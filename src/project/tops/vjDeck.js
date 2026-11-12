@@ -143,6 +143,9 @@ export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
     clips: Array.from({ length: columns }, () => null)
 })
 
+// A stored cue id: a non-empty string, anything else reads as no cue.
+const cueIdOf = (value) => (typeof value === 'string' ? value.trim() : '')
+
 /** A fresh deck. Layer ids are stable per position, so every new deck reads the same. */
 export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAULT_BPM } = {}) => {
     const cols = Math.round(clamp(columns, 1, MAX_COLUMNS, DEFAULT_COLUMNS))
@@ -157,6 +160,8 @@ export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAUL
         // The crossfader, 0 = all A, 1 = all B; layers with side '' ignore it.
         crossfade: 0.5,
         columns: cols,
+        // The light cue (an id from the project's cues) each column also fires; '' = none.
+        columnCues: Array.from({ length: cols }, () => ''),
         layers: Array.from({ length: Math.round(clamp(layers, 1, MAX_LAYERS, 3)) }, (_, index) => createLayer(index, cols))
     }
 }
@@ -198,6 +203,7 @@ export const normalizeDeck = (raw) => {
         effects: normalizeEffects(raw.effects),
         crossfade: clamp(raw.crossfade, 0, 1, 0.5),
         columns,
+        columnCues: Array.from({ length: columns }, (_, column) => cueIdOf(Array.isArray(raw.columnCues) ? raw.columnCues[column] : '')),
         layers: layers.length ? layers : createDeck({ columns }).layers
     }
 }
@@ -271,7 +277,16 @@ export const addColumn = (deck) => {
     const next = normalizeDeck(deck)
     if (next.columns >= MAX_COLUMNS) return next
     next.columns += 1
+    next.columnCues = [...next.columnCues, '']
     next.layers = next.layers.map((layer) => ({ ...layer, clips: [...layer.clips, null] }))
+    return next
+}
+
+/** The light cue a column also fires when it is launched: a cue id, or '' for none. A column that is not there changes nothing. */
+export const setColumnCue = (deck, column, cueId) => {
+    const next = normalizeDeck(deck)
+    if (!Number.isInteger(column) || column < 0 || column >= next.columns) return next
+    next.columnCues = next.columnCues.map((id, index) => (index === column ? cueIdOf(cueId) : id))
     return next
 }
 

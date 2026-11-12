@@ -70,10 +70,13 @@ describe('read and write', () => {
 })
 
 describe('which seams exist', () => {
-    it('s1 and s2 need more than 900px, s4 more than 560px, s5 and s6 more than 560px and room for three panels', () => {
+    it('s1 and s2 need more than 900px, s4 and s5/s6 more than 683px (the bottom row stacks below) and room for three panels', () => {
         expect(seamsShown({ ...BOX, width: 901 })).toEqual({ s1s2: true, s4: true, s56: true })
         expect(seamsShown({ ...BOX, width: 900 })).toEqual({ s1s2: false, s4: true, s56: true })
-        expect(seamsShown({ ...BOX, width: 561 })).toMatchObject({ s4: true, s56: false })
+        // Round 4: the bottom row stacks at 683px or less, so s4, s5 and s6 begin at 684px together.
+        expect(seamsShown({ ...BOX, width: 684 })).toEqual({ s1s2: false, s4: true, s56: true })
+        expect(seamsShown({ ...BOX, width: 683 })).toEqual({ s1s2: false, s4: false, s56: false })
+        expect(seamsShown({ ...BOX, width: 561 })).toEqual({ s1s2: false, s4: false, s56: false })
         expect(seamsShown({ ...BOX, width: 560 })).toEqual({ s1s2: false, s4: false, s56: false })
         expect(seamsShown(null)).toEqual({ s1s2: false, s4: false, s56: false })
     })
@@ -134,8 +137,10 @@ describe('clamp', () => {
     })
 
     it('a seam that is not shown writes nothing', () => {
-        const narrow = { ...BOX, width: 650 }
-        expect(resolveLayout({ head: 0.1, monitorW: 0.1, bottomH: 0.3, cols: [0.3, 0.3] }, narrow)).toEqual({ bottomH: expect.any(Number) })
+        // Batch 4 stacks the bottom row at 683 px, so 650 px shows no seam at all; 700 px shows the bottom seams but not head/monitor.
+        const narrow = { ...BOX, width: 700 }
+        expect(resolveLayout({ head: 0.1, monitorW: 0.1, bottomH: 0.3 }, narrow)).toEqual({ bottomH: expect.any(Number) })
+        expect(resolveLayout({ head: 0.1, monitorW: 0.1, bottomH: 0.3, cols: [0.3, 0.3] }, { ...BOX, width: 650 })).toEqual({})
         expect(resolveLayout({ head: 0.1, bottomH: 0.3, cols: [0.3, 0.3] }, { ...BOX, width: 500 })).toEqual({})
     })
 

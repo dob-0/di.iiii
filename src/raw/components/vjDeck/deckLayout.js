@@ -7,7 +7,9 @@
 //   s5  Sources | Clip                 value = the Sources width      (px)
 //   s6  Clip | Effects                 value = the Clip width         (px)
 //
-// Stored: localStorage 'di.vjDeck.layout' = { v: 1, head, monitorW, bottomH, cols: [a, b] }.
+// Stored: localStorage 'di.vjDeck.layout' = { v: 1, head, monitorW, bottomH, cols: [a, b], folded: [..], locked }.
+// folded = the bottom panels shown as a narrow rail (PANEL_IDS, never all three); locked = the viewer's
+// hand lock: borders and fold controls do nothing (the whole-layout reset still works).
 // Every field is optional and is a FRACTION of the deck box (its width for head, monitorW and
 // cols; its height for bottomH), never px: a phone and a desk want different pixels. The deck
 // box is the deck's content box (what the container queries measure, padding left out).
@@ -18,6 +20,8 @@
 export const LAYOUT_KEY = 'di.vjDeck.layout'
 export const LAYOUT_VERSION = 1
 export const SEAM_IDS = ['s1', 's2', 's4', 's5', 's6']
+// The three bottom panels, left to right.
+export const PANEL_IDS = ['sources', 'clip', 'effects']
 
 // px limits (the lead's decision D11).
 export const LIMITS = {
@@ -36,7 +40,11 @@ export const LIMITS = {
 }
 
 // The container queries of vjDeck.css: at or under these widths the CSS rules and no variable apply.
-export const NARROW = { sideBySide: 900, stacked: 560 }
+// bottomStacked: at or under this the three bottom panels stack in one column. It is three panels of
+// panelMin plus two column gaps (3 x 220 + 2 x 12 = 684) minus 1px, so at every wider deck the
+// borders s5 and s6 exist; at every narrower one the panels are stacked and have no side neighbour.
+// vjDeck.css has the same number in its container query (a test reads both).
+export const NARROW = { sideBySide: 900, stacked: 560, bottomStacked: 683 }
 
 // A stored fraction outside these reads as unset (a hand-edited or corrupt value).
 const FRACTION = { head: [0.02, 0.5], monitorW: [0.02, 0.6], bottomH: [0.03, 0.6], cols: [0.02, 0.8] }
@@ -44,6 +52,13 @@ const FRACTION = { head: [0.02, 0.5], monitorW: [0.02, 0.6], bottomH: [0.03, 0.6
 const inRange = (value, [low, high]) => typeof value === 'number' && Number.isFinite(value) && value >= low && value <= high
 const round = (value) => Math.round(value * 100000) / 100000
 const clamp = (value, low, high) => Math.min(Math.max(value, low), Math.max(low, high))
+
+/** The folded panel ids in panel order, without repeats or unknown ids. All three folded reads as none: one panel stays open. */
+export const sanitizeFolded = (value) => {
+    if (!Array.isArray(value)) return []
+    const list = PANEL_IDS.filter((id) => value.includes(id))
+    return list.length >= PANEL_IDS.length ? [] : list
+}
 
 /** The valid fields of any parsed value; anything else is left out. A wrong version reads as nothing. */
 export const sanitizeLayout = (raw) => {
@@ -53,6 +68,9 @@ export const sanitizeLayout = (raw) => {
     if (inRange(raw.head, FRACTION.head)) out.head = raw.head
     if (inRange(raw.monitorW, FRACTION.monitorW)) out.monitorW = raw.monitorW
     if (inRange(raw.bottomH, FRACTION.bottomH)) out.bottomH = raw.bottomH
+    const folded = sanitizeFolded(raw.folded)
+    if (folded.length) out.folded = folded
+    if (raw.locked === true) out.locked = true
     if (Array.isArray(raw.cols) && raw.cols.length === 2 && raw.cols.every((value) => inRange(value, FRACTION.cols))) {
         out.cols = [raw.cols[0], raw.cols[1]]
     }
@@ -60,6 +78,36 @@ export const sanitizeLayout = (raw) => {
 }
 
 export const hasLayout = (layout) => Object.keys(layout || {}).length > 0
+
+/** True when the layout holds a size or a fold: the lock alone is not a different layout. */
+export const hasArrangement = (layout) => Object.keys(layout || {}).some((key) => key !== 'locked')
+
+/** The folded panel ids of a layout (always an array). */
+export const foldedOf = (layout) => sanitizeFolded(layout?.folded)
+
+/** The layout after a panel is folded or unfolded; the last open panel cannot be folded (returns the same layout). */
+export const toggleFold = (layout, panel) => {
+    if (!PANEL_IDS.includes(panel)) return layout
+    const current = foldedOf(layout)
+    const next = { ...(layout || {}) }
+    if (current.includes(panel)) {
+        const rest = current.filter((id) => id !== panel)
+        if (rest.length) next.folded = rest
+        else delete next.folded
+        return next
+    }
+    if (current.length >= PANEL_IDS.length - 1) return layout
+    next.folded = PANEL_IDS.filter((id) => id === panel || current.includes(id))
+    return next
+}
+
+/** The layout after the whole-layout reset: sizes and folds go back to today's, the hand lock stays. */
+export const resetArrangement = (layout) => (layout?.locked ? { locked: true } : {})
+
+/** The grid columns of the bottom row while a panel is folded: a rail for it, an equal share for the others. */
+export const foldColumns = (folded, rail = 'max(var(--vj-control), var(--di-space-7))') => (
+    PANEL_IDS.map((id) => (folded.includes(id) ? rail : 'minmax(0, 1fr)')).join(' ')
+)
 
 /** The stored layout (or {}). Storage may be blocked or hold anything: that reads as nothing stored. */
 export const readLayout = (storage) => {
@@ -87,15 +135,15 @@ export const writeLayout = (storage, layout = {}) => {
 
 /**
  * Which seams exist at this box. box = { width, height, top, gap } in px (top = the top bar's height).
- * s1 and s2 need more than 900px, s4 and s5/s6 more than 560px; s5/s6 also need room for three
- * panels of 220px (the container queries rule below those, and no variable is applied there).
+ * s1 and s2 need more than 900px, s4 and s5/s6 more than 683px (below it the bottom row is stacked,
+ * vjDeck.css); s5/s6 also need room for three panels of 220px. No variable is applied where a seam is hidden.
  */
 export const seamsShown = (box) => {
     if (!box || !(box.width > 0)) return { s1s2: false, s4: false, s56: false }
     return {
         s1s2: box.width > NARROW.sideBySide,
-        s4: box.width > NARROW.stacked && box.height > 0,
-        s56: box.width > NARROW.stacked && box.width - 2 * colGapOf(box) >= 3 * LIMITS.panelMin
+        s4: box.width > NARROW.bottomStacked && box.height > 0,
+        s56: box.width > NARROW.bottomStacked && box.width - 2 * colGapOf(box) >= 3 * LIMITS.panelMin
     }
 }
 
@@ -181,6 +229,24 @@ export const applySeam = (layout, id, px, box, now = {}) => {
     return sanitizeLayout(next)
 }
 
+/**
+ * The layout with ONLY this border back at its default. s1, s2 and s4 own one field. s5 and s6 share
+ * the two column widths: s5 puts Sources back to a third and leaves Effects where it is (Clip takes the
+ * difference); s6 puts Clip back to a third and leaves Sources. When both are thirds the field is cleared.
+ * now = the sizes in px right now ({ a, b }); without a box or sizes the whole field goes (the old behaviour).
+ */
+export const resetOneSeam = (layout, id, box, now = {}) => {
+    if ((id !== 's5' && id !== 's6') || !box || !(box.width > 0) || !((now.a || 0) > 0) || !((now.b || 0) > 0)) return clearSeam(layout, id)
+    const third = (box.width - 2 * colGapOf(box)) / 3
+    const total = now.a + now.b
+    const a = id === 's5' ? third : now.a
+    const b = id === 's6' ? third : total - a
+    const next = { ...(layout || {}) }
+    if (Math.abs(a - third) < 1 && Math.abs(b - third) < 1) { delete next.cols; return next }
+    next.cols = [round(a / box.width), round(clamp(b, LIMITS.panelMin, box.width - 2 * colGapOf(box) - a - LIMITS.panelMin) / box.width)]
+    return sanitizeLayout(next)
+}
+
 /** The layout with one seam back at today's size. */
 export const clearSeam = (layout, id) => {
     const next = { ...(layout || {}) }
@@ -206,7 +272,7 @@ export const layoutVars = (resolved) => {
     return vars
 }
 
-export const LAYOUT_VAR_NAMES = ['--vj-head', '--vj-monitor-w', '--vj-bottom-h', '--vj-bottom-cols', '--vj-bottom-a', '--vj-bottom-b']
+export const LAYOUT_VAR_NAMES = ['--vj-head', '--vj-monitor-w', '--vj-bottom-h', '--vj-bottom-cols', '--vj-bottom-a', '--vj-bottom-b', '--vj-fold-cols']
 
 /**
  * What a key does to a seam (WAI-ARIA window splitter). Returns the new value in px, or null when

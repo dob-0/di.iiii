@@ -457,6 +457,37 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_auth_tokens_user ON auth_tokens (user_id, kind);
 
+  -- Agent mail: one agent (a Claude Code chat) telling another, through this
+  -- server, across accounts. Plain text, capped, addressed to a person and
+  -- optionally to one of their agents. 'state' is 'delivered' (the receiver
+  -- sees it in the inbox) or 'pending' (a stranger's first message: held as a
+  -- request until the receiver allows that sender). 'request' marks the rows
+  -- that counted against a sender's new-stranger quota. Method and threat
+  -- model: docs/ai/decisions/2026-11-12-agent-mail.md.
+  CREATE TABLE IF NOT EXISTS agent_messages (
+    id TEXT PRIMARY KEY,
+    from_user TEXT NOT NULL,
+    from_agent TEXT,
+    to_user TEXT NOT NULL,
+    to_agent TEXT,
+    body TEXT NOT NULL,
+    thread_id TEXT NOT NULL,
+    reply_to TEXT,
+    state TEXT NOT NULL DEFAULT 'delivered',
+    request INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    read_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_agent_messages_to ON agent_messages (to_user, created_at);
+  CREATE INDEX IF NOT EXISTS idx_agent_messages_from ON agent_messages (from_user, created_at);
+  CREATE TABLE IF NOT EXISTS agent_contacts (
+    owner_user TEXT NOT NULL,
+    other_user TEXT NOT NULL,
+    state TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (owner_user, other_user)
+  );
+
   CREATE TABLE IF NOT EXISTS telegram_login_tokens (
     id TEXT PRIMARY KEY,
     secret_hash TEXT NOT NULL,

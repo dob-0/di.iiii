@@ -55,7 +55,10 @@ export function fireCue(cue, applyOps) {
     if (!cue || typeof applyOps !== 'function') return
     // The laser look goes right after the light: one cue, one go. Same terms:
     // never throws, a cue with no laser look touches no network.
-    recallCueLighting(cue)
+    const lit = recallCueLighting(cue)
     recallCueLaser(cue)
     applyOps(cueOps(cue))
+    // Resolves true when the light desk took it, false when it did not answer (or the cue has no
+    // light). Callers that do not care ignore it, as they always did.
+    return lit
 }

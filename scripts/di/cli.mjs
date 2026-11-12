@@ -28,6 +28,7 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import { decideMode } from './detect.mjs'
+import { uploadInParts } from './partsUpload.mjs'
 import {
     activate,
     buildSchemaVersion,
@@ -65,6 +66,8 @@ import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from '
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import { runPost } from './post.mjs'
+import { runAgentMail } from './agentMail.mjs'
+import { runAgents } from './agentsRemote.mjs'
 import { runWifi } from './wifiCmd.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
@@ -506,6 +509,16 @@ const openThroughServer = async ({ home, port, file, as }) => {
     }
 }
 
+/** Above this a file goes in parts. 90 MB: under the 100 MB a proxy takes per request. */
+const openToSingleMax = () => Number(process.env.DI_OPEN_TO_SINGLE_MAX_BYTES) || 90 * 1024 * 1024
+const OLD_SERVER_LIMIT_MB = 100
+
+/**
+ * The file in parts (scripts/di/partsUpload.mjs, shared with `propose`): this
+ * adds the words `di open` says while it goes.
+ */
+const sendInParts = (options) => uploadInParts({ ...options, say: (line) => say(style.dim(line)), words: ui, olderMb: OLD_SERVER_LIMIT_MB })
+
 /**
  * `di open FILE --to URL` — the same file, into ANOTHER di.iiii. Same rules as
  * `di move --from`: the address's own /serverXR, the token from stdin
@@ -532,17 +545,26 @@ const openOnAnother = async (args, resolved) => {
     if (!token) { fail(ui.openToSignIn(site)); process.exitCode = 1; return }
     const name = path.basename(resolved)
     try {
-        const form = new FormData()
-        form.append('bundle', await fs.openAsBlob(resolved), name)
-        if (args.flags.as) form.append('as', String(args.flags.as))
-        say(style.dim(ui.openToSending(fs.statSync(resolved).size, host)))
-        const response = await fetch(`${base}/api/spaces/bundle`, {
-            method: 'POST',
-            headers: withUserAgent({ Authorization: `Bearer ${token}` }),
-            body: form,
-            signal: AbortSignal.timeout(Number(process.env.DI_OPEN_TO_TIMEOUT_MS) || 30 * 60 * 1000)
-        })
-        const body = await response.json().catch(() => ({}))
+        const size = fs.statSync(resolved).size
+        const headers = withUserAgent({ Authorization: `Bearer ${token}` })
+        const timeout = () => AbortSignal.timeout(Number(process.env.DI_OPEN_TO_TIMEOUT_MS) || 30 * 60 * 1000)
+        let response = null
+        let body = {}
+        // Over one safe request (Cloudflare refuses a body over 100 MB): in parts.
+        if (size > openToSingleMax()) {
+            const sent = await sendInParts({ base, headers, resolved, name, size, host, as: args.flags.as, timeout })
+            if (sent.fallback) { /* an older server: the one POST below, if the file fits it */ }
+            else if (sent.stop) { fail(sent.stop); fail(ui.openToNothing(name, host)); process.exitCode = 1; return }
+            else { response = sent.response; body = sent.body }
+        }
+        if (!response) {
+            const form = new FormData()
+            form.append('bundle', await fs.openAsBlob(resolved), name)
+            if (args.flags.as) form.append('as', String(args.flags.as))
+            say(style.dim(ui.openToSending(size, host)))
+            response = await fetch(`${base}/api/spaces/bundle`, { method: 'POST', headers, body: form, signal: timeout() })
+            body = await response.json().catch(() => ({}))
+        }
         if (response.ok) {
             const id = body?.spaceId || args.flags.as || name.replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
             say(ui.opened(id, `${site}/${id}`))
@@ -1791,6 +1813,10 @@ const COMMANDS = {
     follows: cmdFollows,
     wifi: cmdWifi,
     post: cmdPost,
+    tell: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
+    inbox: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
+    contacts: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
+    agents: (args) => { process.exitCode = runAgents(args, { say, fail }) },
     unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,

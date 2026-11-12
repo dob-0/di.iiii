@@ -6,6 +6,8 @@ import { placeOps as serverPlaceOps } from '../../../shared/placement.cjs'
 
 const connectMock = vi.fn()
 const disconnectMock = vi.fn()
+const reconnectMock = vi.fn()
+const fakeStream = { id: 'fake-stream' }
 const getProjectDocumentMock = vi.fn()
 const listProjectOpsMock = vi.fn()
 const submitProjectOpsMock = vi.fn()
@@ -15,7 +17,11 @@ const buildProjectEventsUrlMock = vi.fn((projectId) => `/api/projects/${projectI
 vi.mock('../services/projectSyncService.js', () => ({
     createProjectSyncService: () => ({
         connect: (...args) => connectMock(...args),
-        disconnect: (...args) => disconnectMock(...args)
+        disconnect: (...args) => disconnectMock(...args),
+        reconnect: (...args) => reconnectMock(...args),
+        get currentSource() {
+            return fakeStream
+        }
     })
 }))
 
@@ -31,6 +37,7 @@ describe('useProjectDocumentSync', () => {
     afterEach(() => {
         connectMock.mockReset()
         disconnectMock.mockReset()
+        reconnectMock.mockReset()
         getProjectDocumentMock.mockReset()
         listProjectOpsMock.mockReset()
         submitProjectOpsMock.mockReset()
@@ -752,5 +759,74 @@ describe('useProjectDocumentSync', () => {
         await waitFor(() => expect(submitProjectOpsMock).toHaveBeenCalled())
         const sent = submitProjectOpsMock.mock.calls[0][2][0]
         expect(sent.payload.patch.position).toEqual(expected)
+    })
+
+    // A proxy can leave the stream open and mute after a server restart. The
+    // service asks (onSilent) after 20 s without an event; a newer op on the
+    // server means the stream is deaf: apply it and replace the stream.
+    describe('silence watchdog (onSilent)', () => {
+        const baseDocument = {
+            projectMeta: { id: 'studio-project', title: 'Studio Project' },
+            presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+            entities: []
+        }
+        const mount = async () => {
+            getProjectDocumentMock.mockResolvedValue({ version: 400, document: baseDocument })
+            const hook = renderHook(() => {
+                const store = useProjectStore()
+                const sync = useProjectDocumentSync({ projectId: 'studio-project', store })
+                return { store, sync }
+            })
+            await waitFor(() => {
+                expect(hook.result.current.store.state.version).toBe(400)
+            })
+            return hook
+        }
+
+        it('applies a newer op and reconnects the stream when the server is ahead', async () => {
+            listProjectOpsMock.mockResolvedValue({
+                ops: [{
+                    opId: 'remote-401',
+                    version: 401,
+                    type: 'setPresentationState',
+                    payload: { patch: { codeHtml: '<main>Newer</main>' } }
+                }],
+                latestVersion: 401
+            })
+            const { result } = await mount()
+
+            await act(async () => {
+                await connectMock.mock.calls[0][0].onSilent(fakeStream)
+            })
+
+            expect(listProjectOpsMock).toHaveBeenCalledWith('studio-project', 400)
+            expect(result.current.store.state.version).toBe(401)
+            expect(result.current.store.state.document.presentationState.codeHtml).toContain('Newer')
+            expect(reconnectMock).toHaveBeenCalledTimes(1)
+        })
+
+        it('leaves a quiet stream alone when no newer op exists', async () => {
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 400 })
+            const { result } = await mount()
+
+            await act(async () => {
+                await connectMock.mock.calls[0][0].onSilent(fakeStream)
+            })
+
+            expect(listProjectOpsMock).toHaveBeenCalledTimes(1)
+            expect(result.current.store.state.version).toBe(400)
+            expect(reconnectMock).not.toHaveBeenCalled()
+        })
+
+        it('leaves a failed check to the normal reconnect', async () => {
+            listProjectOpsMock.mockRejectedValue(new Error('down'))
+            await mount()
+
+            await act(async () => {
+                await connectMock.mock.calls[0][0].onSilent(fakeStream)
+            })
+
+            expect(reconnectMock).not.toHaveBeenCalled()
+        })
     })
 })

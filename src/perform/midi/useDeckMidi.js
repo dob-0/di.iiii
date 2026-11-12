@@ -78,7 +78,7 @@ const claim = (id, token, listener) => {
 }
 const isOwner = (id, token) => slot(id).order[0] === token
 
-export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '', console: consoleId, fxLayer = -1, fxEffect = 0, onFxLayer, onFxEffect }) {
+export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = true, deckId = '', console: consoleId, fxLayer = -1, fxEffect = 0, onFxLayer, onFxEffect, onColumn }) {
     const k2Console = consoleOf(consoleId)
     const defaults = useMemo(() => defaultMap(k2Console.id), [k2Console.id])
     const overrides = useMemo(() => normalizeOverrides(stored), [stored])
@@ -104,7 +104,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const timer = useRef(null)
     const pickup = useRef(new Map())
     const live = useRef({})
-    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, enabled: active, fx: { layer: fxLayer, effect: fxEffect }, onFxLayer, onFxEffect } })
+    useEffect(() => { live.current = { write, onTap, onPatch, map, stored, enabled: active, fx: { layer: fxLayer, effect: fxEffect }, onFxLayer, onFxEffect, onColumn } })
     const tapState = useRef({ taps: [] })
 
     const flush = useCallback(() => {
@@ -211,6 +211,8 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         ahead.current = next
         if (continuous) schedule()
         else { dirty.current = true; flush() }
+        // A column launched by MIDI (the K2's encoder pushes): reported after its write, once per launch.
+        if (bound?.action === 'column' && Number.isInteger(bound.args?.column)) current.onColumn?.(bound.args.column)
     }, [flush, schedule])
 
     // One MIDI access, only while this instance owns the deck.

@@ -12,7 +12,10 @@ import { keyValue } from './deckLayout.js'
 //   The value is committed once, on pointerup.
 // - Keys: the WAI-ARIA window splitter (https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/).
 //   The handlers sit here and stop the event, so the deck's own key listener never sees them.
-// - Double-click: back to today's size (onReset).
+// - Double-click: THAT border back to its default (onReset); the key Delete or Backspace does the same
+//   on the focused border (the splitter pattern uses neither, so both are free here).
+// - Locked (the viewer's lock): none of the above does anything, the border shows no resize cursor
+//   and takes no pointer (CSS data-locked); it is out of the tab order.
 //
 // `read()` returns the seam's sizes in px NOW ({ value, min, max, dim }), measured by the parent: a
 // fresh read at the start of each drag and key, so a stale prop can never move the wrong amount.
@@ -21,7 +24,7 @@ import { keyValue } from './deckLayout.js'
 const MARK = 'data-seam-dragging'
 const ARROWS = { vertical: ['ArrowLeft', 'ArrowRight'], horizontal: ['ArrowUp', 'ArrowDown'] }
 
-export default function DeckSeam({ id, orientation, label, controls, now, sign = 1, read, onPreview, onCommit, onCancel, onReset }) {
+export default function DeckSeam({ id, orientation, label, controls, now, sign = 1, locked = false, read, onPreview, onCommit, onCancel, onReset }) {
     const drag = useRef(null)
     const frame = useRef(0)
     const restore = useRef(null)
@@ -61,6 +64,7 @@ export default function DeckSeam({ id, orientation, label, controls, now, sign =
     }, [])
 
     const onPointerDown = (event) => {
+        if (locked) return
         if (event.button !== undefined && event.button !== 0) return
         event.preventDefault()
         event.stopPropagation()
@@ -106,10 +110,17 @@ export default function DeckSeam({ id, orientation, label, controls, now, sign =
     }
 
     const onKeyDown = (event) => {
+        if (locked) return
         if (event.ctrlKey || event.metaKey || event.altKey) return
         if (event.key === 'Escape') {
             event.stopPropagation()
             event.currentTarget.blur()
+            return
+        }
+        if (event.key === 'Delete' || event.key === 'Backspace') {
+            event.preventDefault()
+            event.stopPropagation()
+            onReset(id)
             return
         }
         const state = read()
@@ -127,20 +138,22 @@ export default function DeckSeam({ id, orientation, label, controls, now, sign =
             className="vj-deck-seam"
             data-seam={id}
             role="separator"
-            tabIndex={0}
+            tabIndex={locked ? -1 : 0}
+            data-locked={locked ? 'true' : undefined}
             aria-orientation={orientation}
             aria-label={label}
             aria-controls={controls}
             aria-valuenow={percent(now.value)}
             aria-valuemin={percent(now.min)}
             aria-valuemax={percent(now.max)}
-            title="Drag to resize. Double-click to reset."
+            title={locked ? 'The layout is locked. Unlock it to move this border.' : 'Drag to resize. Double-click to reset.'}
+            aria-keyshortcuts="Delete Backspace"
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={(event) => finish(event, true)}
             onPointerCancel={(event) => finish(event, false)}
             onLostPointerCapture={(event) => finish(event, false)}
-            onDoubleClick={(event) => { event.stopPropagation(); onReset(id) }}
+            onDoubleClick={(event) => { event.stopPropagation(); if (!locked) onReset(id) }}
             onKeyDown={onKeyDown}
         />
     )

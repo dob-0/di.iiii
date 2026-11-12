@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { createTopEngine } from './topEngine.js'
 import { TOP_OPERATORS, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
 import { topThumbnailGroups, topThumbnailsFor } from './topThumbnails.js'
@@ -127,6 +127,14 @@ const EMPTY = { nodes: [], wires: [] }
  * @param {Array|Map} [options.assets]        the project's files, so a Clip In's asset id finds its video
  * @param {string} [options.projectId]        the project those files belong to
  */
+// The failures that are still open, by camera node id: set a message, or clear the entry with ''.
+function withCameraError(now, id, message) {
+    if (message) return now[id] === message ? now : { ...now, [id]: message }
+    if (!(id in now)) return now
+    const { [id]: _gone, ...rest } = now
+    return rest
+}
+
 export function useTopNetwork({
     network: networkIn = EMPTY, spaceId = '', canvas = null, show = null, thumbnails = false, onMeasure = null,
     assets = null, projectId = null, width = 640, height = 360
@@ -138,7 +146,10 @@ export function useTopNetwork({
     // A camera that cannot open is NOT a fault of the picture: the output stays up and the camera's
     // clip is transparent (topEngine.js blankRule). The reason is reported per node (reportTop) and
     // returned here for a screen that wants to say it, never as `error`, which replaces the picture.
-    const [cameraError, setCameraError] = useState('')
+    // Kept PER camera node: one camera opening must not wipe the reason another one is still failing.
+    const [cameraErrors, setCameraErrors] = useState({})
+    const setCameraError = useCallback((id, message) => setCameraErrors((now) => withCameraError(now, id, message)), [])
+    const cameraError = Object.values(cameraErrors)[0] || ''
     const [link, setLink] = useState(null)
     const [linkView, setLinkView] = useState({ machine: null, peers: [] })
     const engineRef = useRef(null)
@@ -441,13 +452,14 @@ export function useTopNetwork({
             live.delete(id)
         }
         for (const id of offIds) reportTop(id, { camera: { error: null, errorName: null, blocked: false } })
-        if (offIds.length && !ids.length) setCameraError('')
+        // A camera that is off or gone from the network has no failure to show.
+        setCameraErrors((now) => (Object.keys(now).every((id) => ids.includes(id)) ? now : Object.fromEntries(Object.entries(now).filter(([id]) => ids.includes(id)))))
         if (!ids.length) return undefined
         const media = globalThis.navigator?.mediaDevices
         if (!media?.getUserMedia) {
             const refusal = cameraRefusal({ secure: globalThis.isSecureContext !== false, hasApi: false })
             for (const id of ids) reportTop(id, { camera: { error: refusal, blocked: true } })
-            setCameraError(refusal)
+            for (const id of ids) setCameraError(id, refusal)
             return undefined
         }
         let cancelled = false
@@ -467,7 +479,7 @@ export function useTopNetwork({
             const camera = caught instanceof CameraNotFoundError ? caught.camera : null
             const refusal = camera ? `Camera "${camera}" not found.` : cameraRefusal({ errorName })
             reportTop(id, { camera: { error: refusal, errorName, blocked: true } })
-            setCameraError(refusal)
+            setCameraError(id, refusal)
             if (!cameraRetryable(errorName)) return
             const attempt = attempts.get(id) || 0
             attempts.set(id, attempt + 1)
@@ -499,6 +511,7 @@ export function useTopNetwork({
                 if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
                 live.set(id, { key: wantedKeys.get(id), stream, engine: engineRef.current })
                 attempts.delete(id)
+                setCameraError(id, '')
                 const track = stream.getVideoTracks()[0]
                 if (track) {
                     tracksRef.current.set(id, track)

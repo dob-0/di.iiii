@@ -79,8 +79,13 @@
     cursor: pointer;
 }
 
-.perform-strip-button:hover {
+.perform-strip-button:hover:not(:disabled) {
     border-color: var(--di-ink);
+}
+
+.perform-strip-button:disabled {
+    color: var(--di-faint);
+    cursor: default;
 }
 
 .perform-strip-button .perform-changed {

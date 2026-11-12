@@ -28,15 +28,33 @@
  *                            models, audio) from the space, and that is meant.
  *                            The server refuses a file that removes media
  *                            unless N is exactly the number its summary shows.
+ *
+ * A file over 64 MB (env DI_PROPOSE_SINGLE_MAX_BYTES) goes in parts, because
+ * Cloudflare refuses one request body over 100 MB: the same proposal, made on
+ * the server from the joined file (serverXR/src/routes/bundleParts.js). A server
+ * that cannot take a proposal in parts is told so and nothing is sent.
  */
 
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { TIERS, localBase, resolveTier, isProductionTarget } from './tier-sync.mjs'
+import { uploadInParts } from './di/partsUpload.mjs'
+import { moveToken } from './di/login.mjs'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const TIMEOUT_MS = 180000
+const singleMax = () => Number(process.env.DI_PROPOSE_SINGLE_MAX_BYTES) || 64 * 1024 * 1024
+
+const words = {
+    openToPartSent: (n, parts, sent, total) => `part ${n}/${parts} sent (${(sent / 1048576).toFixed(0)} of ${(total / 1048576).toFixed(0)} MB)`,
+    openToPartFailed: (n, parts, host, why) => `part ${n}/${parts} did not reach ${host} after several tries (${why}). What was sent was removed there; run the same command again to start over.`,
+    openToOlderServer: (host) => `${host} has no way to take a file in parts yet. Nothing was sent.`,
+    partsKindUnknown: (host) => `${host} is an older version: it cannot take a proposal in parts. Nothing was sent.`,
+    openToJob: (state, host) => state === 'joining' ? `all parts are on ${host}; it is joining them...` : `${host} is checking the file and making the proposal...`,
+    openToJobTimedOut: (host) => `${host} did not finish in time (set DI_OPEN_TO_FINISH_TIMEOUT_MS, in milliseconds, to wait longer). It may still be working there: look at its approvals before sending again.`,
+    openToPollLost: (host, why) => `lost touch with ${host} (${why}). It may still be working there: look at its approvals before sending again.`
+}
 
 const fail = (message) => { const e = new Error(message); e.userFacing = true; throw e }
 
@@ -111,10 +129,29 @@ export async function proposeBundle(argv) {
     if (isProductionTarget(base) && !args.allowProduction) {
         fail('this is production. Propose on the dev tier first; add --allow-production only when the owner asked for it.')
     }
-    const token = env[tier.tokenKey]
-    if (!token) fail(`no ${tier.tokenKey} in serverXR/.env.local or the environment`)
+    // The tier's key, else the login `di login` stored for that address (never printed).
+    const token = env[tier.tokenKey] || moveToken({ from: new URL(base).origin, env: {} })
+    if (!token) fail(`no ${tier.tokenKey} in serverXR/.env.local or the environment, and no stored login (di login)`)
     const spaceId = args.space || await spaceIdInFile(args.file)
     if (!spaceId) fail('could not read the space id from the file; pass --space <id>')
+
+    const uploadName = path.basename(args.file).endsWith('.diiii') ? path.basename(args.file) : `${spaceId}.diiii`
+    const size = fs.statSync(args.file).size
+
+    if (size > singleMax()) {
+        const sent = await uploadInParts({
+            base, headers: { Authorization: `Bearer ${token}` }, resolved: args.file, name: uploadName, size, host: new URL(base).host,
+            timeout: () => AbortSignal.timeout(Number(process.env.DI_OPEN_TO_TIMEOUT_MS) || 30 * 60 * 1000),
+            extra: { kind: 'proposal', proposal: { spaceId, mode: args.direct ? 'auto' : 'propose', from: args.from || undefined, dryRun: args.dryRun, overwriteNewer: args.overwriteNewer, acceptLoss: args.acceptLoss === null ? undefined : args.acceptLoss } },
+            expectKind: 'proposal', say: (line) => console.log(line), words
+        })
+        if (sent.stop) { console.log(`→ ${sent.stop}`); return 1 }
+        if (!sent.fallback) {
+            console.log(formatOutcome(sent.response.status, sent.body))
+            return sent.response.ok ? 0 : 1
+        }
+        // No parts door on that server: the one POST below, if it fits.
+    }
 
     const form = new FormData()
     form.append('mode', args.direct ? 'auto' : 'propose')
@@ -122,7 +159,7 @@ export async function proposeBundle(argv) {
     if (args.dryRun) form.append('dryRun', 'true')
     if (args.overwriteNewer) form.append('overwriteNewer', 'true')
     if (args.acceptLoss !== null) form.append('acceptLoss', args.acceptLoss)
-    form.append('bundle', new Blob([fs.readFileSync(args.file)]), path.basename(args.file).endsWith('.diiii') ? path.basename(args.file) : `${spaceId}.diiii`)
+    form.append('bundle', new Blob([fs.readFileSync(args.file)]), uploadName)
 
     const url = `${base}/api/spaces/${encodeURIComponent(spaceId)}/proposals`
     const response = await fetch(url, {

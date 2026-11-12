@@ -1,4 +1,5 @@
 import { createBasePathHelpers, joinPath } from '../../project/routing/laneBasePath.js'
+import { buildPerformPath } from '../../perform/performRouting.js'
 
 export const STUDIO_PAGE_SPACES = 'spaces'
 export const STUDIO_PAGE_HUB = 'hub'
@@ -81,6 +82,14 @@ export const buildStudioProjectPath = (projectId, spaceId = null) => {
     }
     return joinPath(prefix, spaceId, STUDIO_RESERVED_SEGMENT, 'projects', projectId)
 }
+
+// The deck's door from Studio. It names NO layout on purpose: the address
+// carries only `from=studio`, so the deck opens the layout the show chose as its
+// default, else the one last used on this device, and only on a fresh device
+// the first one for a Studio visitor (src/perform/presets.js DEFAULT_PRESET_FROM).
+// It used to force `preset=vj`, which overrode both.
+export const buildStudioDeckPath = (spaceId, projectId) =>
+    buildPerformPath(spaceId, projectId, { from: 'studio' })
 
 export const getStudioLocationState = (
     locationLike = null,

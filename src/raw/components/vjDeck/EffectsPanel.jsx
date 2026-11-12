@@ -1,3 +1,4 @@
+import FoldButton from './FoldButton.jsx'
 import { useState, useSyncExternalStore } from 'react'
 import { bodyMatte } from '../../../project/tops/bodyMatte.js'
 import {
@@ -52,6 +53,7 @@ export default function EffectsPanel({ deck, scope, layerIndex, onScope, onLayer
     return (
         <section className="vj-deck-panel vj-deck-fx" aria-label="Effects">
             <div className="vj-deck-panel-head vj-deck-fx-top">
+                <FoldButton panel="effects" />
                 <span className="vj-deck-label">Effects</span>
                 <div className="vj-deck-fx-scope" role="radiogroup" aria-label="Effects of">
                     <button type="button" role="radio" aria-checked={!isMaster} className={`vj-deck-button vj-deck-fx-button${!isMaster ? ' is-on' : ''}`} onClick={() => onScope('layer')}>Layer</button>

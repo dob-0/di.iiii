@@ -587,10 +587,16 @@ function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, labe
     const shown = resolveAlias(outNodeId, network?.alias)
     const present = Boolean(network?.nodes?.some((node) => node.id === shown))
     // Nothing to show → nothing to run; an empty network starts no engine.
-    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: shown, width: w, height: h })
+    const { error, cameraError } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: shown, width: w, height: h })
     if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out or deck is gone" width={width} height={height} />
     if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
-    return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
+    // A camera that cannot open never replaces the picture (the other nodes still draw); its reason is a caption.
+    return (
+        <>
+            <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
+            {cameraError ? <span className="map-source-camera-error" role="status" style={{ position: 'absolute', left: 8, bottom: 8, font: '12px sans-serif', color: '#fff', background: 'rgba(0,0,0,0.6)', padding: '2px 6px' }}>{cameraError}</span> : null}
+        </>
+    )
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.

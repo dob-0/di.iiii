@@ -26,6 +26,7 @@ import {
     tapTempo,
     trigger,
     triggerColumn,
+    setColumnCue,
     updateClip
 } from '../../../project/tops/vjDeck.js'
 import { detectAssetMediaKind } from '../../../utils/mediaAssetTypes.js'
@@ -35,6 +36,8 @@ import { isTypingTarget } from '../../../perform/windowKeys.js'
 import { useShowClockContext } from '../../../perform/useShowClock.js'
 import { DEFAULT_BPM } from '../../../timeline/showClock.js'
 import { clipStill } from './clipStills.js'
+import { cueForColumn, columnForCue } from '../../../project/tops/vjDeckCues.js'
+import { cueLightTarget, readLightFollowState } from '../../../map/lightingLink.js'
 import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
 import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
@@ -44,6 +47,7 @@ import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
 import EffectsPanel from './EffectsPanel.jsx'
 import DeckSeam from './DeckSeam.jsx'
+import FoldButton, { DeckFoldContext } from './FoldButton.jsx'
 import SourceSwitch, { useSourceOff } from './SourceSwitch.jsx'
 import { cameraSourceKey, inputSourceKey, networkSourceKey } from '../../../project/tops/sourceSwitch.js'
 import useDeckLayout from './useDeckLayout.js'
@@ -83,6 +87,29 @@ const readMonitorPrefs = () => {
 }
 const writeMonitorPrefs = (prefs) => {
     try { window.localStorage.setItem(MONITOR_KEY, JSON.stringify(prefs)) } catch { /* the choice lasts until the page closes */ }
+}
+
+// LIGHTS FOLLOW: with it on, playing a column also fires the light cue set for that column.
+// Per viewer and per project, on the device, never in the show document: a test page or
+// another machine starts with it off. Only the exact stored word 'on' reads as on.
+const FOLLOW_KEY = 'di.vjDeck.lightsFollow'
+// The desk is asked this often, only while Lights follow is on and the page is visible. The
+// desk pushes DMX frames (api/dmx/stream), not cue changes, so the summary is polled.
+export const FOLLOW_POLL_MS = 250
+// A desk change that names the cue the deck itself just fired, inside this, is the deck's own echo.
+export const FOLLOW_ECHO_MS = 1500
+// A slower desk: a reading that names any look the deck fired inside this is still the deck's echo.
+export const FOLLOW_ECHO_LOOK_MS = 5000
+// One summary request is given up after this, and after a failed or not-own reading the next
+// request waits this long (the light server being down must not cost 4 requests a second).
+export const FOLLOW_TIMEOUT_MS = 2000
+export const FOLLOW_RETRY_MS = 2000
+const followKeyOf = (projectId) => `${FOLLOW_KEY}.${projectId || 'local'}`
+const readFollow = (projectId) => {
+    try { return window.localStorage.getItem(followKeyOf(projectId)) === 'on' } catch { return false }
+}
+const writeFollow = (projectId, on) => {
+    try { window.localStorage.setItem(followKeyOf(projectId), on ? 'on' : 'off') } catch { /* the choice lasts until the page closes */ }
 }
 
 function DeckPicture({ nodeId, className, label, width = 160, height = 90 }) {
@@ -232,6 +259,7 @@ function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, o
     return (
         <section className="vj-deck-panel vj-deck-sources" aria-label={picking ? 'Add a clip' : 'Sources'}>
             <div className="vj-deck-panel-head">
+                <FoldButton panel="sources" />
                 <span className="vj-deck-label">{target ? `Sources: ${picking ? 'add to' : 'put in'} ${targetName}` : 'Sources'}</span>
                 {picking ? <button type="button" className="vj-deck-button vj-deck-button--quiet" onClick={onCancel}>Cancel</button> : null}
             </div>
@@ -322,7 +350,7 @@ function CameraPreview({ camera, device, className }) {
 }
 const percent = (value) => `${Math.round(value * 100)}`
 
-export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now(), spaceId = '', projectId = null }) {
+export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now(), spaceId = '', projectId = null, cues = [], onFireCue = null, onColumnLaunch = null }) {
     const deck = useMemo(() => normalizeDeck(node?.values?.deck), [node?.values?.deck])
     const deckId = node?.id || ''
     const editable = typeof onPatchValues === 'function'
@@ -356,6 +384,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             label={label}
             controls={controls}
             sign={sign}
+            locked={deckLayout.locked}
             now={deckLayout.stateOf(id)}
             read={() => deckLayout.read(id)}
             onPreview={deckLayout.preview}
@@ -410,6 +439,132 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         if (editable) { latestDeck.current = nextDeck; onPatchValues({ deck: nextDeck }) }
     }
 
+    // Lights follow. ONE function reports a launched column, and only code that launches
+    // calls it: the header button (launchColumn) and the MIDI column action (onColumn of
+    // useDeckMidi). Nothing infers a launch from the deck data, so another viewer's window
+    // never fires. The light call is fire and forget: the launch never waits for it.
+    const [lightsFollow, setLightsFollow] = useState(() => readFollow(projectId))
+    const [cueStatus, setCueStatus] = useState('')
+    useEffect(() => { setLightsFollow(readFollow(projectId)) }, [projectId])
+    const followLive = useRef({})
+    followLive.current = { lightsFollow, cues, onFireCue, onColumnLaunch }
+    const fireSeq = useRef(0)
+    // Every cue the deck fired lately (newest last), of any kind: the desk-follow echo guard reads it.
+    const deckFires = useRef([])
+    // fireLight false = the launch came FROM the desk: the column plays, the desk is not told.
+    const reportColumnLaunch = (column, { fireLight = true } = {}) => {
+        const live = followLive.current
+        try { live.onColumnLaunch?.(column) } catch { /* the launch already happened */ }
+        if (!live.lightsFollow || !fireLight) return
+        const cue = cueForColumn(latestDeck.current, column, live.cues)
+        if (!cue) { setCueStatus(`Column ${column + 1} has no cue`); return }
+        if (typeof live.onFireCue !== 'function') { setCueStatus('the light desk did not answer'); return }
+        const seq = (fireSeq.current += 1)
+        deckFires.current = [...deckFires.current, { cueId: cue.id, look: cueLightTarget(cue)?.kind === 'look' ? cueLightTarget(cue).id : '', at: now() }].slice(-16)
+        const name = cue.name || cue.id
+        setCueStatus(`Fired ${name}`)
+        let answer
+        try { answer = Promise.resolve(live.onFireCue(cue)) } catch { answer = Promise.resolve(false) }
+        answer.then((ok) => { if (ok === false && fireSeq.current === seq) setCueStatus('the light desk did not answer') }, () => { if (fireSeq.current === seq) setCueStatus('the light desk did not answer') })
+    }
+    const launchColumn = (column, options) => {
+        write(triggerColumn(latestDeck.current, column))
+        reportColumnLaunch(column, options)
+    }
+    followLive.current.launchColumn = launchColumn
+    followLive.current.now = now
+    followLive.current.deck = deck
+
+    // Light -> deck, the other half of Lights follow. A new cue or look on the desk launches the
+    // column that holds that cue, through launchColumn with fireLight false (no ping-pong). The
+    // first reading only sets the baseline, so switching on never jumps the deck.
+    const deskSeen = useRef(null)
+    useEffect(() => {
+        if (!lightsFollow) return undefined
+        let stopped = false
+        let timer = null
+        let busy = false
+        let controller = null
+        let abortTimer = null
+        let nextAt = 0
+        const visible = () => typeof document === 'undefined' || document.visibilityState === 'visible'
+        const apply = (reading) => {
+            const live = followLive.current
+            const sig = [reading.lookId, reading.layerFiredAt, reading.cueIndex, reading.cueFiredAt].join('|')
+            const before = deskSeen.current
+            deskSeen.current = { sig, lookId: reading.lookId }
+            if (before === null || before.sig === sig) return
+            // Echo guard. The desk answers the deck's own cue a moment later, and a scene cue has no
+            // look to compare, so the guard goes by time first (the deck fired recently, of any
+            // kind: its echo), then by look (any look the deck fired lately: a slow desk), then by
+            // "only the cue index/firedAt moved while the look stayed" (the deck re-fired a cue).
+            // Known limit: the server's desk summary has no firedAt on layers, so layerFiredAt is
+            // always null; the desk re-firing the SAME look is seen only through cue index/firedAt.
+            const at = live.now()
+            const fires = deckFires.current.filter((fire) => at - fire.at < FOLLOW_ECHO_LOOK_MS)
+            deckFires.current = fires
+            const lastFire = fires[fires.length - 1]
+            if (lastFire && at - lastFire.at < FOLLOW_ECHO_MS) return
+            if (reading.lookId && fires.some((fire) => fire.look && fire.look === reading.lookId)) return
+            if (fires.length && reading.lookId === before.lookId) return
+            if (!reading.lookId) return
+            const own = (Array.isArray(live.cues) ? live.cues : [])
+                .filter((cue) => cue && cueLightTarget(cue)?.kind === 'look' && cueLightTarget(cue).id === reading.lookId)
+            const cue = own.find((candidate) => columnForCue(latestDeck.current, candidate.id) >= 0)
+            if (!cue) { setCueStatus(`no column for ${own[0]?.name || own[0]?.id || reading.lookId}`); return }
+            const column = columnForCue(latestDeck.current, cue.id)
+            setCueStatus(`Desk fired ${cue.name || cue.id}: column ${column + 1}`)
+            live.launchColumn(column, { fireLight: false })
+        }
+        const tick = async () => {
+            if (busy || stopped || !visible()) return
+            if (followLive.current.now() < nextAt) return
+            busy = true
+            controller = typeof AbortController === 'function' ? new AbortController() : null
+            abortTimer = setTimeout(() => { try { controller?.abort() } catch { /* nothing to cancel */ } }, FOLLOW_TIMEOUT_MS)
+            let good = false
+            try {
+                const reading = await readLightFollowState({ spaceId: spaceId || null, signal: controller?.signal })
+                if (stopped) return
+                if (reading.state === 'own') { good = true; apply(reading) }
+            } catch { /* aborted, or the desk went away */ } finally {
+                clearTimeout(abortTimer)
+                abortTimer = null
+                busy = false
+                if (!stopped) {
+                    // Off, other show, failed or timed out: forget the baseline (the first good reading
+                    // after only sets it) and wait before asking again.
+                    if (good) nextAt = 0
+                    else { deskSeen.current = null; nextAt = followLive.current.now() + FOLLOW_RETRY_MS }
+                }
+            }
+        }
+        const start = () => {
+            if (timer || stopped || !visible()) return
+            deskSeen.current = null
+            nextAt = 0
+            timer = setInterval(tick, FOLLOW_POLL_MS)
+            tick()
+        }
+        const stop = () => {
+            if (timer) clearInterval(timer)
+            timer = null
+            if (abortTimer) clearTimeout(abortTimer)
+            abortTimer = null
+            try { controller?.abort() } catch { /* nothing to cancel */ }
+        }
+        const onVisibility = () => { if (visible()) start(); else stop() }
+        document.addEventListener('visibilitychange', onVisibility)
+        start()
+        return () => { stopped = true; stop(); document.removeEventListener('visibilitychange', onVisibility) }
+    }, [lightsFollow, spaceId])
+    const toggleLightsFollow = () => {
+        const next = !lightsFollow
+        setLightsFollow(next)
+        writeFollow(projectId, next)
+        if (!next) setCueStatus('')
+    }
+
     // A selection whose slot was emptied (here or by another window) lets go.
     const selectedClip = selected ? deck.layers[selected.layer]?.clips[selected.column] || null : null
     useEffect(() => {
@@ -449,7 +604,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const [fxIndex, setFxIndex] = useState(0) // which effect of the selected stack the K2's third pot row turns
     // K2 LAYER button: this layer's effects (leaves Master scope); K2 encoder 6 push: the next effect
     const onFxLayer = (index) => { setFxPick(index); setFxScope('layer'); setFxIndex(0) }
-    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, console: node?.values?.midiConsole, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer, fxEffect: fxIndex, onFxLayer, onFxEffect: setFxIndex })
+    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, console: node?.values?.midiConsole, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer, fxEffect: fxIndex, onFxLayer, onFxEffect: setFxIndex, onColumn: reportColumnLaunch })
     const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {
         if (!midi.learning) return
@@ -650,8 +805,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         >Take</button>
     )
 
+    const foldValue = { folded: deckLayout.folded, locked: deckLayout.locked, toggle: deckLayout.toggleFolded }
     return (
-        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-layout={deckLayout.custom ? 'custom' : 'default'} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onDeckKeyDown} onContextMenuCapture={onDeckContextMenu}>
+        <DeckFoldContext.Provider value={foldValue}>
+        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-k2={k2Open ? 'open' : undefined} data-placement={mode} data-monitor-size={monitors.size} data-layout={deckLayout.custom ? 'custom' : 'default'} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onDeckKeyDown} onContextMenuCapture={onDeckContextMenu}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
@@ -675,6 +832,17 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     onClick={() => setK2Open((on) => !on)}
                     title="Show the Xone:K2 layout with what each control does and what it sends"
                 >K2</button>
+                <div className="vj-deck-follow">
+                    <button
+                        type="button"
+                        className="vj-deck-button vj-deck-lights-follow"
+                        aria-pressed={lightsFollow}
+                        title="With this on, playing a column also fires its light cue on the light desk, and a cue or look fired on the light desk plays the column that holds that cue. Both ways. It is kept on this device only, and the K2 column pushes do the same."
+                        aria-label="Lights follow, both ways: a column fires its light cue, and a light cue plays its column"
+                        onClick={toggleLightsFollow}
+                    >Lights follow <span className="vj-deck-state" aria-hidden="true">{lightsFollow ? 'on' : 'off'}</span></button>
+                    {lightsFollow || cueStatus ? <span className="vj-deck-dim vj-deck-follow-status" role="status" aria-live="polite">{cueStatus}</span> : null}
+                </div>
                 <button
                     type="button"
                     className="vj-deck-button vj-deck-preview-only"
@@ -732,7 +900,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                     key={column}
                                     type="button"
                                     className="vj-deck-button vj-deck-column"
-                                    onClick={() => write(triggerColumn(latestDeck.current, column))}
+                                    onClick={() => launchColumn(column)}
                                     disabled={!editable}
                                     aria-label={`Play column ${column + 1}`}
                                     data-midi-target={`column:${column}`}
@@ -741,6 +909,29 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                 </button>
                             ))}
                         </div>
+                        {lightsFollow || deck.columnCues.some(Boolean) ? (
+                            <div className="vj-deck-row vj-deck-columns vj-deck-cues" role="group" aria-label="Light cue per column">
+                                <span className="vj-deck-label vj-deck-columns-head" title="The light cue each column fires when Lights follow is on">Cue</span>
+                                {columns.map((column) => {
+                                    const stored = deck.columnCues[column]
+                                    const known = !stored || cues.some((cue) => cue?.id === stored)
+                                    return (
+                                        <select
+                                            key={column}
+                                            className="vj-deck-chip vj-deck-column-cue"
+                                            value={stored}
+                                            disabled={!editable}
+                                            aria-label={`Light cue for column ${column + 1}`}
+                                            onChange={(event) => write(setColumnCue(latestDeck.current, column, event.target.value))}
+                                        >
+                                            <option value="">No cue</option>
+                                            {cues.filter((cue) => cue?.id).map((cue) => <option key={cue.id} value={cue.id}>{cue.name || cue.id}</option>)}
+                                            {known ? null : <option value={stored}>Missing cue</option>}
+                                        </select>
+                                    )
+                                })}
+                            </div>
+                        ) : null}
                         {rows.map(({ layer, index }) => (
                             <div
                                 className="vj-deck-row"
@@ -898,10 +1089,20 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                             onClick={() => setMonitorPrefs({ hidden: !monitors.hidden })}
                         >{monitors.hidden ? 'Show preview' : 'Hide preview'}</button>
                         {previewOnly && monitors.hidden ? takeButton : null}
+                        <button
+                            type="button"
+                            className="vj-deck-button vj-deck-layout-lock"
+                            aria-pressed={deckLayout.locked}
+                            onClick={deckLayout.toggleLock}
+                            title={deckLayout.locked ? 'Let the borders and panels be moved again' : 'Keep the borders and panels where they are'}
+                        >{deckLayout.locked ? 'Unlock layout' : 'Lock layout'}</button>
                         {deckLayout.custom ? (
                             <button type="button" className="vj-deck-button vj-deck-layout-reset" onClick={deckLayout.resetAll} title="Put every panel back to its usual size">Reset layout</button>
                         ) : null}
                     </div>
+                    {deckLayout.measured && !deckLayout.shown.s1s2 ? (
+                        <span className="vj-deck-dim vj-deck-seams-hint" role="note">Some borders are hidden at this width. Make the window wider (over 900 px) to move them.</span>
+                    ) : null}
                     {monitors.hidden ? null : (
                     <figure className="vj-deck-monitor vj-deck-monitor--preview">
                         <figcaption className="vj-deck-label vj-deck-monitor-caption"><span>Preview</span>{previewOnly ? takeButton : null}</figcaption>
@@ -965,7 +1166,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     />
                 ) : (
                     <section className="vj-deck-panel vj-deck-clip" aria-label="Clip">
-                        <div className="vj-deck-panel-head"><span className="vj-deck-label">Clip</span></div>
+                        <div className="vj-deck-panel-head"><FoldButton panel="clip" /><span className="vj-deck-label">Clip</span></div>
                         <p className="vj-deck-hint">Select a clip</p>
                     </section>
                 )}
@@ -977,6 +1178,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
             {k2Open ? <K2LayoutPanel windowPath={spaceId && projectId ? buildK2WindowPath(spaceId, projectId) : ''} publisher={midi.k2Publisher} map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
             <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
+        </DeckFoldContext.Provider>
     )
 }
 
@@ -986,6 +1188,7 @@ function ClipSettings({ clip, title, name, editable, onChange, onRemove }) {
     return (
         <section className="vj-deck-panel vj-deck-clip" aria-label="Clip settings">
             <div className="vj-deck-panel-head">
+                <FoldButton panel="clip" />
                 <span className="vj-deck-label">{title}</span>
                 <span className="vj-deck-clip-name">{name}</span>
             </div>

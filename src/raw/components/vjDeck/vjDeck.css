@@ -16,8 +16,8 @@
     --vj-layers: 3;
     /* The seams (DeckSeam.jsx): one hairline for every new rule, a grip mark that keeps 3:1
        against the panel ground (WCAG 1.4.11), and the gap the root keeps between its rows. */
-    --vj-line: rgba(255, 255, 255, 0.14);
-    --vj-grip: var(--di-dim);
+    --vj-line: var(--di-faint);
+    --vj-grip: var(--di-ink);
     --vj-gap: var(--di-space-2);
     container-type: inline-size;
     container-name: vjdeck;
@@ -329,7 +329,8 @@
     justify-content: center;
     gap: var(--di-space-1);
     min-width: 0;
-    padding: var(--di-space-1) var(--di-space-2);
+    /* the right padding is the strip's part of the S1 grab zone (12px with the 3px gap: DeckSeam S1) */
+    padding: var(--di-space-1) var(--di-space-3) var(--di-space-1) var(--di-space-2);
     background: var(--di-surface-2);
     border-left: 2px solid transparent;
 }
@@ -511,6 +512,37 @@
 
 .vj-deck-column {
     text-align: center;
+}
+
+/* The cue row sits under the sticky columns row and scrolls with the grid. */
+.vj-deck-cues {
+    position: static;
+}
+
+.vj-deck-column-cue {
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vj-deck-follow {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-width: 0;
+}
+
+.vj-deck-follow-status {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* State by text and a mark, not by colour alone. */
+.vj-deck-button[aria-pressed='true'].vj-deck-lights-follow {
+    border-color: var(--di-ink);
+    box-shadow: inset 0 0 0 1px var(--di-ink);
 }
 
 /* --- bottom: sources and the selected clip ------------------------------- */
@@ -975,6 +1007,8 @@
 
 /* --- seams: the borders between panels, draggable (DeckSeam.jsx, deckLayout.js) ----- */
 
+/* Round 4 (2026-11-12): the resting line is --di-faint (it was a white at 14%, one step too quiet on a
+   stage screen) and the grip is --di-ink (it was --di-dim); the zones are 12px or more on a mouse. */
 /* A seam's grab zone lies over the GAP between two panels and may grow only over EMPTY padding
    (S1: the layer strip's right padding; S4 and S5/S6 on a finger: the bottom panels' border and
    padding). It never lies over a clip tile or a control: a click there is the tile's. Numbers:
@@ -1057,19 +1091,37 @@
     background: var(--di-cyan);
 }
 
+/* The zone itself shows on hover (a wash) and more while dragging, so a border is found before it is
+   taken: rest = the faint line and the white grip, hover = cyan + wash, drag = cyan + the stronger tint. */
+.vj-deck-seam:hover {
+    background: var(--di-cyan-wash);
+}
+
+.vj-deck-seam.is-dragging {
+    background: var(--di-cyan-dim);
+}
+
+/* Locked (the viewer's own lock): the line stays, the border takes no pointer and shows no resize cursor. */
+.vj-deck-seam[data-locked] {
+    pointer-events: none;
+    cursor: default;
+    touch-action: auto;
+}
+
 /* No text selection while a seam is dragged (DeckSeam.jsx sets the mark on the deck root). */
 .vj-deck[data-seam-dragging] {
     user-select: none;
     -webkit-user-select: none;
 }
 
-/* S1: the layer strip's right padding (7px) and the 3px gap after it; the tiles start after the gap. */
+/* S1: the layer strip's right padding (12px) and the 3px gap after it; the zone is the last 9px of the
+   padding and the gap: 12px; the tiles start after the gap. */
 .vj-deck-seam[data-seam='s1'] {
-    --vj-zone: calc(var(--di-space-2) + var(--di-space-1));
-    --vj-lead: calc(var(--di-space-2) + var(--di-space-1) / 2);
+    --vj-zone: var(--di-space-3);
+    --vj-lead: calc(var(--di-space-3) - var(--di-space-1) + var(--di-space-1) / 2);
     top: 0;
     bottom: 0;
-    left: calc(var(--vj-head) - var(--di-space-2));
+    left: calc(var(--vj-head) - var(--di-space-3) + var(--di-space-1));
 }
 
 /* S2: exactly the gap between the clip grid and the monitor column. */
@@ -1079,13 +1131,14 @@
     right: var(--vj-monitor-w);
 }
 
-/* S4: exactly the gap under the main row (it hangs from the main row's foot). */
+/* S4: the 7px gap under the main row and 5px into the bottom panels' empty top border and padding: 12px
+   (it hangs from the main row's foot; the line stays in the middle of the gap). */
 .vj-deck-seam[data-seam='s4'] {
-    --vj-zone: var(--vj-gap);
+    --vj-zone: var(--di-space-3);
     --vj-lead: calc(var(--vj-gap) / 2);
     left: 0;
     right: 0;
-    bottom: calc(var(--vj-gap) * -1);
+    bottom: calc(var(--di-space-3) * -1);
 }
 
 /* S5 and S6: exactly the gaps between the three bottom panels. */
@@ -1126,6 +1179,76 @@
     }
 }
 
+/* --- fold: a bottom panel as a narrow rail (FoldButton.jsx, useDeckLayout.js) ------ */
+/* The fold button is first in every panel head. Open, it is a small quiet button with a minus; folded
+   (data-fold lists the folded panels on the deck root), the panel shows only that button: a plus and
+   the panel's name, turned to read along the rail. useDeckLayout.js writes --vj-fold-cols (a rail for
+   each folded panel, an equal share for the others) and no border is drawn beside a folded panel. */
+.vj-deck-panel-head .vj-deck-fold {
+    order: -1;
+    flex: none;
+    margin-left: 0;
+}
+
+.vj-deck-fold:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--di-cyan);
+}
+
+.vj-deck-fold[aria-disabled='true'] {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.vj-deck-fold-name {
+    display: none;
+}
+
+.vj-deck[data-fold~='sources'] .vj-deck-sources,
+.vj-deck[data-fold~='clip'] .vj-deck-clip,
+.vj-deck[data-fold~='effects'] .vj-deck-fx {
+    padding: 0;
+    overflow: hidden;
+}
+
+.vj-deck[data-fold~='sources'] .vj-deck-sources > :not(.vj-deck-panel-head),
+.vj-deck[data-fold~='clip'] .vj-deck-clip > :not(.vj-deck-panel-head),
+.vj-deck[data-fold~='effects'] .vj-deck-fx > :not(.vj-deck-panel-head),
+.vj-deck[data-fold~='sources'] .vj-deck-sources .vj-deck-panel-head > :not(.vj-deck-fold),
+.vj-deck[data-fold~='clip'] .vj-deck-clip .vj-deck-panel-head > :not(.vj-deck-fold),
+.vj-deck[data-fold~='effects'] .vj-deck-fx .vj-deck-panel-head > :not(.vj-deck-fold) {
+    display: none;
+}
+
+.vj-deck[data-fold~='sources'] .vj-deck-sources .vj-deck-fold-name,
+.vj-deck[data-fold~='clip'] .vj-deck-clip .vj-deck-fold-name,
+.vj-deck[data-fold~='effects'] .vj-deck-fx .vj-deck-fold-name {
+    display: inline;
+}
+
+/* Side by side: the rail is a column of its own, its name turned. */
+@container vjdeck (min-width: 684px) {
+    .vj-deck[data-fold] .vj-deck-bottom {
+        grid-template-columns: var(--vj-fold-cols);
+    }
+
+    .vj-deck[data-fold~='sources'] .vj-deck-sources .vj-deck-fold,
+    .vj-deck[data-fold~='clip'] .vj-deck-clip .vj-deck-fold,
+    .vj-deck[data-fold~='effects'] .vj-deck-fx .vj-deck-fold {
+        flex-direction: column;
+        height: 100%;
+        writing-mode: vertical-rl;
+    }
+}
+
+/* --- the K2 panel keeps every border reachable (G8) ----------------------- */
+/* The K2 panel (z-index 20, k2LayoutPanel.css) lies over the Effects panel and over the borders (z-index 3).
+   While it is open the borders go above it: only their own 12px strips lie over the panel, and what the
+   panel shows is not changed. */
+.vj-deck[data-k2='open'] .vj-deck-seam {
+    z-index: 21;
+}
+
 /* --- a narrow deck: a phone, or a small window ---------------------------- */
 
 @container vjdeck (max-width: 900px) {
@@ -1152,6 +1275,21 @@
     }
 }
 
+/* The bottom panels stack at 683px or less (NARROW.bottomStacked in deckLayout.js: 3 x 220 + 2 x 12 - 1).
+   Above it three panels of 220px or more sit side by side and both borders (s5, s6) exist: there is no
+   width between where the panels are side by side and have no border. Stacked panels take their own
+   height and the deck scrolls: squeezed into 40% they showed half a source row and one cut effect. */
+@container vjdeck (max-width: 683px) {
+    .vj-deck-bottom {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
+        flex: 0 0 auto;
+        min-height: 0;
+        max-height: none;
+        overflow: visible;
+    }
+}
+
 @container vjdeck (max-width: 560px) {
     .vj-deck-grid {
         --vj-head: 176px;
@@ -1164,17 +1302,6 @@
        the viewer can still hide Preview. The bottom panels stack. */
     .vj-deck[data-monitor-size='l'] {
         --vj-monitor-w-row: 0 1 128px;
-    }
-
-    /* Stacked panels take their own height and the deck scrolls: squeezed into 40% they
-       showed half a source row and one cut effect. */
-    .vj-deck-bottom {
-        grid-template-columns: minmax(0, 1fr);
-        grid-template-rows: none;
-        flex: 0 0 auto;
-        min-height: 0;
-        max-height: none;
-        overflow: visible;
     }
 
     .vj-deck-top {
