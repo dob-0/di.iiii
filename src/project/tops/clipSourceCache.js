@@ -13,10 +13,48 @@
 // of the same address plays the same blob. The connection is free again the
 // moment the download ends. A file larger than `maxBytes`, or a fetch that
 // fails, resolves to null and the caller plays the address directly, as before.
+//
+// Parking: with a budget set (setClipParkBytes, 0 = off), a file nobody plays
+// any more is kept in memory instead of dropped, oldest-first out once the
+// parked files together pass the budget. Launching a clip again then costs no
+// download, which is what a performer on a deck needs.
 
 export const CLIP_MEMORY_MAX_BYTES = 768 * 1024 * 1024
 
-const cache = new Map() // address → { promise: Promise<string|null>, refs, objectUrl }
+const cache = new Map() // address → { promise: Promise<string|null>, refs, objectUrl, bytes, parkedAt, revoke }
+let parkBudget = 0
+let parkCounter = 0
+
+const parkedEntries = () => [...cache.entries()].filter(([, entry]) => entry.parkedAt > 0)
+
+// Over budget: drop the oldest parked file first. A file bigger than the whole budget goes at once.
+const enforceBudget = () => {
+    const parked = parkedEntries().sort((a, b) => a[1].parkedAt - b[1].parkedAt)
+    let total = parked.reduce((sum, [, entry]) => sum + entry.bytes, 0)
+    while (total > parkBudget && parked.length) {
+        const [url, entry] = parked.shift()
+        total -= entry.bytes
+        cache.delete(url)
+        if (entry.objectUrl) {
+            entry.revoke(entry.objectUrl)
+            entry.objectUrl = ''
+        }
+    }
+}
+
+const park = (entry) => {
+    entry.parkedAt = ++parkCounter
+    enforceBudget()
+}
+
+/** How much memory parked clips may hold; 0 (the default) keeps nothing once the last reader lets go. */
+export const setClipParkBytes = (bytes) => {
+    parkBudget = Math.max(0, Number(bytes) || 0)
+    enforceBudget()
+}
+
+/** Bytes held by clips nobody is playing right now. */
+export const clipSourceParkedBytes = () => parkedEntries().reduce((sum, [, entry]) => sum + entry.bytes, 0)
 
 /**
  * @param {string} url
@@ -31,7 +69,7 @@ export const acquireClipSource = (url, {
 } = {}) => {
     let entry = cache.get(url)
     if (!entry) {
-        entry = { refs: 0, objectUrl: '', promise: null }
+        entry = { refs: 0, objectUrl: '', promise: null, bytes: 0, parkedAt: 0, revoke: revokeObjectURL }
         const created = entry
         created.promise = (async () => {
             try {
@@ -45,9 +83,12 @@ export const acquireClipSource = (url, {
                 }
                 const blob = await response.blob()
                 if (blob.size > maxBytes) return null
-                // Released while it was still downloading: nobody will play it.
-                if (created.refs <= 0) return null
+                // Released while it was still downloading: nobody will play it, unless parking is on.
+                if (created.refs <= 0 && parkBudget <= 0) return null
+                created.bytes = Number(blob.size) || 0
                 created.objectUrl = createObjectURL(blob)
+                // Released during the download: it is parked now that its size is known.
+                if (created.refs <= 0 && cache.get(url) === created) park(created)
                 return created.objectUrl
             } catch {
                 return null
@@ -55,6 +96,7 @@ export const acquireClipSource = (url, {
         })()
         cache.set(url, entry)
     }
+    entry.parkedAt = 0
     entry.refs += 1
     const held = entry
     let released = false
@@ -63,6 +105,17 @@ export const acquireClipSource = (url, {
         released = true
         held.refs -= 1
         if (held.refs > 0) return
+        if (parkBudget > 0 && cache.get(url) === held) {
+            if (held.objectUrl) {
+                park(held)
+            } else {
+                // Still downloading: the download parks itself when it ends. A failed one is simply dropped.
+                held.promise.then((objectUrl) => {
+                    if (!objectUrl && held.refs <= 0 && cache.get(url) === held) cache.delete(url)
+                })
+            }
+            return
+        }
         if (cache.get(url) === held) cache.delete(url)
         held.promise.then(() => {
             if (!held.objectUrl) return
@@ -73,5 +126,5 @@ export const acquireClipSource = (url, {
     return { promise: held.promise, release }
 }
 
-/** For tests. */
+/** Entries in the cache, parked ones included. For tests. */
 export const clipSourceCacheSize = () => cache.size

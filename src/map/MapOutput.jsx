@@ -4,6 +4,8 @@ import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
 import { mapOutputReason } from './mapOutputReason.js'
 import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { overlayDeckLive, useDeckLive } from '../project/tops/deckLive.js'
+import { setClipParkBytes } from '../project/tops/clipSourceCache.js'
+import { useClipWarmup } from '../project/tops/clipWarmup.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import RigBlackout from '../rig/RigBlackout.jsx'
 import useScreenWakeLock from '../hooks/useScreenWakeLock.js'
@@ -48,6 +50,14 @@ export default function MapOutput({ projectId, spaceId }) {
     // ?clean=1 — the show wall: nothing but the picture, ever. No buttons and no cursor even while the mouse
     // moves over it (a second display the mouse wanders onto in the middle of a set).
     const [isClean] = useState(() => isCleanRequest())
+    // The show wall keeps every deck clip in memory: the files are fetched once at load and kept,
+    // so a launched clip starts at once instead of after its download.
+    useEffect(() => {
+        if (!isClean) return undefined
+        setClipParkBytes(384 * 1024 * 1024)
+        return () => setClipParkBytes(0)
+    }, [isClean])
+    useClipWarmup(doc, { spaceId, projectId, enabled: isClean })
     const { machine } = useMachinePresence(isPreview ? null : spaceId, { ndi: 'poll' })
     useEffect(() => {
         if (isPreview && doc) signalPreviewReady(spaceId)
