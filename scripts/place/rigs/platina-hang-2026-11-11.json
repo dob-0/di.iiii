@@ -263,7 +263,8 @@
     2.5,
     0.1
    ],
-   "source": "plot-front.png outline x 610..1014, y 438..690 on grid 1 m; plot-side.png faces x 451/463 (thickness), bottom y 741; screen-from-plot-8x5.png (same size)"
+   "source": "plot-front.png outline x 610..1014, y 438..690 on grid 1 m; plot-side.png faces x 451/463 (thickness), bottom y 741; screen-from-plot-8x5.png (same size)",
+   "opaque": true
   },
   {
    "id": "platina-truss-over",
@@ -286,7 +287,8 @@
     0.38
    ],
    "sections": 4,
-   "source": "x/length plot-top.png (y 385, x 518..1128, grid 76.4 px/m), cross-check plot-front.png length; z and height plot-side.png (square at x 700..742, y 62..102)"
+   "source": "x/length plot-top.png (y 385, x 518..1128, grid 76.4 px/m), cross-check plot-front.png length; z and height plot-side.png (square at x 700..742, y 62..102)",
+   "opaque": true
   },
   {
    "id": "platina-truss-aud",
@@ -309,7 +311,8 @@
     0.38
    ],
    "sections": 4,
-   "source": "plot-top.png y 860, x 525..1135; z and height plot-side.png (square at x 1425..1463)"
+   "source": "plot-top.png y 860, x 525..1135; z and height plot-side.png (square at x 1425..1463)",
+   "opaque": true
   },
   {
    "id": "platina-deck",
@@ -347,7 +350,8 @@
     ]
    ],
    "outline_note": "front arc through its two ends and its middle (plot-top.png y 645 at x 298/1365, y 713 at x 832)",
-   "source": "plot-front.png deck x 107..1517, deck height 0.62 m (front) / 0.59 m (side), z plot-side.png 339..1228"
+   "source": "plot-front.png deck x 107..1517, deck height 0.62 m (front) / 0.59 m (side), z plot-side.png 339..1228",
+   "opaque": true
   },
   {
    "id": "platina-wing-l1",
@@ -370,7 +374,8 @@
     6.62,
     0.35
    ],
-   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834",
+   "opaque": true
   },
   {
    "id": "platina-wing-r1",
@@ -393,7 +398,8 @@
     6.62,
     0.35
    ],
-   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked",
+   "opaque": true
   },
   {
    "id": "platina-wing-l2",
@@ -416,7 +422,8 @@
     6.62,
     0.35
    ],
-   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834",
+   "opaque": true
   },
   {
    "id": "platina-wing-r2",
@@ -439,7 +446,8 @@
     6.62,
     0.35
    ],
-   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked",
+   "opaque": true
   },
   {
    "id": "platina-wing-l3",
@@ -462,7 +470,8 @@
     6.62,
     0.35
    ],
-   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834",
+   "opaque": true
   },
   {
    "id": "platina-wing-r3",
@@ -485,7 +494,8 @@
     6.62,
     0.35
    ],
-   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked",
+   "opaque": true
   },
   {
    "id": "platina-wing-l4",
@@ -508,7 +518,8 @@
     6.62,
     0.35
    ],
-   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834"
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834",
+   "opaque": true
   },
   {
    "id": "platina-wing-r4",
@@ -531,7 +542,8 @@
     6.62,
     0.35
    ],
-   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked"
+   "source": "plan from plot-top.png (rectangles at y 230/320/439/548, 27 px deep); height plot-front.png y 166..834; mirrored from the left, right-hand edges checked",
+   "opaque": true
   },
   {
    "id": "platina-riser-l",
@@ -554,7 +566,8 @@
     0.99,
     1.5
    ],
-   "source": "plot-top.png box x -4.71..-2.72 m, z; height plot-front.png y 672..772"
+   "source": "plot-top.png box x -4.71..-2.72 m, z; height plot-front.png y 672..772",
+   "opaque": true
   },
   {
    "id": "platina-riser-r",
@@ -577,7 +590,8 @@
     0.99,
     1.5
    ],
-   "source": "plot-top.png box x 2.64..4.65 m, z; height plot-front.png y 672..772"
+   "source": "plot-top.png box x 2.64..4.65 m, z; height plot-front.png y 672..772",
+   "opaque": true
   },
   {
    "id": "platina-tower-1",
@@ -600,7 +614,8 @@
     1.59,
     0.1
    ],
-   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)",
+   "opaque": true
   },
   {
    "id": "platina-tower-2",
@@ -623,7 +638,8 @@
     1.59,
     0.1
    ],
-   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)",
+   "opaque": true
   },
   {
    "id": "platina-tower-3",
@@ -646,7 +662,8 @@
     1.59,
     0.1
    ],
-   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)",
+   "opaque": true
   },
   {
    "id": "platina-tower-4",
@@ -669,7 +686,8 @@
     1.59,
     0.1
    ],
-   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)",
+   "opaque": true
   },
   {
    "id": "platina-tower-5",
@@ -692,7 +710,8 @@
     1.59,
     0.1
    ],
-   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)",
+   "opaque": true
   },
   {
    "id": "platina-tower-6",
@@ -715,7 +734,8 @@
     1.59,
     0.1
    ],
-   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)",
+   "opaque": true
   },
   {
    "id": "platina-tower-7",
@@ -738,7 +758,8 @@
     1.59,
     0.1
    ],
-   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)",
+   "opaque": true
   },
   {
    "id": "platina-tower-8",
@@ -761,7 +782,8 @@
     1.59,
     0.1
    ],
-   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)"
+   "source": "plot-front.png pole under the bars (x lines 159..170 and the like)",
+   "opaque": true
   },
   {
    "id": "platina-stand-l",
@@ -784,7 +806,8 @@
     2.63,
     0.06
    ],
-   "source": "plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)"
+   "source": "plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)",
+   "opaque": true
   },
   {
    "id": "platina-stand-r",
@@ -807,7 +830,27 @@
     2.63,
     0.06
    ],
-   "source": "plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)"
+   "source": "plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)",
+   "opaque": true
+  },
+  {
+   "id": "platina-floor",
+   "name": "hall floor (size PROPOSED, the hall is not measured)",
+   "kind": "box",
+   "anchor": "base",
+   "status": "PROPOSED",
+   "p": [
+    0,
+    -0.05,
+    7.0
+   ],
+   "s": [
+    24.0,
+    0.05,
+    30.0
+   ],
+   "source": "no hall record; owner N3835: light stops at the first surface",
+   "opaque": true
   }
  ],
  "fixtures": [

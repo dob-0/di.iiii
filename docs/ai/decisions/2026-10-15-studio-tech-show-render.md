@@ -58,7 +58,7 @@ reads the same schematic in every version). Try in that section stays a Studio-s
 - "Lamp bodies dark" in Show: the bodies render as they do today; a darker body material is owed if the GPU look asks.
 - The look is unvalidated until seen on the GPU (v2-11 "second-drop" and "green-breath", Tech and Show from one camera).
 
-## Addendum 2026-11-12 — Tech as the operator mode (owner N3818; OPEN for the owner's yes)
+## Addendum 2026-11-12 — Tech as the operator mode (owner N3818; ACCEPTED 2026-11-12 05:54, owner N3986 "i think go all with suggested", relayed by the lead; the lead named this change in his list)
 
 Tech now keeps what an operator needs to check a running cue: the rig's data holders (`rigLooks`, `rigParts`, `venuePlan`), so
 the cue plays and the SHOW chip and SCENES row are present; the stage solids of a room that holds a rig; and an image or video
