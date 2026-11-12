@@ -229,6 +229,8 @@ export const normalizeDeck = (raw) => {
             bypass: layer.bypass === true,
             solo: layer.solo === true,
             side: sideOf(layer.side),
+            // OVER: the layer is laid on after the master's effects (a title over the finished picture).
+            over: layer.over === true,
             effects: normalizeEffects(layer.effects),
             clips
         }
@@ -583,7 +585,7 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     }
     let below = null
     const anySolo = deck.layers.some((layer) => layer.solo)
-    deck.layers.forEach((layer, index) => {
+    const lay = (layer, index) => {
         // Bypass, solo, the crossfader and opacity 0 silence a layer by its blend's
         // mix, NEVER by dropping its nodes: a dropped source is destroyed and made
         // again (a camera closes and reopens, a video restarts). The source and the
@@ -628,9 +630,12 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
         if (below) wires.push({ from: below, to: blend, port: 'a' })
         wires.push({ from: runStack(layer.effects, source, (id) => layerEffectNodeId(deckId, index, id), (id) => layerEffectMixNodeId(deckId, index, id), opacity <= 0), to: blend, port: 'b' })
         below = blend
-    })
+    }
+    deck.layers.forEach((layer, index) => { if (!layer.over) lay(layer, index) })
 
     if (below) below = runStack(deck.effects, below, (id) => masterEffectNodeId(deckId, id), (id) => masterEffectMixNodeId(deckId, id))
+    // The OVER layers go on last, in their own order: the master's effects never touch them.
+    deck.layers.forEach((layer, index) => { if (layer.over) lay(layer, index) })
     nodes.push({
         id: master,
         type: 'top.level',
