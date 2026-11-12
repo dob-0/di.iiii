@@ -22,6 +22,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | --- | --- |
 | **space** | A place that is yours: an address, a guest list, and everything in it. A real place is ONE space; coming back to a job continues its project, it never makes a sibling ("continue, never recreate", 2026-11-02, `docs/ai/decisions/2026-11-02-continue-never-recreate.md`). |
 | **project** | One thing you make inside a space. |
+| **shelf** | A named group of projects inside a space. It groups work without becoming a place of its own; deleting a shelf never deletes the work on it, and a project on no shelf is listed under "Not on a shelf". Made and filled in Studio, shown as a heading on a space's project pages. In the data it is a collection; the word a person reads is shelf. Added 2026-11-12. |
 | **canvas** | The surface your nodes sit on. |
 | **node** | One card on the canvas. |
 | **object** | One thing standing in the scene. |
@@ -34,6 +35,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 | **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
+| **Perform** | The tool that runs a project as a show: the VJ deck, the wall and the lights on screen, and nothing else. Opens at `/{space}/perform/{project}`. A door to it never names a layout: the show's default or the last one used on the device opens (`src/perform/presets.js`). The capital is the tool; to perform is the verb. Added 2026-11-12. |
 | **Light** | The lighting desk: patch, looks, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
 | **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
 | **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |

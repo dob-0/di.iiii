@@ -174,10 +174,18 @@ export const WIKI_ARTICLES = [
             'Two ways in. Every card on /spaces carries an “Everything inside” line, and inside a public room a second corner mark next to “Made with di.iiii” opens the same list — it appears only when there is more than one thing in the space, because a room that is the whole of its space has nothing to send you to.',
             'A space holding one thing, and that thing being the front door, sends you to the room instead. A list whose only row is the room you would already be standing in says less than the room does.',
             'Filing is somewhere else. Drafts, archived work, shelves and the trash live in Studio, at /<space>/studio, and this page only says so — to somebody who could already get in.',
-            'A page that is code is listed too. Two of di.iiii’s own exhibitions have a front page written as code rather than made in the editor — the WCC landing at /wcc is one — so no database row exists for it and a list built by asking the server what a space holds could not see it. It is listed all the same, first, as the way in: the real page, not a copy of it. Being code is what it is, not where it hides — it opens like any other row, and it is changed by changing the code.'
+            'A page that is code is listed too. Two of di.iiii’s own exhibitions have a front page written as code rather than made in the editor — the WCC landing at /wcc is one — so no database row exists for it and a list built by asking the server what a space holds could not see it. It is listed all the same, first, as the way in: the real page, not a copy of it. Being code is what it is, not where it hides — it opens like any other row, and it is changed by changing the code.',
+            'FOR A MEMBER, THE SAME PAGE HAS DOORS AND SHELVES. A member is someone who can edit the space. A visitor sees the page exactly as described above, and nothing more is asked of the server for them.',
+            { list: [
+                'A door strip sits under each project, and on each project card in Studio and in Nodes: Perform, Studio and Nodes, and Projection and Light when the project holds them. One press goes straight to that tool for that project, so the deck is one press away instead of three to five. A door opens the tool in the layout the show chose, or the one you used last; it never forces one.',
+                'A project that is a page, made of code, gets no doors: there is nothing in it for these tools to open. On a card, the door for the tool the card already opens is left out.',
+                'When the space has shelves, the page groups its projects under a heading for each shelf, in the shelves’ own order, and anything not on a shelf comes last under “Not on a shelf”. A shelf with nothing to show says “Nothing on this shelf yet.” A space with no shelves looks as it did before. If the shelves cannot be loaded, the list stays flat and says “The shelves did not load, so this list is not grouped.”',
+                'The strips and headings appear a moment after the rows, once the member’s own list has answered.',
+                'The list that Nodes opens at space level now says what it is: “Pick a project. A card opens it in Nodes.” The Studio list says the same with Studio. It is a picker, and the card you press opens that project in that tool.'
+            ] }
         ],
-        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page', 'code'],
-        updated: '2026-09-10'
+        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page', 'code', 'doors', 'perform', 'shelves', 'members', 'nodes'],
+        updated: '2026-11-12'
     },
     {
         id: 'the-front-door',

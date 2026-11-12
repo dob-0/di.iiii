@@ -6,6 +6,8 @@ import { buildRawProjectPath, buildRawProjectsPath } from '../../raw/utils/rawRo
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import GridFloorBackground from '../../components/GridFloorBackground.jsx'
 import useAuthSession from '../../hooks/useAuthSession.js'
+import useLocalInstall from '../../hooks/useLocalInstall.js'
+import { useAllTools } from '../utils/jamMode.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
     createProject,
@@ -26,6 +28,8 @@ import { newProjectDestination } from '../utils/newProjectEntry.js'
 import { buildStudioHubPath, buildStudioProjectPath, buildSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { describeProjectLayers } from '../../project/layers.js'
+import { doorsForListRow } from '../../project/doors.js'
+import { groupByShelf } from '../../project/shelves.js'
 import '../styles/studio-hub.css'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 
@@ -55,7 +59,6 @@ const formatSource = (source = '') => {
 // created on an older build and synced in can still arrive wearing one.
 const isArchivedTitle = (title = '') => title.trimStart().startsWith('[archived]')
 const projectState = (project) => project?.state || (isArchivedTitle(project?.title) ? 'archived' : 'live')
-const UNSHELVED = '__loose__'
 
 // A space has one project list. Studio's address and Nodes' address both show
 // it; the only thing that differs is which editor a card opens in, and the one
@@ -65,11 +68,20 @@ const UNSHELVED = '__loose__'
 // the system", in the owner's words.
 const TOOLS = {
     studio: {
+        // `name` is what the page says a card opens in. `from` is the desk a
+        // card's Perform door says it came from, and `own` is the one door a
+        // card does not repeat, because the card itself opens it.
+        name: 'Studio',
+        from: 'studio',
+        own: 'studio',
         source: 'studio-v3',
         open: (projectId, spaceId) => navigateToStudioPath(buildStudioProjectPath(projectId, spaceId)),
         other: { label: 'Nodes', title: 'The node editor', path: buildRawProjectsPath }
     },
     nodes: {
+        name: 'Nodes',
+        from: 'raw',
+        own: 'raw',
         source: 'raw-v2',
         open: (projectId, spaceId) => appNavigate(buildRawProjectPath(projectId, spaceId)),
         other: { label: 'Studio', title: 'Open this space in Studio', path: buildStudioHubPath }
@@ -79,6 +91,10 @@ const TOOLS = {
 export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn = 'studio', children = null }) {
     const tool = TOOLS[openIn] || TOOLS.studio
     const { role, openSpaceId } = useAuthSession()
+    // What decides which doors a card offers: the install (Light opens another
+    // way on a local one) and the top bar's own "All tools" switch.
+    const { isLocal: isLocalInstall } = useLocalInstall()
+    const allTools = useAllTools()
     const [projects, setProjects] = useState([])
     const [status, setStatus] = useState('loading...')
     const [isBusy, setIsBusy] = useState(false)
@@ -110,22 +126,9 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
 
     // The shelves, in their order, each with what is on it — and everything
     // else under one last heading. A space with no shelves renders exactly as
-    // it did before: one grid, no headings, nothing to learn.
-    const shelved = useMemo(() => {
-        if (!collections.length) return [{ id: UNSHELVED, label: null, items: visibleProjects }]
-        const byShelf = new Map(collections.map(c => [c.id, []]))
-        const loose = []
-        for (const project of visibleProjects) {
-            const bucket = project.collectionId && byShelf.has(project.collectionId)
-                ? byShelf.get(project.collectionId)
-                : loose
-            bucket.push(project)
-        }
-        return [
-            ...collections.map(c => ({ id: c.id, label: c.label, items: byShelf.get(c.id) || [] })),
-            ...(loose.length ? [{ id: UNSHELVED, label: 'Not on a shelf', items: loose }] : [])
-        ]
-    }, [collections, visibleProjects])
+    // it did before: one grid, no headings, nothing to learn. The grouping is
+    // shared with the space page (src/project/shelves.js).
+    const shelved = useMemo(() => groupByShelf(visibleProjects, collections), [collections, visibleProjects])
 
     useEffect(() => {
         setSpaceLabel(spaceId)
@@ -386,6 +389,21 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
     // per shelf — without the card being written three times.
     const renderProjectCard = (project) => {
         const isRenaming = renamingId === project.id
+        // The other places this project opens: Perform, and whichever of Studio
+        // and Nodes this card does not open itself, plus Projection and Light
+        // when the card's own counts say the project reached them. A row is read
+        // in one place (doorsForListRow): a page that is read (layers.page) has
+        // no desk, so it gets none.
+        const doors = isRenaming
+            ? []
+            : doorsForListRow(project, {
+                space: spaceId,
+                from: tool.from,
+                isLocalInstall,
+                allTools
+            }).filter(door => door.key !== tool.own)
+        // The project this space opens on: the same mark the space page uses.
+        const isWayIn = !codeSpace && Boolean(project.id) && spaceMeta?.publishedProjectId === project.id
         return (
             <div
                 key={project.id}
@@ -447,6 +465,23 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                         </div>
                     )}
                 </div>
+                {doors.length > 0 && (
+                    // The doors are links, not buttons: a middle click opens a new
+                    // tab, and a click on one never reaches the card. A group with a
+                    // name is a non-interactive role, so this is the rule that fires.
+                    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+                    <div
+                        className="sh-card-doors"
+                        role="group"
+                        aria-label={`Open ${project.title || project.id} in`}
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={e => e.stopPropagation()}
+                    >
+                        {doors.map(door => (
+                            <a key={door.key} className="sh-door" href={door.href}>{door.label}</a>
+                        ))}
+                    </div>
+                )}
                 {/* What the project holds, in one line — "3 things · 2 wires ·
                     1 surface · 1 lamp", or "empty" — worked out by the server
                     from the document (src/project/layers.js), never stored. A
@@ -455,6 +490,9 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                     <p className="sh-code-blurb">{describeProjectLayers(project.layers)}</p>
                 )}
                 <div className="sh-project-meta">
+                    {isWayIn && (
+                        <span className="sh-way-in" title="What this space opens on">the way in</span>
+                    )}
                     <span className="sh-meta-tag">{formatRelativeDate(project.updatedAt)}</span>
                     <span className="sh-meta-tag">{formatSource(project.source)}</span>
                     {projectState(project) !== 'live' && (
@@ -544,6 +582,9 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID, openIn =
                     <div>
                         <p className="sh-space-context">Space: {spaceLabel}</p>
                         <h1 className="sh-title">projects</h1>
+                        <p className="sh-tool-line">
+                            Pick a project. A card opens it in <strong className="sh-tool-name">{tool.name}</strong>.
+                        </p>
                     </div>
                     {creatingTitle === null ? (
                         <div className="sh-top-actions">

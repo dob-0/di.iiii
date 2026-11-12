@@ -5,6 +5,7 @@ import {
     STUDIO_PAGE_PROJECT,
     STUDIO_PAGE_DIRECTOR,
     DEFAULT_STUDIO_SPACE_ID,
+    buildStudioDeckPath,
     buildStudioDirectorPath,
     buildStudioHubPath,
     buildStudioSpacesPath,
@@ -172,6 +173,14 @@ describe('studioRouting', () => {
         expect(getStudioLocationState(new URL('https://example.com/wcc/studio')).page).toBe(STUDIO_PAGE_HUB)
         expect(getStudioLocationState(new URL('https://example.com/studio')).page).toBe(STUDIO_PAGE_SPACES)
         expect(getStudioLocationState(new URL('https://example.com/wcc/studio/projects/abc')).projectId).toBe('abc')
+    })
+
+    it('the deck door from Studio names no layout and carries from=studio', () => {
+        const address = buildStudioDeckPath('gallery', 'demo-project')
+        expect(address).toBe('/gallery/perform/demo-project?from=studio')
+        // No preset in the address: a show default or the last used layout wins.
+        expect(new URL(address, 'https://example.com').searchParams.has('preset')).toBe(false)
+        expect(new URL(address, 'https://example.com').searchParams.get('from')).toBe('studio')
     })
 
     it('does not mistake a deeper path for the projects list', () => {

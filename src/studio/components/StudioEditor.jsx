@@ -28,10 +28,9 @@ import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAsse
 import { spaceAddressOf } from '../../utils/spaceAddress.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildShareUrl } from '../../utils/spaceRouting.js'
 import { buildStudioPreviewUrl } from '../utils/previewUrl.js'
-import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildSpaceProjectsPath, buildStudioDeckPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
-import { buildPerformPath } from '../../perform/performRouting.js'
 import { buildScreenOps, buildVideoToScreenOps, findPictureSource, screenSurfaceOptions } from '../utils/screenOps.js'
 import { ScreenActionsContext } from './ScreenActionsContext.js'
 import { useStudioCues } from '../hooks/useStudioCues.js'
@@ -1453,7 +1452,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const studioHeading = document.projectMeta?.title || projectId
     const screenActions = useMemo(() => ({
         openProjection: () => navigateToStudioPath(buildMapPath(resolvedSpaceId, projectId)),
-        openDeck: () => navigateToStudioPath(buildPerformPath(resolvedSpaceId, projectId, { preset: 'vj', from: 'studio' })),
+        openDeck: () => navigateToStudioPath(buildStudioDeckPath(resolvedSpaceId, projectId)),
         convertToScreen: selectedEntity?.type === 'video'
             ? () => {
                 const made = buildVideoToScreenOps(document, selectedEntity, { createdBy: currentAuthor(displayName) })
