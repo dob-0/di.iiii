@@ -93,6 +93,14 @@ export const matteWanted = (node) => node?.values?.unseen !== true
  *
  * Pure: tested without a GL context (topEngine.blank.test.js).
  */
+// A picture counts as seen only when the model run really started; otherwise a still source
+// would never be asked again (same pixels, same=true, no mask for the rest of the show).
+export function rememberMatteRun(state, words, submitted) {
+    if (!submitted) { state.previous = null; return }
+    state.previous = state.previous || new Uint32Array(words.length)
+    state.previous.set(words)
+}
+
 export const blankRule = ({ type, source = false, inputs = {}, blank = new Set() } = {}) => {
     if (source) return null
     if (type === 'top.blend') {
@@ -456,7 +464,8 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         if (state.frame === matteFrames) return state
         state.frame = matteFrames
         const service = bodyMatte()
-        if (service.status() !== 'ready' || !readSource) { state.ready = false; return state }
+        // Not ready: forget the picture seen, so the first frame after the model is back runs again.
+        if (service.status() !== 'ready' || !readSource) { state.ready = false; state.previous = null; return state }
         // Not this source's turn (the budget went to an older mask): it keeps the mask it has.
         if (!matteAllowed.has(sourceId)) return state
         if (!matteTarget) {
@@ -470,8 +479,6 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
         let same = state.previous !== null
         if (same) for (let i = 0; i < words.length; i += 1) if (words[i] !== state.previous[i]) { same = false; break }
         if (same) return state
-        state.previous = state.previous || new Uint32Array(words.length)
-        state.previous.set(words)
         // A fresh array each run: it is handed to the worker (transferred), not kept.
         const data = new Uint8ClampedArray(MATTE_W * MATTE_H * 4)
         const rowBytes = MATTE_W * 4
@@ -479,7 +486,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             data.set(mattePixels.subarray((MATTE_H - 1 - y) * rowBytes, (MATTE_H - y) * rowBytes), y * rowBytes)
         }
         for (let i = 3; i < data.length; i += 4) data[i] = 255
-        service.submit(sourceId, { data, width: MATTE_W, height: MATTE_H })
+        rememberMatteRun(state, words, service.submit(sourceId, { data, width: MATTE_W, height: MATTE_H }))
         return state
     }
 
