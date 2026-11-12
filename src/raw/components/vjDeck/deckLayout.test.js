@@ -137,8 +137,10 @@ describe('clamp', () => {
     })
 
     it('a seam that is not shown writes nothing', () => {
-        const narrow = { ...BOX, width: 650 }
-        expect(resolveLayout({ head: 0.1, monitorW: 0.1, bottomH: 0.3, cols: [0.3, 0.3] }, narrow)).toEqual({ bottomH: expect.any(Number) })
+        // Batch 4 stacks the bottom row at 683 px, so 650 px shows no seam at all; 700 px shows the bottom seams but not head/monitor.
+        const narrow = { ...BOX, width: 700 }
+        expect(resolveLayout({ head: 0.1, monitorW: 0.1, bottomH: 0.3 }, narrow)).toEqual({ bottomH: expect.any(Number) })
+        expect(resolveLayout({ head: 0.1, monitorW: 0.1, bottomH: 0.3, cols: [0.3, 0.3] }, { ...BOX, width: 650 })).toEqual({})
         expect(resolveLayout({ head: 0.1, bottomH: 0.3, cols: [0.3, 0.3] }, { ...BOX, width: 500 })).toEqual({})
     })
 
