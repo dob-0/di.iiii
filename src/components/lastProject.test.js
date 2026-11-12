@@ -49,7 +49,7 @@ describe('last project', () => {
         expect(readLastProjectOf('s0')).toBe(null)
         expect(readLastProjectOf('s54')).toBe('p')
         window.localStorage.setItem('dii.lastProjectBySpace', '[1,2')
-        expect(readLastProjectOf('s54')).toBe(null)
+        expect(readLastProjectOf('s50')).toBe(null) // only the tab's own last space (s54) can still answer
         expect(() => rememberProject('s1', 'q')).not.toThrow()
         expect(readLastProjectOf('s1')).toBe('q')
     })
