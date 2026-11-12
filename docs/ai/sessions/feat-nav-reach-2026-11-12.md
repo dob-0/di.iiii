@@ -65,3 +65,10 @@ Second run on GitHub: 6 tests of `src/components/surfaceBar.embed.test.jsx` time
 `listCollections`, and the review round had moved the reader's name outside the promise, so reading the name threw inside the effect
 and unmounted the page ("[vitest] No "listCollections" export is defined on the ... mock"). Each read now starts inside its own
 promise, the name included. That test file is the guard: it fails again if the read moves out.
+
+Picture-and-click check on GitHub (`.github/workflows/reach-check.yml`, `scripts/reach-check.mjs`, seed `scripts/seed-reach-check.mjs`): a seeded
+space `navtest` (alpha on shelf Show, beta on Archive, `home` the way in) is walked as a member and as a visitor, on a desktop and an iPhone 15 Pro
+viewport: the door strip and the shelf order, one click from a Perform door to `/navtest/perform/scene-alpha`, the tool line and the missing own-tool
+door on the Studio and Nodes lists, and no strips or shelves for a visitor. One screenshot per step goes to artifact `reach-pictures` with `report.json`.
+It is report-only (`continue-on-error`) until after the show on 2026-11-14; remove that line then. By hand, against a stack running with REQUIRE_AUTH=true:
+`node scripts/seed-reach-check.mjs --token <tok>` then `npm run check:reach -- --base <url> --token <tok>`.

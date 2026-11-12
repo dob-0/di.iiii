@@ -1,0 +1,123 @@
+name: Reach check
+
+# Picture-and-click check for the doors and shelves (PR #1278): a seeded space
+# `navtest`, a member and a visitor, desktop and phone, one screenshot per step.
+# See scripts/reach-check.mjs and docs/ai/sessions/feat-nav-reach-2026-11-12.md.
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - 'src/pages/SpaceContentsPage.jsx'
+      - 'src/pages/spaceContents.css'
+      - 'src/project/doors.js'
+      - 'src/project/shelves.js'
+      - 'src/project/layers.js'
+      - 'src/studio/components/StudioHub.jsx'
+      - 'src/studio/styles/studio-hub.css'
+      - 'src/components/SurfaceBar.jsx'
+      - 'scripts/reach-check.mjs'
+      - 'scripts/seed-reach-check.mjs'
+      - '.github/workflows/reach-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reach-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          if [ -f serverXR/package-lock.json ]; then
+            npm --prefix serverXR ci
+          else
+            npm --prefix serverXR install
+          fi
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # Same bounded retry as browser-checks.yml: a stalled apt phase must not
+      # hold the dpkg lock for the second attempt.
+      - name: Install Playwright Chromium
+        timeout-minutes: 11
+        run: |
+          timeout 300 npx playwright install --with-deps chromium || {
+            echo "attempt 1 did not finish in 300s -- clearing leftover apt and retrying"
+            sudo pkill -9 -f 'apt-get|dpkg' 2>/dev/null || true
+            for i in $(seq 1 30); do
+              sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || break
+              sleep 2
+            done
+            sudo dpkg --configure -a || true
+            timeout 300 npx playwright install --with-deps chromium
+          }
+
+      # REQUIRE_AUTH=true so a visitor is a visitor (with it off every visitor
+      # counts as a member). serverXR/src/config.js:212-217 needs one auth token
+      # (ADMIN_API_TOKEN) and a session secret (AUTH_SESSION_SECRET) for it.
+      - name: Start seeded server + frontend
+        run: |
+          mkdir -p /tmp/reach-data
+          (cd serverXR && REQUIRE_AUTH=true AUTH_SESSION_SECRET=ci-throwaway-session-secret DATA_ROOT=/tmp/reach-data ADMIN_API_TOKEN=ci-seed node src/index.js > /tmp/serverxr.log 2>&1 &)
+          # plain vite, NOT `npm run dev` (that launcher would spawn a second serverXR)
+          npx vite --port 5173 > /tmp/vite.log 2>&1 &
+          ok=""
+          for i in $(seq 1 120); do
+            if curl -sf http://localhost:4000/serverXR/api/health > /dev/null && curl -sf http://localhost:5173 > /dev/null; then ok=1; break; fi
+            sleep 1
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::server or frontend never came up"
+            tail -n 30 /tmp/serverxr.log /tmp/vite.log
+            exit 1
+          fi
+
+      - name: Seed the navtest space
+        run: node scripts/seed-reach-check.mjs --token ci-seed
+
+      # Report-only until after the show on 2026-11-14: a red result here must
+      # not block a merge before then. Remove continue-on-error afterwards.
+      - name: Reach check (member and visitor, desktop and phone)
+        continue-on-error: true
+        run: node scripts/reach-check.mjs --base http://localhost:5173 --token ci-seed --out /tmp/reach
+
+      # verify-surfaces only reads (it signs in, loads pages, screenshots); it
+      # seeds only the /raw browser storage. --settle 3000 keeps it short.
+      - name: Surface audit (the three list pages, signed in)
+        continue-on-error: true
+        run: node scripts/verify-surfaces.mjs --base http://localhost:5173 --pages /navtest/projects,/navtest/studio,/navtest/raw/projects --token ci-seed --settle 3000 --out /tmp/verify-surfaces
+
+      - name: Upload pictures
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: reach-pictures
+          path: |
+            /tmp/reach
+            /tmp/verify-surfaces
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -n 50 /tmp/serverxr.log /tmp/vite.log || true
