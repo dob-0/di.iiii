@@ -432,3 +432,10 @@ describe('a unit with its own profile (the fixture library\'s real figures, 2026
         expect(e.components.light).toBeUndefined()
     })
 })
+
+describe('epic-build: an opaque solid stops a beam (2026-11-12, owner N3835)', () => {
+    it('a deck that says opaque counts, a plain deck does not', () => {
+        expect(isSteelSolid({ id: 'x-deck', kind: 'box', opaque: true })).toBe(true)
+        expect(isSteelSolid({ id: 'x-deck', kind: 'box' })).toBe(false)
+    })
+})

@@ -397,6 +397,13 @@ def build(repo, M):
         add(f'platina-hazer-{i + 1}', 'magmatic-magma-prime', 'hazer', [x, deck + 0.20, -0.55], [-math.pi / 2, 0, 0], 0.0, 'PROPOSED',
             'PROPOSED: on the deck behind the screen line, outside the screen\'s width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none',
             f'hazer {i + 1}', [0.16, 0.40, 0.34], i, {'aim_home': 'horizontal +z (output toward the audience)', 'machine': 'hazer', 'size_note': 'the maker\'s 338 x 160 x 400 mm (L x W x H, manual p16)'})
+    # LIGHT STOPS AT THE FIRST SURFACE (owner N3835, 2026-11-12): every solid of this stage is opaque, and the room has a floor.
+    # Without a hall record the room had no ground at all, so a beam aimed down ran on under the stage. The floor's size is
+    # PROPOSED (the hall is not measured): 24 x 30 m, its top at y = 0, the audience floor of this frame.
+    solids.append({'id': 'platina-floor', 'name': 'hall floor (size PROPOSED, the hall is not measured)', 'kind': 'box', 'anchor': 'base',
+                   'status': 'PROPOSED', 'p': [0, -0.05, 7.0], 's': [24.0, 0.05, 30.0], 'source': 'no hall record; owner N3835: light stops at the first surface'})
+    for s_ in solids:
+        s_['opaque'] = True
     rig = {
         'version': '1.0', 'title': 'Platina - Live in Yerevan: rig plan for the visualiser (stage, trusses, towers measured from the 11-10 light plot; 54 lamps of the 11-11 offer)', 'date': '2026-11-11',
         # the room's ONE camera level (three.js toneMappingExposure). MEASURED 2026-11-11 on the GPU (pics8, cues 12 and 18 at

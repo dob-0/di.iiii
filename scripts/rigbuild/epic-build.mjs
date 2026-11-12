@@ -267,7 +267,9 @@ export const positionOf = (f) => {
  * crane, beam, pipe, scaffold) — the words say what the piece is, not whose production it is. A deck, a speaker, a barrier
  * and a hoist's chain are not. Pure. */
 const STEEL_WORDS = new Set(['truss', 'girder', 'steel', 'tower', 'crane', 'beam', 'pipe', 'scaffold'])
-export const isSteelSolid = (s) => Boolean(s) && (s.steel === true || s.kind === 'tower' || /^truss/.test(String(s.kind || '')) ||
+// `opaque: true` (2026-11-12, owner N3835 "some lights go out from the objects"): a rig solid that says it is opaque (a deck, a
+// wing, an LED wall, a floor) stops a beam the same way, through the same flag the room already casts against.
+export const isSteelSolid = (s) => Boolean(s) && (s.steel === true || s.opaque === true || s.kind === 'tower' || /^truss/.test(String(s.kind || '')) ||
     String(s.id || '').split('-').some((w) => STEEL_WORDS.has(w)))
 const STEEL_FLAG = Object.freeze({ kind: STEEL_KIND })
 
