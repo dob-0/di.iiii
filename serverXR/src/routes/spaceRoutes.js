@@ -24,6 +24,7 @@ const defaultWithSpaceOpsLock = createKeyedLock()
 const PRIVATE_PUBLISH_ERROR = 'That project is private, so it cannot be the space\'s published front door. Make it public first (project settings), then publish it.'
 
 function registerSpaceRoutes(router, {
+  proposals = null,
   applySceneOps,
   blankScene,
   broadcastLiveEvent,
@@ -804,7 +805,7 @@ function registerSpaceRoutes(router, {
     }
   })
 
-  registerBundleParts(router, { config, mayOpenAFile, importBundleFile, normalizeSpaceId })
+  registerBundleParts(router, { config, mayOpenAFile, importBundleFile, normalizeSpaceId, proposals })
 
   // Sends a refusal the store raised on purpose (protected space, name in the
   // trash) as its own status and code instead of a bare 500.
