@@ -140,3 +140,14 @@ describe('bundle parts', () => {
         expect(imports).toBe(1)
     })
 })
+
+describe('bundle parts without an uploads folder', () => {
+    it('registers no route and does not throw', async () => {
+        const handlers = {}
+        const router = {}
+        for (const verb of ['get', 'post', 'put', 'delete']) router[verb] = (route, handler) => { handlers[`${verb} ${route}`] = handler }
+        const api = registerBundleParts(router, { config: {}, mayOpenAFile: () => true, importBundleFile: async () => {}, normalizeSpaceId: (x) => x })
+        expect(Object.keys(handlers)).toEqual([])
+        await expect(api.sweep()).resolves.toBeUndefined()
+    })
+})

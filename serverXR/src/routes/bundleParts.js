@@ -64,7 +64,13 @@ const registerBundleParts = (router, {
   statfs = fsp.statfs,
   marginBytes = DEFAULT_MARGIN_BYTES
 }) => {
-  const root = path.join(config.directories.uploadsDir, 'bundle-parts')
+  // A server built without an uploads folder (some route tests) has no parts route.
+  const uploadsDir = config?.directories?.uploadsDir
+  if (!uploadsDir) {
+    logger.warn('[bundle-parts] no uploads folder configured: the parts route is off')
+    return { sweep: async () => {} }
+  }
+  const root = path.join(uploadsDir, 'bundle-parts')
   const maxBytes = config.maxBundleBytes
   const partBytes = config.bundlePartBytes
   const dirOf = (id) => path.join(root, id)
