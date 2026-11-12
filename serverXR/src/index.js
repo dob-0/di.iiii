@@ -127,6 +127,7 @@ const { registerAiContextRoutes } = require('./aiContext')
 const { registerAiPublicRoutes } = require('./aiPublic')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
+const { registerAgentMailRoutes } = require('./routes/agentMailRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
 const domainStore = require('./domainStore')
 const { createCloudflareSaas } = require('./cloudflareSaas')
@@ -1637,6 +1638,8 @@ registerAiContextRoutes(router, {
 // middleware above, because every handler reads `req.authState` — and the whole
 // access rule ("somebody you share a space with") is written in terms of it.
 registerDmRoutes(router, {})
+// Agent mail: chats of different people telling each other (routes/agentMailRoutes.js).
+registerAgentMailRoutes(router, {})
 registerChatRoutes(router, { deps: { listSpaces } })
 
 // Joining a space with four words (serverXR/src/routes/followRoutes.js). The
@@ -3307,6 +3310,7 @@ const contentProposals = createContentProposals({
   maxOpHistory: MAX_OP_HISTORY,
   maxOpAgeMs: MAX_OP_AGE_MS,
   schemaVersion: SCHEMA_VERSION,
+  onLightShowWritten: (spaceId) => lighting.adoptShowFile(spaceId),
   logger
 })
 contentProposals.register()
