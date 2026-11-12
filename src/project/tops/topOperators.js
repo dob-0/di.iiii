@@ -483,8 +483,8 @@ void main() {
             toggle('invert', 'Film (negative)', 0),
             param('cut', 'Two-tone', 0, 0, 1),
             param('flash', 'Flash (Hz)', 0, 0, 15, 0.5),
-            // 0 white-hot (grey), 1 iron (the thermal camera), 2 rainbow, 3 olive (night shot)
-            param('tone', 'Thermal colour', 0, 0, 3, 1),
+            // 0 white-hot (grey), 1 iron (the thermal camera), 2 rainbow, 3 olive (night shot), 4 chrome (polished metal)
+            param('tone', 'Thermal colour', 0, 0, 4, 1),
             param('hud', 'Camera frame', 0, 0, 1),
             // a thermal sensor is small (160 x 120): the heat read on a coarse grid and blown up soft
             param('sensor', 'Sensor blur', 0, 0, 1)
@@ -524,6 +524,12 @@ vec3 ds_tone(float v, float tone) {
     if (tone < 0.5) return vec3(v);
     if (tone < 1.5) return ds_ramp(v, vec3(0.0), vec3(0.10, 0.0, 0.42), vec3(0.58, 0.04, 0.56), vec3(0.93, 0.24, 0.13), vec3(1.0, 0.72, 0.05), vec3(1.0, 1.0, 0.94));
     if (tone < 2.5) return ds_ramp(v, vec3(0.03, 0.05, 0.50), vec3(0.0, 0.42, 0.98), vec3(0.15, 0.88, 0.30), vec3(0.99, 0.92, 0.08), vec3(1.0, 0.16, 0.28), vec3(1.0, 0.86, 0.86));
+    // chrome: light and dark bands turning over each other like a reflection on polished metal, a cold tint
+    if (tone > 3.5) {
+        float m = 0.5 + 0.5 * sin(v * 9.4 - 1.2);
+        float g = clamp(mix(v, m, 0.62) * 1.15 - 0.05, 0.0, 1.0);
+        return mix(vec3(0.02, 0.03, 0.05), vec3(0.93, 0.96, 1.0), g * g * (3.0 - 2.0 * g));
+    }
     // olive: the army-green grade of a night shot, light end almost white
     return mix(vec3(v * 0.58, v * 0.70, v * 0.24), vec3(v), smoothstep(0.75, 1.0, v) * 0.7);
 }
@@ -659,7 +665,8 @@ void main() {
             param('mirror', 'Flip', 0.3, 0, 1),
             param('flash', 'Flash frame', 0.6, 0, 1),
             param('bars', 'Bars', 0, 0, 1),
-            param('burst', 'Burst', 0, 0, 1)
+            param('burst', 'Burst', 0, 0, 1),
+            param('lens', 'Fisheye', 0, 0, 1)
         ],
         // The picture edited like a music video, live. Time is cut into SHOTS (Cuts per second); every shot is one
         // still framing, chosen once at its cut: a size (wide, medium or close: Punch-in), a place in the frame
@@ -677,6 +684,7 @@ uniform float p_mirror;
 uniform float p_flash;
 uniform float p_bars;
 uniform float p_burst;
+uniform float p_lens;
 float ct_hash(float n) { return fract(sin(n * 127.1 + 3.7) * 43758.5453123); }
 void main() {
     float rate = max(p_rate, 0.05);
@@ -693,7 +701,12 @@ void main() {
     vec2 c = vec2(0.5) + (vec2(ct_hash(shot + 17.0), ct_hash(shot + 43.0)) * 2.0 - 1.0) * room * p_move;
     vec2 p = (uv - 0.5) / z + c;
     if (ct_hash(shot + 71.0) < p_mirror * 0.5) p.x = 1.0 - p.x;
+    // fisheye: the middle of the frame pushed at the viewer, the corners falling away into black
+    vec2 fc = (p - 0.5) * vec2(1.7778, 1.0);
+    float fr = dot(fc, fc) * 2.2;
+    p = 0.5 + (p - 0.5) * mix(1.0, 0.5 + 0.75 * fr, p_lens);
     vec3 col = texture2D(a, clamp(p, 0.0, 1.0)).rgb;
+    col *= 1.0 - p_lens * smoothstep(0.62, 1.05, fr);
     float hit = step(into, 0.05) * step(0.5, ct_hash(shot + 5.0)) * p_flash * (1.0 - isBurst);
     col = mix(col, 1.0 - col, max(hit, side));
     col *= step(abs(uv.y - 0.5), 0.5 - 0.13 * p_bars);
