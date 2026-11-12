@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * reach-check.mjs — picture-and-click check for PR #1278 (doors and shelves).
+ * reach-check.mjs — picture-and-click check for PR #1278 (doors and shelves) and batch 2 (Nodes on the bar opens the last project).
  *
  * Walks a stack seeded by scripts/seed-reach-check.mjs (space navtest) on a
  * desktop and a phone viewport, with direct addresses only, and writes one
@@ -12,6 +12,8 @@
  *   c  member  /navtest/raw/projects  tool line says "in Nodes."; alpha's card strip has no Nodes door
  *   d  member  /navtest/studio        tool line says "in Studio."; alpha's card strip has no Studio door
  *   e  visitor /navtest/projects      no door strips, no shelf headings
+ *   f  member  opens alpha in Nodes, then (in a NEW tab, same device) the space page; the bar's Nodes opens alpha's Nodes
+ *   g  member  /navtest/raw/projects/gone-since, then the space page: the bar's Nodes falls back to the list
  *
  * Usage: node scripts/reach-check.mjs [--base <url>] [--token <tok>] [--out <dir>]
  *   defaults: --base http://localhost:5173, --token $REACH_CHECK_TOKEN, --out .reach-check
@@ -145,6 +147,54 @@ const run = async () => {
                 const strips = await page.locator('.sc-row-doors').count()
                 const shelves = await page.locator('h2.sc-shelf').count()
                 return { url, ok: strips === 0 && shelves === 0, expected: '0 door strips, 0 shelf headings', got: `${strips} strips, ${shelves} shelf headings` }
+            })
+
+            // Batch 2 (N3851.19). A member stood in alpha's Nodes; a NEW page of the same context has its own
+            // sessionStorage but shares the device's localStorage, which is the point of "per device".
+            await step('f', 'member', member, async (page) => {
+                const editor = await member.newPage()
+                track(editor, 'f-editor')
+                await editor.goto(`${BASE}/${SPACE}/raw/projects/scene-alpha`, { waitUntil: 'domcontentloaded', timeout: 40000 })
+                await editor.locator('.sbar-where--project').waitFor({ timeout: WAIT })
+                await editor.close()
+                const url = await goto(page, `/${SPACE}/projects`)
+                const nodes = page.locator('.sbar-links a.sbar-link', { hasText: /^Nodes$/ })
+                await nodes.waitFor({ timeout: WAIT })
+                // The page waits for the space's own list before it judges a remembered project.
+                await page.locator('.sc-row-name', { hasText: /^\s*alpha\s*$/ }).waitFor({ timeout: WAIT })
+                const href = await nodes.getAttribute('href')
+                await nodes.click()
+                await page.waitForURL((u) => u.pathname === `/${SPACE}/raw/projects/scene-alpha`, { timeout: WAIT })
+                await page.locator('.sbar-where--project').waitFor({ timeout: WAIT })
+                const where = (await texts(page.locator('.sbar-where--project')))[0]
+                const p = new URL(page.url()).pathname
+                return {
+                    url,
+                    ok: href === `/${SPACE}/raw/projects/scene-alpha` && p === `/${SPACE}/raw/projects/scene-alpha` && where === 'alpha',
+                    expected: `bar Nodes href and landing /${SPACE}/raw/projects/scene-alpha, bar names "alpha"`,
+                    got: `href ${href}; landed ${p}; bar names "${where}"`,
+                }
+            })
+
+            // A remembered project that is no longer in the space: the bar must not send the member to a dead editor.
+            await step('g', 'member', member, async (page) => {
+                await page.addInitScript(([space]) => {
+                    try { window.localStorage.setItem('dii.lastProjectBySpace', JSON.stringify({ [space]: 'gone-since' })) } catch { /* blocked */ }
+                }, [SPACE])
+                const url = await goto(page, `/${SPACE}/projects`)
+                const nodes = page.locator('.sbar-links a.sbar-link', { hasText: /^Nodes$/ })
+                await nodes.waitFor({ timeout: WAIT })
+                await page.locator('.sc-row-name', { hasText: /^\s*alpha\s*$/ }).waitFor({ timeout: WAIT })
+                const href = await nodes.getAttribute('href')
+                await nodes.click()
+                await page.waitForURL((u) => u.pathname === `/${SPACE}/raw/projects`, { timeout: WAIT })
+                const said = await page.locator('p.sh-tool-line').first().waitFor({ timeout: WAIT }).then(() => texts(page.locator('p.sh-tool-line')))
+                return {
+                    url,
+                    ok: href === `/${SPACE}/raw/projects` && said[0] === 'Pick a project. A card opens it in Nodes.',
+                    expected: `bar Nodes href /${SPACE}/raw/projects and the list that says "...in Nodes."`,
+                    got: `href ${href}; list says "${said[0]}"`,
+                }
             })
 
             await member.close()
