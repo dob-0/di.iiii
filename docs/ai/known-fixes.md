@@ -1928,3 +1928,11 @@ Cause: three walls in series for a hosted tier: serverXR `MAX_UPLOAD_MB` default
 Fix: `docker-compose.dev.yml` sets `MAX_UPLOAD_MB: ${DEV_MAX_UPLOAD_MB:-2048}` (production keeps 100); a dedicated nginx location for `/serverXR/api/spaces/(bundle|:id/proposals)` with 2100m, `proxy_request_buffering off`, 900 s timeouts; `httpServer.requestTimeout = 0` when the ceiling is above 100 MB.
 Regression guard: `scripts/uploadLimit.test.js` (fails if the dev default is under 1024 MB or nginx is the smaller wall).
 Still needed on the VPS: a dev-tier deploy (compose file + new client image), and no `MAX_UPLOAD_MB`/`DEV_MAX_UPLOAD_MB` below 1024 in the dev `.env`. Not checked against a real 843 MB upload.
+
+## 2026-11-12 - Camera refusal said nowhere on the Map source view
+
+Symptom: a blocked or missing camera on a Pictures surface showed a blank picture with no reason.
+Cause: the refusal moved from `error` to `cameraError` (so a camera never replaces the whole picture) and nothing read `cameraError`; it was also never cleared after a later successful open.
+Fix: `MapSourceView.jsx` shows `cameraError` as a caption over the picture; `useTopNetwork.js` clears it when a camera opens.
+Guard: `MapSourceView.network.test.jsx` (caption, canvas kept), `useTopNetwork.camera.test.jsx` (cleared on open). Run by CI only; the local lane gate was closed.
+Lesson: when a value moves to a new field, grep the readers in the same change.
