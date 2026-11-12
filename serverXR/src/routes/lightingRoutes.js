@@ -100,6 +100,9 @@ function registerLightingRoutes(app, { dataDir, spacesDir = null, findSpace = nu
     },
     // The scene library as { id, name }, for a caller that must not build the desk: [] until it is built.
     scenes: () => (desk ? desk.scenes() : []),
+    // A space's show.json was replaced on disk (a proposal applied): a desk that has it loaded reads it again.
+    // Never builds one — no desk, nothing loaded, nothing to reload.
+    adoptShowFile: (id) => (desk ? desk.adoptShowFile(id) : false),
     // Only the desk that was actually built is closed; asking never builds one.
     close: () => { if (desk) { desk.close(); desk = null } }
   }
