@@ -110,10 +110,17 @@ export const buildVideoToScreenOps = (document, video, { createdBy = null } = {}
             bind.surfaceId
         )
     })
+    // The video's children move under the new Screen BEFORE the video is deleted (deleteEntity
+    // takes the whole subtree). Owner 2026-11-12, N3967: "yes" to keeping them.
+    const entities = Array.isArray(document?.entities) ? document.entities : []
+    const moveChildren = entities
+        .filter((child) => child?.parentId === video.id && child.id !== video.id)
+        .map((child) => ({ type: 'updateEntity', payload: { entityId: child.id, patch: { parentId: entity.id } } }))
     return {
         entity,
         surfaceId: bind.surfaceId,
         bound: Boolean(bind.surfaceId),
-        ops: [...bind.ops, { type: 'createEntity', payload: { entity } }, { type: 'deleteEntity', payload: { entityId: video.id } }]
+        movedChildren: moveChildren.length,
+        ops: [...bind.ops, { type: 'createEntity', payload: { entity } }, ...moveChildren, { type: 'deleteEntity', payload: { entityId: video.id } }]
     }
 }

@@ -2023,3 +2023,8 @@ Cause: `cameraError` in `useTopNetwork.js` was one string for the whole hook, an
 Fix: the failures are kept per camera node id (`cameraErrors`, `withCameraError`); a camera that opens clears only its own entry, a camera switched off or removed drops its entry, and `cameraError` is the first failure still open. A camera that cannot open still never becomes `error`.
 Guard: `useTopNetwork.camera.test.jsx` "two cameras: the failing one keeps its caption..." (the GUARD test is unchanged). Run by CI only. The view shows one caption, the first open failure, not one per camera.
 Lesson: a value shared by several sources must be keyed by source before any of them may clear it.
+
+## "Show the live deck here instead" deleted the objects inside the video (2026-11-12, owner rows N3967, N3971)
+Found by code review, not seen live. `buildVideoToScreenOps` (`src/studio/utils/screenOps.js`) deleted the video with `deleteEntity`, which takes the whole subtree, so a Frame or Label placed inside the video was deleted with it (undo restored it).
+Fix: the video's direct children are moved under the new Screen (`updateEntity` parentId) in the same batch, before the video is deleted; one Ctrl+Z puts them back under the video.
+Guard: `src/studio/utils/screenOps.test.js` ("moves the video children under the Screen, and undo puts them back"). Known limit: a video that was never rotated becomes an upright Screen, so its children turn with it.
