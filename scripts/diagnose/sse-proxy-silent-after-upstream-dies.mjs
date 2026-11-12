@@ -6,6 +6,7 @@
 import http from 'node:http'
 import path from 'node:path'
 import { createRequire } from 'node:module'
+import { fileURLToPath } from 'node:url'
 const require = createRequire(import.meta.url)
 const VITE = process.argv[2] // path to node_modules/vite
 const mode = process.argv[3] || 'destroy' // destroy (FIN) | reset (RST)
@@ -24,7 +25,7 @@ upstream.on('connection', (s) => { sockets.add(s); s.on('close', () => sockets.d
 await new Promise((r) => upstream.listen(0, '127.0.0.1', r))
 const upPort = upstream.address().port
 
-const vite = await createServer({ configFile: false, root: path.dirname(new URL(import.meta.url).pathname), logLevel: 'silent',
+const vite = await createServer({ configFile: false, root: path.dirname(fileURLToPath(import.meta.url)), logLevel: 'silent',
   server: { middlewareMode: true, proxy: { '/serverXR': { target: `http://127.0.0.1:${upPort}`, changeOrigin: true, xfwd: true, ws: true } } } })
 const front = http.createServer(vite.middlewares)
 await new Promise((r) => front.listen(0, '127.0.0.1', r))
