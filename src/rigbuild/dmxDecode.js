@@ -462,5 +462,7 @@ export const encodeDmx = (channels, want = {}, type = null) => {
         out.tilt = c
         if (has('tiltFine')) out.tiltFine = f
     }
+    // Raw roles a designer sets by name (a haze machine's fog / volume / fan): written only where the chart has the role.
+    for (const [role, v] of Object.entries(want.raw || {})) if (has(role) && Number.isFinite(Number(v))) out[role] = Math.max(0, Math.min(255, Math.round(Number(v))))
     return out
 }

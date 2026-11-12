@@ -15,6 +15,7 @@ import { deskMotionOf, djCentre } from './lookMotion.js'
 import { typeById } from './fixtureTypes.js'
 import { encodeDmx } from './dmxDecode.js'
 import { lookStrobeHz } from './strobeCap.js'
+import { hazeFor } from './hazePolicy.js'
 import { panTiltOfBeam, runningMode, fixturePanOf } from './dmxPose.js'
 
 // Fixture categories a look's level motion never reaches: not lamps, so no rhythm on their output (2026-10-17).
@@ -57,6 +58,8 @@ export const deskLooksWithValues = (rigLooks, deskFixtures = [], { entities = []
             const level = pose && !laserHeld ? (pose.level ?? 1) : 0
             const want = { level }
             if (pose?.color) want.colour = pose.color
+            // a haze machine's own channels (hazePolicy.js): out unless the look is a show look
+            if (type?.category === 'hazer') want.raw = hazeFor(look.id)
             if (pose && Array.isArray(type?.pan_tilt_deg?.value)) {
                 const { pan, tilt } = panTiltOfBeam(spotAimDirection(pose.rotation), fx.hung === true)
                 want.pan = fixturePanOf(pan, fx)
