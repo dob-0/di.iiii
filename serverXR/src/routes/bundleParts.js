@@ -146,8 +146,11 @@ const registerBundleParts = (router, {
       } else if (!mayOpenAFile(req, res)) return
       if (needsSubject(req, res)) return
       const proposalFields = kind === 'proposal' ? body.proposal || {} : null
-      const proposalSpace = kind === 'proposal' ? normalizeSpaceId(String(proposalFields.spaceId || '').trim()) : ''
-      if (kind === 'proposal' && !proposalSpace) return res.status(400).json({ error: 'Say which space the proposal is for (proposal.spaceId).' })
+      let proposalSpace = null
+      if (kind === 'proposal') {
+        proposalSpace = normalizeSpaceId(String(proposalFields.spaceId ?? '').trim())
+        if (!proposalSpace) return res.status(400).json({ error: 'Say which space the proposal is for (proposal.spaceId).' })
+      }
       const size = Number(body.size)
       const sha256 = String(body.sha256 || '').toLowerCase()
       const name = String(body.name || '').slice(0, 255)
