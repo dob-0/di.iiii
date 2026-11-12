@@ -742,6 +742,25 @@ export function useProjectDocumentSync({
                     value: 'degraded',
                     error: 'Project event stream is reconnecting.'
                 })
+            },
+            // Silence watchdog (the service owns the clock, this owns the
+            // version). A proxy can leave the stream open and mute after a
+            // server restart; a deaf tab later writes its old deck over newer
+            // ones. Ask the server once for ops after our version: anything
+            // newer means the stream is deaf -- catchUp applies it, then the
+            // stream is replaced. Nothing newer is just a quiet stream; a
+            // failed ask is left to the normal reconnect.
+            onSilent: async (source) => {
+                if (syncService.currentSource !== source) return
+                let result
+                try {
+                    result = await catchUp(versionRef.current)
+                } catch {
+                    return
+                }
+                if (result === 'level' || syncService.currentSource !== source) return
+                pushActivity('Project event stream was silent — caught up and reconnected.')
+                syncService.reconnect()
             }
         })
 
