@@ -59,6 +59,10 @@ const registerBundleParts = (router, {
   mayOpenAFile,
   importBundleFile,
   normalizeSpaceId,
+  // { precheck(req) -> null | {status, body}, submit(req, {spaceId, uploadPath, fields}) -> {status, body} }:
+  // what a file sent with kind "proposal" goes through (the same code as
+  // POST /api/spaces/:id/proposals). null: this server takes no proposals in parts.
+  proposals = null,
   ttlMs = DEFAULT_TTL_MS,
   now = Date.now,
   statfs = fsp.statfs,
@@ -110,12 +114,13 @@ const registerBundleParts = (router, {
 
   // The upload a request names, and only for the one who started it.
   const open = async (req, res) => {
-    if (!mayOpenAFile(req, res)) return null
     if (needsSubject(req, res)) return null
     const id = String(req.params.id || '')
     if (!ID_PATTERN.test(id)) { res.status(404).json({ error: 'No such upload.' }); return null }
     const meta = await readJson(path.join(dirOf(id), 'meta.json'))
     if (!meta) { res.status(404).json({ error: 'No such upload (it may have expired). Start again.' }); return null }
+    // A proposal's access rule is the proposals route's, checked at start and again at finish.
+    if (meta.kind !== 'proposal' && !mayOpenAFile(req, res)) return null
     if (meta.owner !== who(req)) { res.status(403).json({ error: 'This upload belongs to someone else.' }); return null }
     return { id, dir: dirOf(id), meta }
   }
@@ -130,9 +135,19 @@ const registerBundleParts = (router, {
 
   router.post('/api/spaces/bundle/uploads', async (req, res, next) => {
     try {
-      if (!mayOpenAFile(req, res)) return
-      if (needsSubject(req, res)) return
       const body = req.body || {}
+      const kind = body.kind === undefined || body.kind === 'import' ? 'import' : body.kind
+      if (kind !== 'import' && kind !== 'proposal') return res.status(400).json({ error: 'Unknown kind of upload (import or proposal).', code: 'kind_unsupported' })
+      if (kind === 'proposal') {
+        // The proposals route's own refusals, before a byte is sent.
+        if (!proposals) return res.status(400).json({ error: 'This di.iiii takes no proposal in parts.', code: 'kind_unsupported' })
+        const refusal = proposals.precheck(req)
+        if (refusal) return res.status(refusal.status).json(refusal.body)
+      } else if (!mayOpenAFile(req, res)) return
+      if (needsSubject(req, res)) return
+      const proposalFields = kind === 'proposal' ? body.proposal || {} : null
+      const proposalSpace = kind === 'proposal' ? normalizeSpaceId(String(proposalFields.spaceId || '').trim()) : ''
+      if (kind === 'proposal' && !proposalSpace) return res.status(400).json({ error: 'Say which space the proposal is for (proposal.spaceId).' })
       const size = Number(body.size)
       const sha256 = String(body.sha256 || '').toLowerCase()
       const name = String(body.name || '').slice(0, 255)
@@ -163,11 +178,22 @@ const registerBundleParts = (router, {
         id, owner: who(req), size, sha256, name, parts, partBytes,
         as: normalizeSpaceId(String(body.as || '').trim()) || '',
         label: String(body.label || '').slice(0, 200),
+        kind,
+        ...(kind === 'proposal' ? { proposal: {
+          spaceId: proposalSpace,
+          fields: {
+            mode: proposalFields.mode === 'propose' ? 'propose' : 'auto',
+            from: proposalFields.from ? String(proposalFields.from).slice(0, 200) : null,
+            overwriteNewer: proposalFields.overwriteNewer === true,
+            dryRun: proposalFields.dryRun === true,
+            acceptLoss: proposalFields.acceptLoss === undefined || proposalFields.acceptLoss === null ? null : String(proposalFields.acceptLoss).slice(0, 20)
+          }
+        } } : {}),
         createdAt: now()
       }
       await fsp.mkdir(dirOf(id), { recursive: true })
       await fsp.writeFile(path.join(dirOf(id), 'meta.json'), JSON.stringify(meta))
-      res.status(201).json({ uploadId: id, partBytes, parts, expiresInHours: Math.round(ttlMs / 3600000) })
+      res.status(201).json({ uploadId: id, kind, partBytes, parts, expiresInHours: Math.round(ttlMs / 3600000) })
     } catch (error) { next(error) }
   })
 
@@ -245,7 +271,14 @@ const registerBundleParts = (router, {
       }
       await writeStatus(dir, { state: 'importing' })
       const { res, captured } = captureResponse()
-      await importBundleFile(req, res, joined, { as: meta.as, label: meta.label })
+      if (meta.kind === 'proposal') {
+        // The same code the one-POST proposals route runs on its file.
+        const outcome = await proposals.submit(req, { spaceId: meta.proposal.spaceId, uploadPath: joined, fields: meta.proposal.fields })
+        captured.status = outcome.status
+        captured.body = outcome.body
+      } else {
+        await importBundleFile(req, res, joined, { as: meta.as, label: meta.label })
+      }
       if (captured.status >= 200 && captured.status < 300) {
         await writeStatus(dir, { state: 'done', httpStatus: captured.status, ...(captured.body || {}) })
       } else {
