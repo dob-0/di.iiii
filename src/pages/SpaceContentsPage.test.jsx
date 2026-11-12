@@ -234,6 +234,23 @@ describe('a space\'s contents page', () => {
         expect(marks).toHaveLength(1)
         expect(marks[0].closest('a')).toHaveAttribute('href', '/wcc')
     })
+    it('opens the last project from the bar\'s Nodes, and the list once that project is gone from the space', async () => {
+        listSpaceContentsMock.mockResolvedValue(contents)
+        window.localStorage.setItem('dii.lastProjectBySpace', JSON.stringify({ br_id_ge: 'one-shot' }))
+        try {
+            const { unmount } = render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await screen.findByRole('link', { name: /One shot/ })
+            expect(document.querySelector('.sbar-links a[href$="/raw/projects/one-shot"]')).not.toBeNull()
+            unmount()
+            window.localStorage.setItem('dii.lastProjectBySpace', JSON.stringify({ br_id_ge: 'deleted-since' }))
+            render(<SpaceContentsPage spaceId="br_id_ge" />)
+            await screen.findByRole('link', { name: /One shot/ })
+            const bar = [...document.querySelectorAll('.sbar-links a')].find((a) => a.textContent === 'Nodes')
+            expect(bar.getAttribute('href')).toBe('/br_id_ge/raw/projects')
+        } finally {
+            window.localStorage.removeItem('dii.lastProjectBySpace')
+        }
+    })
 })
 
 // Nav reach (2026-11-12): a member's page offers the doors of each scene and groups the list under the space's

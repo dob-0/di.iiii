@@ -182,9 +182,10 @@ export const WIKI_ARTICLES = [
                 'When the space has shelves, the page groups its projects under a heading for each shelf, in the shelves’ own order, and anything not on a shelf comes last under “Not on a shelf”. A shelf with nothing on show says “Nothing on show on this shelf.” A space with no shelves looks as it did before. If the shelves cannot be loaded, the list stays flat and says “The shelves did not load, so this list is not grouped.” If what each project holds cannot be loaded, the page says “What each project holds did not load, so Projection and Light doors may be missing.” Inside an embed the page stays the plain list.',
                 'The strips and headings appear a moment after the rows, once the member’s own list has answered.',
                 'The list that Nodes opens at space level now says what it is: “Pick a project. A card opens it in Nodes.” The Studio list says the same with Studio. It is a picker, and the card you press opens that project in that tool.'
-            ] }
+            ] },
+            'NODES ON THE TOP BAR OPENS YOUR LAST PROJECT. On a space’s own page, the bar’s Nodes goes straight to the project you last stood in inside that space, on this device (a new tab on the same laptop does it too), instead of the list. If you have not been in one in that space, or that project is no longer in the space, it opens the list as before. On the Nodes list itself the bar is not drawn. To reach the list from a project: Nodes’ “Projects” button in its ⋯ menu, Studio’s “Nodes” button on its list, or the address /<space>/raw/projects. Tools and Wiki already carried you into the project you were in, and still do. Studio’s link on the bar is unchanged.'
         ],
-        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page', 'code', 'doors', 'perform', 'shelves', 'members', 'nodes'],
+        tags: ['spaces', 'projects', 'contents', 'visitors', 'published', 'scene', 'page', 'code', 'doors', 'perform', 'shelves', 'members', 'nodes', 'bar', 'last project'],
         updated: '2026-11-12'
     },
     {

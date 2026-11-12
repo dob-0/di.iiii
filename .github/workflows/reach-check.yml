@@ -16,6 +16,7 @@ on:
       - 'src/studio/components/StudioHub.jsx'
       - 'src/studio/styles/studio-hub.css'
       - 'src/components/SurfaceBar.jsx'
+      - 'src/components/lastProject.js'
       - 'scripts/reach-check.mjs'
       - 'scripts/seed-reach-check.mjs'
       - '.github/workflows/reach-check.yml'
