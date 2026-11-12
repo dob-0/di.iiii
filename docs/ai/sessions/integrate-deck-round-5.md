@@ -7,8 +7,7 @@ Branch `integrate/deck-round-5`, built from `integrate/deck-round-4` (b9955183c,
 - `feat/platina-lights` at 28e1fedb0 (the lights line), then again at 9445319f8 (haze machines get their own channels per look), one merge commit each.
 - `origin/dev` at 24b923148 (it moved after the first push, so it was merged in a third merge commit).
 
-### Skipped
-- `integrate/deck-round-3` (f834d8a8c): pull request 1275 showed failing checks (build-and-test, node-22-compat, test shard 2/3) when checked, so it was left to the job that fixes it.
+- `integrate/deck-round-3` at ca264c559 (pull request 1275: camera caption fix), merged after its fresh review was clean. Its test src/project/tops/useTopNetwork.camera.test.jsx runs in CI for the first time here.
 
 ### Conflicts
 - `docs/ai/known-fixes.md` (deck-wall-live merge and dev merge): append-only, both sides' entries kept (union).
