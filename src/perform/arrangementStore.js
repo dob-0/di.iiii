@@ -1,5 +1,4 @@
 import { GRID } from './presets.js'
-import { normalizePerformRect } from '../shared/projectSchema.js'
 
 // THE REMEMBERED ARRANGEMENT of the Perform desk: where each window stands,
 // how big it is, its stacking and its state (minimised, maximised, hidden),
@@ -26,8 +25,12 @@ const storage = () => {
 
 /** A percent rectangle forced inside the desk and no smaller than one unit of its grid; null if it is not a rectangle. */
 export const clampRect = (rect, grid = GRID.wide) => {
-    const base = normalizePerformRect(rect)
-    if (!base) return null
+    // Not normalizePerformRect: it trims the width to what is left of the desk to the right of x,
+    // so a window placed near the right edge would shrink to a sliver. Here the window keeps its
+    // size and is shifted back into the desk.
+    if (!Array.isArray(rect) || rect.length !== 4) return null
+    const base = rect.map(Number)
+    if (!base.every(Number.isFinite)) return null
     const minW = 100 / grid.cols
     const minH = 100 / grid.rows
     const width = Math.min(100, Math.max(minW, base[2]))
