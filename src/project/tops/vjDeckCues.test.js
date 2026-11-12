@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { addColumn, createDeck, normalizeDeck, setColumnCue } from './vjDeck.js'
-import { cueForColumn } from './vjDeckCues.js'
+import { cueForColumn, columnForCue } from './vjDeckCues.js'
 
 const cues = [
     { id: 'cue-a', name: 'Alpha', lightLook: 'look-a' },
@@ -61,5 +61,26 @@ describe('cueForColumn', () => {
     it('never matches by name', () => {
         const named = setColumnCue(createDeck({ columns: 2 }), 0, 'Alpha')
         expect(cueForColumn(named, 0, cues)).toBeNull()
+    })
+})
+
+describe('columnForCue', () => {
+    it('finds the column that holds the cue', () => {
+        const deck = setColumnCue(createDeck({ columns: 4 }), 2, 'cue-a')
+        expect(columnForCue(deck, 'cue-a')).toBe(2)
+    })
+    it('says -1 when no column holds it', () => {
+        expect(columnForCue(setColumnCue(createDeck({ columns: 3 }), 0, 'cue-a'), 'cue-z')).toBe(-1)
+    })
+    it('an empty or wrong id never matches, even though empty columns hold ""', () => {
+        const deck = createDeck({ columns: 3 })
+        expect(columnForCue(deck, '')).toBe(-1)
+        expect(columnForCue(deck, null)).toBe(-1)
+        expect(columnForCue(deck, 7)).toBe(-1)
+    })
+    it('with several columns holding it, the lowest wins', () => {
+        let deck = createDeck({ columns: 5 })
+        deck = setColumnCue(setColumnCue(deck, 3, 'cue-a'), 1, 'cue-a')
+        expect(columnForCue(deck, 'cue-a')).toBe(1)
     })
 })

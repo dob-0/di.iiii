@@ -36,7 +36,8 @@ import { isTypingTarget } from '../../../perform/windowKeys.js'
 import { useShowClockContext } from '../../../perform/useShowClock.js'
 import { DEFAULT_BPM } from '../../../timeline/showClock.js'
 import { clipStill } from './clipStills.js'
-import { cueForColumn } from '../../../project/tops/vjDeckCues.js'
+import { cueForColumn, columnForCue } from '../../../project/tops/vjDeckCues.js'
+import { cueLightTarget, readLightFollowState } from '../../../map/lightingLink.js'
 import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
 import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
@@ -92,6 +93,11 @@ const writeMonitorPrefs = (prefs) => {
 // Per viewer and per project, on the device, never in the show document: a test page or
 // another machine starts with it off. Only the exact stored word 'on' reads as on.
 const FOLLOW_KEY = 'di.vjDeck.lightsFollow'
+// The desk is asked this often, only while Lights follow is on and the page is visible. The
+// desk pushes DMX frames (api/dmx/stream), not cue changes, so the summary is polled.
+export const FOLLOW_POLL_MS = 250
+// A desk change that names the cue the deck itself just fired, inside this, is the deck's own echo.
+export const FOLLOW_ECHO_MS = 1500
 const followKeyOf = (projectId) => `${FOLLOW_KEY}.${projectId || 'local'}`
 const readFollow = (projectId) => {
     try { return window.localStorage.getItem(followKeyOf(projectId)) === 'on' } catch { return false }
@@ -437,24 +443,84 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const followLive = useRef({})
     followLive.current = { lightsFollow, cues, onFireCue, onColumnLaunch }
     const fireSeq = useRef(0)
-    const reportColumnLaunch = (column) => {
+    const lastDeckFire = useRef({ cueId: '', look: '', at: 0 })
+    // fireLight false = the launch came FROM the desk: the column plays, the desk is not told.
+    const reportColumnLaunch = (column, { fireLight = true } = {}) => {
         const live = followLive.current
         try { live.onColumnLaunch?.(column) } catch { /* the launch already happened */ }
-        if (!live.lightsFollow) return
+        if (!live.lightsFollow || !fireLight) return
         const cue = cueForColumn(latestDeck.current, column, live.cues)
         if (!cue) { setCueStatus(`Column ${column + 1} has no cue`); return }
         if (typeof live.onFireCue !== 'function') { setCueStatus('the light desk did not answer'); return }
         const seq = (fireSeq.current += 1)
+        lastDeckFire.current = { cueId: cue.id, look: cueLightTarget(cue)?.kind === 'look' ? cueLightTarget(cue).id : '', at: now() }
         const name = cue.name || cue.id
         setCueStatus(`Fired ${name}`)
         let answer
         try { answer = Promise.resolve(live.onFireCue(cue)) } catch { answer = Promise.resolve(false) }
         answer.then((ok) => { if (ok === false && fireSeq.current === seq) setCueStatus('the light desk did not answer') }, () => { if (fireSeq.current === seq) setCueStatus('the light desk did not answer') })
     }
-    const launchColumn = (column) => {
+    const launchColumn = (column, options) => {
         write(triggerColumn(latestDeck.current, column))
-        reportColumnLaunch(column)
+        reportColumnLaunch(column, options)
     }
+    followLive.current.launchColumn = launchColumn
+    followLive.current.now = now
+    followLive.current.deck = deck
+
+    // Light -> deck, the other half of Lights follow. A new cue or look on the desk launches the
+    // column that holds that cue, through launchColumn with fireLight false (no ping-pong). The
+    // first reading only sets the baseline, so switching on never jumps the deck.
+    const deskSeen = useRef(null)
+    useEffect(() => {
+        if (!lightsFollow) return undefined
+        let stopped = false
+        let timer = null
+        let busy = false
+        let controller = null
+        const visible = () => typeof document === 'undefined' || document.visibilityState === 'visible'
+        const apply = (reading) => {
+            const live = followLive.current
+            const sig = [reading.lookId, reading.layerFiredAt, reading.cueIndex, reading.cueFiredAt].join('|')
+            if (deskSeen.current === null) { deskSeen.current = sig; return }
+            if (deskSeen.current === sig) return
+            deskSeen.current = sig
+            const fired = lastDeckFire.current
+            if (fired.look && reading.lookId === fired.look && live.now() - fired.at < FOLLOW_ECHO_MS) return
+            if (!reading.lookId) return
+            const own = (Array.isArray(live.cues) ? live.cues : [])
+                .filter((cue) => cue && cueLightTarget(cue)?.kind === 'look' && cueLightTarget(cue).id === reading.lookId)
+            const cue = own.find((candidate) => columnForCue(latestDeck.current, candidate.id) >= 0)
+            if (!cue) { setCueStatus(`no column for ${own[0]?.name || own[0]?.id || reading.lookId}`); return }
+            const column = columnForCue(latestDeck.current, cue.id)
+            setCueStatus(`Desk fired ${cue.name || cue.id}: column ${column + 1}`)
+            live.launchColumn(column, { fireLight: false })
+        }
+        const tick = async () => {
+            if (busy || stopped || !visible()) return
+            busy = true
+            controller = typeof AbortController === 'function' ? new AbortController() : null
+            try {
+                const reading = await readLightFollowState({ spaceId: spaceId || null, signal: controller?.signal })
+                if (!stopped && reading.state === 'own') apply(reading)
+            } catch { /* aborted, or the desk went away: the next tick asks again */ } finally { busy = false }
+        }
+        const start = () => {
+            if (timer || stopped || !visible()) return
+            deskSeen.current = null
+            timer = setInterval(tick, FOLLOW_POLL_MS)
+            tick()
+        }
+        const stop = () => {
+            if (timer) clearInterval(timer)
+            timer = null
+            try { controller?.abort() } catch { /* nothing to cancel */ }
+        }
+        const onVisibility = () => { if (visible()) start(); else stop() }
+        document.addEventListener('visibilitychange', onVisibility)
+        start()
+        return () => { stopped = true; stop(); document.removeEventListener('visibilitychange', onVisibility) }
+    }, [lightsFollow, spaceId])
     const toggleLightsFollow = () => {
         const next = !lightsFollow
         setLightsFollow(next)
@@ -734,7 +800,8 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         type="button"
                         className="vj-deck-button vj-deck-lights-follow"
                         aria-pressed={lightsFollow}
-                        title="With this on, playing a column also fires its light cue on the light desk. It is kept on this device only, and the K2 column pushes do the same."
+                        title="With this on, playing a column also fires its light cue on the light desk, and a cue or look fired on the light desk plays the column that holds that cue. Both ways. It is kept on this device only, and the K2 column pushes do the same."
+                        aria-label="Lights follow, both ways: a column fires its light cue, and a light cue plays its column"
                         onClick={toggleLightsFollow}
                     >Lights follow <span className="vj-deck-state" aria-hidden="true">{lightsFollow ? 'on' : 'off'}</span></button>
                     {lightsFollow || cueStatus ? <span className="vj-deck-dim vj-deck-follow-status" role="status" aria-live="polite">{cueStatus}</span> : null}

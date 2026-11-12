@@ -11,3 +11,9 @@ export const cueForColumn = (deck, column, cues) => {
     if (!id || !Array.isArray(cues)) return null
     return cues.find((cue) => cue && cue.id === id) || null
 }
+
+/** The lowest column whose stored cue id is this id, or -1. An empty id never matches. */
+export const columnForCue = (deck, cueId) => {
+    if (typeof cueId !== 'string' || !cueId) return -1
+    return normalizeDeck(deck).columnCues.indexOf(cueId)
+}
