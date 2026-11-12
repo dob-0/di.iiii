@@ -3801,6 +3801,10 @@ initStorage()
 
     serverFacts.tlsName = tlsFiles ? certificateName(tlsFiles.cert) : null
     followsChanged = startFollowsWhenUp
+    // Node ends any request still arriving after 300 s (requestTimeout): 843 MB
+    // over 20 Mbit/s takes ~6 min. A ceiling above the 100 MB default (dev tier,
+    // MAX_UPLOAD_MB=2048) lifts it; the default hosted tier keeps the 300 s.
+    if (config.maxUploadBytes > 100 * 1024 * 1024) httpServer.requestTimeout = 0
     httpServer.listen(PORT, config.host, () => {
       // The first beat decides; later beats refresh it, or take over from a
       // holder that stopped (onGain), or step down if another server took it

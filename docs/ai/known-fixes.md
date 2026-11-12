@@ -1826,3 +1826,15 @@ Seen live: the `/out` page showed a phone camera (v4l2loopback fed by scrcpy) th
 Cause: `MapCameraSource` called getUserMedia once per device id and nothing listened for the track ending or for a first open that failed because the feed was not up yet.
 Fix: it re-opens by itself on track `ended` / stream `inactive` and on busy/not-found class errors, with a back-off (0.5, 1, 2 s, then 3 s), stopping old tracks first; the stream lookup is asked again; no retry on NotAllowedError; timers and listeners are cleared on unmount.
 Guard: `src/map/MapSourceView.reacquire.test.jsx` (fake timers, faked mediaDevices). Not checked on a real camera.
+
+## Dev refused an 843 MB space carry (2026-11-12, owner row N3847)
+Symptom: `di open platina.diiii --to https://dev.diiii.xyz` stopped with "platina.diiii is bigger than dev.diiii.xyz takes over the wire (its MAX_UPLOAD_MB)".
+Cause: three walls in series for a hosted tier: serverXR `MAX_UPLOAD_MB` default 100 (docker-compose.yml, no dev override), nginx `client_max_body_size 110m` on `/serverXR/` (nginx.conf, baked into the client image), and Node's 300 s `requestTimeout`; the CLI only reads the 413.
+Fix: `docker-compose.dev.yml` sets `MAX_UPLOAD_MB: ${DEV_MAX_UPLOAD_MB:-2048}` (production keeps 100); a dedicated nginx location for `/serverXR/api/spaces/(bundle|:id/proposals)` with 2100m, `proxy_request_buffering off`, 900 s timeouts; `httpServer.requestTimeout = 0` when the ceiling is above 100 MB.
+Regression guard: `scripts/uploadLimit.test.js` (fails if the dev default is under 1024 MB or nginx is the smaller wall).
+Still needed on the VPS: a dev-tier deploy (compose file + new client image), and no `MAX_UPLOAD_MB`/`DEV_MAX_UPLOAD_MB` below 1024 in the dev `.env`. Not checked against a real 843 MB upload.
+
+## A laser send could wait for ever; a new Screen could bind to a deleted deck (code review, 2026-11-12, owner row N3876)
+Found by review, not seen live. (1) `postLaser` in `src/map/laserLink.js` had no timeout and no abort, so a laser engine that took the connection but never answered left a cue's laser look or the Perform Blackout send pending for ever. (2) `findPictureSurface` in `src/studio/utils/screenOps.js` reused the first `network` surface with any `ref`, even one naming a deck that was deleted, so "Add Screen" bound to a surface that shows nothing.
+Fix: (1) every laser POST races a 4 s timer (`LASER_POST_TIMEOUT_MS`, overridable by `timeoutMs`), aborts the fetch and answers `false`; the race answers even if a fetch ignores the signal. (2) a surface is reused only when its `ref` is a node still in the document; otherwise a new surface is made on the live deck.
+Guard: `src/map/laserLink.test.js` (fake timers, a fetch that never answers) and two cases in `src/studio/utils/screenOps.test.js`. Not checked against a real hung laser engine.
