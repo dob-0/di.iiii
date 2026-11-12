@@ -19,3 +19,10 @@
 - CI fix (caused by this branch): raw/rawTestScope.test.js failed because src/map/MapSourceView.sourceOff.test.jsx was not in the test:raw list; added `map/MapSourceView.sourceOff` to package.json.
 - CI on the final head: build-and-test, checks, browser-checks, test shards 1 to 3, node-22-compat: all pass.
 - Not run locally: the lane gate stayed closed (exit 2), so no local test run; CI was the runner.
+
+## Review outcome (deck line review, round 1)
+
+- useTopNetwork cameraError read nowhere (should-fix): confirmed, fixed (caption on MapSourceView, cleared on open). Studio LiveScreens does not use the hook, so only the Map source view was affected.
+- topEngine refreshMatte marks picture seen early (should-fix): confirmed, fixed (rememberMatteRun after submit true; forgotten while model not ready). A worker answer of type fail after an accepted submit is not covered.
+- Notes, listed and not fixed: nocam-check.mjs default output folder is an absolute private path; ?enter= handler may strip the param before the node syncs (unrun, low confidence); no caller of bodyMatte retry() after a load error; K2 FREEZE release clears a hand-set hold; cameraError duplicate of the first finding (fixed with it).
+- Local tests not run: lane gate returned 2. CI is the runner.
