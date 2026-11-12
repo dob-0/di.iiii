@@ -25,3 +25,10 @@ aylmo (the show's source) is off. Studio-mac keeps playing until PONYO plays. Ea
    scrcpy + a virtual camera) and check how the deck matches the label (`src/project/tops/cameraPool.js`). Installs need Emily's yes.
 6. Measure: frames per second on the VJ deck and the stage page, before (old copy) and after. Report the numbers.
 7. Report to the owner: the address to open for clients, what works, what does not, undo (back to the old commit).
+
+## Visuals (owner: "move all visuals")
+- All visuals = the whole `platina` space with its clip media: file `platina.diiii`, 884044401 bytes (studio-mac
+  `~/di-backups/carry/platina.diiii`, made on aylmo 2026-11-12 12:58). Its import on studio-mac (deck-round-5 stack) holds
+  54 fixtures, 37 looks, 9 cues.
+- It reaches PONYO by USB stick (dev answered 503 at 20:4x; PONYO is not a Taildrop target). On PONYO import it into the
+  di that runs the show (`di open <file> --dry-run` first: it imports, see the di docs), then point the deck's clips at it.
