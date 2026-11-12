@@ -3,7 +3,7 @@
 // renderPlan.test.js). The document is never written: every plan draws a copy.
 //
 //   studio  the building view — the document as authored; the Studio viewport adds its edit tools
-//   tech    the schematic for the crew in the live show — ONLY the show's things: the rig as plain flat shapes in their own
+//   tech    the schematic for the crew in the live show — ONLY the show's things (the rig, the cue data, the stage solids and the wall picture): the rig as plain flat shapes in their own
 //           colour, the floor and the hall as plain grey faces; no air, fog, bloom, shadows, floor reflection, machines,
 //           outside, or other objects (owner 2026-10-15 07:1x–07:2x)
 //   show    the room as the audience sees it — the document as authored (its own air, bloom, lasers with halo); the public
@@ -17,6 +17,8 @@ export const RENDER_STORAGE_KEY = 'di.view.render'
 export const SCHEMATIC_LOOK = 'schematic'
 /** Tech's light on the hall: white, never tinted by the version's ambient (owner 2026-10-15: "why the lights like this"). */
 export const TECH_AMBIENT = Object.freeze({ color: '#ffffff', intensity: 0.6 })
+/** Tech's exposure: the plain grey solids read at 1, whatever the room's authored haze exposure is. */
+export const TECH_EXPOSURE = 1
 /** Tech's layers: the factory's machines and the world outside the hall are not the show's things. */
 export const TECH_LAYERS = Object.freeze({ machines: false, outside: false })
 
@@ -90,10 +92,22 @@ const isBuilding = (e) => {
     return e.type === 'model' && PLACE_NAME.test(String(e.name || ''))
 }
 
+// The show's own data holders: the entity that carries the looks/cues (rigLooks), the part map (rigParts) or the hall plan
+// (venuePlan). They draw nothing themselves, but the cue player (useRigLookEntities → rigLooksOf) reads the looks from the
+// entity list it is fed, so dropping the holder left Tech with no cue at all (the lamps stayed at their authored state).
+const DATA_COMPONENTS = ['rigLooks', 'rigParts', 'venuePlan']
+const holdsShowData = (e) => DATA_COMPONENTS.some((k) => e?.components?.[k] != null)
+// A picture or video on the stage's wall: the LED wall picture (named for what it is, never for a production).
+const SCREEN_TYPES = new Set(['image', 'video'])
+const SCREEN_NAME = /\b(screen|led|wall|projection|backdrop)\b/i
+const isScreenPicture = (e) => SCREEN_TYPES.has(e?.type) && SCREEN_NAME.test(String(e?.name || ''))
+// A stage solid: a plain box/cylinder/... (towers, wings, screen frame, stands). Kept only in a room that holds a rig.
+const isSolid = (e) => Boolean(e?.components?.primitive || e?.components?.occluder)
+
 /** Is this entity one of the show's things — kept in Tech on its own merit? */
 export const isShowThing = (entity) => {
     if (!entity) return false
-    if (isRig(entity) || isBuilding(entity)) return true
+    if (isRig(entity) || isBuilding(entity) || holdsShowData(entity) || isScreenPicture(entity)) return true
     if (entity.type === 'camera') return true
     return FLOOR_NAME.test(String(entity.name || ''))
 }
@@ -103,8 +117,10 @@ export const techEntities = (entities = []) => {
     const list = Array.isArray(entities) ? entities : []
     const byId = new Map(list.map((e) => [e?.id, e]))
     const keep = new Set()
+    // in a room with a rig the stage's own solids are the show's things too (drawn plain grey in Tech)
+    const rigRoom = list.some((e) => isRig(e))
     for (const e of list) {
-        if (!isShowThing(e)) continue
+        if (!isShowThing(e) && !(rigRoom && isSolid(e))) continue
         let at = e
         const seen = new Set()
         while (at && !keep.has(at.id) && !seen.has(at.id)) {
@@ -129,6 +145,8 @@ const techDocument = (document) => {
         renderSettings: {
             ...rest,
             look: SCHEMATIC_LOOK,
+            // the authored exposure belongs to the haze (Show's 0.1 here turned the plain grey solids black): Tech's fixed
+            toneMappingExposure: TECH_EXPOSURE,
             shadows: false,
             shadowCasting: { ...(rs.shadowCasting || {}), enabled: false }
         },

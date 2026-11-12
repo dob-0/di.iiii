@@ -1,0 +1,32 @@
+{
+ "what": "Platina: which v3 wall still each light look shows in the room (scripts/rigbuild/screen-picture.mjs --looks). Source: platina/scenes/one-desk/light-cues-to-deck-looks.md; 10 are certain (same name), the rest PROPOSED until the owner or the deck says otherwise. Looks not named = wall dark.",
+ "byLook": {
+  "doors": "v3-violet-drift.png",
+  "wait": "v3-violet-drift.png",
+  "entry": "v3-ice-back.png",
+  "magenta-room": "v3-magenta-room.png",
+  "magenta-room-beams": "v3-magenta-room.png",
+  "red-verticals": "v3-red-verticals.png",
+  "red-verticals-cross": "v3-red-verticals.png",
+  "ice-line": "v3-ice-line.png",
+  "ice-line-beams": "v3-ice-line.png",
+  "cathedral": "v3-cathedral.png",
+  "cathedral-turn": "v3-cathedral.png",
+  "white-back": "v3-white-back.png",
+  "white-back-beams": "v3-white-back.png",
+  "freeze-hold": "v3-white-back.png",
+  "drop-hit": "v3-white-back.png",
+  "drop-magenta": "v3-magenta-flood.png",
+  "drop-red": "v3-red-verticals.png",
+  "drop-cathedral": "v3-cathedral.png",
+  "build-ice": "v3-ice-back.png",
+  "fx-strobe": "v3-white-back.png",
+  "fx-sparkle": "v3-ice-line.png",
+  "fx-radar": "v3-red-verticals.png",
+  "fx-blocks": "v3-magenta-flood.png",
+  "fx-glitch": "v3-ice-back.png",
+  "fx-bars": "v3-ice-line.png",
+  "encore": "v3-magenta-flood.png",
+  "bow": "v3-white-back.png"
+ }
+}

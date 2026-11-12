@@ -462,5 +462,18 @@ export const encodeDmx = (channels, want = {}, type = null) => {
         out.tilt = c
         if (has('tiltFine')) out.tiltFine = f
     }
+    // Per-pixel colours (a pixel bar's p01r..p32b): `want.pixels` = factors 0..1 of the look's colour, one per pixel. The hue comes
+    // from want.colour at full, the pixel's factor scales it, the dimmer (above) carries the level. Whites cw## stay 0.
+    if (Array.isArray(want.pixels) && rgb) {
+        const lin = rgb.map(toLinear)
+        const peak = Math.max(...lin) || 1
+        want.pixels.forEach((k, i) => {
+            const n = String(i + 1).padStart(2, '0')
+            ;['r', 'g', 'b'].forEach((ch, j) => { if (has(`p${n}${ch}`)) out[`p${n}${ch}`] = Math.round((lin[j] / peak) * 255 * clamp01(Number(k))) })
+        })
+        for (const role of Object.keys(spec)) if (/^cw\d+$/.test(role)) out[role] = 0
+    }
+    // Raw roles a designer sets by name (a haze machine's fog / volume / fan): written only where the chart has the role.
+    for (const [role, v] of Object.entries(want.raw || {})) if (has(role) && Number.isFinite(Number(v))) out[role] = Math.max(0, Math.min(255, Math.round(Number(v))))
     return out
 }

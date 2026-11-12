@@ -6,7 +6,7 @@ import { MeshLambertMaterial } from 'three'
 // "looks where lasers and lights are just the shapes, not other things"). Mounted by RenderSettingsEffect only while the
 // render-time copy says `renderSettings.look === 'schematic'` (src/shared/renderPlan.js). A mesh whose material carries a
 // texture is drawn with one shared grey material; on unmount every swapped mesh gets its own material back. Beams and
-// laser lines (userData.beamPick) and shader materials are never touched. Models load late, so the scene is looked at
+// laser lines (userData.beamPick) and a wall picture (userData.keepTexture, ImageObject) and shader materials are never touched. Models load late, so the scene is looked at
 // again every second (a traverse, no per-frame cost), and a swap asks the on-demand loop for one frame.
 
 export const SCHEMATIC_GREY = '#8a8d91'
@@ -24,7 +24,7 @@ export default function SchematicSurfaces() {
         const sweep = () => {
             let changed = false
             scene.traverse((o) => {
-                if (!o.isMesh || swapped.has(o) || o.userData?.beamPick) return
+                if (!o.isMesh || swapped.has(o) || o.userData?.beamPick || o.userData?.keepTexture) return
                 const list = Array.isArray(o.material) ? o.material : [o.material]
                 if (!list.some(isTextured)) return
                 swapped.set(o, o.material)

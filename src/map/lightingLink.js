@@ -279,6 +279,27 @@ export async function readLightLooks({ spaceId = null, fetchImpl, signal } = {})
     }
 }
 
+/**
+ * What Lights follow reads from the desk, one GET of the space's own summary:
+ *   { state: 'off' | 'other' | 'own', lookId, layerFiredAt, cueIndex, cueFiredAt }
+ * lookId is layers[0].lookId (the layer the cues play on); cueIndex and cueFiredAt come
+ * from summary.cues. Never throws but on abort; a field the desk did not send is null.
+ */
+export async function readLightFollowState({ spaceId = null, fetchImpl, signal } = {}) {
+    const got = await getLightJson(spacePath(spaceId, 'api/summary'), { fetchImpl, signal })
+    if (got.state !== 'own') return { state: got.state, lookId: null, layerFiredAt: null, cueIndex: null, cueFiredAt: null }
+    const layer = Array.isArray(got.body?.layers) ? got.body.layers[0] : null
+    const cues = got.body?.cues && typeof got.body.cues === 'object' ? got.body.cues : {}
+    const num = (value) => (Number.isFinite(Number(value)) && value !== null && value !== '' ? Number(value) : null)
+    return {
+        state: 'own',
+        lookId: typeof layer?.lookId === 'string' && layer.lookId ? layer.lookId : null,
+        layerFiredAt: num(layer?.firedAt),
+        cueIndex: num(cues.index),
+        cueFiredAt: num(cues.firedAt)
+    }
+}
+
 // The same call a cue makes for a look (recallCueLighting above), on the space's address.
 export const fireLightLook = (id, { spaceId = null, fetchImpl } = {}) => postLight(spacePath(spaceId, 'api/looks/fire'), { id }, { fetchImpl })
 

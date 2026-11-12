@@ -271,12 +271,21 @@ void main() {
         label: 'Silhouette',
         family: 'adjust',
         inputs: ['a'],
+        // Reads `time` only when Drift or Flash is above 0.
+        animated: true,
         params: [
             param('threshold', 'Threshold', 0.5, 0, 1),
             param('soft', 'Softness', 0.05, 0, 0.5),
             toggle('invert', 'Invert'),
             colour('colour', 'Subject', '#ffffff'),
-            colour('back', 'Background', '#000000')
+            colour('back', 'Background', '#000000'),
+            // Both 0 = exactly the old look. Drift turns the Background's hue round
+            // the colour circle (1 = one turn every 2 s); Flash swaps Subject and
+            // Background in a hard on/off, Flash x 12 swaps a second (the engine
+            // gives shaders `time` only, no BPM or beat phase). A black
+            // Background has no hue: Drift needs a colour there to show.
+            param('drift', 'Drift', 0, 0, 1),
+            param('flash', 'Flash', 0, 0, 1)
         ],
         // Luma against a threshold with a smooth edge: the bright part of the
         // picture becomes the Subject colour, the rest the Background colour
@@ -289,12 +298,23 @@ uniform float p_soft;
 uniform float p_invert;
 uniform vec3 p_colour;
 uniform vec3 p_back;
+uniform float p_drift;
+uniform float p_flash;
 void main() {
     float l = luma(texture2D(a, uv).rgb);
     float s = max(p_soft, 0.0005);
     float m = smoothstep(p_threshold - s, p_threshold + s, l);
     if (p_invert > 0.5) m = 1.0 - m;
-    gl_FragColor = vec4(mix(p_back, p_colour, m), 1.0);
+    vec3 back = p_back;
+    if (p_drift > 0.0) {
+        // Hue turn = rotation about the grey axis (1,1,1).
+        float ang = 3.14159265 * p_drift * mod(time, 3600.0);
+        vec3 k = vec3(0.57735027);
+        back = back * cos(ang) + cross(k, back) * sin(ang) + k * dot(k, back) * (1.0 - cos(ang));
+        back = clamp(back, 0.0, 1.0);
+    }
+    if (p_flash > 0.0 && mod(floor(time * p_flash * 12.0), 2.0) > 0.5) m = 1.0 - m;
+    gl_FragColor = vec4(mix(back, p_colour, m), 1.0);
 }`
     },
 
@@ -333,6 +353,86 @@ void main() {
     float iso = 1.0 - smoothstep(p_width - 0.5, p_width + 0.5, px);
     float edge = clamp(grad * 6.0, 0.0, 1.0) * p_edges;
     gl_FragColor = vec4(mix(p_back, p_colour, clamp(max(iso, edge), 0.0, 1.0)), 1.0);
+}`
+    },
+
+    // Body: the person cut out as a flat shape (bodyMatte.js finds them). `a` is the
+    // picture on the stack, `b` the layer's source picture BEFORE its other
+    // effects: the model looks at `b`, the colours are painted over `a`. The
+    // engine gives it `mask` (the model's answer, top-down, 8-bit) and
+    // matte_ready (0 while the model loads or when it is not available: the
+    // shader then passes `a` through unchanged). The echo trail lives in this
+    // operator's own alpha (`self`): every operator draws alpha 1 except this one.
+    'top.matte': {
+        label: 'Body',
+        family: 'adjust',
+        inputs: ['a', 'b'],
+        matte: true,
+        animated: true,
+        params: [
+            param('soft', 'Softness', 0.3, 0, 1),
+            param('drift', 'Drift', 0, 0, 1),
+            param('echo', 'Echo', 0, 0, 1),
+            colour('colour', 'Body', '#000000'),
+            colour('back', 'Background', '#e8456b'),
+            param('shade', 'Shade', 0, 0, 1),
+            param('fill', 'Fill', 1, 0, 1),
+            toggle('invert', 'Invert')
+        ],
+        fragment: `
+uniform sampler2D self;
+uniform sampler2D mask;
+uniform float matte_ready;
+uniform float p_soft;
+uniform float p_drift;
+uniform float p_echo;
+uniform float p_shade;
+uniform float p_fill;
+uniform float p_invert;
+uniform vec3 p_colour;
+uniform vec3 p_back;
+vec3 hueTurn(vec3 c, float turns) {
+    float k = 6.2831853 * turns;
+    const vec3 w = vec3(0.57735);
+    return c * cos(k) + cross(w, c) * sin(k) + w * dot(w, c) * (1.0 - cos(k));
+}
+float person(vec2 o) {
+    vec2 q = uv + o * texel;
+    return texture2D(mask, vec2(q.x, 1.0 - q.y)).r;
+}
+float edge(float v) {
+    float w = 0.04 + p_soft * 0.42;
+    return smoothstep(0.5 - w, 0.5 + w, v);
+}
+float decay() { return p_echo * 0.985; }
+float trailAt(vec2 o) {
+    vec2 q = clamp(uv + o * texel, vec2(0.0), vec2(1.0));
+    return max(edge(person(o)), max(texture2D(self, q).a * decay() - 1.0 / 255.0, 0.0));
+}
+void main() {
+    vec3 pic = texture2D(a, uv).rgb;
+    if (matte_ready < 0.5) { gl_FragColor = vec4(pic, 0.0); return; }
+    float m = edge(person(vec2(0.0)));
+    vec3 back = clamp(hueTurn(p_back, time * p_drift * 0.125), 0.0, 1.0);
+    vec3 body = mix(p_colour, back * 0.55, p_shade);
+    float seen = p_invert > 0.5 ? 1.0 - m : m;
+    vec3 inside = mix(pic, body, p_fill);
+    vec3 outside = back;
+    if (p_invert > 0.5) { outside = mix(pic, body, p_fill); inside = back; }
+    vec3 col = mix(outside, inside, seen);
+    float t = 0.0;
+    if (p_echo > 0.001) {
+        t = trailAt(vec2(0.0));
+        float gx = trailAt(vec2(1.0, 0.0)) - trailAt(vec2(-1.0, 0.0));
+        float gy = trailAt(vec2(0.0, 1.0)) - trailAt(vec2(0.0, -1.0));
+        float grad = length(vec2(gx, gy)) * 0.5;
+        float bands = 6.0;
+        float d = abs(fract(t * bands + 0.5) - 0.5);
+        float px = d / max(grad * bands, 0.02);
+        float line = (1.0 - smoothstep(0.5, 1.5, px)) * smoothstep(0.02, 0.08, t) * (1.0 - smoothstep(0.92, 1.0, t));
+        col = mix(col, body, line * (1.0 - m));
+    }
+    gl_FragColor = vec4(col, t);
 }`
     },
 
@@ -377,6 +477,63 @@ void main() {
     float line = mod(floor(uv.y / texel.y), 2.0);
     vec3 c = vec3(r, g, b) * (1.0 - p_scan * 0.5 * line);
     gl_FragColor = vec4(c, 1.0);
+}`
+    },
+
+    'top.blocks': {
+        label: 'Blocks',
+        family: 'adjust',
+        inputs: ['a'],
+        animated: true,
+        params: [
+            param('amount', 'Amount', 0.3, 0, 1),
+            param('size', 'Size', 0.25, 0, 1),
+            param('rate', 'Rate', 6, 0, 30, 0.5),
+            param('shift', 'Shift', 0.5, 0, 1),
+            param('hold', 'Hold', 0.5, 0, 1)
+        ],
+        // A broken video stream: the picture is cut into rectangles of mixed
+        // sizes (a coarse grid, each cell split once or twice) and Amount of
+        // them are broken. A broken block either keeps the OLD picture (reads
+        // `self`, this operator's last output, like Freeze) or slides sideways
+        // by up to Shift. The pattern steps Rate times a second and is a hash
+        // of the block and the step, never a random call. Hold stretches how
+        // many steps a block stays as it is (1 step at 0, up to 12 at 1). Colour
+        // is left alone: grey comes from the effects placed before it.
+        fragment: `
+uniform sampler2D self;
+uniform float p_amount;
+uniform float p_size;
+uniform float p_rate;
+uniform float p_shift;
+uniform float p_hold;
+float hsh(vec2 p, float s) { return fract(sin(dot(p, vec2(127.1, 311.7)) + s * 74.7) * 43758.5453123); }
+void main() {
+    vec3 live = texture2D(a, uv).rgb;
+    vec4 held = texture2D(self, uv);
+    float aspect = texel.y / texel.x;
+    vec2 q = vec2(uv.x * aspect, uv.y);
+    float tick = floor(mod(time, 3600.0) * p_rate);
+    vec2 cs = vec2(2.0, 1.0) * mix(0.03, 0.4, p_size);
+    vec2 id = floor(q / cs);
+    float life = 1.0 + floor(hsh(id, 2.0) * p_hold * 12.0);
+    float ep = mod(floor((tick + floor(hsh(id, 1.0) * life)) / life), 509.0);
+    for (int l = 0; l < 2; l++) {
+        float r = hsh(id + float(l) * 17.0, ep + 3.0);
+        if (r < 0.6) {
+            float ax = hsh(id + float(l) * 17.0, ep + 4.0);
+            vec2 f = ax < 0.4 ? vec2(2.0, 1.0) : (ax < 0.75 ? vec2(1.0, 2.0) : vec2(2.0, 2.0));
+            cs = cs / f;
+            id = floor(q / cs);
+        }
+    }
+    if (hsh(id, ep + 50.0) >= p_amount) { gl_FragColor = vec4(live, 1.0); return; }
+    if (hsh(id, ep + 70.0) < 0.5) {
+        gl_FragColor = vec4(held.a > 0.5 ? held.rgb : live, 1.0);
+    } else {
+        float dx = (hsh(id, ep + 90.0) - 0.5) * 1.2 * p_shift;
+        gl_FragColor = vec4(texture2D(a, vec2(fract(uv.x + dx), uv.y)).rgb, 1.0);
+    }
 }`
     },
 

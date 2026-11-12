@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { context as fiberContext, useFrame } from '@react-three/fiber'
-import { AdditiveBlending, BufferAttribute, BufferGeometry, ConeGeometry, DoubleSide, NormalBlending } from 'three'
+import { AdditiveBlending, BufferAttribute, BufferGeometry, ConeGeometry, DoubleSide, FrontSide, NormalBlending } from 'three'
 import { spotTargetOffset } from '../project/viewport/spotLightAim.js'
 import { beamCastsLight, beamFadeColors, beamIsVisible, edgeForExponent, fieldRatioOf, profileExponentForRatio, spotBeamShape, spotLightCone } from './spotBeam.js'
 import { strobeEnvelope } from '../rigbuild/rigFlash.js'
@@ -211,7 +211,9 @@ export default function SpotLightObject({
                         opacity={schematic ? SCHEMATIC_CONE_OPACITY : throwShape.opacity}
                         blending={schematic ? NormalBlending : AdditiveBlending}
                         depthWrite={false}
-                        side={DoubleSide}
+                        // Tech: front faces only — a camera standing inside a wide wash cone saw its far wall, and 20+ stacked cones
+                        // filled the screen with one flat colour (operator view must read at a glance)
+                        side={schematic ? FrontSide : DoubleSide}
                         toneMapped={false}
                         fog={false}
                         // where the cone meets the building it is cut there (beamReach.js clipPlanesOf)
@@ -315,7 +317,7 @@ function BeamAirStrobe({ material, values }) {
 // direction (BeamReachProbe, beamReach.js); before the first cast, and on a miss, at `length` (capped on a miss).
 // RENDER TECH (renderPlan.js): a laser's lines as plain lines in its colour, each to its first surface (physics first:
 // the same BeamReachProbe as LaserLines), the frame on at the show's time. No haze law, no halo, no end spot.
-const SCHEMATIC_CONE_OPACITY = 0.28
+export const SCHEMATIC_CONE_OPACITY = 0.22
 function SchematicLaserLines({ store, laser, color, length }) {
     const { points, pose } = useLaserFramePose(store, laser)
     // Drawn from the pose (blended between keyframes when the frames tween); the reach probe casts the keyframe on

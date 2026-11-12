@@ -267,7 +267,9 @@ export const positionOf = (f) => {
  * crane, beam, pipe, scaffold) — the words say what the piece is, not whose production it is. A deck, a speaker, a barrier
  * and a hoist's chain are not. Pure. */
 const STEEL_WORDS = new Set(['truss', 'girder', 'steel', 'tower', 'crane', 'beam', 'pipe', 'scaffold'])
-export const isSteelSolid = (s) => Boolean(s) && (s.steel === true || s.kind === 'tower' || /^truss/.test(String(s.kind || '')) ||
+// `opaque: true` (2026-11-12, owner N3835 "some lights go out from the objects"): a rig solid that says it is opaque (a deck, a
+// wing, an LED wall, a floor) stops a beam the same way, through the same flag the room already casts against.
+export const isSteelSolid = (s) => Boolean(s) && (s.steel === true || s.opaque === true || s.kind === 'tower' || /^truss/.test(String(s.kind || '')) ||
     String(s.id || '').split('-').some((w) => STEEL_WORDS.has(w)))
 const STEEL_FLAG = Object.freeze({ kind: STEEL_KIND })
 
@@ -394,8 +396,11 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
         const ghost = s.id.startsWith('rig-shell-')          // the building's ghost shell (outer walls, roof): seen through (owner 2026-10-12)
         const color = ghost ? '#9aa0a6' : s.id === 'rig-ash-wall' ? '#070707' : s.id.startsWith('rig-pa-') ? '#202226' : '#6f7378'
         const size = s.kind === 'tower' ? [0.29, r3(6 * s.s[1]), 0.29] : s.s
-        // a solid that says anchor 'base' gives p as the middle of its FOOT; a box entity is drawn from its centre
-        const pos = s.anchor === 'base' ? [s.p[0], r3(s.p[1] + size[1] / 2), s.p[2]] : s.p
+        // A box entity is drawn standing ON its position (BoxObject.jsx lifts the mesh by half its height). So a solid that says
+        // anchor 'base' (p = the middle of its FOOT) goes in as it is, and one given by its centre is lowered by half its height.
+        // (2026-11-12, N3788: the 11-11 rule added half a height to the base ones, and every wing, the wall, the deck and the
+        // stands hung half their own height in the air; measured on the room's frame against the wall picture and a 2.63 m pole.)
+        const pos = s.anchor === 'base' ? s.p : [s.p[0], r3(s.p[1] - size[1] / 2), s.p[2]]
         out.push(box(s.id, s.name.slice(0, 200), pos, size, color, ghost ? (s.opacity ?? 0.2) : 1, ghost ? 0.9 : s.id === 'rig-ash-wall' ? 0.98 : 0.85, !ghost && isSteelSolid(s)))   // box(…, opacity, roughness, steel)
     }
     return out

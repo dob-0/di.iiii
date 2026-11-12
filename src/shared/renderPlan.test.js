@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-    RENDER_MODES, SCHEMATIC_LOOK, TECH_AMBIENT, TECH_LAYERS,
+    RENDER_MODES, SCHEMATIC_LOOK, TECH_AMBIENT, TECH_EXPOSURE, TECH_LAYERS,
     isShowThing, normalizeRender, outputDocument, renderPlan, roomRenderWanted, techEntities
 } from './renderPlan.js'
 
@@ -58,7 +58,7 @@ describe('render words', () => {
 
 describe('Tech keeps only the show\'s things', () => {
     it('keeps the rig, the building, the floor/stage, cameras and the parent of a kept lamp; drops the rest', () => {
-        expect(ids(techEntities(ENTITIES))).toEqual(['place-hall', 'truss-g', 'lamp-1', 'cube-1', 'truss-1', 'stage', 'cam-floor'])
+        expect(ids(techEntities(ENTITIES))).toEqual(['place-hall', 'truss-g', 'lamp-1', 'cube-1', 'truss-1', 'stage', 'cam-floor', 'screen'])
     })
     it('keeps a show thing on its own merit and nothing else (parity with smartViewGeometry: src/project/viewport/renderPlanParity.test.js)', () => {
         expect(isShowThing(ENTITIES.find((e) => e.id === 'press'))).toBe(false)
@@ -68,6 +68,31 @@ describe('Tech keeps only the show\'s things', () => {
         const loop = [{ id: 'a', parentId: 'b', type: 'spotLight' }, { id: 'b', parentId: 'a', type: 'group' }, { id: 'c', parentId: 'gone', type: 'spotLight' }]
         expect(ids(techEntities(loop))).toEqual(['a', 'b', 'c'])
         expect(techEntities(null)).toEqual([])
+    })
+})
+
+describe('Tech as the operator mode (N3818)', () => {
+    const RIG = [
+        { id: 'rig-show', type: 'group', name: 'the show', components: { rigLooks: { looks: [{ id: 'a' }] }, rigParts: { parts: {} } } },
+        { id: 'rig-venue', type: 'group', name: 'venue', components: { venuePlan: {}, viewRole: 'frame' } },
+        { id: 'lamp', type: 'spotLight', name: 'lamp', components: { fixture: { type: 'x' }, beam: {} } },
+        { id: 'tower', type: 'box', name: 'tower 1 pole', components: { primitive: { shape: 'box' }, occluder: { kind: 'steel' } } },
+        { id: 'wing', type: 'box', name: 'wing panel', components: { primitive: { shape: 'box' } } },
+        { id: 'pic', type: 'image', name: 'the picture on the wall', components: { media: { assetId: 'x' } } },
+        { id: 'photo', type: 'image', name: 'Holiday photo', components: { media: { assetId: 'y' } } },
+        { id: 'press', type: 'model', name: 'Press 1890' }
+    ]
+    it('keeps the entity that holds the cue looks, or the cue player has nothing to play (Tech showed no cue)', () => {
+        expect(ids(techEntities(RIG))).toContain('rig-show')
+        expect(isShowThing(RIG[0])).toBe(true)
+        expect(techEntities(RIG).some((e) => Array.isArray(e?.components?.rigLooks?.looks))).toBe(true)
+    })
+    it('keeps the stage solids of a room with a rig and the wall picture; drops an unrelated photo and model', () => {
+        expect(ids(techEntities(RIG))).toEqual(['rig-show', 'rig-venue', 'lamp', 'tower', 'wing', 'pic'])
+    })
+    it('a room with no rig keeps no loose solids', () => {
+        const none = [{ id: 'b', type: 'box', name: 'cube', components: { primitive: { shape: 'box' } } }]
+        expect(techEntities(none)).toEqual([])
     })
 })
 
@@ -95,16 +120,16 @@ describe('renderPlan — the decision table', () => {
         expect(tech.schematic).toBe(true)
         expect(tech.editing).toBe(false)
     })
-    it('Tech keeps the exposure (the one light-environment group it reads)', () => {
+    it('Tech fixes the exposure (the authored one belongs to the haze; 0.1 turned the grey solids black) and keeps the mapping', () => {
         expect(tech.document.renderSettings.toneMapping).toBe('aces')
-        expect(tech.document.renderSettings.toneMappingExposure).toBe(3.5)
+        expect(tech.document.renderSettings.toneMappingExposure).toBe(TECH_EXPOSURE)
     })
     it('Tech: fog off, the hall lit white, machines and outside off', () => {
         expect(tech.document.worldState.fog).toEqual({ enabled: false, near: 8, far: 50, color: '#111' })
         expect(tech.document.worldState.ambientLight).toEqual(TECH_AMBIENT)
         expect(tech.document.worldState.backgroundColor).toBe('#000')
         expect(tech.layers).toEqual(TECH_LAYERS)
-        expect(ids(tech.document.entities)).not.toContain('screen')
+        expect(ids(tech.document.entities)).not.toContain('press')
     })
     it('never writes the document', () => {
         const before = JSON.stringify(DOC)

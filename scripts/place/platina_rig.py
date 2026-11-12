@@ -227,7 +227,9 @@ def build(repo, M):
     # Each unit's profile comes from the fixture library (the real lamp, owner 11-11 N3738 "all real"): the maker's light
     # output and beam, read from the type file. `draw` holds the renderer's own class values (penumbra, air share, reach),
     # which no maker states. A figure the maker does not publish is said so, with what stands in for it.
-    DRAW = {'wash': {'penumbra': 0.5, 'haze': 0.35, 'reach_m': 18}, 'beam': {'penumbra': 0.1, 'haze': 1, 'reach_m': 40}, 'bar': {'penumbra': 0.5, 'haze': 0.35, 'reach_m': 24}}
+    DRAW = {'wash': {'penumbra': 0.5, 'haze': 0.35, 'reach_m': 18}, 'beam': {'penumbra': 0.1, 'haze': 1, 'reach_m': 40}, 'bar': {'penumbra': 1, 'haze': 0.35, 'reach_m': 24}}
+    # bar penumbra 1 (2026-11-12, N3790): a 1 m strip of LEDs has no lens edge, its light falls off smoothly to the side. At 0.5 each
+    # of the 24 bars drew a round pool edge; stacked 3 high on 8 towers they showed as nested rings on the floor and the wings.
     def profile(tid, cls, lumens=None, why=''):
         t = lib(tid); o = t.get('optics') or {}
         p = {'library': tid, 'basis': t.get('identified'), 'why': why}
@@ -349,6 +351,11 @@ def build(repo, M):
     for i, x in enumerate(sorted(sx_)):
         add(f'platina-k15-{7 + i:02d}', 'cp-hy-beye-k15', 'k15-sides', [x, sy_, sz_], [math.pi, 0, 0], 0.2618, 'measured', 'x plot-front.png lamp body, z plot-side.png/plot-top.png, height plot-front.png: on a stand at the side (the plot shows a pole)',
             f'K15 {7 + i} side stand', [M['k15_side']['body_front_m'][0], M['k15_side']['body_front_m'][1], 0.36], i, {'aim_home': 'straight up', 'stand': 'on a pole beside the body (plot-front.png)'})
+    # the two side K15 stand on a stand: draw its pole, deck to lamp foot (2026-11-12, N3788: without it the lamp hung in the air)
+    for i, x in enumerate(sorted(sx_)):
+        foot = sy_ - M['k15_side']['body_front_m'][1] / 2
+        solids.append({'id': f'platina-stand-{"lr"[i]}', 'name': f'stand pole under side K15 {7 + i}', 'kind': 'box', 'anchor': 'base', 'status': 'from-plan-words', 'p': [r2(x), deck, r2(sz_)], 'r': [0, 0, 0],
+                       's': [0.06, r2(foot - deck), 0.06], 'source': 'plot-front.png draws a pole at the side K15 (height measured, the place of the pole under the lamp is ours)'})
     # XP-16R: PROPOSED. 7 in the plot's Sharpy slots on the over-stage truss (the truss the 8 K10 of the offer hang on);
     # the other 5 stand on the deck (default, --xp-rest deck) or hang on the audience-side truss (--xp-rest truss, the first version)
     slots = sorted(M['sharpy']['x_top_m']); zs = M['k10']['over_z_side_m']
@@ -390,6 +397,13 @@ def build(repo, M):
         add(f'platina-hazer-{i + 1}', 'magmatic-magma-prime', 'hazer', [x, deck + 0.20, -0.55], [-math.pi / 2, 0, 0], 0.0, 'PROPOSED',
             'PROPOSED: on the deck behind the screen line, outside the screen\'s width, between the screen and the back wall (-0.96 m): hidden from the audience, hazes the whole stage; the list and the plot place none',
             f'hazer {i + 1}', [0.16, 0.40, 0.34], i, {'aim_home': 'horizontal +z (output toward the audience)', 'machine': 'hazer', 'size_note': 'the maker\'s 338 x 160 x 400 mm (L x W x H, manual p16)'})
+    # LIGHT STOPS AT THE FIRST SURFACE (owner N3835, 2026-11-12): every solid of this stage is opaque, and the room has a floor.
+    # Without a hall record the room had no ground at all, so a beam aimed down ran on under the stage. The floor's size is
+    # PROPOSED (the hall is not measured): 24 x 30 m, its top at y = 0, the audience floor of this frame.
+    solids.append({'id': 'platina-floor', 'name': 'hall floor (size PROPOSED, the hall is not measured)', 'kind': 'box', 'anchor': 'base',
+                   'status': 'PROPOSED', 'p': [0, -0.05, 7.0], 's': [24.0, 0.05, 30.0], 'source': 'no hall record; owner N3835: light stops at the first surface'})
+    for s_ in solids:
+        s_['opaque'] = True
     rig = {
         'version': '1.0', 'title': 'Platina - Live in Yerevan: rig plan for the visualiser (stage, trusses, towers measured from the 11-10 light plot; 54 lamps of the 11-11 offer)', 'date': '2026-11-11',
         # the room's ONE camera level (three.js toneMappingExposure). MEASURED 2026-11-11 on the GPU (pics8, cues 12 and 18 at

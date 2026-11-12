@@ -24,6 +24,7 @@ import {
     widthClassOf
 } from './presets.js'
 import { keysOf, nextWindowId, windowKeyAction } from './windowKeys.js'
+import { clearArrangement, readArrangement, writeArrangement } from './arrangementStore.js'
 import PerformWindowBody, { windowTitle } from './PerformWindows.jsx'
 import './perform.css'
 
@@ -135,10 +136,21 @@ export default function PerformDesk({
     }, [choice?.notice, chosenId])
 
     // The arrangement on screen: which windows, their rectangles, their stacking.
+    const skipRestore = useRef(false)
     const [arrangement, setArrangement] = useState(null) // { presetId, widthClass, windows, rects, order, minimized }
     useEffect(() => {
         if (!preset) return
         if (arrangement && arrangement.presetId === preset.id && arrangement.widthClass === widthClass) return
+        // A reload (or a remount) finds the arrangement this device kept for this project, if it belongs to this preset and width.
+        // Picking a preset or "Reset layout" asks for the preset as it is: that read is skipped once.
+        if (skipRestore.current) skipRestore.current = false
+        else {
+            const kept = readArrangement(spaceId, projectId)
+            if (kept && kept.presetId === preset.id && kept.widthClass === widthClass) {
+                setArrangement(kept)
+                return
+            }
+        }
         const rects = preset[widthClass] || {}
         const windows = preset.windows.filter((item) => rects[item.id])
         setArrangement({
@@ -151,6 +163,11 @@ export default function PerformDesk({
             changed: false
         })
     }, [preset, widthClass, arrangement === null]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Every change of place, size or state is kept on this device, under the project's key (arrangementStore.js).
+    useEffect(() => {
+        if (arrangement?.changed) writeArrangement(spaceId, projectId, arrangement)
+    }, [arrangement, spaceId, projectId])
 
     // The address says which preset is open, so "copy link" and a reload agree.
     useEffect(() => {
@@ -332,6 +349,8 @@ export default function PerformDesk({
     }, [])
 
     const pick = (id) => {
+        clearArrangement(spaceId, projectId)
+        skipRestore.current = true
         setChosenId(id)
         setNotice('')
         setArrangement(null)
@@ -357,6 +376,7 @@ export default function PerformDesk({
         } else {
             applyLocalOps({ type: 'upsertPerformPreset', payload: { preset: saved } }, { activityMessage: `Gave “${saved.name}” to the show.` })
         }
+        clearArrangement(spaceId, projectId)
         setSaving(null)
         setSaveName('')
         setMenu(null)
@@ -403,6 +423,9 @@ export default function PerformDesk({
         else addWindow(kind)
     }
     const nodesHref = buildRawProjectPath(projectId, spaceId)
+    // The deck's full page: Nodes opens with this deck node entered (?enter=<node id>).
+    const deckNodeId = document?.nodes?.find?.((node) => node?.typeId === 'vj.deck')?.id || null
+    const deckFullHref = deckNodeId ? `${nodesHref}?enter=${encodeURIComponent(deckNodeId)}` : null
 
     return (
         <>
@@ -511,6 +534,7 @@ export default function PerformDesk({
                                 ))}
                             </div>
                             <div className="perform-menu-group perform-menu-sep">
+                                {deckFullHref ? <a className="perform-menu-item" role="menuitem" href={deckFullHref} onClick={(event) => navigateInApp(event, deckFullHref)}>Nodes · VJ deck, full page ›</a> : null}
                                 <a className="perform-menu-item" role="menuitem" href={nodesHref} onClick={(event) => navigateInApp(event, nodesHref)}>Nodes · the whole patch ›</a>
                             </div>
                         </div>
@@ -543,6 +567,13 @@ export default function PerformDesk({
                         </div>
                     ) : null}
                 </div>
+                <button
+                    type="button"
+                    className="perform-strip-button"
+                    onClick={arrangeAll}
+                    disabled={!arrangement?.windows.length}
+                    title={`Arrange all: every window edge to edge, none over another (${keysOf('arrange')})`}
+                >Arrange all</button>
                 {missingDeck ? (
                     <span className="perform-strip-notice" role="status">
                         This view has no VJ deck.{' '}

@@ -119,6 +119,8 @@ import { buildObjectCards, thingBandBounds } from '../utils/objectCards.js'
 import { cardHeight } from '../utils/cardGeometry.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
 import { setAppNavigate } from '../../utils/appNavigate.js'
+import { stashRawEnterNode } from '../utils/rawEnterNodeHandoff.js'
+import { VJ_DECK_TYPE } from '../../project/tops/vjDeck.js'
 
 const OUTLINER_STORAGE_KEY = 'test-outliner-ws'
 const makeWorkspaceDoc = (nodes = []) => JSON.stringify({
@@ -139,6 +141,8 @@ const makeNodeZero = () => ({
 // across a suite, so without this the first empty render decides the chrome for
 // every later test in the file.
 afterEach(() => {
+    // entering a node now writes ?enter= into the address; every test starts at a clean one
+    window.history.replaceState(null, '', '/')
     for (const key of Object.keys(window.localStorage)) {
         if (key.startsWith('dii.raw.zen.') || key.startsWith('dii.rawLayout.')) window.localStorage.removeItem(key)
     }
@@ -960,8 +964,94 @@ describe('RawEditor hardware Back (mobile finding #3)', () => {
         render(<RawEditor localStorageKey={KEY} />)
         fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
         expect(screen.getByText(/inside/)).toBeTruthy()
-        act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
+        // a real Back moves the address to the entry before: no ?enter=
+        act(() => {
+            window.history.replaceState(null, '', window.location.pathname)
+            window.dispatchEvent(new PopStateEvent('popstate'))
+        })
         expect(screen.queryByText(/inside/)).toBeNull()
+    })
+
+    it('G7: Back at the root pushes no guard entry (Back leaves Nodes normally)', () => {
+        window.localStorage.setItem(KEY, JSON.stringify({
+            nodes: [{ id: 'c1', typeId: 'geom.cube', label: 'Cube', values: {} }],
+            edges: [], workspaceState: {}
+        }))
+        const push = vi.spyOn(window.history, 'pushState')
+        render(<RawEditor localStorageKey={KEY} />)
+        act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
+        expect(push).not.toHaveBeenCalled()
+        push.mockRestore()
+    })
+})
+
+describe('RawEditor deck ways (G1, G2)', () => {
+    const DECK = { id: 'deck1', typeId: VJ_DECK_TYPE, label: 'Deck', parentId: null, values: {} }
+    const CUBE = { id: 'c1', typeId: 'geom.cube', label: 'Cube', parentId: null, values: {} }
+    const open = async (nodes, address = '/') => {
+        mockLoadOnMount = { document: { nodes, edges: [], projectMeta: { title: 'Platina', spaceId: 'hayfilm' } }, version: 1 }
+        window.history.replaceState(null, '', address)
+        const view = render(<RawEditor projectId="p-deck" spaceId="hayfilm" />)
+        await waitFor(() => expect(view.container.querySelector('.sbar')).toBeTruthy())
+        return view
+    }
+    const deckButton = () => screen.queryByRole('button', { name: 'Open VJ Deck' })
+    afterEach(() => {
+        mockLoadOnMount = null
+        window.sessionStorage.clear()
+    })
+
+    it('G1: no Open VJ Deck button without a deck node', async () => {
+        await open([CUBE])
+        expect(deckButton()).toBeNull()
+    })
+
+    it('G1+G2: the button enters the deck and writes ?enter=; Back leaves it', async () => {
+        await open([DECK], '/?preset=vj')
+        await waitFor(() => expect(deckButton()).toBeTruthy())
+        fireEvent.click(deckButton())
+        const params = new URLSearchParams(window.location.search)
+        expect(params.get('enter')).toBe('deck1')
+        expect(params.get('preset')).toBe('vj')
+        expect(deckButton()).toBeNull()
+        act(() => {
+            window.history.replaceState(null, '', '/?preset=vj')
+            window.dispatchEvent(new PopStateEvent('popstate'))
+        })
+        expect(deckButton()).toBeTruthy()
+    })
+
+    it('G2: ?enter= on load opens the deck (button gone = inside)', async () => {
+        await open([DECK], '/?enter=deck1')
+        await waitFor(() => expect(screen.getByRole('navigation', { name: 'Inside' })).toBeTruthy())
+        expect(deckButton()).toBeNull()
+        expect(new URLSearchParams(window.location.search).get('enter')).toBe('deck1')
+    })
+
+    it('G2: an unknown ?enter= id is ignored and removed', async () => {
+        await open([DECK], '/?enter=nope&from=raw')
+        await waitFor(() => expect(new URLSearchParams(window.location.search).get('enter')).toBeNull())
+        expect(deckButton()).toBeTruthy()
+        expect(new URLSearchParams(window.location.search).get('from')).toBe('raw')
+    })
+
+    it('G1 (review): the button reaches a deck nested in another node while inside a sibling', async () => {
+        const FOLDER = { id: 'f1', typeId: 'geom.cube', label: 'Folder', parentId: null, values: {} }
+        const NESTED = { ...DECK, id: 'deckN', parentId: 'f1' }
+        const OTHER = { id: 'o1', typeId: 'geom.cube', label: 'Other', parentId: null, values: {} }
+        await open([FOLDER, NESTED, OTHER], '/?enter=o1')
+        await waitFor(() => expect(new URLSearchParams(window.location.search).get('enter')).toBe('o1'))
+        await waitFor(() => expect(deckButton()).toBeTruthy())
+        fireEvent.click(deckButton())
+        await waitFor(() => expect(new URLSearchParams(window.location.search).get('enter')).toBe('deckN'))
+        expect(deckButton()).toBeNull()
+    })
+
+    it('G2: stashRawEnterNode(nodeId) from another surface opens the deck on load', async () => {
+        stashRawEnterNode('deck1')
+        await open([DECK])
+        await waitFor(() => expect(deckButton()).toBeNull())
+        expect(new URLSearchParams(window.location.search).get('enter')).toBe('deck1')
     })
 })
 
@@ -1944,7 +2034,11 @@ describe('RawEditor: Open means the inside, every time', () => {
             expect(screen.getByRole('navigation', { name: 'Node scope' })).toBeTruthy()
             // Opening never put a window on screen as a side effect.
             expect(document.querySelector('.raw-window')).toBeNull()
-            act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
+            // a real Back returns the address to the entry before (no ?enter=)
+            act(() => {
+                window.history.replaceState(null, '', '/')
+                window.dispatchEvent(new PopStateEvent('popstate'))
+            })
         }
     })
 

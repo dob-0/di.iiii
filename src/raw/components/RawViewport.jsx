@@ -30,6 +30,7 @@ import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 import ScenePictureFeed from './ScenePictureFeed.jsx'
+import { LiveWallSources, LiveWallSwitch, useRoomWall } from '../../project/viewport/LiveWall.jsx'
 import { buildEntityTree } from '../../project/entityTree.js'
 import { rendererWithFallback } from '../../project/viewport/rendererFallback.js'
 
@@ -94,9 +95,9 @@ const asPositiveVec3 = (value, fallback = [1, 1, 1], min = 0.001, max = 100) => 
 // exactly as StudioViewport's SceneEntityNode does; drawn from the room's
 // centre it stood somewhere else in Nodes' room than in Studio (unit 4 of
 // decisions/2026-09-23-layers-what-inside-what.md, seen before it was fixed).
-function EntityVisual({ entity, childrenOf = null, depth = 0, assetMap, selectedEntityId = null, onSelect, showSelectionPills = true, onPointerDown, onPointerMove, onPointerUp }) {
+function EntityVisual({ entity, childrenOf = null, depth = 0, assetMap, screens = null, selectedEntityId = null, onSelect, showSelectionPills = true, onPointerDown, onPointerMove, onPointerUp }) {
     const transform = entity.components?.transform || {}
-    const content = <EntityContent entity={entity} assetMap={assetMap} />
+    const content = <EntityContent entity={entity} assetMap={assetMap} screens={screens} />
     const children = childrenOf?.get(entity.id) || []
     const selected = entity.id === selectedEntityId
 
@@ -129,6 +130,7 @@ function EntityVisual({ entity, childrenOf = null, depth = 0, assetMap, selected
                         childrenOf={childrenOf}
                         depth={depth + 1}
                         assetMap={assetMap}
+                        screens={screens}
                         selectedEntityId={selectedEntityId}
                         onSelect={onSelect}
                         showSelectionPills={showSelectionPills}
@@ -838,6 +840,8 @@ function SceneContent({
     scopeId,
     worldNode,
     liveOutputs = null,
+    // What each screen entity draws, by mapping surface id (LiveWall.jsx); null = nothing mounted.
+    screens = null,
     showSelectionPills = true,
     // false = a pure LOOK: no picking, no dragging, no double-click placing.
     // The /out projector view passes false — "handlers simply not passed" was
@@ -1220,6 +1224,7 @@ function SceneContent({
                                 entity={shown}
                                 childrenOf={entityTree.childrenOf}
                                 assetMap={assetMap}
+                                screens={screens}
                                 selectedEntityId={selectedEntityId}
                                 onSelect={onSelectEntity}
                                 showSelectionPills={showSelectionPills}
@@ -1435,6 +1440,13 @@ export default function RawViewport({
 }) {
     const viewportRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
+    // The live wall (LiveWall.jsx): the platform's own live screens, mounted only while this room holds a
+    // screen entity and the viewer's switch is on. Off, the screens are not drawn and the still picture shows.
+    const wall = useRoomWall(document.entities)
+    const sceneDocument = useMemo(
+        () => (wall.drawn === document.entities || (!document.entities && !wall.drawn.length) ? document : { ...document, entities: wall.drawn }),
+        [document, wall.drawn]
+    )
     const camera = document.worldState?.savedView || {}
     const spatialNodes = useMemo(
         () => (document.nodes || []).filter((node) => isSpatialNode(node) && (scopeId === undefined || (node.parentId || null) === scopeId)),
@@ -1553,7 +1565,8 @@ export default function RawViewport({
                     ambience={ambience}
                     showSelectionPills={showSelectionPills}
                     interactive={interactive}
-                    document={document}
+                    screens={wall.screens}
+                    document={sceneDocument}
                     selectedEntityId={selectedEntityId}
                     selectedNodeId={selectedNodeId}
                     onSelectEntity={onSelectEntity}
@@ -1571,6 +1584,8 @@ export default function RawViewport({
                     ? <ScenePictureFeed nodeId={pictureNodeId} onPictureChange={onPictureChange} />
                     : null}
             </Canvas>
+            <LiveWallSources document={document} entities={wall.drawn} mounted={wall.mounted} onScreens={wall.setScreens} />
+            <LiveWallSwitch on={wall.on} onChange={wall.setOn} hasWall={wall.hasWall} style={{ right: 8, top: 8 }} />
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
             <div className="raw-cursor-layer">
                 {Object.values(cursors).map((cursor) => (

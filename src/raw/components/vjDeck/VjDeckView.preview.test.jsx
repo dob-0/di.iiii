@@ -26,12 +26,14 @@ beforeEach(() => { try { window.localStorage.clear() } catch { /* none */ } })
 afterEach(cleanup)
 
 describe('deselect', () => {
-    it('a click on the tile that is already playing stops its layer', () => {
+    it('a click on the tile that is already playing keeps it playing and only selects it (N3634)', () => {
         const onValues = vi.fn()
         render(<Host initialDeck={base()} onValues={onValues} />)
         expect(slot(1, 1).getAttribute('aria-pressed')).toBe('true')
         fireEvent.click(slot(1, 1))
-        expect(last(onValues).layers[0].active).toBe(-1)
+        expect(slot(1, 1).getAttribute('aria-pressed')).toBe('true')
+        expect(onValues.mock.calls.every(([values]) => (values?.deck || values)?.layers?.[0]?.active !== -1)).toBe(true)
+        expect(screen.getByRole('region', { name: 'Clip settings' })).toBeTruthy()
         fireEvent.click(slot(1, 3))
         expect(last(onValues).layers[0].active).toBe(2)
     })

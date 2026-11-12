@@ -2651,6 +2651,15 @@ function createDesk(opts = {}) {
     // `scenes()` is the library as { id, name }, read through to the show that is loaded now.
     onScene: (fn) => engine.onScene(fn),
     scenes: () => state.scenes.map((s) => ({ id: s.id, name: s.name })),
+    // A show.json was written for this space from outside (a proposal applied): read it
+    // again, dropping any pending save so the old copy is not written over it. False
+    // when this desk is running something else.
+    adoptShowFile: (id) => {
+      if (show.space !== id) return false;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false;
+      switchShow({ ...show });
+      return true;
+    },
     get state() { return state; },
     get showFile() { return showFile(); },
     get show() { return showInfo(); },

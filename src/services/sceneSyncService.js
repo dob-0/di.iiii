@@ -6,11 +6,16 @@
 // arguments. One success resets the count.
 export const RECONNECT_ERRORS_BEFORE_COOLDOWN = 3
 export const RECONNECT_COOLDOWN_MS = 15000
+// A 502 while the server restarts fails the EventSource for good (readyState
+// CLOSED, no browser retry): reconnect ourselves with a short backoff.
+export const CLOSED_BACKOFF_BASE_MS = 1000
+const EVENT_SOURCE_CLOSED = 2
 
 export function createSceneSyncService() {
     let eventSource = null
     let cooldownTimer = null
     let errorCount = 0
+    let closedCount = 0
     let lastConnectArgs = null
 
     const disconnect = () => {
@@ -80,10 +85,26 @@ export function createSceneSyncService() {
         source.addEventListener('ready', handleReady)
         source.onopen = () => {
             errorCount = 0
+            closedCount = 0
             onOpen?.()
         }
         source.onerror = () => {
             onError?.()
+            if (source.readyState === EVENT_SOURCE_CLOSED) {
+                const delay = Math.min(
+                    CLOSED_BACKOFF_BASE_MS * 2 ** closedCount,
+                    RECONNECT_COOLDOWN_MS
+                )
+                closedCount += 1
+                errorCount = 0
+                const closedArgs = lastConnectArgs
+                disconnect()
+                cooldownTimer = setTimeout(() => {
+                    cooldownTimer = null
+                    connect(closedArgs)
+                }, delay)
+                return
+            }
             errorCount += 1
             if (errorCount < RECONNECT_ERRORS_BEFORE_COOLDOWN) {
                 // the browser's own ~3s retry is fine for a blip

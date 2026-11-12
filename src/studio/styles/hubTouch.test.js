@@ -42,3 +42,13 @@ describe('the space Manage panel under a finger', () => {
         expect(coarseRules('studio-space-hub.css')[`${sel}|min-height`]).toBe('var(--di-touch-target)')
     })
 })
+
+// Nav reach (2026-11-12): the doors under a project are a finger tall under a finger, on the hub card and on the space page.
+describe('the project doors under a finger', () => {
+    it.each([
+        ['studio-hub.css', '.sh-door'],
+        ['../../pages/spaceContents.css', '.sc-door']
+    ])('%s %s is at least a finger tall', (file, sel) => {
+        expect(coarseRules(file)[`${sel}|min-height`]).toBe('var(--di-touch-target)')
+    })
+})

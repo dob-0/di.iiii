@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
     createSceneSyncService,
+    CLOSED_BACKOFF_BASE_MS,
     RECONNECT_COOLDOWN_MS,
     RECONNECT_ERRORS_BEFORE_COOLDOWN
 } from './sceneSyncService.js'
@@ -70,6 +71,24 @@ describe('createSceneSyncService reconnect cap', () => {
 
         expect(service.currentSource).toBe(source)
         expect(source.closed).not.toBe(true)
+
+        service.disconnect()
+    })
+
+    it('opens a new stream after a backoff when the browser gave up (CLOSED)', () => {
+        const service = createSceneSyncService()
+        service.connect({ eventsUrl: '/api/scenes/s1/events' })
+        const first = service.currentSource
+        first.readyState = 2
+        first.onerror()
+
+        expect(first.closed).toBe(true)
+        expect(service.currentSource).toBe(null)
+        vi.advanceTimersByTime(CLOSED_BACKOFF_BASE_MS - 1)
+        expect(service.currentSource).toBe(null)
+        vi.advanceTimersByTime(1)
+        expect(service.currentSource).not.toBe(null)
+        expect(service.currentSource).not.toBe(first)
 
         service.disconnect()
     })

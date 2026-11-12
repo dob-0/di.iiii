@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import VjDeckView from '../../raw/components/vjDeck/VjDeckView.jsx'
 import { createDeck, setClip } from '../../project/tops/vjDeck.js'
 
@@ -48,5 +48,36 @@ describe('VjDeckView with a K2', () => {
         act(() => fake.input.onmidimessage({ data: [0xbe, 12, 127] }))
         act(() => fake.input.onmidimessage({ data: [0xbe, 12, 64] }))
         await waitFor(() => expect(Number(screen.getByLabelText('Master').value)).toBeCloseTo(64 / 127, 2))
+    })
+
+    it('on the K2 (1.9) console the dead fader 4 moves nothing, pot 12 is the level of layer 4, and the panel switch saves the console', async () => {
+        const fake = fakeAccess()
+        vi.stubGlobal('navigator', { ...globalThis.navigator, requestMIDIAccess: () => Promise.resolve(fake.access) })
+        render(<Host values={{ deck: createDeck({ layers: 4, columns: 4 }), midiConsole: 'k2-1.9' }} />)
+        // the MIDI state text beside the MIDI button (the open K2 panel has a status line of its own)
+        const state = () => document.querySelector('.vj-deck-midi-state').textContent
+        const level4 = () => screen.getByLabelText('Layer 4 opacity').value
+        await waitFor(() => expect(state()).toContain('K2 (1.9)'))
+        await waitFor(() => expect(fake.input.onmidimessage).toBeTypeOf('function'))
+
+        // fader 4 (CC 19): up to the deck's 1 and down again would drive layer 4 on K2; here it is not bound
+        act(() => fake.input.onmidimessage({ data: [0xbe, 19, 127] }))
+        act(() => fake.input.onmidimessage({ data: [0xbe, 19, 0] }))
+        expect(level4()).toBe('1')
+        // pot 12 (CC 15), the knob above it: reaches the deck's 1, then drives
+        act(() => fake.input.onmidimessage({ data: [0xbe, 15, 127] }))
+        act(() => fake.input.onmidimessage({ data: [0xbe, 15, 0] }))
+        await waitFor(() => expect(level4()).toBe('0'))
+
+        // the switch in the K2 panel: back to K2 is one click, saved in the deck's values
+        fireEvent.click(screen.getByRole('button', { name: 'K2' }))
+        const group = screen.getByRole('group', { name: 'K2 console' })
+        expect(within(group).getByRole('button', { name: 'K2 (1.9)' }).getAttribute('aria-pressed')).toBe('true')
+        fireEvent.click(within(group).getByRole('button', { name: 'K2' }))
+        await waitFor(() => expect(state()).not.toContain('(1.9)'))
+        // and on K2 the fader is bound again: 0 is where layer 4 stands, then it drives up
+        act(() => fake.input.onmidimessage({ data: [0xbe, 19, 0] }))
+        act(() => fake.input.onmidimessage({ data: [0xbe, 19, 127] }))
+        await waitFor(() => expect(level4()).toBe('1'))
     })
 })

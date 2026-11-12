@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { getSharedLightingMirror } from '../rigMirror/useLightingMirror.js'
 import { useProjectLibrary } from './types/projectTypes.js'
 import { libraryWithShow } from './rental.js'
+import { withLookMedia } from './lookMedia.js'
 import { blendEntities, flashEntities, lookIdOfDesk, lookPoses, posedEntities, rigLooksOf, washLevelOf, withLookWash, withWashLevel } from './looks.js'
 import { clockFadeOf, showDriver, showOf, showStateAt } from './showClock.js'
 import { dmxEntities } from './dmxPose.js'
@@ -62,10 +63,12 @@ const deskLookOf = (s) => (s.present ? (s.looks || []).map(lookIdOfDesk).find(Bo
 /** The room drawn in a look: posed, the wash at the look's level. Pure. */
 export const roomInLook = ({ entities, library, looks, lookId }) => {
     if (!looks || !lookId) return entities
-    const poses = lookPoses({ entities, library, lookId, rigLooks: looks })
-    if (!poses.size) return entities
+    // the wall first: a picture with a look map shows this look's own asset (lookMedia.js, owner N3855)
+    const walled = withLookMedia(entities, lookId)
+    const poses = lookPoses({ entities: walled, library, lookId, rigLooks: looks })
+    if (!poses.size) return walled
     const look = looks.looks.find((l) => l.id === lookId)
-    return withWashLevel(posedEntities(entities, poses), washLevelOf(look))
+    return withWashLevel(posedEntities(walled, poses), washLevelOf(look))
 }
 
 /** How far a fade has come, 0..1, at `now`. No fade (or none recorded) is 1. */

@@ -48,7 +48,7 @@ describe('VjDeckView cameras', () => {
         render(<Host onValues={onValues} />)
         const picker = await openPicker()
         const group = within(picker).getByRole('group', { name: 'Cameras' })
-        expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual(['Phone', 'Webcam'])
+        expect(within(group).getAllByRole('button').filter((b) => !b.classList.contains('vj-deck-source-switch')).map((b) => b.textContent)).toEqual(['Phone', 'Webcam'])
         expect(listeners.devicechange).toBeTypeOf('function')
         fireEvent.click(within(group).getByRole('button', { name: 'Camera Phone' }))
         expect(lastDeck(onValues).layers[0].clips[0]).toMatchObject({ kind: 'camera', camera: 'Phone', device: 'd1', label: 'Phone' })
@@ -237,7 +237,7 @@ describe('VjDeckView a playing camera that cannot open', () => {
         await act(async () => {})
         const tile = screen.getByRole('button', { name: /Layer 1, slot 1: Phone/ })
         expect(within(tile).getByText('The camera is busy in another program.')).toBeTruthy()
-        // A tap on the playing tile stops it now; Preview only selects it without touching the output.
+        // A tap on the playing tile only selects it; with Preview only the output is not touched either.
         fireEvent.click(screen.getByRole('button', { name: /Preview only/ }))
         fireEvent.click(tile)
         const preview = document.querySelector('.vj-deck-monitor--preview')

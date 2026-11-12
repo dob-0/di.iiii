@@ -16,7 +16,7 @@ const CASES = [
     { id: 'piece', type: 'model', name: 'truss', components: { piece: {} } },
     { id: 'warehouse', type: 'model', name: 'old warehouse scan' },
     { id: 'press', type: 'model', name: 'Press 1890' },
-    { id: 'video', type: 'video', name: 'LED content' }
+    { id: 'video', type: 'video', name: 'trailer clip' } // a wall picture (screen/led/wall) is kept by Tech on purpose: renderPlan.test.js
 ]
 
 describe('renderPlan isShowThing agrees with smartViewGeometry', () => {

@@ -14,7 +14,7 @@ Earlier design: di-atlas-perform `decisions/2026-09-24-vj-pure.md` (layout A).
    - LEFT, flexible: the clip grid. First row = column triggers. One row per layer.
      Each layer's strip head (`.vj-deck-layer`): `[B]` bypass, `[S]` solo, name, clear `x`; second line:
      side select (- / A / B) and blend select; third line: opacity fader + number.
-   - RIGHT, fixed 300px when wide: `.vj-deck-monitors`, two 16:9 monitors stacked, each with a mono uppercase
+   - RIGHT, default 300px when wide, draggable 140 to 480px (the line between the grid and the monitors; kept in `di.vjDeck.layout`, see known-fixes 2026-11-11): `.vj-deck-monitors`, two 16:9 monitors stacked, each with a mono uppercase
      caption: PREVIEW (`.vj-deck-monitor--preview`: the selected clip, its live picture if playing, else its
      still, else "Select a clip") and OUTPUT (`.vj-deck-monitor--output`: the master picture that was the small
      "Out" canvas in the header, now here and bigger).

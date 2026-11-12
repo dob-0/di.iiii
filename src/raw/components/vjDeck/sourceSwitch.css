@@ -1,0 +1,20 @@
+/* The switch of a Sources row (SourceSwitch.jsx): the last cell of the row, as tall as the
+   row's other controls. Tokens only; the row that is off reads muted, with the word Off. */
+.vj-deck-source.has-switch {
+    grid-template-columns: max-content minmax(0, 1fr) max-content max-content;
+}
+
+.vj-deck-source-switch {
+    grid-column: 4;
+    min-height: var(--vj-source-row);
+    padding-block: 0;
+    line-height: 1;
+    border-color: transparent;
+}
+
+.vj-deck-source.is-source-off .vj-deck-source-kind,
+.vj-deck-source.is-source-off .vj-deck-source-name,
+.vj-deck-source.is-source-off .vj-deck-source-state,
+.vj-deck-source.is-source-off .vj-deck-source-switch {
+    color: var(--di-dim);
+}

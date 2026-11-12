@@ -23,6 +23,11 @@ export const QUALITY_STEPS = [
     { samples: 5, bloom: false, dprMax: 0.75 }
 ]
 
+// Where a room STARTS (owner 2026-11-12, N3787: "make mid quality by def ... preview fps is low, imagine this will work in
+// mobile too"): the middle notch, not full. A strong card climbs to full by itself after RAISE_AFTER_MS of clear room per
+// notch; a phone or a busy card no longer spends its first seconds at a quality it cannot hold.
+export const START_QUALITY = 2
+
 export const TARGET_FPS = 55 // a little under 60: vsync jitter alone must not step down
 export const RAISE_FPS = 70 // only climb back with clear room to spare (no see-saw)
 export const WINDOW_MS = 2000 // frame rate measured over this long
@@ -38,13 +43,25 @@ export const HITCH_MS = 250
  * The next notch, given the current one and a measurement.
  * `fps` over the last window; `goodForMs` how long the rate has stayed above RAISE_FPS.
  */
-export const nextQuality = (level, fps, goodForMs = 0) => {
+export const nextQuality = (level, fps, goodForMs = 0, peakFps = 0) => {
     const top = QUALITY_STEPS.length - 1
     if (!Number.isFinite(fps) || fps <= 0) return level
     if (fps < TARGET_FPS && level < top) return level + 1
-    if (fps > RAISE_FPS && goodForMs >= RAISE_AFTER_MS && level > 0) return level - 1
+    if (hasRoom(fps, peakFps) && goodForMs >= RAISE_AFTER_MS && level > 0) return level - 1
     return level
 }
+
+/**
+ * BEST QUALITY + MAX FRAME RATE (owner 2026-11-12, N3794): may this rate climb a notch?
+ * Above RAISE_FPS, yes. But a 60 Hz screen never shows more than 60, so a room that started
+ * at the middle notch could never reach full there. A rate that sits at the screen's own
+ * ceiling (`peakFps`, the highest window seen, within CEILING_SLACK) and over the target is
+ * as fast as that screen goes: climb, and let the step-down rule and the wait after a failed
+ * climb (mayRaiseTo) take it back if the better notch does not hold.
+ */
+export const CEILING_SLACK = 2
+export const hasRoom = (fps, peakFps = 0) =>
+    fps > RAISE_FPS || (fps > TARGET_FPS + CEILING_SLACK && peakFps > 0 && fps >= peakFps - CEILING_SLACK)
 
 /** The DPR to draw at for a notch, inside the room's own [dprMin, dprMax]. */
 export const qualityDpr = (level, renderSettings, deviceDpr = 1) => {

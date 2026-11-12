@@ -17,3 +17,15 @@ describe('a Pictures surface on the wall', () => {
         expect(useTopNetwork).toHaveBeenCalledWith(expect.objectContaining({ spaceId: 'lab', assets, projectId: 'p1' }))
     })
 })
+
+describe('a camera that cannot open on a Pictures surface', () => {
+    it('keeps the picture and says the reason as a caption (cameraError was read nowhere)', () => {
+        useTopNetwork.mockReturnValue({ error: '', cameraError: 'Camera "Phone" not found.' })
+        const network = { nodes: [{ id: 'out1', type: 'top.out' }], wires: [] }
+        const surface = normalizeMappingSurface({ id: 's1', resolution: [640, 360], source: { kind: 'network', ref: 'out1' } })
+        const { container, getByRole } = render(<MapSourceView surface={surface} spaceId="lab" network={network} projectId="p1" live />)
+        expect(container.querySelector('canvas')).not.toBeNull()
+        expect(getByRole('status').textContent).toBe('Camera "Phone" not found.')
+        useTopNetwork.mockReturnValue({ error: '' })
+    })
+})

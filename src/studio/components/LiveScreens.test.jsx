@@ -39,6 +39,20 @@ const roomWith = ({ surfaces = [], planes = [] }) => {
 }
 
 describe('the sources behind the screens', () => {
+    it('hands each map source the project assets and project id, so a Clip In resolves to the project', async () => {
+        const seen = []
+        const mod = await import('../../map/MapSourceView.jsx')
+        const spy = vi.spyOn(mod, 'default').mockImplementation((props) => { seen.push(props); return null })
+        const document = roomWith({
+            surfaces: [{ id: 'wall', name: 'Wall', source: { kind: 'test', ref: 'card' } }],
+            planes: [{ id: 'screen-1', surfaceId: 'wall' }]
+        })
+        render(<LiveScreens document={{ ...document, assets: [{ id: 'a1', name: 'x.mp4' }] }} onScreens={() => {}} />)
+        spy.mockRestore()
+        expect(seen[0]?.projectId).toBe('p')
+        expect(seen[0]?.assets).toEqual([{ id: 'a1', name: 'x.mp4' }])
+    })
+
     it('mounts one real map source per surface a plane points at — none for a surface nobody shows', () => {
         const document = roomWith({
             surfaces: [
