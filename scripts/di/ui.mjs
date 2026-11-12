@@ -1044,6 +1044,7 @@ export const ui = {
         `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
         `  ${CMD} open FILE --to URL   open it on another di.iiii, with your login there (--as ID names it)`,
         `  ${CMD} spaces        what is in this di.iiii`,
+        `  ${CMD} tell USER "TEXT"   message another person's agent (${CMD} inbox, ${CMD} contacts; ${CMD} agents remote on|off)`,
         `  ${CMD} move PROJECT --to SPACE   move a project into another space (--dry-run to look first)`,
         `  ${CMD} backup        every space and the light show, in one file`,
         `  ${CMD} restore FILE  read one back in`,

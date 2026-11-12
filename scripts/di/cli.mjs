@@ -66,6 +66,8 @@ import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from '
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import { runPost } from './post.mjs'
+import { runAgentMail } from './agentMail.mjs'
+import { runAgents } from './agentsRemote.mjs'
 import { runWifi } from './wifiCmd.mjs'
 import {
     isStageMachine, joinPlan, joinStage, leaveStage, readManifest,
@@ -1887,6 +1889,10 @@ const COMMANDS = {
     follows: cmdFollows,
     wifi: cmdWifi,
     post: cmdPost,
+    tell: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
+    inbox: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
+    contacts: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
+    agents: (args) => { process.exitCode = runAgents(args, { say, fail }) },
     unfollow: cmdUnfollow,
     down: cmdDown,
     stop: cmdDown,
