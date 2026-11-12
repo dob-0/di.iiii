@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTopReport } from '../../../project/tops/topReports.js'
 import { registerTopThumbnail } from '../../../project/tops/topThumbnails.js'
 import {
@@ -30,13 +30,23 @@ import {
 } from '../../../project/tops/vjDeck.js'
 import { detectAssetMediaKind } from '../../../utils/mediaAssetTypes.js'
 import { resolveClipUrl } from '../../../project/tops/clipVideos.js'
+import { readNdiSources } from '../../../project/tops/machineDevices.js'
 import { isTypingTarget } from '../../../perform/windowKeys.js'
 import { useShowClockContext } from '../../../perform/useShowClock.js'
 import { DEFAULT_BPM } from '../../../timeline/showClock.js'
 import { clipStill } from './clipStills.js'
 import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
+import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
+import K2LayoutPanel from '../../../perform/midi/K2LayoutPanel.jsx'
+import { buildK2WindowPath } from '../../../perform/midi/k2WindowRouting.js'
+import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
+import ContextMenu from '../ContextMenu.jsx'
 import EffectsPanel from './EffectsPanel.jsx'
+import DeckSeam from './DeckSeam.jsx'
+import SourceSwitch, { useSourceOff } from './SourceSwitch.jsx'
+import { cameraSourceKey, inputSourceKey, networkSourceKey } from '../../../project/tops/sourceSwitch.js'
+import useDeckLayout from './useDeckLayout.js'
 import './vjDeck.css'
 
 // The VJ deck: Resolume's clip grid for one vj.deck node.
@@ -173,60 +183,105 @@ function useCameras() {
     return { ...state, allow }
 }
 
-// One row of the Sources list: a small kind label and the name, on one line.
+// The NDI sources this machine's finder sees, read AFTER the first paint and never awaited by the
+// panel: a machine without NDI answers nothing within the 1500 ms leash (machineDevices.js) and the
+// list stays "none seen". Not played by the deck yet (the gap is written in docs/ai/known-fixes.md).
+function useNetworkSources() {
+    const [sources, setSources] = useState([])
+    useEffect(() => {
+        let alive = true
+        const timer = setTimeout(() => {
+            readNdiSources().then((found) => { if (alive) setSources(found) }).catch(() => {})
+        }, 0)
+        return () => { alive = false; clearTimeout(timer) }
+    }, [])
+    return sources
+}
+
+// One row of the Sources list: a small kind label, the name and, when it has one, a state.
 // The row is the drag handle (type DRAG_SOURCE, the clip to make); the name is
-// the button, which puts the clip in the target slot.
-function SourceRow({ kind, name, label, clip, editable, canPlace, onPlace }) {
+// the button, which puts the clip in the target slot. A row with no clip (a network
+// source the deck cannot play yet) is shown, not draggable and not placeable.
+function SourceRow({ kind, name, label, clip, editable, canPlace, onPlace, state = '', stateTone = '', switchKey = '' }) {
+    const playable = Boolean(clip)
+    const off = useSourceOff(switchKey)
     return (
         // The row is only a drag handle; its button is the keyboard and touch way to the same thing.
         // eslint-disable-next-line jsx-a11y/no-static-element-interactions
-        <div className="vj-deck-source" draggable={editable} onDragStart={(event) => {
+        <div className={`vj-deck-source${playable ? '' : ' is-unplayable'}${switchKey ? ' has-switch' : ''}${off ? ' is-source-off' : ''}`} draggable={editable && playable} onDragStart={(event) => {
+            if (!clip) { event.preventDefault(); return }
             event.dataTransfer.setData(DRAG_SOURCE, JSON.stringify(clip))
             event.dataTransfer.effectAllowed = 'copy'
         }}>
             <span className="vj-deck-source-kind">{kind}</span>
-            <button type="button" className="vj-deck-button vj-deck-source-name" aria-label={label} title={name} disabled={!canPlace} onClick={() => onPlace(clip)}>{name}</button>
+            <button type="button" className="vj-deck-button vj-deck-source-name" aria-label={label} title={name} disabled={!canPlace || !playable} onClick={() => clip && onPlace(clip)}>{name}</button>
+            {off ? <span className="vj-deck-source-state is-off">Off</span> : state ? <span className={`vj-deck-source-state${stateTone ? ` is-${stateTone}` : ''}`}>{state}</span> : null}
+            {switchKey ? <SourceSwitch sourceKey={switchKey} name={name} off={off} /> : null}
         </div>
     )
 }
 
-// ALWAYS visible: every wired input, every camera and every video of the
-// project, one row each. A row is dragged onto any slot, or clicked to fill
-// the slot that is picked or selected (`target`).
-function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, onPlace, videoAssets, onUploadFile, uploading, onFile, notice }) {
+// ALWAYS visible, in four groups with a header each: DEVICES (the cameras the browser lists), NETWORK
+// (NDI), INPUTS (In 1 to 4) and FILES (the videos of the project, with the upload row). A row is dragged
+// onto any slot, or clicked to fill the slot that is picked or selected (`target`).
+function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, onPlace, videoAssets, onUploadFile, uploading, onFile, notice, liveCameras = [] }) {
     const { supported, cameras, needsPermission, error, allow } = useCameras()
+    const network = useNetworkSources()
     const canPlace = editable && Boolean(target)
-    const row = (props) => <SourceRow key={props.label} editable={editable} canPlace={canPlace} onPlace={onPlace} {...props} />
+    const row = (props) => <SourceRow key={`${props.kind}:${props.label}`} editable={editable} canPlace={canPlace} onPlace={onPlace} {...props} />
     return (
         <section className="vj-deck-panel vj-deck-sources" aria-label={picking ? 'Add a clip' : 'Sources'}>
             <div className="vj-deck-panel-head">
                 <span className="vj-deck-label">{target ? `Sources: ${picking ? 'add to' : 'put in'} ${targetName}` : 'Sources'}</span>
                 {picking ? <button type="button" className="vj-deck-button vj-deck-button--quiet" onClick={onCancel}>Cancel</button> : null}
             </div>
-            {onUploadFile ? (
-                <div className="vj-deck-source vj-deck-source--upload">
-                    <span className="vj-deck-source-kind">File</span>
-                    <label className="vj-deck-button vj-deck-upload">
-                        {uploading ? `Bringing in ${uploading}` : 'Upload video'}
-                        <input type="file" accept="video/*" onChange={onFile} disabled={Boolean(uploading)} />
-                    </label>
-                </div>
-            ) : null}
             {notice ? <span className="vj-deck-dim" role="status">{notice}</span> : null}
             <div className="vj-deck-source-list">
-                <div className="vj-deck-source-group">
-                    {DECK_INPUTS.map((input) => row({ kind: 'Input', name: inputLabel(input), label: inputLabel(input), clip: { kind: 'input', input, label: inputLabel(input) } }))}
-                </div>
                 {/* Named only while a slot is being filled: the grid's own group count stays what it was. */}
-                <div role={picking ? 'group' : undefined} aria-label={picking ? 'Cameras' : undefined} className="vj-deck-source-group">
-                    {cameras.map((camera) => row({ kind: 'Camera', name: camera.label, label: `Camera ${camera.label}`, clip: { kind: 'camera', camera: camera.label, device: camera.id, label: camera.label } }))}
+                <div role={picking ? 'group' : undefined} aria-label={picking ? 'Cameras' : undefined} className="vj-deck-source-group vj-deck-source-devices">
+                    <div className="vj-deck-source-head">Devices</div>
+                    {cameras.map((camera) => row({ kind: 'Camera', name: camera.label, label: `Camera ${camera.label}`, state: liveCameras.includes(camera.label) ? 'Live' : 'Ready', stateTone: liveCameras.includes(camera.label) ? 'live' : '', clip: { kind: 'camera', camera: camera.label, device: camera.id, label: camera.label }, switchKey: cameraSourceKey(camera.label) }))}
                     {needsPermission ? <button type="button" className="vj-deck-button vj-deck-allow-cameras" onClick={allow}>Allow cameras</button> : null}
                     {!supported || (!cameras.length && !needsPermission && !error) ? <span className="vj-deck-dim vj-deck-camera-none">No camera on this machine</span> : null}
                     {error ? <span className="vj-deck-dim" role="status">{error}</span> : null}
                 </div>
-                <div className="vj-deck-source-group">
-                    {videoAssets.map((asset) => row({ kind: 'Video', name: asset.name || asset.id, label: asset.name || asset.id, clip: { kind: 'asset', asset: asset.id, label: asset.name || '' } }))}
-                    {!videoAssets.length ? <span className="vj-deck-dim" title="No video in this project yet.">{mode === 'perform' ? 'No video' : 'No video in this project yet.'}</span> : null}
+                <div className="vj-deck-source-group vj-deck-source-network">
+                    <div className="vj-deck-source-head">Network</div>
+                    {network.map((source) => row({ kind: 'NDI', name: source.label, label: `NDI ${source.label}`, state: 'Not on deck yet', stateTone: 'off', clip: null, switchKey: networkSourceKey(source.label) }))}
+                    {!network.length ? <span className="vj-deck-dim vj-deck-network-none">None seen</span> : null}
+                </div>
+                <div className="vj-deck-source-group vj-deck-source-inputs">
+                    <div className="vj-deck-source-head">Inputs</div>
+                    {DECK_INPUTS.map((input) => row({ kind: 'Input', name: inputLabel(input), label: inputLabel(input), clip: { kind: 'input', input, label: inputLabel(input) }, switchKey: inputSourceKey(input) }))}
+                </div>
+                <div className="vj-deck-source-group vj-deck-source-files">
+                    <div className="vj-deck-source-head">Files</div>
+                    {onUploadFile ? (
+                        <div className="vj-deck-source vj-deck-source--upload">
+                            <span className="vj-deck-source-kind">File</span>
+                            {/* The visible label is the button and the keyboard stop; the real file input is out of the
+                                tab order and the accessibility tree (a 1px control that read as a second Upload). */}
+                            <label
+                                className="vj-deck-button vj-deck-upload"
+                                // eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- a label with a file input IS the button; the input is hidden from keys and readers
+                                role="button"
+                                tabIndex={uploading ? -1 : 0}
+                                aria-disabled={uploading ? 'true' : undefined}
+                                onKeyDown={(event) => {
+                                    if (uploading || (event.key !== 'Enter' && event.key !== ' ')) return
+                                    event.preventDefault()
+                                    event.currentTarget.querySelector('input')?.click()
+                                }}
+                            >
+                                {uploading ? `Bringing in ${uploading}` : 'Upload video'}
+                                <input type="file" accept="video/*" onChange={onFile} disabled={Boolean(uploading)} tabIndex={-1} aria-hidden="true" />
+                            </label>
+                        </div>
+                    ) : null}
+                    <div className="vj-deck-source-files-list">
+                        {videoAssets.map((asset) => row({ kind: 'Video', name: asset.name || asset.id, label: asset.name || asset.id, clip: { kind: 'asset', asset: asset.id, label: asset.name || '' } }))}
+                        {!videoAssets.length ? <span className="vj-deck-dim" title="No video in this project yet.">{mode === 'perform' ? 'No video' : 'No video in this project yet.'}</span> : null}
+                    </div>
                 </div>
             </div>
             {!target ? <p className="vj-deck-hint">{mode === 'perform' ? 'Drag onto a slot' : 'Drag a source onto a slot, or tap a slot first and then a source.'}</p> : null}
@@ -239,11 +294,13 @@ function SourcesPanel({ mode, editable, target, targetName, picking, onCancel, o
 // or at all, the caller's fallback text stays.
 function CameraPreview({ camera, device, className }) {
     const videoRef = useRef(null)
+    const off = useSourceOff(cameraSourceKey(camera))
     useEffect(() => {
         const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
-        if (!media?.getUserMedia || !media.enumerateDevices) return undefined
+        if (off || !media?.getUserMedia || !media.enumerateDevices) return undefined
         let cancelled = false
         let stream = null
+        const video = videoRef.current
         ;(async () => {
             try {
                 const list = (await media.enumerateDevices()).filter((item) => item.kind === 'videoinput')
@@ -257,8 +314,10 @@ function CameraPreview({ camera, device, className }) {
         return () => {
             cancelled = true
             stream?.getTracks?.().forEach((track) => track.stop())
+            // The picture goes with the tracks: no last frame, no stream object held; switching on asks for a fresh one.
+            if (video) video.srcObject = null
         }
-    }, [camera, device])
+    }, [camera, device, off])
     return <video ref={videoRef} className={className} muted playsInline aria-label={`Preview of ${camera}`} data-camera-preview="true" />
 }
 const percent = (value) => `${Math.round(value * 100)}`
@@ -277,10 +336,34 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const [fxPick, setFxPick] = useState(null)
     const tapsRef = useRef([])
     const rootRef = useRef(null)
+    const scrollRef = useRef(null)
     // PREVIEW ONLY: a click selects (the Preview pane shows it) and TAKE sends it live.
     // View state of this person's screen, not of the show; MIDI always goes live.
     const [previewOnly, setPreviewOnly] = useState(false)
     const [monitors, setMonitors] = useState(readMonitorPrefs) // { size: 's'|'m'|'l', hidden }
+    // The borders between the panels: this viewer's sizes, never the show's (useDeckLayout.js).
+    const deckLayout = useDeckLayout(rootRef)
+    // S / M / L and Hide preview change the monitor column's width without changing the deck box:
+    // measure again so the announced seam value is the fresh one.
+    const { refresh: refreshLayout } = deckLayout
+    useLayoutEffect(() => { refreshLayout() }, [monitors.size, monitors.hidden, refreshLayout])
+    const paneId = (name) => `vj-deck-${deckLayout.uid}-${name}`
+    const seam = (id, shown, orientation, label, controls, sign = 1) => (shown ? (
+        <DeckSeam
+            key={id}
+            id={id}
+            orientation={orientation}
+            label={label}
+            controls={controls}
+            sign={sign}
+            now={deckLayout.stateOf(id)}
+            read={() => deckLayout.read(id)}
+            onPreview={deckLayout.preview}
+            onCommit={deckLayout.commit}
+            onCancel={deckLayout.cancel}
+            onReset={deckLayout.resetSeam}
+        />
+    ) : null)
     const setMonitorPrefs = (patch) => setMonitors((current) => { const next = { ...current, ...patch }; writeMonitorPrefs(next); return next })
 
     // The same list and value a Video node's picker uses: the PROJECT's files
@@ -290,12 +373,37 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         () => (assets || []).filter((asset) => asset?.id && detectAssetMediaKind(asset) === 'video'),
         [assets]
     )
+    const liveCameras = deck.layers.map((layer) => layer.clips[layer.active]).filter((clip) => clip?.kind === 'camera').map((clip) => clip.camera)
     const clipName = (clip) => (clip.label || (clip.kind === 'input' ? inputLabel(clip.input) : clip.kind === 'camera' ? clip.camera : assetName(clip.asset)))
     const assetName = (id) => (assets || []).find((asset) => asset?.id === id)?.name || id
 
     // The newest deck this view has seen or written: an upload that finishes after a
     // long wait places its clip into THIS, never into the deck captured when the file
     // was chosen (that would undo every change made meanwhile).
+    // End room for the snap (SPEC rule 3): when the layer rows overflow their box, the grid gets
+    // room below the last row so that row can also rest right under the Columns header.
+    useEffect(() => {
+        const box = scrollRef.current
+        if (!box || typeof ResizeObserver === 'undefined') return undefined
+        const measure = () => {
+            const rows = box.querySelectorAll('.vj-deck-row:not(.vj-deck-columns)')
+            const head = box.querySelector('.vj-deck-columns')
+            const last = rows[rows.length - 1]
+            if (!last || !head) return
+            const boxTop = box.getBoundingClientRect().top - box.scrollTop
+            const lastRect = last.getBoundingClientRect()
+            const contentBottom = lastRect.bottom - boxTop
+            const gap = parseFloat(getComputedStyle(box.firstElementChild).rowGap) || 0
+            const room = contentBottom > box.clientHeight + 1 ? Math.max(0, Math.round(box.clientHeight - head.offsetHeight - gap - lastRect.height)) : 0
+            box.style.setProperty('--vj-end-room', `${room}px`)
+        }
+        measure()
+        const watcher = new ResizeObserver(measure)
+        watcher.observe(box)
+        box.querySelectorAll('.vj-deck-row').forEach((row) => watcher.observe(row))
+        return () => watcher.disconnect()
+    }, [deck.layers.length, deck.columns])
+
     const latestDeck = useRef(deck)
     useEffect(() => { latestDeck.current = deck }, [deck])
     const write = (nextDeck) => {
@@ -337,7 +445,11 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     // MIDI (src/perform/midi): live while the deck is on screen; Learn binds the
     // control clicked on the deck (data-midi-target) to the next controller message.
     const fxLayer = Math.min(deck.layers.length - 1, Math.max(0, fxPick ?? selected?.layer ?? 0))
-    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer })
+    const [k2Open, setK2Open] = useState(false)
+    const [fxIndex, setFxIndex] = useState(0) // which effect of the selected stack the K2's third pot row turns
+    // K2 LAYER button: this layer's effects (leaves Master scope); K2 encoder 6 push: the next effect
+    const onFxLayer = (index) => { setFxPick(index); setFxScope('layer'); setFxIndex(0) }
+    const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, console: node?.values?.midiConsole, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer, fxEffect: fxIndex, onFxLayer, onFxEffect: setFxIndex })
     const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {
         if (!midi.learning) return
@@ -357,6 +469,39 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         event.preventDefault()
         if (event.key === 'Enter' || event.key === ' ') midi.pickTarget(key)
     }
+    // Right-click (or Shift+F10 / the menu key) on any control with a MIDI target: map it,
+    // remove its map, put its value back. Anything else keeps the browser's own menu.
+    const [menu, setMenu] = useState(null) // { x, y, key, label, fromKeyboard }
+    const targetOf = (event) => event.target?.closest?.('[data-midi-target]') || null
+    const openMenu = (el, x, y, fromKeyboard) => {
+        setMenu({ x, y, key: el.getAttribute('data-midi-target'), label: el.getAttribute('aria-label') || el.textContent.trim() || el.getAttribute('data-midi-target'), fromKeyboard })
+    }
+    const onDeckContextMenu = (event) => {
+        if (!editable) return
+        const el = targetOf(event)
+        if (!el) return
+        event.preventDefault()
+        openMenu(el, event.clientX, event.clientY, false)
+    }
+    const onDeckMenuKey = (event) => {
+        if (!editable || !(event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) return
+        const el = targetOf(event)
+        if (!el) return
+        event.preventDefault()
+        const r = el.getBoundingClientRect()
+        openMenu(el, r.left, r.bottom, true)
+    }
+    const onResetValue = (key) => { const next = resetDeckValue(latestDeck.current, key); if (next) write(next) }
+    const onDeckKeyDown = (event) => { onDeckMenuKey(event); if (!event.defaultPrevented) onLearnKey(event) }
+    const menuItems = (() => {
+        if (!menu) return []
+        const bound = midi.bindingOf(menu.key)
+        const items = [{ heading: bound ? bound.text : 'Not mapped' }, { id: 'map', label: 'Map to MIDI', hint: 'Then move or press the control on the controller', run: () => midi.mapOnce(menu.key) }]
+        if (bound?.learned) items.push({ id: 'unmap', label: 'Remove MIDI map', run: () => midi.unmap(menu.key) })
+        else if (bound) items.push({ id: 'unmap', label: 'Remove MIDI map', kb: 'K2 default', disabled: true, hint: 'The K2 default map cannot be removed; map the control to override it' })
+        if (resetDeckValue(deck, menu.key)) items.push({ id: 'reset', label: 'Reset value', run: () => onResetValue(menu.key) })
+        return items
+    })()
     const clipUrl = (clip) => (clip?.kind === 'asset' ? resolveClipUrl(clip.asset, spaceId, { assets, projectId }) : '')
 
     const onTile = (layerIndex, column) => {
@@ -369,9 +514,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         setSelected({ layer: layerIndex, column })
         setFxPick(null)
         if (previewOnly) return
-        // The tile that is already playing stops its layer, the same as the x beside the name.
-        if (deck.layers[layerIndex].active === column) write(clearLayer(latestDeck.current, layerIndex))
-        else write(trigger(latestDeck.current, layerIndex, column))
+        // A click on the tile that is already playing only selects it (to reach its clip and effects): it stopped
+        // the layer before, so picking a clip to change an effect switched the picture off (owner, N3634).
+        // The x beside the layer's name is the one way to stop a layer.
+        if (deck.layers[layerIndex].active !== column) write(trigger(latestDeck.current, layerIndex, column))
     }
 
     // Take: the previewed clip goes live (the only way out in Preview only besides MIDI).
@@ -505,7 +651,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     )
 
     return (
-        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onLearnKey}>
+        <div ref={rootRef} className={`vj-deck vj-deck--${mode}`} data-placement={mode} data-monitor-size={monitors.size} data-layout={deckLayout.custom ? 'custom' : 'default'} data-preview-only={previewOnly ? 'true' : 'false'} data-bpm={shownBpm} data-leader={clock?.leader || 'deck'} onClickCapture={onLearnClick} onPointerDownCapture={onLearnPress} onMouseDownCapture={onLearnPress} onKeyDownCapture={onDeckKeyDown} onContextMenuCapture={onDeckContextMenu}>
             <header className="vj-deck-top">
                 <div className="vj-deck-tempo">
                     <span className="vj-deck-label">BPM</span>
@@ -522,6 +668,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     {followsLight ? <span className="vj-deck-dim vj-deck-leader" title="The Light desk on this machine keeps the show’s tempo; the deck follows it.">follows Light</span> : null}
                 </div>
                 <DeckMidiControl midi={midi} editable={editable} />
+                <button
+                    type="button"
+                    className={`vj-deck-button${k2Open ? ' is-on' : ''}`}
+                    aria-pressed={k2Open}
+                    onClick={() => setK2Open((on) => !on)}
+                    title="Show the Xone:K2 layout with what each control does and what it sends"
+                >K2</button>
                 <button
                     type="button"
                     className="vj-deck-button vj-deck-preview-only"
@@ -567,10 +720,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 </div>
             </header>
 
-            <div className="vj-deck-main">
+            <div className="vj-deck-main" style={{ '--vj-layers': deck.layers.length }}>
                 {/* Pointer shortcut only: the keyboard way to deselect is Esc (handled on document). */}
                 {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
-                <div className="vj-deck-scroll" onClick={onGridBackground}>
+                <div className="vj-deck-scroll" id={paneId('grid')} ref={scrollRef} onClick={onGridBackground}>
                     <div className="vj-deck-grid" style={gridStyle}>
                         <div className="vj-deck-row vj-deck-columns" role="group" aria-label="Columns">
                             <span className="vj-deck-label vj-deck-columns-head">Columns</span>
@@ -723,7 +876,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     </div>
                 </div>
 
-                <aside className="vj-deck-monitors" aria-label="Monitors">
+                <aside className="vj-deck-monitors" id={paneId('monitors')} aria-label="Monitors">
                     <div className="vj-deck-monitor-tools">
                         <div className="vj-deck-sizes" role="toolbar" aria-label="Monitor size">
                             {MONITOR_SIZES.map((size) => (
@@ -731,9 +884,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                                     key={size}
                                     type="button"
                                     className="vj-deck-button vj-deck-size"
-                                    aria-pressed={monitors.size === size}
+                                    aria-pressed={monitors.size === size && deckLayout.layout.monitorW == null}
                                     aria-label={`Monitor size ${size.toUpperCase()}`}
-                                    onClick={() => setMonitorPrefs({ size })}
+                                    onClick={() => { setMonitorPrefs({ size }); deckLayout.clearMonitorW() }}
                                 >{size.toUpperCase()}</button>
                             ))}
                         </div>
@@ -745,6 +898,9 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                             onClick={() => setMonitorPrefs({ hidden: !monitors.hidden })}
                         >{monitors.hidden ? 'Show preview' : 'Hide preview'}</button>
                         {previewOnly && monitors.hidden ? takeButton : null}
+                        {deckLayout.custom ? (
+                            <button type="button" className="vj-deck-button vj-deck-layout-reset" onClick={deckLayout.resetAll} title="Put every panel back to its usual size">Reset layout</button>
+                        ) : null}
                     </div>
                     {monitors.hidden ? null : (
                     <figure className="vj-deck-monitor vj-deck-monitor--preview">
@@ -776,9 +932,12 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         </div>
                     </figure>
                 </aside>
+                {seam('s1', deckLayout.shown.s1s2, 'vertical', 'Resize the layer strip and the clip grid', paneId('grid'))}
+                {seam('s2', deckLayout.shown.s1s2, 'vertical', 'Resize the clip grid and the monitors', paneId('monitors'), -1)}
+                {seam('s4', deckLayout.shown.s4, 'horizontal', 'Resize the clip grid and the panels below', paneId('bottom'))}
             </div>
 
-            <div className="vj-deck-bottom">
+            <div className="vj-deck-bottom" id={paneId('bottom')}>
                 <SourcesPanel
                     mode={mode}
                     editable={editable}
@@ -792,6 +951,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     uploading={uploading}
                     onFile={onFile}
                     notice={notice}
+                    liveCameras={liveCameras}
                 />
                 {selectedClip ? (
                     <ClipSettings
@@ -809,8 +969,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                         <p className="vj-deck-hint">Select a clip</p>
                     </section>
                 )}
-                <EffectsPanel deck={deck} scope={fxScope} layerIndex={fxLayer} onScope={setFxScope} onLayer={setFxPick} editable={editable} write={write} />
+                <EffectsPanel deck={deck} scope={fxScope} layerIndex={fxLayer} onScope={setFxScope} onLayer={setFxPick} editable={editable} write={write} fxIndex={fxIndex} />
+                {seam('s5', deckLayout.shown.s56, 'vertical', 'Resize Sources and Clip', paneId('bottom'))}
+                {seam('s6', deckLayout.shown.s56, 'vertical', 'Resize Clip and Effects', paneId('bottom'))}
             </div>
+            <MidiMapOverlay rootRef={rootRef} midi={midi} layoutKey={deck} />
+            {k2Open ? <K2LayoutPanel windowPath={spaceId && projectId ? buildK2WindowPath(spaceId, projectId) : ''} publisher={midi.k2Publisher} map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
+            <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
     )
 }

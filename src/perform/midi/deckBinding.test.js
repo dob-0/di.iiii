@@ -123,7 +123,12 @@ describe('the K2 default map', () => {
     it('lists what it leaves free and keeps the laser and light out', () => {
         expect(XONE_K2_MAP.length + XONE_K2_FREE.length).toBe(58)
         expect(XONE_K2_FREE).not.toContain('pot 9') // pots 9-12 drive the first effect
-        expect(XONE_K2_FREE).toContain('encoder 2')
+        // the top knobs 2-4 carry what four strips cannot: layers 5 and 6, and the master effect (N3635)
+        // LAYER, encoder 6 push and EXIT SETUP now carry the effects (next FX layer, next effect, freeze hold)
+        expect(XONE_K2_FREE).toEqual([])
+        const turn = { kind: 'cc', cc: 1, channel: 15, value: 127 } // encoder 2, one step down
+        const six = createDeck({ layers: 6, columns: 4 })
+        expect(applyMidi(six, turn, defaultMap()).layers[4].opacity).toBeLessThan(six.layers[4].opacity)
         expect(XONE_K2_MAP.every((e) => !/laser|light|arm/i.test(e.action))).toBe(true)
     })
     it('plays the layout: fader 3, matrix G, pot switches, encoders', () => {
@@ -134,7 +139,7 @@ describe('the K2 default map', () => {
         expect(applyMidi(deck, noteOn(33), map).layers[1].active).toBe(1) // F = row 2, col 2
         expect(applyMidi(deck, noteOn(48), map).layers[0].bypass).toBe(true)
         expect(applyMidi(deck, noteOn(47), map).layers[3].solo).toBe(true)
-        expect(applyMidi(deck, noteOn(40), map).layers[0].side).toBe('a')
+        expect(applyMidi(deck, noteOn(40), map)).toBe(deck) // pot switch 9 = effect 1 on/off; this deck has no effect
         expect(applyMidi(deck, noteOn(53), map).layers[0].active).toBe(1)
         expect(applyMidi(deck, cc(20, 10), map).crossfade).toBeGreaterThan(deck.crossfade)
         expect(applyMidi(deck, cc(21, 127), map).master).toBeCloseTo(0.98)

@@ -35,6 +35,7 @@ import { getJamLocationState, isJamLocation } from './project/routing/jamRouting
 import { getMakeLocationState, isMakeLocation } from './make/makeRouting.js'
 import { getMapLocationState, isMapLocation } from './map/mapRouting.js'
 import { getPerformLocationState, isPerformLocation } from './perform/performRouting.js'
+import { getK2WindowLocationState, isK2WindowLocation } from './perform/midi/k2WindowRouting.js'
 import { getPatchSheetLocationState, isPatchSheetLocation } from './rigbuild/patchRouting.js'
 import { getVisualiseLocationState, isVisualiseLocation } from './rigbuild/visualiseRouting.js'
 import { getTouchLocationState, isTouchLocation, touchDeskPath } from './rigbuild/touchRouting.js'
@@ -69,6 +70,8 @@ const ChatHomeSurface = lazy(() => import('./chat/ChatHomeSurface.jsx'))
 const MapSurface = lazy(() => import('./map/MapSurface.jsx'))
 const MapOutput = lazy(() => import('./map/MapOutput.jsx'))
 const PerformApp = lazy(() => import('./perform/PerformApp.jsx'))
+// The K2 drawn as a picture in its own window (src/perform/midi/K2Window.jsx): its own small chunk.
+const K2Window = lazy(() => import('./perform/midi/K2Window.jsx'))
 const ScanSurface = lazy(() => import('./scan/ScanSurface.jsx'))
 // `/tools` — the Kit (src/kit/KitPage.jsx). Its own chunk: a page of cards and
 // stills, which must never pull three.js for a phone that has not asked a card
@@ -460,6 +463,7 @@ function AppRouter() {
     const makeState = getMakeLocationState(location)
     const mapState = getMapLocationState(location)
     const performState = getPerformLocationState(location)
+    const k2WindowState = getK2WindowLocationState(location)
     const patchSheetState = getPatchSheetLocationState(location)
     const visualiseState = getVisualiseLocationState(location)
     const touchState = getTouchLocationState(location)
@@ -754,6 +758,19 @@ function AppRouter() {
     // and the generic /{space}/{projectSlug} rule would read "perform" as a
     // project — and behind the same gate, because it writes the same document
     // through the same op layer as Nodes.
+    // `/{space}/perform/{projectId}/k2` — the controller window (src/perform/midi/K2Window.jsx): the
+    // K2 drawn as a picture, read only. NO gate and no project load on purpose: everything it shows
+    // arrives from the deck page over a BroadcastChannel (same browser, same origin), so the address
+    // opens nothing a stranger could read; it is dispatched before the Perform line, which wants
+    // exactly three segments.
+    if (isK2WindowLocation(k2WindowState)) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <K2Window />
+            </Suspense>
+        )
+    }
+
     if (isPerformLocation(performState)) {
         return (
             <ProtectedSurface

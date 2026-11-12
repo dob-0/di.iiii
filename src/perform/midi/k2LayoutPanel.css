@@ -1,0 +1,67 @@
+/* The K2 layout panel (K2LayoutPanel.jsx), inside the VJ deck. Spine tokens only;
+   the three LED colours are the deck's own (red bypass, amber loaded, green playing). */
+.k2-panel {
+    position: absolute;
+    right: var(--di-space-2);
+    bottom: var(--di-space-2);
+    z-index: 20;
+    box-sizing: border-box;
+    width: min(440px, calc(100% - 2 * var(--di-space-2)));
+    max-height: calc(100% - 6rem);
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2);
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-line);
+    border-radius: 0;
+    color: var(--di-ink);
+}
+.k2-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2); }
+.k2-panel-title { font-size: var(--di-text-3); color: var(--di-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.k2-close { min-width: 24px; min-height: 24px; padding: 0 var(--di-space-2); background: transparent; color: var(--di-ink); border: 1px solid var(--di-line); border-radius: 0; cursor: pointer; font: inherit; font-size: var(--di-text-2); }
+.k2-device { min-width: 24px; min-height: 24px; padding: 0 var(--di-space-2); background: transparent; color: var(--di-ink); border: 1px solid var(--di-line); border-radius: 0; cursor: pointer; font: inherit; font-size: var(--di-text-2); }
+.k2-switch { display: inline-flex; margin-left: auto; }
+.k2-switch-item { min-height: 24px; padding: 0 var(--di-space-2); background: transparent; color: var(--di-dim); border: 1px solid var(--di-line); border-radius: 0; cursor: pointer; font: inherit; font-size: var(--di-text-2); }
+.k2-switch-item + .k2-switch-item { border-left: 0; }
+.k2-switch-item.is-on { background: var(--di-ink); border-color: var(--di-ink); color: var(--di-bg); }
+.k2-body { display: flex; flex-direction: column; gap: var(--di-space-1); }
+.k2-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--di-space-1); }
+.k2-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.k2-control {
+    position: relative;
+    box-sizing: border-box;
+    min-width: 24px;
+    min-height: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding: 2px var(--di-space-1);
+    overflow: hidden;
+    text-align: left;
+    font: inherit;
+    font-size: var(--di-text-2);
+    line-height: 1.2;
+    color: var(--di-ink);
+    background: var(--di-bg);
+    border: 1px solid var(--di-line);
+    border-radius: 0;
+    cursor: pointer;
+}
+.k2-control-name { color: var(--di-dim); font-family: var(--di-mono); }
+.k2-control-what { overflow-wrap: anywhere; }
+.k2-control.is-free .k2-control-what { color: var(--di-dim); }
+.k2-control--fader { min-height: 56px; }
+.k2-control--pot, .k2-control--fader {
+    background-image: linear-gradient(to top, var(--di-cyan-dim) var(--k2-fill, 0%), transparent var(--k2-fill, 0%));
+}
+.k2-control--encoder_push, .k2-control--pot_switch { min-height: 24px; }
+.k2-control--matrix_switch { min-height: 40px; }
+.k2-control.is-lit { border-color: var(--di-cyan); }
+.k2-control.is-held { background-color: var(--di-cyan-dim); box-shadow: inset 0 0 0 1px var(--di-cyan); }
+.k2-control.is-selected { outline: 1px solid var(--di-cyan); outline-offset: 1px; }
+.k2-control:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 1px; }
+.k2-control-value { position: absolute; top: 2px; right: var(--di-space-1); font-family: var(--di-mono); color: var(--di-cyan); }
+.k2-detail { margin: 0; min-height: 1.4em; font-size: var(--di-text-2); font-family: var(--di-mono); color: var(--di-ink); }

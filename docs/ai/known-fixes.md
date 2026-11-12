@@ -1827,9 +1827,120 @@ Cause: `MapCameraSource` called getUserMedia once per device id and nothing list
 Fix: it re-opens by itself on track `ended` / stream `inactive` and on busy/not-found class errors, with a back-off (0.5, 1, 2 s, then 3 s), stopping old tracks first; the stream lookup is asked again; no retry on NotAllowedError; timers and listeners are cleared on unmount.
 Guard: `src/map/MapSourceView.reacquire.test.jsx` (fake timers, faked mediaDevices). Not checked on a real camera.
 
+## A click on a playing clip (to change its effects) switched the clip off (2026-11-11, owner row N3634)
+Symptom: on the VJ Deck, clicking the tile that plays, to reach its clip settings or add an effect, stopped its layer: the picture went off.
+Cause: `VjDeckView.jsx` `onSlot` wrote `clearLayer` when the clicked tile was the active one ("tap again stops", a deliberate earlier design).
+Fix: a click on the playing tile only selects it; any other tile still triggers. A layer stops with the x beside its name (`Clear Layer N`).
+Guard: `VjDeckView.preview.test.jsx` ("keeps it playing and only selects it"), `VjDeckView.test.jsx` (tap again keeps `active`, the x stops). Seen on the agent browser against the real deck: the same two clips play before and after the click.
+
+## The Xone:K2 was invisible to the show browser (Flatpak Chromium Web MIDI, 2026-11-11, owner rows N3621/N3630)
+Symptom: the deck said "no controller"; the page had MIDI permission but listed only "Midi Through Port-0", while `amidi -l` showed the K2.
+Cause: Chromium finds hardware MIDI ports through udev and the Flatpak sandbox has no `/run/udev`.
+Fix: `scripts/show/k2-browser-access.sh on` (read-only per-user override; `off` undoes it), then `scripts/show/stage-restart.sh <stage-open options>` (asks the browser to quit over its debugging port, opens the stage and Perform again; nothing is killed). Both take `--dry-run`.
+Guard: none automated (needs the hardware); `k2-browser-access.sh status` prints the override and the ports Linux sees.
+
+## The K2 was seen ("K2") but no knob or button moved the deck, and its lights stayed dark (2026-11-11, owner rows N3630/N3632/N3636)
+Symptom: the deck said `K2`, the owner pressed and turned; nothing happened. Measured: 467 messages on the wire (`aseqdump -p 28:0`) in 80 s, 0 deck controls changed.
+Cause: the K2's MIDI channel is a device setting (15 from the factory); the owner's sends on channel 2. The default map matched channel 15 only, and the lights were sent on 15.
+Fix: `useDeckMidi.js` reads a K2 message as if it came on `K2_CHANNEL` and sends the lights back on the channel last heard (the LED cache is forgotten when that channel changes). After the fix, same measure: 10 deck controls changed in 70 s.
+Guard: `useDeckMidi.test.jsx` ("a K2 set to another MIDI channel"). The lights on the real K2 are seen by the owner only.
+
+## Body (top.matte) layers ran the person model on a silent layer, and several Body layers dropped the output to 12-17 fps (2026-11-11, owner row N3661)
+Symptom: with three Body layers up the deck output ran at 13-17 frames a second (one Body 40.7, none at the display rate); a Body on a layer the deck had silenced (fader down, bypassed, outside the solo) still cost a model run.
+Cause: (i) `topEngine.refreshMatte` ran the model for every Body node every frame, no matter whether its layer was seen (commit 2c3678834, "a Body on a silent layer ran the model": `matteWanted` skips a node the deck marked `values.unseen`); (ii) the model (about 14-20 ms) ran synchronously on the page's render thread, one run per source per frame: three runs a frame = the whole frame.
+Fix: the model runs in a Web Worker (`bodyMatteWorker.js`, a classic worker that `import()`s the vendored `vision_bundle.mjs`; created with `new Worker(new URL('./bodyMatteWorker.js', import.meta.url))`). The engine posts a 480x270 picture when the worker is idle, polls the answer at the start of the next frame, and keeps the last mask until a newer one arrives (never a black frame, never a wait). `matteScheduler.js` gives the run to the source whose mask is oldest; budget = 1 run while the worker is idle, 0 while it is busy. If no worker can start (no OffscreenCanvas, load error, init silent for 30 s, worker dies) `bodyMatte.js` falls back to the page thread with a budget of ONE run per engine frame. The identical-picture check stays (0.31 ms for 480x270 against about 14-20 ms for a run it can save on 30-fps sources). Last release ends the worker.
+Measured (platina/matte-worker/RESULT.md, one run, load average 13-34, 1280x720, three different 60-fps clips): Body off 59.3 / 59.7 fps, old code 12.5 / 11.8, worker 59.1 / 57.8.
+Guard: `vjDeck.bodySilent.test.js` (silent layer: no run), `matteScheduler.test.js` (fair, budgeted), `bodyMatte.worker.test.js` (fake worker: late and out-of-order answers, failure -> fallback, last release ends the worker). Not proven: the real Vite build/dev serving of the worker file (the harness serves raw files).
+
+## Nobody could find the VJ deck again, or get back to it, from Nodes, Perform, Tools, Wiki or the projector page (2026-11-11, owner row N3677, audit G1-G8)
+Symptom: the deck was only reachable by a double click on its node; Back at the Nodes root was swallowed; Tools and Wiki had no way to Perform; the projector page had no way back.
+Cause: no button for the deck, the open node was not in the address, a history guard re-pushed an entry at the root, and the Desk | Perform switch was mounted only on the desks.
+Fix: Nodes bar "Open VJ Deck" (walks the parent chain if the deck is nested); the open node is `?enter=<id>` (one history entry per step in; stale ids are dropped; other params kept; `stashRawEnterNode(nodeId)` still works); no root guard; Perform menu "Nodes · VJ deck, full page"; Desk | Perform on Tools and Wiki (`current="elsewhere"`); "Back to Perform" in the projector page controls (hidden in full screen); Studio clips get the project's assets and id.
+Guard: `RawEditor.test.jsx` (deck ways), `rawEnterNodeHandoff.test.js`, `PerformDesk.test.jsx`, `KitPage.test.jsx`, `WikiPage.test.jsx`, `MapOutput.controls.test.jsx`, `LiveScreens.test.jsx`. Not proven: a real-browser Back/Forward/reload walk (see platina-ways/ways-fixes-review.md).
+## 2026-11-11 — a camera with no picture put a helper card (or a black layer) on the live output (owner N3682)
+Symptom: on `/<space>/map/<project>/out` a camera clip whose camera was absent showed the Map's dim surface card ("srf-1 / Camera "Phone" not found.") over the whole wall; with a camera that was not granted/opened, its layer was an opaque black picture that hid the file clip under it, and a Body effect on it painted a flat pink.
+Cause (verified by flipping each): (1) `useTopNetwork.js` called `setError(refusal)` for a camera that cannot open, and `MapSourceView.jsx` MapNetworkSource replaces the whole canvas with `MapSourcePlaceholder` whenever `error` is set; (2) `topEngine.js` drew a camera source with no stream as an empty (black) texture, and the layer's Blend mixed it in at full opacity.
+Fix: a camera failure is `cameraError` (and `reportTop`, which the deck cell and monitor already show as text), never `error`; the engine marks a camera with no stream/frame as blank (`blankRule`): a Blend passes the picture below through, an effect on it is blank. Test patterns stay in the mapping editor.
+Measured (scripts/show/nocam-check.mjs, scratch stack, lane 2): mean abs diff vs the scene without the camera clip 96-107 of 255 before, 0.00 after; only-camera case: grid max 143 before (card), 0 after; mapping editor picture 0.72 of 255 between base and fix.
+Guard: `topEngine.blank.test.js` (red when the Blend/effect condition is flipped), `useTopNetwork.camera.test.jsx` GUARD case (red when the camera failure is put back into `error`). Not checked on a real wall or a real unplugged camera. A camera that returns reopens by itself (existing: devicechange + back-off, track-ended watch).
+## 2026-11-11 — VJ deck: a layer row rested half under the Columns header, and the deck had no size check
+
+Symptom: on the owner's screen (Perform, 6 layers) the top layer row stopped partly under the sticky Columns header; Sources kind tags read "CAME..."; at 568 px wide the layer name was 19 px wide and cut. Tiled windows make the page half or a third of the screen, so every size has to hold, not only the one that was looked at.
+Cause: measured on lane 3 with `scripts/deck-size-check.mjs` at 36 cases (2 pages x 2 deck shapes x 9 sizes): the scroll box held a sticky header and free-scrolling rows, so any scroll position that is not a multiple of the row height leaves a row half under the header (148 cases, base); the 44 px touch buttons left the layer name 19 px (13 cut words); the kind tag column was a fixed 44 px.
+Fix: `.vj-deck-scroll` uses scroll-snap (y mandatory) with scroll-padding under the header and rows `snap-align: start`; `VjDeckView.jsx` gives the grid end room (`--vj-end-room`) only when the rows overflow, so the last row can also rest under the header; at touch size the layer name takes its own line; kind tags keep their word.
+Guard: `scripts/deck-size-check.mjs` (run on a scratch server: `DI_TEST_LANES=3 DI_TEST_LANE=3 di-test-browser run scripts/deck-size-check.mjs`, a/b/c/d must be 0 in 36 cases; `-- --e --video <tiny.mp4>` for group order, row reach, drag and click), `VjDeckView.sources.test.jsx` (group order, unplayable NDI rows, device row drag; each watched going red with its condition flipped).
+Lesson: a size bug is found by measuring a grid of sizes over the whole page, not by looking at one; and "partly under" has to be defined (a row that is part covered and part clear), or fully scrolled rows count as faults.
+
+## 2026-11-11 — VJ deck: the panels could not be resized, the deck root scrolled, Sources showed 5 of 6 rows (owner N3711)
+
+Symptom: the owner (a VJ, page 1706x922, 5 layers x 8 clips) "cannot change the window sizes". Measured on lane 3 with `scripts/deck-comfort-walk.mjs`: 32 of 32 pointer drags on panel borders moved 0 boxes and the cursor never changed; `.vj-deck` scrolled 22 px at 1920x1000, 1706x922 and 1440x810 (30 px at 1280x720); Sources showed 4 of 5 rows and hid its Files head; 10 clip names were cut at 1706x922.
+Cause: there were no draggable borders (every size was a CSS constant or content height); the 22 px scroll came from the hidden upload input (position absolute, containing block `.vj-deck`) sitting below the visible Sources list; Sources had `max-height: 240px`; the five-layer rule asked only the perform and inside placements, and P1 is the window placement. Found while building: a CSS rule that declared `--vj-end-room: 0px` on `.vj-deck-grid` shadowed the value `VjDeckView.jsx` sets on `.vj-deck-scroll` (52 rows under the Columns header in the size check), and the panel clamp used the deck's row gap (7 px) for the bottom panels' column gap (12 px), so Effects could end at 210 px.
+Fix: five seams on the deck (S1 layer strip | grid, S2 grid | monitors, S4 main | bottom row, S5 Sources | Clip, S6 Clip | Effects): `DeckSeam.jsx` (APG window splitter: pointer capture, rAF CSS variable, arrows 1 % / Shift 10 %, Home/End, Enter, double-click resets), `deckLayout.js` (pure: key `di.vjDeck.layout` = {v:1, head, monitorW, bottomH, cols:[a,b]} as fractions of the deck box; clamp on every read and size change, never rewritten: S1 150-280, S2 140-min(480, width-734-gap), S4 120 to 60 % with the main row keeping 220 (520 when stacked), S5/S6 each panel 220), `useDeckLayout.js`; a Reset layout button while anything is stored. Unset means today's CSS and no variable. S1/S2 are not shown at 900 px or less, S4/S5/S6 not at 560 px or less. One scroller per bottom panel; Sources uncapped; five layers asked of the main row in every placement on a frame of 800 px or more (bottom row minimum 150 px); a tile narrower than 180 px wraps its name onto two lines.
+Measured (walk part S, 1706x922 unless said; build-2.md): outer scroll 0 at six sizes (was 22/22/22/30); layer rows cut 0/0/0 at 1920x1000/1706x922/1440x810; cut clip names 0 at 1706x922 (was 10); all 5 seams change boxes, reset and move by keys; 0 overlapping panels in every step and in the extreme layout at six sizes; 36-case size check a 0 b 0 c 0 d 0 with nothing stored and with the extreme layout; no non-GET request or remount caused by dragging; Reset layout gives the default picture (0 differing pixels).
+Guard: `deckLayout.test.js` (clamp, key, store, real column gap, stacked main), `VjDeckView.resize.test.jsx` (seams, keys, reset, no write), `vjDeck.css.test.js` (end room on the scroll box, five-layer rule, tile wrap, Sources uncapped), `scripts/deck-comfort-walk.mjs --part S` and `scripts/deck-size-check.mjs --layout JSON` (browser, lane 3).
+Lesson: a layout fix is proven by measuring the stored extreme and the default at several sizes, not by reading CSS; a CSS variable set inline on a parent must not be re-declared on a child.
+
+## 2026-11-11 — K2 (1.9): the top button row played layer 1 while the deck screen draws layer 4 on top
+
+Symptom: the owner pressed button A and got the layer drawn at the bottom of the deck screen.
+Cause: the matrix rows counted up from layer 1 (`layer = floor(i / 4)`) while the deck draws the highest layer first.
+Fix: in console K2 (1.9) only, A-D play layer 4, E-H layer 3, I-L layer 2, M-P layer 1 (`xoneK2.js`); the lights, the K2 panel and the K2 window read the same map, so they follow. Console K2 keeps its order.
+Guard: `k2ButtonRows.test.js` (K2 rows pinned unchanged; K2 (1.9) rows for presses, job texts and lights), `k2Console19.test.js` T4.
+Lesson: a controller's rows must be checked against how the screen draws the same things, by pressing, not by reading the map.
+
+## 2026-11-11 — VJ deck seams: blocked storage broke the deck, a drag re-rendered it every frame, a click stored a size (review-2, walk-2)
+
+Symptom: (1) with site data blocked the whole deck failed to render; (2) dragging the S4 seam re-rendered the deck on every pointer move while the output played; (3) a click with sub-pixel jitter, or a drag out and back, made the bottom row fixed, showed Reset layout and stored a size.
+Cause: (1) `window.localStorage` was read as a default parameter and an argument, outside the try (`deckLayout.js` readLayout/writeLayout, `useDeckLayout.js` flush); (2) the ResizeObserver on `.vj-deck-bottom` fired every frame of the preview and `sync()` set React state; (3) `DeckSeam.jsx` committed whenever any non-zero delta had happened.
+Fix: every storage access inside the try; `sync()` returns while a drag is open (ref set by the first preview, cleared by commit or cancel, one sync after); commit only when the value moved 1 px or more. Also: lost pointer capture and a second pointer are handled, `data-seam-dragging` on the deck root switches text selection off, the announced value is re-measured after S/M/L, the upload input is out of the tab order, the grab zones lie over the gaps only.
+Guard: `VjDeckView.resize.test.jsx` F1 (throwing getter), F2 (Profiler render count during an S4 drag with an observer firing every move), F3 (jitter and out-and-back), `vjDeck.css.test.js`.
+Lesson: a storage getter can throw, so the access itself belongs inside the try; and a state update from an observer must be paused while a drag owns the size.
+
+## 2026-11-11 — VJ deck seams: unmount and window resize in a drag, touch zone over a scrollbar (review-3)
+
+Symptom: (1) a seam that unmounted in the middle of a drag (hidden by a small box, or the deck closed) left the drag flag set, so the size observer stayed paused; (2) a window resize in a drag kept the old box and the old limits (the observer is paused by design during a drag); (3) on touch the wide S5/S6 zones lay over the right-edge scrollbar of the panel before them.
+Cause: `DeckSeam.jsx` cleanup only removed the mark and the frame, never called `onCancel`; nothing listened for the window resize while a drag was open; `vjDeck.css` coarse rule grew S5/S6 to both sides (`margin-left` negative).
+Fix: cleanup calls `onCancel` for an open drag; a window `resize` listener cancels (clears the flag, measures the fresh box), reads the seam again, counts from the pointer and previews the fresh value; coarse S5/S6 grow to the right only (no `margin-left`, base `--vj-lead`).
+Guard: `VjDeckView.resize.test.jsx` "a drag that is cut short" (3 tests, all fail on the old `DeckSeam.jsx`), `vjDeck.css.test.js` touch zone rule. Not measured on a touch screen.
+Lesson: a drag that owns shared state must release it in its own unmount cleanup, and a pause for a drag needs a way out for the events the pause hides.
+
+## 2026-11-11 - Source switch: a camera switched off kept its last frame; the pool stopped listening after a reset
+
+Symptom: review of the source switch: a camera preview switched off stopped its tracks but the video element kept its stream (last frame on screen, stream object held); the camera pool subscribed to the switch once per module, so after the switch's listeners were reset it never stopped a source again.
+Cause: the cleanup of the preview effects in VjDeckView.jsx (CameraPreview) and MapSourceView.jsx only stopped tracks; cameraPool.js guarded its subscription with a module flag that the reset did not clear.
+Fix: both cleanups set the video's srcObject to null after the tracks stop (off and unmount; on again opens a fresh stream through the effect); cameraPool.js calls subscribeSourcesOff on every open (idempotent).
+Guard: src/map/MapSourceView.sourceOff.test.jsx (off, on again, unmount), src/project/tops/cameraPool.off.test.js (stop after a reset).
+Lesson: stopping a stream's tracks is not letting go of it: clear the element that shows it in the same cleanup.
+
+## 2026-11-12 — Controller window: pad labels cut at both sides, face taller than the screen, dev strip over the readout
+
+Symptom: (1) the 16 pad labels ("L1 clip 1") were wider than the pads and cut on both sides; (2) the window opened 999 high with a 875 px face, taller than a 922 px screen, so labels shrank or the page scrolled; (3) the fixed dev strip at the foot of a dev copy covered the last readout lines.
+Cause: (1) the face drew the label in a 24 unit pad with the same 28 unit text box as every control; (2) the face (135 x 370 units) was fixed to the real unit's proportions and the open call asked for a fixed height; (3) the strip is fixed bottom right over every page and the window did not leave room.
+Fix: `xone-k2-face.json` redrawn squatter (144 x 293 units, columns 34 apart, pads 31 x 22 with the label inside, same order and grouping); `k2Face.js` shapeBox and `K2Window.jsx` take an optional width and height per control; `K2LayoutPanel.jsx` `windowFeatures()` asks for screen.availHeight minus 60 (600 to 1000, 860 without a screen); `k2Window.css` leaves the strip's height under the readout, only where `.tree-chip` exists, only in this window. deckBinding.js and TreeChip are unchanged.
+Guard: `k2WindowFit.test.js` (every label of every console fits its pad, no label boxes overlap, the face fits 860 px at 12 px text, device order kept, window height from the screen, strip gap in this window only).
+Lesson: a face that is data still needs a fit test against the real screen and the real text; measure the drawn text size, not the size in units.
+Second pass (same day): (4) the fader caps at rest covered the top of the first label line and the second line touched the pad row, because the fader's box ignored the cap (2.5 units past the track at each end); (5) in the encoder row the turn job and the press job stacked with no gap and read as one four-line label. Fix: the fader box now includes the cap, fader and pad labels are one line (per-control `maxLines`), "Layer N" is drawn "LN" (`shortLayer`, readout and aria-label keep the words), every label keeps 0.9 unit (2 px) from every foreign shape, and the press job has half a line of gap and the dim ink (`.is-press`).
+Guard: `k2WindowFit.test.js` (every label against every shape and fader cap at value 0 and 127 and every other label, all consoles; encoder job gap and dim class), `k2Face.test.js` (shortLayer, faceLines), `K2Window.test.jsx` (is-press on every push, LN on the fader).
+
 ## Dev refused an 843 MB space carry (2026-11-12, owner row N3847)
 Symptom: `di open platina.diiii --to https://dev.diiii.xyz` stopped with "platina.diiii is bigger than dev.diiii.xyz takes over the wire (its MAX_UPLOAD_MB)".
 Cause: three walls in series for a hosted tier: serverXR `MAX_UPLOAD_MB` default 100 (docker-compose.yml, no dev override), nginx `client_max_body_size 110m` on `/serverXR/` (nginx.conf, baked into the client image), and Node's 300 s `requestTimeout`; the CLI only reads the 413.
 Fix: `docker-compose.dev.yml` sets `MAX_UPLOAD_MB: ${DEV_MAX_UPLOAD_MB:-2048}` (production keeps 100); a dedicated nginx location for `/serverXR/api/spaces/(bundle|:id/proposals)` with 2100m, `proxy_request_buffering off`, 900 s timeouts; `httpServer.requestTimeout = 0` when the ceiling is above 100 MB.
 Regression guard: `scripts/uploadLimit.test.js` (fails if the dev default is under 1024 MB or nginx is the smaller wall).
 Still needed on the VPS: a dev-tier deploy (compose file + new client image), and no `MAX_UPLOAD_MB`/`DEV_MAX_UPLOAD_MB` below 1024 in the dev `.env`. Not checked against a real 843 MB upload.
+
+## 2026-11-12 - Camera refusal said nowhere on the Map source view
+
+Symptom: a blocked or missing camera on a Pictures surface showed a blank picture with no reason.
+Cause: the refusal moved from `error` to `cameraError` (so a camera never replaces the whole picture) and nothing read `cameraError`; it was also never cleared after a later successful open.
+Fix: `MapSourceView.jsx` shows `cameraError` as a caption over the picture; `useTopNetwork.js` clears it when a camera opens.
+Guard: `MapSourceView.network.test.jsx` (caption, canvas kept), `useTopNetwork.camera.test.jsx` (cleared on open). Run by CI only; the local lane gate was closed.
+Lesson: when a value moves to a new field, grep the readers in the same change.
+
+## 2026-11-12 - Body never made a mask for a still source after a failed or skipped run
+
+Symptom: a Body effect on a still or paused source passed the picture through for the rest of the show.
+Cause: `refreshMatte` (topEngine.js) stored the picture as seen before knowing the model run started, and while the model was not ready; the same pixels then read as unchanged for ever.
+Fix: `rememberMatteRun` keeps the picture only after `submit()` returned true; the seen picture is forgotten while the model is not ready.
+Guard: `topEngine.blank.test.js` "rememberMatteRun". Run by CI only. A worker answer of type fail after an accepted submit is not covered.
+Lesson: mark work as done only after the thing that does it confirmed it started.

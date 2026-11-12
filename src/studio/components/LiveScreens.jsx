@@ -149,7 +149,7 @@ const textureFor = (element, kind) => {
     return { texture, rate: liveScreenRate(kind, tag), signature: `${tag}|${element}`, element }
 }
 
-function LiveScreenSource({ surfaceId, surface, spaceId, network, register }) {
+function LiveScreenSource({ surfaceId, surface, spaceId, projectId, assets, network, register }) {
     const hostRef = useRef(null)
     const plan = useMemo(() => liveScreenPlan(surface, surfaceId), [surface, surfaceId])
 
@@ -201,7 +201,7 @@ function LiveScreenSource({ surfaceId, surface, spaceId, network, register }) {
     if (plan.mode !== 'live') return null
     return (
         <div ref={hostRef} className="studio-live-screen-host" data-surface-id={surfaceId}>
-            <MapSourceView surface={surface} spaceId={spaceId} live network={network} label={surface.name || surface.id} />
+            <MapSourceView surface={surface} spaceId={spaceId} live network={network} assets={assets} projectId={projectId} label={surface.name || surface.id} />
         </div>
     )
 }
@@ -214,6 +214,8 @@ export default function LiveScreens({ document, onScreens }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const network = useMemo(() => toTopNetwork(document), [document?.nodes, document?.edges])
     const spaceId = document?.projectMeta?.spaceId || ''
+    const projectId = document?.projectMeta?.id || ''
+    const assets = document?.assets || null
 
     const registry = useRef(new Map())
     const onScreensRef = useRef(onScreens)
@@ -263,6 +265,8 @@ export default function LiveScreens({ document, onScreens }) {
                     surfaceId={id}
                     surface={byId.get(id) || null}
                     spaceId={spaceId}
+                    projectId={projectId}
+                    assets={assets}
                     network={network}
                     register={registerRef.current}
                 />

@@ -161,4 +161,27 @@ describe('a Camera In opening its device', () => {
         expect(secondTrack.stop).toHaveBeenCalledTimes(1)
         expect(firstTrack.stop).not.toHaveBeenCalled()
     })
+
+    it('GUARD: a camera that cannot open never becomes `error` (the Map output replaces its whole picture with a card for that)', async () => {
+        devices = [{ kind: 'videoinput', deviceId: 'w1', label: 'Integrated Webcam' }]
+        setup()
+        const { id, doc } = cameraDoc({ device: 'x', deviceLabel: 'Phone' })
+        const { result } = renderHook(() => useTopNetwork({ network: toTopNetwork(doc) }))
+        await flush()
+        expect(readTopReport(id).camera.blocked).toBe(true)
+        expect(result.current.error).toBe('')
+        expect(result.current.cameraError).toBe('Camera "Phone" not found.')
+    })
+    it('cameraError is cleared when the camera opens after a failure', async () => {
+        devices = [{ kind: 'videoinput', deviceId: 'w1', label: 'Integrated Webcam' }]
+        setup()
+        const { doc } = cameraDoc({ device: 'x', deviceLabel: 'Phone' })
+        const { result } = renderHook(() => useTopNetwork({ network: toTopNetwork(doc) }))
+        await flush()
+        expect(result.current.cameraError).toBe('Camera "Phone" not found.')
+        devices = [{ kind: 'videoinput', deviceId: 'p1', label: 'Phone' }]
+        await act(async () => { listeners.devicechange?.() })
+        await flush()
+        expect(result.current.cameraError).toBe('')
+    })
 })

@@ -14,8 +14,14 @@
     --vj-monitor-w: 300px;
     --vj-monitor-w-row: 1 1 0;
     --vj-layers: 3;
+    /* The seams (DeckSeam.jsx): one hairline for every new rule, a grip mark that keeps 3:1
+       against the panel ground (WCAG 1.4.11), and the gap the root keeps between its rows. */
+    --vj-line: rgba(255, 255, 255, 0.14);
+    --vj-grip: var(--di-dim);
+    --vj-gap: var(--di-space-2);
     container-type: inline-size;
     container-name: vjdeck;
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: var(--di-space-2);
@@ -48,6 +54,7 @@
     --vj-tile: 112px;
     --vj-tile-height: 72px;
     --vj-control: 32px;
+    --vj-gap: var(--di-space-3);
     gap: var(--di-space-3);
     padding: var(--di-space-4);
     font-size: var(--di-text-4);
@@ -190,6 +197,7 @@
     grid-template-rows: minmax(0, 1fr);
     gap: var(--di-space-3);
     min-height: 220px;
+    position: relative;
 }
 
 .vj-deck-monitors {
@@ -282,18 +290,31 @@
 /* --- the grid ------------------------------------------------------------- */
 
 .vj-deck-scroll {
+    /* None until the end room is measured and set inline here (VjDeckView.jsx); the grid inherits it. */
+    --vj-end-room: 0px;
     flex: 1 1 auto;
     /* A short frame keeps the column row and one layer row in view; the grid scrolls inside. */
     min-height: 0;
     min-width: 0;
     overflow: auto;
+    /* A layer row rests whole under the sticky Columns header, never half under it:
+       rows snap to the line below the header, and the end of the grid has room for the
+       last row to reach it (SPEC rule 3). */
+    scroll-snap-type: y mandatory;
+    scroll-padding-top: calc(var(--vj-control) + var(--di-space-1));
+}
+
+.vj-deck-scroll .vj-deck-row:not(.vj-deck-columns) {
+    scroll-snap-align: start;
 }
 
 .vj-deck-grid {
+    /* The end room is measured and set inline on .vj-deck-scroll (VjDeckView.jsx) and inherited here. */
     display: flex;
     flex-direction: column;
     gap: var(--di-space-1);
     min-width: min-content;
+    padding-bottom: var(--vj-end-room);
 }
 
 .vj-deck-row {
@@ -390,6 +411,8 @@
 }
 
 .vj-deck-tile {
+    /* A tile narrower than 180px wraps its name onto two lines (the query below). */
+    container-type: inline-size;
     position: relative;
     display: flex;
     align-items: flex-end;
@@ -453,6 +476,21 @@
     background: transparent;
 }
 
+/* The name of a clip wraps onto two lines (broken anywhere) while its tile is narrower than 180px;
+   the whole name stays in the tile's title. */
+@container (max-width: 179px) {
+    .vj-deck-tile:not(.vj-deck-tile--empty) .vj-deck-tile-name {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-all;
+        line-height: 1.25;
+    }
+}
+
 .vj-deck-tile.is-playing .vj-deck-tile-name {
     background: var(--di-ink);
     color: var(--di-bg);
@@ -463,6 +501,7 @@
     top: 0;
     z-index: 1;
     background: var(--di-bg);
+    min-height: var(--vj-control);
 }
 
 .vj-deck-columns-head {
@@ -508,12 +547,15 @@
 
 .vj-deck-bottom {
     display: grid;
-    /* Always visible at the foot of the deck: at least 160px, at most 40% of it; each panel scrolls. */
+    /* Always visible at the foot of the deck: at least 150px, at most 40% of it. The row never
+       scrolls: each panel does (one scroller per panel). A dragged height (--vj-bottom-h) fixes it. */
+    position: relative;
     flex: 0 1 auto;
-    min-height: 160px;
+    min-height: 150px;
     max-height: 40%;
-    overflow-y: auto;
+    overflow: hidden;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
     gap: var(--di-space-3);
 }
 
@@ -564,6 +606,10 @@
     border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+/* the effect the K2's third pot row turns (EffectsPanel fxIndex) */
+.vj-deck-fx-effect.is-midi-current {
+    box-shadow: inset 2px 0 0 var(--di-cyan);
+}
 .vj-deck-fx-effect[data-on='false'] {
     opacity: 0.55;
 }
@@ -650,6 +696,9 @@
 }
 
 .vj-deck-upload {
+    /* The hidden file input is absolute: without this its box belongs to .vj-deck and, scrolled
+       out of the panel, it made the whole deck scroll by its own offset. */
+    position: relative;
     display: inline-flex;
     align-items: center;
 }
@@ -734,11 +783,38 @@
     max-height: 200px;
 }
 
-/* --- sources: one line per source, scrolling inside the panel ------------- */
+/* Up to five layers are whole in the default state: the main row asks for its Columns row and its
+   layer rows (the Columns row, then one layer row and one gap per layer), and the bottom row gives the
+   height back, down to its minimum (its panels scroll). It is asked on a frame of 800px or more;
+   a shorter one keeps today's rule (the grid scrolls inside). A dragged bottom height wins
+   (data-bottom='fixed'); the narrow rule below keeps its own minimum. */
+.vj-deck--window {
+    /* A window's layer row is as high as its layer head (three controls), not a grid track. */
+    --vj-row-min: 94px;
+}
+
+@media (min-height: 800px) {
+    @container vjdeck (min-width: 901px) {
+        .vj-deck .vj-deck-main {
+            min-height: max(
+                220px,
+                calc(max(var(--vj-control), 28px) + min(var(--vj-layers), 5) * (var(--vj-row-min) + var(--di-space-1)))
+            );
+        }
+
+        .vj-deck[data-bottom='fixed'] .vj-deck-main {
+            min-height: 220px;
+        }
+    }
+}
+
+/* --- sources: four groups, DEVICES first, scrolling inside the panel ------ */
 
 .vj-deck-sources {
     --vj-source-row: 24px;
-    max-height: 240px;
+    /* No cap: the list fills the panel and scrolls inside it; the panel itself does not scroll. */
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* A panel never squeezes its own rows (the Effects head wrapped to two lines and lay
@@ -751,21 +827,40 @@
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
-    min-height: calc(var(--vj-source-row) * 2);
+    gap: var(--di-space-2);
+    min-height: 0;
     overflow: auto;
 }
 
 .vj-deck-source-group {
     display: flex;
+    flex: none;
     flex-direction: column;
 }
 
-/* One compact line per source: the kind as a small tag, then the name. */
+.vj-deck-source-head {
+    padding: var(--di-space-1) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
+    letter-spacing: var(--di-label-tracking);
+    line-height: 1;
+    text-transform: var(--di-label-case);
+    white-space: nowrap;
+}
+
+/* FILES come last, so a long list never pushes the devices out of view. One scroll box: the list's. */
+.vj-deck-source-files-list {
+    display: flex;
+    flex-direction: column;
+}
+
+/* One line per source: the kind as a small tag (its full word), the name, a state. */
 .vj-deck-source {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
     align-items: center;
-    gap: var(--di-space-1);
+    gap: var(--di-space-2);
     box-sizing: border-box;
     min-height: var(--vj-source-row);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
@@ -773,14 +868,46 @@
 }
 
 .vj-deck-source-kind {
-    overflow: hidden;
+    min-width: 7ch;
     color: var(--di-dim);
     font-size: var(--di-text-1);
     letter-spacing: 0.08em;
     line-height: 1;
-    text-overflow: ellipsis;
     text-transform: uppercase;
     white-space: nowrap;
+}
+
+.vj-deck-source-state {
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.vj-deck-source-state.is-live {
+    color: var(--di-ink);
+    box-shadow: inset 2px 0 0 var(--di-ink);
+    padding-left: var(--di-space-1);
+}
+
+.vj-deck-source.is-unplayable {
+    cursor: default;
+}
+
+.vj-deck-source.is-unplayable .vj-deck-source-name {
+    color: var(--di-dim);
+}
+
+.vj-deck-source--upload {
+    cursor: default;
+}
+
+.vj-deck-source--upload .vj-deck-upload {
+    min-height: var(--vj-source-row);
+    padding-block: 0;
+    line-height: 1;
 }
 
 .vj-deck-source-name {
@@ -797,18 +924,12 @@
     border-color: transparent;
 }
 
-.vj-deck-source--upload {
-    cursor: default;
-}
-
-.vj-deck-source--upload .vj-deck-upload {
-    min-height: var(--vj-source-row);
-    padding-block: 0;
-    line-height: 1;
-}
-
 .vj-deck-source-name:disabled {
     cursor: grab;
+}
+
+.vj-deck-source.is-unplayable .vj-deck-source-name:disabled {
+    cursor: default;
 }
 
 /* A slot a drag is over: the one place it would land. */
@@ -840,6 +961,169 @@
 .vj-deck-fx-params {
     display: flex;
     flex-direction: column;
+}
+
+/* A dragged height and dragged panel widths (useDeckLayout.js sets the variables and these two marks). */
+.vj-deck[data-bottom='fixed'] .vj-deck-bottom {
+    min-height: var(--vj-bottom-h);
+    max-height: var(--vj-bottom-h);
+}
+
+.vj-deck[data-cols='fixed'] .vj-deck-bottom {
+    grid-template-columns: var(--vj-bottom-cols);
+}
+
+/* --- seams: the borders between panels, draggable (DeckSeam.jsx, deckLayout.js) ----- */
+
+/* A seam's grab zone lies over the GAP between two panels and may grow only over EMPTY padding
+   (S1: the layer strip's right padding; S4 and S5/S6 on a finger: the bottom panels' border and
+   padding). It never lies over a clip tile or a control: a click there is the tile's. Numbers:
+   S1 10px (3px gap + 7px strip padding), S2 12px, S5 and S6 12px (24px on a finger), S4 7px
+   (15px on a finger). --vj-zone is the zone's size across the seam, --vj-lead the distance from the
+   zone's start to the gap's centre line, where the hairline and the mark are drawn. */
+.vj-deck-seam {
+    --vj-zone: var(--di-space-3);
+    --vj-lead: calc(var(--di-space-3) / 2);
+    --vj-mark: var(--di-space-7);
+    position: absolute;
+    z-index: 3;
+    box-sizing: border-box;
+    touch-action: none;
+}
+
+.vj-deck-seam::before,
+.vj-deck-seam::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+}
+
+/* the 1px line */
+.vj-deck-seam::before {
+    background: var(--vj-line);
+}
+
+/* the resting mark: 3px wide, 40px long (--di-space-1 by --di-space-7), in the middle of the seam */
+.vj-deck-seam::after {
+    background: var(--vj-grip);
+}
+
+.vj-deck-seam[aria-orientation='vertical'] {
+    width: var(--vj-zone);
+    cursor: col-resize;
+}
+
+.vj-deck-seam[aria-orientation='vertical']::before {
+    top: 0;
+    bottom: 0;
+    left: calc(var(--vj-lead) - 0.5px);
+    width: 1px;
+}
+
+.vj-deck-seam[aria-orientation='vertical']::after {
+    top: calc(50% - var(--vj-mark) / 2);
+    left: calc(var(--vj-lead) - var(--di-space-1) / 2);
+    width: var(--di-space-1);
+    height: var(--vj-mark);
+}
+
+.vj-deck-seam[aria-orientation='horizontal'] {
+    height: var(--vj-zone);
+    cursor: row-resize;
+}
+
+.vj-deck-seam[aria-orientation='horizontal']::before {
+    left: 0;
+    right: 0;
+    top: calc(var(--vj-lead) - 0.5px);
+    height: 1px;
+}
+
+.vj-deck-seam[aria-orientation='horizontal']::after {
+    left: calc(50% - var(--vj-mark) / 2);
+    top: calc(var(--vj-lead) - var(--di-space-1) / 2);
+    width: var(--vj-mark);
+    height: var(--di-space-1);
+}
+
+/* Hover and keyboard focus: the whole seam shows as a 1px line, and the mark, in --di-cyan (the
+   brand's focused and active colour, no glow, no size change); while dragging the same. */
+.vj-deck-seam:hover::before,
+.vj-deck-seam:hover::after,
+.vj-deck-seam:focus-visible::before,
+.vj-deck-seam:focus-visible::after,
+.vj-deck-seam.is-dragging::before,
+.vj-deck-seam.is-dragging::after {
+    background: var(--di-cyan);
+}
+
+/* No text selection while a seam is dragged (DeckSeam.jsx sets the mark on the deck root). */
+.vj-deck[data-seam-dragging] {
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* S1: the layer strip's right padding (7px) and the 3px gap after it; the tiles start after the gap. */
+.vj-deck-seam[data-seam='s1'] {
+    --vj-zone: calc(var(--di-space-2) + var(--di-space-1));
+    --vj-lead: calc(var(--di-space-2) + var(--di-space-1) / 2);
+    top: 0;
+    bottom: 0;
+    left: calc(var(--vj-head) - var(--di-space-2));
+}
+
+/* S2: exactly the gap between the clip grid and the monitor column. */
+.vj-deck-seam[data-seam='s2'] {
+    top: 0;
+    bottom: 0;
+    right: var(--vj-monitor-w);
+}
+
+/* S4: exactly the gap under the main row (it hangs from the main row's foot). */
+.vj-deck-seam[data-seam='s4'] {
+    --vj-zone: var(--vj-gap);
+    --vj-lead: calc(var(--vj-gap) / 2);
+    left: 0;
+    right: 0;
+    bottom: calc(var(--vj-gap) * -1);
+}
+
+/* S5 and S6: exactly the gaps between the three bottom panels. */
+.vj-deck-seam[data-seam='s5'] {
+    top: 0;
+    bottom: 0;
+    left: calc((100% - 2 * var(--di-space-3)) / 3);
+}
+
+.vj-deck[data-cols='fixed'] .vj-deck-seam[data-seam='s5'] {
+    left: var(--vj-bottom-a);
+}
+
+.vj-deck-seam[data-seam='s6'] {
+    top: 0;
+    bottom: 0;
+    left: calc((100% - 2 * var(--di-space-3)) * 2 / 3 + var(--di-space-3));
+}
+
+.vj-deck[data-cols='fixed'] .vj-deck-seam[data-seam='s6'] {
+    left: calc(var(--vj-bottom-a) + var(--vj-bottom-b) + var(--di-space-3));
+}
+
+/* A finger: S5 and S6 grow 12px to the RIGHT only, into the next panel's border and padding (13px of
+   empty room). The left side stays at the gap: that is the edge of the panel before it, and its
+   scrollbar sits there, so a finger can still take the scrollbar. The line and the mark stay in the
+   middle of the gap (--vj-lead is the base). S4 grows 8px down into the panels' top border and
+   padding. S1 and S2 stay as they are: their neighbours hold tiles. Not measured on a touch screen. */
+@media (pointer: coarse) {
+    .vj-deck-seam[data-seam='s5'],
+    .vj-deck-seam[data-seam='s6'] {
+        --vj-zone: calc(var(--di-space-3) * 2);
+    }
+
+    .vj-deck-seam[data-seam='s4'] {
+        --vj-zone: calc(var(--vj-gap) + var(--di-space-2) + 1px);
+        bottom: calc((var(--vj-gap) + var(--di-space-2) + 1px) * -1);
+    }
 }
 
 /* --- a narrow deck: a phone, or a small window ---------------------------- */
@@ -886,9 +1170,11 @@
        showed half a source row and one cut effect. */
     .vj-deck-bottom {
         grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: none;
         flex: 0 0 auto;
+        min-height: 0;
         max-height: none;
-        overflow-y: visible;
+        overflow: visible;
     }
 
     .vj-deck-top {
@@ -937,4 +1223,55 @@
     .vj-deck-chip {
         padding: 0 var(--di-space-1);
     }
+
+    /* 44px buttons leave the name 19px: it takes its own line so it reads whole. */
+    .vj-deck-layer-line:first-child {
+        flex-wrap: wrap;
+    }
+
+    .vj-deck-layer-line:first-child .vj-deck-layer-name {
+        order: 5;
+        flex: 1 0 100%;
+    }
+}
+
+/* --- map mode (MIDI on): the Ableton look --------------------------------- */
+/* One layer over the deck, one box per mappable control, measured from the control
+   (MidiMapOverlay.jsx). It never takes the pointer, so Learn's click still lands. */
+
+.vj-deck-mapmode {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.vj-deck-mapbox {
+    position: absolute;
+    box-sizing: border-box;
+    background: var(--di-cyan-wash);
+    border: 1px solid var(--di-cyan-border);
+}
+
+.vj-deck-mapbox.is-mapped {
+    background: var(--di-cyan-dim);
+    border-color: var(--di-cyan-line);
+}
+
+.vj-deck-mapbox.is-picked {
+    background: var(--di-cyan-dim);
+    border: var(--di-space-1) solid var(--di-cyan);
+}
+
+.vj-deck-maptag {
+    position: absolute;
+    right: 0;
+    top: 0;
+    padding: 0 var(--di-space-1);
+    background: var(--di-cyan);
+    color: var(--di-bg);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    line-height: 1.2;
+    white-space: nowrap;
 }

@@ -14,6 +14,7 @@
 
 import { generateId } from '../../shared/projectSchema.js'
 import { TOP_OPERATORS, isTopType, resolveTopParams } from './topOperators.js'
+import { inputSourceKey, markSourceNode } from './sourceSwitch.js'
 import { DEFAULT_BPM, TAP_RESET_MS as CLOCK_TAP_RESET_MS, sanitizeEpoch, tapTempo as clockTapTempo } from '../../timeline/showClock.js'
 
 export const VJ_DECK_TYPE = 'vj.deck'
@@ -75,8 +76,8 @@ export const normalizeClip = (clip) => {
 // the master's). `main` is what the panel and MIDI show first: numeric params
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
-// One of every effect fits on a stack (18 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 18
+// One of every effect fits on a stack (20 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
+export const MAX_EFFECTS = 20
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -85,9 +86,11 @@ export const EFFECT_TYPES = {
     'top.feedback': { main: ['trail'] },
     'top.transform': { main: ['scale', 'rotate', 'moveX'] },
     'top.freeze': { main: ['hold'] },
-    'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back'] },
+    'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back', 'drift', 'flash'] },
     'top.lineart': { main: ['bands', 'width', 'colour'] },
+    'top.matte': { main: ['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert'] },
     'top.glitch': { main: ['amount', 'speed', 'split'] },
+    'top.blocks': { main: ['amount', 'size', 'rate', 'shift', 'hold'] },
     'top.pixelate': { main: ['size', 'levels', 'grey'] },
     'top.displace': { main: ['source', 'amountX', 'amountY', 'scale', 'speed'] },
     'top.hsvadj': { main: ['hue', 'sat', 'value'] },
@@ -492,14 +495,22 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     // A stack after `input`: each ON effect is the operator plus a Blend (Mix mode:
     // a = what came in, b = the effect, Amount = the effect's mix = dry/wet).
     // Off or empty adds nothing. Returns the id the next stage reads.
-    const runStack = (stack, input, effectIdOf, mixIdOf) => {
+    const runStack = (stack, input, effectIdOf, mixIdOf, unseen = false) => {
         let current = input
         for (const effect of stack) {
             if (!effect.on) continue
             const fx = effectIdOf(effect.id)
             const wet = mixIdOf(effect.id)
-            nodes.push({ id: fx, type: effect.type, values: { machine, ...effect.params } })
+            const matte = Boolean(TOP_OPERATORS[effect.type]?.matte)
+            // A Body on a silent layer keeps its node (so the model stays loaded and nothing
+            // restarts when the fader comes up) but is told nobody sees it: the engine then
+            // does not run the model for it. Three Body layers with two faders down cost
+            // three model runs a frame (17 frames a second on the show machine, 2026-11-11).
+            nodes.push({ id: fx, type: effect.type, values: { machine, ...effect.params, ...(matte && unseen ? { unseen: true } : {}) } })
             wires.push({ from: current, to: fx, port: 'a' })
+            // Body looks for the person in what the stack started from (the layer's
+            // own picture, before its other effects), and paints over `a`.
+            if (matte) wires.push({ from: input, to: fx, port: 'b' })
             nodes.push({ id: wet, type: 'top.blend', values: { machine, mode: '0', mix: effect.mix } })
             wires.push({ from: current, to: wet, port: 'a' })
             wires.push({ from: fx, to: wet, port: 'b' })
@@ -546,9 +557,13 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
             })
         }
         const blend = blendNodeId(deckId, index)
-        nodes.push({ id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } })
+        const blendNode = { id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } }
+        // An input clip's blend remembers which input it plays, so the source switch can silence it
+        // without the network carrying any extra value (sourceSwitch.js).
+        if (clip.kind === 'input') markSourceNode(blendNode, inputSourceKey(clip.input))
+        nodes.push(blendNode)
         if (below) wires.push({ from: below, to: blend, port: 'a' })
-        wires.push({ from: runStack(layer.effects, source, (id) => layerEffectNodeId(deckId, index, id), (id) => layerEffectMixNodeId(deckId, index, id)), to: blend, port: 'b' })
+        wires.push({ from: runStack(layer.effects, source, (id) => layerEffectNodeId(deckId, index, id), (id) => layerEffectMixNodeId(deckId, index, id), opacity <= 0), to: blend, port: 'b' })
         below = blend
     })
 

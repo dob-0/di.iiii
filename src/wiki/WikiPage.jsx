@@ -5,6 +5,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
 import AskDi from '../askdi/AskDi.jsx'
+import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
@@ -137,6 +138,7 @@ export default function WikiPage({ articleId = null }) {
                 fourth name ("← Home") for the screen three other surfaces
                 already called three other things. One bar, one set of names. */}
             <SurfaceBar here="wiki" space={lastProject.space} project={lastProject.project} isLocalInstall={localInstall.isLocal} hidden={isEmbed}>
+                <DeskPerformSwitch current="elsewhere" space={lastProject.space} project={lastProject.project} from="raw" />
                 {role === 'admin' && <a className="sbar-link" href="/admin">Admin</a>}
             </SurfaceBar>
 
