@@ -2134,7 +2134,11 @@ router.param('spaceId', createSpaceIdParam({ normalizeSpaceId, spaceExists, find
 // /api/spaces/bundle/scene (a space called "bundle") never matches. Not on
 // req.originalUrl, which also carries the query string.
 const isOpenAFile = (req) =>
-  req.method === 'POST' && req.params.spaceId === 'bundle' && (req.path === '/' || req.path === '')
+  req.params.spaceId === 'bundle' && (
+    (req.method === 'POST' && (req.path === '/' || req.path === '')) ||
+    // The same door in parts (routes/bundleParts.js): start, PUT a part, finish, cancel.
+    /^\/uploads(\/|$)/.test(req.path)
+  )
 router.use('/api/spaces/:spaceId', async (req, res, next) => {
   // POST /api/spaces/bundle is "open a file", which CREATES a space — it names
   // no existing one, exactly like POST /api/spaces. Read as a space id,
