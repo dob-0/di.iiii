@@ -17,6 +17,17 @@ describe('laser sends answer in bounded time (review 2026-11-12, N3876 #4)', () 
         expect(seenSignal?.aborted).toBe(true)
     })
 
+    it('a fetch that honours the signal is aborted at the timeout and the send is false', async () => {
+        vi.useFakeTimers()
+        const fetchImpl = vi.fn((url, init) => new Promise((resolve, reject) => {
+            init.signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))
+        }))
+        const result = setLaserBlackout(false, { fetchImpl })
+        await vi.advanceTimersByTimeAsync(LASER_POST_TIMEOUT_MS + 1)
+        await expect(result).resolves.toBe(false)
+        expect(fetchImpl.mock.calls[0][1].signal.aborted).toBe(true)
+    })
+
     it('an answer before the timeout is used', async () => {
         const fetchImpl = vi.fn(async () => ({ ok: true }))
         await expect(goLaserLook('look-1', { fetchImpl })).resolves.toBe(true)

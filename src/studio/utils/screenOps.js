@@ -13,6 +13,8 @@ export const SCREEN_NAME = 'Screen'
 export const SCREEN_WIDTH = 3.2
 export const SCREEN_HEIGHT = 1.8
 
+const PICTURE_TYPES = new Set(['vj.deck', 'top.out'])
+
 // The picture a screen should run: the first VJ deck, else the first Picture Out.
 export const findPictureSource = (document) => {
     const nodes = Array.isArray(document?.nodes) ? document.nodes : []
@@ -24,8 +26,10 @@ export const findPictureSource = (document) => {
 // and a new one is made on the live deck instead (review 2026-11-12, N3876 #2).
 export const findPictureSurface = (document) => {
     const surfaces = document?.mappingState?.surfaces || []
-    const nodeIds = new Set((Array.isArray(document?.nodes) ? document.nodes : []).map((node) => node?.id))
-    return surfaces.find((surface) => surface?.source?.kind === 'network' && surface.source.ref && nodeIds.has(surface.source.ref)) || null
+    const nodes = Array.isArray(document?.nodes) ? document.nodes : []
+    // Only a live picture node counts (the same two kinds findPictureSource offers).
+    const isPictureNode = (ref) => nodes.some((node) => node?.id === ref && PICTURE_TYPES.has(node.typeId))
+    return surfaces.find((surface) => surface?.source?.kind === 'network' && surface.source.ref && isPictureNode(surface.source.ref)) || null
 }
 
 // What a picture source is called to a person.

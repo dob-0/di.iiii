@@ -42,6 +42,14 @@ describe('buildScreenOps', () => {
         expect(made.ops[0].payload.surface.source).toEqual({ kind: 'network', ref: 'node-deck' })
     })
 
+    it('skips a surface whose ref is a node that is not a picture source', () => {
+        const other = { id: 'node-lamp', typeId: 'light.lamp' }
+        const d = doc({ nodes: [other, deck], mappingState: { surfaces: [{ id: 'srf-lamp', source: { kind: 'network', ref: 'node-lamp' } }] } })
+        const made = buildScreenOps(d)
+        expect(made.surfaceId).not.toBe('srf-lamp')
+        expect(made.ops[0].payload.surface.source.ref).toBe('node-deck')
+    })
+
     it('with only a dead surface and no deck, stays unbound', () => {
         const d = doc({ mappingState: { surfaces: [{ id: 'srf-dead', source: { kind: 'network', ref: 'node-gone' } }] } })
         expect(buildScreenOps(d).bound).toBe(false)
