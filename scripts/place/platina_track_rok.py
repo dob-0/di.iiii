@@ -33,6 +33,11 @@ CUES = [
 ]
 
 
+# Three standalone HOLD cues for deck columns 9-11 (hold 0 = the runner never advances; cuerun.js line 96): same looks as the chain's
+# intro / build / drop, ids track-rok-hold-*. The chain's own cues stay unlinked; column 12 links track-rok-intro (autoplay needs the desk's play-in-order on).
+HOLDS = [('intro', 'A', 1.0), ('build', 'B', 2.0), ('drop', 'C', 0.5)]
+
+
 def make(rig, base, marks=None):
     g = groups(rig)
     bars = [p for t in sorted(g['bars']) for p in g['bars'][t]]
@@ -51,6 +56,12 @@ def make(rig, base, marks=None):
         S.append({'id': f'track-rok-{id_}', 'title': title, 'act': 9, 'intent': f'Track scene mark {t0:g} s: {title}.', 'parts': parts,
                   'motion': {'mode': 'none', 'bpm': 79, 'depth': 0, 'spatial': 'patch', 'kinds': [], 'still': 0.0}, 'heads': None,
                   'cue': {'fade_s': min(fade, hold), 'hold_s': hold}, 'fade_s': min(fade, hold), 'hold_s': hold, 't0_s': t0})
+    by = {s['id']: s for s in S}
+    for key, col, fade in HOLDS:
+        c = json.loads(json.dumps(by[f'track-rok-{key}']))
+        c.update({'id': f'track-rok-hold-{key}', 'title': f'column {col}: {c["title"]} (holds)', 'intent': f'Standalone hold of the track {key} look for a deck column; no auto-next.', 't0_s': 0.0,
+                  'cue': {'fade_s': fade, 'hold_s': 0}, 'fade_s': fade, 'hold_s': 0})
+        S.append(c)
     return {'what': 'Platina track scene Рок-н-роллер, first 30 s: the lamp cues on the shared marks', 'source': f'written by scripts/place/platina_track_rok.py from the rig {RIG} and the marks file',
             'licence': 'own work', 'date': '2026-11-12', 'version': 'track-rok-1', 'tempo_bpm': {'value': [79], 'basis': 'marks file tempo_bpm'},
             'rules': {**base['rules'], 'track': 'no strobe, under 3 level changes per second, no full-field white (marks file limits)'},
@@ -63,7 +74,7 @@ def main(argv=None):
     a = ap.parse_args(argv)
     spec = make(json.load(open(a.rig, encoding='utf-8')), json.load(open(a.base, encoding='utf-8')))
     json.dump(spec, open(a.out, 'w', encoding='utf-8'), indent=1, ensure_ascii=False)
-    print(f'{a.out}: {len(spec["scenes"])} cues, holds sum {sum(s["hold_s"] for s in spec["scenes"]):g} s')
+    print(f'{a.out}: {len(spec["scenes"])} cues (holds sum {sum(s["hold_s"] for s in spec["scenes"]):g} s)')
     return 0
 
 

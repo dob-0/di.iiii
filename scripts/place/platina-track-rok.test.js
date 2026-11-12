@@ -7,7 +7,8 @@ const here = dirname(fileURLToPath(import.meta.url))
 const spec = JSON.parse(readFileSync(join(here, 'rigs', 'platina-scenes-spec-track-rok-2026-11-12.json'), 'utf8'))
 const marksFile = join(process.env.HOME || '', 'work/platina/scenes/track-rok-n-roller/timeline-30s.json')
 describe('track-rok lamp cues', () => {
-    const S = spec.scenes
+    const S = spec.scenes.filter((s) => !/^track-rok-hold-/.test(s.id))
+    const H = spec.scenes.filter((s) => /^track-rok-hold-/.test(s.id))
     it('ids are track-rok-*, starts ascend, holds are the gaps and sum to 30 s', () => {
         expect(S.every((s) => /^track-rok-/.test(s.id))).toBe(true)
         S.forEach((s, i) => { if (i) expect(s.t0_s).toBeGreaterThan(S[i - 1].t0_s); if (i < S.length - 1) expect(s.hold_s).toBeCloseTo(S[i + 1].t0_s - s.t0_s, 3) })
@@ -20,6 +21,10 @@ describe('track-rok lamp cues', () => {
     })
     it('no strobe and no lamp above 85 % (no full-field white)', () => {
         S.forEach((s) => { expect(s.motion.mode).toBe('none'); Object.values(s.parts).forEach(([, lv]) => expect(lv).toBeLessThanOrEqual(0.85)) })
+    })
+    it('three standalone holds (hold 0, no auto-next) copy the chain looks of intro, build, drop', () => {
+        expect(H.map((s) => s.id)).toEqual(['track-rok-hold-intro', 'track-rok-hold-build', 'track-rok-hold-drop'])
+        H.forEach((h) => { expect(h.hold_s).toBe(0); const c = S.find((s) => s.id === h.id.replace('-hold', '')); expect(h.parts).toEqual(c.parts) })
     })
     it.skipIf(!existsSync(marksFile))('first start is 0 and the drop is at the marks file 12 s', () => {
         expect(S[0].t0_s).toBe(0)

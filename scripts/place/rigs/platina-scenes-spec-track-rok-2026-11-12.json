@@ -1846,6 +1846,586 @@
    "fade_s": 0.5,
    "hold_s": 0.5,
    "t0_s": 29.5
+  },
+  {
+   "id": "track-rok-hold-intro",
+   "title": "column A: INTRO: green wash (holds)",
+   "act": 9,
+   "intent": "Standalone hold of the track intro look for a deck column; no auto-next.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#1d8c39",
+     0.15
+    ],
+    "K10 2 over the stage": [
+     "#1d8c39",
+     0.15
+    ],
+    "K10 3 over the stage": [
+     "#1d8c39",
+     0.15
+    ],
+    "K10 4 over the stage": [
+     "#1d8c39",
+     0.15
+    ],
+    "K10 5 over the stage": [
+     "#1d8c39",
+     0.15
+    ],
+    "K10 6 over the stage": [
+     "#1d8c39",
+     0.15
+    ],
+    "K10 7 over the stage": [
+     "#1d8c39",
+     0.15
+    ],
+    "K10 8 over the stage": [
+     "#1d8c39",
+     0.15
+    ],
+    "K15 1 stage-floor row": [
+     "#1d8c39",
+     0.1
+    ],
+    "K15 2 stage-floor row": [
+     "#1d8c39",
+     0.1
+    ],
+    "K15 3 stage-floor row": [
+     "#1d8c39",
+     0.1
+    ],
+    "K15 4 stage-floor row": [
+     "#1d8c39",
+     0.1
+    ],
+    "K15 5 stage-floor row": [
+     "#1d8c39",
+     0.1
+    ],
+    "K15 6 stage-floor row": [
+     "#1d8c39",
+     0.1
+    ],
+    "K15 7 side stand": [
+     "#1d8c39",
+     0.1
+    ],
+    "K15 8 side stand": [
+     "#1d8c39",
+     0.1
+    ],
+    "pixel line tower 1 bar 1": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 1 bar 2": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 1 bar 3": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 2 bar 1": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 2 bar 2": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 2 bar 3": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 3 bar 1": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 3 bar 2": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 3 bar 3": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 4 bar 1": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 4 bar 2": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 4 bar 3": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 5 bar 1": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 5 bar 2": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 5 bar 3": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 6 bar 1": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 6 bar 2": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 6 bar 3": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 7 bar 1": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 7 bar 2": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 7 bar 3": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 8 bar 1": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 8 bar 2": [
+     "#1d8c39",
+     0.15
+    ],
+    "pixel line tower 8 bar 3": [
+     "#1d8c39",
+     0.15
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 79,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": null,
+   "cue": {
+    "fade_s": 1.0,
+    "hold_s": 0
+   },
+   "fade_s": 1.0,
+   "hold_s": 0,
+   "t0_s": 0.0
+  },
+  {
+   "id": "track-rok-hold-build",
+   "title": "column B: BUILD: cyan up over 4 s (holds)",
+   "act": 9,
+   "intent": "Standalone hold of the track build look for a deck column; no auto-next.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#19e0da",
+     0.6
+    ],
+    "K10 2 over the stage": [
+     "#19e0da",
+     0.6
+    ],
+    "K10 3 over the stage": [
+     "#19e0da",
+     0.6
+    ],
+    "K10 4 over the stage": [
+     "#19e0da",
+     0.6
+    ],
+    "K10 5 over the stage": [
+     "#19e0da",
+     0.6
+    ],
+    "K10 6 over the stage": [
+     "#19e0da",
+     0.6
+    ],
+    "K10 7 over the stage": [
+     "#19e0da",
+     0.6
+    ],
+    "K10 8 over the stage": [
+     "#19e0da",
+     0.6
+    ],
+    "K15 1 stage-floor row": [
+     "#19e0da",
+     0.45
+    ],
+    "K15 2 stage-floor row": [
+     "#19e0da",
+     0.45
+    ],
+    "K15 3 stage-floor row": [
+     "#19e0da",
+     0.45
+    ],
+    "K15 4 stage-floor row": [
+     "#19e0da",
+     0.45
+    ],
+    "K15 5 stage-floor row": [
+     "#19e0da",
+     0.45
+    ],
+    "K15 6 stage-floor row": [
+     "#19e0da",
+     0.45
+    ],
+    "K15 7 side stand": [
+     "#19e0da",
+     0.45
+    ],
+    "K15 8 side stand": [
+     "#19e0da",
+     0.45
+    ],
+    "pixel line tower 1 bar 1": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 1 bar 2": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 1 bar 3": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 2 bar 1": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 2 bar 2": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 2 bar 3": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 3 bar 1": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 3 bar 2": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 3 bar 3": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 4 bar 1": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 4 bar 2": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 4 bar 3": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 5 bar 1": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 5 bar 2": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 5 bar 3": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 6 bar 1": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 6 bar 2": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 6 bar 3": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 7 bar 1": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 7 bar 2": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 7 bar 3": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 8 bar 1": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 8 bar 2": [
+     "#19e0da",
+     0.7
+    ],
+    "pixel line tower 8 bar 3": [
+     "#19e0da",
+     0.7
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 79,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": null,
+   "cue": {
+    "fade_s": 2.0,
+    "hold_s": 0
+   },
+   "fade_s": 2.0,
+   "hold_s": 0,
+   "t0_s": 0.0
+  },
+  {
+   "id": "track-rok-hold-drop",
+   "title": "column C: DROP 1: one step to steel (holds)",
+   "act": 9,
+   "intent": "Standalone hold of the track drop look for a deck column; no auto-next.",
+   "parts": {
+    "K10 1 over the stage": [
+     "#96a1a6",
+     0.8
+    ],
+    "K10 2 over the stage": [
+     "#96a1a6",
+     0.8
+    ],
+    "K10 3 over the stage": [
+     "#96a1a6",
+     0.8
+    ],
+    "K10 4 over the stage": [
+     "#96a1a6",
+     0.8
+    ],
+    "K10 5 over the stage": [
+     "#96a1a6",
+     0.8
+    ],
+    "K10 6 over the stage": [
+     "#96a1a6",
+     0.8
+    ],
+    "K10 7 over the stage": [
+     "#96a1a6",
+     0.8
+    ],
+    "K10 8 over the stage": [
+     "#96a1a6",
+     0.8
+    ],
+    "K15 1 stage-floor row": [
+     "#96a1a6",
+     0.6
+    ],
+    "K15 2 stage-floor row": [
+     "#96a1a6",
+     0.6
+    ],
+    "K15 3 stage-floor row": [
+     "#96a1a6",
+     0.6
+    ],
+    "K15 4 stage-floor row": [
+     "#96a1a6",
+     0.6
+    ],
+    "K15 5 stage-floor row": [
+     "#96a1a6",
+     0.6
+    ],
+    "K15 6 stage-floor row": [
+     "#96a1a6",
+     0.6
+    ],
+    "K15 7 side stand": [
+     "#96a1a6",
+     0.6
+    ],
+    "K15 8 side stand": [
+     "#96a1a6",
+     0.6
+    ],
+    "pixel line tower 1 bar 1": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 1 bar 2": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 1 bar 3": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 2 bar 1": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 2 bar 2": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 2 bar 3": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 3 bar 1": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 3 bar 2": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 3 bar 3": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 4 bar 1": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 4 bar 2": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 4 bar 3": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 5 bar 1": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 5 bar 2": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 5 bar 3": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 6 bar 1": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 6 bar 2": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 6 bar 3": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 7 bar 1": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 7 bar 2": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 7 bar 3": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 8 bar 1": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 8 bar 2": [
+     "#96a1a6",
+     0.8
+    ],
+    "pixel line tower 8 bar 3": [
+     "#96a1a6",
+     0.8
+    ],
+    "XP-16R 1": [
+     "#ffffff",
+     0.5
+    ],
+    "XP-16R 2": [
+     "#ffffff",
+     0.5
+    ],
+    "XP-16R 3": [
+     "#ffffff",
+     0.5
+    ],
+    "XP-16R 4": [
+     "#ffffff",
+     0.5
+    ],
+    "XP-16R 5": [
+     "#ffffff",
+     0.5
+    ],
+    "XP-16R 6": [
+     "#ffffff",
+     0.5
+    ],
+    "XP-16R 7": [
+     "#ffffff",
+     0.5
+    ]
+   },
+   "motion": {
+    "mode": "none",
+    "bpm": 79,
+    "depth": 0,
+    "spatial": "patch",
+    "kinds": [],
+    "still": 0.0
+   },
+   "heads": null,
+   "cue": {
+    "fade_s": 0.5,
+    "hold_s": 0
+   },
+   "fade_s": 0.5,
+   "hold_s": 0,
+   "t0_s": 0.0
   }
  ]
 }
