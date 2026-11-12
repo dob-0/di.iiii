@@ -32,3 +32,9 @@ aylmo (the show's source) is off. Studio-mac keeps playing until PONYO plays. Ea
   54 fixtures, 37 looks, 9 cues.
 - It reaches PONYO by USB stick (dev answered 503 at 20:4x; PONYO is not a Taildrop target). On PONYO import it into the
   di that runs the show (`di open <file> --dry-run` first: it imports, see the di docs), then point the deck's clips at it.
+
+## Getting the files (no USB)
+- On studio-mac the owner runs `~/di-health/bin/ponyo-serve.sh` (3 h, tailnet only). Then on PONYO:
+  `curl.exe -O http://100.107.177.72:8765/platina.diiii`, `curl.exe -O http://100.107.177.72:8765/platina-show-data-2026-11-12.tgz`,
+  `curl.exe -O http://100.107.177.72:8765/SHA256SUMS`, and check each file with `certutil -hashfile <file> SHA256` against SHA256SUMS.
+- Run Claude on PONYO as dob (owner's admin account there), so installs need no one else's hand.
