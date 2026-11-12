@@ -30,11 +30,14 @@ export const APC40_LAYOUT = [
             cells: [...range(8).map((c) => at('note', layer * 8 + c, 1, `${layer + 1}·${c + 1}`, 'pad')), at('note', 82 + row, 1, `scene ${row + 1}`, 'scene')]
         }
     }),
+    { id: 'select', title: 'Track select keys (note 51) and master select', cells: [...range(8).map((i) => at('note', 51, i + 1, `select ${i + 1}`, 'button')), at('note', 80, 1, 'master', 'button')] },
+    { id: 'activator', title: 'Activator keys, note 50', cells: range(8).map((i) => at('note', 50, i + 1, `act ${i + 1}`, 'button')) },
+    { id: 'ab', title: 'A|B keys, note 66', cells: range(8).map((i) => at('note', 66, i + 1, `A|B ${i + 1}`, 'button')) },
     { id: 'stops', title: 'Clip stop keys', cells: [...range(8).map((i) => at('note', 52, i + 1, `stop ${i + 1}`, 'button')), at('note', 81, 1, 'stop all', 'button')] },
     { id: 'solo', title: 'Track keys, note 49', cells: range(8).map((i) => at('note', 49, i + 1, `S ${i + 1}`, 'button')) },
     { id: 'bypass', title: 'Track keys, note 48', cells: range(8).map((i) => at('note', 48, i + 1, `B ${i + 1}`, 'button')) },
     { id: 'faders', title: 'Faders', cells: [...range(8).map((i) => at('cc', 7, i + 1, `fader ${i + 1}`, 'fader')), at('cc', 14, 1, 'master', 'fader')] },
-    { id: 'other', title: 'Tempo and more', cells: [at('cc', 13, 1, 'tempo', 'encoder'), at('note', 99, 1, 'tap', 'button'), at('note', 90, 1, 'resync', 'button'), at('cc', 47, 1, 'cue level', 'encoder')] }
+    { id: 'other', title: 'Tempo and more', cells: [at('cc', 13, 1, 'tempo', 'encoder'), at('note', 99, 1, 'tap', 'button'), at('note', 90, 1, 'resync', 'button'), at('cc', 47, 1, 'cue level', 'encoder'), at('cc', 15, 1, 'crossfader', 'fader')] }
 ]
 
 const sameControl = (match, item) => match && match.kind === item.kind && match.number === item.number && (match.channel || 0) === item.channel

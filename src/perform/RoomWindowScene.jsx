@@ -97,6 +97,7 @@ export default function RoomWindowScene({ document, spaceId, projectId, followLo
                             entryView="scene"
                             navMode="orbit"
                             isPreview
+                            liveScreens
                             outputMode
                             initialCameraView={opening.current}
                             xrDefaultMode="off"

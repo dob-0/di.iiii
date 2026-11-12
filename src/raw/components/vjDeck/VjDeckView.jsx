@@ -609,7 +609,8 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const [k2Open, setK2Open] = useState(false)
     const [fxIndex, setFxIndex] = useState(0) // which effect of the selected stack the K2's third pot row turns
     // K2 LAYER button: this layer's effects (leaves Master scope); K2 encoder 6 push: the next effect
-    const onFxLayer = (index) => { setFxPick(index); setFxScope('layer'); setFxIndex(0) }
+    // -1 = the master stack (a controller's master-select key)
+    const onFxLayer = (index) => { if (index < 0) { setFxScope('master'); setFxIndex(0); return } setFxPick(index); setFxScope('layer'); setFxIndex(0) }
     const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, console: node?.values?.midiConsole, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer, fxEffect: fxIndex, onFxLayer, onFxEffect: setFxIndex, onColumn: reportColumnLaunch })
     const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {

@@ -112,6 +112,9 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const live = useRef({})
     useEffect(() => { live.current = { write, onTap, onPatch, map, stored, isRelative: k2Console.isRelative || k2IsRelative, jump: isApcConsole, enabled: active, fx: { layer: fxLayer, effect: fxEffect }, onFxLayer, onFxEffect, onColumn } })
     const tapState = useRef({ taps: [] })
+    const abStates = useRef(new Map())
+    const statefulKey = useCallback((control) => control?.kind === 'note'
+        && (control.number === 48 || control.number === 49 || (control.number === 66 && (control.press ? control.value === 1 || control.value === 2 : abStates.current.get(control.channel) === true))), [])
 
     const flush = useCallback(() => {
         if (timer.current !== null) { clearTimeout(timer.current); timer.current = null }
@@ -182,6 +185,11 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         // APC40 mkII, generic mode: the 8 device knobs (CC 16-23) send on the channel of the selected track
         // (1-8, master 9). The map is written for channel 1, so after a track-select press they went dead.
         if (current.jump && raw?.kind === 'cc' && raw.cc >= 16 && raw.cc <= 23 && raw.channel >= 2 && raw.channel <= 9) message = { ...raw, channel: 1 }
+        // APC40: the activator key (note 50) is a toggle in the controller, so every second press arrives as a
+        // note-off. Its job here is a plain press (stop that layer's clip), so both count as one.
+        if (current.jump && raw?.kind === 'noteOff' && raw.note === 50) message = { ...raw, kind: 'noteOn', velocity: 127 }
+        // the A|B key: remember whether it speaks in states (velocity 1 = A, 2 = B), so its note-off means "none"
+        if (current.jump && raw?.kind === 'noteOn' && raw.note === 66) abStates.current.set(raw.channel, raw.velocity === 1 || raw.velocity === 2)
         monitorRef.current?.push(message) // the K2 panel's live picture; no deck write, no render here
         // the controller window (k2Channel.js): nothing at all unless a window asked for it
         const publisher = publisherRef.current
@@ -212,6 +220,9 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         const next = applyMidi(base, message, current.map, {
             // APC40: a fader or knob takes its value at once, as in Resolume (no soft takeover); the K2 consoles keep pickup
             onTap: () => current.onTap?.(), tapState: tapState.current, pickup: current.jump ? undefined : pickup.current, fx: current.fx, holdLayer,
+            // APC40 mkII, generic mode: record-arm (48) and solo (49) are toggles IN the controller (on = note-on, off =
+            // note-off; acting on presses only made every second press do nothing), and A|B (66) when it speaks in states
+            stateful: current.jump ? statefulKey : undefined,
             onFxLayer: (index) => current.onFxLayer?.(index), onFxEffect: (index) => current.onFxEffect?.(index)
         })
         if (heldNow && !controlOf(message)?.press) { holdLayerRef.current = null; setHoldNote('') }

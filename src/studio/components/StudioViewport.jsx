@@ -1201,6 +1201,9 @@ export default function StudioViewport({
     enableNavigation = true,
     showChrome = true,
     lowPower = false,
+    // a low-power view that still wants the room's screens live (the Perform desk's Room 3D monitor: ONE small
+    // room beside the deck, where a dark LED wall is the one thing the picture is for). Cards leave it off.
+    liveScreens = false,
     showHelp = false,
     onCloseHelp,
     onShowHelp,
@@ -1456,7 +1459,7 @@ export default function StudioViewport({
             {/* The sources behind the room's screens. Not in a low-power preview
                 card: thirteen cards each running a video would be the cost the
                 cards exist to avoid; there a screen draws its dim plate. */}
-            {!lowPower && <LiveScreens document={document} onScreens={setScreens} />}
+            {(!lowPower || liveScreens) && <LiveScreens document={document} onScreens={setScreens} />}
 
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
 

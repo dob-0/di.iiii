@@ -73,11 +73,16 @@ export const ACTIONS = {
     fxToggle: { args: [], button: true },
     // The next layer (with clips) whose effects the pots address; the view owns that choice (ctx.onFxLayer).
     fxLayerNext: { args: [], button: true },
+    // Layer n (args.layer, 0-based; -1 = the master) is the stack the pots address (ctx.onFxLayer): a track-select key.
+    fxLayer: { args: [], button: true },
     // The next effect of the selected stack that the pots turn (ctx.onFxEffect).
     fxNext: { args: [], button: true },
     // FREEZE while held: hold 1 on every Freeze effect of the master and the selected layer, 0 on release.
     hold: { args: [], button: false }
 }
+
+/** The actions a stateful key (ctx.stateful) sets from its own state instead of toggling. */
+const STATEFUL_ACTIONS = new Set(['bypass', 'solo', 'side'])
 
 // --- the effects half of the K2: which stack, which effect, freeze ----------------
 
@@ -197,7 +202,10 @@ const run = (deck, control, entry, ctx) => {
     const args = entry.args || {}
     const spec = ACTIONS[entry.action]
     if (!spec) return deck
-    if (spec.button && !control.press) return deck
+    // A STATEFUL key (ctx.stateful): the controller itself toggles it and says its new state, on = note-on,
+    // off = note-off (the APC40's record-arm, solo and A|B keys). Its release is a message too, not a key-up.
+    const stateful = STATEFUL_ACTIONS.has(entry.action) && ctx.stateful?.(control) === true
+    if (spec.button && !control.press && !stateful) return deck
     const base = normalizeDeck(deck)
     const layer = layerAt(base, args.layer)
     if (spec.args.includes('layer') && !layer) return deck
@@ -222,9 +230,12 @@ const run = (deck, control, entry, ctx) => {
             const clip = layer.clips[layer.active]
             return nextOr(continuous(clip.speed, control, entry, { step: DEFAULT_STEP.clipSpeed, from: (x) => x * 4, to: (x) => x / 4 }, ctx), (v) => updateClip(base, args.layer, layer.active, { speed: v }))
         }
-        case 'bypass': return setBypass(base, layer.id, !layer.bypass)
-        case 'solo': return setSolo(base, layer.id, !layer.solo)
-        case 'side': return setSide(base, layer.id, SIDE_CYCLE[layer.side] ?? '')
+        case 'bypass': return setBypass(base, layer.id, stateful ? control.press : !layer.bypass)
+        case 'solo': return setSolo(base, layer.id, stateful ? control.press : !layer.solo)
+        case 'side':
+            // a stateful A|B key says which side: velocity 1 = A, 2 = B, note-off = none
+            if (stateful) return setSide(base, layer.id, !control.press ? '' : control.value === 2 ? 'b' : 'a')
+            return setSide(base, layer.id, SIDE_CYCLE[layer.side] ?? '')
         case 'clip':
             if (!isInt(args.column) || !layer.clips[args.column]) return deck
             return trigger(base, args.layer, args.column)
@@ -261,6 +272,11 @@ const run = (deck, control, entry, ctx) => {
             if (!Number.isInteger(where) || !Number.isInteger(args.slot)) return deck
             const effect = stackFor(base, where)[args.slot]
             return effect ? setEffectOn(base, where < 0 ? MASTER_STACK : where, effect.id, !effect.on) : deck
+        }
+        case 'fxLayer': {
+            const to = args.layer === -1 ? -1 : isInt(args.layer) && base.layers[args.layer] ? args.layer : null
+            if (to !== null) ctx.onFxLayer?.(to)
+            return deck
         }
         case 'fxLayerNext': {
             const to = nextFxLayer(base, ctx.fx?.layer)
@@ -450,6 +466,7 @@ export const ledColour = (deck, entry, ctx = {}) => {
         case 'bypass': return layer?.bypass ? 'red' : null
         case 'solo': return layer?.solo ? 'green' : null
         case 'side': return layer?.side === 'a' ? 'amber' : layer?.side === 'b' ? 'green' : null
+        case 'fxLayer': return Number.isInteger(ctx.fx?.layer) && ctx.fx.layer === args.layer ? 'green' : null
         case 'fxToggle': {
             if (!Number.isInteger(ctx.fx?.layer) || !Number.isInteger(args.slot)) return null
             const effect = stackFor(base, ctx.fx.layer)[args.slot]
@@ -533,6 +550,7 @@ export const describeAction = (entry, ctx = {}) => {
         case 'bpm': return 'BPM'
         case 'tap': return 'Tap tempo'
         case 'fxToggle': return Number.isInteger(args.slot) ? `FX ${args.slot + 1} on/off` : 'Effect on/off'
+        case 'fxLayer': return args.layer === -1 ? 'FX: master' : layer ? `FX: layer ${layer}` : 'FX layer'
         case 'fxLayerNext': return 'Next FX layer'
         case 'fxNext': return 'Next effect'
         case 'hold': return 'Freeze (hold)'

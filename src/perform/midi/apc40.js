@@ -105,6 +105,7 @@ export const APC40_LED = { EMPTY: 1, LOADED: 33, PLAYING: 52, SCENE_OFF: 1, SCEN
 const isPad = (note) => note >= 0 && note <= 39
 const isScene = (note) => note >= 82 && note <= 86
 const TRACK_STOP = 52
+const AB_KEY = 66
 
 /** The velocity one bound APC40 button shows for this deck. */
 export const apc40Velocity = (deck, entry, ctx = {}) => {
@@ -122,6 +123,8 @@ export const apc40Velocity = (deck, entry, ctx = {}) => {
         return colour ? APC40_LED.SCENE_ON : APC40_LED.SCENE_OFF
     }
     if (note === TRACK_STOP) return colour === 'green' ? APC40_LED.STOP_ON : APC40_LED.OFF
+    // the A|B key has two colours of its own: 1 = A, 2 = B
+    if (note === AB_KEY && entry.action === 'side') return colour === 'amber' ? 1 : colour === 'green' ? 2 : APC40_LED.OFF
     // bypass lit = layer bypassed, solo lit = soloed, resync lit = freeze held
     return colour ? APC40_LED.ON : APC40_LED.OFF
 }
