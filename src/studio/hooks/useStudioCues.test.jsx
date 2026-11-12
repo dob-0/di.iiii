@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as cueKeysSwitch from '../utils/cueKeysSwitch.js'
 
 // The claim under test: a cue taken in the 3D scene and the same cue taken at
 // the projection desk are the SAME EVENT. Not "equivalent", not "similar" —
@@ -143,5 +144,54 @@ describe('the number keys in the 3D scene', () => {
         renderStudio(vi.fn(), { mappingState: { cues: [] } })
         expect(spy.mock.calls.some(([type]) => type === 'keydown')).toBe(false)
         spy.mockRestore()
+    })
+})
+
+// The number keys' switch (the cluster's Keys 1-9 row): OFF means a digit fires nothing, for every digit.
+describe('the number keys switch', () => {
+    const { setCueKeysOn, resetCueKeysForTest } = cueKeysSwitch
+    const nine = '123456789'.split('').map((key) => ({ id: `cue-${key}`, name: `Cue ${key}`, key, fade: 0, hold: 0, surfaces: {} }))
+    const press = (key) => act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true })) })
+
+    let readSpy = null
+    beforeEach(() => { window.localStorage.clear(); resetCueKeysForTest() })
+    afterEach(() => { setCueKeysOn(true); window.localStorage.clear(); resetCueKeysForTest(); readSpy?.mockRestore(); readSpy = null })
+
+    it('OFF: none of the digits 1-9 fires a cue', () => {
+        renderStudio(vi.fn(), { mappingState: { cues: nine } })
+        setCueKeysOn(false)
+        '123456789'.split('').forEach(press)
+        expect(sharedFireCue).not.toHaveBeenCalled()
+    })
+
+    it('ON (the default): every digit 1-9 fires the cue bound to it', () => {
+        renderStudio(vi.fn(), { mappingState: { cues: nine } })
+        '123456789'.split('').forEach(press)
+        expect(sharedFireCue.mock.calls.map(([cue]) => cue.key)).toEqual('123456789'.split(''))
+    })
+
+    it('turned back ON, the keys fire again without a reload', () => {
+        renderStudio(vi.fn())
+        setCueKeysOn(false)
+        press('1')
+        expect(sharedFireCue).not.toHaveBeenCalled()
+        setCueKeysOn(true)
+        press('1')
+        expect(sharedFireCue).toHaveBeenCalledTimes(1)
+    })
+
+    it('a storage that throws on read leaves the keys ON', () => {
+        readSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked') })
+        resetCueKeysForTest()
+        renderStudio(vi.fn())
+        press('1')
+        expect(sharedFireCue).toHaveBeenCalledTimes(1)
+    })
+
+    it('the button press is not blocked by the switch: the strip still fires with the keys OFF', () => {
+        const { result } = renderStudio(vi.fn())
+        setCueKeysOn(false)
+        act(() => { result.current.fireCue(CUE) })
+        expect(sharedFireCue).toHaveBeenCalledTimes(1)
     })
 })

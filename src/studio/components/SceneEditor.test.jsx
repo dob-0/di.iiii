@@ -86,13 +86,45 @@ describe('the scene editor: a change emits the ops with the rebuilt look', () =>
         expect(screen.getByTestId('heads-warning').textContent).toMatch(/vertical/)
     })
 
-    it('Play is the desk GO on this scene', async () => {
+    it('the button is GO on Light, never Play, and the first press calls the scene\'s GO', async () => {
         const doc = baseDoc()
-        const onPlay = vi.fn(async () => {})
+        const onPlay = vi.fn(async () => ({ asked: false }))
         render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} onPlay={onPlay} />)
         fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
-        fireEvent.click(screen.getByTestId('scene-play'))
+        const btn = screen.getByTestId('scene-play')
+        expect(btn.textContent).toBe('GO on Light')
+        expect(btn.getAttribute('title')).not.toMatch(/desk|Play/i)
+        fireEvent.click(btn)
         expect(onPlay).toHaveBeenCalledWith(expect.objectContaining({ id: doc.mappingState.cues[3].id }))
+        expect((await screen.findByTestId('play-state')).textContent).toBe('Light is on this scene')
+        expect(screen.queryByTestId('go-replace-question')).toBeNull()
+    })
+
+    it('Light runs another cue list: GO asks first; Cancel sends nothing, the confirm replaces', async () => {
+        const doc = baseDoc()
+        const onPlay = vi.fn(async () => ({ asked: true }))
+        const onPlayReplace = vi.fn(async () => ({ asked: false }))
+        render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} onPlay={onPlay} onPlayReplace={onPlayReplace} />)
+        fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
+        fireEvent.click(screen.getByTestId('scene-play'))
+        const q = await screen.findByTestId('go-replace-question')
+        expect(q.textContent).toMatch(/Light runs another cue list\. GO replaces it\./)
+        fireEvent.click(screen.getByTestId('go-replace-cancel'))
+        expect(screen.queryByTestId('go-replace-question')).toBeNull()
+        expect(onPlayReplace).not.toHaveBeenCalled()
+        fireEvent.click(screen.getByTestId('scene-play'))
+        fireEvent.click(await screen.findByTestId('go-replace-confirm'))
+        await screen.findByText('Light is on this scene')
+        expect(onPlayReplace).toHaveBeenCalledTimes(1)
+        expect(onPlayReplace).toHaveBeenCalledWith(expect.objectContaining({ id: doc.mappingState.cues[3].id }))
+    })
+
+    it('a failed send says so in true words', async () => {
+        const doc = baseDoc()
+        render(<ScenePicker document={doc} current={undefined} onPick={() => {}} onApplyOps={() => {}} onPlay={async () => { throw new Error('Light did not answer') }} />)
+        fireEvent.click(screen.getByLabelText(`Edit ${scenesOf(doc)[3].name}`))
+        fireEvent.click(screen.getByTestId('scene-play'))
+        expect((await screen.findByTestId('play-state')).textContent).toBe('not sent: Light did not answer')
     })
 })
 

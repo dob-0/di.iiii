@@ -1,5 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getCueKeysOn, resetCueKeysForTest, setCueKeysOn } from '../utils/cueKeysSwitch.js'
 import StudioControlCluster from './StudioControlCluster.jsx'
 import { buildStudioPreviewUrl } from '../utils/previewUrl.js'
 import { describeUnsaved } from '../../project/hooks/useProjectDocumentSync.js'
@@ -244,5 +245,55 @@ describe('a page project (pageOnly)', () => {
             expect(screen.getByRole('button', { name })).toBeInTheDocument()
         }
         expect(screen.queryByRole('button', { name: 'Add a scene' })).toBeNull()
+    })
+})
+
+// The number keys 1-9 fire cues and change the real room; the cluster says so and turns them off.
+describe('the Keys 1-9 row and chip', () => {
+    const keyed = [{ id: 'c1', name: 'Open', key: '3' }]
+    const unkeyed = [{ id: 'c2', name: 'Blackout' }, { id: 'c3', name: 'Odd', key: 'x' }]
+    beforeEach(() => { window.localStorage.clear(); resetCueKeysForTest() })
+    afterEach(() => { setCueKeysOn(true); window.localStorage.clear(); resetCueKeysForTest() })
+
+    it('draws nothing when no cue carries a key 1-9', () => {
+        render(<StudioControlCluster {...base} cues={unkeyed} />)
+        expect(screen.queryByTestId('cue-keys-row')).toBeNull()
+        render(<StudioControlCluster {...base} />)
+        expect(screen.queryByTestId('cue-keys-row')).toBeNull()
+        expect(screen.queryByTestId('cue-keys-chip')).toBeNull()
+    })
+
+    it('draws one row with true words when a cue has a key; one press turns the keys off and on', () => {
+        render(<StudioControlCluster {...base} cues={keyed} />)
+        const row = screen.getByTestId('cue-keys-row')
+        expect(row.textContent).toMatch(/Keys 1-9/)
+        expect(row.textContent).toMatch(/real lights/)
+        expect(row.textContent).not.toMatch(/desk|Play/)
+        const btn = within(row).getByRole('button', { name: 'Turn off' })
+        expect(btn).toHaveAttribute('aria-pressed', 'true')
+        fireEvent.click(btn)
+        expect(getCueKeysOn()).toBe(false)
+        const on = within(screen.getByTestId('cue-keys-row')).getByRole('button', { name: 'Turn on' })
+        expect(on).toHaveAttribute('aria-pressed', 'false')
+        fireEvent.click(on)
+        expect(getCueKeysOn()).toBe(true)
+    })
+
+    it('the chip is in the header only while collapsed, shows the state and toggles with one press', () => {
+        render(<StudioControlCluster {...base} cues={keyed} />)
+        expect(screen.queryByTestId('cue-keys-chip')).toBeNull()
+        fireEvent.click(screen.getByTitle('Collapse'))
+        expect(screen.queryByTestId('cue-keys-row')).toBeNull()
+        const chip = screen.getByTestId('cue-keys-chip')
+        expect(chip.textContent).toBe('1-9 on')
+        fireEvent.click(chip)
+        expect(getCueKeysOn()).toBe(false)
+        expect(screen.getByTestId('cue-keys-chip').textContent).toBe('1-9 off')
+    })
+
+    it('a collapsed cluster with no keyed cue draws no chip', () => {
+        render(<StudioControlCluster {...base} cues={unkeyed} />)
+        fireEvent.click(screen.getByTitle('Collapse'))
+        expect(screen.queryByTestId('cue-keys-chip')).toBeNull()
     })
 })
