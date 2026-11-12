@@ -499,6 +499,7 @@ export function useTopNetwork({
                 if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
                 live.set(id, { key: wantedKeys.get(id), stream, engine: engineRef.current })
                 attempts.delete(id)
+                setCameraError('')
                 const track = stream.getVideoTracks()[0]
                 if (track) {
                     tracksRef.current.set(id, track)
