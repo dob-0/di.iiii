@@ -13,16 +13,23 @@ export const SCREEN_NAME = 'Screen'
 export const SCREEN_WIDTH = 3.2
 export const SCREEN_HEIGHT = 1.8
 
+const PICTURE_TYPES = new Set(['vj.deck', 'top.out'])
+
 // The picture a screen should run: the first VJ deck, else the first Picture Out.
 export const findPictureSource = (document) => {
     const nodes = Array.isArray(document?.nodes) ? document.nodes : []
     return nodes.find((node) => node?.typeId === 'vj.deck') || nodes.find((node) => node?.typeId === 'top.out') || null
 }
 
-// An existing surface that already shows pictures (kind network with a ref).
+// An existing surface that already shows pictures: kind network, and its ref is a node that is
+// still in the document. A surface left pointing at a deleted deck shows nothing, so it is skipped
+// and a new one is made on the live deck instead (review 2026-11-12, N3876 #2).
 export const findPictureSurface = (document) => {
     const surfaces = document?.mappingState?.surfaces || []
-    return surfaces.find((surface) => surface?.source?.kind === 'network' && surface.source.ref) || null
+    const nodes = Array.isArray(document?.nodes) ? document.nodes : []
+    // Only a live picture node counts (the same two kinds findPictureSource offers).
+    const isPictureNode = (ref) => nodes.some((node) => node?.id === ref && PICTURE_TYPES.has(node.typeId))
+    return surfaces.find((surface) => surface?.source?.kind === 'network' && surface.source.ref && isPictureNode(surface.source.ref)) || null
 }
 
 // What a picture source is called to a person.

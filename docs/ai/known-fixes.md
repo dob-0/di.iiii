@@ -1833,3 +1833,8 @@ Cause: three walls in series for a hosted tier: serverXR `MAX_UPLOAD_MB` default
 Fix: `docker-compose.dev.yml` sets `MAX_UPLOAD_MB: ${DEV_MAX_UPLOAD_MB:-2048}` (production keeps 100); a dedicated nginx location for `/serverXR/api/spaces/(bundle|:id/proposals)` with 2100m, `proxy_request_buffering off`, 900 s timeouts; `httpServer.requestTimeout = 0` when the ceiling is above 100 MB.
 Regression guard: `scripts/uploadLimit.test.js` (fails if the dev default is under 1024 MB or nginx is the smaller wall).
 Still needed on the VPS: a dev-tier deploy (compose file + new client image), and no `MAX_UPLOAD_MB`/`DEV_MAX_UPLOAD_MB` below 1024 in the dev `.env`. Not checked against a real 843 MB upload.
+
+## A laser send could wait for ever; a new Screen could bind to a deleted deck (code review, 2026-11-12, owner row N3876)
+Found by review, not seen live. (1) `postLaser` in `src/map/laserLink.js` had no timeout and no abort, so a laser engine that took the connection but never answered left a cue's laser look or the Perform Blackout send pending for ever. (2) `findPictureSurface` in `src/studio/utils/screenOps.js` reused the first `network` surface with any `ref`, even one naming a deck that was deleted, so "Add Screen" bound to a surface that shows nothing.
+Fix: (1) every laser POST races a 4 s timer (`LASER_POST_TIMEOUT_MS`, overridable by `timeoutMs`), aborts the fetch and answers `false`; the race answers even if a fetch ignores the signal. (2) a surface is reused only when its `ref` is a node still in the document; otherwise a new surface is made on the live deck.
+Guard: `src/map/laserLink.test.js` (fake timers, a fetch that never answers) and two cases in `src/studio/utils/screenOps.test.js`. Not checked against a real hung laser engine.
