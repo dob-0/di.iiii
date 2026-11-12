@@ -13,7 +13,9 @@
 // not white gets a small swatch at its symbol (the "colour" RP-2 notes beside the
 // lens), because there the colour is information.
 
-export const SHAPES = ['circle', 'square', 'hexagon', 'bar', 'triangle', 'diamond', 'pentagon', 'octagon', 'cross']
+// 2026-11-12: five more outlines. The library grew to 11 unlettered lamp types (the Platina rental lamps), past the
+// eight free outlines, and two types then shared the circle.
+export const SHAPES = ['circle', 'square', 'hexagon', 'bar', 'triangle', 'diamond', 'pentagon', 'octagon', 'cross', 'ring', 'star', 'slot', 'heptagon', 'chevron']
 
 const BY_CATEGORY = {
     'moving-head': 'circle', par: 'bar', laser: 'diamond', 'co2-jet': 'triangle',
@@ -27,7 +29,8 @@ const BY_TYPE = { 'up-b380f': 'circle', 'up-250bsw': 'square', 'up-hk1915': 'hex
 const LETTER = { 'co2-jet': 'C', 'spark-machine': 'S', 'smoke-machine': 'Z', hazer: 'H', 'fog-machine': 'F', effect: 'E', laser: 'L' }
 // A second type in a lettered category needs its own letter, or the key reads two as one:
 // the LaserCube Ultra MK2 (2026-10-04) is a laser beside the UP-LA40WF — K, for the cube.
-const LETTER_BY_TYPE = { 'ext-lc-ultra-mk2': 'K' }
+// the Magma Prime (2026-11-12) is a hazer beside the generic hazer: M, for Magma.
+const LETTER_BY_TYPE = { 'ext-lc-ultra-mk2': 'K', 'magmatic-magma-prime': 'M' }
 
 // A box on the floor with no beam: an effect. One list for the plot, the hand (hotbar)
 // and a new lamp (plotEdits): the hazer (RIG_BUILD.md §13) joined the first three.
@@ -78,6 +81,19 @@ export const shapePath = (shape, cx, cy, r) => {
         case 'diamond': return poly(cx, cy, r * 1.1, 4)
         case 'pentagon': return poly(cx, cy, r, 5)
         case 'octagon': return poly(cx, cy, r, 8, Math.PI / 8)
+        case 'ring': return `${shapePath('circle', cx, cy, r)}${shapePath('circle', cx, cy, r * 0.55)}`
+        case 'star': {
+            const pts = []
+            for (let i = 0; i < 10; i++) {
+                const a = -Math.PI / 2 + (i * Math.PI) / 5
+                const q = i % 2 ? r * 0.45 : r * 1.1
+                pts.push(`${f(cx + q * Math.cos(a))},${f(cy + q * Math.sin(a))}`)
+            }
+            return `M${pts.join('L')}Z`
+        }
+        case 'slot': return `M${f(cx - r * 0.45)},${f(cy - r * 1.1)}h${f(0.9 * r)}v${f(2.2 * r)}h${f(-0.9 * r)}Z`
+        case 'heptagon': return poly(cx, cy, r, 7)
+        case 'chevron': return `M${f(cx - r)},${f(cy + r * 0.7)}L${f(cx)},${f(cy - r)}L${f(cx + r)},${f(cy + r * 0.7)}L${f(cx)},${f(cy)}Z`
         default: return `M${f(cx - r)},${f(cy - r)}L${f(cx + r)},${f(cy + r)}M${f(cx + r)},${f(cy - r)}L${f(cx - r)},${f(cy + r)}`
     }
 }

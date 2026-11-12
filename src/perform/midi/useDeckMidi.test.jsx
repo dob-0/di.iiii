@@ -272,3 +272,67 @@ describe('Learn in the view', () => {
         expect(Number(master.value)).toBeCloseTo(0.4)
     })
 })
+
+describe('map from the right-click menu', () => {
+    it('Map to MIDI binds one control and then learn ends; the MIDI button path stays on for a row of controls', async () => {
+        const onPatch = vi.fn()
+        const { fake, writes, result } = await mount({ onPatch })
+        act(() => { result.current.mapOnce('master') })
+        expect(result.current.learning).toBe(true)
+        expect(result.current.target.key).toBe('master')
+        send(fake, cc(12, 64))
+        expect(onPatch).toHaveBeenCalledTimes(1)
+        expect(result.current.learning).toBe(false)
+        expect(result.current.target).toBe(null)
+        send(fake, [0x9e, 37, 127]) // plays again
+        expect(writes).toHaveLength(1)
+
+        // the Learn button: several in a row
+        act(() => result.current.toggleLearn())
+        act(() => { result.current.pickTarget('master') })
+        send(fake, cc(12, 64))
+        act(() => { result.current.pickTarget('crossfade') })
+        send(fake, cc(13, 64))
+        expect(onPatch).toHaveBeenCalledTimes(3)
+        expect(result.current.learning).toBe(true)
+    })
+
+    it('mapOnce refuses a key that is not a target; unmap writes the stored map without that control', async () => {
+        const onPatch = vi.fn()
+        const stored = { bindings: [{ match: { kind: 'cc', number: 12, channel: 15 }, action: 'master', args: {} }, { match: { kind: 'cc', number: 13, channel: 15 }, action: 'crossfade', args: {} }] }
+        const { result } = await mount({ onPatch, stored })
+        expect(result.current.mapOnce('nonsense')).toBe(false)
+        expect(result.current.learning).toBe(false)
+        expect(result.current.bindingOf('master')).toEqual({ text: 'CC 12 · ch 15', short: 'CC 12', learned: true })
+        expect(result.current.bindingOf('tap').learned).toBe(false) // the K2 default
+        act(() => { result.current.unmap('master') })
+        expect(onPatch).toHaveBeenCalledWith({ midiMap: { bindings: [expect.objectContaining({ action: 'crossfade' })] } })
+    })
+
+    it('a button whose binding moved goes dark on the K2', async () => {
+        const { fake, rerender } = await mount()
+        expect(fake.sent).toContainEqual([0x9e, 108, 127]) // matrix A green (clip 1:1 playing)
+        const stored = { bindings: [{ match: { kind: 'note', number: 37, channel: 15 }, action: 'clip', args: { layer: 0, column: 0 } }] }
+        rerender({ deck: playedDeck(), stored })
+        await flushAsync()
+        expect(fake.sent).toContainEqual([0x9e, 108, 0]) // matrix A is unbound now: off
+        expect(fake.sent).toContainEqual([0x9e, 109, 127]) // note 37 took the clip: green
+    })
+})
+
+describe('a K2 set to another MIDI channel (the owner\'s sends on 2, N3636)', () => {
+    it('its buttons and faders still play the deck, and the lights are sent back on that channel', async () => {
+        const { fake, writes } = await mount()
+        expect(fake.sent.length).toBeGreaterThan(0)
+        expect(fake.sent.every((bytes) => bytes[0] === 0x9e)).toBe(true) // factory channel 15 until the device is heard
+        fake.sent.length = 0
+        send(fake, [0x91, 37, 127]) // matrix B (layer 1, slot 2) on channel 2
+        expect(writes.at(-1).layers[0].active).toBe(1)
+        expect(fake.sent.length).toBeGreaterThan(0)
+        expect(fake.sent.every((bytes) => bytes[0] === 0x91)).toBe(true)
+        send(fake, [0xb1, FADER_2, 127])
+        send(fake, [0xb1, FADER_2, 0])
+        act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
+        expect(writes.at(-1).layers[1].opacity).toBe(0)
+    })
+})

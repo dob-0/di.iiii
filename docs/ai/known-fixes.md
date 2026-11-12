@@ -1834,6 +1834,153 @@ Cause: `MapCameraSource` called getUserMedia once per device id and nothing list
 Fix: it re-opens by itself on track `ended` / stream `inactive` and on busy/not-found class errors, with a back-off (0.5, 1, 2 s, then 3 s), stopping old tracks first; the stream lookup is asked again; no retry on NotAllowedError; timers and listeners are cleared on unmount.
 Guard: `src/map/MapSourceView.reacquire.test.jsx` (fake timers, faked mediaDevices). Not checked on a real camera.
 
+## A click on a playing clip (to change its effects) switched the clip off (2026-11-11, owner row N3634)
+Symptom: on the VJ Deck, clicking the tile that plays, to reach its clip settings or add an effect, stopped its layer: the picture went off.
+Cause: `VjDeckView.jsx` `onSlot` wrote `clearLayer` when the clicked tile was the active one ("tap again stops", a deliberate earlier design).
+Fix: a click on the playing tile only selects it; any other tile still triggers. A layer stops with the x beside its name (`Clear Layer N`).
+Guard: `VjDeckView.preview.test.jsx` ("keeps it playing and only selects it"), `VjDeckView.test.jsx` (tap again keeps `active`, the x stops). Seen on the agent browser against the real deck: the same two clips play before and after the click.
+
+## The Xone:K2 was invisible to the show browser (Flatpak Chromium Web MIDI, 2026-11-11, owner rows N3621/N3630)
+Symptom: the deck said "no controller"; the page had MIDI permission but listed only "Midi Through Port-0", while `amidi -l` showed the K2.
+Cause: Chromium finds hardware MIDI ports through udev and the Flatpak sandbox has no `/run/udev`.
+Fix: `scripts/show/k2-browser-access.sh on` (read-only per-user override; `off` undoes it), then `scripts/show/stage-restart.sh <stage-open options>` (asks the browser to quit over its debugging port, opens the stage and Perform again; nothing is killed). Both take `--dry-run`.
+Guard: none automated (needs the hardware); `k2-browser-access.sh status` prints the override and the ports Linux sees.
+
+## The K2 was seen ("K2") but no knob or button moved the deck, and its lights stayed dark (2026-11-11, owner rows N3630/N3632/N3636)
+Symptom: the deck said `K2`, the owner pressed and turned; nothing happened. Measured: 467 messages on the wire (`aseqdump -p 28:0`) in 80 s, 0 deck controls changed.
+Cause: the K2's MIDI channel is a device setting (15 from the factory); the owner's sends on channel 2. The default map matched channel 15 only, and the lights were sent on 15.
+Fix: `useDeckMidi.js` reads a K2 message as if it came on `K2_CHANNEL` and sends the lights back on the channel last heard (the LED cache is forgotten when that channel changes). After the fix, same measure: 10 deck controls changed in 70 s.
+Guard: `useDeckMidi.test.jsx` ("a K2 set to another MIDI channel"). The lights on the real K2 are seen by the owner only.
+
+## Body (top.matte) layers ran the person model on a silent layer, and several Body layers dropped the output to 12-17 fps (2026-11-11, owner row N3661)
+Symptom: with three Body layers up the deck output ran at 13-17 frames a second (one Body 40.7, none at the display rate); a Body on a layer the deck had silenced (fader down, bypassed, outside the solo) still cost a model run.
+Cause: (i) `topEngine.refreshMatte` ran the model for every Body node every frame, no matter whether its layer was seen (commit 2c3678834, "a Body on a silent layer ran the model": `matteWanted` skips a node the deck marked `values.unseen`); (ii) the model (about 14-20 ms) ran synchronously on the page's render thread, one run per source per frame: three runs a frame = the whole frame.
+Fix: the model runs in a Web Worker (`bodyMatteWorker.js`, a classic worker that `import()`s the vendored `vision_bundle.mjs`; created with `new Worker(new URL('./bodyMatteWorker.js', import.meta.url))`). The engine posts a 480x270 picture when the worker is idle, polls the answer at the start of the next frame, and keeps the last mask until a newer one arrives (never a black frame, never a wait). `matteScheduler.js` gives the run to the source whose mask is oldest; budget = 1 run while the worker is idle, 0 while it is busy. If no worker can start (no OffscreenCanvas, load error, init silent for 30 s, worker dies) `bodyMatte.js` falls back to the page thread with a budget of ONE run per engine frame. The identical-picture check stays (0.31 ms for 480x270 against about 14-20 ms for a run it can save on 30-fps sources). Last release ends the worker.
+Measured (platina/matte-worker/RESULT.md, one run, load average 13-34, 1280x720, three different 60-fps clips): Body off 59.3 / 59.7 fps, old code 12.5 / 11.8, worker 59.1 / 57.8.
+Guard: `vjDeck.bodySilent.test.js` (silent layer: no run), `matteScheduler.test.js` (fair, budgeted), `bodyMatte.worker.test.js` (fake worker: late and out-of-order answers, failure -> fallback, last release ends the worker). Not proven: the real Vite build/dev serving of the worker file (the harness serves raw files).
+
+## Nobody could find the VJ deck again, or get back to it, from Nodes, Perform, Tools, Wiki or the projector page (2026-11-11, owner row N3677, audit G1-G8)
+Symptom: the deck was only reachable by a double click on its node; Back at the Nodes root was swallowed; Tools and Wiki had no way to Perform; the projector page had no way back.
+Cause: no button for the deck, the open node was not in the address, a history guard re-pushed an entry at the root, and the Desk | Perform switch was mounted only on the desks.
+Fix: Nodes bar "Open VJ Deck" (walks the parent chain if the deck is nested); the open node is `?enter=<id>` (one history entry per step in; stale ids are dropped; other params kept; `stashRawEnterNode(nodeId)` still works); no root guard; Perform menu "Nodes · VJ deck, full page"; Desk | Perform on Tools and Wiki (`current="elsewhere"`); "Back to Perform" in the projector page controls (hidden in full screen); Studio clips get the project's assets and id.
+Guard: `RawEditor.test.jsx` (deck ways), `rawEnterNodeHandoff.test.js`, `PerformDesk.test.jsx`, `KitPage.test.jsx`, `WikiPage.test.jsx`, `MapOutput.controls.test.jsx`, `LiveScreens.test.jsx`. Not proven: a real-browser Back/Forward/reload walk (see platina-ways/ways-fixes-review.md).
+## 2026-11-11 — a camera with no picture put a helper card (or a black layer) on the live output (owner N3682)
+Symptom: on `/<space>/map/<project>/out` a camera clip whose camera was absent showed the Map's dim surface card ("srf-1 / Camera "Phone" not found.") over the whole wall; with a camera that was not granted/opened, its layer was an opaque black picture that hid the file clip under it, and a Body effect on it painted a flat pink.
+Cause (verified by flipping each): (1) `useTopNetwork.js` called `setError(refusal)` for a camera that cannot open, and `MapSourceView.jsx` MapNetworkSource replaces the whole canvas with `MapSourcePlaceholder` whenever `error` is set; (2) `topEngine.js` drew a camera source with no stream as an empty (black) texture, and the layer's Blend mixed it in at full opacity.
+Fix: a camera failure is `cameraError` (and `reportTop`, which the deck cell and monitor already show as text), never `error`; the engine marks a camera with no stream/frame as blank (`blankRule`): a Blend passes the picture below through, an effect on it is blank. Test patterns stay in the mapping editor.
+Measured (scripts/show/nocam-check.mjs, scratch stack, lane 2): mean abs diff vs the scene without the camera clip 96-107 of 255 before, 0.00 after; only-camera case: grid max 143 before (card), 0 after; mapping editor picture 0.72 of 255 between base and fix.
+Guard: `topEngine.blank.test.js` (red when the Blend/effect condition is flipped), `useTopNetwork.camera.test.jsx` GUARD case (red when the camera failure is put back into `error`). Not checked on a real wall or a real unplugged camera. A camera that returns reopens by itself (existing: devicechange + back-off, track-ended watch).
+## 2026-11-11 — VJ deck: a layer row rested half under the Columns header, and the deck had no size check
+
+Symptom: on the owner's screen (Perform, 6 layers) the top layer row stopped partly under the sticky Columns header; Sources kind tags read "CAME..."; at 568 px wide the layer name was 19 px wide and cut. Tiled windows make the page half or a third of the screen, so every size has to hold, not only the one that was looked at.
+Cause: measured on lane 3 with `scripts/deck-size-check.mjs` at 36 cases (2 pages x 2 deck shapes x 9 sizes): the scroll box held a sticky header and free-scrolling rows, so any scroll position that is not a multiple of the row height leaves a row half under the header (148 cases, base); the 44 px touch buttons left the layer name 19 px (13 cut words); the kind tag column was a fixed 44 px.
+Fix: `.vj-deck-scroll` uses scroll-snap (y mandatory) with scroll-padding under the header and rows `snap-align: start`; `VjDeckView.jsx` gives the grid end room (`--vj-end-room`) only when the rows overflow, so the last row can also rest under the header; at touch size the layer name takes its own line; kind tags keep their word.
+Guard: `scripts/deck-size-check.mjs` (run on a scratch server: `DI_TEST_LANES=3 DI_TEST_LANE=3 di-test-browser run scripts/deck-size-check.mjs`, a/b/c/d must be 0 in 36 cases; `-- --e --video <tiny.mp4>` for group order, row reach, drag and click), `VjDeckView.sources.test.jsx` (group order, unplayable NDI rows, device row drag; each watched going red with its condition flipped).
+Lesson: a size bug is found by measuring a grid of sizes over the whole page, not by looking at one; and "partly under" has to be defined (a row that is part covered and part clear), or fully scrolled rows count as faults.
+
+## 2026-11-11 — VJ deck: the panels could not be resized, the deck root scrolled, Sources showed 5 of 6 rows (owner N3711)
+
+Symptom: the owner (a VJ, page 1706x922, 5 layers x 8 clips) "cannot change the window sizes". Measured on lane 3 with `scripts/deck-comfort-walk.mjs`: 32 of 32 pointer drags on panel borders moved 0 boxes and the cursor never changed; `.vj-deck` scrolled 22 px at 1920x1000, 1706x922 and 1440x810 (30 px at 1280x720); Sources showed 4 of 5 rows and hid its Files head; 10 clip names were cut at 1706x922.
+Cause: there were no draggable borders (every size was a CSS constant or content height); the 22 px scroll came from the hidden upload input (position absolute, containing block `.vj-deck`) sitting below the visible Sources list; Sources had `max-height: 240px`; the five-layer rule asked only the perform and inside placements, and P1 is the window placement. Found while building: a CSS rule that declared `--vj-end-room: 0px` on `.vj-deck-grid` shadowed the value `VjDeckView.jsx` sets on `.vj-deck-scroll` (52 rows under the Columns header in the size check), and the panel clamp used the deck's row gap (7 px) for the bottom panels' column gap (12 px), so Effects could end at 210 px.
+Fix: five seams on the deck (S1 layer strip | grid, S2 grid | monitors, S4 main | bottom row, S5 Sources | Clip, S6 Clip | Effects): `DeckSeam.jsx` (APG window splitter: pointer capture, rAF CSS variable, arrows 1 % / Shift 10 %, Home/End, Enter, double-click resets), `deckLayout.js` (pure: key `di.vjDeck.layout` = {v:1, head, monitorW, bottomH, cols:[a,b]} as fractions of the deck box; clamp on every read and size change, never rewritten: S1 150-280, S2 140-min(480, width-734-gap), S4 120 to 60 % with the main row keeping 220 (520 when stacked), S5/S6 each panel 220), `useDeckLayout.js`; a Reset layout button while anything is stored. Unset means today's CSS and no variable. S1/S2 are not shown at 900 px or less, S4/S5/S6 not at 560 px or less. One scroller per bottom panel; Sources uncapped; five layers asked of the main row in every placement on a frame of 800 px or more (bottom row minimum 150 px); a tile narrower than 180 px wraps its name onto two lines.
+Measured (walk part S, 1706x922 unless said; build-2.md): outer scroll 0 at six sizes (was 22/22/22/30); layer rows cut 0/0/0 at 1920x1000/1706x922/1440x810; cut clip names 0 at 1706x922 (was 10); all 5 seams change boxes, reset and move by keys; 0 overlapping panels in every step and in the extreme layout at six sizes; 36-case size check a 0 b 0 c 0 d 0 with nothing stored and with the extreme layout; no non-GET request or remount caused by dragging; Reset layout gives the default picture (0 differing pixels).
+Guard: `deckLayout.test.js` (clamp, key, store, real column gap, stacked main), `VjDeckView.resize.test.jsx` (seams, keys, reset, no write), `vjDeck.css.test.js` (end room on the scroll box, five-layer rule, tile wrap, Sources uncapped), `scripts/deck-comfort-walk.mjs --part S` and `scripts/deck-size-check.mjs --layout JSON` (browser, lane 3).
+Lesson: a layout fix is proven by measuring the stored extreme and the default at several sizes, not by reading CSS; a CSS variable set inline on a parent must not be re-declared on a child.
+
+## 2026-11-11 — K2 (1.9): the top button row played layer 1 while the deck screen draws layer 4 on top
+
+Symptom: the owner pressed button A and got the layer drawn at the bottom of the deck screen.
+Cause: the matrix rows counted up from layer 1 (`layer = floor(i / 4)`) while the deck draws the highest layer first.
+Fix: in console K2 (1.9) only, A-D play layer 4, E-H layer 3, I-L layer 2, M-P layer 1 (`xoneK2.js`); the lights, the K2 panel and the K2 window read the same map, so they follow. Console K2 keeps its order.
+Guard: `k2ButtonRows.test.js` (K2 rows pinned unchanged; K2 (1.9) rows for presses, job texts and lights), `k2Console19.test.js` T4.
+Lesson: a controller's rows must be checked against how the screen draws the same things, by pressing, not by reading the map.
+
+## 2026-11-11 — VJ deck seams: blocked storage broke the deck, a drag re-rendered it every frame, a click stored a size (review-2, walk-2)
+
+Symptom: (1) with site data blocked the whole deck failed to render; (2) dragging the S4 seam re-rendered the deck on every pointer move while the output played; (3) a click with sub-pixel jitter, or a drag out and back, made the bottom row fixed, showed Reset layout and stored a size.
+Cause: (1) `window.localStorage` was read as a default parameter and an argument, outside the try (`deckLayout.js` readLayout/writeLayout, `useDeckLayout.js` flush); (2) the ResizeObserver on `.vj-deck-bottom` fired every frame of the preview and `sync()` set React state; (3) `DeckSeam.jsx` committed whenever any non-zero delta had happened.
+Fix: every storage access inside the try; `sync()` returns while a drag is open (ref set by the first preview, cleared by commit or cancel, one sync after); commit only when the value moved 1 px or more. Also: lost pointer capture and a second pointer are handled, `data-seam-dragging` on the deck root switches text selection off, the announced value is re-measured after S/M/L, the upload input is out of the tab order, the grab zones lie over the gaps only.
+Guard: `VjDeckView.resize.test.jsx` F1 (throwing getter), F2 (Profiler render count during an S4 drag with an observer firing every move), F3 (jitter and out-and-back), `vjDeck.css.test.js`.
+Lesson: a storage getter can throw, so the access itself belongs inside the try; and a state update from an observer must be paused while a drag owns the size.
+
+## 2026-11-11 — VJ deck seams: unmount and window resize in a drag, touch zone over a scrollbar (review-3)
+
+Symptom: (1) a seam that unmounted in the middle of a drag (hidden by a small box, or the deck closed) left the drag flag set, so the size observer stayed paused; (2) a window resize in a drag kept the old box and the old limits (the observer is paused by design during a drag); (3) on touch the wide S5/S6 zones lay over the right-edge scrollbar of the panel before them.
+Cause: `DeckSeam.jsx` cleanup only removed the mark and the frame, never called `onCancel`; nothing listened for the window resize while a drag was open; `vjDeck.css` coarse rule grew S5/S6 to both sides (`margin-left` negative).
+Fix: cleanup calls `onCancel` for an open drag; a window `resize` listener cancels (clears the flag, measures the fresh box), reads the seam again, counts from the pointer and previews the fresh value; coarse S5/S6 grow to the right only (no `margin-left`, base `--vj-lead`).
+Guard: `VjDeckView.resize.test.jsx` "a drag that is cut short" (3 tests, all fail on the old `DeckSeam.jsx`), `vjDeck.css.test.js` touch zone rule. Not measured on a touch screen.
+Lesson: a drag that owns shared state must release it in its own unmount cleanup, and a pause for a drag needs a way out for the events the pause hides.
+
+## 2026-11-11 - Source switch: a camera switched off kept its last frame; the pool stopped listening after a reset
+
+Symptom: review of the source switch: a camera preview switched off stopped its tracks but the video element kept its stream (last frame on screen, stream object held); the camera pool subscribed to the switch once per module, so after the switch's listeners were reset it never stopped a source again.
+Cause: the cleanup of the preview effects in VjDeckView.jsx (CameraPreview) and MapSourceView.jsx only stopped tracks; cameraPool.js guarded its subscription with a module flag that the reset did not clear.
+Fix: both cleanups set the video's srcObject to null after the tracks stop (off and unmount; on again opens a fresh stream through the effect); cameraPool.js calls subscribeSourcesOff on every open (idempotent).
+Guard: src/map/MapSourceView.sourceOff.test.jsx (off, on again, unmount), src/project/tops/cameraPool.off.test.js (stop after a reset).
+Lesson: stopping a stream's tracks is not letting go of it: clear the element that shows it in the same cleanup.
+
+## 2026-11-12 — Controller window: pad labels cut at both sides, face taller than the screen, dev strip over the readout
+
+Symptom: (1) the 16 pad labels ("L1 clip 1") were wider than the pads and cut on both sides; (2) the window opened 999 high with a 875 px face, taller than a 922 px screen, so labels shrank or the page scrolled; (3) the fixed dev strip at the foot of a dev copy covered the last readout lines.
+Cause: (1) the face drew the label in a 24 unit pad with the same 28 unit text box as every control; (2) the face (135 x 370 units) was fixed to the real unit's proportions and the open call asked for a fixed height; (3) the strip is fixed bottom right over every page and the window did not leave room.
+Fix: `xone-k2-face.json` redrawn squatter (144 x 293 units, columns 34 apart, pads 31 x 22 with the label inside, same order and grouping); `k2Face.js` shapeBox and `K2Window.jsx` take an optional width and height per control; `K2LayoutPanel.jsx` `windowFeatures()` asks for screen.availHeight minus 60 (600 to 1000, 860 without a screen); `k2Window.css` leaves the strip's height under the readout, only where `.tree-chip` exists, only in this window. deckBinding.js and TreeChip are unchanged.
+Guard: `k2WindowFit.test.js` (every label of every console fits its pad, no label boxes overlap, the face fits 860 px at 12 px text, device order kept, window height from the screen, strip gap in this window only).
+Lesson: a face that is data still needs a fit test against the real screen and the real text; measure the drawn text size, not the size in units.
+Second pass (same day): (4) the fader caps at rest covered the top of the first label line and the second line touched the pad row, because the fader's box ignored the cap (2.5 units past the track at each end); (5) in the encoder row the turn job and the press job stacked with no gap and read as one four-line label. Fix: the fader box now includes the cap, fader and pad labels are one line (per-control `maxLines`), "Layer N" is drawn "LN" (`shortLayer`, readout and aria-label keep the words), every label keeps 0.9 unit (2 px) from every foreign shape, and the press job has half a line of gap and the dim ink (`.is-press`).
+Guard: `k2WindowFit.test.js` (every label against every shape and fader cap at value 0 and 127 and every other label, all consoles; encoder job gap and dim class), `k2Face.test.js` (shortLayer, faceLines), `K2Window.test.jsx` (is-press on every push, LN on the fader).
+
+## 2026-11-12 — VJ deck panes: a width band with three panels and no border, no fold, thin borders, K2 over the borders (deck-ui round 4)
+
+Symptom: (1) in a deck 561 to 683 px wide the three bottom panels sat side by side with no border between them and could not be resized; (2) no panel could be folded away; (3) the borders were a 14 % white line and an 8 px (S4) or 10 px (S1) grab zone, easy to miss on a stage screen; (4) double-click on a Sources or Clip border reset both; (5) the K2 panel covered the Effects panel and the borders.
+Cause: (1) `seamsShown` asked for 3 x 220 px plus the gaps (684 px) while the CSS stacked the bottom row only at 560 px; (2) the layout object had sizes only; (3) `--vj-line` was a literal white at 14 % and the S4 and S1 zones were as wide as their gap; (4) s5 and s6 share one stored field and `clearSeam` dropped all of it; (5) the K2 panel is z-index 20, the borders 3.
+Fix: `NARROW.bottomStacked` = 683 and the CSS container query `max-width: 683px` for the bottom row (one number, a test reads both); `folded` and `locked` in `sanitizeLayout` and the 'di.vjDeck.layout' object, `FoldButton.jsx` in each panel head, `foldColumns`; `resetOneSeam`; borders 12 px or more on a mouse, `--vj-line` is `--di-faint`, grip `--di-ink`, hover and drag washes; Delete resets the focused border; lock in `DeckSeam.jsx` and `useDeckLayout.js`; `.vj-deck[data-k2='open'] .vj-deck-seam` above the K2 panel.
+Guard: `deckPanes.test.js` (every width from 1 to 2400 px is stacked or has both borders; zone sizes read from the CSS; fold, reset and lock logic), `VjDeckView.panes.test.jsx` (fold, last panel open, lock, one-border reset, K2, hint), `deckLayout.test.js` (thresholds).
+Lesson: a threshold that is written twice (a container query and a constant) needs a test that reads both and walks every width, or a gap opens between them.
+
+## 2026-11-12 — Perform desk: windows over each other, no visible way to tile them, arrangement lost on reload
+
+Symptom: a Perform window lay over the VJ deck and cut its covered part; the only "Arrange all" was in a right-click menu and on Shift+A; after any reload (every install of a new version reloads the pages) the windows were back in the preset's places.
+Cause: (1) windows are free frames with no collision, and the stack top shows whole, the one below is cut by the one above (normal for free windows: `.raw-window-body` only clips a window to its own frame, `raw.css`); the tiling action existed but had no button. (2) the arrangement was `useState` in `PerformDesk.jsx`; only the active preset id and saved presets reached localStorage.
+Fix: a strip button "Arrange all" (same `arrangeAll`, same disabled rule, key in its title); `src/perform/arrangementStore.js` keeps `{ presetId, widthClass, windows, rects, order, minimized, restore }` per device under `di.perform.arrangement.v1:<space>:<project>` on every change, restores it on mount (clamped into the desk, a corrupt or old value reads as nothing, a different preset or width class is not used); picking a preset, Reset layout and Save clear it. Nothing goes into the project document.
+Guard: `arrangeAll.test.js` (2, 4 and 7 windows on 1706x922 and 1280x720: no two pixel rectangles intersect, none outside the desk), `arrangementStore.test.js` (store, clamp, corrupt, stale ids, storage refused), `PerformArrangement.test.jsx` (button, disabled, remount restore, Reset layout, clamp on restore).
+Lesson: state a person builds by hand (a layout) must survive the reload that every install causes; keep it in one store with one key, and give every hidden action a visible control.
+
+## An LED bar's strip never drew: the schema dropped `beam.emitter` (2026-11-11, owner row N3767)
+Seen in the room: the Platina pixel lines stayed round spots though the rig file gave each a 1 m bar emitter; the document read back 0 entities with `beam.emitter`.
+Cause: the beam normaliser in the shared schema keeps only the keys it names, so a new beam key written by a builder is dropped on save; and a scratch serverXR started before the schema change keeps dropping it until it is restarted.
+Fix: `normalizeBeamEmitter` in both twins (`shared/projectSchema.cjs`, `src/shared/projectSchema.js`); restart the scratch stack after a schema change (`di-dev down <tree>; di-dev up <tree> --api scratch`).
+Guard: `src/shared/projectSchema.light.test.js` (browser and server twin keep a bar emitter, drop another shape). Seen on the agent screen: 24 bars drawn.
+
+## Hung lamps drew as standing lamps: the builder never wrote `fixture.hung` (2026-11-12, owner row N3767)
+Seen in the room: the Platina lamps under the truss had their bodies below the lens, as if standing in the air, and a head pattern turned them with a standing lamp's signs.
+Cause: `scripts/rigbuild/epic-build.mjs` built the lamp's `fixture` without `hung`; the room reads `fixture.hung === true` (sheet.js, headMotion.js), so every lamp counted as standing.
+Fix: a rig unit says `hung: true` (platina_rig.py: the K10 over the stage, the XP-16R under the truss) and epic-build carries it into `fixture.hung`.
+Guard: `scripts/place/platina-rig.test.js` (the hung rows say hung, the deck row does not; the beam lamps' rest aim leans toward the audience). Seen on the agent screen: bodies above the lens, under the truss.
+
+## 2026-11-12 — A rig's walls, wings, deck and stands hung half their own height in the air (rig build)
+Symptom (owner, Platina scratch room): a side lamp "in the air", the wing panels floating, the wall box 1.25 m above its picture.
+Cause: `BoxObject.jsx` draws a box standing ON its position (the mesh is lifted by half its height). The 11-11 rule in `scripts/rigbuild/epic-build.mjs` took a box as drawn from its centre and ADDED half a height to every base-anchored solid.
+Fix: a base-anchored solid goes in at its foot as it is; a solid given by its centre (a truss) is lowered by half its height. The two side K15 also got their stand poles as solids (`platina_rig.py`).
+Guard: `scripts/rigbuild/epic-build.test.js` (a solid stands on its foot), `scripts/place/platina-rig.test.js` (no lamp is in the air: a solid or a lamp right under each standing lamp, a truss right over each hung one). Seen on the agent screen: wings on the deck, poles under the side lamps.
+
+## 2026-11-12 — The picture on the LED wall did not show (wall picture script)
+Symptom (owner): "where are the visuals on the screen"; only a thin red band at the wall's foot.
+Cause: `ImageObject.jsx` lays its plane flat (a floor sticker, the mesh turned -90 degrees about x). `scripts/rigbuild/screen-picture.mjs` wrote the entity with rotation 0, so the picture lay flat inside the wall.
+Fix: the picture entity is turned +90 degrees about x; its height is then the scale's third number; its centre is half a height above the wall box's position.
+Guard: `scripts/rigbuild/screen-picture.test.js` (the plane's top edge lands straight above, facing the audience). Seen on the agent screen: the red verticals fill the wall.
+
+## 2026-11-12 — A room that starts at the middle quality notch never reached full on a 60 Hz screen (frame-rate governor)
+Symptom: with the start at notch 2 (owner: mid by default, then "best quality + max fps") the room stayed at notch 2: the climb needed over 70 fps, a 60 Hz screen shows 60.
+Fix: `hasRoom` in `src/project/viewport/qualityGovernor.js`: a rate at the screen's own ceiling (the highest window seen, within 2) and over the target may climb; the step-down rule and the 60 s wait after a failed climb keep it from see-sawing.
+Guard: `src/project/viewport/qualityGovernor.test.js`. Measured on the agent screen (1280 x 720, Platina scratch room): notch 2 at 3 s, notch 0 at 33 s, 60 fps.
+
+## 2026-11-12 — Tech (operator mode) showed no cue, a flat pale screen and no SHOW chip / SCENES (N3818)
+Symptom (owner): `?render=tech` gave a pale beige screen, lamps and stage almost invisible, no cue colours, no SHOW chip, no SCENES button.
+Cause: (1) `techEntities` (src/shared/renderPlan.js) dropped the group that holds `components.rigLooks` (and rigParts, venuePlan); the cue player reads the looks from the entity list it is fed (`rigLooksOf`, src/rigbuild/useRigLook.js), found none, so no driver, no chip, no scenes row, no posed lamps. (2) With no cue every lamp stood at its authored state and the Tech cone (SpotLightObject.jsx, DoubleSide, opacity 0.28, normal blending) of 50+ lamps stacked into one flat colour over the camera. (3) Stage solids (towers, wings, screen frame, stands) and the wall picture were dropped by `isShowThing`; the picture's texture would also have been swapped for grey by SchematicSurfaces. (4) The authored exposure 0.1 (a haze setting) made Tech's plain grey solids black.
+Fix: renderPlan keeps the data holders, the stage solids of a room that holds a rig, and an image/video named screen/led/wall/projection/backdrop; ImageObject marks its mesh `userData.keepTexture` and SchematicSurfaces skips it; the Tech cone is FrontSide at 0.22; Tech fixes the exposure at 1 (TECH_EXPOSURE).
+Guard: `src/shared/renderPlan.test.js` (operator-mode block), `src/objectComponents/SpotLightObject.schematic.test.js`, `src/project/viewport/renderPlanParity.test.js`. Seen on the agent screen, drop-magenta Tech.
+
+
 ## Dev refused an 843 MB space carry (2026-11-12, owner row N3847)
 Symptom: `di open platina.diiii --to https://dev.diiii.xyz` stopped with "platina.diiii is bigger than dev.diiii.xyz takes over the wire (its MAX_UPLOAD_MB)".
 Cause: three walls in series for a hosted tier: serverXR `MAX_UPLOAD_MB` default 100 (docker-compose.yml, no dev override), nginx `client_max_body_size 110m` on `/serverXR/` (nginx.conf, baked into the client image), and Node's 300 s `requestTimeout`; the CLI only reads the 413.
@@ -1841,12 +1988,67 @@ Fix: `docker-compose.dev.yml` sets `MAX_UPLOAD_MB: ${DEV_MAX_UPLOAD_MB:-2048}` (
 Regression guard: `scripts/uploadLimit.test.js` (fails if the dev default is under 1024 MB or nginx is the smaller wall).
 Still needed on the VPS: a dev-tier deploy (compose file + new client image), and no `MAX_UPLOAD_MB`/`DEV_MAX_UPLOAD_MB` below 1024 in the dev `.env`. Not checked against a real 843 MB upload.
 
+## 2026-11-12 — Beams passed through the deck, the wings and the LED wall, and ran on under the stage (Platina, owner N3835)
+- **Symptom:** in a rig room built with `--hall none`, cones crossed the stage solids and continued below the ground.
+- **Cause:** a beam stops only at a building (`svBuilding`) or at steel (`components.occluder {kind:'steel'}`, `beamReach.js`); `epic-build.mjs` flagged only trusses and towers, and with no hall there was no floor at all.
+- **Fix:** a rig solid that says `opaque: true` gets the same flag (`isSteelSolid`); `platina_rig.py` marks every solid opaque and adds `platina-floor` (size PROPOSED). Limit: no roof — a beam aimed up ends at its stored length.
+- **Guard:** `scripts/rigbuild/epic-build.test.js` "an opaque solid stops a beam"; `scripts/place/platina-rig.test.js` "every solid is opaque and there is a floor".
+- **Also (N3848):** a scene click in the room goes through Light (`serverXR/src/show/showRemote.js`, refusal `not-on-light`); a scratch room needs `patch.mjs --exact` then `epic-build.mjs … --desk-only` after every build.
+
+## 2026-11-12: the room's wall showed one still in every scene (owner N3855)
+- **Seen:** the scratch Platina room changed its lights per scene, the LED wall kept `v3-red-verticals` in all of them.
+- **Cause:** the wall picture is one `image` entity with one asset; nothing tied it to the look that is on.
+- **Fix:** `components.lookMedia.byLook` on the picture (look id to asset id), applied by `roomInLook` through `src/rigbuild/lookMedia.js`; a look the map does not name leaves the wall dark. Written by `scripts/rigbuild/screen-picture.mjs --looks <map> --looks-dir <stills>`; Platina's map `scripts/place/rigs/platina-wall-looks-v3-2026-11-12.json` (27 looks, 8 stills; 10 certain, 17 PROPOSED).
+- **Guard:** `src/rigbuild/lookMedia.test.js`.
+- **Owed:** stills only (no moving loop); the deck's live picture on the wall is the Studio's LiveScreens, not in the public room.
+
 ## A laser send could wait for ever; a new Screen could bind to a deleted deck (code review, 2026-11-12, owner row N3876)
 Found by review, not seen live. (1) `postLaser` in `src/map/laserLink.js` had no timeout and no abort, so a laser engine that took the connection but never answered left a cue's laser look or the Perform Blackout send pending for ever. (2) `findPictureSurface` in `src/studio/utils/screenOps.js` reused the first `network` surface with any `ref`, even one naming a deck that was deleted, so "Add Screen" bound to a surface that shows nothing.
 Fix: (1) every laser POST races a 4 s timer (`LASER_POST_TIMEOUT_MS`, overridable by `timeoutMs`), aborts the fetch and answers `false`; the race answers even if a fetch ignores the signal. (2) a surface is reused only when its `ref` is a node still in the document; otherwise a new surface is made on the live deck.
 Guard: `src/map/laserLink.test.js` (fake timers, a fetch that never answers) and two cases in `src/studio/utils/screenOps.test.js`. Not checked against a real hung laser engine.
 
+## 2026-11-12 - Camera refusal said nowhere on the Map source view
+
+Symptom: a blocked or missing camera on a Pictures surface showed a blank picture with no reason.
+Cause: the refusal moved from `error` to `cameraError` (so a camera never replaces the whole picture) and nothing read `cameraError`; it was also never cleared after a later successful open.
+Fix: `MapSourceView.jsx` shows `cameraError` as a caption over the picture; `useTopNetwork.js` clears it when a camera opens.
+Guard: `MapSourceView.network.test.jsx` (caption, canvas kept), `useTopNetwork.camera.test.jsx` (cleared on open). Run by CI only; the local lane gate was closed.
+Lesson: when a value moves to a new field, grep the readers in the same change.
+
+## 2026-11-12 - Body never made a mask for a still source after a failed or skipped run
+
+Symptom: a Body effect on a still or paused source passed the picture through for the rest of the show.
+Cause: `refreshMatte` (topEngine.js) stored the picture as seen before knowing the model run started, and while the model was not ready; the same pixels then read as unchanged for ever.
+Fix: `rememberMatteRun` keeps the picture only after `submit()` returned true; the seen picture is forgotten while the model is not ready.
+Guard: `topEngine.blank.test.js` "rememberMatteRun". Run by CI only. A worker answer of type fail after an accepted submit is not covered.
+Lesson: mark work as done only after the thing that does it confirmed it started.
+
+## 2026-11-12 - One camera opening hid the reason another camera was still failing
+
+Symptom: with two Camera In nodes, camera A failed (not found or blocked) and camera B opened; the caption for A vanished although A was still failing, and came back only on A's next retry failure.
+Cause: `cameraError` in `useTopNetwork.js` was one string for the whole hook, and any camera opening set it to an empty string.
+Fix: the failures are kept per camera node id (`cameraErrors`, `withCameraError`); a camera that opens clears only its own entry, a camera switched off or removed drops its entry, and `cameraError` is the first failure still open. A camera that cannot open still never becomes `error`.
+Guard: `useTopNetwork.camera.test.jsx` "two cameras: the failing one keeps its caption..." (the GUARD test is unchanged). Run by CI only. The view shows one caption, the first open failure, not one per camera.
+Lesson: a value shared by several sources must be keyed by source before any of them may clear it.
+
 ## "Show the live deck here instead" deleted the objects inside the video (2026-11-12, owner rows N3967, N3971)
 Found by code review, not seen live. `buildVideoToScreenOps` (`src/studio/utils/screenOps.js`) deleted the video with `deleteEntity`, which takes the whole subtree, so a Frame or Label placed inside the video was deleted with it (undo restored it).
 Fix: the video's direct children are moved under the new Screen (`updateEntity` parentId) in the same batch, before the video is deleted; one Ctrl+Z puts them back under the video.
 Guard: `src/studio/utils/screenOps.test.js` ("moves the video children under the Screen, and undo puts them back"). Known limit: a video that was never rotated becomes an upright Screen, so its children turn with it.
+
+## 2026-11-12 - A project page went deaf after the di server restarted and later wrote its old deck over newer ones
+
+Symptom: after di's autoupdate restarted the server, an open project page (the VJ deck) stopped receiving project-op events until a reload; its next deck write sent the whole node values and reverted newer ones (server op log v34901 at 12:53:04: a 12-column deck back to 9 columns).
+Cause: the vite `/serverXR` proxy (changeOrigin, xfwd, ws) leaves the browser's SSE response open and silent when the upstream dies (no end, no close, no error), so EventSource never fires onerror and never reconnects; a new stream while the server is down gets 502, which the spec turns into readyState CLOSED with no browser retry, and the error counter in `projectSyncService` waited for a retry that never came. Repro: `scripts/diagnose/sse-proxy-silent-after-upstream-dies.mjs` (RESULT: H4 reproduced, 0 bytes after the kill, new stream 502).
+Fix: `projectSyncService` and `sceneSyncService` reconnect themselves with a 1 s, 2 s, 4 s ... backoff (cap 15 s) when the error leaves readyState CLOSED (the 3-errors-then-cooldown path stays for CONNECTING). `projectSyncService` also keeps a silence clock (any event restarts it); after 20 s without one it calls `onSilent` once per 20 s, and `useProjectDocumentSync` runs `catchUp(version)` (listProjectOps since the local version): newer ops are applied (or the document resynced on a gap) and the stream is replaced; no newer ops means a quiet stream and nothing happens; a failed ask is left to the normal reconnect.
+Guard: `projectSyncService.test.js` (CLOSED backoff, silence clock, reset by a message, timers cleared, reconnect), `sceneSyncService.test.js` (CLOSED reconnect), `useProjectDocumentSync.test.jsx` "silence watchdog" (newer op applied and stream reconnected; quiet stream untouched; failed ask ignored). Known limit: a healthy but quiet stream costs one listProjectOps request per 20 s per open project tab.
+Lesson: an event stream behind a proxy needs a liveness check of its own; "no error" does not mean "still connected".
+
+## 2026-11-12 - Lights follow (desk to deck) could replay the wrong column and hammered a dead light server
+
+Symptom: with Lights follow on, firing column A then column B within a quarter second made the deck relaunch A while the desk went to B; a scene cue fired by the deck launched the column of the stale layer-0 look; after the desk had been off, the first reading when it came back could launch a column; with the light server down the deck asked 4 times a second (a 502 and a console error each time) and one hung request blocked every later poll.
+Cause: the echo guard in `VjDeckView.jsx` remembered only the LAST deck fire and only when that cue was a look (a scene cue left `look` empty, so the guard skipped it); `deskSeen` kept its old baseline when a reading was not 'own' or failed; the poll had no request timeout and no backoff.
+Fix: the deck keeps its recent fires (`deckFires`, any cue kind). A desk change within `FOLLOW_ECHO_MS` (1.5 s) of the last fire is an echo; after that a reading naming any look fired within `FOLLOW_ECHO_LOOK_MS` (5 s) is an echo (slow desk), and so is a change where only the desk's cue index/firedAt moved while its look stayed, when the deck fired anything in that 5 s. A reading that is not 'own', or a failed request, resets the baseline (the first good reading only sets it). Each summary request is aborted after `FOLLOW_TIMEOUT_MS` (2 s); after a failed or not-'own' reading the next request waits `FOLLOW_RETRY_MS` (2 s); an 'own' reading returns to the 250 ms pace.
+Guard: `VjDeckView.deskFollow.test.jsx` (fast A then B, slow desk at 2 s, scene cue echo, desk off then on another look, at most one request per 2 s while off, hung request aborted and polling continues, real change 6 s after the last fire still launches). The old test "same cue from the desk after 1.5 s launches" now waits past the 5 s window, because a desk change 250 ms after a deck fire is by design an echo.
+Known limit: the server's desk summary has no `firedAt` on layers (`serverXR/src/lighting/desk.js`), so `layerFiredAt` is always null; the desk re-firing the SAME look is seen only through cue index/firedAt. A real desk change inside 5 s of a deck fire is taken as the deck's echo and does not move the deck.
+Lesson: an echo guard that remembers one event fails for two fast ones; guard by time window as well as by identity, and any poll of another machine needs a timeout, a backoff and a reset of what it believed when the link drops.

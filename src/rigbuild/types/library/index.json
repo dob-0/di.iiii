@@ -67,6 +67,31 @@
       "id": "ext-lc-ultra-mk2",
       "code": "EXT-LC-ULTRA-MK2",
       "category": "laser"
+    },
+    {
+      "id": "cp-aleda-beye-k10",
+      "code": "CP-ALEDA-BEYE-K10",
+      "category": "moving-head"
+    },
+    {
+      "id": "cp-hy-beye-k15",
+      "code": "CP-HY-BEYE-K15",
+      "category": "moving-head"
+    },
+    {
+      "id": "acme-pixel-line-ip",
+      "code": "ACME-PIXEL-LINE-IP",
+      "category": "led-bar"
+    },
+    {
+      "id": "acme-xp16r-bsw",
+      "code": "ACME-XP16R-BSW",
+      "category": "moving-head"
+    },
+    {
+      "id": "magmatic-magma-prime",
+      "code": "MAGMATIC-MAGMA-PRIME",
+      "category": "hazer"
     }
   ]
 }

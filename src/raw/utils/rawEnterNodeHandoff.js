@@ -13,8 +13,12 @@ const STORAGE_KEY = 'dii.raw.enterNodeOnOpen'
 
 const canUseStorage = () => typeof window !== 'undefined' && Boolean(window.sessionStorage)
 
-export const stashRawEnterNode = (projectId, nodeId) => {
-    if (!canUseStorage() || !projectId || !nodeId) return
+// stashRawEnterNode(nodeId) lands inside that node in whichever project opens
+// next; stashRawEnterNode(projectId, nodeId) is bound to one project. Another
+// surface may instead navigate to the Nodes path with ?enter=<nodeId>.
+export const stashRawEnterNode = (...args) => {
+    const [projectId, nodeId] = args.length >= 2 ? args : [null, args[0]]
+    if (!canUseStorage() || !nodeId) return
     try {
         window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ projectId, nodeId }))
     } catch {
@@ -33,7 +37,7 @@ export const peekRawEnterNode = (projectId) => {
         const raw = window.sessionStorage.getItem(STORAGE_KEY)
         if (!raw) return null
         const parsed = JSON.parse(raw)
-        return parsed?.projectId === projectId && parsed?.nodeId ? parsed.nodeId : null
+        return parsed?.nodeId && (!parsed.projectId || parsed.projectId === projectId) ? parsed.nodeId : null
     } catch {
         return null
     }

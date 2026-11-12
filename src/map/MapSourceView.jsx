@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
 import { startLiveAiRestyle } from './liveAiRestyle.js'
 import { resolveAlias } from '../project/tops/vjDeck.js'
 import { openSharedCamera } from '../project/tops/cameraPool.js'
+import { getSourcesOff, subscribeSourcesOff } from '../project/tops/sourceSwitch.js'
 import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
@@ -386,6 +387,9 @@ const REOPEN_ERRORS = ['NotReadableError', 'TrackStartError', 'NotFoundError', '
 function MapCameraSource({ deviceId, effect = null, label, width, height, onStale = null }) {
     const staleRef = useRef(onStale)
     useEffect(() => { staleRef.current = onStale })
+    // The switch of a source (sourceSwitch.js): when it changes the stream is closed and asked for again;
+    // the pool refuses a camera that is off. Nothing off: this value never changes.
+    const sourcesOff = useSyncExternalStore(subscribeSourcesOff, getSourcesOff)
     const videoRef = useRef(null)
     const canvasRef = useRef(null)
     const glowRef = useRef(null)
@@ -402,6 +406,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
     const [aiStatus, setAiStatus] = useState('reaching the live-AI engine…')
 
     useEffect(() => {
+        const video = videoRef.current
         let stream = null
         let cancelled = false
         let timer = null
@@ -464,6 +469,7 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
                 .catch((error) => {
                     if (cancelled) return
                     const failure = error?.name
+                    if (failure === 'SourceOff') { setWaiting(false); return } // a choice: no message, no retry
                     if (failure !== 'NotAllowedError' && (deviceId || wasLive) && REOPEN_ERRORS.includes(failure)) {
                         // Say so on the surface: a black rectangle reads as a mapping mistake.
                         setWaiting(true)
@@ -480,8 +486,10 @@ function MapCameraSource({ deviceId, effect = null, label, width, height, onStal
             clearTimeout(timer)
             clearTimeout(stable)
             drop()
+            // Source off or unmount: no last frame stays and the stream object is let go; on again opens a fresh one.
+            if (video) video.srcObject = null
         }
-    }, [deviceId])
+    }, [deviceId, sourcesOff])
 
     // The glow runs while the effect is on; its knobs change without restarting
     // it, so dragging a slider on the desk never blinks the wall.
@@ -579,10 +587,16 @@ function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, labe
     const shown = resolveAlias(outNodeId, network?.alias)
     const present = Boolean(network?.nodes?.some((node) => node.id === shown))
     // Nothing to show → nothing to run; an empty network starts no engine.
-    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: shown, width: w, height: h })
+    const { error, cameraError } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: shown, width: w, height: h })
     if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out or deck is gone" width={width} height={height} />
     if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
-    return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
+    // A camera that cannot open never replaces the picture (the other nodes still draw); its reason is a caption.
+    return (
+        <>
+            <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
+            {cameraError ? <span className="map-source-camera-error" role="status" style={{ position: 'absolute', left: 8, bottom: 8, font: '12px sans-serif', color: '#fff', background: 'rgba(0,0,0,0.6)', padding: '2px 6px' }}>{cameraError}</span> : null}
+        </>
+    )
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.

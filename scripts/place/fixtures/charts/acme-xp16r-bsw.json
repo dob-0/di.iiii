@@ -1,0 +1,1065 @@
+{
+ "kind": "xp16r",
+ "code": "ACME-XP16R-BSW",
+ "maker": "ACME (Foshan Yi Feng Electric Industrial Co.)",
+ "model": "XP-16R BSW III",
+ "manual": {
+  "url": "https://en.acmelighting.com/Uploads/download/file_material/1548730155bda9de23c5da5e98.pdf",
+  "date": "2018-02-05 (PDF metadata)",
+  "read": "2026-11-11, pdftotext + page image p6",
+  "basis": "EXACT"
+ },
+ "howToRead": "value ranges are [from, to, meaning] parsed from the maker's own text (`text` is that text, verbatim); `role` is di's role; `cap` / `default` only where the manual's range supports them (others are owed). Every mode here is read from the maker's manual (EXACT).",
+ "modes": {
+  "19": {
+   "status": "EXACT",
+   "name": "Mode 1",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Pan",
+     "role": "pan",
+     "text": "0-255 = 0 to 540 deg (16-bit with ch2)",
+     "ranges": [
+      [
+       0,
+       255,
+       "0 to 540 deg (16-bit with ch2)"
+      ]
+     ],
+     "page": "p26-29",
+     "default": 128
+    },
+    {
+     "ch": 2,
+     "function": "Pan fine",
+     "role": "panFine",
+     "page": "p26-29"
+    },
+    {
+     "ch": 3,
+     "function": "Tilt",
+     "role": "tilt",
+     "text": "0-255 = 0 to 270 deg (16-bit with ch4)",
+     "ranges": [
+      [
+       0,
+       255,
+       "0 to 270 deg (16-bit with ch4)"
+      ]
+     ],
+     "page": "p26-29",
+     "default": 128
+    },
+    {
+     "ch": 4,
+     "function": "Tilt fine",
+     "role": "tiltFine",
+     "page": "p26-29"
+    },
+    {
+     "ch": 5,
+     "function": "Pan/Tilt speed",
+     "role": "speed",
+     "text": "fast to slow",
+     "page": "p26-29"
+    },
+    {
+     "ch": 6,
+     "function": "Special function (incl. lamp on/off, resets)",
+     "role": "control",
+     "text": "000-049 none; 050 enable / 060 disable auto colour frost; 070 enable / 080 disable blackout while pan/tilt moves; 090/100 same for colour change; 110/120 same for gobo change; 130 lamp on; 140 pan/tilt reset; 150 effect reset; 160 fan quiet; 170 fan fast; 180 lamp full power; 190 lamp half power; 200 all reset; 230 lamp off (each a 10-wide band, hold ~5 s)",
+     "ranges": [
+      [
+       0,
+       49,
+       "none"
+      ],
+      [
+       50,
+       50,
+       "enable / 060 disable auto colour frost"
+      ],
+      [
+       70,
+       70,
+       "enable / 080 disable blackout while pan/tilt moves"
+      ],
+      [
+       90,
+       90,
+       "/100 same for colour change"
+      ],
+      [
+       110,
+       110,
+       "/120 same for gobo change"
+      ],
+      [
+       130,
+       130,
+       "lamp on"
+      ],
+      [
+       140,
+       140,
+       "pan/tilt reset"
+      ],
+      [
+       150,
+       150,
+       "effect reset"
+      ],
+      [
+       160,
+       160,
+       "fan quiet"
+      ],
+      [
+       170,
+       170,
+       "fan fast"
+      ],
+      [
+       180,
+       180,
+       "lamp full power"
+      ],
+      [
+       190,
+       190,
+       "lamp half power"
+      ],
+      [
+       200,
+       200,
+       "all reset"
+      ],
+      [
+       230,
+       230,
+       "lamp off (each a 10-wide band, hold ~5 s)"
+      ]
+     ],
+     "page": "p26-29",
+     "default": 0
+    },
+    {
+     "ch": 7,
+     "function": "Colour wheel",
+     "role": "color",
+     "text": "000-002 white; Color 1..29 in 2-3 value steps (003-004 ... 061-063); 064-127 indexing; 128-189 CCW fast-slow; 190-193 stop; 194-255 CW slow-fast",
+     "ranges": [
+      [
+       0,
+       2,
+       "white"
+      ],
+      [
+       64,
+       127,
+       "indexing"
+      ],
+      [
+       128,
+       189,
+       "CCW fast-slow"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW slow-fast"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 8,
+     "function": "Gobo wheel 1 (static)",
+     "role": "gobo",
+     "text": "000-003 open; Gobo 1..16 in 3-value steps (004-006 ... 049-055); 056-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW",
+     "ranges": [
+      [
+       0,
+       3,
+       "open"
+      ],
+      [
+       56,
+       127,
+       "shake"
+      ],
+      [
+       128,
+       189,
+       "CCW"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 9,
+     "function": "Gobo wheel 2 (rotating)",
+     "role": "gobo2",
+     "text": "000-005 open; Gobo 2-1..2-12 (006-010 ... 062-067); 068-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW",
+     "ranges": [
+      [
+       0,
+       5,
+       "open"
+      ],
+      [
+       68,
+       127,
+       "shake"
+      ],
+      [
+       128,
+       189,
+       "CCW"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 10,
+     "function": "Rotating gobo index/rotation",
+     "role": "gobo2Rotation",
+     "text": "000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast",
+     "ranges": [
+      [
+       0,
+       127,
+       "index"
+      ],
+      [
+       128,
+       189,
+       "CCW fast to slow"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW slow to fast"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 11,
+     "function": "Prism 1 (8-facet) in/out",
+     "role": "prism",
+     "text": "000-007 no prism; 008-255 prism in",
+     "ranges": [
+      [
+       0,
+       7,
+       "no prism"
+      ],
+      [
+       8,
+       255,
+       "prism in"
+      ]
+     ],
+     "page": "p26-29",
+     "cap": {
+      "prism": true,
+      "prismIn": {
+       "from": 8,
+       "facets": 8,
+       "basis": "MANUAL p26-29: 008-255 prism 1 in; 8 facets from the manual p5"
+      }
+     }
+    },
+    {
+     "ch": 12,
+     "function": "Prism 1 rotation",
+     "role": "rotation",
+     "text": "000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast",
+     "ranges": [
+      [
+       0,
+       127,
+       "index"
+      ],
+      [
+       128,
+       189,
+       "CCW fast to slow"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW slow to fast"
+      ]
+     ],
+     "page": "p26-29",
+     "cap": {
+      "prismRotation": {
+       "prism": 1,
+       "index": {
+        "from": 0,
+        "to": 127
+       },
+       "basis": "MANUAL p26-29: 0-127 index; 128-189 CCW, 190-193 stop, 194-255 CW"
+      }
+     }
+    },
+    {
+     "ch": 13,
+     "function": "Prism 2 (6-linear) in/out",
+     "role": "prism2",
+     "text": "000-007 no prism; 008-255 prism in",
+     "ranges": [
+      [
+       0,
+       7,
+       "no prism"
+      ],
+      [
+       8,
+       255,
+       "prism in"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 14,
+     "function": "Prism 2 rotation",
+     "role": "prism2Rotation",
+     "text": "000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast",
+     "ranges": [
+      [
+       0,
+       127,
+       "index"
+      ],
+      [
+       128,
+       189,
+       "CCW fast to slow"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW slow to fast"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 15,
+     "function": "Zoom",
+     "role": "zoom",
+     "text": "0-255 = 100% to 0%",
+     "ranges": [
+      [
+       0,
+       255,
+       "100% to 0%"
+      ]
+     ],
+     "page": "p26"
+    },
+    {
+     "ch": 16,
+     "function": "Focus",
+     "role": "focus",
+     "text": "0-255 near to far",
+     "ranges": [
+      [
+       0,
+       255,
+       "near to far"
+      ]
+     ],
+     "page": "p26"
+    },
+    {
+     "ch": 17,
+     "function": "Frost",
+     "role": "frost",
+     "text": "000-007 off; 008-255 on",
+     "ranges": [
+      [
+       0,
+       7,
+       "off"
+      ],
+      [
+       8,
+       255,
+       "on"
+      ]
+     ],
+     "page": "p26",
+     "cap": {
+      "frost": {
+       "from": 8,
+       "to": 255,
+       "basis": "MANUAL p26: 000-007 off; 008-255 on (an insert, not a curve)"
+      }
+     }
+    },
+    {
+     "ch": 18,
+     "function": "Shutter/strobe",
+     "role": "strobe",
+     "text": "000-007 shutter off; 008-015 open; 016-131 strobe slow-fast; 132-167 slow open fast close; 168-203 fast open slow close; 204-239 slow open slow close; 240-247 random strobe; 248-255 open",
+     "ranges": [
+      [
+       0,
+       7,
+       "shutter off"
+      ],
+      [
+       8,
+       15,
+       "open"
+      ],
+      [
+       16,
+       131,
+       "strobe slow-fast"
+      ],
+      [
+       132,
+       167,
+       "slow open fast close"
+      ],
+      [
+       168,
+       203,
+       "fast open slow close"
+      ],
+      [
+       204,
+       239,
+       "slow open slow close"
+      ],
+      [
+       240,
+       247,
+       "random strobe"
+      ],
+      [
+       248,
+       255,
+       "open"
+      ]
+     ],
+     "page": "p26",
+     "default": 255,
+     "cap": {
+      "shutter": [
+       {
+        "from": 0,
+        "to": 7,
+        "open": false
+       },
+       {
+        "from": 8,
+        "to": 15,
+        "open": true
+       },
+       {
+        "from": 248,
+        "to": 255,
+        "open": true
+       }
+      ]
+     }
+    },
+    {
+     "ch": 19,
+     "function": "Dimmer",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p26"
+    }
+   ],
+   "src": "acme-xp16r-bsw/xp-16r-bsw-iii-manual.pdf p23-26 (display: DMX Settings > DMX Channel Mode > Mode1 (19), p12)"
+  },
+  "21": {
+   "status": "EXACT",
+   "name": "Mode 2",
+   "note": "LARGEST. adds zoom fine and focus fine",
+   "channels": [
+    {
+     "ch": 1,
+     "function": "Pan",
+     "role": "pan",
+     "text": "0-255 = 0 to 540 deg (16-bit with ch2)",
+     "ranges": [
+      [
+       0,
+       255,
+       "0 to 540 deg (16-bit with ch2)"
+      ]
+     ],
+     "page": "p26-29",
+     "default": 128
+    },
+    {
+     "ch": 2,
+     "function": "Pan fine",
+     "role": "panFine",
+     "page": "p26-29"
+    },
+    {
+     "ch": 3,
+     "function": "Tilt",
+     "role": "tilt",
+     "text": "0-255 = 0 to 270 deg (16-bit with ch4)",
+     "ranges": [
+      [
+       0,
+       255,
+       "0 to 270 deg (16-bit with ch4)"
+      ]
+     ],
+     "page": "p26-29",
+     "default": 128
+    },
+    {
+     "ch": 4,
+     "function": "Tilt fine",
+     "role": "tiltFine",
+     "page": "p26-29"
+    },
+    {
+     "ch": 5,
+     "function": "Pan/Tilt speed",
+     "role": "speed",
+     "text": "fast to slow",
+     "page": "p26-29"
+    },
+    {
+     "ch": 6,
+     "function": "Special function (incl. lamp on/off, resets)",
+     "role": "control",
+     "text": "000-049 none; 050 enable / 060 disable auto colour frost; 070 enable / 080 disable blackout while pan/tilt moves; 090/100 same for colour change; 110/120 same for gobo change; 130 lamp on; 140 pan/tilt reset; 150 effect reset; 160 fan quiet; 170 fan fast; 180 lamp full power; 190 lamp half power; 200 all reset; 230 lamp off (each a 10-wide band, hold ~5 s)",
+     "ranges": [
+      [
+       0,
+       49,
+       "none"
+      ],
+      [
+       50,
+       50,
+       "enable / 060 disable auto colour frost"
+      ],
+      [
+       70,
+       70,
+       "enable / 080 disable blackout while pan/tilt moves"
+      ],
+      [
+       90,
+       90,
+       "/100 same for colour change"
+      ],
+      [
+       110,
+       110,
+       "/120 same for gobo change"
+      ],
+      [
+       130,
+       130,
+       "lamp on"
+      ],
+      [
+       140,
+       140,
+       "pan/tilt reset"
+      ],
+      [
+       150,
+       150,
+       "effect reset"
+      ],
+      [
+       160,
+       160,
+       "fan quiet"
+      ],
+      [
+       170,
+       170,
+       "fan fast"
+      ],
+      [
+       180,
+       180,
+       "lamp full power"
+      ],
+      [
+       190,
+       190,
+       "lamp half power"
+      ],
+      [
+       200,
+       200,
+       "all reset"
+      ],
+      [
+       230,
+       230,
+       "lamp off (each a 10-wide band, hold ~5 s)"
+      ]
+     ],
+     "page": "p26-29",
+     "default": 0
+    },
+    {
+     "ch": 7,
+     "function": "Colour wheel",
+     "role": "color",
+     "text": "000-002 white; Color 1..29 in 2-3 value steps (003-004 ... 061-063); 064-127 indexing; 128-189 CCW fast-slow; 190-193 stop; 194-255 CW slow-fast",
+     "ranges": [
+      [
+       0,
+       2,
+       "white"
+      ],
+      [
+       64,
+       127,
+       "indexing"
+      ],
+      [
+       128,
+       189,
+       "CCW fast-slow"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW slow-fast"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 8,
+     "function": "Gobo wheel 1 (static)",
+     "role": "gobo",
+     "text": "000-003 open; Gobo 1..16 in 3-value steps (004-006 ... 049-055); 056-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW",
+     "ranges": [
+      [
+       0,
+       3,
+       "open"
+      ],
+      [
+       56,
+       127,
+       "shake"
+      ],
+      [
+       128,
+       189,
+       "CCW"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 9,
+     "function": "Gobo wheel 2 (rotating)",
+     "role": "gobo2",
+     "text": "000-005 open; Gobo 2-1..2-12 (006-010 ... 062-067); 068-127 shake; 128-189 CCW; 190-193 stop; 194-255 CW",
+     "ranges": [
+      [
+       0,
+       5,
+       "open"
+      ],
+      [
+       68,
+       127,
+       "shake"
+      ],
+      [
+       128,
+       189,
+       "CCW"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 10,
+     "function": "Rotating gobo index/rotation",
+     "role": "gobo2Rotation",
+     "text": "000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast",
+     "ranges": [
+      [
+       0,
+       127,
+       "index"
+      ],
+      [
+       128,
+       189,
+       "CCW fast to slow"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW slow to fast"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 11,
+     "function": "Prism 1 (8-facet) in/out",
+     "role": "prism",
+     "text": "000-007 no prism; 008-255 prism in",
+     "ranges": [
+      [
+       0,
+       7,
+       "no prism"
+      ],
+      [
+       8,
+       255,
+       "prism in"
+      ]
+     ],
+     "page": "p26-29",
+     "cap": {
+      "prism": true,
+      "prismIn": {
+       "from": 8,
+       "facets": 8,
+       "basis": "MANUAL p26-29: 008-255 prism 1 in; 8 facets from the manual p5"
+      }
+     }
+    },
+    {
+     "ch": 12,
+     "function": "Prism 1 rotation",
+     "role": "rotation",
+     "text": "000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast",
+     "ranges": [
+      [
+       0,
+       127,
+       "index"
+      ],
+      [
+       128,
+       189,
+       "CCW fast to slow"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW slow to fast"
+      ]
+     ],
+     "page": "p26-29",
+     "cap": {
+      "prismRotation": {
+       "prism": 1,
+       "index": {
+        "from": 0,
+        "to": 127
+       },
+       "basis": "MANUAL p26-29: 0-127 index; 128-189 CCW, 190-193 stop, 194-255 CW"
+      }
+     }
+    },
+    {
+     "ch": 13,
+     "function": "Prism 2 (6-linear) in/out",
+     "role": "prism2",
+     "text": "000-007 no prism; 008-255 prism in",
+     "ranges": [
+      [
+       0,
+       7,
+       "no prism"
+      ],
+      [
+       8,
+       255,
+       "prism in"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 14,
+     "function": "Prism 2 rotation",
+     "role": "prism2Rotation",
+     "text": "000-127 index; 128-189 CCW fast to slow; 190-193 stop; 194-255 CW slow to fast",
+     "ranges": [
+      [
+       0,
+       127,
+       "index"
+      ],
+      [
+       128,
+       189,
+       "CCW fast to slow"
+      ],
+      [
+       190,
+       193,
+       "stop"
+      ],
+      [
+       194,
+       255,
+       "CW slow to fast"
+      ]
+     ],
+     "page": "p26-29"
+    },
+    {
+     "ch": 15,
+     "function": "Zoom",
+     "role": "zoom",
+     "text": "0-255 = 100% to 0%",
+     "ranges": [
+      [
+       0,
+       255,
+       "100% to 0%"
+      ]
+     ],
+     "page": "p27-29"
+    },
+    {
+     "ch": 16,
+     "function": "Zoom fine",
+     "role": "zoomFine",
+     "page": "p29"
+    },
+    {
+     "ch": 17,
+     "function": "Focus",
+     "role": "focus",
+     "text": "near to far",
+     "page": "p29"
+    },
+    {
+     "ch": 18,
+     "function": "Focus fine",
+     "role": "focusFine",
+     "page": "p29"
+    },
+    {
+     "ch": 19,
+     "function": "Frost",
+     "role": "frost",
+     "text": "000-007 off; 008-255 on",
+     "ranges": [
+      [
+       0,
+       7,
+       "off"
+      ],
+      [
+       8,
+       255,
+       "on"
+      ]
+     ],
+     "page": "p29",
+     "cap": {
+      "frost": {
+       "from": 8,
+       "to": 255,
+       "basis": "MANUAL p29: 000-007 off; 008-255 on (an insert, not a curve)"
+      }
+     }
+    },
+    {
+     "ch": 20,
+     "function": "Shutter/strobe",
+     "role": "strobe",
+     "text": "000-007 shutter off; 008-015 open; 016-131 strobe slow-fast; 132-167 slow open fast close; 168-203 fast open slow close; 204-239 slow open slow close; 240-247 random strobe; 248-255 open",
+     "ranges": [
+      [
+       0,
+       7,
+       "shutter off"
+      ],
+      [
+       8,
+       15,
+       "open"
+      ],
+      [
+       16,
+       131,
+       "strobe slow-fast"
+      ],
+      [
+       132,
+       167,
+       "slow open fast close"
+      ],
+      [
+       168,
+       203,
+       "fast open slow close"
+      ],
+      [
+       204,
+       239,
+       "slow open slow close"
+      ],
+      [
+       240,
+       247,
+       "random strobe"
+      ],
+      [
+       248,
+       255,
+       "open"
+      ]
+     ],
+     "page": "p29",
+     "default": 255,
+     "cap": {
+      "shutter": [
+       {
+        "from": 0,
+        "to": 7,
+        "open": false
+       },
+       {
+        "from": 8,
+        "to": 15,
+        "open": true
+       },
+       {
+        "from": 248,
+        "to": 255,
+        "open": true
+       }
+      ]
+     }
+    },
+    {
+     "ch": 21,
+     "function": "Dimmer",
+     "role": "dimmer",
+     "text": "0-255 = 0%-100%",
+     "ranges": [
+      [
+       0,
+       255,
+       "0%-100%"
+      ]
+     ],
+     "page": "p30"
+    }
+   ],
+   "src": "acme-xp16r-bsw/xp-16r-bsw-iii-manual.pdf p26-30 (Mode 2 (21), p12)"
+  }
+ },
+ "owed": [
+  "colour and gobo slot names and counts (14 vs 29 colours, 17 vs 16 gobos: the manual disagrees with itself)",
+  "colour wheel / gobo slot caps",
+  "zoom direction (0-255 = 100%-0%: which end is narrow is not stated)",
+  "prism 2 cap",
+  "IP rating",
+  "whether the rented unit has 23 channels (no such XP-16R was found)"
+ ]
+}

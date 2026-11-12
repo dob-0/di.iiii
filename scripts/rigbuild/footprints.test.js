@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 
 import { REPO_ROOT } from '../place/common.mjs'
 import { surfaceHit } from '../place/rig-lib.mjs'
-import { readGeometry } from '../place/fixtures-glb.mjs'
+import { builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { loadLibrary } from './library.mjs'
 import { VERSIONS_FILE, rigFileOf } from './versions.mjs'
 import { HALL_FILE, hallFirstHit, hallFirstSurface } from './hall-reach.mjs'
@@ -160,7 +160,7 @@ describe('the flags and the basis', () => {
 const read = (f) => JSON.parse(fs.readFileSync(path.join(REPO_ROOT, f), 'utf8'))
 const spec = read(VERSIONS_FILE)
 const manifest = read('scripts/place/fixtures/fixtures.json')
-const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
 const library = loadLibrary()
 
 // 2026-10-02: the hall record now carries the permanent objects near the stage (hall dims layer 2026-10-02,

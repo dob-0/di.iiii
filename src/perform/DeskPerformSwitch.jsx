@@ -17,7 +17,8 @@ export const deskPathFor = (from, space, project) => {
 }
 
 /**
- *   current  'desk' on Projection / Studio / Nodes, 'perform' on Perform
+ *   current  'desk' on Projection / Studio / Nodes, 'perform' on Perform,
+ *            'elsewhere' on Tools / Wiki (neither half marked)
  *   from     on a desk: which desk this is ('map' | 'studio' | 'raw');
  *            on Perform: the desk the person came from
  */
@@ -25,7 +26,9 @@ export default function DeskPerformSwitch({ current = 'desk', space, project, fr
     if (!space || !project) return null
     const deskHref = deskPathFor(from, space, project)
     const performHref = buildPerformPath(space, project, { from })
-    const onDesk = current !== 'perform'
+    // 'elsewhere' (Tools, Wiki): neither half is the page you are on, both are ways in.
+    const elsewhere = current === 'elsewhere'
+    const onDesk = current !== 'perform' && !elsewhere
     return (
         <span className="sbar-switch" role="group" aria-label="Desk or Perform">
             <a
@@ -36,10 +39,10 @@ export default function DeskPerformSwitch({ current = 'desk', space, project, fr
             >Desk</a>
             <span className="sbar-sep" aria-hidden="true"> | </span>
             <a
-                className={`sbar-link${onDesk ? '' : ' is-here'}`}
+                className={`sbar-link${onDesk || elsewhere ? '' : ' is-here'}`}
                 href={performHref}
-                aria-current={onDesk ? undefined : 'page'}
-                onClick={onDesk ? (event) => navigateInApp(event, performHref) : (event) => event.preventDefault()}
+                aria-current={onDesk || elsewhere ? undefined : 'page'}
+                onClick={onDesk || elsewhere ? (event) => navigateInApp(event, performHref) : (event) => event.preventDefault()}
             >Perform</a>
         </span>
     )

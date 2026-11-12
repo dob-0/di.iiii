@@ -50,7 +50,7 @@ import path from 'node:path'
 import { parseArgs, die, say, readJson, REPO_ROOT } from '../place/common.mjs'
 import { makeClient } from '../place/api.mjs'
 import { buildRig, nightOps } from '../place/rig-lib.mjs'
-import { FIXTURE_DIR, readGeometry } from '../place/fixtures-glb.mjs'
+import { FIXTURE_DIR, builtKinds, readGeometry } from '../place/fixtures-glb.mjs'
 import { RIG_SHOW_ID } from '../../src/rigbuild/rental.js'
 import { findVersion, projectOf, rentalFileOf, rigFileOf, VERSIONS_FILE } from './versions.mjs'
 import { rigLooksFrom } from './looks.mjs'
@@ -179,7 +179,7 @@ const main = async () => {
         const look = String(args.look)
         const hall = readJson(hallFile)
         const manifest = readJson(path.join(FIXTURE_DIR, 'fixtures.json'))
-        const geometry = Object.fromEntries(Object.keys(manifest.kinds).map((k) => [k, readGeometry(k)]))
+        const geometry = Object.fromEntries(builtKinds(manifest).map((k) => [k, readGeometry(k)]))
         // --nominal: the look without its levels, so every lamp keeps its full light
         const shown = args.nominal ? { ...rig, looks: { ...rig.looks, [look]: { ...rig.looks[look], levels: undefined } } } : rig
         const built = buildRig(shown, hall, { geometry, manifest, look })

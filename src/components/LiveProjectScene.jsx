@@ -31,6 +31,7 @@ import { buildAssetMap } from '../project/viewport/buildAssetMap.js'
 import { outputRenderSettings } from '../project/viewport/outputMode.js'
 import BoxObject from '../objectComponents/BoxObject.jsx'
 import PlaneObject from '../objectComponents/PlaneObject.jsx'
+import { LiveWallSources, LiveWallSwitch, useRoomWall } from '../project/viewport/LiveWall.jsx'
 import TorusObject from '../objectComponents/TorusObject.jsx'
 import CapsuleObject from '../objectComponents/CapsuleObject.jsx'
 import RingObject from '../objectComponents/RingObject.jsx'
@@ -120,7 +121,7 @@ const COARSE_POINTER = typeof window !== 'undefined' && !!window.matchMedia?.('(
 const BILLBOARD_TEXT_SCALE = COARSE_POINTER ? 0.45 : 1
 
 
-function EntityVisual({ entity, assetMap }) {
+function EntityVisual({ entity, assetMap, screens = null }) {
     const media = entity.components?.media || {}
     const appearance = entity.components?.appearance || {}
     const asset = media.assetId ? assetMap.get(media.assetId) : null
@@ -185,6 +186,8 @@ function EntityVisual({ entity, assetMap }) {
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
                 material={material}
+                // a screen entity (components.surface) draws the picture of its mapping surface (LiveWall.jsx); a plain plane draws as it did
+                screen={entity.components?.surface?.surfaceId ? (screens?.get?.(entity.components.surface.surfaceId) || {}) : null}
             />
         )
     case 'torus':
@@ -349,7 +352,7 @@ function EntityVisual({ entity, assetMap }) {
 // Idle motion layered on top of the authored transform -- gates and ground
 // stay put (they're architecture), flying pieces get a real flight path,
 // everything else gets a gentle bob + slow spin so the room feels alive.
-function AnimatedEntity({ entity, assetMap, childMap = null }) {
+function AnimatedEntity({ entity, assetMap, childMap = null, screens = null }) {
     const groupRef = useRef(null)
     const basePos = entity.components?.transform?.position || [0, 0, 0]
     const baseRot = entity.components?.transform?.rotation || [0, 0, 0]
@@ -393,11 +396,11 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
                 renders EntityVisual exactly as before. */}
             <EntityLink entity={entity} enabled>
                 <Suspense fallback={null}>
-                    <EntityVisual entity={entity} assetMap={assetMap} />
+                    <EntityVisual entity={entity} assetMap={assetMap} screens={screens} />
                 </Suspense>
             </EntityLink>
             {children.map((child) => (
-                <AnimatedEntity key={child.id} entity={child} assetMap={assetMap} childMap={childMap} />
+                <AnimatedEntity key={child.id} entity={child} assetMap={assetMap} childMap={childMap} screens={screens} />
             ))}
         </group>
     )
@@ -1846,7 +1849,11 @@ export default function LiveProjectScene({
         return () => window.removeEventListener('keydown', onKey)
     }, [walking, exitLabel, locking])
 
-    const entities = useMemo(() => entitiesOverride || doc?.entities || [], [entitiesOverride, doc?.entities])
+    const allEntities = useMemo(() => entitiesOverride || doc?.entities || [], [entitiesOverride, doc?.entities])
+    // The live wall (LiveWall.jsx): screen entities (components.surface) show their mapping surface's picture.
+    // Nothing is mounted unless the room holds one and the viewer's switch is on; off, they are left out.
+    const wall = useRoomWall(allEntities)
+    const entities = wall.drawn
     // Legacy-imported projects store assets with an empty `url` field (the
     // registry that fills it in -- registerAssetSources -- only ever runs
     // inside the Studio editor's useAssetRestore hook, never here). Fall back
@@ -2096,7 +2103,7 @@ export default function LiveProjectScene({
                 {renderSettings?.atmosphere?.haze ? null : <AmbientField center={center} />}
                 {showEntities && rootEntities.map((entity) => (
                     <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
-                        <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} />
+                        <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} screens={wall.screens} />
                     </SceneEntityErrorBoundary>
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
@@ -2144,6 +2151,9 @@ export default function LiveProjectScene({
             </Canvas>
 
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
+
+            {showEntities ? <LiveWallSources document={doc} entities={wall.drawn} mounted={wall.mounted} onScreens={wall.setScreens} /> : null}
+            {showEntities && showChrome && interactive ? <LiveWallSwitch on={wall.on} onChange={wall.setOn} hasWall={wall.hasWall} style={{ position: 'fixed', left: 12, bottom: 12 }} /> : null}
 
             {/* Joystick and the Fly toggle are functional controls, not
                 branding chrome -- a touch device has no F key and no other

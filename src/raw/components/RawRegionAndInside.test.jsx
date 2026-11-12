@@ -145,6 +145,7 @@ const occupants = () => [
 
 afterEach(() => {
     cleanup()
+    window.history.replaceState(null, "", "/") // entering a node writes ?enter= into the address
     window.localStorage.removeItem(KEY)
     setWidth(1024)
     mockApplyLocalOps.mockClear()

@@ -77,10 +77,20 @@ const SCALE = 0.02          // the rig's one exposure number (moxir rig files ph
 const r3 = (v) => Math.round(v * 1000) / 1000
 
 /** Candela per unit at its zoom (fixtures.json photometry, the same as moxir_v1.py / epic_placement.py). */
+/** The type a lamp's PHOTOMETRY, reach, penumbra and haze are looked up by: the rig file's own stand-in (`profile.stand_in`, a
+ * lamp with no profile of its own, e.g. a Platina bar drawn as an IP PAR) when it names one, else its type. A type that
+ * no table knows used to fall to the 1000 cd default (intensity 20, ~30x dimmer than the PAR it stands in for). Pure. */
+export const photoKind = (f) => (typeof f?.profile?.stand_in === 'string' && f.profile.stand_in ? f.profile.stand_in : f?.type)
 export const candelaOf = (f) => {
     const half = f.angle_rad ?? 0.1
     const deg = (2 * half * 180) / Math.PI
-    switch (f.type) {
+    // The unit's OWN photometry (the rig file's profile.photometry, read from the fixture library): the maker's lux at a
+    // distance (candela = lux x d^2; a zoom lamp spreads the same flux, so x (stated beam / current beam)^2), or the maker's
+    // total lumens over the cone of the unit's beam (a uniform cone: an upper bound on axis). Else the tables below.
+    const ph = f?.profile?.photometry
+    if (ph && ph.lux > 0 && ph.at_m > 0) return ph.lux * ph.at_m ** 2 * (ph.zoom && ph.beam_deg > 0 && deg > 0 ? (ph.beam_deg / deg) ** 2 : 1)
+    if (ph && ph.lumens > 0 && half > 0) return ph.lumens / (2 * Math.PI * (1 - Math.cos(half)))
+    switch (photoKind(f)) {
         case 'up-pl5403': return 609.56 / SCALE                         // beta's own PAR figure
         case 'up-b380f': return 1004000 / SCALE
         case 'up-hk1915': return 350000 * (4 / deg) ** 2
@@ -104,7 +114,7 @@ export const reachOf = (f, dims = null) => {
     if (hit === 0) return 0
     if (hit != null && hit > 0) return r3(Math.min(Math.max(hit, MIN_REACH), MISS_REACH_CAP))
     if (Number(f.throw_m) > 0) return r3(Math.min(Math.max(Number(f.throw_m), 1), MISS_REACH_CAP))
-    return DIST[f.type] || 24
+    return Number(f?.profile?.draw?.reach_m) || DIST[photoKind(f)] || 24
 }
 const PENUMBRA = { 'up-pl5403': 0.5, 'up-b380f': 0.1, 'up-hk1915': 0.5, 'up-250bsw': 0.3, 'ext-blinder': 0.6, 'ext-strobe': 0.6 }
 const HAZE = { 'up-b380f': 1, 'ext-lc-ultra-mk2': 1, 'up-la40wf': 1 }
@@ -257,7 +267,9 @@ export const positionOf = (f) => {
  * crane, beam, pipe, scaffold) — the words say what the piece is, not whose production it is. A deck, a speaker, a barrier
  * and a hoist's chain are not. Pure. */
 const STEEL_WORDS = new Set(['truss', 'girder', 'steel', 'tower', 'crane', 'beam', 'pipe', 'scaffold'])
-export const isSteelSolid = (s) => Boolean(s) && (s.steel === true || s.kind === 'tower' || /^truss/.test(String(s.kind || '')) ||
+// `opaque: true` (2026-11-12, owner N3835 "some lights go out from the objects"): a rig solid that says it is opaque (a deck, a
+// wing, an LED wall, a floor) stops a beam the same way, through the same flag the room already casts against.
+export const isSteelSolid = (s) => Boolean(s) && (s.steel === true || s.opaque === true || s.kind === 'tower' || /^truss/.test(String(s.kind || '')) ||
     String(s.id || '').split('-').some((w) => STEEL_WORDS.has(w)))
 const STEEL_FLAG = Object.freeze({ kind: STEEL_KIND })
 
@@ -316,11 +328,13 @@ export const patchOps = (doc, rig) => {
  * with why = inside_slab | on_floor (physics_check.py's words). Pure but for the report. */
 const beamOf = (f, hall, report) => {
     const length = reachOf(f, hall)
-    const haze = HAZE[f.type] ?? 0.35
-    if (length !== 0) return { visible: true, haze, length }
+    const haze = f?.profile?.draw?.haze ?? HAZE[photoKind(f)] ?? 0.35
+    // `emitter`: the lamp's own glowing face as the eye sees it (an LED bar is a 1 m strip, not a point); the room view draws it
+    const emitter = f?.emitter?.shape ? { emitter: { shape: f.emitter.shape, width: Number(f.emitter.width_m) || 0.1, length: Number(f.emitter.length_m) || 1 } } : {}
+    if (length !== 0) return { visible: true, haze, length, ...emitter }
     const at = lampFirstSurface(f, hall)
     report?.push({ id: f.id, why: at.why, surface: at.name })
-    return { visible: false, haze }
+    return { visible: false, haze, ...emitter }
 }
 
 /** v1.0's entities from the rig file. `report` (an array) collects the lamps whose first hit is 0 m. Pure. */
@@ -350,8 +364,17 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
                 components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: 'up-yz31p', unit: 1, circuit: f.circuit || '', position: 'floor', ...dmxOf(f) } } })
             continue
         }
+        if (f.machine) {
+            // a haze or smoke machine of any type (the rig unit says `machine`): a group the haze field reads through its library
+            // type (hazeField.js hazeMachinesOf: category + fluid_ml_per_min), never a lamp
+            const r = Array.isArray(f.r) && f.r.length === 3 ? f.r.map(Number) : [0, 0, 0]
+            out.push({ id: f.id, type: 'group', name: `${f.type.toUpperCase()} ${f.part || f.machine} (${f.status || ''})`.slice(0, 200), parentId: null,
+                components: { transform: { position: f.p, rotation: r, scale: [1, 1, 1] }, fixture: { type: f.type, unit: 1, circuit: f.circuit || '', position: 'floor', ...dmxOf(f) } } })
+            continue
+        }
         if (f.angle_rad == null) continue
         const fixture = { type: f.type, unit: 1, circuit: f.circuit || '', position: positionOf(f) }
+        if (f.hung === true) fixture.hung = true   // the rig says the lamp hangs: its body is drawn above the lens, its pan/tilt signs are a hung lamp's
         if (f.dmx) Object.assign(fixture, { universe: f.dmx.universe, address: f.dmx.address, mode: `${f.dmx.footprint}ch` })
         out.push({ id: f.id, type: 'spotLight', name: `${f.type.toUpperCase()} ${f.part} (${f.status})`, parentId: null,
             components: {
@@ -359,7 +382,7 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
                 appearance: { color: f.colour || '#e8e4dc', opacity: 1 },
                 // NO CUTOFF (sim-physics, 2026-10-09; rig-lib lightDistance): distance 0 is pure inverse square; the drawn beam
                 // keeps its own length (beam.length), the cast throw to the first thing it meets (reachOf)
-                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: PENUMBRA[f.type] ?? 0.4, decay: 2 },
+                light: { color: f.colour || '#e8e4dc', intensity: Math.round(candelaOf(f) * SCALE * 100) / 100, distance: 0, angle: f.angle_rad, penumbra: f?.profile?.draw?.penumbra ?? PENUMBRA[photoKind(f)] ?? 0.4, decay: 2 },
                 beam: beamOf(f, hall, report),
                 animation: { mode: 'static', speed: 1, amplitude: 1 },
                 fixture
@@ -373,7 +396,12 @@ export const v1Entities = (rig, { hall = null, report = null } = {}) => {
         const ghost = s.id.startsWith('rig-shell-')          // the building's ghost shell (outer walls, roof): seen through (owner 2026-10-12)
         const color = ghost ? '#9aa0a6' : s.id === 'rig-ash-wall' ? '#070707' : s.id.startsWith('rig-pa-') ? '#202226' : '#6f7378'
         const size = s.kind === 'tower' ? [0.29, r3(6 * s.s[1]), 0.29] : s.s
-        out.push(box(s.id, s.name.slice(0, 200), s.p, size, color, ghost ? (s.opacity ?? 0.2) : 1, ghost ? 0.9 : s.id === 'rig-ash-wall' ? 0.98 : 0.85, !ghost && isSteelSolid(s)))   // box(…, opacity, roughness, steel)
+        // A box entity is drawn standing ON its position (BoxObject.jsx lifts the mesh by half its height). So a solid that says
+        // anchor 'base' (p = the middle of its FOOT) goes in as it is, and one given by its centre is lowered by half its height.
+        // (2026-11-12, N3788: the 11-11 rule added half a height to the base ones, and every wing, the wall, the deck and the
+        // stands hung half their own height in the air; measured on the room's frame against the wall picture and a 2.63 m pole.)
+        const pos = s.anchor === 'base' ? s.p : [s.p[0], r3(s.p[1] - size[1] / 2), s.p[2]]
+        out.push(box(s.id, s.name.slice(0, 200), pos, size, color, ghost ? (s.opacity ?? 0.2) : 1, ghost ? 0.9 : s.id === 'rig-ash-wall' ? 0.98 : 0.85, !ghost && isSteelSolid(s)))   // box(…, opacity, roughness, steel)
     }
     return out
 }
@@ -436,7 +464,7 @@ export const v1Looks = (rig, ents, ctx, rigFile = RIG_FILE) => {
         return { id: lk.id.replace(/_/g, '-'), title: lk.title.slice(0, 60), intent: (lk.intent || '').slice(0, 480), ...(lk.act != null ? { act: lk.act } : {}), aims, colours, levels, ...(lk.parts ? { parts: lk.parts } : {}), ...(lk.laser_colour ? { laser_colour: lk.laser_colour } : {}), ...(lk.desk_caps ? { desk_caps: lk.desk_caps } : {}), ...(lk.motion ? { motion: lk.motion } : {}), ...(lk.heads ? { heads: lk.heads } : {}) }
     }
     const looks = rig.looks.some((l) => l.id === 'black') ? rig.looks : [{ id: 'black', title: 'The black', intent: 'Nothing lit; the smoke stays. 3-5 s before every laser moment and before the roof.', parts: {} }, ...rig.looks]
-    return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: 'still-smoking', looks: looks.map(lookOf) }
+    return { source: rigFile === RIG_FILE ? `${RIG_FILE} (MOXIR v1.0, scripts/place/moxir_v1.py)` : `${rigFile} (${rig.version || 'MOXIR'})`, writtenAt: '2026-10-08', defaultLook: rig.defaultLook || 'still-smoking', looks: looks.map(lookOf) }
 }
 
 /** A rig file's OWN cue list (MOXIR v2 layouts, 2026-10-09: rig.cues [{look, name, fade, hold}], one per look it carries), else
@@ -467,12 +495,14 @@ export const V1_HAZE_SIGMA = 0.0169
 // chosen by eye on the real GPU in Lite (0.04 read as black, 0.3 shows columns, roof steel and the truss at a low level
 // while every look keeps its contrast). A measured lux reading on the night replaces it.
 export const V1_AMBIENT = 0.3
-export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT, atmosphere = null } = {}) => [
+// `exposure`: a rig that states its own camera level (rig.camera.exposure, measured for its lamps) is drawn at it; else the
+// document's level is left alone (MOXIR's rooms run at 1).
+export const v1RenderOps = ({ sigma = V1_HAZE_SIGMA, ambient = V1_AMBIENT, atmosphere = null, exposure = null } = {}) => [
     // exposure.auto false: Full's camera adaptation (autoExposure.js, gain up to 3x) opened "the black" into a lit brown
     // hall (seen 10-08, Full, Floor z 38) — the old "flat brown" again. Full now draws at the room's one exposure, as Lite does.
     // A rig file that states its own `atmosphere` (MOXIR v2 B tuned, 2026-10-09: the ONE machine's two-zone haze) is drawn
     // with it; else v1.0's one uniform sigma.
-    { type: 'setRenderSettings', payload: { patch: { atmosphere: atmosphere ? atmosphereOfRig(atmosphere) : { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false } } } },
+    { type: 'setRenderSettings', payload: { patch: { atmosphere: atmosphere ? atmosphereOfRig(atmosphere) : { scattering: sigma, anisotropy: 0.7, haze: null }, exposure: { auto: false }, ...(exposure > 0 ? { toneMappingExposure: exposure } : {}) } } },
     { type: 'setWorldState', payload: { patch: { ambientLight: { color: '#a39c92', intensity: ambient } } } }
 ]
 
@@ -783,7 +813,7 @@ const main = async () => {
     // (an empty scratch desk) then does not drive the room (showClock.js showDriver)
     ops.push({ type: 'setMappingState', payload: { patch: { loop: rig.loop !== false, showEpoch: Date.now(), ...(rig.showSource ? { showSource: rig.showSource } : {}) } } })
     if (!looksOnly) ops.push({ type: 'setPresentationState', payload: { patch: viewsOf(rig) } })
-    if (!looksOnly) ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null }))
+    if (!looksOnly) ops.push(...v1RenderOps({ ambient: Number(args.ambient ?? V1_AMBIENT), atmosphere: rig.atmosphere || null, exposure: Number(rig.camera?.exposure) || null }))
     say(`${project} @ v${got.body.version}: ${looksOnly ? 'looks only — ' : `delete ${old.length}, create ${ents.length}, `}${looks.looks.length} looks, ${cues.length} cues; ${ops.length} ops`)
     if (args.out) {
         fs.mkdirSync(String(args.out), { recursive: true })

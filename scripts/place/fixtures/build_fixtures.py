@@ -467,11 +467,44 @@ def panel(p):
             "parts": ["Base", "Yoke", "Head", "Lens"], "objects": [base_o, yoke_o, head_o, lens_o]}
 
 
+def led_bar(p):
+    """An LED bar (a pixel line): a long aluminium profile, one long window of cells on its front, two omega
+    brackets on its back. No motor: it is hung or stood by hand. At home it lies on its brackets, window up
+    (+Z here, +Y in glTF), its length along X; the rig turns it to stand or to hang."""
+    ln, w, h = (v * MM for v in p["box_mm"])  # length (X), width (Y), height with the brackets
+    br = p.get("bracket_h_mm", 24) * MM
+    base = Part("Base")
+    for sx in (-1, 1):  # the two omega brackets: a foot plate and two cheeks each
+        x = sx * ln * p.get("bracket_at", 0.3)
+        base.box((x, 0, 0.002), (0.06, w, 0.004), "Metal")
+        for sy in (-1, 1):
+            base.box((x, sy * w * 0.3, br / 2), (0.06, 0.004, br), "Metal")
+    base_o = base.build((0, 0, 0))
+    hd = Part("Head")
+    hd.box((0, 0, br + (h - br) / 2), (ln, w, h - br), "Body", bevel=0.004)
+    for sx in (-1, 1):  # the end caps
+        hd.box((sx * (ln / 2 - 0.006), 0, br + (h - br) / 2), (0.012, w + 0.002, h - br + 0.002), "Trim")
+    for k in range(p.get("fins", 3)):  # the cooling ribs along the back
+        y = -w / 2 + w * (k + 0.5) / p.get("fins", 3)
+        hd.box((0, y, br - 0.004), (ln * 0.9, 0.006, 0.008), "Trim")
+    lens = Part("Lens")
+    cells = p.get("cells", 16)
+    ww = p.get("window_w_mm", 70) * MM
+    span = ln - 0.03
+    for k in range(cells):  # the window, cut into its cells so a chase reads on the body
+        x = -span / 2 + span * (k + 0.5) / cells
+        lens.box((x, 0, h + 0.001), (span / cells - 0.004, ww, 0.002), "Lens")
+    head_o = hd.build((0, 0, 0), parent=base_o)
+    lens_o = lens.build((0, 0, 0), parent=head_o)
+    return {"lensY": h + 0.002, "motion": "none", "aimedByHand": True, "cells": cells,
+            "parts": ["Base", "Head", "Lens"], "objects": [base_o, head_o, lens_o]}
+
+
 ARCHETYPES = {"moving-head": moving_head, "par": par_can, "laser": laser_box,
               "co2-jet": co2_jet, "spark-machine": spark_machine, "smoke-machine": smoke_machine,
               # a hazer is drawn as the same kind of box (it is one: pump, heater, fan, nozzle);
               # its own archetype name keeps its plot symbol (plotSymbols.js: H, not Z)
-              "hazer": smoke_machine, "strobe": panel, "blinder": panel}
+              "hazer": smoke_machine, "strobe": panel, "blinder": panel, "led-bar": led_bar}
 
 
 # ---------------------------------------------------------------------------

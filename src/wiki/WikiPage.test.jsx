@@ -142,5 +142,16 @@ describe('WikiPage bar keeps the project', () => {
         expect(nodes?.getAttribute('href')).toContain('show')
         window.sessionStorage.clear()
     })
-})
 
+    it('G4: the bar carries Desk | Perform for the last project, neither half marked; none without one', () => {
+        window.sessionStorage.clear()
+        const empty = render(<WikiPage />)
+        expect(empty.container.querySelector('.sbar-switch')).toBeNull()
+        empty.unmount()
+        window.sessionStorage.setItem('dii.lastProject', JSON.stringify({ space: 'lab', project: 'show' }))
+        const { container } = render(<WikiPage />)
+        expect(container.querySelector('.sbar-switch a[href="/lab/perform/show?from=raw"]')).toBeTruthy()
+        expect(container.querySelector('.sbar-switch [aria-current]')).toBeNull()
+        window.sessionStorage.clear()
+    })
+})
