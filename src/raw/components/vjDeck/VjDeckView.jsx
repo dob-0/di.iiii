@@ -98,6 +98,12 @@ const FOLLOW_KEY = 'di.vjDeck.lightsFollow'
 export const FOLLOW_POLL_MS = 250
 // A desk change that names the cue the deck itself just fired, inside this, is the deck's own echo.
 export const FOLLOW_ECHO_MS = 1500
+// A slower desk: a reading that names any look the deck fired inside this is still the deck's echo.
+export const FOLLOW_ECHO_LOOK_MS = 5000
+// One summary request is given up after this, and after a failed or not-own reading the next
+// request waits this long (the light server being down must not cost 4 requests a second).
+export const FOLLOW_TIMEOUT_MS = 2000
+export const FOLLOW_RETRY_MS = 2000
 const followKeyOf = (projectId) => `${FOLLOW_KEY}.${projectId || 'local'}`
 const readFollow = (projectId) => {
     try { return window.localStorage.getItem(followKeyOf(projectId)) === 'on' } catch { return false }
@@ -443,7 +449,8 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const followLive = useRef({})
     followLive.current = { lightsFollow, cues, onFireCue, onColumnLaunch }
     const fireSeq = useRef(0)
-    const lastDeckFire = useRef({ cueId: '', look: '', at: 0 })
+    // Every cue the deck fired lately (newest last), of any kind: the desk-follow echo guard reads it.
+    const deckFires = useRef([])
     // fireLight false = the launch came FROM the desk: the column plays, the desk is not told.
     const reportColumnLaunch = (column, { fireLight = true } = {}) => {
         const live = followLive.current
@@ -453,7 +460,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         if (!cue) { setCueStatus(`Column ${column + 1} has no cue`); return }
         if (typeof live.onFireCue !== 'function') { setCueStatus('the light desk did not answer'); return }
         const seq = (fireSeq.current += 1)
-        lastDeckFire.current = { cueId: cue.id, look: cueLightTarget(cue)?.kind === 'look' ? cueLightTarget(cue).id : '', at: now() }
+        deckFires.current = [...deckFires.current, { cueId: cue.id, look: cueLightTarget(cue)?.kind === 'look' ? cueLightTarget(cue).id : '', at: now() }].slice(-16)
         const name = cue.name || cue.id
         setCueStatus(`Fired ${name}`)
         let answer
@@ -478,15 +485,28 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         let timer = null
         let busy = false
         let controller = null
+        let abortTimer = null
+        let nextAt = 0
         const visible = () => typeof document === 'undefined' || document.visibilityState === 'visible'
         const apply = (reading) => {
             const live = followLive.current
             const sig = [reading.lookId, reading.layerFiredAt, reading.cueIndex, reading.cueFiredAt].join('|')
-            if (deskSeen.current === null) { deskSeen.current = sig; return }
-            if (deskSeen.current === sig) return
-            deskSeen.current = sig
-            const fired = lastDeckFire.current
-            if (fired.look && reading.lookId === fired.look && live.now() - fired.at < FOLLOW_ECHO_MS) return
+            const before = deskSeen.current
+            deskSeen.current = { sig, lookId: reading.lookId }
+            if (before === null || before.sig === sig) return
+            // Echo guard. The desk answers the deck's own cue a moment later, and a scene cue has no
+            // look to compare, so the guard goes by time first (the deck fired recently, of any
+            // kind: its echo), then by look (any look the deck fired lately: a slow desk), then by
+            // "only the cue index/firedAt moved while the look stayed" (the deck re-fired a cue).
+            // Known limit: the server's desk summary has no firedAt on layers, so layerFiredAt is
+            // always null; the desk re-firing the SAME look is seen only through cue index/firedAt.
+            const at = live.now()
+            const fires = deckFires.current.filter((fire) => at - fire.at < FOLLOW_ECHO_LOOK_MS)
+            deckFires.current = fires
+            const lastFire = fires[fires.length - 1]
+            if (lastFire && at - lastFire.at < FOLLOW_ECHO_MS) return
+            if (reading.lookId && fires.some((fire) => fire.look && fire.look === reading.lookId)) return
+            if (fires.length && reading.lookId === before.lookId) return
             if (!reading.lookId) return
             const own = (Array.isArray(live.cues) ? live.cues : [])
                 .filter((cue) => cue && cueLightTarget(cue)?.kind === 'look' && cueLightTarget(cue).id === reading.lookId)
@@ -498,22 +518,39 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         }
         const tick = async () => {
             if (busy || stopped || !visible()) return
+            if (followLive.current.now() < nextAt) return
             busy = true
             controller = typeof AbortController === 'function' ? new AbortController() : null
+            abortTimer = setTimeout(() => { try { controller?.abort() } catch { /* nothing to cancel */ } }, FOLLOW_TIMEOUT_MS)
+            let good = false
             try {
                 const reading = await readLightFollowState({ spaceId: spaceId || null, signal: controller?.signal })
-                if (!stopped && reading.state === 'own') apply(reading)
-            } catch { /* aborted, or the desk went away: the next tick asks again */ } finally { busy = false }
+                if (stopped) return
+                if (reading.state === 'own') { good = true; apply(reading) }
+            } catch { /* aborted, or the desk went away */ } finally {
+                clearTimeout(abortTimer)
+                abortTimer = null
+                busy = false
+                if (!stopped) {
+                    // Off, other show, failed or timed out: forget the baseline (the first good reading
+                    // after only sets it) and wait before asking again.
+                    if (good) nextAt = 0
+                    else { deskSeen.current = null; nextAt = followLive.current.now() + FOLLOW_RETRY_MS }
+                }
+            }
         }
         const start = () => {
             if (timer || stopped || !visible()) return
             deskSeen.current = null
+            nextAt = 0
             timer = setInterval(tick, FOLLOW_POLL_MS)
             tick()
         }
         const stop = () => {
             if (timer) clearInterval(timer)
             timer = null
+            if (abortTimer) clearTimeout(abortTimer)
+            abortTimer = null
             try { controller?.abort() } catch { /* nothing to cancel */ }
         }
         const onVisibility = () => { if (visible()) start(); else stop() }
