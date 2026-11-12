@@ -13,7 +13,7 @@ describe('Body effect registry', () => {
         expect(EFFECT_TYPE_IDS).toContain('top.matte')
         expect(TOP_OPERATORS['top.matte'].label).toBe('Body')
         expect(effectMainParams('top.matte').slice(0, 3).map((p) => p.name)).toEqual(['soft', 'drift', 'echo'])
-        expect(effectMainParams('top.matte').map((p) => p.name)).toEqual(['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert'])
+        expect(effectMainParams('top.matte').map((p) => p.name)).toEqual(['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert', 'keep'])
     })
 
     it('keeps defaults that give a clean black body on a colour, flat, still, no echo', () => {

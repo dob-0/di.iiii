@@ -377,7 +377,9 @@ void main() {
             colour('back', 'Background', '#e8456b'),
             param('shade', 'Shade', 0, 0, 1),
             param('fill', 'Fill', 1, 0, 1),
-            toggle('invert', 'Invert')
+            toggle('invert', 'Invert'),
+            // 0 = flat background colour; 1 = the picture stays around the person, dimmed (the person stands out of the room)
+            param('keep', 'Keep room', 0, 0, 1)
         ],
         fragment: `
 uniform sampler2D self;
@@ -389,6 +391,7 @@ uniform float p_echo;
 uniform float p_shade;
 uniform float p_fill;
 uniform float p_invert;
+uniform float p_keep;
 uniform vec3 p_colour;
 uniform vec3 p_back;
 vec3 hueTurn(vec3 c, float turns) {
@@ -414,6 +417,7 @@ void main() {
     if (matte_ready < 0.5) { gl_FragColor = vec4(pic, 0.0); return; }
     float m = edge(person(vec2(0.0)));
     vec3 back = clamp(hueTurn(p_back, time * p_drift * 0.125), 0.0, 1.0);
+    back = mix(back, pic * 0.42, p_keep);
     vec3 body = mix(p_colour, back * 0.55, p_shade);
     float seen = p_invert > 0.5 ? 1.0 - m : m;
     vec3 inside = mix(pic, body, p_fill);
@@ -510,7 +514,12 @@ float ds_luma(vec2 p) { return dot(texture2D(a, p).rgb, vec3(0.299, 0.587, 0.114
 float ds_hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
 float ds_cell(vec2 c, vec2 cell) {
     vec2 o = cell * 0.25;
-    return 0.25 * (ds_luma(c + vec2(o.x, o.y)) + ds_luma(c + vec2(-o.x, o.y)) + ds_luma(c + vec2(o.x, -o.y)) + ds_luma(c + vec2(-o.x, -o.y)));
+    return 0.5 * (ds_luma(c + o) + ds_luma(c - o));
+}
+vec4 ds_spline(float f) {
+    float f2 = f * f;
+    float f3 = f2 * f;
+    return vec4(1.0 - 3.0 * f + 3.0 * f2 - f3, 3.0 * f3 - 6.0 * f2 + 4.0, -3.0 * f3 + 3.0 * f2 + 3.0 * f + 1.0, f3) / 6.0;
 }
 void main() {
     // the scanner bar: where it is on its way down, and the tremble of the picture under it
@@ -561,10 +570,16 @@ void main() {
         vec2 cell = texel * (8.0 + p_sensor * 72.0);
         vec2 at = p / cell - 0.5;
         vec2 base = floor(at);
-        vec2 f = fract(at);
-        f = f * f * (3.0 - 2.0 * f);
-        float low = mix(mix(ds_cell((base + vec2(0.5, 0.5)) * cell, cell), ds_cell((base + vec2(1.5, 0.5)) * cell, cell), f.x),
-                        mix(ds_cell((base + vec2(0.5, 1.5)) * cell, cell), ds_cell((base + vec2(1.5, 1.5)) * cell, cell), f.x), f.y);
+        vec4 wx = ds_spline(fract(at.x));
+        vec4 wy = ds_spline(fract(at.y));
+        float low = 0.0;
+        for (int j = 0; j < 4; j++) {
+            float wj = j == 0 ? wy.x : j == 1 ? wy.y : j == 2 ? wy.z : wy.w;
+            for (int i = 0; i < 4; i++) {
+                float wi = i == 0 ? wx.x : i == 1 ? wx.y : i == 2 ? wx.z : wx.w;
+                low += wi * wj * ds_cell((base + vec2(float(i) - 0.5, float(j) - 0.5)) * cell, cell);
+            }
+        }
         d = pow(smoothstep(0.04, 0.85, low), 1.1);
     }
 

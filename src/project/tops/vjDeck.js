@@ -88,7 +88,7 @@ export const EFFECT_TYPES = {
     'top.freeze': { main: ['hold'] },
     'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back', 'drift', 'flash'] },
     'top.lineart': { main: ['bands', 'width', 'colour'] },
-    'top.matte': { main: ['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert'] },
+    'top.matte': { main: ['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert', 'keep'] },
     'top.glitch': { main: ['amount', 'speed', 'split'] },
     'top.blocks': { main: ['amount', 'size', 'rate', 'shift', 'hold'] },
     'top.pixelate': { main: ['size', 'levels', 'grey'] },
