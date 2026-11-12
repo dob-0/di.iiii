@@ -12,12 +12,16 @@
 const store = require('../agentMailStore')
 const { findUserById, listUsers } = require('../userStore')
 const { isGuestSubject } = require('../authAccess')
+const { getDb } = require('../db')
 
 const handleOf = (user) => user?.username || user?.id || null
 
 const registerAgentMailRoutes = (router, { deps = {} } = {}) => {
   const s = { ...store, ...deps.store }
   const users = { findUserById, listUsers, ...deps.users }
+  const spaceInfo = deps.spaceInfo || ((id) => {
+    try { return getDb().prepare('SELECT kind, is_public FROM spaces WHERE id = ?').get(String(id)) } catch { return null }
+  })
 
   const accountOf = (req) => {
     const state = req.authState
@@ -26,10 +30,22 @@ const registerAgentMailRoutes = (router, { deps = {} } = {}) => {
     return state
   }
 
+  // A space counts only if it is somebody's own to share: not the communal open space (kind 'global', index.js
+  // ensureOpenSpace), not an account's sandbox, not anything public to all (spaces.is_public, db.js). Every account
+  // can hold the open space, so counting it would make every pair "share" and leave the stranger gate empty.
+  // users.spaces is a flat list of granted ids (userStore.js); roles are per account (users.role), not per space,
+  // so "has a grant" is the membership there is. An id with no spaces row is treated as an ordinary space.
+  const countsAsShared = (spaceId) => {
+    const row = spaceInfo(spaceId)
+    return !(row && (row.kind === 'global' || row.kind === 'sandbox' || Number(row.is_public) === 1))
+  }
+
+  // Only the SENDER being unrestricted (the owner or an admin writing out) skips the gate. A recipient being
+  // unrestricted must not: the admin is the account strangers will target most.
   const sharesASpace = (mine, theirs) => {
-    if (mine.isUnrestricted || theirs.isUnrestricted) return true
+    if (mine.isUnrestricted) return true
     const set = new Set(Array.isArray(mine.spaces) ? mine.spaces : [])
-    return (Array.isArray(theirs.spaces) ? theirs.spaces : []).some((id) => set.has(id))
+    return (Array.isArray(theirs.spaces) ? theirs.spaces : []).some((id) => set.has(id) && countsAsShared(id))
   }
 
   const find = (handle) => {

@@ -24,7 +24,10 @@ const people = {
     kiara: { id: 'kiara', username: 'kiara', spaces: ['s1', 's2'] },
     eter: { id: 'eter', username: 'eter', spaces: ['s2'] },
     stranger: { id: 'stranger', username: 'sam', spaces: ['x'] },
-    stranger2: { id: 'stranger2', username: 'sue', spaces: ['y'] }
+    stranger2: { id: 'stranger2', username: 'sue', spaces: ['y'] },
+    admin: { id: 'admin', username: 'owner', spaces: [], isUnrestricted: true },
+    pub1: { id: 'pub1', username: 'pub1', spaces: ['open', 'pubroom', 'sandbox-x'] },
+    pub2: { id: 'pub2', username: 'pub2', spaces: ['open', 'pubroom', 'sandbox-x'] }
 }
 for (const n of ['r1', 'r2', 'r3', 'r4', 'r5', 'r6']) people[n] = { id: n, username: n, spaces: [`z-${n}`] }
 
@@ -33,12 +36,15 @@ beforeEach(() => {
     initDb(':memory:')
     router = makeRouter()
     registerAgentMailRoutes(router, {
-        deps: { users: { findUserById: (id) => people[id] || null, listUsers: () => Object.values(people) } }
+        deps: {
+            spaceInfo: (id) => ({ open: { kind: 'global', is_public: 1 }, pubroom: { kind: 'normal', is_public: 1 }, 'sandbox-x': { kind: 'sandbox', is_public: 0 } })[id] || null,
+            users: { findUserById: (id) => people[id] || null, listUsers: () => Object.values(people) }
+        }
     })
 })
 afterEach(() => closeDb())
 
-const as = (id) => ({ authenticated: true, type: 'session', subject: id, spaces: people[id]?.spaces || [] })
+const as = (id) => ({ authenticated: true, type: 'session', subject: id, spaces: people[id]?.spaces || [], isUnrestricted: Boolean(people[id]?.isUnrestricted) })
 const call = async (route, { user, body = {}, query = {}, params = {} } = {}) => {
     const res = makeRes()
     await router.routes[route]({ authState: user ? as(user) : null, body, query, params }, res)
@@ -89,6 +95,24 @@ describe('people who share a space', () => {
         expect(long.body.max).toBe(4000)
         expect((await send('ana', 'kiara@example.org')).statusCode).toBe(404)
         expect(sent.statusCode).toBe(201)
+    })
+})
+
+describe('who counts as a stranger', () => {
+    it('an unrestricted recipient (the owner) still gets a stranger as a held request', async () => {
+        const res = await send('stranger', 'owner', 'hello owner')
+        expect(res.body.status).toBe('request_sent')
+        expect((await send('stranger', 'owner', 'again')).statusCode).toBe(409)
+        const box = await call('get /api/agent-mail/inbox', { user: 'admin' })
+        expect(box.body.messages).toEqual([])
+        expect(box.body.requests).toHaveLength(1)
+    })
+    it('an unrestricted sender may write to anyone directly', async () => {
+        expect((await send('admin', 'sam', 'hi')).body.status).toBe('delivered')
+    })
+    it('two accounts that only share the open space, a public space or a sandbox id are strangers', async () => {
+        const res = await send('pub1', 'pub2', 'hi')
+        expect(res.body.status).toBe('request_sent')
     })
 })
 
