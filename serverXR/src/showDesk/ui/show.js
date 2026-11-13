@@ -955,6 +955,7 @@
         if (target === 'laser-master') return $('laserMaster')
         return null
     }
+    const DIRECT = /^(?:lamp:|layer:)/
     const midiMove = (m, raw) => {
         if (m.relative && (m.target === 'fx:mode' || m.target === 'fx:spatial')) {
             const list = m.target === 'fx:mode' ? S.light && S.light.fxModes : S.light && S.light.fxSpatial
@@ -975,6 +976,7 @@
         const cur = Math.min(max, Math.max(min, Number(input.value)))
         let next
         if (m.relative) next = cur + ((raw < 64 ? raw : raw - 128) * span) / 200 // two's complement steps from the screen's value
+        else if (DIRECT.test(m.target)) next = min + (raw / 127) * span // the three faders: always the fader's own value, no pick-up (owner 2026-11-13)
         else {
             const t = min + (raw / 127) * span
             const tol = span / 50
@@ -990,7 +992,7 @@
         const places = (String(input.step).split('.')[1] || '').length
         const stepped = step > 0 ? Number((Math.round((next - min) / step) * step + min).toFixed(places)) : next
         input.value = String(Math.min(max, Math.max(min, stepped)))
-        if (!m.relative) pickup.get(m.target).set = Number(input.value)
+        if (!m.relative && pickup.get(m.target)) pickup.get(m.target).set = Number(input.value)
         input.dispatchEvent(new Event('input'))
     }
     // A scene key beyond the matrix, the two bottom corners: the next or the previous scene in the lighting desk's order.

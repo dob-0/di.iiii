@@ -812,6 +812,18 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         await settle()
         expect(posts.at(-1)).toEqual({ url: '../light/api/master', body: { master: 201 } })
     })
+    it('faders 1-3 are direct: a sweep 0..127 with the slider pulled back by the server gives the full 0..255 and 0..1', async () => {
+        const lamp = lampRow('f2').querySelector('input')
+        for (const v of [0, 20, 40, 60, 80, 100, 127]) {
+            midi(0xbe, 17, v)
+            await settle()
+            lamp.value = '46' // the server's state re-rendered the slider (scene recall, echo)
+        }
+        const levels = posts.filter((p) => /light\/api\/fixtures?/.test(p.url) || p.body.level !== undefined || p.body.values).map((p) => JSON.stringify(p.body))
+        expect(levels.length).toBeGreaterThan(5)
+        expect(levels.join(' ')).toMatch(/255/)
+        expect(levels[levels.length - 1]).toMatch(/255/)
+    })
     it('a pot on the live look picks up too, then posts looks/edit with the live id', async () => {
         midi(0xbe, 4, 0) // level is 1 on the screen: a pot at 0 waits
         await settle()
