@@ -33,7 +33,8 @@
     const EMITTERS = ['r', 'g', 'b', 'w', 'a', 'y', 'warm', 'cool', 'uv', 'lime']
     const LIVE_SEND_MS = 60 // the live strip sends each field at most this often; the last value always goes
     // The laser desk's own swatches (laser/ui/desk.js SWATCHES), then the extra colours of the show's palette.
-    const SWATCHES = ['#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60', '#e0001a', '#f0eaff', '#7a20ff']
+    // 2026-11-13 (owner: "real 255 red color in colors pallet"): pure red #ff0000 (R 255, G 0, B 0) first; #ff2030 stays.
+    const SWATCHES = ['#ff0000', '#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60', '#e0001a', '#f0eaff', '#7a20ff']
     // A copy of shared/laserShapes.cjs LASER_SHAPES (showDesk.test.js keeps it equal); the desk's own `shapes` wins when it
     // sends one. "spots" (dots) comes first on the strip, so any live look becomes dots with one tap.
     const SHAPES = ['circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid',

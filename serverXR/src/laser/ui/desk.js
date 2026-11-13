@@ -13,7 +13,7 @@
     // The desk's colours (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): the hue
     // wheel a laser draws well, full colours, then two whites. Green is here to pick; it is no seed look's colour.
     const SWATCHES = [
-        ['#ff2030', 'Red'], ['#ff6a00', 'Orange'], ['#ffb020', 'Amber'], ['#ffe600', 'Yellow'], ['#a8ff00', 'Lime'],
+        ['#ff0000', 'Pure red 255'], ['#ff2030', 'Red'], ['#ff6a00', 'Orange'], // #ff0000 added 2026-11-13 (owner: "real 255 red") ['#ffb020', 'Amber'], ['#ffe600', 'Yellow'], ['#a8ff00', 'Lime'],
         ['#20ff60', 'Green'], ['#00ffb0', 'Mint'], ['#20d8ff', 'Cyan'], ['#0090ff', 'Sky'], ['#3050ff', 'Blue'],
         ['#5a2dff', 'Indigo'], ['#8040ff', 'Violet'], ['#c000ff', 'Purple'], ['#ff30c0', 'Magenta'], ['#ff5080', 'Pink'],
         ['#ffffff', 'White'], ['#ffd8a8', 'Warm white']
