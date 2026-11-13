@@ -956,6 +956,22 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         await settle()
         expect(editPosts().at(-1).body).toEqual({ id: 'ring', pulseBeats: 2 })
     })
+    it('a stopped cube: the K2 laser pots and encoders are ignored and say so; the lights pot still works; a running cube takes them again (2026-11-13)', async () => {
+        desk.cubes = desk.cubes.map((c) => ({ ...c, engineDark: 'stopped' }))
+        await refresh()
+        posts = []
+        midi(0xbe, 4, 127)
+        midi(0xbe, 4, 64) // pot 1: laser level
+        await settle()
+        expect(editPosts()).toEqual([])
+        expect($('midiLine').textContent).toContain('live:level ignored: the cube is stopped')
+        desk.cubes = desk.cubes.map((c) => ({ ...c, engineDark: null }))
+        await refresh()
+        midi(0xbe, 4, 127)
+        midi(0xbe, 4, 64)
+        await settle()
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
+    })
     it('a switch under a pot parks it: the pot moves nothing until it passes the screen\'s value again', async () => {
         midi(0xbe, 4, 127)
         midi(0xbe, 4, 64)
