@@ -24,6 +24,9 @@ const LASER_SHAPES = [
     'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse',
     // 2026-11-13: the smallest dots the cube may draw, many of them over the whole field.
     'stardust',
+    // 2026-11-13, the owner: "vertical lines going down", "wobble ones", "one line in the middle horizontal and other lines
+    // going from there like light points".
+    'rain', 'curtain', 'rays',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
@@ -136,6 +139,8 @@ const markQuarter = (n, marks) => clamp(Math.floor(n / (4 * marks)), 3, 12)
 const SPOT_R = 0.12
 // The smallest stardust dot, a field radius: 0.019 makes a 0.038 circle, above the engine's still-beam window (0.032).
 const STARDUST_R = 0.019
+// The light point at the head of a ray: half a spot (SPOT_R), a point rather than a ball.
+const LIGHT_R = 0.06
 // Morse's dash: still a stroke at MARK_MIN_SIZE turned 45°, where its box is smallest (0.34 × 0.15 / √2 = 0.036 of the field).
 const DASH = 0.34
 // The places spots rest on: a honeycomb 0.36 apart inside the circle (19 places), so resting spots keep half a spot
@@ -462,6 +467,63 @@ const STROKES = {
             })
             return i % 2 === 0 ? line : line.reverse()
         })
+    },
+    // `copies` upright dashes (6, at most 10), one in each lane, falling top to bottom: a dash comes in whole at the top,
+    // falls in 2 beats and is gone at the bottom, then falls again. Each lane its own length (1 to 1.2) and its own
+    // place in the fall, so the dashes never fall as one row. A dash stays 1 long or more: at 0.7 (0.035 at size 0.05) the
+    // engine's still-beam guard read the smallest picture as dots (laserGuards.test.js), at 1 it reads strokes. Drawn down and up in turn, so each blank move is a short hop.
+    rain: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 6, 1, 10))
+        const lane = 2 / count
+        const each = Math.max(2, Math.floor(n / count))
+        return Array.from({ length: count }, (_, i) => {
+            const x = -1 + lane * (i + 0.5)
+            const length = 1 + 0.2 * hash01(i, 0, 41)
+            const f = (((beat / 2 + hash01(i, 0, 42)) % 1) + 1) % 1
+            const top = 1 - f * (2 - length)
+            return along(i % 2 === 0 ? [[x, top], [x, top - length]] : [[x, top - length], [x, top]], each)
+        })
+    },
+    // `copies` upright lines (5, at most 8), each held at its ends like a string, a wave running DOWN along it half a
+    // wavelength a beat, each line a little behind the next: the curtain of the wobble. The wave never reaches the next line
+    // (its swing is 0.45 of a lane at most).
+    curtain: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 5, 1, 8))
+        const lane = 2 / count
+        const amp = Math.min(0.18, 0.45 * lane)
+        const each = Math.max(16, Math.floor(n / count))
+        return Array.from({ length: count }, (_, i) => {
+            const x0 = -1 + lane * (i + 0.5)
+            const line = Array.from({ length: each }, (_, j) => {
+                const s = j / (each - 1)
+                const y = 1 - s * 2
+                return [x0 + amp * Math.sin(Math.PI * s) * Math.sin(TAU * (0.75 * y + beat / 2) + i * 0.9), y]
+            })
+            return i % 2 === 0 ? line : line.reverse()
+        })
+    },
+    // One level line across the middle and `copies` places on it (5, 3 to 8) that shoot light: from each, a short beam
+    // (0.45 at most) leaves the line up and one leaves it down, each with a small light point (LIGHT_R) at its head, and
+    // flies out to the edge in 2 beats, where it is gone and the place fires again. Each place a share of the 2 beats
+    // behind the one before: a ripple of light along the line. The point stops its own width inside the field.
+    rays: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 5, 3, 8))
+        const lane = 2 / count
+        const far = 1 - LIGHT_R
+        const paths = [[[-1, 0], [1, 0]]]
+        for (let i = 0; i < count; i += 1) {
+            const f = (((beat / 2 - i / count) % 1) + 1) % 1
+            const head = far * f
+            const tail = Math.max(0, head - 0.45)
+            if (head - tail < 0.05) continue
+            const x = -1 + lane * (i + 0.5)
+            for (const dir of [1, -1]) {
+                const from = [x, dir * tail]
+                paths.push([from, ...arcPath(x, dir * head, LIGHT_R, dir > 0 ? -Math.PI / 2 : Math.PI / 2)])
+            }
+        }
+        // At most 1600 points: 11 strokes and their hops at 1992 came to 2334, one over the Ultra's 2333 frame budget.
+        return byLength(paths, Math.min(n, 1600))
     },
     // The scenes: a few lines, circles and dots each, moving on the beat. A dot is a small ring (SPOT_R), as the spots are,
     // and it only moves: it never squashes, smears or fades.

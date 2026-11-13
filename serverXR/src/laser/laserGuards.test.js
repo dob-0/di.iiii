@@ -324,6 +324,20 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
             }
         }
     })
+// 2026-11-13: the owner's animations rain (falling dashes), curtain (upright wobble) and rays (light shot out of a middle line).
+    it('rain, curtain and rays as sent are never still at any quarter beat over 16, at 0.5, 0.1 and 0.05, and never put 40 % in one window', () => {
+        const plan = at(30000)
+        expect(LASER_SHAPES.slice(33)).toEqual(['rain', 'curtain', 'rays'])
+        for (const shape of LASER_SHAPES.slice(33)) {
+            for (const size of [0.5, 0.1, 0.05]) {
+                for (let beat = 0; beat < 16; beat += 0.25) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0, points: 300, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                    expect(stillBeams(frame), `${shape} ${size} beat ${beat}`).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, `${shape} ${size} beat ${beat}`).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
     it('the scenes as sent are never still at any quarter beat over 16, and never put 40 % in one window', () => {
         const plan = at(30000)
         for (const shape of SCENES) {
@@ -503,7 +517,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(33)
+        expect(LASER_SHAPES.length).toBe(36)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))
