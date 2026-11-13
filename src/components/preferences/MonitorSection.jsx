@@ -47,7 +47,7 @@ const signatures = (panels) => {
     const sig = {}
     for (const m of panels?.machines?.rows || []) sig[`m:${m.id}`] = String(m.online)
     for (const n of panels?.network?.rows || []) sig[`n:${n.id}`] = `${n.ok}:${n.status}`
-    for (const a of panels?.agents?.rows || []) sig[`a:${a.sessionId}`] = a.status
+    for (const a of panels?.agents?.rows || []) sig[`a:${a.machine || ''}${a.sessionId}`] = a.status
     for (const s of panels?.services?.rows || []) sig[`s:${s.unit}`] = s.active
     for (const c of panels?.connected?.rows || []) sig[`c:${c.id}`] = `${c.state}:${c.detail}`
     for (const u of panels?.presence?.rows || []) sig[`u:${u.id}`] = String(u.people.length)
@@ -139,9 +139,10 @@ export default function MonitorSection({ onStats }) {
     const agentGroups = useMemo(() => {
         const groups = new Map()
         for (const a of panels.agents?.rows || []) {
-            if (!matches(query, a.title, a.account, a.branch, a.cwd, a.status)) continue
-            if (!groups.has(a.account)) groups.set(a.account, [])
-            groups.get(a.account).push(a)
+            if (!matches(query, a.title, a.account, a.machine, a.branch, a.cwd, a.status)) continue
+            const key = a.machine ? `${a.machine} / ${a.account}` : a.account
+            if (!groups.has(key)) groups.set(key, [])
+            groups.get(key).push(a)
         }
         return [...groups.entries()]
     }, [panels.agents, query])
@@ -281,6 +282,9 @@ export default function MonitorSection({ onStats }) {
 
                     <ModuleSection title="Agents" subtitle={`${panels.agents?.live ?? 0} live of ${panels.agents?.total ?? 0} sessions · accounts: ${(panels.agents?.accounts || []).join(', ') || 'none found'}`}>
                         <PanelNote panel={panels.agents} empty="No live agent sessions." />
+                        {(panels.agents?.remotes || []).filter((r) => !r.ok).map((r) => (
+                            <div key={r.name} className="monitor-note">{r.name}: not reachable ({r.error})</div>
+                        ))}
                         {agentGroups.map(([account, rows]) => (
                             <div key={account} className="monitor-group">
                                 <div className="monitor-group-title">{account} <span className="preferences-tree-tag">{rows.length}</span></div>

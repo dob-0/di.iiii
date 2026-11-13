@@ -73,6 +73,46 @@ function findClaudeHomes(home) {
     })
 }
 
+// Fixed, read-only command run on a remote machine over ssh. Never built from
+// a request or from config: only the ssh target comes from ~/.di/monitor.json.
+// One line per live session file: <path><TAB><json>. A session file whose pid
+// is gone is skipped (kill -0 works on Linux and macOS).
+const REMOTE_SESSIONS_COMMAND = [
+  'for f in "$HOME"/.claude*/sessions/*.json; do',
+  '[ -f "$f" ] || continue;',
+  "pid=$(sed -n 's/.*\"pid\":\\([0-9][0-9]*\\).*/\\1/p' \"$f\" | head -n 1);",
+  '[ -n "$pid" ] && kill -0 "$pid" 2>/dev/null || continue;',
+  'printf \'%s\\t\' "$f"; head -c 4096 "$f" | tr -d \'\\n\'; echo;',
+  'done'
+].join(' ')
+const SSH_ARGS = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=3']
+const SSH_TARGET = /^[A-Za-z0-9._@-]{1,100}$/
+
+function parseRemoteSessions(machine, out) {
+  const rows = []
+  for (const line of String(out).split('\n')) {
+    const tab = line.indexOf('\t')
+    if (tab < 0) continue
+    let rec
+    try { rec = JSON.parse(line.slice(tab + 1)) } catch { continue }
+    if (!rec || typeof rec.sessionId !== 'string') continue
+    const account = path.basename(path.dirname(path.dirname(line.slice(0, tab))))
+    rows.push({
+      machine,
+      account,
+      sessionId: rec.sessionId,
+      title: String(rec.name || rec.sessionId.slice(0, 8)).slice(0, 120),
+      status: rec.status || 'live',
+      kind: rec.kind || 'interactive',
+      branch: null,
+      cwd: typeof rec.cwd === 'string' ? rec.cwd : null,
+      model: null,
+      lastActivity: Number.isFinite(rec.updatedAt) ? new Date(rec.updatedAt).toISOString() : null
+    })
+  }
+  return rows
+}
+
 function createMonitorStore({
   home = os.homedir(),
   configPath = process.env.DI_MONITOR_CONFIG || path.join(home, '.di', 'monitor.json'),
@@ -120,7 +160,21 @@ function createMonitorStore({
     return { rows, up: rows.filter((r) => r.ok).length, total: rows.length }
   }
 
-  async function agents() {
+  async function remoteAgents(config) {
+    const list = (Array.isArray(config.remoteAgents) ? config.remoteAgents : [])
+      .filter((r) => r && typeof r.name === 'string' && typeof r.ssh === 'string' && SSH_TARGET.test(r.ssh) && !r.ssh.startsWith('-'))
+      .slice(0, 12)
+    return Promise.all(list.map(async (r) => {
+      try {
+        const out = await withTimeout(runCommand('ssh', [...SSH_ARGS, r.ssh, REMOTE_SESSIONS_COMMAND], { timeout: 6000 }), 7000)
+        return { name: r.name, ok: true, rows: parseRemoteSessions(r.name, out) }
+      } catch (error) {
+        return { name: r.name, ok: false, rows: [], error: String(error.message || error).split('\n')[0].slice(0, 200) }
+      }
+    }))
+  }
+
+  async function agents(config = {}) {
     const homes = findClaudeHomes(home)
     const live = []
     let total = 0
@@ -152,13 +206,17 @@ function createMonitorStore({
       }
     }
     const seen = new Set()
-    const rows = live.filter((r) => (seen.has(r.sessionId) ? false : seen.add(r.sessionId)))
+    const localRows = live.filter((r) => (seen.has(r.sessionId) ? false : seen.add(r.sessionId)))
+    const remotes = await remoteAgents(config)
+    const remoteRows = remotes.flatMap((r) => r.rows).filter((r) => (seen.has(`${r.machine}:${r.sessionId}`) ? false : seen.add(`${r.machine}:${r.sessionId}`)))
+    const rows = [...localRows, ...remoteRows]
     return {
       rows,
       live: rows.length,
       busy: rows.filter((r) => r.status === 'busy').length,
       total,
-      accounts: homes.map((d) => path.basename(d))
+      accounts: homes.map((d) => path.basename(d)),
+      remotes: remotes.map((r) => ({ name: r.name, ok: r.ok, live: r.rows.length, ...(r.error ? { error: r.error } : {}) }))
     }
   }
 
@@ -308,7 +366,7 @@ function createMonitorStore({
     const entries = await Promise.all([
       panel('machines', machines),
       panel('network', () => network(config)),
-      panel('agents', agents),
+      panel('agents', () => agents(config)),
       panel('presence', presence),
       panel('connected', () => connected(selfBase)),
       panel('services', services),
@@ -329,4 +387,4 @@ function createMonitorStore({
   return { getMonitor }
 }
 
-module.exports = { createMonitorStore, findClaudeHomes, DEFAULT_PROBES }
+module.exports = { createMonitorStore, REMOTE_SESSIONS_COMMAND, findClaudeHomes, DEFAULT_PROBES }

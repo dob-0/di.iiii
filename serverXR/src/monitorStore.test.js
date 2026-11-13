@@ -7,7 +7,7 @@ import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { createMonitorStore, findClaudeHomes } = require('./monitorStore.js')
+const { createMonitorStore, findClaudeHomes, REMOTE_SESSIONS_COMMAND } = require('./monitorStore.js')
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'di-monitor-'))
 
@@ -174,5 +174,71 @@ describe('monitor snapshot', () => {
     await store.getMonitor()
     await store.getMonitor()
     expect(calls).toBe(1)
+  })
+
+  describe('remote agents', () => {
+    const line = (file, rec) => `${file}\t${JSON.stringify(rec)}`
+    const config = (home, list) => {
+      const p = path.join(home, 'monitor.json')
+      fs.writeFileSync(p, JSON.stringify({ remoteAgents: list }))
+      return p
+    }
+
+    it('adds remote live sessions tagged with the machine and runs only the fixed ssh command', async () => {
+      const home = tmp()
+      const calls = []
+      const runCommand = async (command, args) => {
+        if (command === 'ssh') {
+          calls.push([command, args])
+          return [
+            line('/home/di/.claude/sessions/1.json', { pid: 1, sessionId: 'abc12345-x', status: 'busy', cwd: '/home/di', name: 'di-58', updatedAt: 1790967899754 }),
+            'garbage line', line('/home/di/.claude/sessions/2.json', { nope: true })
+          ].join('\n')
+        }
+        throw new Error('not installed')
+      }
+      const store = createMonitorStore({ home, configPath: config(home, [{ name: 'r-di', ssh: 'r-di' }]), runCommand, fetchImpl: null })
+      const { panels } = await store.getMonitor()
+      expect(calls).toHaveLength(1)
+      expect(calls[0][1]).toEqual(['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=3', 'r-di', REMOTE_SESSIONS_COMMAND])
+      expect(panels.agents.ok).toBe(true)
+      expect(panels.agents.rows).toHaveLength(1)
+      expect(panels.agents.rows[0]).toMatchObject({ machine: 'r-di', account: '.claude', title: 'di-58', status: 'busy', cwd: '/home/di' })
+      expect(panels.agents.remotes).toEqual([{ name: 'r-di', ok: true, live: 1 }])
+    })
+
+    it('greys only the unreachable machine, keeps local rows and the others', async () => {
+      const home = tmp()
+      fs.mkdirSync(path.join(home, '.claude', 'projects'), { recursive: true })
+      const runCommand = async (command, args) => {
+        if (command === 'ssh' && args.includes('down')) throw new Error('ssh: connect to host down port 22: Connection timed out\nmore')
+        if (command === 'ssh') return line('/home/x/.claude-two/sessions/9.json', { sessionId: 'sess-up-1', status: 'idle' })
+        throw new Error('not installed')
+      }
+      const store = createMonitorStore({
+        home, runCommand, fetchImpl: null,
+        configPath: config(home, [{ name: 'down', ssh: 'down' }, { name: 'up', ssh: 'up' }])
+      })
+      const { panels } = await store.getMonitor()
+      expect(panels.agents.ok).toBe(true)
+      expect(panels.agents.rows.map((r) => r.machine)).toEqual(['up'])
+      expect(panels.agents.remotes[0]).toMatchObject({ name: 'down', ok: false, live: 0 })
+      expect(panels.agents.remotes[0].error).toContain('Connection timed out')
+      expect(panels.agents.remotes[0].error).not.toContain('more')
+      expect(panels.agents.remotes[1]).toMatchObject({ name: 'up', ok: true, live: 1 })
+    })
+
+    it('ignores entries that could inject ssh options or shell', async () => {
+      const home = tmp()
+      const calls = []
+      const runCommand = async (command, args) => { if (command === 'ssh') calls.push(args); return '' }
+      const store = createMonitorStore({
+        home, runCommand, fetchImpl: null,
+        configPath: config(home, [{ name: 'a', ssh: '-oProxyCommand=evil' }, { name: 'b', ssh: 'host; rm -rf /' }, { name: 'c' }, null])
+      })
+      const { panels } = await store.getMonitor()
+      expect(calls).toHaveLength(0)
+      expect(panels.agents.remotes).toEqual([])
+    })
   })
 })
