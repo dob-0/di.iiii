@@ -762,6 +762,34 @@ describe('the live strip plays the live look with the laser desk\'s own looks/ed
         expect(document.querySelector('#liveSaved .colourpad')).toBeNull()
         expect(JSON.parse(window.localStorage.getItem('diShowDesk.savedColours.v1'))).toEqual([])
     })
+    it('Delete colour takes the live colour off the row: a saved one goes, a built-in hides until Show all; the look keeps its colour (owner 2026-11-14)', async () => {
+        window.localStorage.removeItem('diShowDesk.savedColours.v1')
+        await press(document.querySelector('.colourpad[data-colour="#ff0000"]'))
+        // a built-in is hidden, never lost: Show all brings it back
+        expect($('liveDeleteColour').disabled).toBe(false)
+        expect($('liveShowAll').style.display).toBe('none')
+        await press($('liveDeleteColour'))
+        expect(document.querySelector('#liveColours > .colourpad[data-colour="#ff0000"]').style.display).toBe('none')
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.hiddenColours.v1'))).toEqual(['#ff0000'])
+        expect($('liveShowAll').style.display).toBe('')
+        await press($('liveShowAll'))
+        expect(document.querySelector('#liveColours > .colourpad[data-colour="#ff0000"]').style.display).toBe('')
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.hiddenColours.v1'))).toEqual([])
+        const pick = $('livePick')
+        pick.value = '#abcdef'
+        pick.dispatchEvent(new Event('input'))
+        await settle()
+        await press($('liveSaveColour'))
+        expect($('liveDeleteColour').disabled).toBe(false) // the live colour is the saved one
+        const before = edits().length
+        await press($('liveDeleteColour'))
+        expect(document.querySelector('#liveSaved .colourpad[data-colour="#abcdef"]')).toBeNull()
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.savedColours.v1'))).toEqual([])
+        expect(edits().length).toBe(before) // nothing sent: the laser keeps its colour
+        expect($('liveDeleteColour').disabled).toBe(true)
+        expect($('liveSaveColour').disabled).toBe(false) // it can be saved again
+        expect(document.querySelectorAll('#liveColours > .colourpad').length).toBe(12)
+    })
     it('the XY pad posts x and height of the live look, throttled, the last place wins', async () => {
         const pad = $('xyPad')
         pad.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200, right: 200, bottom: 200 })

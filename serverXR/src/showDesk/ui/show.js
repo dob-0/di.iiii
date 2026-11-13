@@ -754,24 +754,38 @@
     }
     // 2026-11-13 (owner: "i want option save color"): Save colour keeps the live colour picked with the + as a swatch in the row,
     // in this browser (the show machine's profile keeps it across installs); newest first, at most SAVED_MAX; a right-click removes one.
+    // 2026-11-14 (owner: "add option to delete colors"): Delete colour takes the live saved colour off the row, for touch too. The
+    // look keeps its colour (the + lights again, Save colour brings it back). A built-in swatch is hidden, never lost: Save colour
+    // on it, or Show all, brings it back (dob-85 relayed the same ask: "delete colrs from color palette").
     const SAVED_KEY = 'diShowDesk.savedColours.v1'
     const SAVED_MAX = 6
     const HEX = /^#[0-9a-f]{6}$/
     let savedColours = []
     try { const s = JSON.parse(window.localStorage.getItem(SAVED_KEY) || '[]'); if (Array.isArray(s)) savedColours = s.filter((c) => HEX.test(c)).slice(0, SAVED_MAX) } catch { /* nothing kept here */ }
+    const HIDDEN_KEY = 'diShowDesk.hiddenColours.v1'
+    let hiddenSwatches = []
+    try { const h = JSON.parse(window.localStorage.getItem(HIDDEN_KEY) || '[]'); if (Array.isArray(h)) hiddenSwatches = h.filter((c) => SWATCHES.includes(c)) } catch { /* nothing kept here */ }
+    const storeHidden = () => { try { window.localStorage.setItem(HIDDEN_KEY, JSON.stringify(hiddenSwatches)) } catch { /* lasts until a reload */ } }
     const storeSaved = () => { try { window.localStorage.setItem(SAVED_KEY, JSON.stringify(savedColours)) } catch { /* this browser keeps nothing: the colours last until a reload */ } }
     const liveColourNow = () => { const l = liveLookFull(); return l && !l.rainbow ? String(l.colour || '').toLowerCase() : '' }
     const paintSaved = () => $('liveSaved').replaceChildren(...savedColours.map((c) => el('button', {
-        type: 'button', class: 'pad colourpad savedpad', 'data-colour': c, style: `background:${c}`, title: `Saved colour ${c} (right-click removes it)`, 'aria-label': `Saved colour ${c}`, disabled: true,
+        type: 'button', class: 'pad colourpad savedpad', 'data-colour': c, style: `background:${c}`, title: `Saved colour ${c} (Delete colour or a right-click removes it)`, 'aria-label': `Saved colour ${c}`, disabled: true,
         onclick: () => editLive({ colour: c, rainbow: false }),
         oncontextmenu: (e) => { e.preventDefault(); savedColours = savedColours.filter((x) => x !== c); storeSaved(); paintSaved(); renderLive() }
     })))
     const saveColour = () => {
         const c = liveColourNow()
+        if (hiddenSwatches.includes(c)) { hiddenSwatches = hiddenSwatches.filter((x) => x !== c); storeHidden(); renderLive(); return }
         if (!HEX.test(c) || SWATCHES.includes(c) || savedColours.includes(c)) return
         savedColours = [c, ...savedColours].slice(0, SAVED_MAX)
         storeSaved(); paintSaved(); renderLive()
     }
+    const deleteColour = () => {
+        const c = liveColourNow()
+        if (savedColours.includes(c)) { savedColours = savedColours.filter((x) => x !== c); storeSaved(); paintSaved() } else if (SWATCHES.includes(c) && !hiddenSwatches.includes(c)) { hiddenSwatches = [...hiddenSwatches, c]; storeHidden() } else return
+        renderLive()
+    }
+    const showAllColours = () => { hiddenSwatches = []; storeHidden(); renderLive() }
     const buildLive = () => {
         // 2026-11-13 (owner: "instead of rainbow add + where will be colors palette and i can choose"): the + opens the browser's
         // colour picker (any colour). A pick posts like a swatch, at most every LIVE_SEND_MS while dragging; the last one always goes.
@@ -785,7 +799,9 @@
         const plus = el('button', { type: 'button', class: 'pad togglepad pickpad', id: 'livePlus', 'aria-pressed': 'false', title: 'Any colour: opens the colour palette', 'aria-label': 'Any colour', disabled: true, onclick: () => { try { pick.showPicker() } catch { pick.click() } } }, '+')
         $('liveColours').append(...SWATCHES.map((c) => el('button', { type: 'button', class: 'pad colourpad', 'data-colour': c, style: `background:${c}`, title: `Colour ${c}`, 'aria-label': `Colour ${c}`, disabled: true, onclick: () => editLive({ colour: c, rainbow: false }) })),
             el('span', { class: 'savedcolours', id: 'liveSaved' }), plus, pick,
-            el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveSaveColour', disabled: true, title: 'Save the live colour (picked with +) into the row', onclick: saveColour }, 'Save colour'))
+            el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveSaveColour', disabled: true, title: 'Save the live colour (picked with +) into the row', onclick: saveColour }, 'Save colour'),
+            el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveDeleteColour', disabled: true, title: 'Take the live colour off the row (the look keeps its colour; Show all brings built-ins back)', onclick: deleteColour }, 'Delete colour'),
+            el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveShowAll', style: 'display:none', title: 'Bring back the deleted built-in colours', onclick: showAllColours }, 'Show all'))
         paintSaved()
         for (const k of EFFECTS) {
             const input = liveFader(k, null)
@@ -828,11 +844,15 @@
         for (const b of $('liveColours').querySelectorAll('.colourpad')) mark(b, Boolean(look && !look.rainbow && String(look.colour || '').toLowerCase() === b.dataset.colour))
         // the + is lit, in the look's own colour, when the live colour is one off the row (picked with the +)
         const colourNow = look && !look.rainbow ? String(look.colour || '').toLowerCase() : ''
-        const custom = Boolean(colourNow) && !SWATCHES.includes(colourNow) && !savedColours.includes(colourNow)
+        const custom = Boolean(colourNow) && (!SWATCHES.includes(colourNow) || hiddenSwatches.includes(colourNow)) && !savedColours.includes(colourNow)
+        for (const b of $('liveColours').querySelectorAll(':scope > .colourpad')) b.style.display = hiddenSwatches.includes(b.dataset.colour) ? 'none' : ''
+        $('liveShowAll').style.display = hiddenSwatches.length ? '' : 'none'
+        $('liveShowAll').textContent = `Show all (${hiddenSwatches.length} hidden)`
         mark($('livePlus'), custom)
         $('livePlus').style.background = custom ? colourNow : ''
         $('livePick').disabled = !on
         $('liveSaveColour').disabled = !(on && custom && HEX.test(colourNow))
+        $('liveDeleteColour').disabled = !(on && (savedColours.includes(colourNow) || (SWATCHES.includes(colourNow) && !hiddenSwatches.includes(colourNow))))
         mark($('liveMirror'), Boolean(look && look.mirror))
         for (const b of $('liveEffects').querySelectorAll('[data-effect]')) mark(b, Boolean(look && Number(look[b.dataset.effect])))
         if (S.desk && Number.isFinite(Number(S.desk.bpm))) {
