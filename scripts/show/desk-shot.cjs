@@ -25,7 +25,7 @@ const TYPES = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/htm
   await p.goto('http://desk.test/serverXR/show/', { waitUntil: 'domcontentloaded' })
   await p.waitForTimeout(2500)
   const m = await p.evaluate(() => ({ sh: document.documentElement.scrollHeight, ih: innerHeight, rows: [...document.body.children].map((e) => e.className.toString().slice(0, 20) + ':' + Math.round(e.getBoundingClientRect().bottom)), scenes: document.querySelectorAll('.scenebtn').length }))
-  await p.screenshot({ path: OUT })
+  await p.screenshot({ path: OUT, fullPage: true })
   console.log(JSON.stringify({ m, blocked }))
   await b.close()
 })()

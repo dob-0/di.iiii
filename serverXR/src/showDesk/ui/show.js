@@ -353,6 +353,20 @@
         }
         return out
     }
+    // 2026-11-13 (owner: "all scenes small now fix that"): the first 15 scenes are the K2's 15 pads (midiMap.js: pads A-O = scene 0-14):
+    // they are the BIG tiles, 5 columns (one per act of three) x 3 rows; every later scene stays, behind the "More scenes" toggle.
+    const PAD_SCENES = 15
+    let moreOpen = false
+    const renderMoreToggle = (total) => {
+        const b = $('scenesMore')
+        if (!b) return
+        b.onclick = () => { moreOpen = !moreOpen; renderMoreToggle(total) }
+        b.hidden = total <= PAD_SCENES
+        b.textContent = moreOpen ? `Fewer scenes` : `More scenes (${Math.max(0, total - PAD_SCENES)})`
+        b.setAttribute('aria-expanded', moreOpen ? 'true' : 'false')
+        $('scenes').classList.toggle('show-more', moreOpen && total > PAD_SCENES)
+        $('scenes').classList.toggle('has-more', total > PAD_SCENES)
+    }
     const renderScenes = () => {
         const note = $('scenesNote')
         const items = sceneItems()
@@ -378,14 +392,15 @@
                 return parts.btn
             }))
         }
-        for (const i of items) {
+        renderMoreToggle(items.length)
+        for (const [idx, i] of items.entries()) {
             const p = sceneBtns.get(i.id)
             if (!p) continue
             setText(p.nameText, i.name)
             setText(p.lookText, i.look ? `laser: ${i.look.name}` : 'lights only')
             p.liveTag.hidden = !i.laser
             const edited = Boolean(S.light && !S.light.activeScene && litScene === i.id)
-            setClass(p.btn, `scenebtn${i.lights ? ' is-lights' : ''}${i.laser ? ' is-laser' : ''}${edited ? ' is-edited' : ''}${sceneBusy === i.id ? ' is-busy' : ''}`)
+            setClass(p.btn, `scenebtn${idx < PAD_SCENES ? ` scene-pad act-${Math.floor(idx / 3)}` : ' scene-more'}${i.lights ? ' is-lights' : ''}${i.laser ? ' is-laser' : ''}${edited ? ' is-edited' : ''}${sceneBusy === i.id ? ' is-busy' : ''}`)
             const pressed = i.lights ? 'true' : 'false'
             if (p.btn.getAttribute('aria-pressed') !== pressed) p.btn.setAttribute('aria-pressed', pressed)
             const dots = sceneDots(i.id)
