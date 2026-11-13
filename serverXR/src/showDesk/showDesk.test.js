@@ -496,6 +496,19 @@ describe('one screen, 1278 x 758, no page scroll', () => {
     })
 })
 
+// Every shape pad on screen (2026-11-14): the strip was held at two rows (--shapes-h: 92px) and, with 47 shapes, 13 of them sat
+// in a third row the strip cut off at the 1278 px stage window. Measured in a browser: before 13 cut, after 0 (3 rows, 138 px).
+describe('every shape pad is on screen', () => {
+    const css = fs.readFileSync(path.join(UI, 'show.css'), 'utf8')
+    it('the laser side lets the shape strip take the rows its shapes need, in every density', () => {
+        const laserSide = css.match(/body\.showdesk, body\.showdesk\[data-density="compact"\], body\.showdesk\[data-density="touch"\] \{([^}]*)\}/)
+        expect(laserSide).not.toBeNull()
+        expect(laserSide[1]).toMatch(/--shapes-h:\s*auto;/)
+        expect(laserSide[1]).toMatch(/--live-h:\s*auto;/) // the live strip grows with it; the page scrolls down, never sideways
+        expect(css).toMatch(/\.shapes \{[^}]*flex-wrap:\s*wrap;[^}]*height:\s*auto;/)
+    })
+})
+
 // Two densities (the owner, 2026-10-31 20:5x, at the stage Mac with a mouse: "fix the UI, it is huge … it's not the touch
 // screen"): Touch keeps the sizes above; Compact is one block of tokens on body[data-density="compact"]; the switch is the
 // only logic. The real fit is measured in a browser at 1278 x 758 and 1280 x 700 (the session note has the numbers).

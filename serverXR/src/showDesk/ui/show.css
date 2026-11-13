@@ -397,7 +397,9 @@ body.showdesk { --act-0: var(--accent); --act-1: var(--warn); --act-2: var(--dan
 .showscenes .scenebtn.act-2 { border-left-color: var(--act-2); } .showscenes .scenebtn.act-3 { border-left-color: var(--act-3); } .showscenes .scenebtn.act-4 { border-left-color: var(--act-4); }
 .showscenes .scenebtn.is-lights { outline: 3px solid var(--accent); outline-offset: -3px; background: color-mix(in srgb, var(--accent) 22%, transparent); }
 /* the laser side: bigger touch targets (the density variables the page already reads) */
-body.showdesk, body.showdesk[data-density="compact"], body.showdesk[data-density="touch"] { --shape-h: 44px; --shape-font: 15px; --pad: 46px; --row: 44px; --target: 44px; --fx-font: 15px; --live-h: auto; --shapes-h: 92px; --scenes-h: auto; --bank-max: none; }
+body.showdesk, body.showdesk[data-density="compact"], body.showdesk[data-density="touch"] { --shape-h: 44px; --shape-font: 15px; --pad: 46px; --row: 44px; --target: 44px; --fx-font: 15px; --live-h: auto; --shapes-h: auto; --scenes-h: auto; --bank-max: none; }
+/* every shape pad on screen: the strip takes as many rows as the shapes need (47 = 4 rows at the 1278 px stage window); a fixed two rows
+   hid 13 of them under the fold of the strip (2026-11-14) */
 .livestrip input[type=range] { height: 32px; }
 .livestrip input[type=range]::-webkit-slider-thumb { width: 28px; height: 28px; }
 .cubecard .cubeon, .cubecard .cubeoff { min-height: 60px; font-size: 22px; font-weight: 700; }

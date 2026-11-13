@@ -1758,3 +1758,11 @@ Fix: `lighting/desk.js` `releaseManualCueLook()`: a person's scene recall (`POST
 the cue layer (the latest action wins, LTP). A look the cue list fired stays, and so does any look while the list runs. The reply says `cueLookReleased`.
 Guard: `serverXR/src/lighting/cueLayerRecall.test.js` (hand-fired look released and the scene reaches the DMX; a cue-fired look stays; an unknown scene
 leaves it). It fails on the code before the fix (1 of 3).
+
+## Show desk: 13 laser shapes could not be pressed on the stage window (2026-11-14, Projector Room show)
+Symptom: after 11 shapes were added (47 in all), none of the new ones showed on the Show desk at the stage window (1278 x 766); curtain and rays were cut too.
+Cause: the BIG-laser block of `serverXR/src/showDesk/ui/show.css` held the shape strip at two rows (`--shapes-h: 92px`, overflow hidden); the shapes
+wrap into a third row that the strip cut off. Measured with Playwright on the live page: 13 pads outside the strip at 1278 px, 2 at 1600 px, 20 at 1024 px.
+Fix: `--shapes-h: auto` in that block (it already has `--live-h: auto` and the page scrolls down): 0 pads cut at 1278, 1600 and 1024 px; the page is
+46 px longer at 1278 px (895 to 941).
+Guard: `serverXR/src/showDesk/showDesk.test.js` "every shape pad is on screen" (fails on `--shapes-h: 92px`).
