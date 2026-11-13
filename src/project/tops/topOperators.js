@@ -483,8 +483,9 @@ void main() {
             toggle('invert', 'Film (negative)', 0),
             param('cut', 'Two-tone', 0, 0, 1),
             param('flash', 'Flash (Hz)', 0, 0, 15, 0.5),
-            // 0 white-hot (grey), 1 iron (the thermal camera), 2 rainbow, 3 olive (night shot), 4 chrome (polished metal)
-            param('tone', 'Thermal colour', 0, 0, 4, 1),
+            // 0 white-hot (grey), 1 iron (the thermal camera), 2 rainbow, 3 olive (night shot), 4 chrome (polished metal),
+            // 5 night green (a stage seen through night vision), 6 ghost (cold white light on black)
+            param('tone', 'Thermal colour', 0, 0, 6, 1),
             param('hud', 'Camera frame', 0, 0, 1),
             // a thermal sensor is small (160 x 120): the heat read on a coarse grid and blown up soft
             param('sensor', 'Sensor blur', 0, 0, 1)
@@ -525,6 +526,10 @@ vec3 ds_tone(float v, float tone) {
     if (tone < 1.5) return ds_ramp(v, vec3(0.0), vec3(0.10, 0.0, 0.42), vec3(0.58, 0.04, 0.56), vec3(0.93, 0.24, 0.13), vec3(1.0, 0.72, 0.05), vec3(1.0, 1.0, 0.94));
     if (tone < 2.5) return ds_ramp(v, vec3(0.03, 0.05, 0.50), vec3(0.0, 0.42, 0.98), vec3(0.15, 0.88, 0.30), vec3(0.99, 0.92, 0.08), vec3(1.0, 0.16, 0.28), vec3(1.0, 0.86, 0.86));
     // chrome: light and dark bands turning over each other like a reflection on polished metal, a cold tint
+    // ghost: a body of cold light. Black, deep blue, pale blue-white, a white core with a breath of green.
+    if (tone > 5.5) return ds_ramp(v, vec3(0.0), vec3(0.03, 0.07, 0.11), vec3(0.20, 0.40, 0.50), vec3(0.58, 0.84, 0.88), vec3(0.86, 1.0, 0.94), vec3(0.96, 1.0, 0.92));
+    // night green: fog lit green, the bright end a vivid lime
+    if (tone > 4.5) return ds_ramp(v, vec3(0.0, 0.06, 0.02), vec3(0.03, 0.26, 0.08), vec3(0.10, 0.46, 0.15), vec3(0.22, 0.68, 0.24), vec3(0.38, 0.88, 0.34), vec3(0.62, 1.0, 0.52));
     if (tone > 3.5) {
         float m = 0.5 + 0.5 * sin(v * 9.4 - 1.2);
         float g = clamp(mix(v, m, 0.62) * 1.15 - 0.05, 0.0, 1.0);
@@ -760,7 +765,7 @@ void main() {
         // Reads `time` (the dots fly).
         animated: true,
         params: [
-            param('size', 'Grain size', 12, 5, 40, 1),
+            param('size', 'Grain size', 12, 3, 40, 1),
             param('fly', 'Flying', 0.6, 0, 1),
             param('reach', 'Reach', 10, 1, 14, 1),
             param('speed', 'Speed', 0.6, 0.05, 3, 0.05),
@@ -769,7 +774,10 @@ void main() {
             param('floor', 'Dark limit', 0.12, 0, 0.9),
             param('keep', 'Picture under', 0, 0, 1),
             // lines drawn from grain to grain where both are lit: the body as a wire mesh
-            param('lines', 'Lines', 0, 0, 1)
+            param('lines', 'Lines', 0, 0, 1),
+            // 1 = round grains on a square grid. More = fine dust: the grid is stretched along the wind, the grains
+            // fly that much farther and draw out into short streaks as they go, like dust caught in a long exposure
+            param('streak', 'Streak', 1, 1, 6, 0.5)
         ],
         // The picture as grains of dust. Every grain has a home on a grid laid along the wind and takes the
         // colour and the size of the picture there (dark = no grain, so a white body on black is a body of
@@ -788,6 +796,7 @@ uniform float p_dot;
 uniform float p_floor;
 uniform float p_keep;
 uniform float p_lines;
+uniform float p_streak;
 float pt_hash(vec2 p, float k) { return fract(sin(dot(p, vec2(127.1, 311.7)) + k * 17.31) * 43758.5453123); }
 void main() {
     // the grid of dots lies along the wind: u runs with it, v across it
@@ -795,7 +804,8 @@ void main() {
     vec2 wind = vec2(cos(ang), sin(ang));
     vec2 across = vec2(-wind.y, wind.x);
     vec2 px = uv / texel;
-    vec2 g = vec2(dot(px, wind), dot(px, across)) / p_size;
+    float sx = max(p_streak, 1.0);
+    vec2 g = vec2(dot(px, wind) / (p_size * sx), dot(px, across) / p_size);
     vec2 cellAt = floor(g);
     float reach = floor(p_reach + 0.5);
     float aa = 1.2 / p_size;
@@ -812,9 +822,12 @@ void main() {
             float age = flies * fract(time * p_speed * (0.5 + pt_hash(cell, 4.0)) + pt_hash(cell, 5.0));
             // it leaves slowly and gathers speed, like dust taken by the wind
             vec2 pos = home + vec2(reach * age * age, (pt_hash(cell, 6.0) - 0.5) * 1.6 * age);
-            float d = length(g - pos);
+            // round at home; drawn out along the wind while it flies
+            vec2 off = g - pos;
+            off.x *= sx / (1.0 + 3.0 * age * step(1.5, sx));
+            float d = length(off);
             if (d > 0.62) continue;
-            vec2 at = (wind * home.x + across * home.y) * p_size * texel;
+            vec2 at = (wind * home.x * sx + across * home.y) * p_size * texel;
             if (at.x < 0.0 || at.x > 1.0 || at.y < 0.0 || at.y > 1.0) continue;
             vec3 src = texture2D(a, at).rgb;
             float l = dot(src, vec3(0.299, 0.587, 0.114));
@@ -835,7 +848,7 @@ void main() {
         for (int n = 0; n < 9; n++) {
             vec2 cell = cellAt + vec2(mod(float(n), 3.0) - 1.0, floor(float(n) / 3.0) - 1.0);
             vec2 home = cell + 0.5 + (vec2(pt_hash(cell, 1.0), pt_hash(cell, 2.0)) - 0.5) * 0.6;
-            vec2 at = clamp((wind * home.x + across * home.y) * p_size * texel, 0.0, 1.0);
+            vec2 at = clamp((wind * home.x * sx + across * home.y) * p_size * texel, 0.0, 1.0);
             vec3 src = texture2D(a, at).rgb;
             float l = dot(src, vec3(0.299, 0.587, 0.114));
             hp[n] = home;

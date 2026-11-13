@@ -99,9 +99,9 @@ export const EFFECT_TYPES = {
     'top.lookup': { main: ['shadows', 'mids', 'highs', 'amount'] },
     'top.slope': { main: ['strength', 'angle', 'size', 'keep'] },
     'top.glow': { main: ['threshold', 'radius', 'amount'] },
-    'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert', 'cut', 'flash', 'tone', 'hud', 'sensor'] },
+    'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert', 'cut', 'flash', 'tone', 'hud', 'sensor', 'grain'] },
     'top.cuts': { main: ['rate', 'zoom', 'move', 'mirror', 'flash', 'bars', 'burst', 'lens', 'tiles'] },
-    'top.particles': { main: ['size', 'fly', 'reach', 'speed', 'angle', 'dot', 'floor', 'keep', 'lines'] }
+    'top.particles': { main: ['size', 'fly', 'reach', 'speed', 'angle', 'dot', 'floor', 'keep', 'lines', 'streak'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type

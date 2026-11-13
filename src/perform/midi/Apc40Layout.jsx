@@ -1,6 +1,7 @@
 import { describeAction, shortMatch } from './deckBinding.js'
 import { APC40_CONTROLS } from './apc40.js'
 import { TOUCH_MS, channelKey } from './k2Monitor.js'
+import { effectLabel, effectNumericParams } from '../../project/tops/vjDeck.js'
 
 // The Akai APC40 mkII drawn as rows, top to bottom as on the device, every control labelled with what it does NOW
 // (the effective map: the APC40 default plus the deck's own bindings, effect knobs included) and lighting up when it
@@ -47,19 +48,44 @@ const sameControl = (match, item) => match && match.kind === item.kind && match.
 export const apc40EntryOf = (map, item) => (Array.isArray(map) ? map : []).find((entry) => sameControl(entry?.match, item)) || null
 
 const plainLayer = (name) => String(name || '').replace(/^\s*\d+\s*/, '').trim()
-const plainEffect = (type) => String(type || '').replace(/^top\./, '')
+const NOTHING = 'nothing here'
+const layerName = (deck, index) => plainLayer(deck?.layers?.[index]?.name) || `L${index + 1}`
+const PRESS_WORDS = { hit: 'burst', punch: 'punch-in', flip: 'flip', neg: 'negative', strobe: 'strobe', black: 'black', multi: 'screens' }
 
-/** What a control does, in short words; effect knobs name the layer and the effect ("CAM pixelate mix"). */
+/** "Glow · amount" (plus " (off)" when the effect is off); 'nothing here' when the effect or its param does not exist. */
+const effectJob = (effect, param) => {
+    if (!effect) return NOTHING
+    const label = param === 'mix' ? 'amount' : effectNumericParams(effect.type)[param]?.label
+    if (!label) return NOTHING
+    return `${effectLabel(effect.type)} · ${label}${effect.on === false ? ' (off)' : ''}`
+}
+
+/** What a control does, in plain words: scene names, "layer · clip", "effect · param", "HOLD burst". No entry = 'free'. */
 export const apc40Job = (entry, deck, fxEffect = 0) => {
-    if (!entry) return 'not used'
+    if (!entry) return 'free'
     const args = entry.args || {}
-    if (entry.action === 'fx' && Number.isInteger(args.layer) && Number.isInteger(args.effect)) {
-        const stack = args.layer >= 0 ? deck?.layers?.[args.layer] : null
-        const effect = (args.layer >= 0 ? stack?.effects : deck?.effects)?.[args.effect]
-        const where = args.layer >= 0 ? plainLayer(stack?.name) || `L${args.layer + 1}` : 'Master'
-        const what = effect ? plainEffect(effect.type) : `fx ${args.effect + 1}`
-        const param = args.param === 'mix' ? 'mix' : Number.isInteger(args.param) ? `param ${args.param + 1}` : ''
-        return `${where} ${what} ${param}`.trim()
+    switch (entry.action) {
+        case 'column': {
+            if (!Number.isInteger(args.column)) break
+            return deck?.layers?.[0]?.clips?.[args.column]?.label || `Scene ${args.column + 1}`
+        }
+        case 'clip': {
+            if (!Number.isInteger(args.layer) || !Number.isInteger(args.column)) break
+            const clip = deck?.layers?.[args.layer]?.clips?.[args.column]
+            return clip ? `${layerName(deck, args.layer)} · ${clip.label || `clip ${args.column + 1}`}` : NOTHING
+        }
+        case 'fx': {
+            if (!Number.isInteger(args.layer) || !Number.isInteger(args.effect)) break
+            if (args.layer < 0) return effectJob(deck?.effects?.[args.effect], args.param)
+            const effect = deck?.layers?.[args.layer]?.effects?.[args.effect]
+            return effect ? `${layerName(deck, args.layer)} · ${effectJob(effect, args.param)}` : NOTHING
+        }
+        case 'fxPress': return `HOLD ${PRESS_WORDS[args.param] || args.param || ''}`.trim()
+        case 'columnNext': return 'Next scene'
+        case 'columnPrev': return 'Previous scene'
+        case 'bankNext': return 'Next 8 scenes'
+        case 'bankPrev': return 'Previous 8 scenes'
+        default: break
     }
     return describeAction(entry, { fxEffect })
 }
