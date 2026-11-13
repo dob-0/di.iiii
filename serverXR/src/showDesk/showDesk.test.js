@@ -743,6 +743,25 @@ describe('the live strip plays the live look with the laser desk\'s own looks/ed
         expect(edits().at(-1)).toEqual({ id: 'ring', colour: '#123456', rainbow: false })
         expect($('livePlus').classList.contains('is-on')).toBe(true)
     })
+    it('Save colour keeps a picked colour in the row (this browser); its swatch sets it; a right-click removes it (owner 2026-11-13)', async () => {
+        expect($('liveSaveColour').disabled).toBe(true) // the live colour is on the row already
+        const pick = $('livePick')
+        pick.value = '#123456'
+        pick.dispatchEvent(new Event('input'))
+        await settle()
+        expect($('liveSaveColour').disabled).toBe(false)
+        await press($('liveSaveColour'))
+        const saved = document.querySelector('#liveSaved .colourpad[data-colour="#123456"]')
+        expect(saved).not.toBeNull()
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.savedColours.v1'))).toEqual(['#123456'])
+        expect($('liveSaveColour').disabled).toBe(true) // saved: nothing more to save
+        await press(document.querySelector('.colourpad[data-colour="#ff0000"]'))
+        await press(document.querySelector('#liveSaved .colourpad[data-colour="#123456"]'))
+        expect(edits().at(-1)).toEqual({ id: 'ring', colour: '#123456', rainbow: false })
+        document.querySelector('#liveSaved .colourpad').dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+        expect(document.querySelector('#liveSaved .colourpad')).toBeNull()
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.savedColours.v1'))).toEqual([])
+    })
     it('the XY pad posts x and height of the live look, throttled, the last place wins', async () => {
         const pad = $('xyPad')
         pad.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200, right: 200, bottom: 200 })

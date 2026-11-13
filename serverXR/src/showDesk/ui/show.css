@@ -143,6 +143,8 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
 .colours { display: flex; gap: 4px; }
 /* 2026-11-13: the + after the swatches opens the colour picker; its input sits hidden right behind it so the picker opens there */
 .pickpad { font-size: 22px; font-weight: 600; min-width: var(--pad); }
+.savedcolours { display: contents; }
+.savepad { white-space: nowrap; }
 .pickinput { flex: 0 0 1px; width: 1px; min-width: 1px; height: var(--pad); margin-left: -5px; padding: 0; border: 0; opacity: 0; }
 .pad { min-height: var(--target); padding: 0 10px; border: 1px solid var(--line); border-radius: 0; background: var(--field); color: var(--text); font-size: 13px; white-space: nowrap; }
 .pad.is-on { box-shadow: inset 0 0 0 3px var(--text); }
