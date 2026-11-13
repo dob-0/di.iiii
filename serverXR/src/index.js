@@ -80,6 +80,7 @@ const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
 const { registerWifiDoorRoutes } = require('./routes/wifiDoorRoutes')
 const { createShareService } = require('./share/shareService')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
+const { registerMonitorRoutes } = require('./routes/monitorRoutes')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
@@ -2564,6 +2565,8 @@ registerShareRoutes(router, {
 })
 
 registerAgentBoardRoutes(router)
+
+registerMonitorRoutes(router)
 
 registerAiChatRoutes(router)
 

@@ -77,4 +77,4 @@ function registerAgentBoardRoutes(router, {
   })
 }
 
-module.exports = { registerAgentBoardRoutes, isLocalOperatorRequest }
+module.exports = { registerAgentBoardRoutes, isLocalOperatorRequest, isAdminCaller }

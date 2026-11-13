@@ -173,6 +173,18 @@ function renderPreferencesPage() {
 
 
 describe('PreferencesPage', () => {
+    it('opens straight on the Monitor from /admin#monitor and ignores an unknown hash', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
+        window.location.hash = '#monitor'
+        const first = renderPreferencesPage()
+        expect(await screen.findByText('Everything that is going on')).toBeTruthy()
+        first.unmount?.()
+        window.location.hash = '#nonsense'
+        renderPreferencesPage()
+        expect(screen.getByText('Spaces and who can see them')).toBeTruthy()
+        window.location.hash = ''
+    })
+
     it('renders runtime build metadata and updates the node inspector when a node is selected', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue({
             ok: true,
