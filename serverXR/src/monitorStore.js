@@ -53,6 +53,9 @@ async function withTimeout(promise, ms) {
 
 function readConfig(configPath) {
   try {
+    // the file can name shell commands: refuse it when anyone but its owner can write to it
+    const st = fs.statSync(configPath)
+    if (st.mode & 0o022) return {}
     const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'))
     return parsed && typeof parsed === 'object' ? parsed : {}
   } catch {
@@ -130,8 +133,14 @@ function createMonitorStore({
     for (const dir of homes) {
       if (!boardStores.has(dir)) boardStores.set(dir, createAgentBoardStore({ claudeHome: dir }))
       const account = path.basename(dir)
-      const board = await boardStores.get(dir).getBoard()
-      const projectsReal = fs.realpathSync(path.join(dir, 'projects'))
+      let board
+      let projectsReal
+      try {
+        board = await boardStores.get(dir).getBoard()
+        projectsReal = fs.realpathSync(path.join(dir, 'projects'))
+      } catch {
+        continue // one broken login dir greys itself, not the whole panel
+      }
       if (!countedProjects.has(projectsReal)) {
         countedProjects.add(projectsReal)
         total += board.totalSessions || 0
@@ -238,7 +247,7 @@ function createMonitorStore({
   async function services() {
     const out = await runCommand('systemctl', ['--user', 'list-units', '--type=service', '--state=running,failed', '--no-legend', '--plain', '--no-pager'])
     const rows = out.split('\n').filter(Boolean).map((line) => {
-      const [unit, , active, sub, ...desc] = line.trim().split(/\s+/)
+      const [unit, , active, sub, ...desc] = line.replace(/^[^\w]+/, '').trim().split(/\s+/)
       return { unit, active, sub, description: desc.join(' ') }
     })
     return {
@@ -302,8 +311,18 @@ function createMonitorStore({
     }
   }
 
+  // one scan at a time: concurrent callers (several tabs, a poll during a slow
+  // panel) share the scan in flight instead of each starting their own.
+  let inflight = null
   async function getMonitor({ selfBase = null } = {}) {
-    if (cache && now() - cache.at < CACHE_TTL_MS) return cache.value
+    if (cache && cache.selfBase === selfBase && now() - cache.at < CACHE_TTL_MS) return cache.value
+    if (inflight && inflight.selfBase === selfBase) return inflight.promise
+    const promise = scan(selfBase).finally(() => { inflight = null })
+    inflight = { selfBase, promise }
+    return promise
+  }
+
+  async function scan(selfBase) {
     const config = readConfig(configPath)
     const entries = await Promise.all([
       panel('machines', machines),
@@ -322,7 +341,7 @@ function createMonitorStore({
       configured: fs.existsSync(configPath),
       panels: Object.fromEntries(entries)
     }
-    cache = { at: now(), value }
+    cache = { at: now(), value, selfBase }
     return value
   }
 
