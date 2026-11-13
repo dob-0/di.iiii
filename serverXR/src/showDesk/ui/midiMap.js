@@ -40,7 +40,8 @@
     // IGNORED while every cube is stopped (the K2 never arms, resumes or raises a cube; that stays a person's Go on the laser page).
     // PROVISIONAL numbers: the owner's laser person (dob-b3) fixes the real ones; midiMap.test.js holds them to this table.
     const LASER_LIMITS = Object.freeze({
-        'live:level': [0, 1], 'live:size': [0, 1], 'live:height': [-1, 1], 'live:x': [-1, 1], 'live:copies': [0, 8],
+        // 2026-11-13: size never 0 from the K2 (0.15 = MARK_MIN_SIZE): a size-0 picture is a still beam and stops the cube, then the K2 is ignored.
+        'live:level': [0, 1], 'live:size': [0.15, 1], 'live:height': [-1, 1], 'live:x': [-1, 1], 'live:copies': [0, 8],
         'live:rotation': [-0.5, 0.5], 'live:spin': [-2, 2], 'live:pulse': [0, 1], 'live:pulseBeats': [0.25, 64], 'live:sweepBeats': [0.25, 64],
         'laser-master': [0, 1]
     })

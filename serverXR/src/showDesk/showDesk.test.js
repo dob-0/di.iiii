@@ -824,6 +824,16 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         expect(levels.join(' ')).toMatch(/255/)
         expect(levels[levels.length - 1]).toMatch(/255/)
     })
+    it('K2 pot 2 (laser size) never sends a size below 0.15, even turned all the way down', async () => {
+        midi(0xbe, 5, 127)
+        await settle()
+        midi(0xbe, 5, 0)
+        await settle()
+        const sizes = posts.filter((p) => p.url === '../laser/desk/api/looks/edit').map((p) => p.body.size).filter((v) => v !== undefined)
+        expect(sizes.length).toBeGreaterThan(0)
+        expect(Math.min(...sizes)).toBeGreaterThanOrEqual(0.15)
+        expect(sizes.at(-1)).toBe(0.15)
+    })
     it('a pot on the live look picks up too, then posts looks/edit with the live id', async () => {
         midi(0xbe, 4, 0) // level is 1 on the screen: a pot at 0 waits
         await settle()
