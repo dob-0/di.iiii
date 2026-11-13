@@ -65,11 +65,19 @@ def inside(rects, x, y):
     return any(a <= x < c and b <= y < d for a, b, c, d, _ in rects)
 
 
-def write_pos(x, y, down):
+# One colour per slot, in order of connection. The owner's own cursor is slot 0 (the system arrow);
+# the extra pointers get slot 1.. : cyan, pink, yellow, green, violet (then it wraps).
+PALETTE = ["#2fd0ff", "#ff4f9a", "#ffd23f", "#6be675", "#b388ff"]
+
+
+def write_pos(cursors):
+    """cursors: list of (x, y, down) in slot order. Slot i gets PALETTE[i]."""
     RUN.mkdir(parents=True, exist_ok=True)
+    out = [{"x": x, "y": y, "down": d, "color": PALETTE[i % len(PALETTE)]}
+           for i, (x, y, d) in enumerate(cursors)]
     # in place, not rename: the overlay's file watcher loses a replaced file
     with open(POS, "w") as f:
-        f.write(json.dumps({"x": x, "y": y, "down": down}))
+        f.write(json.dumps({"cursors": out}))
 
 
 def main():
@@ -106,7 +114,7 @@ def main():
     dev.grab()
     LOG("grabbed; cursor 2 at", int(cx), int(cy), "auto-off in", MAXS, "s")
     end = time.time() + MAXS
-    write_pos(cx, cy, False)
+    write_pos([(cx, cy, False)])
     try:
         while not stop["v"] and time.time() < end:
             r, _, _ = select.select([dev.fd], [], [], 0.25)
@@ -142,7 +150,7 @@ def main():
                         click(btn[ev.code][1]); held = None
                         LOG('release')
                         if saved: move_real(*saved)
-                write_pos(cx, cy, held is not None)
+                write_pos([(cx, cy, held is not None)])
                 if held is not None:
                     move_real(cx, cy)
     finally:

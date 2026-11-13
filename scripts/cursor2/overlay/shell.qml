@@ -1,15 +1,15 @@
-// cursor2 overlay — draws the second cursor. Click-through (empty input mask), overlay layer.
-// Reads $XDG_RUNTIME_DIR/cursor2/pos.json written by cursor2.py: {"x":..,"y":..,"down":bool} in
-// global logical coordinates. One small window per screen; it only shows on the screen holding the point.
+// cursor2 overlay — draws the extra cursors as normal arrow pointers, one colour per slot.
+// Click-through (empty input mask), overlay layer.
+// Reads $XDG_RUNTIME_DIR/cursor2/pos.json written by cursor2.py:
+//   {"cursors":[{"x":..,"y":..,"down":bool,"color":"#rrggbb"}, ...]}  (global logical coordinates)
+// One window per screen; an arrow shows only on the screen that holds its point.
 import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 
 ShellRoot {
-    property real px: -1
-    property real py: -1
-    property bool down: false
+    property var cursors: []
 
     FileView {
         id: posFile
@@ -17,10 +17,7 @@ ShellRoot {
         watchChanges: true
         onFileChanged: reload()
         onLoaded: {
-            try {
-                const o = JSON.parse(text())
-                px = o.x; py = o.y; down = o.down
-            } catch (err) {}
+            try { cursors = JSON.parse(text()).cursors || [] } catch (err) {}
         }
     }
 
@@ -37,17 +34,33 @@ ShellRoot {
             color: "transparent"
             mask: Region {}   // empty region: every click passes through
 
-            readonly property real lx: px - modelData.x
-            readonly property real ly: py - modelData.y
-            readonly property bool here: lx >= 0 && ly >= 0 && lx < modelData.width && ly < modelData.height
-
-            Rectangle {
-                visible: win.here
-                x: win.lx; y: win.ly
-                width: 16; height: 16
-                radius: 8
-                color: down ? "#ff4f9a" : "#2fd0ff"   // pink while pressed, cyan otherwise
-                border.color: "white"; border.width: 2
+            Repeater {
+                model: cursors
+                Canvas {
+                    id: arrow
+                    required property var modelData
+                    readonly property real lx: modelData.x - win.modelData.x
+                    readonly property real ly: modelData.y - win.modelData.y
+                    visible: lx >= 0 && ly >= 0 && lx < win.modelData.width && ly < win.modelData.height
+                    x: lx; y: ly          // the arrow tip is the top-left corner = the point
+                    width: 20; height: 28
+                    scale: modelData.down ? 0.85 : 1.0   // slightly smaller while pressed
+                    transformOrigin: Item.TopLeft
+                    onModelDataChanged: requestPaint()
+                    onPaint: {
+                        const c = getContext("2d")
+                        c.clearRect(0, 0, width, height)
+                        c.beginPath()
+                        // classic arrow outline, tip at (1,1)
+                        c.moveTo(1, 1); c.lineTo(1, 22); c.lineTo(6, 17); c.lineTo(10, 26)
+                        c.lineTo(14, 24); c.lineTo(10, 16); c.lineTo(17, 16); c.closePath()
+                        c.fillStyle = modelData.color
+                        c.fill()
+                        c.lineWidth = 1.5
+                        c.strokeStyle = "white"
+                        c.stroke()
+                    }
+                }
             }
         }
     }
