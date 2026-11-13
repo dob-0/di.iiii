@@ -21,14 +21,16 @@
 # Agents must NOT run this for real: it opens windows on the owner's desktop (use --dry-run).
 set -euo pipefail
 
-space=platina; project=platina-screen; stage_ws=2; tool_ws=1; base=http://diiii.localhost; preset=
+space=platina; project=platina-screen; stage_ws=2; tool_ws=1; base=http://diiii.localhost; preset=; tool_only=0
 tool_x=80; tool_y=60; tool_w=1036; tool_h=837
 port=9224; profile="${HOME}/.local/state/di/out-profile"; dry=0
 
 usage() {
   cat <<'USAGE'
 usage: stage-open.sh [--space S] [--project P] [--stage-ws N] [--tool-ws N] [--base URL]
-                     [--preset ID] [--tool-geometry X,Y,W,H] [--dry-run] [--help]
+                     [--preset ID] [--tool-geometry X,Y,W,H] [--tool-only] [--dry-run] [--help]
+  --tool-only      open ONLY the Perform window; no stage window is opened or placed (the operator opens the
+                   output by hand from the deck's own output button and picks the screen there)
   --space          space id                     (default platina)
   --project        project slug                 (default platina-screen)
   --stage-ws       workspace for the stage page (default 2); the window is fullscreened there
@@ -53,6 +55,7 @@ while [ $# -gt 0 ]; do
     --base) base=${2%/}; shift 2;;
     --preset) preset=$2; shift 2;;
     --tool-geometry) IFS=, read -r tool_x tool_y tool_w tool_h <<<"$2"; shift 2;;
+    --tool-only) tool_only=1; shift;;
     --dry-run) dry=1; shift;;
     -h|--help) usage; exit 0;;
     *) echo "stage-open: unknown argument: $1" >&2; usage >&2; exit 2;;
@@ -89,8 +92,10 @@ else
   echo "+ mkdir -p $profile"
 fi
 
-# 1. stage window
-if [ "$dry" = 1 ]; then
+# 1. stage window (skipped with --tool-only)
+if [ "$tool_only" = 1 ]; then
+  stage_addr=
+elif [ "$dry" = 1 ]; then
   printf '+ %s --app=%s &\n' "${chromium[*]}" "$stage_url"
   stage_addr=0xSTAGE
 else
@@ -110,8 +115,10 @@ else
 fi
 
 # 3. placement
-eval_hl "hl.dispatch(hl.dsp.window.move({ workspace = $stage_ws, window = 'address:$stage_addr', follow = false }))"
-eval_hl "hl.dispatch(hl.dsp.window.fullscreen({ window = 'address:$stage_addr' }))"
+if [ "$tool_only" = 0 ]; then
+  eval_hl "hl.dispatch(hl.dsp.window.move({ workspace = $stage_ws, window = 'address:$stage_addr', follow = false }))"
+  eval_hl "hl.dispatch(hl.dsp.window.fullscreen({ window = 'address:$stage_addr' }))"
+fi
 eval_hl "hl.dispatch(hl.dsp.window.move({ workspace = $tool_ws, window = 'address:$tool_addr', follow = false }))"
 
 # Fit X,Y,W,H (relative to a monitor) inside that monitor; prints the absolute "x y w h".
@@ -162,5 +169,9 @@ else
   fi
 fi
 
-echo "stage: $stage_url  (workspace $stage_ws, fullscreen)"
+if [ "$tool_only" = 1 ]; then
+  echo "stage: not opened (--tool-only); open the output from the deck's output button"
+else
+  echo "stage: $stage_url  (workspace $stage_ws, fullscreen)"
+fi
 echo "tool:  $tool_url  (workspace $tool_ws, floating ${gw}x${gh} at $gx,$gy)"
