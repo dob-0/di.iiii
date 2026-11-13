@@ -103,6 +103,7 @@ describe('rows 19, 23, 24: a cut picture is counted, and a dark cube is not "dri
         const { desk } = deskOn(fake())
         desk.setCube('cube-1', { y: 0.5 }) // ring height 0.5 + 0.5 puts its centre on the top edge
         desk.go('ring')
+        desk.editLive({ height: 0.5 }) // the seed ring's default height was 0.5 until 2026-11-13 (now 0): these rows were written for it
         const c = cube(desk)
         expect(c.offField).toBeGreaterThan(0)
         expect(c.lit).toBeGreaterThan(0)
@@ -121,6 +122,7 @@ describe('rows 19, 23, 24: a cut picture is counted, and a dark cube is not "dri
         const { desk } = deskOn(fake()) // zone y 0…1; the ring at height 0.5 with the cube Up at -1 sits in y -0.95…-0.05
         desk.setCube('cube-1', { y: -1 })
         desk.go('ring')
+        desk.editLive({ height: 0.5 })
         const c = cube(desk)
         expect(c.blanked).toBeGreaterThan(0)
         expect(c.offPercent).toBe(100)
@@ -129,6 +131,7 @@ describe('rows 19, 23, 24: a cut picture is counted, and a dark cube is not "dri
     it('a whole picture on the field reads 0 %', () => {
         const { desk } = deskOn(fake())
         desk.go('ring')
+        desk.editLive({ height: 0.5 })
         expect(cube(desk)).toMatchObject({ driving: true, dark: false, offPercent: 0, offField: 0, blanked: 0 })
     })
 })

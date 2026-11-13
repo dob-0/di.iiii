@@ -22,6 +22,8 @@ const LASER_SHAPES = [
     // Scenes of a few lines, circles and dots that move on the beat (2026-10-30, the owner: "more scenes like complex ones
     // but minimalistic lines circle dots").
     'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse',
+    // 2026-11-13: the smallest dots the cube may draw, many of them over the whole field.
+    'stardust',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
@@ -132,6 +134,8 @@ const markQuarter = (n, marks) => clamp(Math.floor(n / (4 * marks)), 3, 12)
 // A spot is a small ring, not a dot: a dot is a still beam (the engine's guard). 0.12 is the smallest that is still a
 // stroke at MARK_MIN_SIZE (0.24 × 0.15 = 0.036 of the field, over the 0.032 window, at any turn).
 const SPOT_R = 0.12
+// The smallest stardust dot, a field radius: 0.019 makes a 0.038 circle, above the engine's still-beam window (0.032).
+const STARDUST_R = 0.019
 // Morse's dash: still a stroke at MARK_MIN_SIZE turned 45°, where its box is smallest (0.34 × 0.15 / √2 = 0.036 of the field).
 const DASH = 0.34
 // The places spots rest on: a honeycomb 0.36 apart inside the circle (19 places), so resting spots keep half a spot
@@ -389,6 +393,26 @@ const STROKES = {
         const q = markQuarter(n, lit.length)
         return stars.filter((s) => lit.includes(s)).map((s) => sparkleMark(s.x, s.y, s.r, q))
     },
+    // `copies` dots (24, at most 28: the frame budget, measured with the picture lifted 0.5, the worst case; below size 0.15 they crowd, as the marks do), the smallest the still-beam guard still counts
+    // as a stroke: STARDUST_R is a field radius, so a dot is 0.038 wide at any size (just above the engine's 0.6° = 0.032 window).
+    // `size` only spreads the dots (golden angle, sunflower seeds, so the field stays even); a blank hop joins one dot to the next.
+    stardust: (n, { copies = 0, size = 1 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 24, 1, 28))
+        // Each dot costs the engine about 35 points on top (hop + settle; measured 2026-11-13), so 28 dots of 8 points fill the ~2000 budget.
+        const each = 8
+        const r = STARDUST_R / clamp(size, 0.05, 1)
+        const seeds = Array.from({ length: count }, (_, i) => {
+            const a = i * GOLDEN_ANGLE
+            const d = count === 1 ? 0 : Math.sqrt((i + 0.5) / count) * Math.max(0, 1 - r)
+            return { x: Math.cos(a) * d, y: Math.sin(a) * d, a }
+        })
+        // Drawn in a snake of rows, left to right then right to left, so every blank hop is short (the engine pads a long hop
+        // with points, and 60 hops across the field would cost more than the cube's frame budget).
+        const rows = Math.max(1, Math.round(Math.sqrt(count)))
+        const row = (s) => Math.min(rows - 1, Math.floor(((s.y + 1) / 2) * rows))
+        seeds.sort((s, t) => row(s) - row(t) || (row(s) % 2 === 0 ? s.x - t.x : t.x - s.x))
+        return seeds.map(({ x, y, a }) => Array.from({ length: each + 1 }, (_, j) => [x + Math.cos(a + (j / each) * TAU) * r, y + Math.sin(a + (j / each) * TAU) * r]))
+    },
     // The animations: each moves by itself on the beat; the desk's Spin, Pulse and Sweep still add to it.
     // `copies` upright lines (5), one in each lane across the picture. Each swings in its lane, a swing every two beats,
     // each a fifth of a swing behind the one before: a ripple that runs through the curtain. They never cross (a swing
@@ -635,7 +659,7 @@ const generateShape = ({
         clamp((x * cos - y * sin) * scale, -1, 1),
         clamp((x * sin + y * cos) * scale + lift, -1, 1),
     ]
-    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2) })
+    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2), size: scale })
     const total = strokes.reduce((sum, s) => sum + s.length, 0)
     const out = []
     let k = 0
