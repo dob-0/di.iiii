@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CLOCK_WRAP_SECONDS, clockSecondsFor, videoMoved } from './topEngine.js'
+import { CLOCK_WRAP_SECONDS, clockSecondsFor, secondInput, videoMoved } from './topEngine.js'
 import { TOP_OPERATORS } from './topOperators.js'
 
 // The engine's per-frame render loop needs a real WebGL context to exercise
@@ -66,5 +66,24 @@ describe('uploading a paused video', () => {
         expect(videoMoved(slot, { currentTime: 0, currentSrc: 'x' })).toBe(true)
         slot.lastVideoTime = 0
         expect(videoMoved(slot, { currentTime: 0, currentSrc: 'x' })).toBe(true)
+    })
+})
+
+describe('secondInput: the picture an operator reads on b', () => {
+    const inputs = { a: 'main-cam', b: 'phone-cam' }
+    it('Angles with a second camera that has no picture reads the main picture again, not black', () => {
+        expect(secondInput({ second: true, inputs, blank: new Set(['phone-cam']) })).toBe('main-cam')
+    })
+    it('Angles with a second camera that has a picture reads that camera', () => {
+        expect(secondInput({ second: true, inputs, blank: new Set() })).toBe('phone-cam')
+    })
+    it('an operator that does not take a second camera keeps reading b as it is', () => {
+        expect(secondInput({ second: false, inputs, blank: new Set(['phone-cam']) })).toBe('phone-cam')
+    })
+    it('nothing on b is nothing', () => {
+        expect(secondInput({ second: true, inputs: { a: 'main-cam' }, blank: new Set() })).toBe(null)
+    })
+    it('the only operator marked second is Angles', () => {
+        expect(Object.entries(TOP_OPERATORS).filter(([, op]) => op.second).map(([type]) => type)).toEqual(['top.angles'])
     })
 })

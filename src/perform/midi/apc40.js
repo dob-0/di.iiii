@@ -79,6 +79,9 @@ const isPadWithColumn = (entry) => entry?.match?.kind === 'note' && entry.match.
     && (entry.action === 'clip' || entry.action === 'column') && Number.isInteger(entry.args?.column)
 const isBankedPad = (entry) => isPadWithColumn(entry) && entry.args.column < APC40_COLUMNS
 
+/** Whether a pad of `map` (as the bank in use plays it) launches column `column` (a scene pad, not a clip pad or a key). */
+export const apc40PadReaches = (map, column) => (map || []).some((entry) => isPadWithColumn(entry) && entry.action === 'column' && entry.args.column === column)
+
 /** How many banks of pads a deck with this many columns has (at least 1). */
 export const apc40BankCount = (columns) => Math.max(1, Math.ceil((Number(columns) || 0) / APC40_COLUMNS))
 

@@ -466,3 +466,44 @@ describe('sync: a write made by the view, not by MIDI', () => {
         expect(writes.at(-1).layers[1].active).toBe(2)
     })
 })
+
+describe('APC40 next scene and the pad banks', () => {
+    const apcAccess = () => {
+        const input = { id: 'in-apc', name: 'APC40 mkII', manufacturer: 'Akai', onmidimessage: null }
+        const output = { id: 'out-apc', name: 'APC40 mkII', manufacturer: 'Akai', state: 'connected', send: () => {} }
+        return { input, access: { inputs: new Map([[input.id, input]]), outputs: new Map([[output.id, output]]), onstatechange: null } }
+    }
+    const sixteen = () => {
+        let deck = createDeck({ layers: 2, columns: 16 })
+        for (let column = 0; column < 16; column += 1) deck = setClip(deck, 0, column, { id: `s${column}`, kind: 'input', input: 'in1' })
+        return trigger(deck, 0, 7) // scene 8 playing
+    }
+    // the show map: the top pad row = scenes 1-8 (default), the second row (notes 24-31) = scenes 9-16
+    const rowTwo = { bindings: Array.from({ length: 8 }, (_, i) => ({ match: { kind: 'note', number: 24 + i, channel: 1 }, action: 'column', args: { column: 8 + i } })) }
+    const NEXT_SCENE = [0x90, 96, 127] // bank right
+    const mountApc = async (stored) => {
+        const fake = apcAccess()
+        install(fake)
+        const writes = []
+        const view = renderHook(() => useDeckMidi({ deck: sixteen(), stored, write: (deck) => writes.push(deck), onPatch: () => {}, enabled: true, deckId: `deck-banks-${stored ? 'rows' : 'plain'}`, console: 'apc40' }))
+        await flushAsync()
+        return { fake, writes, view }
+    }
+
+    it('from scene 8 to 9 with scenes 9-16 on the second pad row: the scene changes, the pad rows stay where they are', async () => {
+        const { fake, writes, view } = await mountApc(rowTwo)
+        expect(view.result.current.bankCount).toBe(2)
+        send(fake, NEXT_SCENE)
+        act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
+        expect(writes.at(-1).layers[0].active).toBe(8)
+        expect(view.result.current.bank).toBe(0)
+    })
+
+    it('with no pad on scene 9 in the bank in use, the pads still follow the scene to its bank', async () => {
+        const { fake, writes, view } = await mountApc(undefined)
+        send(fake, NEXT_SCENE)
+        act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
+        expect(writes.at(-1).layers[0].active).toBe(8)
+        expect(view.result.current.bank).toBe(1)
+    })
+})

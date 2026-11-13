@@ -27,7 +27,7 @@ import { createK2Monitor } from './k2Monitor.js'
 import { createK2Publisher, eventOf, lightsOf, namedValues } from './k2Channel.js'
 import { jobsFor, linesFor } from './k2Jobs.js'
 import { K2_CHANNEL, CONSOLES, K2_NAME, XONE_K2_LEDS, consoleOf, defaultMap, isK2, k2IsRelative, pickInputId } from './xoneK2.js'
-import { isApc40, APC40_CONSOLE_ID, APC40_COLUMNS, apc40BankCount, apc40Banked, apc40LedChanges, apc40LedClears, apc40Leds } from './apc40.js'
+import { isApc40, APC40_CONSOLE_ID, APC40_COLUMNS, apc40BankCount, apc40Banked, apc40PadReaches, apc40LedChanges, apc40LedClears, apc40Leds } from './apc40.js'
 
 // The live half of the MIDI binding: listens on the K2 (else the first input),
 // applies messages to the deck, keeps Learn, and lights the K2's buttons.
@@ -272,10 +272,11 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         else { dirty.current = true; flush() }
         // A column launched by MIDI (the K2's encoder pushes): reported after its write, once per launch.
         if (bound?.action === 'column' && Number.isInteger(bound.args?.column)) current.onColumn?.(bound.args.column)
-        // A scene step is a column launch too, and the pads go with it to its bank.
+        // A scene step is a column launch too. The pads go with it to its bank only when no pad of the bank in use
+        // reaches that column: with two pad rows of scenes (1-8 and 9-16) a step from 8 to 9 used to swap the rows.
         if (Number.isInteger(stepped)) {
             current.onColumn?.(stepped)
-            if (current.jump) setBank(Math.floor(stepped / APC40_COLUMNS))
+            if (current.jump && !apc40PadReaches(current.map, stepped)) setBank(Math.floor(stepped / APC40_COLUMNS))
         }
     }, [flush, schedule])
 

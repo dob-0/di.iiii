@@ -111,6 +111,13 @@ export const blankRule = ({ type, source = false, inputs = {}, blank = new Set()
     return null
 }
 
+// Which picture an operator reads on `b`. An operator that takes a SECOND camera there (Angles) reads `a` again
+// while that camera has no picture: its other screens show the main picture, not black (blankRule only checks `a`).
+export const secondInput = ({ second = false, inputs = {}, blank = new Set() } = {}) => {
+    if (!inputs.b) return null
+    return second && blank.has(inputs.b) && inputs.a ? inputs.a : inputs.b
+}
+
 // A paused video keeps its currentTime, so "time unchanged" alone would skip the upload
 // when a node's footage is switched to another paused file (same node id, same time,
 // other picture). A new element or a new source forgets the time it was uploaded at.
@@ -586,7 +593,8 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                 continue
             }
             const readA = inputs.a ? latest(inputs.a) : null
-            const readB = inputs.b ? latest(inputs.b) : null
+            const inputB = secondInput({ second: Boolean(operator.second), inputs, blank })
+            const readB = inputB ? latest(inputB) : null
             // A Body nobody sees (a silent deck layer) keeps the mask it has: no model run.
             const matteState = slot.matte && inputs.b
                 ? (matteWanted(node) ? refreshMatte(inputs.b, readB) : matteStates.get(inputs.b) || null)
