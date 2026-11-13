@@ -33,9 +33,12 @@ export const footprintOfName = (name) => {
  * The mode the desk runs for a crew mode: the maker's own mode when its channel list is
  * known; else the ASSUMED test mode of the same footprint (assumedProfiles.js) — the crew
  * still sets the maker's mode on the unit. Null when neither exists.
- * @returns {{crew: string, desk: string, footprint: number, assumed: boolean} | null}
+ * `footprintOnly` (the crew's address table, never a desk): a maker's mode whose channel
+ * COUNT is sourced but whose channel list is owed still gives addresses — an address needs
+ * the footprint and nothing else (RIG_BUILD.md §2.1). It comes back with `listOwed: true`.
+ * @returns {{crew: string, desk: string, footprint: number, assumed: boolean, listOwed?: boolean} | null}
  */
-export const resolveMode = (type, crew) => {
+export const resolveMode = (type, crew, { footprintOnly = false } = {}) => {
     if (!type || !crew) return null
     const own = modeOf(type, crew)
     if (own?.channels?.length) return { crew, desk: own.name, footprint: own.footprint, assumed: false }
@@ -43,7 +46,8 @@ export const resolveMode = (type, crew) => {
     if (!footprint) return null
     const stand = (type.modes || []).find((m) => m.footprint === footprint && m.channels?.length && m.name.startsWith(`${crew}-`))
         || (type.modes || []).find((m) => m.footprint === footprint && m.channels?.length)
-    if (!stand) return null
+    // No list of its own and no ASSUMED stand-in: a crew table still takes the maker's own count.
+    if (!stand) return footprintOnly && own?.footprint ? { crew, desk: own.name, footprint: own.footprint, assumed: false, listOwed: true } : null
     return { crew, desk: stand.name, footprint, assumed: stand.name !== crew }
 }
 
@@ -118,10 +122,11 @@ const ORDER = {
  * @param {object[]} args.entities  the project document's entities
  * @param {object}   args.library   a type library ({types})
  * @param {object}   args.plan      the patch plan (see scripts/place/rigs/*.patch.json)
+ * @param {boolean}  [args.footprintOnly]  a crew table only: accept a mode whose channel list is owed (resolveMode)
  * @returns {{ assignments: object[], ops: object[], universes: object[], errors: string[], warnings: string[], offDmx: string[] }}
  *   `offDmx` = ids of the lamps the document keeps off DMX that no block names (not patched, not an error)
  */
-export const planPatch = ({ entities = [], library, plan }) => {
+export const planPatch = ({ entities = [], library, plan, footprintOnly = false }) => {
     const errors = []
     const warnings = []
     const assignments = []
@@ -158,7 +163,7 @@ export const planPatch = ({ entities = [], library, plan }) => {
             if (members.some((m) => m.e.components.fixture.type !== typeId)) { errors.push(`${where}: the group mixes types`); continue }
             const type = typeById(library, typeId)
             const modeSpec = plan.modes?.[typeId]
-            const mode = resolveMode(type, modeSpec?.crew)
+            const mode = resolveMode(type, modeSpec?.crew, { footprintOnly })
             if (!mode) { errors.push(`${where}: no usable mode for ${typeId} (plan says "${modeSpec?.crew ?? '—'}")`); continue }
             const step = Math.max(mode.footprint, Number(modeSpec.pitch) || 0)
             const start = Number(block.start)
@@ -184,6 +189,7 @@ export const planPatch = ({ entities = [], library, plan }) => {
                     mode: mode.desk,
                     crewMode: mode.crew,
                     assumed: mode.assumed,
+                    listOwed: mode.listOwed === true,
                     unit: i + 1,
                     // Position and mount come from the DOCUMENT unless the block names them.
                     position: 'position' in block ? block.position : (m.e.components.fixture.position || ''),
@@ -231,6 +237,29 @@ export const planPatch = ({ entities = [], library, plan }) => {
     }
     assignments.sort((a, b) => a.universe - b.universe || a.address - b.address)
     return { assignments, ops, universes, errors, warnings, offDmx }
+}
+
+/**
+ * The library a plan is read with: the shared library plus the plan's OWN types (`plan.types`) —
+ * a show's fixtures that are not in the shared library yet (the same idea as a document's
+ * `components.rentalList.types`). A plan type may not reuse a library id, and each needs an id,
+ * a code and at least one mode with a footprint; every mode says where its count comes from (`src`). Pure.
+ */
+export const libraryWithPlan = (library, plan) => {
+    const own = plan?.types || []
+    if (!own.length) return library
+    const ids = new Set((library?.types || []).map((t) => t.id))
+    for (const t of own) {
+        if (!t?.id || !t.code) throw new Error('a plan type needs an id and a code')
+        if (ids.has(t.id)) throw new Error(`plan type "${t.id}" is already in the library: use the library's`)
+        ids.add(t.id)
+        if (!(t.modes || []).length) throw new Error(`plan type "${t.id}" has no mode`)
+        for (const m of t.modes) {
+            if (!m.name || !Number.isInteger(m.footprint) || m.footprint < 1 || m.footprint > 512) throw new Error(`plan type "${t.id}": mode "${m.name ?? '—'}" needs a name and a footprint of 1–512`)
+            if (!m.src) throw new Error(`plan type "${t.id}": mode "${m.name}" does not say where its channel count comes from (src)`)
+        }
+    }
+    return { ...library, types: [...(library?.types || []), ...own] }
 }
 
 /**

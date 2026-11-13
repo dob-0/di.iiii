@@ -1,0 +1,456 @@
+{
+ "patch": "platina-2026-11-11",
+ "title": "Platina - Live in Yerevan: the patch from the rental list, FULL modes (PROPOSED, 2026-11-11), 54 units on 10 universes",
+ "title_ru": "Platina - Live in Yerevan: патч по списку аренды, ПОЛНЫЕ режимы (ЧЕРНОВИК, 2026-11-11), 54 прибора на 10 юниверсах",
+ "writtenAt": "2026-11-11",
+ "owner": "N3655/N3671: every lamp in its full mode; the list is what is rented; the grandMA2 is not used for now, di sends the DMX over Art-Net (N3664).",
+ "status": "PROPOSED, 2026-11-11. The counts are the rental list's. Nothing is confirmed by the rental side: maker and mode of each lamp, the node. Types with a channel count from a maker document: K10, K15, Pixel Line IP (manual copy), Magma Prime. ASSUMED: the XP-16R BWS (23 ch) - own universe, U10.",
+ "crewLine": "PROPOSED, 2026-11-11, not confirmed by the rental side: read the mode on each lamp's display before setting an address.",
+ "crewLine_ru": "ЧЕРНОВИК от 2026-11-11, не подтверждён арендой: перед установкой адреса прочитать режим на дисплее каждого прибора.",
+ "howToRead": "docs/architecture/RIG_BUILD.md §19.5. No project document yet: the crew table comes from this plan alone — node scripts/rigbuild/patch-table.mjs --plan <this> --out <dir> --pdf. Never edit an address by hand: change the plan and print again.",
+ "method": [
+  "One kind per universe where it fits (a lamp never spans two universes); every lamp in its FULL (largest) mode, no spare pitch.",
+  "Fit: K10 8 x 76 = 608 (U1 6, U2 2); K15 8 x 76 = 608 (U2 4, U3 4); hazers 2 x 5; Pixel Line IP 24 x 117 = 2808 (4 per universe, U4-U9, 468 of 512); XP-16R 12 x 23 = 276 (U10, ASSUMED).",
+  "Positions: the 11-10 ones are kept; the XP-16R positions are PROPOSED. The 3 audience-side K10 and the 7 Sharpy of 11-10 are not on the list and are not patched."
+ ],
+ "node": {
+  "what": "ASSUMED: one Art-Net node ('artnet' on the list: maker, model, ports unknown) with 10 outputs, or several nodes",
+  "numbering": "U1 = Art-Net 0.0.0 ... U10 = 0.0.9; sACN 1 ... 10"
+ },
+ "types": [
+  {
+   "id": "cp-aleda-beye-k10",
+   "code": "A.leda B-EYE K10",
+   "maker": "Claypaky",
+   "identified": "PROBABLE: the list says 'LED WASH A.leda K10 19x15'; a copy cannot be ruled out",
+   "modes": [
+    {
+     "name": "Standard",
+     "footprint": 21,
+     "channels": null,
+     "src": "https://github.com/OpenLightingProject/open-fixture-library/blob/4992b86027ee3cba19644bc7417435a68c8cdcb5/fixtures/clay-paky/a-leda-b-eye-k10.json (Open Fixture Library, MIT), read 2026-11-11"
+    },
+    {
+     "name": "Shapes",
+     "footprint": 35,
+     "channels": null,
+     "src": "the same file"
+    },
+    {
+     "name": "Pixel RGB",
+     "footprint": 57,
+     "channels": null,
+     "src": "the same file: 19 pixels x 3"
+    },
+    {
+     "name": "Pixel RGBW",
+     "footprint": 76,
+     "channels": null,
+     "src": "the same file: 19 pixels x 4 (R,G,B,W per pixel). FULL = the largest. HYPOTHESIS: the file lists no pan/tilt in this mode; the rental must say what the display shows"
+    }
+   ]
+  },
+  {
+   "id": "cp-hy-beye-k15",
+   "code": "HY B-EYE K15",
+   "maker": "Claypaky",
+   "identified": "PROBABLE: the list says 'B-Eye K15'; a copy cannot be ruled out",
+   "modes": [
+    {
+     "name": "Standard",
+     "footprint": 22,
+     "channels": null,
+     "src": "https://goknight.com/content/documentation/HyB-EyeK15_Datasheet_01.2021.pdf, read 2026-11-11. ASSUMED: the four counts 22/36/57/76 are in the order Standard, Shape, Pixel RGB, Pixel RGBW"
+    },
+    {
+     "name": "Shape",
+     "footprint": 36,
+     "channels": null,
+     "src": "the same datasheet, same assumption"
+    },
+    {
+     "name": "Pixel RGB",
+     "footprint": 57,
+     "channels": null,
+     "src": "the same datasheet; 19 RGBW LEDs, so 19 x 3"
+    },
+    {
+     "name": "Pixel RGBW",
+     "footprint": 76,
+     "channels": null,
+     "src": "the same datasheet; 19 x 4. FULL = the largest. Channel list NOT read (datasheet gives counts only)"
+    }
+   ]
+  },
+  {
+   "id": "acme-pixel-line-ip",
+   "code": "Pixel Line IP",
+   "maker": "ACME (PROBABLE: the list names no maker; ACME's own range lists a PIXEL LINE IP)",
+   "identified": "PROBABLE",
+   "modes": [
+    {
+     "name": "117ch",
+     "footprint": 117,
+     "channels": null,
+     "src": "a PIXEL LINE IP user manual copy (https://res.cloudinary.com/tr2onhk1/image/upload/v1784625081/artr/specs/xcjuxizosh2ucwt4ktml.pdf, read 2026-11-11) lists Channel Mode 7/15/21/39/112/17/33/65/68/117/70. FULL = 117 (the largest). Which function each channel holds is NOT read; whether 117 is per-pixel is HYPOTHESIS"
+    },
+    {
+     "name": "112ch",
+     "footprint": 112,
+     "channels": null,
+     "src": "the same manual copy"
+    }
+   ]
+  },
+  {
+   "id": "acme-xp16r-bsw",
+   "code": "XP-16R BWS (ASSUMED chart)",
+   "maker": "ACME (PROBABLE: 'xp16r BWS'; ACME's page https://en.acmelighting.com/Info/productdetail/cat_id/16/id/121 lists no such model, a XP-16R BSW PRO appears on ACME's older site)",
+   "identified": "UNKNOWN",
+   "modes": [
+    {
+     "name": "23ch ASSUMED",
+     "footprint": 23,
+     "channels": null,
+     "src": "ASSUMED: a search snippet of a manualshive page for 'ACME XP-16R BSW' says 'Mode1 23 channels'; no other mode seen, the page itself refused our fetch (2026-11-11). The largest mode is NOT known"
+    }
+   ]
+  },
+  {
+   "id": "magmatic-magma-prime",
+   "code": "Magma Prime",
+   "maker": "Magmatic Effects (Elation)",
+   "identified": "CONFIRMED by the maker's manual",
+   "modes": [
+    {
+     "name": "1ch",
+     "footprint": 1,
+     "channels": null,
+     "src": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf"
+    },
+    {
+     "name": "3ch",
+     "footprint": 3,
+     "channels": null,
+     "src": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf"
+    },
+    {
+     "name": "5ch",
+     "footprint": 5,
+     "channels": null,
+     "src": "https://goknight.com/content/documentation/Magma%20Prime%20User%20Manual.pdf read 2026-11-11: 1 fog output, 2 output volume, 3 fan, 4 output duration, 5 interval"
+    }
+   ]
+  }
+ ],
+ "modes": {
+  "cp-aleda-beye-k10": {
+   "crew": "Pixel RGBW",
+   "pitch": 76,
+   "why": "FULL mode (N3655/N3671): the largest"
+  },
+  "cp-hy-beye-k15": {
+   "crew": "Pixel RGBW",
+   "pitch": 76,
+   "why": "FULL mode: the largest"
+  },
+  "acme-pixel-line-ip": {
+   "crew": "117ch",
+   "pitch": 117,
+   "why": "FULL mode: the largest in the manual copy"
+  },
+  "acme-xp16r-bsw": {
+   "crew": "23ch ASSUMED",
+   "pitch": 23,
+   "why": "ASSUMED: the only count seen"
+  },
+  "magmatic-magma-prime": {
+   "crew": "5ch",
+   "pitch": 5,
+   "why": "FULL mode of the maker's manual"
+  }
+ },
+ "universes": [
+  {
+   "universe": 1,
+   "port": "A",
+   "label": "B-EYE K10 washes (1-6)",
+   "label_ru": "Заливка B-EYE K10 (1-6)",
+   "run": "output A: K10 1-6 over the stage",
+   "run_ru": "output A: K10 1-6 over the stage",
+   "blocks": [
+    {
+     "select": {
+      "group": "k10-over-stage",
+      "type": "cp-aleda-beye-k10"
+     },
+     "name": "B-EYE K10 over stage, 1-6",
+     "name_ru": "B-EYE K10 над сценой, 1-6",
+     "start": 1,
+     "fixture": 101,
+     "order": "id-asc",
+     "units": 6,
+     "what": "K10 1-6 over the stage (the 11-10 position), from the audience's left"
+    }
+   ]
+  },
+  {
+   "universe": 2,
+   "port": "B",
+   "label": "B-EYE K10 7-8 and HY B-EYE K15 1-4",
+   "label_ru": "B-EYE K10 7-8 и HY B-EYE K15 1-4",
+   "run": "output B",
+   "run_ru": "output B",
+   "blocks": [
+    {
+     "select": {
+      "group": "k10-over-stage-b",
+      "type": "cp-aleda-beye-k10"
+     },
+     "name": "B-EYE K10 over stage, 7-8",
+     "name_ru": "B-EYE K10 над сценой, 7-8",
+     "start": 1,
+     "fixture": 107,
+     "order": "id-asc",
+     "units": 2,
+     "what": "K10 7-8 over the stage"
+    },
+    {
+     "select": {
+      "group": "k15-floor",
+      "type": "cp-hy-beye-k15"
+     },
+     "name": "HY B-EYE K15, stage floor 1-4",
+     "name_ru": "HY B-EYE K15, пол сцены 1-4",
+     "start": 153,
+     "fixture": 201,
+     "order": "id-asc",
+     "units": 4,
+     "what": "K15 1-4 in the row on the stage floor in front of the screen (totems), from the audience's left"
+    }
+   ]
+  },
+  {
+   "universe": 3,
+   "port": "C",
+   "label": "HY B-EYE K15 5-8 and the hazers",
+   "label_ru": "HY B-EYE K15 5-8 и хейзеры",
+   "run": "output C",
+   "run_ru": "output C",
+   "blocks": [
+    {
+     "select": {
+      "group": "k15-floor-b",
+      "type": "cp-hy-beye-k15"
+     },
+     "name": "HY B-EYE K15, stage floor 5-6",
+     "name_ru": "HY B-EYE K15, пол сцены 5-6",
+     "start": 1,
+     "fixture": 205,
+     "order": "id-asc",
+     "units": 2,
+     "what": "K15 5-6 in the floor row"
+    },
+    {
+     "select": {
+      "group": "k15-sides",
+      "type": "cp-hy-beye-k15"
+     },
+     "name": "HY B-EYE K15, the two sides",
+     "name_ru": "HY B-EYE K15, два боковых",
+     "start": 153,
+     "fixture": 207,
+     "order": "id-asc",
+     "units": 2,
+     "what": "K15 7-8 at the sides (11-10 position)"
+    },
+    {
+     "select": {
+      "group": "hazer",
+      "type": "magmatic-magma-prime"
+     },
+     "name": "Hazer Magma Prime",
+     "name_ru": "Хейзер Magma Prime",
+     "start": 461,
+     "fixture": 301,
+     "order": "id-asc",
+     "units": 2,
+     "what": "the 2 hazers: place not on the list or the drawings"
+    }
+   ]
+  },
+  {
+   "universe": 4,
+   "port": "D",
+   "label": "Pixel Line IP bars 1-4",
+   "label_ru": "Pixel Line IP, планки 1-4",
+   "run": "output D: bars 1-4 of the towers",
+   "run_ru": "output D: bars 1-4 of the towers",
+   "blocks": [
+    {
+     "select": {
+      "group": "pixel-line-g1",
+      "type": "acme-pixel-line-ip"
+     },
+     "name": "Pixel Line IP 1-4",
+     "name_ru": "Pixel Line IP 1-4",
+     "start": 1,
+     "fixture": 401,
+     "order": "id-asc",
+     "units": 4,
+     "what": "bars 1-4: the 8 towers, 3 bars each (11-10 position), towers from the audience's left, in each tower the bottom bar first"
+    }
+   ]
+  },
+  {
+   "universe": 5,
+   "port": "E",
+   "label": "Pixel Line IP bars 5-8",
+   "label_ru": "Pixel Line IP, планки 5-8",
+   "run": "output E: bars 5-8 of the towers",
+   "run_ru": "output E: bars 5-8 of the towers",
+   "blocks": [
+    {
+     "select": {
+      "group": "pixel-line-g2",
+      "type": "acme-pixel-line-ip"
+     },
+     "name": "Pixel Line IP 5-8",
+     "name_ru": "Pixel Line IP 5-8",
+     "start": 1,
+     "fixture": 405,
+     "order": "id-asc",
+     "units": 4,
+     "what": "bars 5-8: the 8 towers, 3 bars each (11-10 position), towers from the audience's left, in each tower the bottom bar first"
+    }
+   ]
+  },
+  {
+   "universe": 6,
+   "port": "F",
+   "label": "Pixel Line IP bars 9-12",
+   "label_ru": "Pixel Line IP, планки 9-12",
+   "run": "output F: bars 9-12 of the towers",
+   "run_ru": "output F: bars 9-12 of the towers",
+   "blocks": [
+    {
+     "select": {
+      "group": "pixel-line-g3",
+      "type": "acme-pixel-line-ip"
+     },
+     "name": "Pixel Line IP 9-12",
+     "name_ru": "Pixel Line IP 9-12",
+     "start": 1,
+     "fixture": 409,
+     "order": "id-asc",
+     "units": 4,
+     "what": "bars 9-12: the 8 towers, 3 bars each (11-10 position), towers from the audience's left, in each tower the bottom bar first"
+    }
+   ]
+  },
+  {
+   "universe": 7,
+   "port": "G",
+   "label": "Pixel Line IP bars 13-16",
+   "label_ru": "Pixel Line IP, планки 13-16",
+   "run": "output G: bars 13-16 of the towers",
+   "run_ru": "output G: bars 13-16 of the towers",
+   "blocks": [
+    {
+     "select": {
+      "group": "pixel-line-g4",
+      "type": "acme-pixel-line-ip"
+     },
+     "name": "Pixel Line IP 13-16",
+     "name_ru": "Pixel Line IP 13-16",
+     "start": 1,
+     "fixture": 413,
+     "order": "id-asc",
+     "units": 4,
+     "what": "bars 13-16: the 8 towers, 3 bars each (11-10 position), towers from the audience's left, in each tower the bottom bar first"
+    }
+   ]
+  },
+  {
+   "universe": 8,
+   "port": "H",
+   "label": "Pixel Line IP bars 17-20",
+   "label_ru": "Pixel Line IP, планки 17-20",
+   "run": "output H: bars 17-20 of the towers",
+   "run_ru": "output H: bars 17-20 of the towers",
+   "blocks": [
+    {
+     "select": {
+      "group": "pixel-line-g5",
+      "type": "acme-pixel-line-ip"
+     },
+     "name": "Pixel Line IP 17-20",
+     "name_ru": "Pixel Line IP 17-20",
+     "start": 1,
+     "fixture": 417,
+     "order": "id-asc",
+     "units": 4,
+     "what": "bars 17-20: the 8 towers, 3 bars each (11-10 position), towers from the audience's left, in each tower the bottom bar first"
+    }
+   ]
+  },
+  {
+   "universe": 9,
+   "port": "I",
+   "label": "Pixel Line IP bars 21-24",
+   "label_ru": "Pixel Line IP, планки 21-24",
+   "run": "output I: bars 21-24 of the towers",
+   "run_ru": "output I: bars 21-24 of the towers",
+   "blocks": [
+    {
+     "select": {
+      "group": "pixel-line-g6",
+      "type": "acme-pixel-line-ip"
+     },
+     "name": "Pixel Line IP 21-24",
+     "name_ru": "Pixel Line IP 21-24",
+     "start": 1,
+     "fixture": 421,
+     "order": "id-asc",
+     "units": 4,
+     "what": "bars 21-24: the 8 towers, 3 bars each (11-10 position), towers from the audience's left, in each tower the bottom bar first"
+    }
+   ]
+  },
+  {
+   "universe": 10,
+   "port": "J",
+   "label": "Acme XP-16R BWS (ASSUMED 23 ch)",
+   "label_ru": "Acme XP-16R BWS (ПРЕДПОЛОЖЕНИЕ, 23 кан.)",
+   "run": "output J: PROPOSED positions",
+   "run_ru": "output J: PROPOSED positions",
+   "blocks": [
+    {
+     "select": {
+      "group": "xp16r-proposed",
+      "type": "acme-xp16r-bsw"
+     },
+     "name": "XP-16R BWS, PROPOSED",
+     "name_ru": "XP-16R BWS, ПРЕДЛОЖЕНО",
+     "start": 1,
+     "fixture": 501,
+     "order": "id-asc",
+     "units": 12,
+     "what": "PROPOSED: 12 beam lamps; the list names no truss. Place where the drawing hangs its beam lamps (over the stage), not decided"
+    }
+   ]
+  }
+ ],
+ "crewNotes": [
+  "PROPOSED 2026-11-11. Without the ASSUMED XP-16R the patch needs 9 universes; with it, 10.",
+  "K10 and K15 'Pixel RGBW' (76 ch) is the largest mode: the maker files list pixels only (HYPOTHESIS: pan/tilt, zoom are in the other modes). Ask the rental which mode the display shows before this is set.",
+  "Pixel Line IP 117 ch: the largest in the manual copy, channel list NOT read. CO2 jets: run by the rental's operator, not patched. The grandMA2 is not used for now.",
+  "Counting: 'the audience's left' is the left as seen from the hall."
+ ],
+ "crewNotes_ru": [
+  "ЧЕРНОВИК 2026-11-11. Без ПРЕДПОЛОЖЕННОГО XP-16R нужно 9 юниверсов, с ним 10.",
+  "K10 и K15 'Pixel RGBW' (76 кан.) — самый большой режим; в файлах производителя только пиксели (ГИПОТЕЗА: pan/tilt и zoom в других режимах). Спросить у аренды, какой режим на дисплее.",
+  "Pixel Line IP 117 кан.: самый большой по копии мануала, список каналов НЕ прочитан. CO2-джеты — оператор аренды, не в патче. grandMA2 пока не используется.",
+  "'Слева от зрителя' — слева, если смотреть из зала на сцену."
+ ]
+}
