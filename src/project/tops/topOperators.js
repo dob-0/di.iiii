@@ -532,7 +532,7 @@ vec3 ds_tone(float v, float tone) {
     // ghost: a body of cold light. Black, deep blue, pale blue-white, a white core with a breath of green.
     if (tone > 5.5) return ds_ramp(v, vec3(0.0), vec3(0.03, 0.07, 0.11), vec3(0.20, 0.40, 0.50), vec3(0.58, 0.84, 0.88), vec3(0.86, 1.0, 0.94), vec3(0.96, 1.0, 0.92));
     // night green: fog lit green, the bright end a vivid lime
-    if (tone > 4.5) return ds_ramp(v, vec3(0.0, 0.06, 0.02), vec3(0.03, 0.26, 0.08), vec3(0.10, 0.46, 0.15), vec3(0.22, 0.68, 0.24), vec3(0.38, 0.88, 0.34), vec3(0.62, 1.0, 0.52));
+    if (tone > 4.5) return ds_ramp(v, vec3(0.0, 0.015, 0.005), vec3(0.0, 0.09, 0.03), vec3(0.02, 0.26, 0.07), vec3(0.08, 0.52, 0.15), vec3(0.28, 0.84, 0.30), vec3(0.78, 1.0, 0.72));
     if (tone > 3.5) {
         float m = 0.5 + 0.5 * sin(v * 9.4 - 1.2);
         float g = clamp(mix(v, m, 0.62) * 1.15 - 0.05, 0.0, 1.0);
@@ -763,6 +763,161 @@ void main() {
     col *= step(abs(uv.y - 0.5), 0.5 - 0.13 * p_bars);
     col *= seam * (1.0 - step(0.5, p_black));
     gl_FragColor = vec4(col, 1.0);
+}`
+    },
+
+    'top.angles': {
+        label: 'Angles',
+        family: 'adjust',
+        // b = the second camera: the deck wires it (vjDeck.js runStack), anywhere else b is what you give it
+        inputs: ['a', 'b'],
+        second: true,
+        // Reads `time` (the screens change angle in time).
+        animated: true,
+        params: [
+            // 1 = off (the picture as it is), 2 = two halves, 3 = three tall screens, 4 = two by two
+            param('screens', 'Screens', 1, 1, 4, 1),
+            param('hold', 'Seconds per angle', 4, 0.5, 16, 0.5),
+            param('zoom', 'Close-ups', 0.6, 0, 1),
+            param('gap', 'Line between', 1, 0, 1),
+            // PRESS value: 1 while a key is held (the deck's fxPress action). A scene never sets it.
+            param('multi', 'Press: screens', 0, 0, 1, 1)
+        ],
+        // The frame as a wall of screens, each one a different ANGLE on the stage: screens side by side show
+        // different cameras (a and b), each at its own shot size (wide, medium, close) and its own place in the
+        // picture. A screen holds its angle for Seconds per angle with a slow push-in, then cuts to the other
+        // camera at another size; the screens change one after another, never together. A tall screen takes the
+        // slice of the camera that fits it, nothing is squeezed. Deterministic: a hash of the shot number.
+        fragment: `
+uniform float p_screens;
+uniform float p_hold;
+uniform float p_zoom;
+uniform float p_gap;
+uniform float p_multi;
+float an_hash(float n) { return fract(sin(n * 91.7 + 1.3) * 43758.5453123); }
+void main() {
+    // a held key is three tall screens, whatever the scene
+    float n = max(floor(p_screens + 0.5), 1.0 + 2.0 * step(0.5, p_multi));
+    if (n < 1.5) { gl_FragColor = vec4(texture2D(a, uv).rgb, 1.0); return; }
+    // the wall: 2 = two halves, 3 = three tall screens, 4 = two by two
+    vec2 cells = n > 3.5 ? vec2(2.0, 2.0) : vec2(n, 1.0);
+    vec2 tile = min(floor(uv * cells), cells - 1.0);
+    vec2 q = uv * cells - tile;
+    float id = tile.x + tile.y * cells.x;
+    // every screen holds one angle; the screens change one after another, never all at once
+    float t = time / max(p_hold, 0.1) + id / (cells.x * cells.y);
+    float shot = mod(floor(t), 4096.0);
+    float into = fract(t) * max(p_hold, 0.1);
+    // which camera: screens side by side never show the same one, and a screen swaps cameras at its change
+    float cam = mod(id + tile.y + shot, 2.0);
+    // the size of the shot: wide, medium, close; never the size this screen had before, never the neighbour's
+    float size = mod(id + shot + floor(an_hash(floor(shot / 3.0) + 7.0) * 3.0), 3.0);
+    float z = (1.0 + p_zoom * size * 0.6) * (1.0 + 0.012 * min(into, 12.0));
+    // the piece of the camera picture that fits this screen without squeezing it
+    vec2 piece = vec2(cells.y / cells.x, 1.0) / z;
+    vec2 room = (1.0 - piece) * 0.5;
+    vec2 c = vec2(0.5) + (vec2(an_hash(shot * 3.0 + id * 17.0), an_hash(shot * 5.0 + id * 29.0)) * 2.0 - 1.0) * room * vec2(0.45, 0.35);
+    // a close shot looks at the head, not at the belt
+    c.y += room.y * 0.4 * step(0.5, size);
+    vec2 p = clamp(c + (q - 0.5) * piece, 0.0, 1.0);
+    vec3 col = mix(texture2D(a, p).rgb, texture2D(b, p).rgb, cam);
+    // a thin dark line between the screens
+    vec2 e = min(q, 1.0 - q) * vec2(1.7778 / cells.x, 1.0 / cells.y);
+    vec2 inner = vec2(step(1.5, cells.x), step(1.5, cells.y));
+    float edge = min(mix(1.0, e.x, inner.x), mix(1.0, e.y, inner.y));
+    col *= step(0.006 * p_gap, edge);
+    gl_FragColor = vec4(col, 1.0);
+}`
+    },
+
+    'top.hologram': {
+        label: 'Hologram',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the beam climbs, the cloud turns).
+        animated: true,
+        params: [
+            // 0 = the picture as it is (the effect costs nothing), 1 = the scan alone
+            param('amount', 'Amount', 0, 0, 1),
+            param('rows', 'Row spacing', 6, 3, 24, 1),
+            param('relief', 'Relief', 3, 0, 6, 0.25),
+            // 0 = unbroken scan lines, 1 = separate points
+            param('points', 'Points', 0.8, 0, 1),
+            param('turn', 'Turn', 0.4, 0, 1),
+            param('beam', 'Beam', 0.6, 0, 1),
+            param('speed', 'Speed', 1, 0, 3, 0.05),
+            param('floor', 'Dark limit', 0.08, 0, 0.9),
+            // 1 = dark points on a white wall
+            param('white', 'On white', 0, 0, 1, 1)
+        ],
+        // The picture as a 3D SCAN: rows of fine points of light, each row lifted by the depth of the picture
+        // under it (bright = near), so a face or a body stands out of the screen like a point cloud. Dark = no
+        // points: a body on black (the Body effect before it) is a hologram of the body alone. Turn: the cloud
+        // is seen a little from one side, then the other. Beam: a line of light climbs the picture and what it
+        // has just passed glows. No memory of the last frame: every point is worked out from the time alone.
+        // For each pixel: the rows below it that their depth could lift this far (8 at most), two reads a row.
+        fragment: `
+uniform float p_amount;
+uniform float p_white;
+uniform float p_rows;
+uniform float p_relief;
+uniform float p_points;
+uniform float p_turn;
+uniform float p_beam;
+uniform float p_speed;
+uniform float p_floor;
+float hg_hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+float hg_lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+void main() {
+    vec3 live = texture2D(a, uv).rgb;
+    if (p_amount < 0.004) { gl_FragColor = vec4(live, 1.0); return; }
+    vec2 px = uv / texel;
+    float rows = max(p_rows, 2.0);
+    float pitch = rows * 0.55;
+    float r0 = floor(px.y / rows);
+    float sway = sin(time * 0.6 * p_speed) * p_turn * rows * 2.2;
+    // the beam climbs the picture; what it has just passed still glows
+    float by = fract(time * 0.18 * p_speed);
+    vec3 col = vec3(0.0);
+    float cover = 0.0;
+    for (int k = 0; k <= 7; k++) {
+        float fk = float(k);
+        if (fk > p_relief + 1.0) break;
+        float r = r0 - fk;
+        float rowY = (r + 0.5) * rows;
+        if (rowY < 0.0) break;
+        // depth here (the light of the picture), then the same point seen a little from the side
+        vec2 at = vec2(px.x, rowY) * texel;
+        float l0 = hg_lum(texture2D(a, at).rgb);
+        at.x = clamp(at.x - (l0 - 0.5) * sway * texel.x, 0.0, 1.0);
+        vec3 src = texture2D(a, at).rgb;
+        float l = hg_lum(src);
+        float lit = smoothstep(p_floor, p_floor + 0.06, l);
+        if (lit < 0.01) continue;
+        // the row is lifted by the depth: near parts rise over far ones
+        float dy = px.y - (rowY + p_relief * rows * l);
+        if (abs(dy) > 3.0) continue;
+        float line = 1.0 - smoothstep(0.35, 1.25, abs(dy));
+        // the row as separate points: a little uneven, a few missing, a few twinkling
+        float cell = floor(px.x / pitch);
+        vec2 key = vec2(cell, r);
+        float cx = (cell + 0.5 + (hg_hash(key) - 0.5) * 0.7) * pitch;
+        float rad = 0.9 + 1.0 * l;
+        float dot1 = 1.0 - smoothstep(rad - 0.55, rad + 0.55, length(vec2(px.x - cx, dy)));
+        float there = step(0.12, hg_hash(key + 3.7));
+        float tw = hg_hash(key + 9.1);
+        float twinkle = 1.0 - 0.6 * step(0.9, tw) * step(0.5, fract(time * 5.0 * p_speed + tw * 13.0));
+        float m = mix(line * 0.8, dot1 * there * twinkle, p_points) * lit;
+        float ry = rowY * texel.y;
+        float behind = by - ry + step(by, ry);
+        float glowed = 0.5 + p_beam * (1.6 * exp(-abs(ry - by) * 55.0) + 0.5 * exp(-behind * 5.0)) + 0.5 * (1.0 - p_beam);
+        m *= (0.45 + 0.75 * l) * glowed;
+        if (m > cover) { cover = m; col = src / max(max(src.r, max(src.g, src.b)), 0.001); }
+    }
+    vec3 outc = col * min(cover, 1.4);
+    // on a white wall: the same points, dark
+    outc = mix(outc, vec3(1.0) - vec3(min(cover, 1.0)), step(0.5, p_white));
+    gl_FragColor = vec4(mix(live, outc, p_amount), 1.0);
 }`
     },
 

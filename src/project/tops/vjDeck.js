@@ -77,7 +77,7 @@ export const normalizeClip = (clip) => {
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
 // One of every effect fits on a stack (21 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 23
+export const MAX_EFFECTS = 25
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -101,7 +101,9 @@ export const EFFECT_TYPES = {
     'top.glow': { main: ['threshold', 'radius', 'amount'] },
     'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert', 'cut', 'flash', 'tone', 'hud', 'sensor', 'grain', 'grid'] },
     'top.cuts': { main: ['rate', 'zoom', 'move', 'mirror', 'flash', 'bars', 'burst', 'lens', 'tiles'] },
-    'top.particles': { main: ['size', 'fly', 'reach', 'speed', 'angle', 'dot', 'floor', 'keep', 'lines', 'streak'] }
+    'top.particles': { main: ['size', 'fly', 'reach', 'speed', 'angle', 'dot', 'floor', 'keep', 'lines', 'streak'] },
+    'top.angles': { main: ['screens', 'hold', 'zoom', 'gap'] },
+    'top.hologram': { main: ['amount', 'rows', 'relief', 'points', 'turn', 'beam', 'speed', 'floor', 'white'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
@@ -559,6 +561,28 @@ export const cameraNodeId = (deckId, label, device = '') => {
     return `${deckId}::cam-${h.toString(36)}`
 }
 
+// An effect that is on but cannot change the picture (its params make the operator pass the input
+// through): runStack builds no nodes for it. A missing param reads as 0.
+export const effectIdle = (effect) => {
+    const p = effect?.params || {}
+    const n = (key) => Number(p[key] ?? 0)
+    if (Number(effect?.mix) <= 0) return true
+    switch (effect?.type) {
+        case 'top.hologram':
+            return n('amount') <= 0
+        case 'top.angles':
+            return n('screens') < 1.5 && n('multi') < 0.5
+        case 'top.freeze':
+            return n('hold') < 0.5
+        case 'top.cuts':
+            return ['zoom', 'move', 'mirror', 'flash', 'bars', 'burst', 'lens'].every((key) => n(key) <= 0) &&
+                n('tiles') < 1.5 &&
+                ['hit', 'punch', 'flip', 'neg', 'strobe', 'black', 'multi'].every((key) => n(key) < 0.5)
+        default:
+            return false
+    }
+}
+
 /**
  * A deck node → the picture operators that make its picture.
  *
@@ -596,10 +620,14 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     // A stack after `input`: each ON effect is the operator plus a Blend (Mix mode:
     // a = what came in, b = the effect, Amount = the effect's mix = dry/wet).
     // Off or empty adds nothing. Returns the id the next stage reads.
-    const runStack = (stack, input, effectIdOf, mixIdOf, unseen = false) => {
+    const runStack = (stack, input, effectIdOf, mixIdOf, unseen = false, second = null) => {
         let current = input
+        // where a Body after this point looks for the person: the stack's own picture, or the wall of
+        // screens once an Angles effect has re-framed it (the mask has to fit what it paints over)
+        let origin = input
         for (const effect of stack) {
             if (!effect.on) continue
+            if (effectIdle(effect)) continue
             const fx = effectIdOf(effect.id)
             const wet = mixIdOf(effect.id)
             const matte = Boolean(TOP_OPERATORS[effect.type]?.matte)
@@ -611,15 +639,27 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
             wires.push({ from: current, to: fx, port: 'a' })
             // Body looks for the person in what the stack started from (the layer's
             // own picture, before its other effects), and paints over `a`.
-            if (matte) wires.push({ from: input, to: fx, port: 'b' })
-            nodes.push({ id: wet, type: 'top.blend', values: { machine, mode: '0', mix: effect.mix } })
-            wires.push({ from: current, to: wet, port: 'a' })
-            wires.push({ from: fx, to: wet, port: 'b' })
-            current = wet
+            if (matte) wires.push({ from: origin, to: fx, port: 'b' })
+            // Angles shows the SECOND camera on every other screen: the first other layer's source (its fader
+            // may be down, the source is there all the same). No second source: the same picture, other framings.
+            const angles = Boolean(TOP_OPERATORS[effect.type]?.second)
+            if (angles) wires.push({ from: second || current, to: fx, port: 'b' })
+            // At full mix the Blend would only copy the effect: the next stage reads the operator itself.
+            if (effect.mix >= 1) {
+                current = fx
+            } else {
+                nodes.push({ id: wet, type: 'top.blend', values: { machine, mode: '0', mix: effect.mix } })
+                wires.push({ from: current, to: wet, port: 'a' })
+                wires.push({ from: fx, to: wet, port: 'b' })
+                current = wet
+            }
+            if (angles) origin = current
         }
         return current
     }
     let below = null
+    // the sources of the layers under the master, bottom first (the master's Angles takes its second camera here)
+    const sources = []
     const anySolo = deck.layers.some((layer) => layer.solo)
     const lay = (layer, index) => {
         // Bypass, solo, the crossfader and opacity 0 silence a layer by its blend's
@@ -657,6 +697,7 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
                 }
             })
         }
+        if (!layer.over) sources.push(source)
         const blend = blendNodeId(deckId, index)
         const blendNode = { id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } }
         // An input clip's blend remembers which input it plays, so the source switch can silence it
@@ -669,7 +710,7 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     }
     deck.layers.forEach((layer, index) => { if (!layer.over) lay(layer, index) })
 
-    if (below) below = runStack(deck.effects, below, (id) => masterEffectNodeId(deckId, id), (id) => masterEffectMixNodeId(deckId, id))
+    if (below) below = runStack(deck.effects, below, (id) => masterEffectNodeId(deckId, id), (id) => masterEffectMixNodeId(deckId, id), false, sources.find((id) => id !== sources[0]) || null)
     // The OVER layers go on last, in their own order: the master's effects never touch them.
     deck.layers.forEach((layer, index) => { if (layer.over) lay(layer, index) })
     nodes.push({

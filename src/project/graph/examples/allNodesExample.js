@@ -371,6 +371,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('topDepthscan', 'top.depthscan', { label: 'Depth scan', col: 12, row: 7 })
     add('topCuts', 'top.cuts', { label: 'Cuts', col: 12, row: 8 })
     add('topParticles', 'top.particles', { label: 'Particles', col: 12, row: 9 })
+    add('topAngles', 'top.angles', { label: 'Angles', col: 12, row: 10 })
+    add('topHologram', 'top.hologram', { label: 'Hologram', col: 12, row: 11 })
     add('topMatte', 'top.matte', { label: 'Body', col: 11, row: 6 })
     add('monitor', 'stream.monitor', { label: 'Monitor', col: 7, row: 0 })
     add('machinesDesk', 'view.desk', { label: 'Desk', col: 7, row: 1 })

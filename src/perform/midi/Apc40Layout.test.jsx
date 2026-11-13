@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import K2LayoutPanel from './K2LayoutPanel.jsx'
+import { apc40Job } from './Apc40Layout.jsx'
 import { createK2Monitor } from './k2Monitor.js'
 import { effectiveMap } from './deckBinding.js'
 import { consoleOf, defaultMap } from './xoneK2.js'
@@ -59,5 +60,13 @@ describe('APC40 layout panel', () => {
         expect(cell('cc:7@3').className).toContain('is-lit')
         expect(cell('cc:7@1').className).not.toContain('is-lit')
         expect(cell('cc:7@3').getAttribute('style')).toContain('50%')
+    })
+})
+
+describe('apc40Job fxSet', () => {
+    it('names the key by its label, else by effect, param and value', () => {
+        const args = { type: 'top.angles', param: 'screens', value: 3 }
+        expect(apc40Job({ action: 'fxSet', args: { ...args, label: 'Screens 3' } }, deck)).toBe('Screens 3')
+        expect(apc40Job({ action: 'fxSet', args }, deck)).toBe('Angles · screens 3')
     })
 })

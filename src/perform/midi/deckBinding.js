@@ -37,6 +37,7 @@ import {
     setMasterParam,
     updateClip
 } from '../../project/tops/vjDeck.js'
+import { TOP_OPERATORS } from '../../project/tops/topOperators.js'
 
 /** Absolute 0..127 → 0..1. */
 export const unit = (value) => Math.min(1, Math.max(0, Number(value) / 127))
@@ -88,8 +89,14 @@ export const ACTIONS = {
     bankPrev: { args: [], button: true },
     // A PRESS: while the key is held one value of a master effect is 1, on release 0 (args { type, param }).
     // The Cuts effect has the values made for it: burst, punch-in, flip, negative, strobe, black.
-    fxPress: { args: [], button: false }
+    fxPress: { args: [], button: false },
+    // A TOGGLE KEY: press sets one value of a master effect (args { type, param, value, label? }), press again puts the operator's default back.
+    fxSet: { args: [], button: true }
 }
+
+/** The fxSet args that are usable: a type, a param and a finite value. */
+const fxSetArgs = (args) => typeof args.type === 'string' && typeof args.param === 'string' && Number.isFinite(args.value)
+const sameValue = (a, b) => Math.abs(Number(a) - Number(b)) < 1e-6
 
 /** The column the deck is on: the one most layers play (the lower layer wins a tie), -1 when nothing plays. */
 export const currentColumn = (deck) => {
@@ -116,7 +123,7 @@ export const stepColumn = (deck, dir) => {
 }
 
 /** The actions a stateful key (ctx.stateful) sets from its own state instead of toggling. */
-const STATEFUL_ACTIONS = new Set(['bypass', 'solo', 'side'])
+const STATEFUL_ACTIONS = new Set(['bypass', 'solo', 'side', 'fxSet'])
 
 // --- the effects half of the K2: which stack, which effect, freeze ----------------
 
@@ -336,6 +343,16 @@ const run = (deck, control, entry, ctx) => {
                 ? setMasterParam(base, args.type, args.param, control.press ? 1 : 0)
                 : deck
         case 'bankPrev': ctx.onBank?.(-1); return deck
+        case 'fxSet': {
+            if (!fxSetArgs(args)) return deck
+            const held = base.effects.find((effect) => effect.type === args.type)
+            if (!held) return deck
+            if (!sameValue(held.params?.[args.param], args.value)) return setMasterParam(base, args.type, args.param, args.value)
+            // back to args.off when the binding names it (Freeze: its own start value is "held"), else the effect's start value
+            if (Number.isFinite(args.off)) return setMasterParam(base, args.type, args.param, args.off)
+            const start = TOP_OPERATORS[args.type]?.params.find((p) => p.name === args.param)
+            return start && Number.isFinite(start.value) ? setMasterParam(base, args.type, args.param, start.value) : deck
+        }
         case 'tap': {
             // The view owns the clock (the show clock, or the deck's own taps).
             if (typeof ctx.onTap === 'function') { ctx.onTap(); return deck }
@@ -518,6 +535,11 @@ export const ledColour = (deck, entry, ctx = {}) => {
             const held = base.effects.find((effect) => effect.type === args.type)
             return held ? (Number(held.params?.[args.param]) > 0 ? 'green' : 'amber') : null
         }
+        case 'fxSet': {
+            const held = base.effects.find((effect) => effect.type === args.type)
+            if (!held) return null
+            return sameValue(held.params?.[args.param], args.value) ? 'green' : 'amber'
+        }
         case 'fxToggle': {
             if (!Number.isInteger(ctx.fx?.layer) || !Number.isInteger(args.slot)) return null
             const effect = stackFor(base, ctx.fx.layer)[args.slot]
@@ -610,6 +632,7 @@ export const describeAction = (entry, ctx = {}) => {
         case 'bankNext': return 'Next bank'
         case 'bankPrev': return 'Previous bank'
         case 'fxPress': return `Hold: ${String(args.param || '').toUpperCase()}`
+        case 'fxSet': return typeof args.label === 'string' && args.label ? args.label : `Set ${args.param} ${args.value}`
         case 'fx': {
             if (args.layer === undefined && args.effect === undefined && Number.isInteger(ctx.fxEffect)) {
                 const name = `FX ${ctx.fxEffect + 1}`

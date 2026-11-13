@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react'
 import VjDeckView from '../../raw/components/vjDeck/VjDeckView.jsx'
-import { createDeck, setClip, trigger } from '../../project/tops/vjDeck.js'
+import { MASTER_STACK, addEffect, createDeck, setClip, setMasterParam, trigger } from '../../project/tops/vjDeck.js'
 import { WRITE_GAP_MS, useDeckMidi } from './useDeckMidi.js'
 
 // A fake Web MIDI access at the navigator boundary: one K2 in, one K2 out.
@@ -380,5 +380,54 @@ describe('APC40 mkII LEDs from the hook', () => {
         view.rerender({ deck: trigger(playedDeck(), 0, 2) })
         expect(fake.sent).toContainEqual([0x90, 2, 52])
         expect(fake.sent).toContainEqual([0x90, 0, 33])
+    })
+})
+
+describe('HOLD keys (fxPress) never stay stuck', () => {
+    const PAD = [0x9e, 100, 127]
+    const PAD_UP = [0x8e, 100, 0]
+    const PAD_2 = [0x9e, 101, 127]
+    const PAD_2_UP = [0x8e, 101, 0]
+    const bind = (note) => ({ match: { kind: 'note', number: note, channel: 0 }, action: 'fxPress', args: { type: 'top.cuts', param: 'black' } })
+    const stored = { bindings: [bind(100), bind(101)] }
+    const withCuts = (black = 0) => {
+        const deck = addEffect(playedDeck(), MASTER_STACK, 'top.cuts')
+        return black ? setMasterParam(deck, 'top.cuts', 'black', black) : deck
+    }
+    const blackOf = (deck) => deck.effects.find((effect) => effect.type === 'top.cuts').params.black
+
+    it('the value goes back to 0 when the controller is unplugged while held', async () => {
+        const { fake, writes } = await mount({ deck: withCuts(), stored })
+        send(fake, PAD)
+        expect(blackOf(writes.at(-1))).toBe(1)
+        fake.access.inputs.clear()
+        await act(async () => { fake.access.onstatechange?.() })
+        expect(blackOf(writes.at(-1))).toBe(0)
+    })
+
+    it('the value goes back to 0 when the hook is disabled while held', async () => {
+        const { fake, writes, rerender } = await mount({ deck: withCuts(), stored })
+        send(fake, PAD)
+        expect(blackOf(writes.at(-1))).toBe(1)
+        rerender({ deck: withCuts(), stored, enabled: false })
+        expect(blackOf(writes.at(-1))).toBe(0)
+    })
+
+    it('two pads on one value keep it at 1 until the second one lifts', async () => {
+        const { fake, writes } = await mount({ deck: withCuts(), stored })
+        send(fake, PAD)
+        send(fake, PAD_2)
+        const count = writes.length
+        send(fake, PAD_UP)
+        expect(writes).toHaveLength(count) // one still held: nothing written
+        expect(blackOf(writes.at(-1))).toBe(1)
+        send(fake, PAD_2_UP)
+        expect(blackOf(writes.at(-1))).toBe(0)
+    })
+
+    it('a deck that arrives with black 1 and nothing held is written back to 0 at activation', async () => {
+        const { writes } = await mount({ deck: withCuts(1), stored })
+        expect(writes.length).toBeGreaterThan(0)
+        expect(blackOf(writes.at(-1))).toBe(0)
     })
 })

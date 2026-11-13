@@ -81,6 +81,7 @@ export const apc40Job = (entry, deck, fxEffect = 0) => {
             return effect ? `${layerName(deck, args.layer)} · ${effectJob(effect, args.param)}` : NOTHING
         }
         case 'fxPress': return `HOLD ${PRESS_WORDS[args.param] || args.param || ''}`.trim()
+        case 'fxSet': return typeof args.label === 'string' && args.label ? args.label : `${effectLabel(args.type)} · ${args.param} ${args.value}`
         case 'columnNext': return 'Next scene'
         case 'columnPrev': return 'Previous scene'
         case 'bankNext': return 'Next 8 scenes'

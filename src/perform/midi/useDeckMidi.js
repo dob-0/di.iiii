@@ -21,6 +21,7 @@ import {
     targetFromKey,
     withOverride
 } from './deckBinding.js'
+import { setMasterParam } from '../../project/tops/vjDeck.js'
 import { useMidiPorts } from './midiPorts.js'
 import { createK2Monitor } from './k2Monitor.js'
 import { createK2Publisher, eventOf, lightsOf, namedValues } from './k2Channel.js'
@@ -178,6 +179,9 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     // FREEZE while held (the K2's EXIT SETUP): the layer the hold was pressed on, null = not held.
     const holdLayerRef = useRef(null)
     const [holdNote, setHoldNote] = useState('')
+    // HOLD keys (fxPress) held now: `${type}|${param}` -> the controls that hold that value (a set, not a count:
+    // a pad that says "pressed" twice is still one pad, and its one release lets go)
+    const pressed = useRef(new Map())
 
     const onMessage = useCallback((raw) => {
         const current = live.current
@@ -218,6 +222,18 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         const base = ahead.current
         let holdLayer
         const bound = entryFor(message, current.map)
+        // HOLD keys (fxPress): count the controls held on one value, so two pads on it keep it at 1 until the last lifts
+        if (bound?.action === 'fxPress') {
+            const key = `${bound.args?.type}|${bound.args?.param}`
+            const pad = `${bound.match?.kind}:${bound.match?.number}:${bound.match?.channel || 0}`
+            const holders = pressed.current.get(key) || new Set()
+            if (controlOf(message)?.press) { holders.add(pad); pressed.current.set(key, holders) }
+            else {
+                holders.delete(pad)
+                if (holders.size > 0) return
+                pressed.current.delete(key)
+            }
+        }
         const heldNow = bound?.action === 'hold'
         if (heldNow) {
             const press = controlOf(message)?.press
@@ -298,7 +314,23 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     else if (ports.status === MIDI_STATUS.ACTIVE) state = 'listening'
     if (learning) state = 'learn'
 
-    const toggleLearn = useCallback(() => { setLearning((on) => !on); setTarget(null); setOnce(false) }, [])
+    // A HOLD key whose release never comes lets go: every held value is written back to 0, in one write.
+    const releasePressed = useCallback(() => {
+        if (!pressed.current.size) return
+        let next = ahead.current
+        for (const key of pressed.current.keys()) {
+            const at = key.indexOf('|')
+            next = setMasterParam(next, key.slice(0, at), key.slice(at + 1), 0)
+        }
+        pressed.current.clear()
+        ahead.current = next
+        dirty.current = true
+        flush()
+    }, [flush])
+    const toggleLearn = useCallback(() => {
+        if (!learnRef.current.learning) releasePressed() // Learn swallows the release
+        setLearning((on) => !on); setTarget(null); setOnce(false)
+    }, [releasePressed])
     const pickTarget = useCallback((key) => {
         const found = targetFromKey(key)
         setTarget(found ? { key, ...found } : null)
@@ -308,11 +340,12 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const mapOnce = useCallback((key) => {
         const found = targetFromKey(key)
         if (!found) return false
+        releasePressed()
         setLearning(true)
         setOnce(true)
         setTarget({ key, ...found })
         return true
-    }, [])
+    }, [releasePressed])
     // What takes a control now, in words: { text, short, learned } or null.
     const bindingOf = useCallback((key) => {
         const found = bindingFor(defaults, overrides, targetFromKey(key))
@@ -333,9 +366,10 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         return true
     }, [])
     const reset = useCallback(() => {
+        releasePressed() // the map changes under a held key: its release would not find its binding
         live.current.onPatch?.({ midiMap: null })
         setTarget(null)
-    }, [])
+    }, [releasePressed])
 
     // The live monitor for the K2 panel (kept last: added after the hooks above).
     const [k2Monitor] = useState(() => createK2Monitor())
@@ -353,17 +387,37 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         flush()
     }, [flush])
     const present = Boolean(device)
-    useEffect(() => { if (!present || !active) releaseHold() }, [present, active, releaseHold])
+    useEffect(() => { if (!present || !active) { releaseHold(); releasePressed() } }, [present, active, releaseHold, releasePressed])
     useEffect(() => {
-        const onHide = () => { if (document.hidden) releaseHold() }
+        const letGo = () => { releaseHold(); releasePressed() }
+        const onHide = () => { if (document.hidden) letGo() }
         document.addEventListener('visibilitychange', onHide)
-        window.addEventListener('pagehide', releaseHold)
+        window.addEventListener('pagehide', letGo)
         return () => {
             document.removeEventListener('visibilitychange', onHide)
-            window.removeEventListener('pagehide', releaseHold)
-            releaseHold()
+            window.removeEventListener('pagehide', letGo)
+            letGo()
         }
-    }, [releaseHold])
+    }, [releaseHold, releasePressed])
+    // At activation: a HOLD value left above 0 in the saved deck by an earlier session (nothing is held now) goes back to 0.
+    useEffect(() => {
+        if (!active || pressed.current.size) return
+        const base = ahead.current
+        let next = base
+        const seen = new Set()
+        for (const entry of live.current.map || []) {
+            if (entry.action !== 'fxPress') continue
+            const { type, param } = entry.args || {}
+            if (typeof type !== 'string' || typeof param !== 'string' || seen.has(`${type}|${param}`)) continue
+            seen.add(`${type}|${param}`)
+            const stuck = (base?.effects || []).some((effect) => effect.type === type && Number(effect.params?.[param]) > 0)
+            if (stuck) next = setMasterParam(next, type, param, 0)
+        }
+        if (next === base) return
+        ahead.current = next
+        dirty.current = true
+        flush()
+    }, [active, flush])
     useEffect(() => { monitorRef.current = k2Monitor; return () => k2Monitor.dispose() }, [k2Monitor])
 
     // The controller window's courier (k2Channel.js). One BroadcastChannel is opened while this
