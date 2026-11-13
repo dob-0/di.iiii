@@ -1,0 +1,222 @@
+{
+  "version": 4,
+  "projectMeta": {
+    "id": "hall-test",
+    "spaceId": "showtest",
+    "title": "Hall",
+    "createdAt": 1790677165717,
+    "updatedAt": 1790677165717,
+    "source": "project"
+  },
+  "nodes": [],
+  "edges": [],
+  "templates": [],
+  "workspaceState": {
+    "selectedNodeId": null,
+    "liveWorldNodeIdByScope": {},
+    "activeNodeIdByTypeScope": {}
+  },
+  "entities": [],
+  "worldState": {
+    "backgroundColor": "#0a1118",
+    "environmentAssetId": null,
+    "environmentIntensity": 1,
+    "atmosphereBlend": false,
+    "hubDecor": false,
+    "spawn": null,
+    "fog": null,
+    "walkableAreas": null,
+    "placement": null,
+    "gridVisible": true,
+    "gridSize": 24,
+    "gridCellSize": 0.75,
+    "gridCellThickness": 0.3,
+    "gridCellColor": "#2a6e73",
+    "gridSectionSize": 6,
+    "gridSectionThickness": 0.65,
+    "gridSectionColor": "#4df9ff",
+    "gridFadeDistance": 80,
+    "gridFadeStrength": 1,
+    "gridOffset": 0.015,
+    "ambientLight": {
+      "color": "#ffffff",
+      "intensity": 0.85
+    },
+    "directionalLight": {
+      "color": "#fff7ea",
+      "intensity": 1.15,
+      "position": [
+        8,
+        12,
+        4
+      ]
+    },
+    "savedView": {
+      "mode": "perspective",
+      "position": [
+        0,
+        2.4,
+        6.5
+      ],
+      "target": [
+        0,
+        0.75,
+        0
+      ],
+      "fov": 50,
+      "zoom": 1,
+      "near": 0.1,
+      "far": 1000
+    }
+  },
+  "renderSettings": {
+    "shadows": true,
+    "shadowCasting": {
+      "enabled": false,
+      "mapSize": 1024
+    },
+    "antialias": true,
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 1,
+    "dprMin": 1,
+    "dprMax": 2
+  },
+  "xrState": {
+    "mode": "none",
+    "debugVisible": false,
+    "vrSupported": false,
+    "arSupported": false
+  },
+  "presentationState": {
+    "mode": "scene",
+    "fixedCamera": {
+      "projection": "perspective",
+      "position": [
+        0,
+        2.4,
+        6.5
+      ],
+      "target": [
+        0,
+        0.75,
+        0
+      ],
+      "fov": 50,
+      "zoom": 1,
+      "near": 0.1,
+      "far": 200,
+      "locked": false
+    },
+    "codeHtml": "",
+    "codeSourceType": "html",
+    "codeUrl": "",
+    "codeFiles": [],
+    "entryView": "scene",
+    "deviceAccess": false
+  },
+  "publishState": {
+    "shareEnabled": false,
+    "xrDefaultMode": "none",
+    "lastExportAt": 0
+  },
+  "showState": {
+    "clockEpoch": 0
+  },
+  "performState": {
+    "presets": []
+  },
+  "mappingState": {
+    "output": {
+      "width": 1920,
+      "height": 1080
+    },
+    "background": "#000000",
+    "surfaces": [],
+    "cues": [],
+    "reference": {
+      "url": "",
+      "opacity": 0.5,
+      "visible": false
+    },
+    "grid": 0,
+    "fade": 0
+  },
+  "windowLayout": {
+    "activeWindowId": "viewport",
+    "windows": {
+      "viewport": {
+        "id": "viewport",
+        "title": "Viewport",
+        "visible": true,
+        "minimized": false,
+        "pinned": true,
+        "x": 24,
+        "y": 176,
+        "width": 860,
+        "height": 580,
+        "zIndex": 3
+      },
+      "assets": {
+        "id": "assets",
+        "title": "Assets",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 910,
+        "y": 176,
+        "width": 360,
+        "height": 360,
+        "zIndex": 4
+      },
+      "inspector": {
+        "id": "inspector",
+        "title": "Inspector",
+        "visible": true,
+        "minimized": false,
+        "pinned": false,
+        "x": 910,
+        "y": 552,
+        "width": 360,
+        "height": 420,
+        "zIndex": 5
+      },
+      "outliner": {
+        "id": "outliner",
+        "title": "Outliner",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 24,
+        "y": 620,
+        "width": 280,
+        "height": 260,
+        "zIndex": 2
+      },
+      "activity": {
+        "id": "activity",
+        "title": "Activity",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 320,
+        "y": 620,
+        "width": 340,
+        "height": 260,
+        "zIndex": 1
+      },
+      "project": {
+        "id": "project",
+        "title": "Project",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 680,
+        "y": 620,
+        "width": 320,
+        "height": 260,
+        "zIndex": 1
+      }
+    }
+  },
+  "assets": []
+}

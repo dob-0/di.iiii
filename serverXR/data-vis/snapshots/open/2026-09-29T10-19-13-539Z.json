@@ -1,0 +1,330 @@
+{
+  "snapshotVersion": 2,
+  "id": "2026-09-29T10-19-13-539Z",
+  "takenAt": "2026-09-29T10-19-13-539Z",
+  "reason": "daily",
+  "actor": {
+    "subject": "server:daily",
+    "type": "server",
+    "label": "di.iiii (daily)"
+  },
+  "scene": {
+    "version": 4,
+    "objects": [],
+    "backgroundColor": "#0a1118",
+    "gridSize": 20,
+    "isGridVisible": true,
+    "isGizmoVisible": true,
+    "isPerfVisible": false,
+    "ambientLight": {
+      "color": "#ffffff",
+      "intensity": 0.8
+    },
+    "directionalLight": {
+      "color": "#ffffff",
+      "intensity": 1,
+      "position": [
+        10,
+        10,
+        5
+      ]
+    },
+    "transformSnaps": {
+      "translation": 0.1,
+      "rotation": 15,
+      "scale": 0.1
+    },
+    "presentation": {
+      "mode": "scene",
+      "sourceType": "html",
+      "url": "",
+      "html": "",
+      "fixedCamera": {
+        "projection": "perspective",
+        "position": [
+          0,
+          1.6,
+          4
+        ],
+        "target": [
+          0,
+          1,
+          0
+        ],
+        "fov": 60,
+        "zoom": 1,
+        "near": 0.1,
+        "far": 200,
+        "locked": true
+      }
+    },
+    "default3DView": {
+      "position": [
+        0,
+        1.6,
+        4
+      ],
+      "target": [
+        0,
+        1,
+        0
+      ]
+    },
+    "savedView": {
+      "viewMode": "3D",
+      "position": [
+        0,
+        1.6,
+        4
+      ],
+      "target": [
+        0,
+        1,
+        0
+      ]
+    }
+  },
+  "projects": [
+    {
+      "id": "open-jam",
+      "meta": {
+        "id": "open-jam",
+        "spaceId": "open",
+        "slug": null,
+        "title": "Open Jam",
+        "createdAt": 1790677013603,
+        "updatedAt": 1790677013603,
+        "lastTouchedAt": 1790677013603,
+        "documentVersion": 0,
+        "source": "studio-v3",
+        "collectionId": null,
+        "position": 0,
+        "state": "live",
+        "visibility": "public",
+        "deletedAt": null
+      },
+      "document": {
+        "version": 4,
+        "projectMeta": {
+          "id": "open-jam",
+          "spaceId": "open",
+          "title": "Open Jam",
+          "createdAt": 1790677013603,
+          "updatedAt": 1790677013603,
+          "source": "studio-v3"
+        },
+        "nodes": [],
+        "edges": [],
+        "templates": [],
+        "workspaceState": {
+          "selectedNodeId": null,
+          "liveWorldNodeIdByScope": {},
+          "activeNodeIdByTypeScope": {}
+        },
+        "entities": [],
+        "worldState": {
+          "backgroundColor": "#0a1118",
+          "environmentAssetId": null,
+          "environmentIntensity": 1,
+          "atmosphereBlend": false,
+          "hubDecor": false,
+          "spawn": null,
+          "fog": null,
+          "walkableAreas": null,
+          "placement": null,
+          "gridVisible": true,
+          "gridSize": 24,
+          "gridCellSize": 0.75,
+          "gridCellThickness": 0.3,
+          "gridCellColor": "#2a6e73",
+          "gridSectionSize": 6,
+          "gridSectionThickness": 0.65,
+          "gridSectionColor": "#4df9ff",
+          "gridFadeDistance": 80,
+          "gridFadeStrength": 1,
+          "gridOffset": 0.015,
+          "ambientLight": {
+            "color": "#ffffff",
+            "intensity": 0.85
+          },
+          "directionalLight": {
+            "color": "#fff7ea",
+            "intensity": 1.15,
+            "position": [
+              8,
+              12,
+              4
+            ]
+          },
+          "savedView": {
+            "mode": "perspective",
+            "position": [
+              0,
+              2.4,
+              6.5
+            ],
+            "target": [
+              0,
+              0.75,
+              0
+            ],
+            "fov": 50,
+            "zoom": 1,
+            "near": 0.1,
+            "far": 1000
+          }
+        },
+        "renderSettings": {
+          "shadows": true,
+          "shadowCasting": {
+            "enabled": false,
+            "mapSize": 1024
+          },
+          "antialias": true,
+          "toneMapping": "ACESFilmic",
+          "toneMappingExposure": 1,
+          "dprMin": 1,
+          "dprMax": 2
+        },
+        "xrState": {
+          "mode": "none",
+          "debugVisible": false,
+          "vrSupported": false,
+          "arSupported": false
+        },
+        "presentationState": {
+          "mode": "scene",
+          "fixedCamera": {
+            "projection": "perspective",
+            "position": [
+              0,
+              2.4,
+              6.5
+            ],
+            "target": [
+              0,
+              0.75,
+              0
+            ],
+            "fov": 50,
+            "zoom": 1,
+            "near": 0.1,
+            "far": 200,
+            "locked": false
+          },
+          "codeHtml": "",
+          "codeSourceType": "html",
+          "codeUrl": "",
+          "codeFiles": [],
+          "entryView": "scene",
+          "deviceAccess": false
+        },
+        "publishState": {
+          "shareEnabled": false,
+          "xrDefaultMode": "none",
+          "lastExportAt": 0
+        },
+        "showState": {
+          "clockEpoch": 0
+        },
+        "performState": {
+          "presets": []
+        },
+        "mappingState": {
+          "output": {
+            "width": 1920,
+            "height": 1080
+          },
+          "background": "#000000",
+          "surfaces": [],
+          "cues": [],
+          "reference": {
+            "url": "",
+            "opacity": 0.5,
+            "visible": false
+          },
+          "grid": 0,
+          "fade": 0
+        },
+        "windowLayout": {
+          "activeWindowId": "viewport",
+          "windows": {
+            "viewport": {
+              "id": "viewport",
+              "title": "Viewport",
+              "visible": true,
+              "minimized": false,
+              "pinned": true,
+              "x": 24,
+              "y": 176,
+              "width": 860,
+              "height": 580,
+              "zIndex": 3
+            },
+            "assets": {
+              "id": "assets",
+              "title": "Assets",
+              "visible": false,
+              "minimized": false,
+              "pinned": false,
+              "x": 910,
+              "y": 176,
+              "width": 360,
+              "height": 360,
+              "zIndex": 4
+            },
+            "inspector": {
+              "id": "inspector",
+              "title": "Inspector",
+              "visible": true,
+              "minimized": false,
+              "pinned": false,
+              "x": 910,
+              "y": 552,
+              "width": 360,
+              "height": 420,
+              "zIndex": 5
+            },
+            "outliner": {
+              "id": "outliner",
+              "title": "Outliner",
+              "visible": false,
+              "minimized": false,
+              "pinned": false,
+              "x": 24,
+              "y": 620,
+              "width": 280,
+              "height": 260,
+              "zIndex": 2
+            },
+            "activity": {
+              "id": "activity",
+              "title": "Activity",
+              "visible": false,
+              "minimized": false,
+              "pinned": false,
+              "x": 320,
+              "y": 620,
+              "width": 340,
+              "height": 260,
+              "zIndex": 1
+            },
+            "project": {
+              "id": "project",
+              "title": "Project",
+              "visible": false,
+              "minimized": false,
+              "pinned": false,
+              "x": 680,
+              "y": 620,
+              "width": 320,
+              "height": 260,
+              "zIndex": 1
+            }
+          }
+        },
+        "assets": []
+      }
+    }
+  ]
+}
