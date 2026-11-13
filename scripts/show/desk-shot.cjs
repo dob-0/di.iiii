@@ -1,4 +1,4 @@
-// Usage: node scripts/show/desk-shot.js <tree> <out.png> [w h density]  (needs playwright-core + /usr/bin/chromium; read-only: files from <tree>, GETs from the live desk on :4000, every other method blocked)
+// Usage: node scripts/show/desk-shot.cjs <tree> <out.png> [w h density]  (needs playwright-core + /usr/bin/chromium; read-only: files from <tree>, GETs from the live desk on :4000, every other method blocked)
 // Read-only render of the Show desk from a worktree: files from disk, GETs proxied from the live desk, every non-GET blocked.
 const { chromium } = require('playwright-core')
 const fs = require('fs'), path = require('path')

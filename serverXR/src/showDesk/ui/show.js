@@ -885,8 +885,48 @@
         clearTimeout(midiOff)
         midiOff = setTimeout(() => node.classList.remove('is-lit'), 300)
     }
+    // 2026-11-13: targets with no control on the page (a layer's level, the effect's depth / speed, two lamps as one). A pseudo input
+    // takes the same value / min / max / step / 'input' event the real ones do, so pick-up and stepping above work unchanged; the
+    // event sends the value (at most one send per 40 ms, the last one always goes). Levels only: none of them arms or lifts anything.
+    const virtualInputs = new Map()
+    const virtualInput = (key, min, max, step, read, write) => {
+        let v = virtualInputs.get(key)
+        if (!v) {
+            let timer = null; let lastSent = 0; let pending = null
+            const flush = () => { timer = null; lastSent = Date.now(); const x = pending; pending = null; if (x !== null) write(x) }
+            v = {
+                min: String(min), max: String(max), step: String(step), disabled: false, _value: null,
+                get value() { return this._value !== null ? String(this._value) : String(read()) },
+                set value(x) { this._value = Number(x) },
+                dispatchEvent() { pending = this._value; this._value = null; const wait = 40 - (Date.now() - lastSent); if (wait <= 0) { if (timer) clearTimeout(timer); flush() } else if (!timer) timer = setTimeout(flush, wait) }
+            }
+            virtualInputs.set(key, v)
+        }
+        return v
+    }
+    const layerOf = (id) => (S.light && Array.isArray(S.light.layers) ? S.light.layers.find((l) => l && l.id === id) : null)
+    const fxOf = () => (S.light && S.light.fx) || {}
+    const fxPost = (patch) => { post(LIGHT + 'fx', patch); if (S.light && S.light.fx) Object.assign(S.light.fx, patch) }
+    const fxStep = (key, list, dir) => {
+        const cur = Math.max(0, list.indexOf(fxOf()[key]))
+        const next = list[Math.min(list.length - 1, Math.max(0, cur + dir))]
+        if (next === fxOf()[key]) return
+        fxPost({ [key]: next }); midiLine(`effect ${key}: ${next}`)
+    }
     const midiInput = (target) => {
         const [kind, rest] = target.split(':')
+        if (kind === 'layer') {
+            const id = rest.split(':')[0]
+            if (!layerOf(id)) return null
+            return virtualInput(target, 0, 100, 1, () => Math.round((layerOf(id).level ?? 0) * 100), (x) => { post(LIGHT + 'layer', { id, level: x / 100 }); layerOf(id).level = x / 100 })
+        }
+        if (target === 'fx:depth') return virtualInput(target, 0, 255, 1, () => fxOf().depth ?? 0, (x) => fxPost({ depth: x }))
+        if (target === 'fx:bpm') return virtualInput(target, 20, 300, 1, () => fxOf().bpm ?? 120, (x) => fxPost({ bpm: x }))
+        if (kind === 'lamp' && rest.includes('+')) {
+            const ins = rest.split('+').map((n) => { const f = fixturesOf()[Number(n)]; return f && lampRows.get(f.id) ? lampRows.get(f.id).input : null })
+            if (ins.some((i) => !i)) return null
+            return virtualInput(target, 0, 255, 1, () => ins[0].value, (x) => ins.forEach((i) => { i.value = String(x); i.dispatchEvent(new Event('input')) }))
+        }
         if (kind === 'lamp') { const f = fixturesOf()[Number(rest)]; return f && lampRows.get(f.id) ? lampRows.get(f.id).input : null }
         if (kind === 'size') { const id = cubeIds()[Number(rest)]; return id && cubeCards.get(id) ? cubeCards.get(id).size : null }
         if (kind === 'live') return liveInputs.get(rest) || null
@@ -895,12 +935,23 @@
         return null
     }
     const midiMove = (m, raw) => {
+        if (m.relative && (m.target === 'fx:mode' || m.target === 'fx:spatial')) {
+            const list = m.target === 'fx:mode' ? S.light && S.light.fxModes : S.light && S.light.fxSpatial
+            if (Array.isArray(list) && list.length) fxStep(m.target === 'fx:mode' ? 'mode' : 'spatial', list, raw < 64 ? 1 : -1)
+            return
+        }
         const input = midiInput(m.target)
         if (!input || input.disabled) return
-        const min = Number(input.min)
-        const max = Number(input.max)
+        // A laser target while every cube is stopped: ignored (the K2 never raises a stopped cube), and its range is the safe one.
+        if (MIDI.isLaserTarget(m.target)) {
+            const cubes = S.desk && Array.isArray(S.desk.cubes) ? S.desk.cubes : []
+            if (cubes.length && cubes.every((c) => c && c.engineDark === 'stopped')) { midiLine(`${m.target} ignored: the cube is stopped`); return }
+        }
+        const lim = MIDI.laserLimit(m.target)
+        const min = lim ? Math.max(Number(input.min), lim[0]) : Number(input.min)
+        const max = lim ? Math.min(Number(input.max), lim[1]) : Number(input.max)
         const span = max - min
-        const cur = Number(input.value)
+        const cur = Math.min(max, Math.max(min, Number(input.value)))
         let next
         if (m.relative) next = cur + ((raw < 64 ? raw : raw - 128) * span) / 200 // two's complement steps from the screen's value
         else {

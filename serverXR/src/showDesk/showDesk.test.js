@@ -972,16 +972,10 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         await settle()
         expect(editPosts().at(-1).body.level).toBeCloseTo(50 / 127, 2)
     })
-    it('the two bottom corners step the scenes from the lit one, never past the ends', async () => {
-        midi(0x9e, 15, 127) // exit setup button: next, from Warm to Blue
-        await settle()
-        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+    it('the layer button steps back one scene from the lit one, never past the start (2026-11-13: the Exit/Setup button is a Blackout now)', async () => {
         light.activeScene = 'dark'
         await refresh()
         posts = []
-        midi(0x9e, 15, 127) // next at the last scene: nothing
-        await settle()
-        expect(posts).toEqual([])
         midi(0x9e, 12, 127) // layer button: previous, from Dark to Blue
         await settle()
         expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
@@ -998,7 +992,7 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         expect($('midiSheet').hidden).toBe(false)
         expect($('midiSheetBtn').getAttribute('aria-expanded')).toBe('true')
         expect($('midiSheet').querySelectorAll('tbody tr').length).toBe(29)
-        expect($('midiSheet').textContent).toContain('Next scene')
+        expect($('midiSheet').textContent).toContain('Previous scene')
         $('midiSheetBtn').click()
         expect($('midiSheet').hidden).toBe(true)
     })
