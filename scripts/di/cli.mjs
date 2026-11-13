@@ -1391,9 +1391,15 @@ const cmdShowReady = async (args) => {
     const home = HOME()
     const space = args._[1]
     if (!space) { fail('which space? — di show-ready hayfilm'); say(showReadyUsage(CMD)); process.exitCode = 1; return }
-    const host = String(args.flags.host && args.flags.host !== true ? args.flags.host : hubUrl(readState(home))).replace(/\/+$/, '')
     const dataDir = isInstalled(home) ? runnerFor(home).describe(home).dataDir : paths(home).data
-    const result = await checkShowReady({ dataDir, space, project: args._[2] || null, host, token: moveToken({ from: host, env: process.env }) })
+    // A space this install follows carries its own key for that host (follows.json,
+    // never printed): its remote is the default host, its key is tried before the login.
+    const follow = readFollows(dataDir)[space]
+    const followHost = follow?.remote ? String(follow.remote).replace(/\/serverXR\/?$/, '').replace(/\/+$/, '') : null
+    const given = args.flags.host && args.flags.host !== true ? String(args.flags.host).replace(/\/+$/, '') : null
+    const host = given || followHost || String(hubUrl(readState(home))).replace(/\/+$/, '')
+    const followKey = follow?.token && followHost && host === followHost ? follow.token : null
+    const result = await checkShowReady({ dataDir, space, project: args._[2] || null, host, token: [followKey, moveToken({ from: host, env: process.env })].filter(Boolean) })
     say(args.flags.json ? jsonReport(result) : renderReport(result))
     process.exitCode = result.exit
 }

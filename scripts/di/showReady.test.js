@@ -134,6 +134,24 @@ describe('show-ready', () => {
         expect((await run(data, { fetchImpl: mockHost({ listStatus: 401 }) })).exit).toBe(2)
     })
 
+    it('uses the follow key when the login is refused, and never prints either', async () => {
+        const data = makeData([{ id: 'p1' }])
+        const seen = []
+        const inner = mockHost({ projects: [{ id: 'p1', visibility: 'public' }] })
+        const fetchImpl = async (url, init) => {
+            const auth = init.headers.authorization
+            seen.push(auth)
+            if (auth !== 'Bearer FOLLOW-KEY') return { status: 403, json: async () => ({ error: 'Space access denied.' }) }
+            return inner(url, init)
+        }
+        const r = await run(data, { token: ['FOLLOW-KEY', 'LOGIN-TOKEN'], fetchImpl })
+        expect(r.exit).toBe(0)
+        const refusedFirst = await run(data, { token: ['LOGIN-TOKEN', 'FOLLOW-KEY'], fetchImpl })
+        expect(refusedFirst.exit).toBe(0)
+        expect(seen).toContain('Bearer LOGIN-TOKEN')
+        expect(renderReport(r) + JSON.stringify(r)).not.toMatch(/FOLLOW-KEY|LOGIN-TOKEN/)
+    })
+
     it('says the space is only here when the host has never heard of it', async () => {
         const data = makeData([{ id: 'p1' }])
         const r = await run(data, { fetchImpl: mockHost({ listStatus: 404 }) })

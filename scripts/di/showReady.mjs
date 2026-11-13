@@ -187,9 +187,18 @@ export const checkShowReady = async ({ dataDir, space, project = null, host, tok
     }
 
     // CLOUD
-    const listing = await hostGet(fetchImpl, host, token, `/api/spaces/${encodeURIComponent(space)}/projects`, timeoutMs)
+    // `token` may be several (the space's follow key first, then the login): the first the host accepts is used.
+    const tokens = [].concat(token || []).filter(Boolean)
+    const listPath = `/api/spaces/${encodeURIComponent(space)}/projects`
+    const refused = (x) => x.status === 401 || x.status === 403
+    let useToken = tokens[0] || ''
+    let listing = await hostGet(fetchImpl, host, useToken, listPath, timeoutMs)
+    for (let i = 1; i < tokens.length && !listing.down && refused(listing); i += 1) {
+        useToken = tokens[i]
+        listing = await hostGet(fetchImpl, host, useToken, listPath, timeoutMs)
+    }
     if (listing.down) { r.unreachable = `${host} did not answer (${listing.why})`; return finish(r) }
-    if (!token) { r.unreachable = `not signed in to ${host}: run di login first, then again`; return finish(r) }
+    if (!tokens.length) { r.unreachable = `not signed in to ${host}: run di login first, then again`; return finish(r) }
     // 403 "Space access denied" (it names requiredSpaceId): the cloud knows no such space for this login.
     const spaceDenied = listing.status === 403 && Boolean(listing.body?.requiredSpaceId)
     if (listing.status === 401 || (listing.status === 403 && !spaceDenied)) { r.unreachable = `${host} did not accept the stored login (HTTP ${listing.status}): run di login`; return finish(r) }
@@ -212,7 +221,7 @@ export const checkShowReady = async ({ dataDir, space, project = null, host, tok
         r.ok.projects += 1
         const g = localById.get(p.id)
         const results = await inPool(g.assets.filter((a) => a.state === 'ok'), 8, async (a) => {
-            const res = await hostGet(fetchImpl, host, token, `/api/projects/${encodeURIComponent(a.project)}/assets/${a.id}/meta`, timeoutMs)
+            const res = await hostGet(fetchImpl, host, useToken, `/api/projects/${encodeURIComponent(a.project)}/assets/${a.id}/meta`, timeoutMs)
             return { a, res }
         })
         for (const { a, res } of results) {
