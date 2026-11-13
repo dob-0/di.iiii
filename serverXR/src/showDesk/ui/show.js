@@ -955,7 +955,10 @@
         if (target === 'laser-master') return $('laserMaster')
         return null
     }
-    const DIRECT = /^(?:lamp:|layer:)/
+    // 2026-11-13 22:25 (owner: "knob faders highest one to 100 and make them work scenes parametres and midi with each other"):
+    // every fader AND every pot is direct: the control's own place is the value (bottom = the range's low end, top = 100 %),
+    // no pick-up, so a knob is never "stuck" under a scene's value. The laser clamps (midiMap.js LASER_LIMITS) still apply.
+    const DIRECT = /^(?:lamp:|layer:|live:|size:|fx:depth$|fx:bpm$|light-master$|laser-master$)/
     const midiMove = (m, raw) => {
         if (m.relative && (m.target === 'fx:mode' || m.target === 'fx:spatial')) {
             const list = m.target === 'fx:mode' ? S.light && S.light.fxModes : S.light && S.light.fxSpatial
@@ -976,7 +979,7 @@
         const cur = Math.min(max, Math.max(min, Number(input.value)))
         let next
         if (m.relative) next = cur + ((raw < 64 ? raw : raw - 128) * span) / 200 // two's complement steps from the screen's value
-        else if (DIRECT.test(m.target)) next = min + (raw / 127) * span // the three faders: always the fader's own value, no pick-up (owner 2026-11-13)
+        else if (DIRECT.test(m.target)) next = min + (raw / 127) * span // faders and pots: always the control's own value, no pick-up (owner 2026-11-13)
         else {
             const t = min + (raw / 127) * span
             const tol = span / 50
@@ -1026,7 +1029,7 @@
         if (t === 'blackout:lights') { pressBlackoutLights(); return }
         if (t === 'scene:next' || t === 'scene:prev') { stepScene(t === 'scene:next' ? 1 : -1); return }
         if (t.startsWith('reset:')) { midiSet(`live:${t.slice(6)}`, resetTo(t.slice(6))); return }
-        if (t.startsWith('park:')) { pickup.delete(t.slice(5)); midiLine(`${t.slice(5)} parked: it waits until it passes the screen`); return }
+        if (t.startsWith('park:')) { pickup.delete(t.slice(5)); midiLine(DIRECT.test(t.slice(5)) ? `${t.slice(5)} is direct: the knob's place is its value` : `${t.slice(5)} parked: it waits until it passes the screen`); return }
         const item = sceneItems()[Number(t.split(':')[1])]
         if (item) pressScene(item.id)
     }

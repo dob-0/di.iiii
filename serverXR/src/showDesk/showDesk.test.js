@@ -800,14 +800,13 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         expect(map.find((m) => m.target === 'lamp:0')).toMatchObject({ kind: 'cc', ch: 14, num: num('fader 1') })
         expect(map.find((m) => m.target === 'live:rotation')).toMatchObject({ kind: 'cc', ch: 14, num: num('encoder 1'), relative: true })
     })
-    it('a fader picks up: nothing moves or posts until the control passes the screen\'s value, then it follows', async () => {
+    it('pot 12 (lights master) is direct (owner 2026-11-13): bottom 0, top 255, no pick-up', async () => {
         midi(0xbe, 15, 0)
-        midi(0xbe, 15, 40)
         await settle()
-        expect(posts).toEqual([])
-        expect($('lightMaster').value).toBe('255')
+        expect(posts.at(-1)).toEqual({ url: '../light/api/master', body: { master: 0 } })
         midi(0xbe, 15, 127)
         await settle()
+        expect(posts.at(-1)).toEqual({ url: '../light/api/master', body: { master: 255 } })
         midi(0xbe, 15, 100)
         await settle()
         expect(posts.at(-1)).toEqual({ url: '../light/api/master', body: { master: 201 } })
@@ -834,10 +833,10 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         expect(Math.min(...sizes)).toBeGreaterThanOrEqual(0.15)
         expect(sizes.at(-1)).toBe(0.15)
     })
-    it('a pot on the live look picks up too, then posts looks/edit with the live id', async () => {
-        midi(0xbe, 4, 0) // level is 1 on the screen: a pot at 0 waits
+    it('a pot on the live look is direct and posts looks/edit with the live id', async () => {
+        midi(0xbe, 4, 0) // level is 1 on the screen: a pot at 0 sets 0 at once
         await settle()
-        expect(posts).toEqual([])
+        expect(posts.filter((p) => p.url === '../laser/desk/api/looks/edit').at(-1)).toEqual({ url: '../laser/desk/api/looks/edit', body: { id: 'ring', level: 0 } })
         midi(0xbe, 4, 127)
         midi(0xbe, 4, 64)
         await settle()
@@ -920,11 +919,13 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         expect($('midiIn').title.split('\n')[0]).toBe(heardLine()) // the whole message is also the tooltip, so a cut line can still be read
         expect($('midiIn').title).toContain('The last MIDI message the page heard') // and the tooltip still says what the line is
     })
-    it('a pot on another channel follows with pick-up as ever; a number the map does not hold says unmapped', async () => {
-        midi(0xb3, 4, 0) // level is 1 on the screen: a pot at 0 waits
+    it('a pot on another channel is direct (owner 2026-11-13): at 0 the level is 0 at once, at the top it is 1; a number the map does not hold says unmapped', async () => {
+        midi(0xb3, 4, 0) // level is 1 on the screen: a pot at 0 sets 0, no pick-up
         await settle()
-        expect(posts).toEqual([])
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0 })
         midi(0xb3, 4, 127)
+        await settle()
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 1 })
         midi(0xb3, 4, 64)
         await settle()
         expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
@@ -999,21 +1000,25 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         await settle()
         expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
     })
-    it('a switch under a pot parks it: the pot moves nothing until it passes the screen\'s value again', async () => {
+    it('a switch under a pot no longer parks it (owner 2026-11-13: every pot is direct): the next turn sets the knob\'s own place', async () => {
         midi(0xbe, 4, 127)
         midi(0xbe, 4, 64)
         await settle()
         expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
         posts = []
-        midi(0x9e, 48, 127) // pot switch 1: park the level
-        expect($('midiLine').textContent).toContain('live:level parked')
+        midi(0x9e, 48, 127) // pot switch 1
+        expect($('midiLine').textContent).toContain('live:level is direct')
         midi(0xbe, 4, 90)
         await settle()
-        expect(editPosts()).toEqual([])
-        expect($('midiLine').textContent).toContain('live:level waits until it passes the screen')
-        midi(0xbe, 4, 50) // across the screen's value: it follows again
+        expect(editPosts().at(-1).body.level).toBeCloseTo(90 / 127, 2)
+    })
+    it('pot 2 (size) at the bottom is the 0.15 floor, never 0; at the top it is 1 (owner 2026-11-13: "knob need max")', async () => {
+        midi(0xbe, 5, 0)
         await settle()
-        expect(editPosts().at(-1).body.level).toBeCloseTo(50 / 127, 2)
+        expect(editPosts().at(-1).body.size).toBeCloseTo(0.15, 2)
+        midi(0xbe, 5, 127)
+        await settle()
+        expect(editPosts().at(-1).body.size).toBe(1)
     })
     it('the layer button steps back one scene from the lit one, never past the start (2026-11-13: the Exit/Setup button is a Blackout now)', async () => {
         light.activeScene = 'dark'
