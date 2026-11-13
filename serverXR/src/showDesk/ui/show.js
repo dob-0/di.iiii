@@ -752,8 +752,18 @@
         for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, up)
     }
     const buildLive = () => {
+        // 2026-11-13 (owner: "instead of rainbow add + where will be colors palette and i can choose"): the + opens the browser's
+        // colour picker (any colour). A pick posts like a swatch, at most every LIVE_SEND_MS while dragging; the last one always goes.
+        // Rainbow stays a field of the look and a toggle on the laser desk page (laser/ui/desk.js).
+        let pickTimer = null; let pickLast = 0; let pickWant = null
+        const pickSend = () => { pickTimer = null; pickLast = Date.now(); const c = pickWant; pickWant = null; if (c) editLive({ colour: c, rainbow: false }) }
+        const pick = el('input', {
+            type: 'color', id: 'livePick', class: 'pickinput', tabindex: '-1', 'aria-hidden': 'true', value: '#ff0000', disabled: true,
+            oninput: () => { pickWant = pick.value.toLowerCase(); const wait = LIVE_SEND_MS - (Date.now() - pickLast); if (wait <= 0) { clearTimeout(pickTimer); pickSend() } else if (!pickTimer) pickTimer = setTimeout(pickSend, wait) }
+        })
+        const plus = el('button', { type: 'button', class: 'pad togglepad pickpad', id: 'livePlus', 'aria-pressed': 'false', title: 'Any colour: opens the colour palette', 'aria-label': 'Any colour', disabled: true, onclick: () => { try { pick.showPicker() } catch { pick.click() } } }, '+')
         $('liveColours').append(...SWATCHES.map((c) => el('button', { type: 'button', class: 'pad colourpad', 'data-colour': c, style: `background:${c}`, title: `Colour ${c}`, 'aria-label': `Colour ${c}`, disabled: true, onclick: () => editLive({ colour: c, rainbow: false }) })),
-            el('button', { type: 'button', class: 'pad togglepad', id: 'liveRainbow', 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('rainbow') }, 'Rainbow'))
+            plus, pick)
         for (const k of EFFECTS) {
             const input = liveFader(k, null)
             $('liveEffects').append(el('div', { class: 'effect' },
@@ -793,7 +803,12 @@
         }
         for (const b of $('liveShapes').children) mark(b, Boolean(look && look.shape === b.dataset.shape))
         for (const b of $('liveColours').querySelectorAll('.colourpad')) mark(b, Boolean(look && !look.rainbow && String(look.colour || '').toLowerCase() === b.dataset.colour))
-        mark($('liveRainbow'), Boolean(look && look.rainbow))
+        // the + is lit, in the look's own colour, when the live colour is one off the row (picked with the +)
+        const colourNow = look && !look.rainbow ? String(look.colour || '').toLowerCase() : ''
+        const custom = Boolean(colourNow) && !SWATCHES.includes(colourNow)
+        mark($('livePlus'), custom)
+        $('livePlus').style.background = custom ? colourNow : ''
+        $('livePick').disabled = !on
         mark($('liveMirror'), Boolean(look && look.mirror))
         for (const b of $('liveEffects').querySelectorAll('[data-effect]')) mark(b, Boolean(look && Number(look[b.dataset.effect])))
         if (S.desk && Number.isFinite(Number(S.desk.bpm))) {

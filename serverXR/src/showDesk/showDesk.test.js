@@ -731,6 +731,18 @@ describe('the live strip plays the live look with the laser desk\'s own looks/ed
             { id: 'ring', colour: '#7a20ff', rainbow: false }, { id: 'ring', shape: 'spots' }, { id: 'ring', pulse: 0 }, { id: 'ring', pulse: 0.3 }, { id: 'ring', mirror: true }
         ])
     })
+    it('the + opens the colour picker (owner 2026-11-13: instead of Rainbow); a pick posts its colour, and a colour off the row lights the +', async () => {
+        expect($('liveRainbow')).toBeNull()
+        expect($('livePlus').textContent).toBe('+')
+        const pick = $('livePick')
+        expect(pick.type).toBe('color')
+        await press($('livePlus'))
+        pick.value = '#123456'
+        pick.dispatchEvent(new Event('input'))
+        await settle()
+        expect(edits().at(-1)).toEqual({ id: 'ring', colour: '#123456', rainbow: false })
+        expect($('livePlus').classList.contains('is-on')).toBe(true)
+    })
     it('the XY pad posts x and height of the live look, throttled, the last place wins', async () => {
         const pad = $('xyPad')
         pad.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200, right: 200, bottom: 200 })
