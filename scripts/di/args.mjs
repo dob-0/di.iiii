@@ -27,6 +27,8 @@ export const parseArgs = (argv) => {
         // The secret must never sit in argv: `--token=VALUE` and a trailing `--token`
         // both become a non-'-' value, which `di open` refuses. Only `--token -` passes.
         if (name === 'token' || name.startsWith('token=')) { args.flags.token = name === 'token' ? (argv[++i] ?? '') : '(inline)'; continue }
+        // `di show-ready SPACE --host https://dev.diiii.xyz`
+        if (name === 'host') { args.flags.host = argv[++i]; continue }
         if (name === 'at') { args.flags.at = argv[++i]; continue }
         if (name === 'build') { args.flags.build = argv[++i]; continue }
         // `di stage join` — which mapping, which Chromium, what this machine

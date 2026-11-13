@@ -9,6 +9,7 @@
  */
 
 import process from 'node:process'
+import { showReadyUsage } from './showReady.mjs'
 
 const canColor = () => {
     if (process.env.NO_COLOR) return false
@@ -603,6 +604,7 @@ export const ui = {
         '                  localhost, .local, LAN and Tailscale addresses needs no flag)',
         '',
         style.dim(`  ${CMD} follows          what this install is following`),
+        style.dim(`  ${CMD} show-ready SPACE   prove a show is complete here, in the cloud, and needs no internet`),
         style.dim(`  ${CMD} wifi             open this install to the wifi for guests (--stop closes, --status asks)`),
         style.dim(`  ${CMD} unfollow SPACE   stop carrying edits`),
         style.dim(`  ${CMD} post draft|show|send|channels   share a post to Telegram, Bluesky, Mastodon`),
@@ -1029,7 +1031,7 @@ export const ui = {
         '90 days unused (a year at most). DI_TOKEN, when set, still wins — for CI.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), show: () => 'di show <command>: the show tools, read from a venue profile. Full help: di show help', service: () => ui.serviceUsage(), login: () => ui.loginUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), 'show-ready': () => showReadyUsage(CMD), stage: () => ui.stageUsage(), show: () => 'di show <command>: the show tools, read from a venue profile. Full help: di show help', service: () => ui.serviceUsage(), login: () => ui.loginUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -1047,6 +1049,7 @@ export const ui = {
         `  ${CMD} tell USER "TEXT"   message another person's agent (${CMD} inbox, ${CMD} contacts; ${CMD} agents remote on|off)`,
         `  ${CMD} move PROJECT --to SPACE   move a project into another space (--dry-run to look first)`,
         `  ${CMD} backup        every space and the light show, in one file`,
+        `  ${CMD} show-ready    is a show complete here, in the cloud, and offline-proof`,
         `  ${CMD} restore FILE  read one back in`,
         `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
         '',

@@ -66,6 +66,7 @@ import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from '
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import { runPost } from './post.mjs'
+import { checkShowReady, jsonReport, renderReport, showReadyUsage } from './showReady.mjs'
 import { runAgentMail } from './agentMail.mjs'
 import { runAgents } from './agentsRemote.mjs'
 import { runWifi } from './wifiCmd.mjs'
@@ -1382,6 +1383,21 @@ const cmdWifi = async (args) => {
 }
 
 /** `di follows` — what this install is following, and whether it is keeping up. */
+/**
+ * `di show-ready SPACE [PROJECT]` — is the show complete here, in the cloud, and
+ * runnable with no internet? Logic and words: showReady.mjs.
+ */
+const cmdShowReady = async (args) => {
+    const home = HOME()
+    const space = args._[1]
+    if (!space) { fail('which space? — di show-ready hayfilm'); say(showReadyUsage(CMD)); process.exitCode = 1; return }
+    const host = String(args.flags.host && args.flags.host !== true ? args.flags.host : hubUrl(readState(home))).replace(/\/+$/, '')
+    const dataDir = isInstalled(home) ? runnerFor(home).describe(home).dataDir : paths(home).data
+    const result = await checkShowReady({ dataDir, space, project: args._[2] || null, host, token: moveToken({ from: host, env: process.env }) })
+    say(args.flags.json ? jsonReport(result) : renderReport(result))
+    process.exitCode = result.exit
+}
+
 const cmdFollows = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -1811,6 +1827,7 @@ const COMMANDS = {
         (error) => { fail(`this copy of di has no show tools (${error.code || error.message}): update di`); process.exitCode = 1 }
     ),
     follows: cmdFollows,
+    'show-ready': cmdShowReady,
     wifi: cmdWifi,
     post: cmdPost,
     tell: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
