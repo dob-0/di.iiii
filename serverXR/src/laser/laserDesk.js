@@ -61,7 +61,7 @@ const LOOK_DEFAULTS = Object.freeze({
     rainbow: false,
     level: 1,
     size: 0.45, // 0…1 of the field's half-width
-    height: 0.5, // the picture's centre up the field: 0.5 keeps a 0.45 picture inside the default keep-in zone (y ≥ 0)
+    height: 0, // the picture's centre up the field: 0 = field centre (the zone is the full -1..1; 0.5 at size 1 put half the picture outside, offPercent 58, 2026-11-13)
     x: 0, // the picture's centre across the field
     rotation: 0, // turns
     spin: 0, // turns per beat
