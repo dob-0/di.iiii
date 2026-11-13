@@ -95,6 +95,28 @@ describe('a look drawn on the beat', () => {
         const q = lookPointsAt({ ...look, spin: 0 }, { t: 0, clock: clock(120) })
         expect(p[0][0]).toBeCloseTo(-q[0][0], 6)
     })
+    // 2026-11-14 (owner: "add rotation pulse, phase, phase beats"; he picked new moves): the picture turns back and forth,
+    // the shape's own motion loops
+    it('rotation pulse turns the picture a quarter turn each way at full depth, once every rotationPulseBeats; off it is the old picture', () => {
+        const look = normaliseLook({ shape: 'line', size: 0.5, colour: '#ffffff', rotationPulse: 1, rotationPulseBeats: 2 })
+        expect(look).toMatchObject({ rotationPulse: 1, rotationPulseBeats: 2, phaseBeats: 0 })
+        const r = (v) => v.map((p) => p.map((n) => +n.toFixed(6) + 0)) // + 0: -0 and 0 are the same place
+        const quarter = (turn) => lookPointsAt({ ...look, rotationPulse: 0, rotation: turn }, { t: 0, clock: clock(120) })
+        expect(r(lookPointsAt(look, { t: 250, clock: clock(120) }))).toEqual(r(quarter(0.25))) // beat 0.5: sin = 1
+        expect(r(lookPointsAt(look, { t: 750, clock: clock(120) }))).toEqual(r(quarter(-0.25))) // beat 1.5: sin = -1
+        expect(r(lookPointsAt(look, { t: 1000, clock: clock(120) }))).toEqual(r(quarter(0))) // beat 2: back where it started
+        const { rotationPulse: _a, rotationPulseBeats: _b, phaseBeats: _c, ...older } = look // a look from an older file
+        expect(r(lookPointsAt(older, { t: 250, clock: clock(120) }))).toEqual(r(quarter(0)))
+    })
+    it('phase beats plays the shape\'s own motion as a loop of that many beats, from phase on; 0 is the old motion', () => {
+        const look = normaliseLook({ shape: 'sparkle', size: 0.5, colour: '#ffffff', phaseBeats: 2 })
+        const at = (l, beat) => lookPointsAt(l, { t: beat * 500, clock: clock(120) })
+        expect(at(look, 2.25)).toEqual(at(look, 0.25)) // the loop: beat 2.25 is beat 0.25 again
+        expect(at({ ...look, phaseBeats: 0 }, 2.25)).not.toEqual(at({ ...look, phaseBeats: 0 }, 0.25)) // without it the sparkles move on
+        const from = { ...look, phase: 1 }
+        expect(at(from, 0.25)).toEqual(at({ ...look, phaseBeats: 0 }, 1.25)) // phase: where in the motion the loop starts
+        expect(normaliseLook({ rotationPulse: 7, rotationPulseBeats: 0, phaseBeats: 999 })).toMatchObject({ rotationPulse: 1, rotationPulseBeats: 0.25, phaseBeats: 64 })
+    })
     it('master 0 and level 0 are a blank frame; a point the moves push out of the field is blanked, not dragged', () => {
         expect(lookPointsAt(ring, { t: 0, clock: clock(), master: 0 })).toEqual([[0, 0, 0, 0, 0]])
         expect(lookPointsAt({ ...ring, level: 0 }, { t: 0, clock: clock() })).toEqual([[0, 0, 0, 0, 0]])

@@ -89,7 +89,7 @@ describe('the K2 table against the maker\'s chart (Xone:K2 user guide AP8509)', 
         for (const t of ['light-master', 'lamp:0', 'layer:base:level', 'fx:depth', 'scene:3', 'blackout']) expect(M.isLaserTarget(t), t).toBe(false)
     })
     it('a laser turn is clamped to the K2 limits whatever the controller sends, and the limits sit inside the engine\'s hard ranges', () => {
-        const HARD = { 'live:level': [0, 1], 'live:size': [0, 1], 'live:height': [-1, 1], 'live:x': [-1, 1], 'live:rotation': [-1, 1], 'live:spin': [-4, 4],
+        const HARD = { 'live:rotationPulse': [0, 1], 'live:rotationPulseBeats': [0.25, 64], 'live:phaseBeats': [0, 64], 'live:level': [0, 1], 'live:size': [0, 1], 'live:height': [-1, 1], 'live:x': [-1, 1], 'live:rotation': [-1, 1], 'live:spin': [-4, 4],
             'live:copies': [0, 24], 'live:pulse': [0, 1], 'live:pulseBeats': [0.25, 64], 'live:sweepBeats': [0.25, 64], 'laser-master': [0, 1] } // laserDesk.js normaliseLook, read by dob-b3 2026-11-13
         for (const [t, [lo, hi]] of Object.entries(M.LASER_LIMITS)) {
             expect(HARD[t], t).toBeTruthy()

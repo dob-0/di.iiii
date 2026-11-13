@@ -35,6 +35,11 @@
     // The laser desk's own swatches (laser/ui/desk.js SWATCHES), then the extra colours of the show's palette.
     // 2026-11-13 (owner: "real 255 red color in colors pallet"): pure red #ff0000 (R 255, G 0, B 0) first; #ff2030 stays.
     const SWATCHES = ['#ff0000', '#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60', '#e0001a', '#f0eaff', '#7a20ff']
+    // 2026-11-14 (owner: "add colors amber and soft ones, not very contrast, very light palette"): a second row. Amber is the
+    // signal amber of SAE J578 / ECE R48 (about 590 nm, #ff7e00), deeper than the yellow-amber #ffb020 above; then the laser
+    // desk's Warm white and six pastels (light, low saturation). The live strip and every lamp row play both rows.
+    const SOFT_SWATCHES = ['#ff7e00', '#ffd8a8', '#ffc8a0', '#ffc0d0', '#d8c8ff', '#c0e0ff', '#c0ffe0', '#fff4b0']
+    const ALL_SWATCHES = [...SWATCHES, ...SOFT_SWATCHES]
     // A copy of shared/laserShapes.cjs LASER_SHAPES (showDesk.test.js keeps it equal); the desk's own `shapes` wins when it
     // sends one. "spots" (dots) comes first on the strip, so any live look becomes dots with one tap.
     const SHAPES = ['circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid',
@@ -56,11 +61,18 @@
         phase: { label: 'Phase', min: 0, max: 16, step: 0.05 },
         pulseBeats: { label: 'Pulse beats', min: 0.25, max: 64, step: 0.25 },
         sweepBeats: { label: 'Sweep beats', min: 0.25, max: 64, step: 0.25 },
-        points: { label: 'Points', min: 16, max: 1992, step: 1 }
+        points: { label: 'Points', min: 16, max: 1992, step: 1 },
+        // 2026-11-14 (owner: "rotation pulse, phase, phase beats … on knobs"): the picture turns back and forth on the beat (up to
+        // a quarter turn each way), and the shape's own motion loops over Phase beats from Phase on (0 = off)
+        rotationPulse: { label: 'Rot. pulse', min: 0, max: 1, step: 0.01, pct: true, on: 0.5 },
+        rotationPulseBeats: { label: 'Rot. beats', min: 0.25, max: 64, step: 0.25 },
+        phaseBeats: { label: 'Phase beats', min: 0, max: 64, step: 0.25 }
     }
     const EFFECTS = ['pulse', 'sweep', 'spin', 'cycle'] // a pad each: a tap turns it off, a tap again back on at its last depth
     const ROW_A = ['level', 'size', 'copies', 'rotation']
     const ROW_B = ['phase', 'pulseBeats', 'sweepBeats', 'points']
+    const ROW_C_EFFECTS = ['rotationPulse'] // a pad + its depth, like Pulse
+    const ROW_C = ['rotationPulseBeats', 'phaseBeats']
 
     const $ = (id) => document.getElementById(id)
     const el = (tag, props = {}, ...kids) => {
@@ -494,7 +506,7 @@
                 bindFader(parts.input, key, (v) => { lampsEdited = true; return post(LIGHT + 'fixture', { id: f.id, values: { dimmer: v }, on: true }) }, (v) => setText(parts.val, pct(v, 255)))
                 // The same colours as the live strip, as this lamp's own colour channels (its profile on the lighting desk)
                 if (Object.keys(lampColour(f, '#ffffff')).length) {
-                    parts.colours.append(...SWATCHES.map((c) => el('button', {
+                    parts.colours.append(...ALL_SWATCHES.map((c) => el('button', {
                         type: 'button', class: 'swatch', 'data-colour': c, style: `background:${c}`, title: `${f.name || f.id}: ${c}`, 'aria-label': `${f.name || f.id} in ${c}`, onclick: () => pressLampColour(f.id, c)
                     })))
                 }
@@ -764,7 +776,7 @@
     try { const s = JSON.parse(window.localStorage.getItem(SAVED_KEY) || '[]'); if (Array.isArray(s)) savedColours = s.filter((c) => HEX.test(c)).slice(0, SAVED_MAX) } catch { /* nothing kept here */ }
     const HIDDEN_KEY = 'diShowDesk.hiddenColours.v1'
     let hiddenSwatches = []
-    try { const h = JSON.parse(window.localStorage.getItem(HIDDEN_KEY) || '[]'); if (Array.isArray(h)) hiddenSwatches = h.filter((c) => SWATCHES.includes(c)) } catch { /* nothing kept here */ }
+    try { const h = JSON.parse(window.localStorage.getItem(HIDDEN_KEY) || '[]'); if (Array.isArray(h)) hiddenSwatches = h.filter((c) => ALL_SWATCHES.includes(c)) } catch { /* nothing kept here */ }
     const storeHidden = () => { try { window.localStorage.setItem(HIDDEN_KEY, JSON.stringify(hiddenSwatches)) } catch { /* lasts until a reload */ } }
     const storeSaved = () => { try { window.localStorage.setItem(SAVED_KEY, JSON.stringify(savedColours)) } catch { /* this browser keeps nothing: the colours last until a reload */ } }
     const liveColourNow = () => { const l = liveLookFull(); return l && !l.rainbow ? String(l.colour || '').toLowerCase() : '' }
@@ -776,13 +788,13 @@
     const saveColour = () => {
         const c = liveColourNow()
         if (hiddenSwatches.includes(c)) { hiddenSwatches = hiddenSwatches.filter((x) => x !== c); storeHidden(); renderLive(); return }
-        if (!HEX.test(c) || SWATCHES.includes(c) || savedColours.includes(c)) return
+        if (!HEX.test(c) || ALL_SWATCHES.includes(c) || savedColours.includes(c)) return
         savedColours = [c, ...savedColours].slice(0, SAVED_MAX)
         storeSaved(); paintSaved(); renderLive()
     }
     const deleteColour = () => {
         const c = liveColourNow()
-        if (savedColours.includes(c)) { savedColours = savedColours.filter((x) => x !== c); storeSaved(); paintSaved() } else if (SWATCHES.includes(c) && !hiddenSwatches.includes(c)) { hiddenSwatches = [...hiddenSwatches, c]; storeHidden() } else return
+        if (savedColours.includes(c)) { savedColours = savedColours.filter((x) => x !== c); storeSaved(); paintSaved() } else if (ALL_SWATCHES.includes(c) && !hiddenSwatches.includes(c)) { hiddenSwatches = [...hiddenSwatches, c]; storeHidden() } else return
         renderLive()
     }
     const showAllColours = () => { hiddenSwatches = []; storeHidden(); renderLive() }
@@ -803,15 +815,19 @@
             el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveDeleteColour', disabled: true, title: 'Take the live colour off the row (the look keeps its colour; Show all brings built-ins back)', onclick: deleteColour }, 'Delete colour'),
             el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveShowAll', style: 'display:none', title: 'Bring back the deleted built-in colours', onclick: showAllColours }, 'Show all'))
         paintSaved()
-        for (const k of EFFECTS) {
+        $('liveSoft').append(...SOFT_SWATCHES.map((c) => el('button', { type: 'button', class: 'pad colourpad', 'data-colour': c, style: `background:${c}`, title: `Colour ${c}`, 'aria-label': `Colour ${c}`, disabled: true, onclick: () => editLive({ colour: c, rainbow: false }) })))
+        const effectCell = (k, box) => {
             const input = liveFader(k, null)
-            $('liveEffects').append(el('div', { class: 'effect' },
+            box.append(el('div', { class: 'effect' },
                 el('button', { type: 'button', class: 'pad effectpad', 'data-effect': k, 'aria-pressed': 'false', disabled: true, title: `${LIVE[k].label}: a tap turns it off, a tap again on at its last depth`, onclick: () => pressEffect(k) },
                     el('span', { text: LIVE[k].label }), liveVals.get(k)), input))
         }
+        for (const k of EFFECTS) effectCell(k, $('liveEffects'))
         $('liveEffects').append(el('button', { type: 'button', class: 'pad effectpad', id: 'liveMirror', 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('mirror') }, 'Mirror'))
         for (const k of ROW_A) liveFader(k, $('liveRowA'))
         for (const k of ROW_B) liveFader(k, $('liveRowB'))
+        for (const k of ROW_C_EFFECTS) effectCell(k, $('liveRowC'))
+        for (const k of ROW_C) liveFader(k, $('liveRowC'))
         for (const k of ['x', 'height']) { const input = liveFader(k, null); input.hidden = true; input.classList.add('xyval'); $('xyPad').append(input) }
         bindXY()
     }
@@ -841,20 +857,20 @@
             if (b.getAttribute('aria-pressed') !== null) b.setAttribute('aria-pressed', p ? 'true' : 'false')
         }
         for (const b of $('liveShapes').children) mark(b, Boolean(look && look.shape === b.dataset.shape))
-        for (const b of $('liveColours').querySelectorAll('.colourpad')) mark(b, Boolean(look && !look.rainbow && String(look.colour || '').toLowerCase() === b.dataset.colour))
+        for (const b of document.querySelectorAll('#liveColours .colourpad, #liveSoft .colourpad')) mark(b, Boolean(look && !look.rainbow && String(look.colour || '').toLowerCase() === b.dataset.colour))
         // the + is lit, in the look's own colour, when the live colour is one off the row (picked with the +)
         const colourNow = look && !look.rainbow ? String(look.colour || '').toLowerCase() : ''
-        const custom = Boolean(colourNow) && (!SWATCHES.includes(colourNow) || hiddenSwatches.includes(colourNow)) && !savedColours.includes(colourNow)
-        for (const b of $('liveColours').querySelectorAll(':scope > .colourpad')) b.style.display = hiddenSwatches.includes(b.dataset.colour) ? 'none' : ''
+        const custom = Boolean(colourNow) && (!ALL_SWATCHES.includes(colourNow) || hiddenSwatches.includes(colourNow)) && !savedColours.includes(colourNow)
+        for (const b of document.querySelectorAll('#liveColours > .colourpad, #liveSoft > .colourpad')) b.style.display = hiddenSwatches.includes(b.dataset.colour) ? 'none' : ''
         $('liveShowAll').style.display = hiddenSwatches.length ? '' : 'none'
         $('liveShowAll').textContent = `Show all (${hiddenSwatches.length} hidden)`
         mark($('livePlus'), custom)
         $('livePlus').style.background = custom ? colourNow : ''
         $('livePick').disabled = !on
         $('liveSaveColour').disabled = !(on && custom && HEX.test(colourNow))
-        $('liveDeleteColour').disabled = !(on && (savedColours.includes(colourNow) || (SWATCHES.includes(colourNow) && !hiddenSwatches.includes(colourNow))))
+        $('liveDeleteColour').disabled = !(on && (savedColours.includes(colourNow) || (ALL_SWATCHES.includes(colourNow) && !hiddenSwatches.includes(colourNow))))
         mark($('liveMirror'), Boolean(look && look.mirror))
-        for (const b of $('liveEffects').querySelectorAll('[data-effect]')) mark(b, Boolean(look && Number(look[b.dataset.effect])))
+        for (const b of document.querySelectorAll('#liveEffects [data-effect], #liveRowC [data-effect]')) mark(b, Boolean(look && Number(look[b.dataset.effect])))
         if (S.desk && Number.isFinite(Number(S.desk.bpm))) {
             putFader($('bpm'), 'bpm', Number(S.desk.bpm))
             if (!held('bpm')) setText($('bpmVal'), String(Math.round(Number(S.desk.bpm))))

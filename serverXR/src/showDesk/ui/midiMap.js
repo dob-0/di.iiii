@@ -26,8 +26,8 @@
     const CHANNEL_KEY = 'diShowDesk.midiChannel.v1'
 
     // ---- what a target is. A fader or a knob takes a continuous target; a button takes a press target.
-    const LIVE_KEYS = 'level|size|height|x|copies|rotation|spin|pulse|sweep|cycle|phase|pulseBeats|sweepBeats|points'
-    const RESET_KEYS = 'rotation|x|cycle|phase|pulseBeats|sweepBeats' // timing and place: none of them is a brightness
+    const LIVE_KEYS = 'level|size|height|x|copies|rotation|spin|pulse|sweep|cycle|phase|pulseBeats|sweepBeats|points|rotationPulse|rotationPulseBeats|phaseBeats'
+    const RESET_KEYS = 'rotation|x|cycle|phase|pulseBeats|sweepBeats|rotationPulse|rotationPulseBeats|phaseBeats' // timing and place: none of them is a brightness
     const CONT = `lamp:\\d{1,3}(?:\\+\\d{1,3})?|layer:(?:base|rhythm|accent|cue):level|fx:(?:depth|bpm|mode|spatial)|size:\\d{1,3}|live:(?:${LIVE_KEYS})|light-master|laser-master`
     const CONTINUOUS = new RegExp(`^(?:${CONT})$`)
     const PRESS = new RegExp(`^(?:scene:(?:\\d{1,3}|next|prev)|blackout(?::lights)?|reset:(?:${RESET_KEYS})|park:(?:${CONT}))$`)
@@ -43,6 +43,7 @@
         // 2026-11-13: size never 0 from the K2 (0.15 = MARK_MIN_SIZE): a size-0 picture is a still beam and stops the cube, then the K2 is ignored.
         'live:level': [0, 1], 'live:size': [0.15, 1], 'live:height': [-1, 1], 'live:x': [-1, 1], 'live:copies': [0, 8],
         'live:rotation': [-0.5, 0.5], 'live:spin': [-2, 2], 'live:pulse': [0, 1], 'live:pulseBeats': [0.25, 64], 'live:sweepBeats': [0.25, 64],
+        'live:rotationPulse': [0, 1], 'live:rotationPulseBeats': [0.25, 64], 'live:phaseBeats': [0, 64], // 2026-11-14 new moves
         'laser-master': [0, 1]
     })
     const isLaserTarget = (t) => typeof t === 'string' && (t === 'laser-master' || /^live:/.test(t) || /^size:/.test(t) || /^park:(?:live:|laser-master|size:)/.test(t))
@@ -56,7 +57,7 @@
 
     // "Reset" sets a live field to the laser desk's own default (laserDesk.js LOOK_DEFAULTS, which its state also serves as
     // `defaults`; the page prefers that, this copy is the fallback and midiMap.test.js keeps it equal).
-    const RESET_TO = Object.freeze({ rotation: 0, x: 0, cycle: 0, phase: 0, pulseBeats: 1, sweepBeats: 4 })
+    const RESET_TO = Object.freeze({ rotation: 0, x: 0, cycle: 0, phase: 0, pulseBeats: 1, sweepBeats: 4, rotationPulse: 0, rotationPulseBeats: 2, phaseBeats: 0 })
 
     // ---- the Xone:K2, control by control, in the order of its face: top encoders, the pots with their switches, the faders,
     // the switch matrix, the bottom row. `control` is the name midi/xone-k2.json gives it. A row is kept as the crew knew it

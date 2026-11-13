@@ -74,6 +74,12 @@ const LOOK_DEFAULTS = Object.freeze({
     sweepBeats: 4,
     mirror: false, // every second cube mirrored (x → −x)
     phase: 0, // beats each cube runs behind the one before it (a chase across the cubes)
+    // 2026-11-14 (owner: "add rotation pulse, phase, phase beats"; he picked: the picture turns back and forth on the beat,
+    // and the shape's own motion loops): rotationPulse 0…1 turns the picture up to a quarter turn each way, once every
+    // rotationPulseBeats; phaseBeats > 0 plays the shape's own motion as a loop of that many beats, started at `phase`.
+    rotationPulse: 0,
+    rotationPulseBeats: 2,
+    phaseBeats: 0, // 0 = off: the shape moves as it always did
     cubes: 'all', // 'all' or the cube ids this look draws on; the others are held dark
     // The light scene this look follows (sceneLink.js): null = never set (the first fill may set it), '' = none, else the
     // scene's id. A setting of the desk, not part of the picture: it is left out of samePicture and Save never copies it.
@@ -149,6 +155,9 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
         sweepBeats: clamp(num(pick('sweepBeats'), 4), 0.25, 64),
         mirror: bool(pick('mirror')),
         phase: clamp(num(pick('phase'), 0), 0, 16),
+        rotationPulse: clamp(num(pick('rotationPulse'), 0), 0, 1),
+        rotationPulseBeats: clamp(num(pick('rotationPulseBeats'), 2), 0.25, 64),
+        phaseBeats: clamp(num(pick('phaseBeats'), 0), 0, 64),
         cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all',
         follows: followsOf(pick('follows'))
     }

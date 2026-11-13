@@ -18,7 +18,7 @@
   --track: 4px;        /* a fader's drawn track; the input stays the hit area */
   --scenes-h: 80px;    /* one row of scene keys: number, name (two lines at most), look; more scenes scroll in the row, never the page */
   --live-h: 238px;     /* the live strip: colours (40), shapes in two rows (2 x 36 + 3), the effects and knobs grid (3 x 34); the XY pad */
-  --bank-min: 268px;   /* the least the fader bank is given */
+  --bank-min: 298px;   /* the least the fader bank is given (268 until 2026-11-14; three 58px lamp rows) */
   --bank-max: 1fr;     /* the bank takes the rest of the screen, in both densities; Rows needs --bank-min of it */
   --links-h: 60px;     /* the bottom line: 46 px of links and MIDI controls, and under them the In line's row (--in-h) */
   --in-h: 14px;        /* the In line, the last MIDI message: a row of its own, as wide as the bar */
@@ -132,10 +132,13 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
 .scenebtn.is-edited { outline: 2px dashed var(--warn); outline-offset: -2px; }
 
 /* ---- the live strip: the live laser look under the fingers. One grid of five equal columns: the colours and the shapes
-   across it, then Pulse Sweep Spin Cycle Mirror · Level Size Copies Rotation BPM · Phase Pulse-beats Sweep-beats Points Tap */
+   across it (the soft colours a second row), then Pulse Sweep Spin Cycle Mirror · Level Size Copies Rotation BPM · Phase Pulse-beats Sweep-beats
+   Points Tap · Rot.-pulse Rot.-pulse-beats Phase-beats */
 .livestrip { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 8px; padding: 2px 8px; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--line); }
-.liveleft { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: var(--pad) var(--shapes-h) repeat(3, var(--row)); gap: 4px; align-content: start; min-width: 0; min-height: 0; }
-.liveleft > .liverow:first-child, .liveleft > .shapes { grid-column: 1 / -1; }
+.liveleft { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: var(--pad) var(--pad) var(--shapes-h) repeat(4, var(--row)); gap: 4px; align-content: start; min-width: 0; min-height: 0; }
+.liveleft > .liverow:first-child, .liveleft > .softrow, .liveleft > .shapes { grid-column: 1 / -1; }
+/* 2026-11-14: the soft row (amber + a very light palette) under the bright one; the fourth knob row: Rot. pulse, its beats, Phase beats */
+.liveleft > .softrow { height: var(--pad); }
 .liveleft > .effects, .liveleft > .faders { display: contents; }
 .liverow { display: flex; align-items: center; gap: 4px; min-width: 0; height: var(--target); }
 .liverow:first-child { height: var(--pad); }
@@ -159,13 +162,14 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
 .effects .effectpad { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; width: 76px; height: var(--row); min-height: var(--row); padding: 0 6px; line-height: 1.1; font-size: var(--fx-font); }
 .effectpad .val { font: 500 11px var(--mono); color: var(--muted); text-align: right; }
 .effects .effect input { width: 100%; min-width: 0; }
+#liveRowC .effect { grid-template-columns: 118px minmax(0, 1fr); } #liveRowC .effectpad { width: 118px; } /* "Rot. pulse 50%" fits */
 .effects > .effectpad { width: auto; justify-content: center; }
 .hfader { display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: 1fr 1fr; column-gap: 4px; align-items: center; min-width: 0; height: var(--row); }
 .hfader span { grid-column: 1; grid-row: 1; align-self: end; font-size: var(--knob-font); line-height: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hfader .val { grid-column: 1; grid-row: 2; align-self: start; font: 500 12px var(--mono); line-height: 14px; color: var(--text); text-align: right; }
 .hfader input { grid-column: 2; grid-row: 1 / -1; width: 100%; min-width: 0; }
-.liveleft .bpmfader { grid-row: 4; grid-column: 5; }
-.liveleft #tapBtn { grid-row: 5; grid-column: 5; height: var(--row); min-height: var(--row); padding: 0 8px; }
+.liveleft .bpmfader { grid-row: 5; grid-column: 5; }
+.liveleft #tapBtn { grid-row: 6; grid-column: 5; height: var(--row); min-height: var(--row); padding: 0 8px; }
 .actbtn { flex: none; padding: 0 14px; }
 .liveright { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
 .livename { margin: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 18px; flex: none; }
@@ -272,7 +276,7 @@ body.showdesk[data-density="compact"] {
    rules above) is the same page with body[data-bank="upright"]. Tokens first (Touch here, Compact at the end of this block). */
 :root {
   --bank-gap: 4px;       /* between the rows of the bank */
-  --lamp-row: 48px;      /* one lamp's row */
+  --lamp-row: 58px;      /* one lamp's row (48 until 2026-11-14: two lines of colour pads, bright and soft, need 58) */
   --lamp-head-w: 148px;  /* its swatch, name and patch line */
   --lamp-val-w: 48px;    /* its level */
   --row-pad: 32px;       /* a lamp's colour pad in its row */
@@ -317,8 +321,11 @@ body.showdesk[data-bank="rows"] .lamp.strip {
 }
 body.showdesk[data-bank="rows"] .lamp .who { padding-right: 0; }
 body.showdesk[data-bank="rows"] .lamp .val { position: static; text-align: right; }
-body.showdesk[data-bank="rows"] .lampcolours { grid-template-columns: none; grid-template-rows: var(--row-pad); grid-auto-flow: column; grid-auto-columns: var(--row-pad); gap: 3px; justify-content: end; }
-body.showdesk[data-bank="rows"] .lampcolours .swatch { width: var(--row-pad); height: var(--row-pad); min-height: var(--row-pad); }
+body.showdesk[data-bank="rows"] .lampcolours { grid-template-columns: repeat(12, var(--lamp-sw)); grid-auto-rows: var(--lamp-sw); grid-auto-flow: row; gap: 3px; justify-content: end; align-content: center; }
+/* 2026-11-14: 12 bright swatches on the first line, the soft row (amber + 7 pastels) under them, as on the live strip; one line of 20
+   pushed the last 3 out of the strip at 1278 px. Two lines fit the strip's height (its 4 px padding each side, a 3 px gap): 26.5 px at 64. */
+body.showdesk[data-bank="rows"] { --lamp-sw: max(22px, calc((var(--lamp-row) - 11px) / 2)); }
+body.showdesk[data-bank="rows"] .lampcolours .swatch { width: var(--lamp-sw); height: var(--lamp-sw); min-height: var(--lamp-sw); }
 /* the lamp's colour monitor at row size: its swatch is a 22 px tab as high as the row (it was 22 x 22); the colour is show.js's, unchanged */
 body.showdesk[data-bank="rows"] .lamp .striphead { align-self: stretch; }
 body.showdesk[data-bank="rows"] .lamp .striphead > .swatch { align-self: stretch; height: auto; min-height: 0; }

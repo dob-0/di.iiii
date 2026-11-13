@@ -56,6 +56,7 @@
       <button id="saveScene" class="actbtn" type="button" title="Write the lamps as they are now into the lit light scene, and the live laser look as it plays now into its own look">Save scene</button>
       <button id="undoBtn" class="actbtn" type="button" title="The laser desk's Undo (one step), and the lit light scene recalled as it was written">Undo</button>
     </div>
+    <div class="liverow softrow"><div class="colours" id="liveSoft" role="group" aria-label="Soft colours of the live look: amber and a very light palette"></div></div>
     <div class="liverow shapes" id="liveShapes" role="group" aria-label="Shape of the live look"></div>
     <div class="liverow effects" id="liveEffects" role="group" aria-label="Effects of the live look">
     </div>
@@ -64,6 +65,7 @@
       <label class="hfader bpmfader" title="The laser desk's beat: pulse and sweep count it"><span>BPM</span><input id="bpm" type="range" min="20" max="300" step="1" value="120" aria-label="Beats per minute of the laser desk"><b id="bpmVal" class="val"></b></label>
       <button id="tapBtn" class="actbtn" type="button" title="Tap the beat (the laser desk's own Tap)">Tap</button>
     </div>
+    <div class="liverow faders effects" id="liveRowC" role="group" aria-label="Rotation pulse and the shape's own loop"></div>
   </div>
   <div class="liveright">
     <p class="livename" id="liveName">No look is live: press a scene</p>

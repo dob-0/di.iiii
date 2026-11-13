@@ -803,6 +803,39 @@ describe('the live strip plays the live look with the laser desk\'s own looks/ed
         expect($('liveSaveColour').disabled).toBe(false) // it can be saved again
         expect(document.querySelectorAll('#liveColours > .colourpad').length).toBe(12)
     })
+    it('the soft row: amber and a very light palette under the bright row, on the live look and on every lamp row; Delete colour hides one (owner 2026-11-14)', async () => {
+        const soft = ['#ff7e00', '#ffd8a8', '#ffc8a0', '#ffc0d0', '#d8c8ff', '#c0e0ff', '#c0ffe0', '#fff4b0']
+        expect([...document.querySelectorAll('#liveSoft > .colourpad')].map((b) => b.dataset.colour)).toEqual(soft)
+        let lampRows = 0
+        for (const row of document.querySelectorAll('.lampcolours')) {
+            const cs = [...row.querySelectorAll('.swatch')].map((b) => b.dataset.colour)
+            if (!cs.length) continue // a lamp with no colour channels has no colours at all
+            lampRows += 1
+            expect(cs.slice(-8)).toEqual(soft) // the lamps play the same palette as the laser (lights and laser are one scene)
+        }
+        expect(lampRows).toBeGreaterThan(0)
+        const before = edits().length
+        await press(document.querySelector('#liveSoft .colourpad[data-colour="#ffc0d0"]'))
+        expect(edits().slice(before).some((b) => b.colour === '#ffc0d0' && b.rainbow === false)).toBe(true)
+        expect(document.querySelector('#liveSoft .colourpad[data-colour="#ffc0d0"]').classList.contains('is-on')).toBe(true)
+        expect($('livePlus').classList.contains('is-on')).toBe(false) // a soft colour is on the row, not a + colour
+        await press($('liveDeleteColour'))
+        expect(document.querySelector('#liveSoft > .colourpad[data-colour="#ffc0d0"]').style.display).toBe('none')
+        await press($('liveShowAll'))
+        expect(document.querySelector('#liveSoft > .colourpad[data-colour="#ffc0d0"]').style.display).toBe('')
+    })
+    it('the fourth knob row: Rot. pulse (a pad and its depth), Rot. pulse beats and Phase beats post the live look (owner 2026-11-14)', async () => {
+        for (const k of ['rotationPulse', 'rotationPulseBeats', 'phaseBeats']) expect(document.querySelector(`#liveRowC input[data-midi="live:${k}"]`), k).not.toBeNull()
+        expect(document.querySelector('#liveRowC [data-effect="rotationPulse"]')).not.toBeNull()
+        const before = edits().length
+        await press(document.querySelector('#liveRowC [data-effect="rotationPulse"]'))
+        expect(edits().slice(before).some((b) => b.rotationPulse === 0.5)).toBe(true) // off → on at its start depth
+        const input = document.querySelector('#liveRowC input[data-midi="live:phaseBeats"]')
+        input.value = '2'
+        input.dispatchEvent(new Event('input'))
+        await settle()
+        expect(edits().slice(before).some((b) => b.phaseBeats === 2)).toBe(true)
+    })
     it('the XY pad posts x and height of the live look, throttled, the last place wins', async () => {
         const pad = $('xyPad')
         pad.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200, right: 200, bottom: 200 })
