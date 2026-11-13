@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { pageTitle } from '../hooks/pageTitles.js'
 import { usePreferencesData } from '../hooks/usePreferencesData.js'
@@ -121,6 +121,16 @@ const sectionFromHash = () => {
 
 export default function PreferencesPage({ onNavigateToEditor }) {
     const [activeSection, setActiveSection] = useState(sectionFromHash)
+    // a /admin#monitor link followed inside an open admin page switches section
+    useEffect(() => {
+        const onHash = () => {
+            // only a hash that names a section moves us; clearing it leaves the open section alone
+            const key = String(window.location.hash || '').replace(/^#/, '')
+            if (SECTIONS.some((section) => section.key === key)) setActiveSection(key)
+        }
+        window.addEventListener('hashchange', onHash)
+        return () => window.removeEventListener('hashchange', onHash)
+    }, [])
     useDocumentTitle(pageTitle('admin', { section: SECTIONS.find((s) => s.key === activeSection)?.label }))
     const [headerCollapsed, setHeaderCollapsed] = useState(false)
     // Refresh loads the lists again by remounting the open section (each one

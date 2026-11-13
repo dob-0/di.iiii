@@ -90,16 +90,24 @@ export default function MonitorSection({ onStats }) {
     const [flashing, setFlashing] = useState(() => new Set())
     const [, setTick] = useState(0)
     const previous = useRef(null)
+    const seq = useRef(0)
+    const flashTimer = useRef(null)
+    const alive = useRef(true)
+    useEffect(() => () => { alive.current = false; clearTimeout(flashTimer.current) }, [])
 
     const load = useCallback(async () => {
+        const mine = ++seq.current
         try {
             const next = await getMonitor()
+            // a slower, older answer must not overwrite a newer one (or land after unmount)
+            if (!alive.current || mine !== seq.current) return
             const sig = signatures(next.panels)
             if (previous.current) {
                 const changed = Object.keys(sig).filter((k) => previous.current[k] !== sig[k])
                 if (changed.length) {
                     setFlashing(new Set(changed))
-                    setTimeout(() => setFlashing(new Set()), FLASH_MS)
+                    clearTimeout(flashTimer.current)
+                    flashTimer.current = setTimeout(() => setFlashing(new Set()), FLASH_MS)
                 }
             }
             previous.current = sig
@@ -109,6 +117,7 @@ export default function MonitorSection({ onStats }) {
             const a = next.panels?.agents
             onStats?.({ live: a?.live || 0, total: a?.total || 0 })
         } catch (e) {
+            if (!alive.current || mine !== seq.current) return
             if (e.status === 404) setUnavailable(true)
             else setError(e.message || 'Failed to load the monitor.')
         }

@@ -242,3 +242,16 @@ describe('monitor snapshot', () => {
     })
   })
 })
+
+describe('monitor store review fixes', () => {
+  it('concurrent callers share one scan', async () => {
+    let tailscaleCalls = 0
+    const store = createMonitorStore({
+      home: '/nonexistent', configPath: '/nonexistent/m.json', repoDir: '/tmp', connections: {},
+      runCommand: async (cmd) => { if (cmd === 'tailscale') tailscaleCalls += 1; await new Promise((r) => setTimeout(r, 30)); return '{}' },
+      fetchImpl: async () => ({ ok: false, status: 503, json: async () => ({}) })
+    })
+    await Promise.all([store.getMonitor({ selfBase: 'x' }), store.getMonitor({ selfBase: 'x' })])
+    expect(tailscaleCalls).toBe(1)
+  })
+})
