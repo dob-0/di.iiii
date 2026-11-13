@@ -488,7 +488,9 @@ void main() {
             param('tone', 'Thermal colour', 0, 0, 6, 1),
             param('hud', 'Camera frame', 0, 0, 1),
             // a thermal sensor is small (160 x 120): the heat read on a coarse grid and blown up soft
-            param('sensor', 'Sensor blur', 0, 0, 1)
+            param('sensor', 'Sensor blur', 0, 0, 1),
+            // thin dark lines over the picture, 10 tall panes across and 4 up: a wall of windows
+            param('grid', 'Window grid', 0, 0, 1)
         ],
         // A camera has no depth, so this reads one out of the light: black and white, the picture of a depth
         // scanner or an x-ray plate (the references: a depth pass of two dancers, a clay relief, stepped depth
@@ -512,6 +514,7 @@ uniform float p_flash;
 uniform float p_tone;
 uniform float p_hud;
 uniform float p_sensor;
+uniform float p_grid;
 // The palettes of a thermal camera: heat 0..1 -> colour. Iron: black, deep blue, purple, red, orange, yellow, white.
 vec3 ds_ramp(float v, vec3 c0, vec3 c1, vec3 c2, vec3 c3, vec3 c4, vec3 c5) {
     float s = clamp(v, 0.0, 1.0) * 5.0;
@@ -652,6 +655,11 @@ void main() {
         float frame = step(abs(b.x), 1.0 + texel.x / 0.006 * 1.5) * step(abs(b.y), 1.0 + texel.y / 0.2 * 1.5) - inBar;
         col = mix(col, ds_tone(b.y * 0.5 + 0.5, tone), inBar * p_hud);
         col = mix(col, vec3(1.0), clamp(frame + ds_hud(uv, texel), 0.0, 1.0) * p_hud);
+    }
+    if (p_grid > 0.01) {
+        vec2 pane = abs(fract(uv * vec2(10.0, 4.0)) - 0.5);
+        float bar = max(step(0.5 - texel.x * 12.0, pane.x), step(0.5 - texel.y * 4.8, pane.y));
+        col = mix(col, col * 0.22, bar * p_grid);
     }
     gl_FragColor = vec4(col, 1.0);
 }`
