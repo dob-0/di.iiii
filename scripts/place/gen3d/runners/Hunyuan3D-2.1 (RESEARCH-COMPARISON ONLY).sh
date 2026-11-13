@@ -5,7 +5,7 @@
 #   5.b no use of Output to improve any other AI model; >1M MAU needs a Tencent licence.
 # Do not show outputs in EU/UK/KR, do not train on them. (The file name uses "-" because "/" cannot be in a file name.)
 #
-# usage: runner.sh [INPUT_DIR] [OUT_DIR]      env: GPU=A100 (default; L4 24 GB < 29 GB needed for shape+paint)
+# usage: runner.sh [INPUT_DIR] [OUT_DIR]      env: GPU=A100, REUSE=<session> (re-run on a live session; setup is skipped), COLLECT_ONLY=1 (with REUSE: no upload/start, only wait+download) (default; L4 24 GB < 29 GB needed for shape+paint)
 # needs: colab-pinned.sh (CLI 0.7.5), gevorg login state at ~/.local/state/colab/gevorg, blender, ffmpeg.
 # Always terminates its session (trap). Never pkill.
 set -uo pipefail
@@ -27,6 +27,7 @@ log() { echo "[$(date +%T)] $*" | tee -a "$OUT/colab.log"; }
 cat >"$TMP/job.sh" <<JOB
 set -euxo pipefail
 cd /content
+if [ ! -f /content/SETUP_OK ]; then
 pip -q install uv; export UV_PYTHON_PREFERENCE=only-managed
 git clone https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1 h21 && git -C h21 checkout $COMMIT
 uv venv --python 3.10 /content/venv && /content/venv/bin/python -V
@@ -36,34 +37,47 @@ uv pip install --python /content/venv/bin/python torch==2.5.1 torchvision==0.20.
 # dropped: gradio fastapi uvicorn pythreejs deepspeed tb_nightly (demo/training only); bpy==4.0 (not on PyPI: stubbed,
 # GLB is built with the repo's own bpy-free create_glb_with_pbr_materials, same as its gradio_app.py)
 grep -v -i -E '^(--extra-index|gradio|fastapi|uvicorn|pythreejs|deepspeed|tb_nightly|bpy)' requirements.txt > /content/req.txt
-uv pip install --python /content/venv/bin/python --index-strategy unsafe-best-match -r /content/req.txt setuptools wheel
+uv pip install --python /content/venv/bin/python --index-strategy unsafe-best-match -r /content/req.txt "setuptools<81" wheel  # pkg_resources is gone in setuptools>=81 (pytorch-lightning 1.9.5 needs it)
+# Colab ships nvcc 13.0, torch 2.5.1 is cu124: torch refuses the mismatch -> side-by-side CUDA 12.4.1 toolkit (no driver)
+wget -q https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_550.54.15_linux.run -O /content/cuda.run
+sh /content/cuda.run --silent --toolkit --toolkitpath=/content/cuda-12.4 --no-opengl-libs --no-man-page --override
+export CUDA_HOME=/content/cuda-12.4 PATH=/content/cuda-12.4/bin:\$PATH
+nvcc --version
 export TORCH_CUDA_ARCH_LIST="8.0"
 (cd hy3dpaint/custom_rasterizer && python setup.py install)
-(cd hy3dpaint/DifferentiableRenderer && bash compile_mesh_painter.sh)
 mkdir -p hy3dpaint/ckpt && wget -q https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P hy3dpaint/ckpt
 uv pip freeze --python /content/venv/bin/python > /content/pip_freeze.txt
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv > /content/gpu.txt
+touch /content/SETUP_OK
+fi
 echo SETUP_DONE
+cd /content/h21
+export VIRTUAL_ENV=/content/venv PATH=/content/cuda-12.4/bin:/content/venv/bin:\$PATH CUDA_HOME=/content/cuda-12.4
+# the repo's compile_mesh_painter.sh asks the SYSTEM python3-config for the suffix (Colab python != venv 3.10): use the venv's
+uv pip install --python /content/venv/bin/python "setuptools<81" -q
+ls hy3dpaint/DifferentiableRenderer/mesh_inpaint_processor*.so >/dev/null 2>&1 || (cd hy3dpaint/DifferentiableRenderer && rm -f mesh_inpaint_processor && c++ -O3 -Wall -shared -std=c++11 -fPIC \$(python -m pybind11 --includes) mesh_inpaint_processor.cpp -o mesh_inpaint_processor\$(python -c "import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))"))
+export VIRTUAL_ENV=/content/venv PATH=/content/cuda-12.4/bin:/content/venv/bin:\$PATH CUDA_HOME=/content/cuda-12.4
 python /content/run.py
 echo ALL_DONE
 JOB
 cat >"$TMP/run.py" <<'PY'
 import sys, os, time, json, glob, shutil
 os.chdir('/content/h21')
-sys.path[:0] = ['./hy3dshape', './hy3dpaint']
+sys.path[:0] = ['/content/h21', './hy3dshape', './hy3dpaint']
 import torch, types
 sys.modules['bpy']=types.ModuleType('bpy')
 from PIL import Image
 try:
     from torchvision_fix import apply_fix; apply_fix()
-except Exception as e: print('fix', e)
+except Exception as e: print('torchvision_fix FAILED', e); raise
 from hy3dshape.rembg import BackgroundRemover
 from hy3dshape.pipelines import Hunyuan3DDiTFlowMatchingPipeline
 t=time.time()
 shape = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2.1')
 rm = BackgroundRemover()
 load_shape = time.time()-t
-os.chdir('/content/h21/hy3dpaint')
+os.chdir('/content/h21')
+if not os.path.exists('ckpt'): os.symlink('hy3dpaint/ckpt','ckpt')  # configs use repo-root-relative paths
 from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
 t=time.time()
 paint = Hunyuan3DPaintPipeline(Hunyuan3DPaintConfig(max_num_view=6, resolution=512))
@@ -83,7 +97,6 @@ for f in sorted(glob.glob('/content/inputs/*.png')):
         mesh.export(f'{d}/shape.glb'); r['shape_peak_gb']=torch.cuda.max_memory_allocated()/2**30
         torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats()
         t=time.time()
-        os.chdir('/content/h21/hy3dpaint')
         out = paint(mesh_path=f'{d}/shape.glb', image_path=f'{d}/input_rgba.png', output_mesh_path=f'{d}/textured.obj', save_glb=False)
         from convert_utils import create_glb_with_pbr_materials
         b=f'{d}/textured'; os.chdir(d)
@@ -100,7 +113,7 @@ printf "import subprocess\nprint(subprocess.run(\"nvidia-smi -L;mkdir -p /conten
 printf "import os\nprint(\" \".join(os.listdir(\"/content/out\")))\n" >"$TMP/ls.py"
 cat >"$TMP/start.py" <<'PY'
 import subprocess
-subprocess.Popen('bash /content/job.sh > /content/job.log 2>&1', shell=True, start_new_session=True)
+subprocess.Popen(['bash','-c','bash /content/job.sh > /content/job.log 2>&1'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
 print('started')
 PY
 cat >"$TMP/poll.py" <<'PY'
@@ -132,11 +145,15 @@ PY
 # ---- run ---------------------------------------------------------------------------------------
 T0=$(date +%s)
 log "new session $SES gpu=$GPU"; $W usage 2>&1 | head -2 | tee -a "$OUT/colab.log"
-$W new -s "$SES" --gpu "$GPU" >>"$OUT/colab.log" 2>&1 || { log "session create failed"; exit 2; }
+if [ -n "${REUSE:-}" ]; then SES="$REUSE"; log "reusing session $SES (setup already done there)"; else
+$W new -s "$SES" --gpu "$GPU" >>"$OUT/colab.log" 2>&1 || { log "session create failed"; exit 2; }; fi
+if [ -z "${COLLECT_ONLY:-}" ]; then
 $W exec -s "$SES" -f "$TMP/init.py" >>"$OUT/colab.log" 2>&1 || true
-for f in "$IN"/*.png; do $W upload -s "$SES" "$f" "/content/inputs/$(basename "$f")" >>"$OUT/colab.log" 2>&1; done
-for f in job.sh run.py; do $W upload -s "$SES" "$TMP/$f" "/content/$f" >>"$OUT/colab.log" 2>&1; done
+up() { for t in 1 2 3 4; do $W upload -s "$SES" "$1" "$2" >>"$OUT/colab.log" 2>&1 && return 0; sleep 10; done; log "UPLOAD FAILED $1"; return 1; }
+for f in "$IN"/*.png; do up "$f" "/content/inputs/$(basename "$f")"; done
+for f in job.sh run.py; do up "$TMP/$f" "/content/$f"; done
 $W exec -s "$SES" -f "$TMP/start.py" 2>&1 | tee -a "$OUT/colab.log"
+fi
 while :; do
   sleep 60
   P=$($W exec -s "$SES" --timeout 60 -f "$TMP/poll.py" 2>&1); echo "$P" | tail -4 >"$OUT/last_poll.txt"

@@ -20,6 +20,7 @@ usage_bal() { cb usage 2>&1 | awk '/balance/{print $3}'; }
 stop() { cb stop -s "$SESS" >/dev/null 2>&1 || true; cb sessions 2>&1 | tail -3; }
 trap stop EXIT
 
+if [ -z "${SKIP_COLAB:-}" ]; then   # SKIP_COLAB=1 redoes only the Blender step
 BAL0=$(usage_bal); T0=$(date +%s)
 cb new -s "$SESS" --gpu "$GPU"
 for f in "$IN"/*.png; do cb upload -s "$SESS" "$f" "/content/in_$(basename "$f")"; done
@@ -58,6 +59,8 @@ cb stop -s "$SESS" || true
 T1=$(date +%s); BAL1=$(usage_bal)
 echo "{\"gpu\":\"$GPU\",\"commit\":\"$COMMIT\",\"wall_sec\":$((T1-T0)),\"units_before\":$BAL0,\"units_after\":$BAL1}" > "$OUT/cost.json"; cat "$OUT/cost.json"
 
+fi
+trap - EXIT
 # Turntable (Blender workbench, 24 frames, 360 deg) per GLB -> mp4 + contact sheet png
 TT="$(mktemp --suffix=.py)"
 cat > "$TT" <<'BPY'
@@ -77,16 +80,15 @@ sc=bpy.context.scene; sc.camera=co; sc.render.engine='BLENDER_WORKBENCH'
 sc.display.shading.light='STUDIO'; sc.display.shading.color_type='MATERIAL'
 sc.render.resolution_x=sc.render.resolution_y=384; sc.frame_start=1; sc.frame_end=24
 sc.world=bpy.data.worlds.new("w"); sc.world.color=(0.12,0.12,0.14)
-pivot.rotation_euler=(0,0,0); pivot.keyframe_insert('rotation_euler',frame=1)
-pivot.rotation_euler=(0,0,2*math.pi*23/24); pivot.keyframe_insert('rotation_euler',frame=24)
-for fc in pivot.animation_data.action.fcurves:
-    for k in fc.keyframe_points: k.interpolation='LINEAR'
-sc.render.filepath=outdir+"/f_"; sc.render.image_settings.file_format='PNG'
-bpy.ops.render.render(animation=True)
+sc.render.image_settings.file_format='PNG'
+for i in range(24):   # explicit per-frame stills: Blender 5 slotted actions have no .fcurves
+    pivot.rotation_euler=(0,0,2*math.pi*i/24)
+    sc.render.filepath=outdir+"/f_%04d.png"%(i+1)
+    bpy.ops.render.render(write_still=True)
 BPY
 shopt -s nullglob
 for g in "$OUT"/*.glb; do n=$(basename "$g" .glb); d="$OUT/turntable_$n"; mkdir -p "$d"
   blender -b -P "$TT" -- "$g" "$d" >"$d/blender.log" 2>&1 || echo "blender failed $n"
   ffmpeg -loglevel error -y -framerate 12 -i "$d/f_%04d.png" -pix_fmt yuv420p "$OUT/turntable_$n.mp4"
-  ffmpeg -loglevel error -y -pattern_type glob -i "$d/f_00[0-2][0-9].png" -vf "select='not(mod(n\,4))',tile=6x1" -frames:v 1 "$OUT/sheet_$n.png"
+  ffmpeg -loglevel error -y -i "$d/f_%04d.png" -vf "select='not(mod(n\,4))',tile=6x1" -frames:v 1 "$OUT/sheet_$n.png"
 done
