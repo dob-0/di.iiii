@@ -51,6 +51,16 @@ describe('applyMidi', () => {
         const next = applyMidi(filled(), noteOn(52), [entry('note', 52, 'column', { column: 1 })])
         expect(next.layers.map((l) => l.active)).toEqual([1, 1, 1, 1])
     })
+    it('column play ignores an empty or out-of-range column', () => {
+        const map = [entry('note', 52, 'column', { column: 3 }), entry('note', 53, 'column', { column: 9 })]
+        const deck = trigger(filled(), 0, 0)
+        expect(applyMidi(deck, noteOn(52), map)).toBe(deck)
+        expect(applyMidi(deck, noteOn(53), map)).toBe(deck)
+        let one = createDeck({ layers: 4, columns: 4 })
+        one = setClip(one, 2, 3, clip(1))
+        const next = applyMidi(one, noteOn(52), map)
+        expect(next.layers[2].active).toBe(3)
+    })
     it('crossfade and master are absolute', () => {
         const deck = createDeck()
         expect(applyMidi(deck, cc(9, 127), [entry('cc', 9, 'crossfade')]).crossfade).toBe(1)

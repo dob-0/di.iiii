@@ -9,7 +9,24 @@ import { useEffect, useRef } from 'react'
 import { acquireClipSource } from './clipSourceCache.js'
 import { resolveClipUrl } from './clipVideos.js'
 
-const warmed = new Set() // addresses this page has already fetched
+const MAX_TRIES = 3
+const RETRY_WAIT_MS = 500
+const warmed = new Set() // addresses this page has fetched successfully
+const tries = new Map() // address → failed tries so far; at MAX_TRIES it is given up for this page
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// The next address still to fetch: not warmed, not given up, fewest failed tries first (deck order among equals).
+const nextUrl = (list) => {
+    let best = ''
+    for (const candidate of list) {
+        if (warmed.has(candidate)) continue
+        const count = tries.get(candidate) || 0
+        if (count >= MAX_TRIES) continue
+        if (!best || count < (tries.get(best) || 0)) best = candidate
+    }
+    return best
+}
 
 /** Unique, non-empty addresses of the deck's asset clips, in deck order. */
 export const deckClipUrls = (document, resolveUrl) => {
@@ -57,11 +74,18 @@ export function useClipWarmup(document, { spaceId = '', projectId = null, enable
                 // Re-read the list after every file: a clip added meanwhile is picked up by this same run.
                 for (;;) {
                     if (stopped.current) return
-                    const url = latest.current.find((candidate) => !warmed.has(candidate))
+                    const url = nextUrl(latest.current)
                     if (!url) return
-                    warmed.add(url)
+                    // A retry of the same address waits a moment, so a 502 is not hammered; other addresses go first.
+                    if (tries.get(url)) {
+                        await wait(RETRY_WAIT_MS)
+                        if (stopped.current) return
+                    }
                     const handle = acquire(url)
-                    try { await handle.promise } finally { handle.release() }
+                    let result = null
+                    try { result = await handle.promise } catch { result = null } finally { handle.release() }
+                    if (result) warmed.add(url)
+                    else tries.set(url, (tries.get(url) || 0) + 1)
                 }
             } finally {
                 running.current = false

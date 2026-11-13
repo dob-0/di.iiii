@@ -431,3 +431,38 @@ describe('HOLD keys (fxPress) never stay stuck', () => {
         expect(blackOf(writes.at(-1))).toBe(0)
     })
 })
+
+describe('sync: a write made by the view, not by MIDI', () => {
+    it('a message after sync(other) computes from other, before the prop has caught up', async () => {
+        const { fake, writes, result } = await mount()
+        const other = trigger(playedDeck(), 1, 2) // the light desk launched layer 2 column 3
+        act(() => result.current.sync(other))
+        send(fake, [0x9e, 37, 127]) // layer 1 column 2, no render in between
+        expect(writes).toHaveLength(1)
+        expect(writes.at(-1).layers[0].active).toBe(1)
+        expect(writes.at(-1).layers[1].active).toBe(2) // other's change is still there
+    })
+
+    it('sync of the deck the hook already holds does nothing', async () => {
+        const { fake, writes, result } = await mount()
+        send(fake, [0x9e, 37, 127])
+        expect(writes).toHaveLength(1)
+        expect(() => act(() => result.current.sync(writes[0]))).not.toThrow() // what the view hands back from flush
+        act(() => result.current.sync(null))
+        act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
+        expect(writes).toHaveLength(1)
+        send(fake, [0x9e, 33, 127]) // still computed from writes[0]
+        expect([writes.at(-1).layers[0].active, writes.at(-1).layers[1].active]).toEqual([1, 1])
+    })
+
+    it('the echo of an earlier MIDI write arriving after sync does not roll the deck back', async () => {
+        const { fake, writes, result, rerender } = await mount()
+        send(fake, [0x9e, 37, 127]) // our write 1: layer 1 column 2
+        const other = trigger(writes[0], 1, 2) // the view then writes layer 2 column 3 on top of it
+        act(() => result.current.sync(other))
+        rerender({ deck: writes[0] }) // the echo of write 1 arrives first
+        send(fake, [0x9e, 38, 127]) // layer 1 column 3: must be computed from other, not write 1
+        expect(writes.at(-1).layers[0].active).toBe(2)
+        expect(writes.at(-1).layers[1].active).toBe(2)
+    })
+})

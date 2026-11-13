@@ -295,7 +295,8 @@ const run = (deck, control, entry, ctx) => {
             if (!isInt(args.column) || !layer.clips[args.column]) return deck
             return trigger(base, args.layer, args.column)
         case 'column':
-            return isInt(args.column) && args.column < base.columns ? triggerColumn(base, args.column) : deck
+            // an empty column is not a scene: pressing it must not black the wall
+            return isInt(args.column) && args.column < base.columns && base.layers.some((item) => item.clips[args.column]) ? triggerColumn(base, args.column) : deck
         case 'clearLayer': return layer.active < 0 ? deck : clearLayer(base, args.layer)
         case 'crossfade':
             return nextOr(continuous(base.crossfade, control, entry, { step: DEFAULT_STEP.crossfade, from: (x) => x, to: (x) => x }, ctx), (v) => setCrossfade(base, v))

@@ -80,6 +80,44 @@ describe('useClipWarmup', () => {
         expect(f.acquire).toHaveBeenCalledWith('https://x.test/s1.mp4')
     })
 
+    it('retries a failed fetch, then keeps it warmed', async () => {
+        const f = fakeAcquire()
+        let calls = 0
+        const acquire = vi.fn((url) => {
+            const handle = f.acquire(url)
+            calls += 1
+            return { ...handle, promise: Promise.resolve(calls === 1 ? null : 'blob:x') }
+        })
+        const doc = deck(asset('https://x.test/r1.mp4'))
+        const { rerender } = render(<Probe document={doc} acquire={acquire} />)
+        await waitFor(() => expect(acquire).toHaveBeenCalledTimes(2), { timeout: 3000 })
+        await wait(50)
+        rerender(<Probe document={deck(asset('https://x.test/r1.mp4'), asset('https://x.test/r2.mp4'))} acquire={acquire} />)
+        await waitFor(() => expect(acquire).toHaveBeenCalledTimes(3), { timeout: 3000 })
+        await wait(50)
+        expect(acquire.mock.calls.map((call) => call[0])).toEqual(['https://x.test/r1.mp4', 'https://x.test/r1.mp4', 'https://x.test/r2.mp4'])
+    })
+
+    it('gives up on an address after 3 tries', async () => {
+        const release = vi.fn()
+        const acquire = vi.fn(() => ({ promise: Promise.resolve(null), release }))
+        render(<Probe document={deck(asset('https://x.test/f1.mp4'))} acquire={acquire} />)
+        await waitFor(() => expect(acquire).toHaveBeenCalledTimes(3), { timeout: 4000 })
+        await wait(800)
+        expect(acquire).toHaveBeenCalledTimes(3)
+        expect(release).toHaveBeenCalledTimes(3)
+    })
+
+    it('survives a rejected promise and still releases', async () => {
+        const release = vi.fn()
+        const acquire = vi.fn(() => ({ promise: Promise.reject(new Error('502')), release }))
+        render(<Probe document={deck(asset('https://x.test/j1.mp4'))} acquire={acquire} />)
+        await waitFor(() => expect(acquire).toHaveBeenCalledTimes(3), { timeout: 4000 })
+        await wait(800)
+        expect(acquire).toHaveBeenCalledTimes(3)
+        expect(release).toHaveBeenCalledTimes(3)
+    })
+
     it('warms nothing when disabled', async () => {
         const f = fakeAcquire()
         render(<Probe document={deck(asset('https://x.test/n1.mp4'))} enabled={false} acquire={f.acquire} />)

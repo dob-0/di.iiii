@@ -44,7 +44,7 @@ import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
 import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
 import K2LayoutPanel from '../../../perform/midi/K2LayoutPanel.jsx'
-import { postDeckLive } from '../../../project/tops/deckLive.js'
+import { postDeckBye, postDeckLive } from '../../../project/tops/deckLive.js'
 import { buildK2WindowPath } from '../../../perform/midi/k2WindowRouting.js'
 import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
@@ -414,7 +414,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
         return () => setClipParkBytes(0)
     }, [])
     const warmDocument = useMemo(() => ({ nodes: [node], assets }), [node, assets])
-    useClipWarmup(warmDocument, { spaceId, projectId })
+    useClipWarmup(warmDocument, { spaceId, projectId, enabled: editable })
 
     // The newest deck this view has seen or written: an upload that finishes after a
     // long wait places its clip into THIS, never into the deck captured when the file
@@ -444,15 +444,25 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     }, [deck.layers.length, deck.columns])
 
     const latestDeck = useRef(deck)
+    const midiSync = useRef(null)
     useEffect(() => { latestDeck.current = deck }, [deck])
     const write = (nextDeck) => {
         if (editable) {
             latestDeck.current = nextDeck
+            midiSync.current?.(nextDeck)
             // the wall on this machine hears it now; the op below is the record (deckLive.js)
             postDeckLive(projectId, node?.id, nextDeck)
             onPatchValues({ deck: nextDeck })
         }
     }
+    // This page going (closed, reloaded, the deck view taken down): tell the walls, so they stop holding what this
+    // page last said and show the stored deck, which is what the page shows when it comes back (deckLive.js).
+    useEffect(() => {
+        if (!editable || !node?.id) return undefined
+        const bye = () => { postDeckBye(projectId, node.id) }
+        window.addEventListener('pagehide', bye)
+        return () => { window.removeEventListener('pagehide', bye); bye() }
+    }, [editable, projectId, node?.id])
 
     // Lights follow. ONE function reports a launched column, and only code that launches
     // calls it: the header button (launchColumn) and the MIDI column action (onColumn of
@@ -621,6 +631,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     // -1 = the master stack (a controller's master-select key)
     const onFxLayer = (index) => { if (index < 0) { setFxScope('master'); setFxIndex(0); return } setFxPick(index); setFxScope('layer'); setFxIndex(0) }
     const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, console: node?.values?.midiConsole, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer, fxEffect: fxIndex, onFxLayer, onFxEffect: setFxIndex, onColumn: reportColumnLaunch })
+    useEffect(() => { midiSync.current = midi.sync })
     const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {
         if (!midi.learning) return

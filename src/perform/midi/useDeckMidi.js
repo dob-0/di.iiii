@@ -141,6 +141,18 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         else timer.current = setTimeout(flush, wait)
     }, [flush])
 
+    // This page just wrote nextDeck through the view (a click, the light desk), not through MIDI. The prop only
+    // reaches us after a render; a message landing before it would compute from the older deck and write it whole.
+    // The in-flight entry keeps the echo of an earlier MIDI write from setting `ahead` back to an older deck.
+    const sync = useCallback((nextDeck) => {
+        if (!nextDeck || nextDeck === ahead.current) return
+        if (timer.current !== null) { clearTimeout(timer.current); timer.current = null }
+        dirty.current = false
+        ahead.current = nextDeck
+        pickup.current = new Map()
+        inflight.current = [...inflight.current, JSON.stringify(nextDeck)].slice(-MAX_INFLIGHT)
+    }, [])
+
     // The prop: an echo of one of our writes is dropped from the in-flight list; the
     // local deck only follows the prop when nothing of ours is pending or in flight,
     // or when the prop is not an echo of ours (someone else changed the deck).
@@ -455,6 +467,7 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
         bindingOf,
         unmap,
         reset,
+        sync,
         k2Console,
         consoles: CONSOLES,
         pickConsole,
