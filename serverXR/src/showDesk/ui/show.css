@@ -241,3 +241,18 @@ body.showdesk[data-density="compact"] {
   --lamp-pad: 22px; --cube-wrap: wrap; --cube-name-flex: none; --preview-w: 132px; --preview-grow: 0; --preview-ar: 132 / 100;
   --bo-w: 140px; --bo-h: 36px; --bo-ls: .02em; --lift-w: 90px; --lift-h: 28px; --desk-h: 28px;
 }
+
+/* ---- 2026-11-13 gap fix (owner: the scene keys and colour row were cut off on the stage screen, 1278 x 766 logical).
+   Before: all scenes sat in ONE row that scrolled sideways (11 of 26 visible, a fat scrollbar over the keys) and the page ended
+   146 px short of the window. Now: the scene keys wrap into as many rows as the scenes need, up to the room the screen has
+   (Compact 168 px = 3 rows, Touch 150 px = 2 rows, more scroll down, never sideways), and a key's look line stops short of its colour dots. */
+body.showdesk { --scenes-h: minmax(80px, 150px); }
+body.showdesk[data-density="compact"] { --scenes-h: minmax(62px, 168px); }
+.showscenes .scenegrid {
+  grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); grid-auto-rows: var(--scene-btn-h);
+  max-height: none; overflow-x: hidden; overflow-y: auto; align-content: start; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+.showscenes .scenebtn .scenelook { max-width: calc(100% - 40px); overflow: hidden; }
+/* A short screen in Touch (the stage window is 766 px high): the keys take Compact's 52 px height, two rows, so the fader bank keeps the
+   height it needs (the cube's On / Off stay on screen). */
+@media (max-height: 800px) { body.showdesk[data-density="touch"] { --scenes-h: minmax(62px, 114px); --scene-btn-h: 52px; --scene-dir: row; --scene-wrap: nowrap; --scene-cut: ellipsis; --scene-text-h: 15px; --scene-text-flex: 0 1 auto; --look-font: 10px; --dots-top: auto; --dots-bottom: 6px; --preview-w: 132px; --preview-grow: 0; --preview-ar: 132 / 100; } }
