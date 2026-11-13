@@ -111,6 +111,7 @@ const refresh = () => window.DiShowDesk.refresh()
 const settle = () => sleep(120) // a press's posts, its tick and a fader's 50 ms send
 const press = async (node) => { node.click(); await settle() }
 const key = (k, init = {}, target = document) => target.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init }))
+const LIGHTS_DARK = [{ url: '../light/api/master', body: { blackout: true } }]
 const DARK = [{ url: '../light/api/master', body: { blackout: true } }, { url: '../laser/desk/api/blackout', body: { on: true } }]
 const LIFT_LIGHTS = { url: '../light/api/master', body: { blackout: false } }
 const LIFT_LASER = { url: '../laser/desk/api/blackout', body: { on: false } }
@@ -825,10 +826,14 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         await settle()
         expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
     })
-    it('the Blackout button (matrix P) sends only the two dark routes', async () => {
+    it('the K2 Blackout (EXIT SETUP) darkens only the lights; matrix P is scene 16 and never goes dark', async () => {
+        midi(0x9e, 15, 127)
+        await settle()
+        expect(posts).toEqual(LIGHTS_DARK)
+        posts.length = 0
         midi(0x9e, 27, 127)
         await settle()
-        expect(posts).toEqual(DARK)
+        expect(posts.filter((p) => p.body.blackout || p.body.on)).toEqual([]) // the fixture has no 16th scene: pad P is a scene or nothing, never a blackout
     })
     it('no MIDI message of any kind, channel, number or value reaches On, Off, a lift, Undo, Save or Release', async () => {
         desk.blackout = true
@@ -848,17 +853,17 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         await press($('midiLearn'))
         $('lightMaster').dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
         $('lightMaster').dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
-        midi(0x9e, 27, 127)
+        midi(0x9e, 15, 127)
         await settle()
-        expect(posts).toEqual(DARK)
+        expect(posts).toEqual(LIGHTS_DARK)
         const sceneKey = document.querySelector('[data-midi^="scene:"]')
         if (sceneKey) {
             sceneKey.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
             sceneKey.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
-            midi(0x9e, 27, 127)
+            midi(0x9e, 15, 127)
             await settle()
         }
-        expect(window.DiShowDesk.midiMap().filter((m) => m.kind === 'note' && m.ch === 14 && m.num === 27).map((m) => m.target)).toEqual(['blackout'])
+        expect(window.DiShowDesk.midiMap().filter((m) => m.kind === 'note' && m.ch === 14 && m.num === 15).map((m) => m.target)).toEqual(['blackout:lights'])
         expect(posts.filter((p) => p.url === '../light/api/scenes/recall')).toEqual([])
         await press($('midiLearn')) // leave Learn mode, so the next test starts clean
     })
@@ -920,14 +925,14 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         expect(window.DiShowDesk.midiChannel()).toBe('any')
         expect(window.localStorage.getItem('diShowDesk.midiChannel.v1')).toBe('any')
     })
-    it('on a picked channel, Blackout all answers on that channel only (dark only, as ever)', async () => {
+    it('on a picked channel, the K2 Blackout answers on that channel only (dark only, as ever)', async () => {
         pickChannel('3')
-        midi(0x95, 27, 127) // channel 6: not heard
+        midi(0x95, 15, 127) // channel 6: not heard
         await settle()
         expect(posts).toEqual([])
-        midi(0x92, 27, 127) // channel 3
+        midi(0x92, 15, 127) // channel 3
         await settle()
-        expect(posts).toEqual(DARK)
+        expect(posts).toEqual(LIGHTS_DARK)
         pickChannel('any')
     })
     it('the In line is lit for 300 ms after a message and then dark; with no port it says so, with one it names it', async () => {

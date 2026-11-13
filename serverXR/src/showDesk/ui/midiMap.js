@@ -30,7 +30,7 @@
     const RESET_KEYS = 'rotation|x|cycle|phase|pulseBeats|sweepBeats' // timing and place: none of them is a brightness
     const CONT = `lamp:\\d{1,3}(?:\\+\\d{1,3})?|layer:(?:base|rhythm|accent|cue):level|fx:(?:depth|bpm|mode|spatial)|size:\\d{1,3}|live:(?:${LIVE_KEYS})|light-master|laser-master`
     const CONTINUOUS = new RegExp(`^(?:${CONT})$`)
-    const PRESS = new RegExp(`^(?:scene:(?:\\d{1,3}|next|prev)|blackout|reset:(?:${RESET_KEYS})|park:(?:${CONT}))$`)
+    const PRESS = new RegExp(`^(?:scene:(?:\\d{1,3}|next|prev)|blackout(?::lights)?|reset:(?:${RESET_KEYS})|park:(?:${CONT}))$`)
     const isContinuous = (t) => typeof t === 'string' && CONTINUOUS.test(t)
     const isPress = (t) => typeof t === 'string' && PRESS.test(t)
     const isTarget = (t) => t === 'spare' || isContinuous(t) || isPress(t)
@@ -81,11 +81,11 @@
         note('matrix A', 36, 'scene:0'), note('matrix B', 37, 'scene:1'), note('matrix C', 38, 'scene:2'), note('matrix D', 39, 'scene:3'),
         note('matrix E', 32, 'scene:4'), note('matrix F', 33, 'scene:5'), note('matrix G', 34, 'scene:6'), note('matrix H', 35, 'scene:7'),
         note('matrix I', 28, 'scene:8'), note('matrix J', 29, 'scene:9'), note('matrix K', 30, 'scene:10'), note('matrix L', 31, 'scene:11'),
-        note('matrix M', 24, 'scene:12'), note('matrix N', 25, 'scene:13'), note('matrix O', 26, 'scene:14'), note('matrix P', 27, 'blackout'),
+        note('matrix M', 24, 'scene:12'), note('matrix N', 25, 'scene:13'), note('matrix O', 26, 'scene:14'), note('matrix P', 27, 'scene:15'),
         note('layer button', 12, 'scene:prev'),
         cc('encoder 5', 20, 'live:pulseBeats', true), note('encoder 5 push', 13, 'reset:pulseBeats'),
         cc('encoder 6', 21, 'live:sweepBeats', true), note('encoder 6 push', 14, 'reset:sweepBeats'),
-        note('exit setup button', 15, 'blackout') // 2026-11-13 (owner: "make exit setup blackout on mapping"): the second Blackout, same press as pad P; it only goes dark, lifting stays on the page
+        note('exit setup button', 15, 'blackout:lights') // 2026-11-13 (owner: "make exit setup blackout on mapping"): the second Blackout, same press as pad P; it only goes dark, lifting stays on the page
     ])
 
     // The map the page starts from: the K2 on its own channel, as plain rows (what Learn changes and Export map shows).
@@ -98,7 +98,7 @@
         const out = (Array.isArray(saved) ? saved : []).filter((m) => m && m.target !== 'spare').map((m) => ({ ...m }))
         const stored = out.slice() // a target held by the STORED map keeps its default out; two default rows may share one (Blackout: pad P and Exit/Setup)
         for (const d of defaults) {
-            const heldTarget = d.target !== 'spare' && d.target !== 'blackout' && stored.some((m) => m.target === d.target)
+            const heldTarget = d.target !== 'spare' && !d.target.startsWith('blackout') && stored.some((m) => m.target === d.target)
             const heldControl = out.some((m) => m.kind === d.kind && m.ch === d.ch && m.num === d.num)
             if (!heldTarget && !heldControl) out.push({ ...d })
         }
@@ -164,6 +164,7 @@
         if (target === 'light-master') return 'Lights master'
         if (target === 'laser-master') return 'Laser master'
         if (target === 'blackout') return 'Blackout all (dark only)'
+        if (target === 'blackout:lights') return 'Blackout lights (dark only, the laser keeps running)'
         if (target === 'spare') return 'Spare, no action'
         if (kind === 'lamp') return rest.includes('+') ? `Lamps ${rest.split('+').map((n) => Number(n) + 1).join(' + ')} level together` : `Lamp ${Number(rest) + 1} level`
         if (kind === 'layer') return `Layer ${rest.split(':')[0]} level`

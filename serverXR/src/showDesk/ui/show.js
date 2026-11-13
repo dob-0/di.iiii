@@ -294,6 +294,12 @@
         await tick()
         say(bad.length ? `Blackout did not reach ${bad.join('; ')}.` : 'Blackout: lights and laser are dark. Lift each with Lift lights or Lift laser.', bad.length ? 'error' : 'ok')
     }
+    // Lights only: the K2 Blackout (EXIT SETUP). It posts the lighting desk's master blackout and never touches the laser.
+    const pressBlackoutLights = async () => {
+        const r = await post(LIGHT + 'master', { blackout: true })
+        await tick()
+        say(r.ok ? 'Blackout: the lights are dark, the laser keeps running. Lift with Lift lights.' : `Blackout did not reach the lighting desk: ${r.error}`, r.ok ? 'ok' : 'error')
+    }
     // Lifting is per half, each with its desk's own route and body: the lighting desk's master {blackout:false} (its own
     // Blackout button), the laser desk's blackout {on:false} (its Shift+B). A half is lifted only when it answered its last
     // state read AND reports its blackout on; a half that did not answer is never lifted. A second lift of the same half
@@ -1015,6 +1021,7 @@
     const midiPress = (m) => {
         const t = m.target
         if (t === 'blackout') { pressBlackout(); return }
+        if (t === 'blackout:lights') { pressBlackoutLights(); return }
         if (t === 'scene:next' || t === 'scene:prev') { stepScene(t === 'scene:next' ? 1 : -1); return }
         if (t.startsWith('reset:')) { midiSet(`live:${t.slice(6)}`, resetTo(t.slice(6))); return }
         if (t.startsWith('park:')) { pickup.delete(t.slice(5)); midiLine(`${t.slice(5)} parked: it waits until it passes the screen`); return }
@@ -1045,6 +1052,7 @@
         // The panic button comes first: while Learn waits for a control, the Blackout button still blacks out and is
         // never learned onto something else (review 2026-10-31 M1).
         if (msg.kind === 'note' && m && m.target === 'blackout') { pressBlackout(); return }
+        if (msg.kind === 'note' && m && m.target === 'blackout:lights') { pressBlackoutLights(); return }
         if (learning && learning.target) { midiLearnSet(ctl); return }
         if (!m || !MIDI.validRow(m) || m.target === 'spare') return
         if (msg.kind === 'cc') midiMove(m, msg.val)

@@ -25,7 +25,7 @@ const TODAY = [
     ['cc', 0, 'live:rotation', true], ['cc', 1, 'live:x', true], ['cc', 2, 'live:cycle', true], ['cc', 3, 'live:phase', true],
     ['note', 36, 'scene:0'], ['note', 37, 'scene:1'], ['note', 38, 'scene:2'], ['note', 39, 'scene:3'],
     ['note', 32, 'scene:4'], ['note', 33, 'scene:5'], ['note', 34, 'scene:6'], ['note', 35, 'scene:7'],
-    ['note', 28, 'scene:8'], ['note', 29, 'scene:9'], ['note', 27, 'blackout']
+    ['note', 28, 'scene:8'], ['note', 29, 'scene:9'], ['note', 27, 'scene:15']
 ]
 
 describe('the K2 table against the maker\'s chart (Xone:K2 user guide AP8509)', () => {
@@ -52,12 +52,13 @@ describe('the K2 table against the maker\'s chart (Xone:K2 user guide AP8509)', 
         expect(M.K2.filter((c) => c.target === 'spare').map((c) => c.control).sort()).toEqual([...SPARE].sort())
         const acting = rows.filter((r) => r.target !== 'spare')
         expect(acting.length).toBe(55)
-        expect(new Set(acting.map((r) => r.target)).size).toBe(54) // no target twice, except Blackout: pad P and the Exit/Setup button
+        expect(new Set(acting.map((r) => r.target)).size).toBe(55) // no target twice
         const presses = M.K2.filter((c) => c.kind === 'note' && c.target !== 'spare')
-        expect(presses.map((c) => c.target).filter((t) => /^scene:\d+$/.test(t) || (t === 'blackout' && false)).sort()).toEqual(Array.from({ length: 15 }, (_, i) => `scene:${i}`).sort()) // pads A-O = the 15 scenes (P = Blackout, below)
-        expect(M.K2.find((c) => c.control === 'matrix P').target).toBe('blackout')
-        expect(M.K2.find((c) => c.control === 'exit setup button').target).toBe('blackout') // the extra Blackout (owner 2026-11-13)
-        expect(presses.every((c) => /^(scene:(\d+|prev)|blackout|park:|reset:)/.test(c.target))).toBe(true) // a press is a scene, Blackout, a park or a reset: nothing else
+        expect(presses.map((c) => c.target).filter((t) => /^scene:\d+$/.test(t) || false).sort()).toEqual(Array.from({ length: 16 }, (_, i) => `scene:${i}`).sort()) // pads A-O = the 15 scenes (P = Blackout, below)
+        expect(M.K2.find((c) => c.control === 'matrix P').target).toBe('scene:15')
+        expect(M.K2.filter((c) => /^blackout/.test(c.target)).map((c) => c.control)).toEqual(['exit setup button']) // exactly one Blackout
+        expect(M.K2.find((c) => c.control === 'exit setup button').target).toBe('blackout:lights') // the extra Blackout (owner 2026-11-13)
+        expect(presses.every((c) => /^(scene:(\d+|prev)|blackout:lights|park:|reset:)/.test(c.target))).toBe(true) // a press is a scene, Blackout, a park or a reset: nothing else
         expect(M.sheet().find((r) => r.control === 'fader 4')).toMatchObject({ midi: 'CC 19', target: 'spare', does: 'Spare, no action' })
     })
     it('keeps the laser controls the crew knew where they were (the controls v1 did not move)', () => {
@@ -82,7 +83,7 @@ describe('the K2 table against the maker\'s chart (Xone:K2 user guide AP8509)', 
     })
     it('the K2 can never arm, Go, resume, raise or switch anything: no default target names it, and the laser targets are the clamped ones', () => {
         for (const r of M.defaultMap()) expect(r.target.split(/[:+]/), r.control).not.toEqual(expect.arrayContaining(['arm']))
-        for (const r of M.defaultMap()) expect(r.target, r.control).toMatch(/^(spare|blackout|scene:\d+|lamp:\d+(\+\d+)?|light-master|laser-master|scene:prev|reset:(rotation|x|pulseBeats|sweepBeats)|park:[a-z:+0-9A-Z-]+|layer:(base|rhythm|accent):level|fx:(depth|bpm|mode|spatial)|live:(level|size|height|x|copies|rotation|spin|pulse|pulseBeats|sweepBeats))$/) // the whole default vocabulary: no arm, Go, resume, On, Off, lift, Undo, Save, Release
+        for (const r of M.defaultMap()) expect(r.target, r.control).toMatch(/^(spare|blackout:lights|scene:\d+|lamp:\d+(\+\d+)?|light-master|laser-master|scene:prev|reset:(rotation|x|pulseBeats|sweepBeats)|park:[a-z:+0-9A-Z-]+|layer:(base|rhythm|accent):level|fx:(depth|bpm|mode|spatial)|live:(level|size|height|x|copies|rotation|spin|pulse|pulseBeats|sweepBeats))$/) // the whole default vocabulary: no arm, Go, resume, On, Off, lift, Undo, Save, Release
         expect(M.isTarget('cube:on')).toBe(false)
         for (const t of ['live:size', 'live:x', 'live:height', 'live:copies', 'live:rotation', 'live:spin', 'live:level', 'laser-master']) expect(M.isLaserTarget(t), t).toBe(true)
         for (const t of ['light-master', 'lamp:0', 'layer:base:level', 'fx:depth', 'scene:3', 'blackout']) expect(M.isLaserTarget(t), t).toBe(false)

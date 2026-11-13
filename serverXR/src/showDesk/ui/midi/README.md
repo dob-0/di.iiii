@@ -96,13 +96,13 @@ are as printed on the unit.
 | matrix M | note 24 | Scene 12 |
 | matrix N | note 25 | Scene 13 |
 | matrix O | note 26 | Scene 14 |
-| matrix P | note 27 | Blackout all (dark only) |
+| matrix P | note 27 | Scene 15 |
 | layer button | note 12 | Previous scene |
 | encoder 5 | CC 20 (relative) | Live look: pulse beats |
 | encoder 5 push | note 13 | Reset pulse beats |
 | encoder 6 | CC 21 (relative) | Live look: sweep beats |
 | encoder 6 push | note 14 | Reset sweep beats |
-| exit setup button | note 15 | Blackout all (dark only) |
+| exit setup button | note 15 | Blackout lights (dark only, the laser keeps running) |
 <!-- k2-map:end -->
 
 - **Live look: x** is the live look on the laser desk; **Cube n size** is the n-th cube's Size fader; **Lamp n level** the n-th lamp
