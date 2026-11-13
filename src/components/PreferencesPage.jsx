@@ -24,6 +24,7 @@ import {
 import AdminManageSection from './preferences/AdminManageSection.jsx'
 import OpenCallSection from './preferences/OpenCallSection.jsx'
 import AgentsSection from './preferences/AgentsSection.jsx'
+import MonitorSection from './preferences/MonitorSection.jsx'
 import EstateSection from './preferences/EstateSection.jsx'
 import AppVisitorsSection from './preferences/AppVisitorsSection.jsx'
 
@@ -45,6 +46,9 @@ const GROUP_LABELS = {
 const SECTIONS = [
     { key: 'manage', label: 'Spaces and users', group: 'admin' },
     { key: 'opencall', label: 'Open call', group: 'admin' },
+    // Everything that is going on, in one place: machines, network, agents,
+    // services, pull requests and the operator's task and show feeds.
+    { key: 'monitor', label: 'Monitor', group: 'admin' },
     { key: 'agents', label: 'Agent sessions', group: 'admin' },
     // The guest book: which apps, crawlers and scripts called, with a block
     // toggle — admin, because blocking changes who gets in.
@@ -61,7 +65,7 @@ const SECTIONS = [
 // Sections where the person is administering, not debugging the scene — the
 // topbar drops the scene-editor telemetry and shows counts that belong to the
 // work at hand instead (fed back by the sections that own the data).
-const ADMIN_SECTION_KEYS = new Set(['manage', 'opencall', 'agents', 'visitors'])
+const ADMIN_SECTION_KEYS = new Set(['manage', 'opencall', 'monitor', 'agents', 'visitors'])
 
 // The 4 management toggles operators flip most often — surfaced on Overview so the
 // full 11-button Command Deck doesn't have to be visible at all times (see Controls).
@@ -104,8 +108,19 @@ function ManagementButton({ button }) {
     )
 }
 
+// /admin#monitor opens straight on a section — the link you hand someone
+// ("open the monitor") instead of "open admin, then click Monitor".
+const sectionFromHash = () => {
+    try {
+        const key = String(window.location.hash || '').replace(/^#/, '')
+        return SECTIONS.some((section) => section.key === key) ? key : 'manage'
+    } catch {
+        return 'manage'
+    }
+}
+
 export default function PreferencesPage({ onNavigateToEditor }) {
-    const [activeSection, setActiveSection] = useState('manage')
+    const [activeSection, setActiveSection] = useState(sectionFromHash)
     useDocumentTitle(pageTitle('admin', { section: SECTIONS.find((s) => s.key === activeSection)?.label }))
     const [headerCollapsed, setHeaderCollapsed] = useState(false)
     // Refresh loads the lists again by remounting the open section (each one
@@ -199,7 +214,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     }
 
     const sections = SECTIONS.map((section) => {
-        if (section.key === 'agents') return { ...section, badge: agentStats?.live || 0 }
+        if (section.key === 'agents' || section.key === 'monitor') return { ...section, badge: agentStats?.live || 0 }
         if (section.key === 'inspect') return { ...section, badge: objects?.length || 0 }
         if (section.key === 'system') return { ...section, badge: entries.length }
         return section
@@ -213,7 +228,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 <div className="preferences-topbar-main">
                     <div className="preferences-eyebrow">Admin</div>
                     <div className="preferences-topbar-title-row">
-                        <h1>{isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
+                        <h1>{activeSection === 'monitor' ? 'Everything that is going on' : isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
                         <span className="preferences-inline-chip">Space: {sync?.spaceId || 'main'}</span>
                         <button
                             type="button"
@@ -236,7 +251,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         // exactly three cards — the metrics grid is 3-up, and a
                         // partial row reads as a broken band of empty cells
                         <>
-                            {activeSection === 'agents' ? (
+                            {activeSection === 'agents' || activeSection === 'monitor' ? (
                                 <>
                                     <MetricCard label="Live" value={agentStats?.live ?? '—'} tone={agentStats?.live ? 'success' : 'default'} />
                                     <MetricCard label="Sessions" value={agentStats?.total ?? '—'} />
@@ -519,6 +534,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
 
                     {activeSection === 'opencall' && <OpenCallSection />}
 
+                    {activeSection === 'monitor' && <MonitorSection onStats={setAgentStats} />}
                     {activeSection === 'agents' && <AgentsSection onBoardStats={setAgentStats} />}
 
                     {activeSection === 'visitors' && <AppVisitorsSection />}

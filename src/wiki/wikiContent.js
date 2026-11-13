@@ -1273,6 +1273,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-29'
     },
     {
+        id: 'monitor-board',
+        category: 'Spaces & access',
+        title: 'Monitor — everything going on, in one place',
+        summary: 'An operator-only live page: machines, network, agent sessions, services, pull requests, and your own task and show feeds.',
+        body: [
+            'Monitor, in the admin console, is one live page for everything that is going on: which machines are on the tailnet, whether the tiers answer, who is connected right now in which space or project, which things di.iiii drives are up (lasers, laser desk, show machine, NDI, OSC, visiting apps), which agent sessions are running (every Claude login on this machine), which services run or failed, which pull requests are open, and your own feeds for tasks and shows.',
+            'It refreshes every five seconds. A row whose state just changed flashes for two seconds. Select anything to see its details in the inspector; the filter box narrows every block at once; Pause stops the refresh.',
+            { list: [
+                'Each block is collected on its own: a missing tool greys that block and says why, the rest keep moving.',
+                'Your feeds live in ~/.di/monitor.json: each one has a panel ("tasks" or "shows") and a command, a file or a URL to read. Only that file decides what runs, never a request.',
+                'Like Agent sessions it reads local machine data, so it only exists when serverXR runs on your own machine; on an install that signs people in, the server shows it to admins only.'
+            ] }
+        ],
+        tags: ['admin', 'monitor', 'machines', 'network', 'agents', 'operator'],
+        updated: '2026-11-13'
+    },
+    {
         id: 'keyboard-shortcuts',
         category: 'Editing',
         title: 'Keyboard shortcuts',
