@@ -2346,11 +2346,12 @@ export const NODE_TYPES = {
         category: 'geometry',
         runtime: 'any',
         singleton: false,
-        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble', 'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse', 'stardust', 'rain', 'curtain', 'rays', 'animation', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
+        keywords: ['laser', 'shape', 'circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid', 'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble', 'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse', 'stardust', 'rain', 'curtain', 'rays', 'lissajous', 'rose', 'spirograph', 'infinity', 'heart', 'hexagon', 'zigzag', 'helix', 'ripple', 'tunnel', 'scan', 'animation', 'rainbow', 'scenes', 'beam', 'draw', 'frame', 'lasercube'],
         inputs: [
             // One of: circle, line, square, triangle, star, wave, fan, spiral, galaxy, sunflower, noisy, grid, arc, cross,
             // bars, rings, corners, chevron, glint, sparkle, twinkle, lines, spots, wobble, and the scenes planets, pendulum, bounce,
-            // radar, constellation, clock, horizon, morse, stardust, rain, curtain, rays — or a comma list of them that plays in turn every
+            // radar, constellation, clock, horizon, morse, stardust, rain, curtain, rays, the figures lissajous, rose, spirograph,
+            // infinity, heart, hexagon, zigzag, helix, ripple, tunnel, scan — or a comma list of them that plays in turn every
             // `cycle` seconds (shared/laserShapes.cjs).
             { id: 'shape',    type: 'string', label: 'Shape',    default: 'circle' },
             { id: 'size',     type: 'number', label: 'Size',     default: 0.5 },
