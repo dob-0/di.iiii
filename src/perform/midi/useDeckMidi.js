@@ -95,8 +95,8 @@ export function useDeckMidi({ deck, write, stored, onPatch, onTap, enabled = tru
     const bankNow = Math.min(bank, bankCount - 1)
     const map = useMemo(() => {
         const plain = effectiveMap(defaults, overrides)
-        return isApcConsole ? apc40Banked(plain, bankNow) : plain
-    }, [defaults, overrides, isApcConsole, bankNow])
+        return isApcConsole ? apc40Banked(plain, bankNow, bankCount) : plain
+    }, [defaults, overrides, isApcConsole, bankNow, bankCount])
 
     // --- one owner per deck id ---
     const [token] = useState(() => ({}))

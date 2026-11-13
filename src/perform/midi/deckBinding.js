@@ -18,6 +18,7 @@ import {
     clearLayer,
     normalizeDeck,
     setBlend,
+    setOver,
     setBpm,
     effectNumericParams,
     setBypass,
@@ -59,6 +60,12 @@ export const ACTIONS = {
     blend: { args: ['layer'], button: false, relativeOk: false },
     clipSpeed: { args: ['layer'], button: false, relativeOk: true },
     bypass: { args: ['layer'], button: true },
+    // A key puts one layer on one blend mode (args { layer, blend, off }): press = that blend, press again = back to `off`
+    // (the text layer: solid, the picture inside the letters, letters that invert the picture, letters cut out of it).
+    layerBlend: { args: ['layer'], button: true },
+    // A key takes a layer out from OVER the master's effects and puts it under them (the text takes the scene's look:
+    // fog, thermal colour, hologram, cuts), and back.
+    layerOver: { args: ['layer'], button: true },
     solo: { args: ['layer'], button: true },
     side: { args: ['layer'], button: true },
     clip: { args: ['layer', 'column'], button: true },
@@ -272,6 +279,13 @@ const run = (deck, control, entry, ctx) => {
             return nextOr(continuous(clip.speed, control, entry, { step: DEFAULT_STEP.clipSpeed, from: (x) => x * 4, to: (x) => x / 4 }, ctx), (v) => updateClip(base, args.layer, layer.active, { speed: v }))
         }
         case 'bypass': return setBypass(base, layer.id, stateful ? control.press : !layer.bypass)
+        case 'layerOver': return setOver(base, args.layer, !layer.over)
+        case 'layerBlend': {
+            const to = Number(args.blend)
+            if (!Number.isInteger(to) || to < 0 || to >= BLEND_MODES.length) return deck
+            const off = Number.isInteger(Number(args.off)) ? Number(args.off) : 2
+            return setBlend(base, args.layer, String(Number(layer.blend) === to ? off : to))
+        }
         case 'solo': return setSolo(base, layer.id, stateful ? control.press : !layer.solo)
         case 'side':
             // a stateful A|B key says which side: velocity 1 = A, 2 = B, note-off = none
@@ -528,6 +542,8 @@ export const ledColour = (deck, entry, ctx = {}) => {
             return has.every((item) => item.active === args.column) ? 'green' : 'amber'
         }
         case 'bypass': return layer?.bypass ? 'red' : null
+        case 'layerBlend': return layer ? (Number(layer.blend) === Number(args.blend) ? 'green' : 'amber') : null
+        case 'layerOver': return layer ? (layer.over ? 'amber' : 'green') : null
         case 'solo': return layer?.solo ? 'green' : null
         case 'side': return layer?.side === 'a' ? 'amber' : layer?.side === 'b' ? 'green' : null
         case 'fxLayer': return Number.isInteger(ctx.fx?.layer) && ctx.fx.layer === args.layer ? 'green' : null
@@ -613,6 +629,8 @@ export const describeAction = (entry, ctx = {}) => {
         case 'blend': return layer ? `L${layer} blend` : 'Blend'
         case 'clipSpeed': return layer ? `L${layer} speed` : 'Clip speed'
         case 'bypass': return layer ? `Bypass L${layer}` : 'Bypass'
+        case 'layerOver': return typeof args.label === 'string' && args.label ? args.label : `L${layer || ''} over / under the effects`
+        case 'layerBlend': return typeof args.label === 'string' && args.label ? args.label : `L${layer || ''} blend ${BLEND_MODES[Number(args.blend)] || ''}`.trim()
         case 'solo': return layer ? `Solo L${layer}` : 'Solo'
         case 'side': return layer ? `L${layer} side A/B` : 'Side A/B'
         case 'clip': return layer && column ? `L${layer} clip ${column}` : 'Clip'

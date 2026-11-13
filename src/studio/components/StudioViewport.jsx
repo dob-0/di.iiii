@@ -237,6 +237,8 @@ const DeskLightContext = createContext(true)
 const canTransform = (editMode) => editMode === 'edit' || editMode === 'select'
 
 function SelectableEntity({ entity, assetMap, screens = null, selected, selectedIdSet = null, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, gizmoSpace = 'world', overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
+    // a visitor's view (links on, see entityLinkContext.js): no editor markers on the lamps
+    const visitor = useContext(EntityLinksContext) === true
     const groupRef = useRef()
     const tcRef = useRef()
     const highlightRef = useRef(null)
@@ -374,7 +376,7 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
                 {/* Live only where the surface turned links on (a visitor's
                     view mode) — see entityLinkContext.js. */}
                 <EntityLink entity={entity}>
-                    <EntityContent entity={shown} assetMap={assetMap} screens={screens} />
+                    <EntityContent entity={shown} assetMap={assetMap} screens={screens} markers={!visitor} />
                 </EntityLink>
                 {selected && isPrimary && (
                     <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]} style={{ pointerEvents: 'none' }}>

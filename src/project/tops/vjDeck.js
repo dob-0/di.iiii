@@ -477,6 +477,8 @@ export const clearLayer = (deck, layerIndex) => withLayer(deck, layerIndex, (lay
 
 export const setOpacity = (deck, layerIndex, opacity) => withLayer(deck, layerIndex, (layer) => ({ ...layer, opacity: clamp(opacity, 0, 1, layer.opacity) }))
 
+/** OVER on / off: laid on after the master's effects (a title on top), or under them like any layer (the title takes the look). */
+export const setOver = (deck, layerIndex, over) => withLayer(deck, layerIndex, (layer) => ({ ...layer, over: over === true }))
 export const setBlend = (deck, layerIndex, blend) => withLayer(deck, layerIndex, (layer) => ({ ...layer, blend: choiceOf(blend, BLEND_MODES.length, layer.blend) }))
 
 export const renameLayer = (deck, layerIndex, name) => withLayer(deck, layerIndex, (layer) => ({ ...layer, name: String(name || '').trim() || layer.name }))

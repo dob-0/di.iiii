@@ -81,6 +81,8 @@ export const apc40Job = (entry, deck, fxEffect = 0) => {
             return effect ? `${layerName(deck, args.layer)} · ${effectJob(effect, args.param)}` : NOTHING
         }
         case 'fxPress': return `HOLD ${PRESS_WORDS[args.param] || args.param || ''}`.trim()
+        case 'layerBlend': if (typeof args.label === 'string' && args.label) return args.label; break
+        case 'layerOver': if (typeof args.label === 'string' && args.label) return args.label; break
         case 'fxSet': return typeof args.label === 'string' && args.label ? args.label : `${effectLabel(args.type)} · ${args.param} ${args.value}`
         case 'columnNext': return 'Next scene'
         case 'columnPrev': return 'Previous scene'

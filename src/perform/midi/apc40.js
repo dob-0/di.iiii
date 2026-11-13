@@ -75,15 +75,23 @@ export const APC40_MAP = [
 
 // BANKS: the deck can hold more columns than the 8 the pads show. Bank n puts columns n*8+1 .. n*8+8 under the pads
 // (clip rows and the column row alike); the track-stop keys keep their own columns.
-const isBankedPad = (entry) => entry?.match?.kind === 'note' && entry.match.number >= 0 && entry.match.number <= 39
-    && (entry.action === 'clip' || entry.action === 'column') && Number.isInteger(entry.args?.column) && entry.args.column < APC40_COLUMNS
+const isPadWithColumn = (entry) => entry?.match?.kind === 'note' && entry.match.number >= 0 && entry.match.number <= 39
+    && (entry.action === 'clip' || entry.action === 'column') && Number.isInteger(entry.args?.column)
+const isBankedPad = (entry) => isPadWithColumn(entry) && entry.args.column < APC40_COLUMNS
 
 /** How many banks of pads a deck with this many columns has (at least 1). */
 export const apc40BankCount = (columns) => Math.max(1, Math.ceil((Number(columns) || 0) / APC40_COLUMNS))
 
-/** The map as bank `bank` (0-based) plays it: every pad's column moved on by 8 per bank. */
-export const apc40Banked = (map, bank) => (bank > 0
-    ? (map || []).map((entry) => (isBankedPad(entry) ? { ...entry, args: { ...entry.args, column: entry.args.column + bank * APC40_COLUMNS } } : entry))
+/**
+ * The map as bank `bank` (0-based) plays it: every pad's column moved on by 8 per bank.
+ * With `count` (how many banks the deck has) the columns go ROUND: a pad row bound to the second 8 columns shows the
+ * first 8 in the last bank, so two rows of pads always hold 16 scenes between them, whatever the bank.
+ */
+export const apc40Banked = (map, bank, count = 0) => (bank > 0
+    ? (map || []).map((entry) => {
+        if (count > 0) return isPadWithColumn(entry) ? { ...entry, args: { ...entry.args, column: (entry.args.column + bank * APC40_COLUMNS) % (count * APC40_COLUMNS) } } : entry
+        return isBankedPad(entry) ? { ...entry, args: { ...entry.args, column: entry.args.column + bank * APC40_COLUMNS } } : entry
+    })
     : map)
 
 /** Sheet controls the map leaves unbound (free for Learn). */
