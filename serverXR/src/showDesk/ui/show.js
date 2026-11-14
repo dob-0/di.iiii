@@ -33,12 +33,19 @@
     const EMITTERS = ['r', 'g', 'b', 'w', 'a', 'y', 'warm', 'cool', 'uv', 'lime']
     const LIVE_SEND_MS = 60 // the live strip sends each field at most this often; the last value always goes
     // The laser desk's own swatches (laser/ui/desk.js SWATCHES), then the extra colours of the show's palette.
-    const SWATCHES = ['#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60', '#e0001a', '#f0eaff', '#7a20ff']
+    // 2026-11-13 (owner: "real 255 red color in colors pallet"): pure red #ff0000 (R 255, G 0, B 0) first; #ff2030 stays.
+    const SWATCHES = ['#ff0000', '#ff2030', '#ffb020', '#ffffff', '#20d8ff', '#3050ff', '#8040ff', '#ff30c0', '#20ff60', '#e0001a', '#f0eaff', '#7a20ff']
+    // 2026-11-14 (owner: "add colors amber and soft ones, not very contrast, very light palette"): a second row. Amber is the
+    // signal amber of SAE J578 / ECE R48 (about 590 nm, #ff7e00), deeper than the yellow-amber #ffb020 above; then the laser
+    // desk's Warm white and six pastels (light, low saturation). The live strip and every lamp row play both rows.
+    const SOFT_SWATCHES = ['#ff7e00', '#ffd8a8', '#ffc8a0', '#ffc0d0', '#d8c8ff', '#c0e0ff', '#c0ffe0', '#fff4b0']
+    const ALL_SWATCHES = [...SWATCHES, ...SOFT_SWATCHES]
     // A copy of shared/laserShapes.cjs LASER_SHAPES (showDesk.test.js keeps it equal); the desk's own `shapes` wins when it
     // sends one. "spots" (dots) comes first on the strip, so any live look becomes dots with one tap.
     const SHAPES = ['circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid',
         'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble',
-        'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse']
+        'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse', 'stardust', 'rain', 'curtain', 'rays',
+        'lissajous', 'rose', 'spirograph', 'infinity', 'heart', 'hexagon', 'zigzag', 'helix', 'ripple', 'tunnel', 'scan']
     // Every field of a look the laser desk knows (laser/laserDesk.js normaliseLook): its range there, its step here.
     const LIVE = {
         level: { label: 'Level', min: 0, max: 1, step: 0.01, pct: true },
@@ -54,11 +61,18 @@
         phase: { label: 'Phase', min: 0, max: 16, step: 0.05 },
         pulseBeats: { label: 'Pulse beats', min: 0.25, max: 64, step: 0.25 },
         sweepBeats: { label: 'Sweep beats', min: 0.25, max: 64, step: 0.25 },
-        points: { label: 'Points', min: 16, max: 1992, step: 1 }
+        points: { label: 'Points', min: 16, max: 1992, step: 1 },
+        // 2026-11-14 (owner: "rotation pulse, phase, phase beats … on knobs"): the picture turns back and forth on the beat (up to
+        // a quarter turn each way), and the shape's own motion loops over Phase beats from Phase on (0 = off)
+        rotationPulse: { label: 'Rot. pulse', min: 0, max: 1, step: 0.01, pct: true, on: 0.5 },
+        rotationPulseBeats: { label: 'Rot. beats', min: 0.25, max: 64, step: 0.25 },
+        phaseBeats: { label: 'Phase beats', min: 0, max: 64, step: 0.25 }
     }
     const EFFECTS = ['pulse', 'sweep', 'spin', 'cycle'] // a pad each: a tap turns it off, a tap again back on at its last depth
     const ROW_A = ['level', 'size', 'copies', 'rotation']
     const ROW_B = ['phase', 'pulseBeats', 'sweepBeats', 'points']
+    const ROW_C_EFFECTS = ['rotationPulse'] // a pad + its depth, like Pulse
+    const ROW_C = ['rotationPulseBeats', 'phaseBeats']
 
     const $ = (id) => document.getElementById(id)
     const el = (tag, props = {}, ...kids) => {
@@ -294,6 +308,12 @@
         await tick()
         say(bad.length ? `Blackout did not reach ${bad.join('; ')}.` : 'Blackout: lights and laser are dark. Lift each with Lift lights or Lift laser.', bad.length ? 'error' : 'ok')
     }
+    // Lights only: the K2 Blackout (EXIT SETUP). It posts the lighting desk's master blackout and never touches the laser.
+    const pressBlackoutLights = async () => {
+        const r = await post(LIGHT + 'master', { blackout: true })
+        await tick()
+        say(r.ok ? 'Blackout: the lights are dark, the laser keeps running. Lift with Lift lights.' : `Blackout did not reach the lighting desk: ${r.error}`, r.ok ? 'ok' : 'error')
+    }
     // Lifting is per half, each with its desk's own route and body: the lighting desk's master {blackout:false} (its own
     // Blackout button), the laser desk's blackout {on:false} (its Shift+B). A half is lifted only when it answered its last
     // state read AND reports its blackout on; a half that did not answer is never lifted. A second lift of the same half
@@ -353,6 +373,20 @@
         }
         return out
     }
+    // 2026-11-13 (owner: "all scenes small now fix that"): the first 15 scenes are the K2's 15 pads (midiMap.js: pads A-O = scene 0-14):
+    // they are the BIG tiles, 5 columns (one per act of three) x 3 rows; every later scene stays, behind the "More scenes" toggle.
+    const PAD_SCENES = 15
+    let moreOpen = false
+    const renderMoreToggle = (total) => {
+        const b = $('scenesMore')
+        if (!b) return
+        b.onclick = () => { moreOpen = !moreOpen; renderMoreToggle(total) }
+        b.hidden = total <= PAD_SCENES
+        b.textContent = moreOpen ? `Fewer scenes` : `More scenes (${Math.max(0, total - PAD_SCENES)})`
+        b.setAttribute('aria-expanded', moreOpen ? 'true' : 'false')
+        $('scenes').classList.toggle('show-more', moreOpen && total > PAD_SCENES)
+        $('scenes').classList.toggle('has-more', total > PAD_SCENES)
+    }
     const renderScenes = () => {
         const note = $('scenesNote')
         const items = sceneItems()
@@ -378,14 +412,15 @@
                 return parts.btn
             }))
         }
-        for (const i of items) {
+        renderMoreToggle(items.length)
+        for (const [idx, i] of items.entries()) {
             const p = sceneBtns.get(i.id)
             if (!p) continue
             setText(p.nameText, i.name)
             setText(p.lookText, i.look ? `laser: ${i.look.name}` : 'lights only')
             p.liveTag.hidden = !i.laser
             const edited = Boolean(S.light && !S.light.activeScene && litScene === i.id)
-            setClass(p.btn, `scenebtn${i.lights ? ' is-lights' : ''}${i.laser ? ' is-laser' : ''}${edited ? ' is-edited' : ''}${sceneBusy === i.id ? ' is-busy' : ''}`)
+            setClass(p.btn, `scenebtn${idx < PAD_SCENES ? ` scene-pad act-${Math.floor(idx / 3)}` : ' scene-more'}${i.lights ? ' is-lights' : ''}${i.laser ? ' is-laser' : ''}${edited ? ' is-edited' : ''}${sceneBusy === i.id ? ' is-busy' : ''}`)
             const pressed = i.lights ? 'true' : 'false'
             if (p.btn.getAttribute('aria-pressed') !== pressed) p.btn.setAttribute('aria-pressed', pressed)
             const dots = sceneDots(i.id)
@@ -471,7 +506,7 @@
                 bindFader(parts.input, key, (v) => { lampsEdited = true; return post(LIGHT + 'fixture', { id: f.id, values: { dimmer: v }, on: true }) }, (v) => setText(parts.val, pct(v, 255)))
                 // The same colours as the live strip, as this lamp's own colour channels (its profile on the lighting desk)
                 if (Object.keys(lampColour(f, '#ffffff')).length) {
-                    parts.colours.append(...SWATCHES.map((c) => el('button', {
+                    parts.colours.append(...ALL_SWATCHES.map((c) => el('button', {
                         type: 'button', class: 'swatch', 'data-colour': c, style: `background:${c}`, title: `${f.name || f.id}: ${c}`, 'aria-label': `${f.name || f.id} in ${c}`, onclick: () => pressLampColour(f.id, c)
                     })))
                 }
@@ -729,18 +764,70 @@
         pad.addEventListener('pointermove', (e) => { if (down) move(e) })
         for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(ev, up)
     }
+    // 2026-11-13 (owner: "i want option save color"): Save colour keeps the live colour picked with the + as a swatch in the row,
+    // in this browser (the show machine's profile keeps it across installs); newest first, at most SAVED_MAX; a right-click removes one.
+    // 2026-11-14 (owner: "add option to delete colors"): Delete colour takes the live saved colour off the row, for touch too. The
+    // look keeps its colour (the + lights again, Save colour brings it back). A built-in swatch is hidden, never lost: Save colour
+    // on it, or Show all, brings it back (dob-85 relayed the same ask: "delete colrs from color palette").
+    const SAVED_KEY = 'diShowDesk.savedColours.v1'
+    const SAVED_MAX = 6
+    const HEX = /^#[0-9a-f]{6}$/
+    let savedColours = []
+    try { const s = JSON.parse(window.localStorage.getItem(SAVED_KEY) || '[]'); if (Array.isArray(s)) savedColours = s.filter((c) => HEX.test(c)).slice(0, SAVED_MAX) } catch { /* nothing kept here */ }
+    const HIDDEN_KEY = 'diShowDesk.hiddenColours.v1'
+    let hiddenSwatches = []
+    try { const h = JSON.parse(window.localStorage.getItem(HIDDEN_KEY) || '[]'); if (Array.isArray(h)) hiddenSwatches = h.filter((c) => ALL_SWATCHES.includes(c)) } catch { /* nothing kept here */ }
+    const storeHidden = () => { try { window.localStorage.setItem(HIDDEN_KEY, JSON.stringify(hiddenSwatches)) } catch { /* lasts until a reload */ } }
+    const storeSaved = () => { try { window.localStorage.setItem(SAVED_KEY, JSON.stringify(savedColours)) } catch { /* this browser keeps nothing: the colours last until a reload */ } }
+    const liveColourNow = () => { const l = liveLookFull(); return l && !l.rainbow ? String(l.colour || '').toLowerCase() : '' }
+    const paintSaved = () => $('liveSaved').replaceChildren(...savedColours.map((c) => el('button', {
+        type: 'button', class: 'pad colourpad savedpad', 'data-colour': c, style: `background:${c}`, title: `Saved colour ${c} (Delete colour or a right-click removes it)`, 'aria-label': `Saved colour ${c}`, disabled: true,
+        onclick: () => editLive({ colour: c, rainbow: false }),
+        oncontextmenu: (e) => { e.preventDefault(); savedColours = savedColours.filter((x) => x !== c); storeSaved(); paintSaved(); renderLive() }
+    })))
+    const saveColour = () => {
+        const c = liveColourNow()
+        if (hiddenSwatches.includes(c)) { hiddenSwatches = hiddenSwatches.filter((x) => x !== c); storeHidden(); renderLive(); return }
+        if (!HEX.test(c) || ALL_SWATCHES.includes(c) || savedColours.includes(c)) return
+        savedColours = [c, ...savedColours].slice(0, SAVED_MAX)
+        storeSaved(); paintSaved(); renderLive()
+    }
+    const deleteColour = () => {
+        const c = liveColourNow()
+        if (savedColours.includes(c)) { savedColours = savedColours.filter((x) => x !== c); storeSaved(); paintSaved() } else if (ALL_SWATCHES.includes(c) && !hiddenSwatches.includes(c)) { hiddenSwatches = [...hiddenSwatches, c]; storeHidden() } else return
+        renderLive()
+    }
+    const showAllColours = () => { hiddenSwatches = []; storeHidden(); renderLive() }
     const buildLive = () => {
+        // 2026-11-13 (owner: "instead of rainbow add + where will be colors palette and i can choose"): the + opens the browser's
+        // colour picker (any colour). A pick posts like a swatch, at most every LIVE_SEND_MS while dragging; the last one always goes.
+        // Rainbow stays a field of the look and a toggle on the laser desk page (laser/ui/desk.js).
+        let pickTimer = null; let pickLast = 0; let pickWant = null
+        const pickSend = () => { pickTimer = null; pickLast = Date.now(); const c = pickWant; pickWant = null; if (c) editLive({ colour: c, rainbow: false }) }
+        const pick = el('input', {
+            type: 'color', id: 'livePick', class: 'pickinput', tabindex: '-1', 'aria-hidden': 'true', value: '#ff0000', disabled: true,
+            oninput: () => { pickWant = pick.value.toLowerCase(); const wait = LIVE_SEND_MS - (Date.now() - pickLast); if (wait <= 0) { clearTimeout(pickTimer); pickSend() } else if (!pickTimer) pickTimer = setTimeout(pickSend, wait) }
+        })
+        const plus = el('button', { type: 'button', class: 'pad togglepad pickpad', id: 'livePlus', 'aria-pressed': 'false', title: 'Any colour: opens the colour palette', 'aria-label': 'Any colour', disabled: true, onclick: () => { try { pick.showPicker() } catch { pick.click() } } }, '+')
         $('liveColours').append(...SWATCHES.map((c) => el('button', { type: 'button', class: 'pad colourpad', 'data-colour': c, style: `background:${c}`, title: `Colour ${c}`, 'aria-label': `Colour ${c}`, disabled: true, onclick: () => editLive({ colour: c, rainbow: false }) })),
-            el('button', { type: 'button', class: 'pad togglepad', id: 'liveRainbow', 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('rainbow') }, 'Rainbow'))
-        for (const k of EFFECTS) {
+            el('span', { class: 'savedcolours', id: 'liveSaved' }), plus, pick,
+            el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveSaveColour', disabled: true, title: 'Save the live colour (picked with +) into the row', onclick: saveColour }, 'Save colour'),
+            el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveDeleteColour', disabled: true, title: 'Take the live colour off the row (the look keeps its colour; Show all brings built-ins back)', onclick: deleteColour }, 'Delete colour'),
+            el('button', { type: 'button', class: 'pad togglepad savepad', id: 'liveShowAll', style: 'display:none', title: 'Bring back the deleted built-in colours', onclick: showAllColours }, 'Show all'))
+        paintSaved()
+        $('liveSoft').append(...SOFT_SWATCHES.map((c) => el('button', { type: 'button', class: 'pad colourpad', 'data-colour': c, style: `background:${c}`, title: `Colour ${c}`, 'aria-label': `Colour ${c}`, disabled: true, onclick: () => editLive({ colour: c, rainbow: false }) })))
+        const effectCell = (k, box) => {
             const input = liveFader(k, null)
-            $('liveEffects').append(el('div', { class: 'effect' },
+            box.append(el('div', { class: 'effect' },
                 el('button', { type: 'button', class: 'pad effectpad', 'data-effect': k, 'aria-pressed': 'false', disabled: true, title: `${LIVE[k].label}: a tap turns it off, a tap again on at its last depth`, onclick: () => pressEffect(k) },
                     el('span', { text: LIVE[k].label }), liveVals.get(k)), input))
         }
+        for (const k of EFFECTS) effectCell(k, $('liveEffects'))
         $('liveEffects').append(el('button', { type: 'button', class: 'pad effectpad', id: 'liveMirror', 'aria-pressed': 'false', disabled: true, onclick: () => toggleLive('mirror') }, 'Mirror'))
         for (const k of ROW_A) liveFader(k, $('liveRowA'))
         for (const k of ROW_B) liveFader(k, $('liveRowB'))
+        for (const k of ROW_C_EFFECTS) effectCell(k, $('liveRowC'))
+        for (const k of ROW_C) liveFader(k, $('liveRowC'))
         for (const k of ['x', 'height']) { const input = liveFader(k, null); input.hidden = true; input.classList.add('xyval'); $('xyPad').append(input) }
         bindXY()
     }
@@ -770,10 +857,20 @@
             if (b.getAttribute('aria-pressed') !== null) b.setAttribute('aria-pressed', p ? 'true' : 'false')
         }
         for (const b of $('liveShapes').children) mark(b, Boolean(look && look.shape === b.dataset.shape))
-        for (const b of $('liveColours').querySelectorAll('.colourpad')) mark(b, Boolean(look && !look.rainbow && String(look.colour || '').toLowerCase() === b.dataset.colour))
-        mark($('liveRainbow'), Boolean(look && look.rainbow))
+        for (const b of document.querySelectorAll('#liveColours .colourpad, #liveSoft .colourpad')) mark(b, Boolean(look && !look.rainbow && String(look.colour || '').toLowerCase() === b.dataset.colour))
+        // the + is lit, in the look's own colour, when the live colour is one off the row (picked with the +)
+        const colourNow = look && !look.rainbow ? String(look.colour || '').toLowerCase() : ''
+        const custom = Boolean(colourNow) && (!ALL_SWATCHES.includes(colourNow) || hiddenSwatches.includes(colourNow)) && !savedColours.includes(colourNow)
+        for (const b of document.querySelectorAll('#liveColours > .colourpad, #liveSoft > .colourpad')) b.style.display = hiddenSwatches.includes(b.dataset.colour) ? 'none' : ''
+        $('liveShowAll').style.display = hiddenSwatches.length ? '' : 'none'
+        $('liveShowAll').textContent = `Show all (${hiddenSwatches.length} hidden)`
+        mark($('livePlus'), custom)
+        $('livePlus').style.background = custom ? colourNow : ''
+        $('livePick').disabled = !on
+        $('liveSaveColour').disabled = !(on && custom && HEX.test(colourNow))
+        $('liveDeleteColour').disabled = !(on && (savedColours.includes(colourNow) || (ALL_SWATCHES.includes(colourNow) && !hiddenSwatches.includes(colourNow))))
         mark($('liveMirror'), Boolean(look && look.mirror))
-        for (const b of $('liveEffects').querySelectorAll('[data-effect]')) mark(b, Boolean(look && Number(look[b.dataset.effect])))
+        for (const b of document.querySelectorAll('#liveEffects [data-effect], #liveRowC [data-effect]')) mark(b, Boolean(look && Number(look[b.dataset.effect])))
         if (S.desk && Number.isFinite(Number(S.desk.bpm))) {
             putFader($('bpm'), 'bpm', Number(S.desk.bpm))
             if (!held('bpm')) setText($('bpmVal'), String(Math.round(Number(S.desk.bpm))))
@@ -885,8 +982,48 @@
         clearTimeout(midiOff)
         midiOff = setTimeout(() => node.classList.remove('is-lit'), 300)
     }
+    // 2026-11-13: targets with no control on the page (a layer's level, the effect's depth / speed, two lamps as one). A pseudo input
+    // takes the same value / min / max / step / 'input' event the real ones do, so pick-up and stepping above work unchanged; the
+    // event sends the value (at most one send per 40 ms, the last one always goes). Levels only: none of them arms or lifts anything.
+    const virtualInputs = new Map()
+    const virtualInput = (key, min, max, step, read, write) => {
+        let v = virtualInputs.get(key)
+        if (!v) {
+            let timer = null; let lastSent = 0; let pending = null
+            const flush = () => { timer = null; lastSent = Date.now(); const x = pending; pending = null; if (x !== null) write(x) }
+            v = {
+                min: String(min), max: String(max), step: String(step), disabled: false, _value: null,
+                get value() { return this._value !== null ? String(this._value) : String(read()) },
+                set value(x) { this._value = Number(x) },
+                dispatchEvent() { pending = this._value; this._value = null; const wait = 40 - (Date.now() - lastSent); if (wait <= 0) { if (timer) clearTimeout(timer); flush() } else if (!timer) timer = setTimeout(flush, wait) }
+            }
+            virtualInputs.set(key, v)
+        }
+        return v
+    }
+    const layerOf = (id) => (S.light && Array.isArray(S.light.layers) ? S.light.layers.find((l) => l && l.id === id) : null)
+    const fxOf = () => (S.light && S.light.fx) || {}
+    const fxPost = (patch) => { post(LIGHT + 'fx', patch); if (S.light && S.light.fx) Object.assign(S.light.fx, patch) }
+    const fxStep = (key, list, dir) => {
+        const cur = Math.max(0, list.indexOf(fxOf()[key]))
+        const next = list[Math.min(list.length - 1, Math.max(0, cur + dir))]
+        if (next === fxOf()[key]) return
+        fxPost({ [key]: next }); midiLine(`effect ${key}: ${next}`)
+    }
     const midiInput = (target) => {
         const [kind, rest] = target.split(':')
+        if (kind === 'layer') {
+            const id = rest.split(':')[0]
+            if (!layerOf(id)) return null
+            return virtualInput(target, 0, 100, 1, () => Math.round((layerOf(id).level ?? 0) * 100), (x) => { post(LIGHT + 'layer', { id, level: x / 100 }); layerOf(id).level = x / 100 })
+        }
+        if (target === 'fx:depth') return virtualInput(target, 0, 255, 1, () => fxOf().depth ?? 0, (x) => fxPost({ depth: x }))
+        if (target === 'fx:bpm') return virtualInput(target, 20, 300, 1, () => fxOf().bpm ?? 120, (x) => fxPost({ bpm: x }))
+        if (kind === 'lamp' && rest.includes('+')) {
+            const ins = rest.split('+').map((n) => { const f = fixturesOf()[Number(n)]; return f && lampRows.get(f.id) ? lampRows.get(f.id).input : null })
+            if (ins.some((i) => !i)) return null
+            return virtualInput(target, 0, 255, 1, () => ins[0].value, (x) => ins.forEach((i) => { i.value = String(x); i.dispatchEvent(new Event('input')) }))
+        }
         if (kind === 'lamp') { const f = fixturesOf()[Number(rest)]; return f && lampRows.get(f.id) ? lampRows.get(f.id).input : null }
         if (kind === 'size') { const id = cubeIds()[Number(rest)]; return id && cubeCards.get(id) ? cubeCards.get(id).size : null }
         if (kind === 'live') return liveInputs.get(rest) || null
@@ -894,15 +1031,31 @@
         if (target === 'laser-master') return $('laserMaster')
         return null
     }
+    // 2026-11-13 22:25 (owner: "knob faders highest one to 100 and make them work scenes parametres and midi with each other"):
+    // every fader AND every pot is direct: the control's own place is the value (bottom = the range's low end, top = 100 %),
+    // no pick-up, so a knob is never "stuck" under a scene's value. The laser clamps (midiMap.js LASER_LIMITS) still apply.
+    const DIRECT = /^(?:lamp:|layer:|live:|size:|fx:depth$|fx:bpm$|light-master$|laser-master$)/
     const midiMove = (m, raw) => {
+        if (m.relative && (m.target === 'fx:mode' || m.target === 'fx:spatial')) {
+            const list = m.target === 'fx:mode' ? S.light && S.light.fxModes : S.light && S.light.fxSpatial
+            if (Array.isArray(list) && list.length) fxStep(m.target === 'fx:mode' ? 'mode' : 'spatial', list, raw < 64 ? 1 : -1)
+            return
+        }
         const input = midiInput(m.target)
         if (!input || input.disabled) return
-        const min = Number(input.min)
-        const max = Number(input.max)
+        // A laser target while every cube is stopped: ignored (the K2 never raises a stopped cube), and its range is the safe one.
+        if (MIDI.isLaserTarget(m.target)) {
+            const cubes = S.desk && Array.isArray(S.desk.cubes) ? S.desk.cubes : []
+            if (cubes.length && cubes.every((c) => c && c.engineDark === 'stopped')) { midiLine(`${m.target} ignored: the cube is stopped`); return }
+        }
+        const lim = MIDI.laserLimit(m.target)
+        const min = lim ? Math.max(Number(input.min), lim[0]) : Number(input.min)
+        const max = lim ? Math.min(Number(input.max), lim[1]) : Number(input.max)
         const span = max - min
-        const cur = Number(input.value)
+        const cur = Math.min(max, Math.max(min, Number(input.value)))
         let next
         if (m.relative) next = cur + ((raw < 64 ? raw : raw - 128) * span) / 200 // two's complement steps from the screen's value
+        else if (DIRECT.test(m.target)) next = min + (raw / 127) * span // faders and pots: always the control's own value, no pick-up (owner 2026-11-13)
         else {
             const t = min + (raw / 127) * span
             const tol = span / 50
@@ -918,7 +1071,7 @@
         const places = (String(input.step).split('.')[1] || '').length
         const stepped = step > 0 ? Number((Math.round((next - min) / step) * step + min).toFixed(places)) : next
         input.value = String(Math.min(max, Math.max(min, stepped)))
-        if (!m.relative) pickup.get(m.target).set = Number(input.value)
+        if (!m.relative && pickup.get(m.target)) pickup.get(m.target).set = Number(input.value)
         input.dispatchEvent(new Event('input'))
     }
     // A scene key beyond the matrix, the two bottom corners: the next or the previous scene in the lighting desk's order.
@@ -949,9 +1102,10 @@
     const midiPress = (m) => {
         const t = m.target
         if (t === 'blackout') { pressBlackout(); return }
+        if (t === 'blackout:lights') { pressBlackoutLights(); return }
         if (t === 'scene:next' || t === 'scene:prev') { stepScene(t === 'scene:next' ? 1 : -1); return }
         if (t.startsWith('reset:')) { midiSet(`live:${t.slice(6)}`, resetTo(t.slice(6))); return }
-        if (t.startsWith('park:')) { pickup.delete(t.slice(5)); midiLine(`${t.slice(5)} parked: it waits until it passes the screen`); return }
+        if (t.startsWith('park:')) { pickup.delete(t.slice(5)); midiLine(DIRECT.test(t.slice(5)) ? `${t.slice(5)} is direct: the knob's place is its value` : `${t.slice(5)} parked: it waits until it passes the screen`); return }
         const item = sceneItems()[Number(t.split(':')[1])]
         if (item) pressScene(item.id)
     }
@@ -979,6 +1133,7 @@
         // The panic button comes first: while Learn waits for a control, the Blackout button still blacks out and is
         // never learned onto something else (review 2026-10-31 M1).
         if (msg.kind === 'note' && m && m.target === 'blackout') { pressBlackout(); return }
+        if (msg.kind === 'note' && m && m.target === 'blackout:lights') { pressBlackoutLights(); return }
         if (learning && learning.target) { midiLearnSet(ctl); return }
         if (!m || !MIDI.validRow(m) || m.target === 'spare') return
         if (msg.kind === 'cc') midiMove(m, msg.val)

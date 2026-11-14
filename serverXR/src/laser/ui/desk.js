@@ -13,10 +13,14 @@
     // The desk's colours (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): the hue
     // wheel a laser draws well, full colours, then two whites. Green is here to pick; it is no seed look's colour.
     const SWATCHES = [
-        ['#ff2030', 'Red'], ['#ff6a00', 'Orange'], ['#ffb020', 'Amber'], ['#ffe600', 'Yellow'], ['#a8ff00', 'Lime'],
+        ['#ff0000', 'Pure red 255'], ['#ff2030', 'Red'], ['#ff6a00', 'Orange'], // #ff0000 added 2026-11-13 (owner: "real 255 red") ['#ffb020', 'Amber'], ['#ffe600', 'Yellow'], ['#a8ff00', 'Lime'],
         ['#20ff60', 'Green'], ['#00ffb0', 'Mint'], ['#20d8ff', 'Cyan'], ['#0090ff', 'Sky'], ['#3050ff', 'Blue'],
         ['#5a2dff', 'Indigo'], ['#8040ff', 'Violet'], ['#c000ff', 'Purple'], ['#ff30c0', 'Magenta'], ['#ff5080', 'Pink'],
-        ['#ffffff', 'White'], ['#ffd8a8', 'Warm white']
+        ['#ffffff', 'White'], ['#ffd8a8', 'Warm white'],
+        // 2026-11-14 (owner: "add colors amber and soft ones, not very contrast, very light palette"): signal amber (SAE J578 /
+        // ECE R48, about 590 nm) and six pastels; the Show desk's soft row and its lamp rows play the same colours
+        ['#ff7e00', 'Signal amber'], ['#ffc8a0', 'Peach'], ['#ffc0d0', 'Blush'], ['#d8c8ff', 'Lavender'], ['#c0e0ff', 'Pale sky'],
+        ['#c0ffe0', 'Pale mint'], ['#fff4b0', 'Pale lemon']
     ]
     const OUT = 'desk'
     // look|cube pairs a Go was pressed for while stopped; cleared when the cube runs again. Stopped still after that Go = the look's own.
@@ -400,7 +404,11 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         { key: 'pulseBeats', label: 'Pulse every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
         { key: 'sweep', label: 'Sweep', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? v.toFixed(2) : 'off'), title: 'The picture swings across the field' },
         { key: 'sweepBeats', label: 'Sweep every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
-        { key: 'phase', label: 'Chase', min: 0, max: 4, step: 0.125, fmt: (v) => (v ? `${v} b` : 'off'), title: 'Beats each cube runs behind the one before it', multi: true }
+        { key: 'phase', label: 'Chase', min: 0, max: 4, step: 0.125, fmt: (v) => (v ? `${v} b` : 'off'), title: 'Beats each cube runs behind the one before it', multi: true },
+        // 2026-11-14 (owner: "rotation pulse, phase, phase beats"): the picture turns back and forth; the shape's own motion loops
+        { key: 'rotationPulse', label: 'Rot. pulse', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 90) + '°' : 'off'), title: 'The picture turns back and forth on the beat, up to this far each way' },
+        { key: 'rotationPulseBeats', label: 'Rot. every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b`, title: 'The rotation pulse turns there and back once every this many beats' },
+        { key: 'phaseBeats', label: 'Phase beats', min: 0, max: 16, step: 0.25, fmt: (v) => (v ? `${v} b` : 'off'), title: "The shape's own motion plays as a loop of this many beats, from Phase (Chase) on" }
     ]
     const CYCLE = { key: 'cycle', label: 'Each shape', min: 0.5, max: 32, step: 0.5, fmt: (v) => `${v} b` }
 

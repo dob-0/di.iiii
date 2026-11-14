@@ -297,7 +297,7 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
     // 2026-10-30: the scenes of lines, circles and dots (planets … morse). A dot is a small ring that shrinks into the
     // window with the picture; the lines and circles around it keep the frame a stroke, morse's dashes only from
     // MARK_MIN_SIZE (it is a mark shape). They move on the beat, so they are held at every quarter beat as well, as sent.
-    const SCENES = LASER_SHAPES.slice(24)
+    const SCENES = LASER_SHAPES.slice(24, 32)
     it('the scenes keep the headroom: 6.1 % / 20.1 % / 33.5 %, morse 6.9 % and 15.1 % at its smallest', () => {
         expect(SCENES).toEqual(['planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse'])
         const figures = SCENES.filter((s) => !MARK_SHAPES.includes(s))
@@ -307,6 +307,62 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
         expect(worstOf(['morse'], 0.5)).toBeCloseTo(0.069, 2)
         expect(worstOf(['morse'], MARK_MIN_SIZE)).toBeCloseTo(0.151, 2)
     })
+    // 2026-11-13: stardust, the smallest dots the cube may draw. The dot is a fixed field size (0.038 wide, the guard's window is
+    // 0.032), so the guard counts every dot as a stroke at any picture size and the frame is never blanked.
+    it('stardust: 24 dots (28 at most) fit the 2000-point send budget, are never still at any size or beat, and no window takes 40 %', () => {
+        const plan = at(30000)
+        for (const copies of [0, 1, 20, 24, 28, 99]) {
+            for (const size of [1, 0.5, MARK_MIN_SIZE]) {
+                for (const beat of [0, 0.5, 3.25]) {
+                    const shape = generateShape({ shape: 'stardust', size, height: 0, copies, points: 1992, beat })
+                    expect(shape.length, `${copies} ${size}`).toBeLessThanOrEqual(2000)
+                    expect(g.optimisePath(applyZone(shape, normaliseZone()).points, plan).stats.out, `sent ${copies} ${size}`).toBeLessThanOrEqual(2000)
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape: 'stardust', size, height: 0, copies, points: 300, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                    expect(stillBeams(frame), `${copies} ${size} ${beat}`).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, `${copies} ${size}`).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
+// 2026-11-13: the owner's animations rain (falling dashes), curtain (upright wobble) and rays (light shot out of a middle line).
+    it('rain, curtain and rays as sent are never still at any quarter beat over 16, at 0.5, 0.1 and 0.05, and never put 40 % in one window', () => {
+        const plan = at(30000)
+        expect(LASER_SHAPES.slice(33, 36)).toEqual(['rain', 'curtain', 'rays'])
+        for (const shape of LASER_SHAPES.slice(33, 36)) {
+            for (const size of [0.5, 0.1, 0.05]) {
+                for (let beat = 0; beat < 16; beat += 0.25) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0, points: 300, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                    expect(stillBeams(frame), `${shape} ${size} beat ${beat}`).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, `${shape} ${size} beat ${beat}`).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
+    // 2026-11-14, the owner: "in shapes list add more shapes": eleven classic figures. Each at its own count and its
+    // largest, at every quarter beat over 16, at 0.5, 0.1 and 0.05: never still, never 40 % in one window, and at 1992
+    // points never over the Ultra Mk2's frame budget as sent (2333 points: the real-cube fixture below). Height 0.5, as the
+    // scenes: the default zone is the upper half, and at height 0 it cuts a small figure's lower half into dots.
+    const FIGURES = LASER_SHAPES.slice(36)
+    const FIGURE_MOST = { lissajous: 6, rose: 12, spirograph: 9, zigzag: 12, helix: 4, ripple: 5, tunnel: 6, scan: 4 }
+    it('the classic figures as sent are never still at any quarter beat over 16, at any count, and never put 40 % in one window', () => {
+        const plan = at(30000)
+        expect(FIGURES).toEqual(['lissajous', 'rose', 'spirograph', 'infinity', 'heart', 'hexagon', 'zigzag', 'helix', 'ripple', 'tunnel', 'scan'])
+        for (const shape of FIGURES) {
+            for (const copies of [0, FIGURE_MOST[shape] ?? 0]) {
+                for (const size of [0.5, 0.1, 0.05]) {
+                    for (let beat = 0; beat < 16; beat += 0.25) {
+                        const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape, size, height: 0.5, copies, points: 300, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                        expect(stillBeams(frame), `${shape} ${copies} ${size} beat ${beat}`).toEqual([])
+                        expect(dwellSpots(frame, { minShare: 0 })[0].share, `${shape} ${copies} ${size} beat ${beat}`).toBeLessThan(0.4)
+                    }
+                }
+                for (const beat of [0, 1.3, 7.75]) {
+                    const shape1992 = generateShape({ shape, size: 1, height: 0, copies, points: 1992, beat })
+                    expect(g.optimisePath(applyZone(shape1992, normaliseZone()).points, plan).stats.out, `sent ${shape} ${copies} ${beat}`).toBeLessThanOrEqual(g.frameBudget(35000, 6000))
+                }
+            }
+        }
+    }, 60000) // 4224 frames through the optimiser: about 7 s
     it('the scenes as sent are never still at any quarter beat over 16, and never put 40 % in one window', () => {
         const plan = at(30000)
         for (const shape of SCENES) {
@@ -486,7 +542,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(32)
+        expect(LASER_SHAPES.length).toBe(47)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))

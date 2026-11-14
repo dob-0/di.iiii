@@ -46,40 +46,40 @@ are as printed on the unit.
 | Control | MIDI | Does |
 |---|---|---|
 | encoder 1 | CC 0 (relative) | Live look: rotation |
-| encoder 2 | CC 1 (relative) | Live look: x |
-| encoder 3 | CC 2 (relative) | Live look: cycle |
-| encoder 4 | CC 3 (relative) | Live look: phase |
+| encoder 2 | CC 1 (relative) | Live look: phase beats |
+| encoder 3 | CC 2 (relative) | Effect mode (step) |
+| encoder 4 | CC 3 (relative) | Effect spread (step) |
 | encoder 1 push | note 52 | Reset rotation |
-| encoder 2 push | note 53 | Reset x |
-| encoder 3 push | note 54 | Reset cycle |
-| encoder 4 push | note 55 | Reset phase |
+| encoder 2 push | note 53 | Reset phase beats |
+| encoder 3 push | note 54 | Spare, no action |
+| encoder 4 push | note 55 | Spare, no action |
 | pot 1 | CC 4 | Live look: level |
 | pot 2 | CC 5 | Live look: size |
-| pot 3 | CC 6 | Live look: height |
+| pot 3 | CC 6 | Live look: rotation pulse |
 | pot 4 | CC 7 | Live look: copies |
 | pot switch 1 | note 48 | Park level |
 | pot switch 2 | note 49 | Park size |
-| pot switch 3 | note 50 | Park height |
+| pot switch 3 | note 50 | Park rotation pulse |
 | pot switch 4 | note 51 | Park copies |
 | pot 5 | CC 8 | Live look: spin |
-| pot 6 | CC 9 | Live look: pulse |
-| pot 7 | CC 10 | Live look: sweep |
+| pot 6 | CC 9 | Layer base level |
+| pot 7 | CC 10 | Layer accent level |
 | pot 8 | CC 11 | Laser master |
 | pot switch 5 | note 44 | Park spin |
-| pot switch 6 | note 45 | Park pulse |
-| pot switch 7 | note 46 | Park sweep |
+| pot switch 6 | note 45 | Park layer base level |
+| pot switch 7 | note 46 | Park layer accent level |
 | pot switch 8 | note 47 | Park laser master |
-| pot 9 | CC 12 | Cube 1 size |
-| pot 10 | CC 13 | Cube 2 size |
-| pot 11 | CC 14 | Cube 3 size |
+| pot 9 | CC 12 | Effect depth |
+| pot 10 | CC 13 | Effect speed (bpm) |
+| pot 11 | CC 14 | Live look: pulse |
 | pot 12 | CC 15 | Lights master |
-| pot switch 9 | note 40 | Park cube 1 size |
-| pot switch 10 | note 41 | Park cube 2 size |
-| pot switch 11 | note 42 | Park cube 3 size |
+| pot switch 9 | note 40 | Park effect depth |
+| pot switch 10 | note 41 | Park effect speed (bpm) |
+| pot switch 11 | note 42 | Park pulse |
 | pot switch 12 | note 43 | Park lights master |
 | fader 1 | CC 16 | Lamp 1 level |
-| fader 2 | CC 17 | Lamp 2 level |
-| fader 3 | CC 18 | Lamp 3 level |
+| fader 2 | CC 17 | Lamps 2 + 3 level together |
+| fader 3 | CC 18 | Layer rhythm level |
 | fader 4 | CC 19 | Spare, no action |
 | matrix A | note 36 | Scene 00 |
 | matrix B | note 37 | Scene 01 |
@@ -96,13 +96,13 @@ are as printed on the unit.
 | matrix M | note 24 | Scene 12 |
 | matrix N | note 25 | Scene 13 |
 | matrix O | note 26 | Scene 14 |
-| matrix P | note 27 | Blackout all (dark only) |
+| matrix P | note 27 | Scene 15 |
 | layer button | note 12 | Previous scene |
 | encoder 5 | CC 20 (relative) | Live look: pulse beats |
 | encoder 5 push | note 13 | Reset pulse beats |
 | encoder 6 | CC 21 (relative) | Live look: sweep beats |
 | encoder 6 push | note 14 | Reset sweep beats |
-| exit setup button | note 15 | Next scene |
+| exit setup button | note 15 | Blackout lights (dark only, the laser keeps running) |
 <!-- k2-map:end -->
 
 - **Live look: x** is the live look on the laser desk; **Cube n size** is the n-th cube's Size fader; **Lamp n level** the n-th lamp

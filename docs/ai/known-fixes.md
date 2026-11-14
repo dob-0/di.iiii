@@ -1747,3 +1747,22 @@ wins), a Channel picker (any, 1 to 16; "15" is the old way), an In line (channel
 A stored (Learn) map wins and the default rows it lacks are added. Lifts, On, Off, Undo, Save and Release stay off MIDI.
 Guard: `midiMap.test.js` (the table equals `ui/midi/xone-k2.json`, today's assignments kept, any channel against a picked one, the merge, the In line's
 words, the README table equals the code) and `showDesk.test.js` "MIDI: any channel, the channel picker, the In line, and the rest of the K2".
+
+## Light desk: a scene press changed nothing after a Looks tile was clicked (2026-11-13, Projector Room show, twice)
+Symptom: the owner, during the show: "when im changing lighs scene its dosnt change" (20:2x and again 23:1x). Scene presses on the Show desk, the K2
+and /light did not change the lamps; DMX A10 stayed 255/176/32 (the look PEAK 3) through ARRIVE 1, BUILD 2 and others.
+Cause: a Looks tile on /light posts `api/looks/fire` with no layer, so the look lands on the `cue` layer (merge ltp, priority 31, mask all, level 1),
+and it covers every scene recalled after it. The show's looks carry the same names as its scenes (ar1..ot3), so the tile looks like a scene button.
+`state.now.source` was `manual` and the cue runner was not running. Live, `POST /light/api/layer {"id":"cue","lookId":null}` freed it.
+Fix: `lighting/desk.js` `releaseManualCueLook()`: a person's scene recall (`POST /api/scenes/recall`, now or on its beat) takes a hand-fired look off
+the cue layer (the latest action wins, LTP). A look the cue list fired stays, and so does any look while the list runs. The reply says `cueLookReleased`.
+Guard: `serverXR/src/lighting/cueLayerRecall.test.js` (hand-fired look released and the scene reaches the DMX; a cue-fired look stays; an unknown scene
+leaves it). It fails on the code before the fix (1 of 3).
+
+## Show desk: 13 laser shapes could not be pressed on the stage window (2026-11-14, Projector Room show)
+Symptom: after 11 shapes were added (47 in all), none of the new ones showed on the Show desk at the stage window (1278 x 766); curtain and rays were cut too.
+Cause: the BIG-laser block of `serverXR/src/showDesk/ui/show.css` held the shape strip at two rows (`--shapes-h: 92px`, overflow hidden); the shapes
+wrap into a third row that the strip cut off. Measured with Playwright on the live page: 13 pads outside the strip at 1278 px, 2 at 1600 px, 20 at 1024 px.
+Fix: `--shapes-h: auto` in that block (it already has `--live-h: auto` and the page scrolls down): 0 pads cut at 1278, 1600 and 1024 px; the page is
+46 px longer at 1278 px (895 to 941).
+Guard: `serverXR/src/showDesk/showDesk.test.js` "every shape pad is on screen" (fails on `--shapes-h: 92px`).

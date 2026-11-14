@@ -31,14 +31,20 @@ const lookPointsAt = (look, { t, clock, index = 0, cube = CUBE_DEFAULTS, master 
     const b = beatsAt(clock, t) - index * look.phase
     const seconds = (b * 60) / bpm
     const breathe = look.pulse > 0 ? 1 - look.pulse * 0.5 * (1 - Math.cos((TAU * b) / look.pulseBeats)) : 1
+    // 2026-11-14: rotation pulse turns the picture back and forth (up to a quarter turn each way) once every rotationPulseBeats;
+    // phase beats plays the shape's own motion (its `beat`) as a loop of that many beats, from `phase` on. A look without
+    // these fields (older files) draws as before: undefined is not > 0.
+    const rock = look.rotationPulse > 0 ? look.rotationPulse * 0.25 * Math.sin((TAU * b) / (look.rotationPulseBeats > 0 ? look.rotationPulseBeats : 2)) : 0
+    const loop = look.phaseBeats > 0 ? look.phaseBeats : 0
+    const shapeBeat = loop ? (look.phase || 0) + (((b % loop) + loop) % loop) : b
     const points = generateShape({
         shape: look.shape,
         size: clamp(look.size * cube.size * breathe, 0, 1),
         height: 0,
-        rotation: look.rotation,
+        rotation: look.rotation + rock,
         spin: (look.spin * bpm) / 60,
         time: seconds,
-        beat: b,
+        beat: shapeBeat,
         colour: look.colour,
         level,
         points: look.points,

@@ -26,14 +26,29 @@
     const CHANNEL_KEY = 'diShowDesk.midiChannel.v1'
 
     // ---- what a target is. A fader or a knob takes a continuous target; a button takes a press target.
-    const LIVE_KEYS = 'level|size|height|x|copies|rotation|spin|pulse|sweep|cycle|phase|pulseBeats|sweepBeats|points'
-    const RESET_KEYS = 'rotation|x|cycle|phase|pulseBeats|sweepBeats' // timing and place: none of them is a brightness
-    const CONT = `lamp:\\d{1,3}|size:\\d{1,3}|live:(?:${LIVE_KEYS})|light-master|laser-master`
+    const LIVE_KEYS = 'level|size|height|x|copies|rotation|spin|pulse|sweep|cycle|phase|pulseBeats|sweepBeats|points|rotationPulse|rotationPulseBeats|phaseBeats'
+    const RESET_KEYS = 'rotation|x|cycle|phase|pulseBeats|sweepBeats|rotationPulse|rotationPulseBeats|phaseBeats' // timing and place: none of them is a brightness
+    const CONT = `lamp:\\d{1,3}(?:\\+\\d{1,3})?|layer:(?:base|rhythm|accent|cue):level|fx:(?:depth|bpm|mode|spatial)|size:\\d{1,3}|live:(?:${LIVE_KEYS})|light-master|laser-master`
     const CONTINUOUS = new RegExp(`^(?:${CONT})$`)
-    const PRESS = new RegExp(`^(?:scene:(?:\\d{1,3}|next|prev)|blackout|reset:(?:${RESET_KEYS})|park:(?:${CONT}))$`)
+    const PRESS = new RegExp(`^(?:scene:(?:\\d{1,3}|next|prev)|blackout(?::lights)?|reset:(?:${RESET_KEYS})|park:(?:${CONT}))$`)
     const isContinuous = (t) => typeof t === 'string' && CONTINUOUS.test(t)
     const isPress = (t) => typeof t === 'string' && PRESS.test(t)
     const isTarget = (t) => t === 'spare' || isContinuous(t) || isPress(t)
+
+    // 2026-11-13 (the owner: "make them that we can't make the bad laser thing with the midi"): the K2 never reaches past these.
+    // A laser target the K2 turns is clamped to [min, max] whatever the controller sends (Learn rows too), and a laser target is
+    // IGNORED while every cube is stopped (the K2 never arms, resumes or raises a cube; that stays a person's Go on the laser page).
+    // PROVISIONAL numbers: the owner's laser person (dob-b3) fixes the real ones; midiMap.test.js holds them to this table.
+    const LASER_LIMITS = Object.freeze({
+        // 2026-11-13: size never 0 from the K2 (0.15 = MARK_MIN_SIZE): a size-0 picture is a still beam and stops the cube, then the K2 is ignored.
+        'live:level': [0, 1], 'live:size': [0.15, 1], 'live:height': [-1, 1], 'live:x': [-1, 1], 'live:copies': [0, 8],
+        'live:rotation': [-0.5, 0.5], 'live:spin': [-2, 2], 'live:pulse': [0, 1], 'live:pulseBeats': [0.25, 64], 'live:sweepBeats': [0.25, 64],
+        'live:rotationPulse': [0, 1], 'live:rotationPulseBeats': [0.25, 64], 'live:phaseBeats': [0, 64], // 2026-11-14 new moves
+        'laser-master': [0, 1]
+    })
+    const isLaserTarget = (t) => typeof t === 'string' && (t === 'laser-master' || /^live:/.test(t) || /^size:/.test(t) || /^park:(?:live:|laser-master|size:)/.test(t))
+    const laserLimit = (t) => LASER_LIMITS[t] || null
+    const clampLaser = (t, v) => { const l = LASER_LIMITS[t]; return l ? Math.min(l[1], Math.max(l[0], v)) : v }
 
     // One row of a map: {kind: 'cc'|'note', ch: 0..15 (the wire), num: 0..127, target, relative?}.
     const validRow = (m) => Boolean(m && (m.kind === 'cc' || m.kind === 'note') && Number.isInteger(m.ch) && m.ch >= 0 && m.ch < 16
@@ -42,32 +57,39 @@
 
     // "Reset" sets a live field to the laser desk's own default (laserDesk.js LOOK_DEFAULTS, which its state also serves as
     // `defaults`; the page prefers that, this copy is the fallback and midiMap.test.js keeps it equal).
-    const RESET_TO = Object.freeze({ rotation: 0, x: 0, cycle: 0, phase: 0, pulseBeats: 1, sweepBeats: 4 })
+    const RESET_TO = Object.freeze({ rotation: 0, x: 0, cycle: 0, phase: 0, pulseBeats: 1, sweepBeats: 4, rotationPulse: 0, rotationPulseBeats: 2, phaseBeats: 0 })
 
     // ---- the Xone:K2, control by control, in the order of its face: top encoders, the pots with their switches, the faders,
     // the switch matrix, the bottom row. `control` is the name midi/xone-k2.json gives it. A row is kept as the crew knew it
     // (2026-10-31) wherever one existed; the rest is new (2026-11-01).
     const cc = (control, num, target, relative = false) => ({ control, kind: 'cc', num, target, relative })
     const note = (control, num, target) => ({ control, kind: 'note', num, target, relative: false })
+    // 2026-11-13 (the owner, via the show lead: "make the mapping like that what turn and press it, the cool scene only, the one
+    // blackout button" and "use the full power of the K2 1.9 ... we don't have fader 4"): PRESS = the 15 matrix pads are scenes 0-14,
+    // pad P is the one Blackout, every other button is spare; TURN = three faders (A1, the pair A10+A20, the rhythm layer), every
+    // pot and encoder a job. Old rows (park, reset, scene next/prev, cube sizes) stay valid TARGETS for Learn, they are just not default.
+    const sp = (control, kind, num) => ({ control, kind, num, target: 'spare', relative: false })
+    // 2026-11-14 (the owner: "yes" to pot 3 = Rot. pulse, encoder 2 = Phase beats): Height and X left the K2 for the new
+    // moves; both stay on the page's XY pad and its faders, and Learn can put them back on any control.
     const K2 = Object.freeze([
-        cc('encoder 1', 0, 'live:rotation', true), cc('encoder 2', 1, 'live:x', true), cc('encoder 3', 2, 'live:cycle', true), cc('encoder 4', 3, 'live:phase', true),
-        note('encoder 1 push', 52, 'reset:rotation'), note('encoder 2 push', 53, 'reset:x'), note('encoder 3 push', 54, 'reset:cycle'), note('encoder 4 push', 55, 'reset:phase'),
-        cc('pot 1', 4, 'live:level'), cc('pot 2', 5, 'live:size'), cc('pot 3', 6, 'live:height'), cc('pot 4', 7, 'live:copies'),
-        note('pot switch 1', 48, 'park:live:level'), note('pot switch 2', 49, 'park:live:size'), note('pot switch 3', 50, 'park:live:height'), note('pot switch 4', 51, 'park:live:copies'),
-        cc('pot 5', 8, 'live:spin'), cc('pot 6', 9, 'live:pulse'), cc('pot 7', 10, 'live:sweep'), cc('pot 8', 11, 'laser-master'),
-        note('pot switch 5', 44, 'park:live:spin'), note('pot switch 6', 45, 'park:live:pulse'), note('pot switch 7', 46, 'park:live:sweep'), note('pot switch 8', 47, 'park:laser-master'),
-        cc('pot 9', 12, 'size:0'), cc('pot 10', 13, 'size:1'), cc('pot 11', 14, 'size:2'), cc('pot 12', 15, 'light-master'),
-        note('pot switch 9', 40, 'park:size:0'), note('pot switch 10', 41, 'park:size:1'), note('pot switch 11', 42, 'park:size:2'), note('pot switch 12', 43, 'park:light-master'),
-        // fader 4 is DEAD on the owner's K2 and is never mapped (N1653, 2026-10-31): its row stays listed, as `spare`, the way the first default map kept it
-        cc('fader 1', 16, 'lamp:0'), cc('fader 2', 17, 'lamp:1'), cc('fader 3', 18, 'lamp:2'), cc('fader 4', 19, 'spare'),
+        cc('encoder 1', 0, 'live:rotation', true), cc('encoder 2', 1, 'live:phaseBeats', true), cc('encoder 3', 2, 'fx:mode', true), cc('encoder 4', 3, 'fx:spatial', true),
+        note('encoder 1 push', 52, 'reset:rotation'), note('encoder 2 push', 53, 'reset:phaseBeats'), sp('encoder 3 push', 'note', 54), sp('encoder 4 push', 'note', 55),
+        cc('pot 1', 4, 'live:level'), cc('pot 2', 5, 'live:size'), cc('pot 3', 6, 'live:rotationPulse'), cc('pot 4', 7, 'live:copies'),
+        note('pot switch 1', 48, 'park:live:level'), note('pot switch 2', 49, 'park:live:size'), note('pot switch 3', 50, 'park:live:rotationPulse'), note('pot switch 4', 51, 'park:live:copies'),
+        cc('pot 5', 8, 'live:spin'), cc('pot 6', 9, 'layer:base:level'), cc('pot 7', 10, 'layer:accent:level'), cc('pot 8', 11, 'laser-master'),
+        note('pot switch 5', 44, 'park:live:spin'), note('pot switch 6', 45, 'park:layer:base:level'), note('pot switch 7', 46, 'park:layer:accent:level'), note('pot switch 8', 47, 'park:laser-master'),
+        cc('pot 9', 12, 'fx:depth'), cc('pot 10', 13, 'fx:bpm'), cc('pot 11', 14, 'live:pulse'), cc('pot 12', 15, 'light-master'),
+        note('pot switch 9', 40, 'park:fx:depth'), note('pot switch 10', 41, 'park:fx:bpm'), note('pot switch 11', 42, 'park:live:pulse'), note('pot switch 12', 43, 'park:light-master'),
+        // fader 4 is DEAD on the owner's K2 and is never mapped (N1653, 2026-10-31): its row stays listed, as `spare`
+        cc('fader 1', 16, 'lamp:0'), cc('fader 2', 17, 'lamp:1+2'), cc('fader 3', 18, 'layer:rhythm:level'), cc('fader 4', 19, 'spare'),
         note('matrix A', 36, 'scene:0'), note('matrix B', 37, 'scene:1'), note('matrix C', 38, 'scene:2'), note('matrix D', 39, 'scene:3'),
         note('matrix E', 32, 'scene:4'), note('matrix F', 33, 'scene:5'), note('matrix G', 34, 'scene:6'), note('matrix H', 35, 'scene:7'),
         note('matrix I', 28, 'scene:8'), note('matrix J', 29, 'scene:9'), note('matrix K', 30, 'scene:10'), note('matrix L', 31, 'scene:11'),
-        note('matrix M', 24, 'scene:12'), note('matrix N', 25, 'scene:13'), note('matrix O', 26, 'scene:14'), note('matrix P', 27, 'blackout'),
+        note('matrix M', 24, 'scene:12'), note('matrix N', 25, 'scene:13'), note('matrix O', 26, 'scene:14'), note('matrix P', 27, 'scene:15'),
         note('layer button', 12, 'scene:prev'),
         cc('encoder 5', 20, 'live:pulseBeats', true), note('encoder 5 push', 13, 'reset:pulseBeats'),
         cc('encoder 6', 21, 'live:sweepBeats', true), note('encoder 6 push', 14, 'reset:sweepBeats'),
-        note('exit setup button', 15, 'scene:next')
+        note('exit setup button', 15, 'blackout:lights') // 2026-11-13 (owner: "make exit setup blackout on mapping"): the second Blackout, same press as pad P; it only goes dark, lifting stays on the page
     ])
 
     // The map the page starts from: the K2 on its own channel, as plain rows (what Learn changes and Export map shows).
@@ -76,10 +98,22 @@
     // A stored map (Learn) is kept whole and wins; the default rows it does not hold are added after it, so a K2 control
     // that is new to the defaults works in a browser that stored its map before. A default row stays out when the stored map
     // already has a row for its target or one on its control. Stored `spare` rows are old defaults, not choices: they go.
+    // 2026-11-14: default rows the owner moved. Learn stores the WHOLE map, so a browser that ever learned keeps the old defaults;
+    // a stored row still on the OLD default of a moved K2 control follows the move. A row learned onto that control (any other
+    // target) stays the person's.
+    const MOVED = Object.freeze([
+        { kind: 'cc', num: 6, from: 'live:height', to: 'live:rotationPulse' }, { kind: 'note', num: 50, from: 'park:live:height', to: 'park:live:rotationPulse' },
+        { kind: 'cc', num: 1, from: 'live:x', to: 'live:phaseBeats' }, { kind: 'note', num: 53, from: 'reset:x', to: 'reset:phaseBeats' }
+    ])
+    const followMoves = (rows) => rows.map((m) => {
+        const mv = m && m.ch === K2_CHANNEL && MOVED.find((x) => x.kind === m.kind && x.num === m.num && x.from === m.target)
+        return mv ? { ...m, target: mv.to } : m
+    })
     const mergeMaps = (saved, defaults) => {
-        const out = (Array.isArray(saved) ? saved : []).filter((m) => m && m.target !== 'spare').map((m) => ({ ...m }))
+        const out = followMoves(Array.isArray(saved) ? saved : []).filter((m) => m && m.target !== 'spare').map((m) => ({ ...m }))
+        const stored = out.slice() // a target held by the STORED map keeps its default out; two default rows may share one (Blackout: pad P and Exit/Setup)
         for (const d of defaults) {
-            const heldTarget = d.target !== 'spare' && out.some((m) => m.target === d.target)
+            const heldTarget = d.target !== 'spare' && !d.target.startsWith('blackout') && stored.some((m) => m.target === d.target)
             const heldControl = out.some((m) => m.kind === d.kind && m.ch === d.ch && m.num === d.num)
             if (!heldTarget && !heldControl) out.push({ ...d })
         }
@@ -145,8 +179,11 @@
         if (target === 'light-master') return 'Lights master'
         if (target === 'laser-master') return 'Laser master'
         if (target === 'blackout') return 'Blackout all (dark only)'
+        if (target === 'blackout:lights') return 'Blackout lights (dark only, the laser keeps running)'
         if (target === 'spare') return 'Spare, no action'
-        if (kind === 'lamp') return `Lamp ${Number(rest) + 1} level`
+        if (kind === 'lamp') return rest.includes('+') ? `Lamps ${rest.split('+').map((n) => Number(n) + 1).join(' + ')} level together` : `Lamp ${Number(rest) + 1} level`
+        if (kind === 'layer') return `Layer ${rest.split(':')[0]} level`
+        if (kind === 'fx') return { depth: 'Effect depth', bpm: 'Effect speed (bpm)', mode: 'Effect mode (step)', spatial: 'Effect spread (step)' }[rest] || target
         if (kind === 'size') return `Cube ${Number(rest) + 1} size`
         if (kind === 'live') return `Live look: ${spaced(rest)}`
         if (kind === 'scene') return rest === 'next' ? 'Next scene' : rest === 'prev' ? 'Previous scene' : `Scene ${rest.padStart(2, '0')}`
@@ -157,5 +194,5 @@
     const sheet = () => K2.map((c) => ({ control: c.control, midi: `${c.kind === 'cc' ? 'CC' : 'note'} ${c.num}${c.relative ? ' (relative)' : ''}`, target: c.target, does: wordsOf(c.target) }))
     const sheetMarkdown = () => ['| Control | MIDI | Does |', '|---|---|---|', ...sheet().map((r) => `| ${r.control} | ${r.midi} | ${r.does} |`)].join('\n')
 
-    return { K2_CHANNEL, CHANNEL_KEY, CHANNEL_CHOICES, K2, RESET_TO, RESET_KEYS, isContinuous, isPress, isTarget, validRow, defaultMap, mergeMaps, channelOf, channelText, channelLabel, parse, find, heard, wordsOf, sheet, sheetMarkdown }
+    return { K2_CHANNEL, CHANNEL_KEY, CHANNEL_CHOICES, K2, RESET_TO, RESET_KEYS, isContinuous, isPress, isTarget, isLaserTarget, laserLimit, clampLaser, LASER_LIMITS, validRow, defaultMap, mergeMaps, channelOf, channelText, channelLabel, parse, find, heard, wordsOf, sheet, sheetMarkdown }
 })

@@ -61,7 +61,7 @@ const LOOK_DEFAULTS = Object.freeze({
     rainbow: false,
     level: 1,
     size: 0.45, // 0…1 of the field's half-width
-    height: 0.5, // the picture's centre up the field: 0.5 keeps a 0.45 picture inside the default keep-in zone (y ≥ 0)
+    height: 0, // the picture's centre up the field: 0 = field centre (the zone is the full -1..1; 0.5 at size 1 put half the picture outside, offPercent 58, 2026-11-13)
     x: 0, // the picture's centre across the field
     rotation: 0, // turns
     spin: 0, // turns per beat
@@ -74,6 +74,12 @@ const LOOK_DEFAULTS = Object.freeze({
     sweepBeats: 4,
     mirror: false, // every second cube mirrored (x → −x)
     phase: 0, // beats each cube runs behind the one before it (a chase across the cubes)
+    // 2026-11-14 (owner: "add rotation pulse, phase, phase beats"; he picked: the picture turns back and forth on the beat,
+    // and the shape's own motion loops): rotationPulse 0…1 turns the picture up to a quarter turn each way, once every
+    // rotationPulseBeats; phaseBeats > 0 plays the shape's own motion as a loop of that many beats, started at `phase`.
+    rotationPulse: 0,
+    rotationPulseBeats: 2,
+    phaseBeats: 0, // 0 = off: the shape moves as it always did
     cubes: 'all', // 'all' or the cube ids this look draws on; the others are held dark
     // The light scene this look follows (sceneLink.js): null = never set (the first fill may set it), '' = none, else the
     // scene's id. A setting of the desk, not part of the picture: it is left out of samePicture and Save never copies it.
@@ -149,6 +155,9 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
         sweepBeats: clamp(num(pick('sweepBeats'), 4), 0.25, 64),
         mirror: bool(pick('mirror')),
         phase: clamp(num(pick('phase'), 0), 0, 16),
+        rotationPulse: clamp(num(pick('rotationPulse'), 0), 0, 1),
+        rotationPulseBeats: clamp(num(pick('rotationPulseBeats'), 2), 0.25, 64),
+        phaseBeats: clamp(num(pick('phaseBeats'), 0), 0, 64),
         cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all',
         follows: followsOf(pick('follows'))
     }
@@ -215,6 +224,10 @@ const SEED_LOOKS = [
     { id: 'lines', name: 'Lines', shape: 'lines', colour: '#ff2030', size: 0.5 },
     { id: 'spots', name: 'Spots', shape: 'spots', colour: '#ffb020', size: 0.5 },
     { id: 'wobble', name: 'Wobble', shape: 'wobble', colour: '#20d8ff', size: 0.5 },
+    // 2026-11-13, the owner: "vertical lines going down", "wobble ones", "one line in the middle and lines going from there like light points".
+    { id: 'rain', name: 'Rain', shape: 'rain', colour: '#20d8ff', size: 0.9 },
+    { id: 'curtain', name: 'Curtain', shape: 'curtain', colour: '#ff30c0', size: 0.9 },
+    { id: 'rays', name: 'Rays', shape: 'rays', colour: '#ffffff', size: 0.9 },
     // 2026-10-30: "more scenes like complex ones but minimalistic lines circle dots". Scenes plays five of them in turn,
     // four bars each.
     { id: 'planets', name: 'Planets', shape: 'planets', colour: '#20d8ff', size: 0.5, points: 400 },

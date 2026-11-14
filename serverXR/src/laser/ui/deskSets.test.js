@@ -344,7 +344,8 @@ describe('the sets shipped with the page', () => {
             expect(new Set(lookIds).size, f).toBe(lookIds.length)
             for (const l of set.looks) {
                 expect(l.id, f).toMatch(/^[A-Za-z0-9_-]{1,40}$/)
-                expect(normaliseLook(l), `${f} ${l.id}`).toEqual(l)
+                // a set written before 2026-11-14 has no rotation pulse / phase beats: the desk fills them in off, the picture is the same
+                expect(normaliseLook(l), `${f} ${l.id}`).toEqual({ ...l, rotationPulse: l.rotationPulse ?? 0, rotationPulseBeats: l.rotationPulseBeats ?? 2, phaseBeats: l.phaseBeats ?? 0 })
             }
         }
     })

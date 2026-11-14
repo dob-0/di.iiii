@@ -18,7 +18,7 @@
   --track: 4px;        /* a fader's drawn track; the input stays the hit area */
   --scenes-h: 80px;    /* one row of scene keys: number, name (two lines at most), look; more scenes scroll in the row, never the page */
   --live-h: 238px;     /* the live strip: colours (40), shapes in two rows (2 x 36 + 3), the effects and knobs grid (3 x 34); the XY pad */
-  --bank-min: 268px;   /* the least the fader bank is given */
+  --bank-min: 298px;   /* the least the fader bank is given (268 until 2026-11-14; three 58px lamp rows) */
   --bank-max: 1fr;     /* the bank takes the rest of the screen, in both densities; Rows needs --bank-min of it */
   --links-h: 60px;     /* the bottom line: 46 px of links and MIDI controls, and under them the In line's row (--in-h) */
   --in-h: 14px;        /* the In line, the last MIDI message: a row of its own, as wide as the bar */
@@ -132,15 +132,23 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
 .scenebtn.is-edited { outline: 2px dashed var(--warn); outline-offset: -2px; }
 
 /* ---- the live strip: the live laser look under the fingers. One grid of five equal columns: the colours and the shapes
-   across it, then Pulse Sweep Spin Cycle Mirror · Level Size Copies Rotation BPM · Phase Pulse-beats Sweep-beats Points Tap */
+   across it (the soft colours a second row), then Pulse Sweep Spin Cycle Mirror · Level Size Copies Rotation BPM · Phase Pulse-beats Sweep-beats
+   Points Tap · Rot.-pulse Rot.-pulse-beats Phase-beats */
 .livestrip { display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 8px; padding: 2px 8px; min-height: 0; overflow: hidden; border-bottom: 1px solid var(--line); }
-.liveleft { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: var(--pad) var(--shapes-h) repeat(3, var(--row)); gap: 4px; align-content: start; min-width: 0; min-height: 0; }
-.liveleft > .liverow:first-child, .liveleft > .shapes { grid-column: 1 / -1; }
+.liveleft { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: var(--pad) var(--pad) var(--shapes-h) repeat(4, var(--row)); gap: 4px; align-content: start; min-width: 0; min-height: 0; }
+.liveleft > .liverow:first-child, .liveleft > .softrow, .liveleft > .shapes { grid-column: 1 / -1; }
+/* 2026-11-14: the soft row (amber + a very light palette) under the bright one; the fourth knob row: Rot. pulse, its beats, Phase beats */
+.liveleft > .softrow { height: var(--pad); }
 .liveleft > .effects, .liveleft > .faders { display: contents; }
 .liverow { display: flex; align-items: center; gap: 4px; min-width: 0; height: var(--target); }
 .liverow:first-child { height: var(--pad); }
 .liverow .grow { flex: 1 1 auto; }
 .colours { display: flex; gap: 4px; }
+/* 2026-11-13: the + after the swatches opens the colour picker; its input sits hidden right behind it so the picker opens there */
+.pickpad { font-size: 22px; font-weight: 600; min-width: var(--pad); }
+.savedcolours { display: contents; }
+.savepad { white-space: nowrap; }
+.pickinput { flex: 0 0 1px; width: 1px; min-width: 1px; height: var(--pad); margin-left: -5px; padding: 0; border: 0; opacity: 0; }
 .pad { min-height: var(--target); padding: 0 10px; border: 1px solid var(--line); border-radius: 0; background: var(--field); color: var(--text); font-size: 13px; white-space: nowrap; }
 .pad.is-on { box-shadow: inset 0 0 0 3px var(--text); }
 .pad:disabled { opacity: .45; }
@@ -154,13 +162,14 @@ body.showdesk .liftbtn { width: var(--lift-w); height: var(--lift-h); min-height
 .effects .effectpad { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0; width: 76px; height: var(--row); min-height: var(--row); padding: 0 6px; line-height: 1.1; font-size: var(--fx-font); }
 .effectpad .val { font: 500 11px var(--mono); color: var(--muted); text-align: right; }
 .effects .effect input { width: 100%; min-width: 0; }
+#liveRowC .effect { grid-template-columns: 118px minmax(0, 1fr); } #liveRowC .effectpad { width: 118px; } /* "Rot. pulse 50%" fits */
 .effects > .effectpad { width: auto; justify-content: center; }
 .hfader { display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: 1fr 1fr; column-gap: 4px; align-items: center; min-width: 0; height: var(--row); }
 .hfader span { grid-column: 1; grid-row: 1; align-self: end; font-size: var(--knob-font); line-height: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hfader .val { grid-column: 1; grid-row: 2; align-self: start; font: 500 12px var(--mono); line-height: 14px; color: var(--text); text-align: right; }
 .hfader input { grid-column: 2; grid-row: 1 / -1; width: 100%; min-width: 0; }
-.liveleft .bpmfader { grid-row: 4; grid-column: 5; }
-.liveleft #tapBtn { grid-row: 5; grid-column: 5; height: var(--row); min-height: var(--row); padding: 0 8px; }
+.liveleft .bpmfader { grid-row: 5; grid-column: 5; }
+.liveleft #tapBtn { grid-row: 6; grid-column: 5; height: var(--row); min-height: var(--row); padding: 0 8px; }
 .actbtn { flex: none; padding: 0 14px; }
 .liveright { display: flex; flex-direction: column; gap: 4px; min-height: 0; }
 .livename { margin: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 18px; flex: none; }
@@ -267,7 +276,7 @@ body.showdesk[data-density="compact"] {
    rules above) is the same page with body[data-bank="upright"]. Tokens first (Touch here, Compact at the end of this block). */
 :root {
   --bank-gap: 4px;       /* between the rows of the bank */
-  --lamp-row: 48px;      /* one lamp's row */
+  --lamp-row: 58px;      /* one lamp's row (48 until 2026-11-14: two lines of colour pads, bright and soft, need 58) */
   --lamp-head-w: 148px;  /* its swatch, name and patch line */
   --lamp-val-w: 48px;    /* its level */
   --row-pad: 32px;       /* a lamp's colour pad in its row */
@@ -312,8 +321,11 @@ body.showdesk[data-bank="rows"] .lamp.strip {
 }
 body.showdesk[data-bank="rows"] .lamp .who { padding-right: 0; }
 body.showdesk[data-bank="rows"] .lamp .val { position: static; text-align: right; }
-body.showdesk[data-bank="rows"] .lampcolours { grid-template-columns: none; grid-template-rows: var(--row-pad); grid-auto-flow: column; grid-auto-columns: var(--row-pad); gap: 3px; justify-content: end; }
-body.showdesk[data-bank="rows"] .lampcolours .swatch { width: var(--row-pad); height: var(--row-pad); min-height: var(--row-pad); }
+body.showdesk[data-bank="rows"] .lampcolours { grid-template-columns: repeat(12, var(--lamp-sw)); grid-auto-rows: var(--lamp-sw); grid-auto-flow: row; gap: 3px; justify-content: end; align-content: center; }
+/* 2026-11-14: 12 bright swatches on the first line, the soft row (amber + 7 pastels) under them, as on the live strip; one line of 20
+   pushed the last 3 out of the strip at 1278 px. Two lines fit the strip's height (its 4 px padding each side, a 3 px gap): 26.5 px at 64. */
+body.showdesk[data-bank="rows"] { --lamp-sw: max(22px, calc((var(--lamp-row) - 11px) / 2)); }
+body.showdesk[data-bank="rows"] .lampcolours .swatch { width: var(--lamp-sw); height: var(--lamp-sw); min-height: var(--lamp-sw); }
 /* the lamp's colour monitor at row size: its swatch is a 22 px tab as high as the row (it was 22 x 22); the colour is show.js's, unchanged */
 body.showdesk[data-bank="rows"] .lamp .striphead { align-self: stretch; }
 body.showdesk[data-bank="rows"] .lamp .striphead > .swatch { align-self: stretch; height: auto; min-height: 0; }
@@ -361,3 +373,45 @@ body.showdesk[data-bank="rows"] .cubecard .sizestrip > b { font: 500 12px var(--
 .livestrip .colourpad { flex: 1 1 var(--pad); width: auto; min-width: var(--pad); }
 .liverow:first-child .togglepad { flex: 0 0 auto; }
 .links > .muted { margin-left: auto; }
+/* ---- 2026-11-13 gap fix (owner: the scene keys and colour row were cut off on the stage screen, 1278 x 766 logical).
+   Before: all scenes sat in ONE row that scrolled sideways (11 of 26 visible, a fat scrollbar over the keys) and the page ended
+   146 px short of the window. Now: the scene keys wrap into as many rows as the scenes need, up to the room the screen has
+   (Compact 168 px = 3 rows, Touch 150 px = 2 rows, more scroll down, never sideways), and a key's look line stops short of its colour dots. */
+body.showdesk { --scenes-h: minmax(80px, 150px); }
+body.showdesk[data-density="compact"] { --scenes-h: minmax(62px, 168px); }
+.showscenes .scenegrid {
+  grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); grid-auto-rows: var(--scene-btn-h);
+  max-height: none; overflow-x: hidden; overflow-y: auto; align-content: start; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+.showscenes .scenebtn .scenelook { max-width: calc(100% - 40px); overflow: hidden; }
+/* A short screen in Touch (the stage window is 766 px high): the keys take Compact's 52 px height, two rows, so the fader bank keeps the
+   height it needs (the cube's On / Off stay on screen). */
+@media (max-height: 800px) { body.showdesk[data-density="touch"] { --scenes-h: minmax(62px, 114px); --scene-btn-h: 52px; --scene-dir: row; --scene-wrap: nowrap; --scene-cut: ellipsis; --scene-text-h: 15px; --scene-text-flex: 0 1 auto; --look-font: 10px; --dots-top: auto; --dots-bottom: 6px; --preview-w: 132px; --preview-grow: 0; --preview-ar: 132 / 100; } }
+/* ---- 2026-11-13 BIG scenes and laser (owner: "all scenes small now fix that", "i mean the lasers"; readable from a distance, touch size).
+   The first 15 scenes (= the K2's pads A-O) are big tiles: 5 columns, one per act of three, 3 rows, the act in a colour; the later scenes
+   wait behind "More scenes". The laser area (shape chips, live sliders, preview, the cube's On / Off) gets touch size; the page scrolls down
+   when the stage window is short, never sideways. */
+body.showdesk { --act-0: var(--accent); --act-1: var(--warn); --act-2: var(--danger); --act-3: #7a20ff; --act-4: #f0eaff; /* the page's own tokens + two palette swatches: no new colour */ }
+.showscenes .panehead { display: flex; align-items: center; gap: 12px; }
+.showscenes #scenesMore { margin-left: auto; min-height: 40px; padding: 0 16px; font-size: 14px; }
+.showscenes .scenegrid:not(.show-more) { display: grid; grid-auto-flow: column; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(3, 58px); gap: 6px; max-height: none; overflow: visible; }
+.showscenes .scenegrid:not(.show-more) .scenebtn.scene-more { display: none; }
+.showscenes .scenegrid.show-more { grid-auto-flow: row; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 58px; max-height: 190px; overflow-y: auto; }
+.showscenes .scenebtn { min-height: 58px; border-left: 6px solid var(--line); }
+.showscenes .scenebtn .scenename { font-size: 17px; font-weight: 600; }
+.showscenes .scenebtn .scenelook { font-size: 12px; }
+.showscenes .scenebtn.act-0 { border-left-color: var(--act-0); } .showscenes .scenebtn.act-1 { border-left-color: var(--act-1); }
+.showscenes .scenebtn.act-2 { border-left-color: var(--act-2); } .showscenes .scenebtn.act-3 { border-left-color: var(--act-3); } .showscenes .scenebtn.act-4 { border-left-color: var(--act-4); }
+.showscenes .scenebtn.is-lights { outline: 3px solid var(--accent); outline-offset: -3px; background: color-mix(in srgb, var(--accent) 22%, transparent); }
+/* the laser side: bigger touch targets (the density variables the page already reads) */
+body.showdesk, body.showdesk[data-density="compact"], body.showdesk[data-density="touch"] { --shape-h: 44px; --shape-font: 15px; --pad: 46px; --row: 44px; --target: 44px; --fx-font: 15px; --live-h: auto; --shapes-h: auto; --scenes-h: auto; --bank-max: none; }
+/* every shape pad on screen: the strip takes as many rows as the shapes need (47 = 4 rows at the 1278 px stage window); a fixed two rows
+   hid 13 of them under the fold of the strip (2026-11-14) */
+.livestrip input[type=range] { height: 32px; }
+.livestrip input[type=range]::-webkit-slider-thumb { width: 28px; height: 28px; }
+.cubecard .cubeon, .cubecard .cubeoff { min-height: 60px; font-size: 22px; font-weight: 700; }
+.cubecard .cubename b { font-size: 18px; } .cubecard .cubestate { font-size: 20px; }
+.livestrip .effect button, .livestrip .actbtn, .livestrip .togglepad { min-height: 44px; font-size: 15px; }
+html, body.showdesk { height: auto; min-height: 100vh; overflow-y: auto; overflow-x: hidden; }
+body.showdesk { grid-template-rows: var(--top-h) auto auto auto var(--links-h); }
+.showbank { min-height: 300px; }

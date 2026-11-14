@@ -111,6 +111,7 @@ const refresh = () => window.DiShowDesk.refresh()
 const settle = () => sleep(120) // a press's posts, its tick and a fader's 50 ms send
 const press = async (node) => { node.click(); await settle() }
 const key = (k, init = {}, target = document) => target.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init }))
+const LIGHTS_DARK = [{ url: '../light/api/master', body: { blackout: true } }]
 const DARK = [{ url: '../light/api/master', body: { blackout: true } }, { url: '../laser/desk/api/blackout', body: { on: true } }]
 const LIFT_LIGHTS = { url: '../light/api/master', body: { blackout: false } }
 const LIFT_LASER = { url: '../laser/desk/api/blackout', body: { on: false } }
@@ -495,6 +496,19 @@ describe('one screen, 1278 x 758, no page scroll', () => {
     })
 })
 
+// Every shape pad on screen (2026-11-14): the strip was held at two rows (--shapes-h: 92px) and, with 47 shapes, 13 of them sat
+// in a third row the strip cut off at the 1278 px stage window. Measured in a browser: before 13 cut, after 0 (3 rows, 138 px).
+describe('every shape pad is on screen', () => {
+    const css = fs.readFileSync(path.join(UI, 'show.css'), 'utf8')
+    it('the laser side lets the shape strip take the rows its shapes need, in every density', () => {
+        const laserSide = css.match(/body\.showdesk, body\.showdesk\[data-density="compact"\], body\.showdesk\[data-density="touch"\] \{([^}]*)\}/)
+        expect(laserSide).not.toBeNull()
+        expect(laserSide[1]).toMatch(/--shapes-h:\s*auto;/)
+        expect(laserSide[1]).toMatch(/--live-h:\s*auto;/) // the live strip grows with it; the page scrolls down, never sideways
+        expect(css).toMatch(/\.shapes \{[^}]*flex-wrap:\s*wrap;[^}]*height:\s*auto;/)
+    })
+})
+
 // Two densities (the owner, 2026-10-31 20:5x, at the stage Mac with a mouse: "fix the UI, it is huge … it's not the touch
 // screen"): Touch keeps the sizes above; Compact is one block of tokens on body[data-density="compact"]; the switch is the
 // only logic. The real fit is measured in a browser at 1278 x 758 and 1280 x 700 (the session note has the numbers).
@@ -730,6 +744,98 @@ describe('the live strip plays the live look with the laser desk\'s own looks/ed
             { id: 'ring', colour: '#7a20ff', rainbow: false }, { id: 'ring', shape: 'spots' }, { id: 'ring', pulse: 0 }, { id: 'ring', pulse: 0.3 }, { id: 'ring', mirror: true }
         ])
     })
+    it('the + opens the colour picker (owner 2026-11-13: instead of Rainbow); a pick posts its colour, and a colour off the row lights the +', async () => {
+        expect($('liveRainbow')).toBeNull()
+        expect($('livePlus').textContent).toBe('+')
+        const pick = $('livePick')
+        expect(pick.type).toBe('color')
+        await press($('livePlus'))
+        pick.value = '#123456'
+        pick.dispatchEvent(new Event('input'))
+        await settle()
+        expect(edits().at(-1)).toEqual({ id: 'ring', colour: '#123456', rainbow: false })
+        expect($('livePlus').classList.contains('is-on')).toBe(true)
+    })
+    it('Save colour keeps a picked colour in the row (this browser); its swatch sets it; a right-click removes it (owner 2026-11-13)', async () => {
+        expect($('liveSaveColour').disabled).toBe(true) // the live colour is on the row already
+        const pick = $('livePick')
+        pick.value = '#123456'
+        pick.dispatchEvent(new Event('input'))
+        await settle()
+        expect($('liveSaveColour').disabled).toBe(false)
+        await press($('liveSaveColour'))
+        const saved = document.querySelector('#liveSaved .colourpad[data-colour="#123456"]')
+        expect(saved).not.toBeNull()
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.savedColours.v1'))).toEqual(['#123456'])
+        expect($('liveSaveColour').disabled).toBe(true) // saved: nothing more to save
+        await press(document.querySelector('.colourpad[data-colour="#ff0000"]'))
+        await press(document.querySelector('#liveSaved .colourpad[data-colour="#123456"]'))
+        expect(edits().at(-1)).toEqual({ id: 'ring', colour: '#123456', rainbow: false })
+        document.querySelector('#liveSaved .colourpad').dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+        expect(document.querySelector('#liveSaved .colourpad')).toBeNull()
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.savedColours.v1'))).toEqual([])
+    })
+    it('Delete colour takes the live colour off the row: a saved one goes, a built-in hides until Show all; the look keeps its colour (owner 2026-11-14)', async () => {
+        window.localStorage.removeItem('diShowDesk.savedColours.v1')
+        await press(document.querySelector('.colourpad[data-colour="#ff0000"]'))
+        // a built-in is hidden, never lost: Show all brings it back
+        expect($('liveDeleteColour').disabled).toBe(false)
+        expect($('liveShowAll').style.display).toBe('none')
+        await press($('liveDeleteColour'))
+        expect(document.querySelector('#liveColours > .colourpad[data-colour="#ff0000"]').style.display).toBe('none')
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.hiddenColours.v1'))).toEqual(['#ff0000'])
+        expect($('liveShowAll').style.display).toBe('')
+        await press($('liveShowAll'))
+        expect(document.querySelector('#liveColours > .colourpad[data-colour="#ff0000"]').style.display).toBe('')
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.hiddenColours.v1'))).toEqual([])
+        const pick = $('livePick')
+        pick.value = '#abcdef'
+        pick.dispatchEvent(new Event('input'))
+        await settle()
+        await press($('liveSaveColour'))
+        expect($('liveDeleteColour').disabled).toBe(false) // the live colour is the saved one
+        const before = edits().length
+        await press($('liveDeleteColour'))
+        expect(document.querySelector('#liveSaved .colourpad[data-colour="#abcdef"]')).toBeNull()
+        expect(JSON.parse(window.localStorage.getItem('diShowDesk.savedColours.v1'))).toEqual([])
+        expect(edits().length).toBe(before) // nothing sent: the laser keeps its colour
+        expect($('liveDeleteColour').disabled).toBe(true)
+        expect($('liveSaveColour').disabled).toBe(false) // it can be saved again
+        expect(document.querySelectorAll('#liveColours > .colourpad').length).toBe(12)
+    })
+    it('the soft row: amber and a very light palette under the bright row, on the live look and on every lamp row; Delete colour hides one (owner 2026-11-14)', async () => {
+        const soft = ['#ff7e00', '#ffd8a8', '#ffc8a0', '#ffc0d0', '#d8c8ff', '#c0e0ff', '#c0ffe0', '#fff4b0']
+        expect([...document.querySelectorAll('#liveSoft > .colourpad')].map((b) => b.dataset.colour)).toEqual(soft)
+        let lampRows = 0
+        for (const row of document.querySelectorAll('.lampcolours')) {
+            const cs = [...row.querySelectorAll('.swatch')].map((b) => b.dataset.colour)
+            if (!cs.length) continue // a lamp with no colour channels has no colours at all
+            lampRows += 1
+            expect(cs.slice(-8)).toEqual(soft) // the lamps play the same palette as the laser (lights and laser are one scene)
+        }
+        expect(lampRows).toBeGreaterThan(0)
+        const before = edits().length
+        await press(document.querySelector('#liveSoft .colourpad[data-colour="#ffc0d0"]'))
+        expect(edits().slice(before).some((b) => b.colour === '#ffc0d0' && b.rainbow === false)).toBe(true)
+        expect(document.querySelector('#liveSoft .colourpad[data-colour="#ffc0d0"]').classList.contains('is-on')).toBe(true)
+        expect($('livePlus').classList.contains('is-on')).toBe(false) // a soft colour is on the row, not a + colour
+        await press($('liveDeleteColour'))
+        expect(document.querySelector('#liveSoft > .colourpad[data-colour="#ffc0d0"]').style.display).toBe('none')
+        await press($('liveShowAll'))
+        expect(document.querySelector('#liveSoft > .colourpad[data-colour="#ffc0d0"]').style.display).toBe('')
+    })
+    it('the fourth knob row: Rot. pulse (a pad and its depth), Rot. pulse beats and Phase beats post the live look (owner 2026-11-14)', async () => {
+        for (const k of ['rotationPulse', 'rotationPulseBeats', 'phaseBeats']) expect(document.querySelector(`#liveRowC input[data-midi="live:${k}"]`), k).not.toBeNull()
+        expect(document.querySelector('#liveRowC [data-effect="rotationPulse"]')).not.toBeNull()
+        const before = edits().length
+        await press(document.querySelector('#liveRowC [data-effect="rotationPulse"]'))
+        expect(edits().slice(before).some((b) => b.rotationPulse === 0.5)).toBe(true) // off → on at its start depth
+        const input = document.querySelector('#liveRowC input[data-midi="live:phaseBeats"]')
+        input.value = '2'
+        input.dispatchEvent(new Event('input'))
+        await settle()
+        expect(edits().slice(before).some((b) => b.phaseBeats === 2)).toBe(true)
+    })
     it('the XY pad posts x and height of the live look, throttled, the last place wins', async () => {
         const pad = $('xyPad')
         pad.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 200, right: 200, bottom: 200 })
@@ -799,22 +905,43 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         expect(map.find((m) => m.target === 'lamp:0')).toMatchObject({ kind: 'cc', ch: 14, num: num('fader 1') })
         expect(map.find((m) => m.target === 'live:rotation')).toMatchObject({ kind: 'cc', ch: 14, num: num('encoder 1'), relative: true })
     })
-    it('a fader picks up: nothing moves or posts until the control passes the screen\'s value, then it follows', async () => {
+    it('pot 12 (lights master) is direct (owner 2026-11-13): bottom 0, top 255, no pick-up', async () => {
         midi(0xbe, 15, 0)
-        midi(0xbe, 15, 40)
         await settle()
-        expect(posts).toEqual([])
-        expect($('lightMaster').value).toBe('255')
+        expect(posts.at(-1)).toEqual({ url: '../light/api/master', body: { master: 0 } })
         midi(0xbe, 15, 127)
         await settle()
+        expect(posts.at(-1)).toEqual({ url: '../light/api/master', body: { master: 255 } })
         midi(0xbe, 15, 100)
         await settle()
         expect(posts.at(-1)).toEqual({ url: '../light/api/master', body: { master: 201 } })
     })
-    it('a pot on the live look picks up too, then posts looks/edit with the live id', async () => {
-        midi(0xbe, 4, 0) // level is 1 on the screen: a pot at 0 waits
+    it('faders 1-3 are direct: a sweep 0..127 with the slider pulled back by the server gives the full 0..255 and 0..1', async () => {
+        const lamp = lampRow('f2').querySelector('input')
+        for (const v of [0, 20, 40, 60, 80, 100, 127]) {
+            midi(0xbe, 17, v)
+            await settle()
+            lamp.value = '46' // the server's state re-rendered the slider (scene recall, echo)
+        }
+        const levels = posts.filter((p) => /light\/api\/fixtures?/.test(p.url) || p.body.level !== undefined || p.body.values).map((p) => JSON.stringify(p.body))
+        expect(levels.length).toBeGreaterThan(5)
+        expect(levels.join(' ')).toMatch(/255/)
+        expect(levels[levels.length - 1]).toMatch(/255/)
+    })
+    it('K2 pot 2 (laser size) never sends a size below 0.15, even turned all the way down', async () => {
+        midi(0xbe, 5, 127)
         await settle()
-        expect(posts).toEqual([])
+        midi(0xbe, 5, 0)
+        await settle()
+        const sizes = posts.filter((p) => p.url === '../laser/desk/api/looks/edit').map((p) => p.body.size).filter((v) => v !== undefined)
+        expect(sizes.length).toBeGreaterThan(0)
+        expect(Math.min(...sizes)).toBeGreaterThanOrEqual(0.15)
+        expect(sizes.at(-1)).toBe(0.15)
+    })
+    it('a pot on the live look is direct and posts looks/edit with the live id', async () => {
+        midi(0xbe, 4, 0) // level is 1 on the screen: a pot at 0 sets 0 at once
+        await settle()
+        expect(posts.filter((p) => p.url === '../laser/desk/api/looks/edit').at(-1)).toEqual({ url: '../laser/desk/api/looks/edit', body: { id: 'ring', level: 0 } })
         midi(0xbe, 4, 127)
         midi(0xbe, 4, 64)
         await settle()
@@ -825,10 +952,14 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         await settle()
         expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
     })
-    it('the Blackout button (matrix P) sends only the two dark routes', async () => {
+    it('the K2 Blackout (EXIT SETUP) darkens only the lights; matrix P is scene 16 and never goes dark', async () => {
+        midi(0x9e, 15, 127)
+        await settle()
+        expect(posts).toEqual(LIGHTS_DARK)
+        posts.length = 0
         midi(0x9e, 27, 127)
         await settle()
-        expect(posts).toEqual(DARK)
+        expect(posts.filter((p) => p.body.blackout || p.body.on)).toEqual([]) // the fixture has no 16th scene: pad P is a scene or nothing, never a blackout
     })
     it('no MIDI message of any kind, channel, number or value reaches On, Off, a lift, Undo, Save or Release', async () => {
         desk.blackout = true
@@ -848,17 +979,17 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         await press($('midiLearn'))
         $('lightMaster').dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
         $('lightMaster').dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
-        midi(0x9e, 27, 127)
+        midi(0x9e, 15, 127)
         await settle()
-        expect(posts).toEqual(DARK)
+        expect(posts).toEqual(LIGHTS_DARK)
         const sceneKey = document.querySelector('[data-midi^="scene:"]')
         if (sceneKey) {
             sceneKey.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
             sceneKey.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
-            midi(0x9e, 27, 127)
+            midi(0x9e, 15, 127)
             await settle()
         }
-        expect(window.DiShowDesk.midiMap().filter((m) => m.kind === 'note' && m.ch === 14 && m.num === 27).map((m) => m.target)).toEqual(['blackout'])
+        expect(window.DiShowDesk.midiMap().filter((m) => m.kind === 'note' && m.ch === 14 && m.num === 15).map((m) => m.target)).toEqual(['blackout:lights'])
         expect(posts.filter((p) => p.url === '../light/api/scenes/recall')).toEqual([])
         await press($('midiLearn')) // leave Learn mode, so the next test starts clean
     })
@@ -893,11 +1024,13 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         expect($('midiIn').title.split('\n')[0]).toBe(heardLine()) // the whole message is also the tooltip, so a cut line can still be read
         expect($('midiIn').title).toContain('The last MIDI message the page heard') // and the tooltip still says what the line is
     })
-    it('a pot on another channel follows with pick-up as ever; a number the map does not hold says unmapped', async () => {
-        midi(0xb3, 4, 0) // level is 1 on the screen: a pot at 0 waits
+    it('a pot on another channel is direct (owner 2026-11-13): at 0 the level is 0 at once, at the top it is 1; a number the map does not hold says unmapped', async () => {
+        midi(0xb3, 4, 0) // level is 1 on the screen: a pot at 0 sets 0, no pick-up
         await settle()
-        expect(posts).toEqual([])
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0 })
         midi(0xb3, 4, 127)
+        await settle()
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 1 })
         midi(0xb3, 4, 64)
         await settle()
         expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
@@ -920,14 +1053,14 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         expect(window.DiShowDesk.midiChannel()).toBe('any')
         expect(window.localStorage.getItem('diShowDesk.midiChannel.v1')).toBe('any')
     })
-    it('on a picked channel, Blackout all answers on that channel only (dark only, as ever)', async () => {
+    it('on a picked channel, the K2 Blackout answers on that channel only (dark only, as ever)', async () => {
         pickChannel('3')
-        midi(0x95, 27, 127) // channel 6: not heard
+        midi(0x95, 15, 127) // channel 6: not heard
         await settle()
         expect(posts).toEqual([])
-        midi(0x92, 27, 127) // channel 3
+        midi(0x92, 15, 127) // channel 3
         await settle()
-        expect(posts).toEqual(DARK)
+        expect(posts).toEqual(LIGHTS_DARK)
         pickChannel('any')
     })
     it('the In line is lit for 300 ms after a message and then dark; with no port it says so, with one it names it', async () => {
@@ -956,32 +1089,46 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         await settle()
         expect(editPosts().at(-1).body).toEqual({ id: 'ring', pulseBeats: 2 })
     })
-    it('a switch under a pot parks it: the pot moves nothing until it passes the screen\'s value again', async () => {
+    it('a stopped cube: the K2 laser pots and encoders are ignored and say so; the lights pot still works; a running cube takes them again (2026-11-13)', async () => {
+        desk.cubes = desk.cubes.map((c) => ({ ...c, engineDark: 'stopped' }))
+        await refresh()
+        posts = []
+        midi(0xbe, 4, 127)
+        midi(0xbe, 4, 64) // pot 1: laser level
+        await settle()
+        expect(editPosts()).toEqual([])
+        expect($('midiLine').textContent).toContain('live:level ignored: the cube is stopped')
+        desk.cubes = desk.cubes.map((c) => ({ ...c, engineDark: null }))
+        await refresh()
+        midi(0xbe, 4, 127)
+        midi(0xbe, 4, 64)
+        await settle()
+        expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
+    })
+    it('a switch under a pot no longer parks it (owner 2026-11-13: every pot is direct): the next turn sets the knob\'s own place', async () => {
         midi(0xbe, 4, 127)
         midi(0xbe, 4, 64)
         await settle()
         expect(editPosts().at(-1).body).toEqual({ id: 'ring', level: 0.5 })
         posts = []
-        midi(0x9e, 48, 127) // pot switch 1: park the level
-        expect($('midiLine').textContent).toContain('live:level parked')
+        midi(0x9e, 48, 127) // pot switch 1
+        expect($('midiLine').textContent).toContain('live:level is direct')
         midi(0xbe, 4, 90)
         await settle()
-        expect(editPosts()).toEqual([])
-        expect($('midiLine').textContent).toContain('live:level waits until it passes the screen')
-        midi(0xbe, 4, 50) // across the screen's value: it follows again
-        await settle()
-        expect(editPosts().at(-1).body.level).toBeCloseTo(50 / 127, 2)
+        expect(editPosts().at(-1).body.level).toBeCloseTo(90 / 127, 2)
     })
-    it('the two bottom corners step the scenes from the lit one, never past the ends', async () => {
-        midi(0x9e, 15, 127) // exit setup button: next, from Warm to Blue
+    it('pot 2 (size) at the bottom is the 0.15 floor, never 0; at the top it is 1 (owner 2026-11-13: "knob need max")', async () => {
+        midi(0xbe, 5, 0)
         await settle()
-        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+        expect(editPosts().at(-1).body.size).toBeCloseTo(0.15, 2)
+        midi(0xbe, 5, 127)
+        await settle()
+        expect(editPosts().at(-1).body.size).toBe(1)
+    })
+    it('the layer button steps back one scene from the lit one, never past the start (2026-11-13: the Exit/Setup button is a Blackout now)', async () => {
         light.activeScene = 'dark'
         await refresh()
         posts = []
-        midi(0x9e, 15, 127) // next at the last scene: nothing
-        await settle()
-        expect(posts).toEqual([])
         midi(0x9e, 12, 127) // layer button: previous, from Dark to Blue
         await settle()
         expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
@@ -998,7 +1145,7 @@ describe('MIDI: any channel, the channel picker, the In line, and the rest of th
         expect($('midiSheet').hidden).toBe(false)
         expect($('midiSheetBtn').getAttribute('aria-expanded')).toBe('true')
         expect($('midiSheet').querySelectorAll('tbody tr').length).toBe(29)
-        expect($('midiSheet').textContent).toContain('Next scene')
+        expect($('midiSheet').textContent).toContain('Previous scene')
         $('midiSheetBtn').click()
         expect($('midiSheet').hidden).toBe(true)
     })

@@ -520,6 +520,19 @@ function createDesk(opts = {}) {
     };
   }
 
+  // A person's scene recall is the latest action, so it wins over a look a hand put on the cue layer (a Looks tile on
+  // /light posts api/looks/fire, which lands on the cue layer). That look (ltp, priority 31, mask all) otherwise covers
+  // every scene recalled after it, and the room "does not change" (the owner, 2026-11-13, twice: 20:2x and 23:1x).
+  // A look the cue runner fired stays, and so does any look while the list runs: the show's playback is not a hand's.
+  // Returns the id of the look taken off, or null.
+  function releaseManualCueLook() {
+    const now = nowOnDesk();
+    if (!now || now.source !== 'manual' || (now.cue && now.cue.running)) return null;
+    const layer = state.layers.find((l) => l.id === CUE_LAYER);
+    layer.lookId = null;
+    return now.lookId;
+  }
+
   // ---- more than one device at once -----------------------------------------
   // Each extra send owns a driver instance of its own, keyed by the send's id. They are
   // built on first use and closed the moment their send is removed, changed onto another
@@ -2196,7 +2209,7 @@ function createDesk(opts = {}) {
         const at = Date.now() + wait;
         pending.push(setTimeout(() => {
           if (state.chase.enabled) { state.chase.enabled = false; engine.chase.running = false; }
-          engine.recallScene(scene, body.fadeMs, recallOwner, { origin });
+          if (engine.recallScene(scene, body.fadeMs, recallOwner, { origin })) releaseManualCueLook();
           save(); pushFrame();
         }, wait));
         return json(res, { ok: true, quantized: body.quantize, at, inMs: wait });
@@ -2225,6 +2238,8 @@ function createDesk(opts = {}) {
         if (fxWasOn && !fxIsOn) out.fxStopped = true;
         const released = rawBefore.filter((k) => !(k in state.raw)).length;
         if (released > 0) out.releasedHolds = released;
+        const cueLook = releaseManualCueLook();
+        if (cueLook) out.cueLookReleased = cueLook;
       }
       save(); pushFrame(); json(res, out);
     },

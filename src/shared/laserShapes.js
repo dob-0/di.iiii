@@ -22,6 +22,14 @@ const LASER_SHAPES = [
     // Scenes of a few lines, circles and dots that move on the beat (2026-10-30, the owner: "more scenes like complex ones
     // but minimalistic lines circle dots").
     'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse',
+    // 2026-11-13: the smallest dots the cube may draw, many of them over the whole field.
+    'stardust',
+    // 2026-11-13, the owner: "vertical lines going down", "wobble ones", "one line in the middle horizontal and other lines
+    // going from there like light points".
+    'rain', 'curtain', 'rays',
+    // 2026-11-14, the owner: "in shapes list add more shapes". Classic laser-show figures: oscilloscope and spirograph
+    // curves, and lines, rings and squares that move on the beat.
+    'lissajous', 'rose', 'spirograph', 'infinity', 'heart', 'hexagon', 'zigzag', 'helix', 'ripple', 'tunnel', 'scan',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
@@ -98,6 +106,10 @@ const along = (vertices, n) => {
     }
     return out
 }
+// A curve f(t), t 0..1, drawn dense (`steps` straight pieces); `along` then sets the frame's points out evenly on it,
+// so the beam keeps one speed and never heaps points into a still beam.
+const curveOf = (f, steps) => Array.from({ length: steps + 1 }, (_, i) => f(i / steps))
+const frac = (v) => v - Math.floor(v)
 
 const polygon = (corners) => [...corners, corners[0]]
 const corner = (i, sides, offset = Math.PI / 2) => {
@@ -132,6 +144,10 @@ const markQuarter = (n, marks) => clamp(Math.floor(n / (4 * marks)), 3, 12)
 // A spot is a small ring, not a dot: a dot is a still beam (the engine's guard). 0.12 is the smallest that is still a
 // stroke at MARK_MIN_SIZE (0.24 × 0.15 = 0.036 of the field, over the 0.032 window, at any turn).
 const SPOT_R = 0.12
+// The smallest stardust dot, a field radius: 0.019 makes a 0.038 circle, above the engine's still-beam window (0.032).
+const STARDUST_R = 0.019
+// The light point at the head of a ray: half a spot (SPOT_R), a point rather than a ball.
+const LIGHT_R = 0.06
 // Morse's dash: still a stroke at MARK_MIN_SIZE turned 45°, where its box is smallest (0.34 × 0.15 / √2 = 0.036 of the field).
 const DASH = 0.34
 // The places spots rest on: a honeycomb 0.36 apart inside the circle (19 places), so resting spots keep half a spot
@@ -389,6 +405,26 @@ const STROKES = {
         const q = markQuarter(n, lit.length)
         return stars.filter((s) => lit.includes(s)).map((s) => sparkleMark(s.x, s.y, s.r, q))
     },
+    // `copies` dots (24, at most 28: the frame budget, measured with the picture lifted 0.5, the worst case; below size 0.15 they crowd, as the marks do), the smallest the still-beam guard still counts
+    // as a stroke: STARDUST_R is a field radius, so a dot is 0.038 wide at any size (just above the engine's 0.6° = 0.032 window).
+    // `size` only spreads the dots (golden angle, sunflower seeds, so the field stays even); a blank hop joins one dot to the next.
+    stardust: (n, { copies = 0, size = 1 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 24, 1, 28))
+        // Each dot costs the engine about 35 points on top (hop + settle; measured 2026-11-13), so 28 dots of 8 points fill the ~2000 budget.
+        const each = 8
+        const r = STARDUST_R / clamp(size, 0.05, 1)
+        const seeds = Array.from({ length: count }, (_, i) => {
+            const a = i * GOLDEN_ANGLE
+            const d = count === 1 ? 0 : Math.sqrt((i + 0.5) / count) * Math.max(0, 1 - r)
+            return { x: Math.cos(a) * d, y: Math.sin(a) * d, a }
+        })
+        // Drawn in a snake of rows, left to right then right to left, so every blank hop is short (the engine pads a long hop
+        // with points, and 60 hops across the field would cost more than the cube's frame budget).
+        const rows = Math.max(1, Math.round(Math.sqrt(count)))
+        const row = (s) => Math.min(rows - 1, Math.floor(((s.y + 1) / 2) * rows))
+        seeds.sort((s, t) => row(s) - row(t) || (row(s) % 2 === 0 ? s.x - t.x : t.x - s.x))
+        return seeds.map(({ x, y, a }) => Array.from({ length: each + 1 }, (_, j) => [x + Math.cos(a + (j / each) * TAU) * r, y + Math.sin(a + (j / each) * TAU) * r]))
+    },
     // The animations: each moves by itself on the beat; the desk's Spin, Pulse and Sweep still add to it.
     // `copies` upright lines (5), one in each lane across the picture. Each swings in its lane, a swing every two beats,
     // each a fifth of a swing behind the one before: a ripple that runs through the curtain. They never cross (a swing
@@ -438,6 +474,63 @@ const STROKES = {
             })
             return i % 2 === 0 ? line : line.reverse()
         })
+    },
+    // `copies` upright dashes (6, at most 10), one in each lane, falling top to bottom: a dash comes in whole at the top,
+    // falls in 2 beats and is gone at the bottom, then falls again. Each lane its own length (1 to 1.2) and its own
+    // place in the fall, so the dashes never fall as one row. A dash stays 1 long or more: at 0.7 (0.035 at size 0.05) the
+    // engine's still-beam guard read the smallest picture as dots (laserGuards.test.js), at 1 it reads strokes. Drawn down and up in turn, so each blank move is a short hop.
+    rain: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 6, 1, 10))
+        const lane = 2 / count
+        const each = Math.max(2, Math.floor(n / count))
+        return Array.from({ length: count }, (_, i) => {
+            const x = -1 + lane * (i + 0.5)
+            const length = 1 + 0.2 * hash01(i, 0, 41)
+            const f = (((beat / 2 + hash01(i, 0, 42)) % 1) + 1) % 1
+            const top = 1 - f * (2 - length)
+            return along(i % 2 === 0 ? [[x, top], [x, top - length]] : [[x, top - length], [x, top]], each)
+        })
+    },
+    // `copies` upright lines (5, at most 8), each held at its ends like a string, a wave running DOWN along it half a
+    // wavelength a beat, each line a little behind the next: the curtain of the wobble. The wave never reaches the next line
+    // (its swing is 0.45 of a lane at most).
+    curtain: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 5, 1, 8))
+        const lane = 2 / count
+        const amp = Math.min(0.18, 0.45 * lane)
+        const each = Math.max(16, Math.floor(n / count))
+        return Array.from({ length: count }, (_, i) => {
+            const x0 = -1 + lane * (i + 0.5)
+            const line = Array.from({ length: each }, (_, j) => {
+                const s = j / (each - 1)
+                const y = 1 - s * 2
+                return [x0 + amp * Math.sin(Math.PI * s) * Math.sin(TAU * (0.75 * y + beat / 2) + i * 0.9), y]
+            })
+            return i % 2 === 0 ? line : line.reverse()
+        })
+    },
+    // One level line across the middle and `copies` places on it (5, 3 to 8) that shoot light: from each, a short beam
+    // (0.45 at most) leaves the line up and one leaves it down, each with a small light point (LIGHT_R) at its head, and
+    // flies out to the edge in 2 beats, where it is gone and the place fires again. Each place a share of the 2 beats
+    // behind the one before: a ripple of light along the line. The point stops its own width inside the field.
+    rays: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 5, 3, 8))
+        const lane = 2 / count
+        const far = 1 - LIGHT_R
+        const paths = [[[-1, 0], [1, 0]]]
+        for (let i = 0; i < count; i += 1) {
+            const f = (((beat / 2 - i / count) % 1) + 1) % 1
+            const head = far * f
+            const tail = Math.max(0, head - 0.45)
+            if (head - tail < 0.05) continue
+            const x = -1 + lane * (i + 0.5)
+            for (const dir of [1, -1]) {
+                const from = [x, dir * tail]
+                paths.push([from, ...arcPath(x, dir * head, LIGHT_R, dir > 0 ? -Math.PI / 2 : Math.PI / 2)])
+            }
+        }
+        // At most 1600 points: 11 strokes and their hops at 1992 came to 2334, one over the Ultra's 2333 frame budget.
+        return byLength(paths, Math.min(n, 1600))
     },
     // The scenes: a few lines, circles and dots each, moving on the beat. A dot is a small ring (SPOT_R), as the spots are,
     // and it only moves: it never squashes, smears or fades.
@@ -582,6 +675,106 @@ const STROKES = {
         }
         return byLength(paths, n)
     },
+    // 2026-11-14: classic laser-show figures. Each curve is one stroke where it can be, points even along it (curveOf).
+    // A Lissajous figure x = sin(a·t + δ), y = sin(b·t), a : b = 3 : 2 (or copies + 1 : copies, copies 1 to 6). δ drifts
+    // a whole turn every 16 beats, so the figure seems to roll in space. One closed stroke.
+    lissajous: (n, { copies = 0, beat = 0 } = {}) => {
+        const b = Math.round(clamp(copies > 0 ? copies : 2, 1, 6))
+        const a = b + 1
+        const d = (TAU * beat) / 16
+        return [along(curveOf((t) => [Math.sin(a * t * TAU + d) * 0.95, Math.sin(b * t * TAU) * 0.95], 240 * a), n)]
+    },
+    // A rose r = cos(k·θ), petal up, with `copies` petals (5): an odd count is k = petals over half a turn, a count of 4,
+    // 8 or 12 is k = petals / 2 over a whole turn. 6 and 10 have no one-stroke rose: they take 7 and 11. Every petal runs
+    // straight through the centre, so the stroke is never lifted and never turns back on itself.
+    rose: (n, { copies = 0 } = {}) => {
+        let petals = Math.round(clamp(copies > 0 ? copies : 5, 3, 12))
+        if (petals % 2 === 0 && petals % 4 !== 0) petals += 1
+        const odd = petals % 2 === 1
+        const k = odd ? petals : petals / 2
+        const span = odd ? Math.PI : TAU
+        return [along(curveOf((t) => {
+            const a = t * span
+            const r = Math.cos(k * a)
+            return [Math.cos(a + Math.PI / 2) * r, Math.sin(a + Math.PI / 2) * r]
+        }, 120 * petals), n)]
+    },
+    // A spirograph (hypotrochoid): a wheel of radius r rolling inside a ring of radius R = `copies` (5, 3 to 9), the pen d
+    // from the wheel's centre. r = R − 2 for an odd R, R − 1 for an even one, so the curve closes after r turns with R
+    // loops. The pen breathes from 0.55 r to 0.95 r and back every 16 beats. One closed stroke, inside the unit circle.
+    spirograph: (n, { copies = 0, beat = 0 } = {}) => {
+        const R = Math.round(clamp(copies > 0 ? copies : 5, 3, 9))
+        const r = R % 2 ? R - 2 : R - 1
+        const d = r * (0.75 - 0.2 * Math.cos((TAU * beat) / 16))
+        const reach = R - r + d
+        const q = (R - r) / r
+        return [along(curveOf((t) => {
+            const a = t * TAU * r
+            return [((R - r) * Math.cos(a) + d * Math.cos(q * a)) / reach, ((R - r) * Math.sin(a) - d * Math.sin(q * a)) / reach]
+        }, 120 * r * R), n)]
+    },
+    // An infinity sign (Bernoulli's lemniscate) across the field, one stroke crossing itself in the middle.
+    infinity: (n) => [along(curveOf((t) => {
+        const a = t * TAU
+        const s = 1 + Math.sin(a) ** 2
+        return [Math.cos(a) / s, (1.3 * Math.sin(a) * Math.cos(a)) / s]
+    }, 480), n)],
+    // A heart (the classic x = 16 sin³t, y = 13 cos t − 5 cos 2t − 2 cos 3t − cos 4t, over 17), one stroke from the dip
+    // at its top round and back.
+    heart: (n) => [along(curveOf((t) => {
+        const a = t * TAU
+        return [(16 * Math.sin(a) ** 3) / 17, (13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a) + 2) / 17]
+    }, 480), n)],
+    hexagon: (n) => [along(polygon([0, 1, 2, 3, 4, 5].map((i) => corner(i, 6))), n)],
+    // A zigzag across the field, `copies` teeth (6, 3 to 12), 0.5 up and down, running sideways one tooth every 2 beats:
+    // a lightning line that never stops. Its tips are rounded (a triangle wave asin(0.9·sin)), so the galvos turn there in
+    // small steps instead of a hard reversal, which costs hold points. One stroke.
+    zigzag: (n, { copies = 0, beat = 0 } = {}) => {
+        const teeth = Math.round(clamp(copies > 0 ? copies : 6, 3, 12))
+        const shift = beat / 2
+        const top = Math.asin(0.9)
+        // At most 1600 points, as rays: at 1992 the tips' hold points came to 2361, over the Ultra's 2333 frame budget.
+        return [along(curveOf((t) => [t * 2 - 1, (0.5 * Math.asin(0.9 * Math.sin(TAU * (t * teeth + shift) - Math.PI / 2))) / top], 80 * teeth), Math.min(n, 1600))]
+    },
+    // A double helix across the field: two strands, a sine and its mirror, `copies` twists (2, 1 to 4), turning a whole
+    // twist every bar (4 beats). Two strokes, the second drawn back the other way so the hop between them is short.
+    helix: (n, { copies = 0, beat = 0 } = {}) => {
+        const twists = Math.round(clamp(copies > 0 ? copies : 2, 1, 4))
+        const phase = (TAU * beat) / 4
+        const strand = (s) => curveOf((t) => [t * 2 - 1, s * 0.45 * Math.sin(TAU * twists * t + phase)], 200 * twists)
+        // At most 1600 points: at 4 twists and 1992 points the turns' hold points came to 2339, over the 2333 budget.
+        return byLength([strand(1), strand(-1).reverse()], Math.min(n, 1600))
+    },
+    // Rings that grow from the centre to the edge, `copies` of them (3, 1 to 5), each a share of 2 beats behind the one
+    // before: a drop in water. A ring is drawn from radius 0.08 up (smaller comes near a still beam); the smallest first.
+    // At most 1600 points, as rays: each ring is a stroke of its own and its hop costs blanking points.
+    ripple: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 3, 1, 5))
+        const radii = Array.from({ length: count }, (_, i) => frac(beat / 2 + i / count)).filter((r) => r >= 0.08).sort((p, q) => p - q)
+        if (!radii.length) radii.push(0.08)
+        return byLength(radii.map((r) => arcPath(0, 0, r, Math.PI / 2)), Math.min(n, 1600))
+    },
+    // A square tunnel: `copies` squares (4, 2 to 6) that grow from the centre to the edge in a bar (4 beats), each turned
+    // an eighth of a turn more as it grows, each a share of the bar behind the one before; the smallest first, none under
+    // 0.08. At most 1600 points: a stroke and four corners a square.
+    tunnel: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 4, 2, 6))
+        const sizes = Array.from({ length: count }, (_, i) => frac(beat / 4 + i / count)).filter((s) => s >= 0.08).sort((p, q) => p - q)
+        const squares = sizes.map((s) => polygon([0, 1, 2, 3].map((i) => {
+            const a = Math.PI / 4 + (i * Math.PI) / 2 + (s * Math.PI) / 4
+            return [Math.cos(a) * s, Math.sin(a) * s]
+        })))
+        return byLength(squares, Math.min(n, 1600))
+    },
+    // `copies` level lines (1, at most 4) that sweep the field down and up once a bar (4 beats), each a share of the bar
+    // behind the one before: in haze, a sheet of light scanning the room. Each line is drawn the other way from the last.
+    scan: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = Math.round(clamp(copies > 0 ? copies : 1, 1, 4))
+        return byLength(Array.from({ length: count }, (_, i) => {
+            const y = 0.95 * Math.cos(TAU * (beat / 4 + i / count))
+            return i % 2 ? [[1, y], [-1, y]] : [[-1, y], [1, y]]
+        }), n)
+    },
 }
 
 /** Hue 0..1 (saturated, full value) to [r, g, b] in 0..1. */
@@ -635,7 +828,7 @@ const generateShape = ({
         clamp((x * cos - y * sin) * scale, -1, 1),
         clamp((x * sin + y * cos) * scale + lift, -1, 1),
     ]
-    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2) })
+    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2), size: scale })
     const total = strokes.reduce((sum, s) => sum + s.length, 0)
     const out = []
     let k = 0

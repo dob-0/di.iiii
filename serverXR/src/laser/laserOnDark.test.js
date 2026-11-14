@@ -102,7 +102,7 @@ describe('laser On: does the cube play, or go dark and switch itself off (N1585)
     })
     it('(b2) a moving seed look live, then On: plays and stays on', () => {
         const rig = rigOf(); const d = deskOf(rig)
-        d.go('star'); run(rig, d, 500)
+        d.go('star'); d.editLive({ height: 0.5 }); run(rig, d, 500) // this rig keeps the old y >= 0 zone, the seed height was 0.5 until 2026-11-13
         const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
         const r = outcome('b2: moving look live, then On', rig, d, t0)
         expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
