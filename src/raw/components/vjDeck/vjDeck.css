@@ -117,6 +117,21 @@
     width: 110px;
 }
 
+.vj-deck-grade,
+.vj-deck-grade-item {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.vj-deck-grade {
+    flex-wrap: wrap;
+}
+
+.vj-deck-grade-item input {
+    width: 84px;
+}
+
 /* The crossfader sits between the tempo and the master: A, the fader, B. */
 .vj-deck-crossfader {
     display: flex;

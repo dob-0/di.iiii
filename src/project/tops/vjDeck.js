@@ -203,6 +203,15 @@ export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
 // A stored cue id: a non-empty string, anything else reads as no cue.
 const cueIdOf = (value) => (typeof value === 'string' ? value.trim() : '')
 
+// The grade panel: three numbers on the master level. level = gain, exposure in stops, contrast around mid grey.
+export const GRADE_PARAMS = [
+    { name: 'level', label: 'Level', min: 0, max: 2, step: 0.01, neutral: 1 },
+    { name: 'contrast', label: 'Contrast', min: 0, max: 3, step: 0.01, neutral: 1 },
+    { name: 'exposure', label: 'Exposure', min: -3, max: 3, step: 0.05, neutral: 0 }
+]
+export const GRADE_NEUTRAL = Object.freeze(Object.fromEntries(GRADE_PARAMS.map((p) => [p.name, p.neutral])))
+export const normalizeGrade = (raw) => Object.fromEntries(GRADE_PARAMS.map((p) => [p.name, clamp(isObject(raw) ? raw[p.name] : undefined, p.min, p.max, p.neutral)]))
+
 /** A fresh deck. Layer ids are stable per position, so every new deck reads the same. */
 export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAULT_BPM } = {}) => {
     const cols = Math.round(clamp(columns, 1, MAX_COLUMNS, DEFAULT_COLUMNS))
@@ -212,6 +221,8 @@ export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAUL
         // phase anchor of src/timeline/showClock.js. 0 = never tapped.
         epoch: 0,
         master: 1,
+        // The grade of the finished picture (the master level's gain / contrast / exposure), whatever scene plays.
+        grade: { ...GRADE_NEUTRAL },
         // The master's effect stack: after the last layer, before the master level.
         effects: [],
         // The crossfader, 0 = all A, 1 = all B; layers with side '' ignore it.
@@ -261,6 +272,7 @@ export const normalizeDeck = (raw) => {
         bpm: clamp(raw.bpm, MIN_BPM, MAX_BPM, DEFAULT_BPM),
         epoch: sanitizeEpoch(raw.epoch),
         master: clamp(raw.master, 0, 1, 1),
+        grade: normalizeGrade(raw.grade),
         effects: normalizeEffects(raw.effects),
         crossfade: clamp(raw.crossfade, 0, 1, 0.5),
         columns,
@@ -523,6 +535,15 @@ export const setMaster = (deck, master) => {
     return next
 }
 
+/** One grade number (level / contrast / exposure); `name` null puts all three back to neutral. */
+export const setGrade = (deck, name, value) => {
+    const next = normalizeDeck(deck)
+    if (name === null) { next.grade = { ...GRADE_NEUTRAL }; return next }
+    if (!GRADE_PARAMS.some((p) => p.name === name)) return next
+    next.grade = normalizeGrade({ ...next.grade, [name]: value })
+    return next
+}
+
 /** The deck's own tempo, and (when given) where its beat is. */
 export const setBpm = (deck, bpm, epoch = undefined) => {
     const next = normalizeDeck(deck)
@@ -718,7 +739,7 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     nodes.push({
         id: master,
         type: 'top.level',
-        values: { machine, threshold: 0, gain: 1, brightness: 0, gamma: 1, invert: false, opacity: deck.master }
+        values: { machine, threshold: 0, gain: deck.grade.level, brightness: 0, gamma: 1, exposure: deck.grade.exposure, contrast: deck.grade.contrast, invert: false, opacity: deck.master }
     })
     if (below) wires.push({ from: below, to: master, port: 'a' })
 

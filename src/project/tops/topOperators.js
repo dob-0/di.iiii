@@ -149,6 +149,9 @@ void main() {
             param('gain', 'Gain', 1, 0, 20, 0.1),
             param('brightness', 'Brightness', 0, -1, 1),
             param('gamma', 'Gamma', 1, 0.1, 4),
+            // Exposure in stops (2^x on the light) and contrast around mid grey; 0 and 1 leave the picture as it was.
+            param('exposure', 'Exposure', 0, -3, 3, 0.05),
+            param('contrast', 'Contrast', 1, 0, 3, 0.01),
             toggle('invert', 'Invert'),
             param('opacity', 'Opacity', 1, 0, 1)
         ],
@@ -157,11 +160,14 @@ uniform float p_threshold;
 uniform float p_gain;
 uniform float p_brightness;
 uniform float p_gamma;
+uniform float p_exposure;
+uniform float p_contrast;
 uniform float p_invert;
 uniform float p_opacity;
 void main() {
     vec3 c = texture2D(a, uv).rgb;
-    c = max(c - vec3(p_threshold), 0.0) * p_gain + vec3(p_brightness);
+    c = max(c - vec3(p_threshold), 0.0) * p_gain * exp2(p_exposure);
+    c = (c - vec3(0.5)) * p_contrast + vec3(0.5) + vec3(p_brightness);
     c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / p_gamma));
     if (p_invert > 0.5) c = 1.0 - c;
     gl_FragColor = vec4(c * p_opacity, 1.0);

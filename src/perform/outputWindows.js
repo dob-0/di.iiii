@@ -188,7 +188,8 @@ export function createOutputController({
         },
         open({ features = '' } = {}) {
             if (state.open) return state.via === 'handle' && handle ? handle : null
-            const opened = open(buildMapOutputPath(spaceId, projectId), outputWindowName(projectId), features || undefined)
+            // ?clean=1: the projector shows the picture only (no camera caption, no controls, no cursor).
+            const opened = open(`${buildMapOutputPath(spaceId, projectId)}?clean=1`, outputWindowName(projectId), features || undefined)
             if (!opened) { set({ blocked: true }); return null }
             try { opened.opener = null } catch { /* a cross-origin window: nothing to cut */ }
             handle = opened

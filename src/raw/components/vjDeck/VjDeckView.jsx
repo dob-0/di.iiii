@@ -12,6 +12,7 @@ import {
     clipNodeId,
     masterNodeId,
     moveClip,
+    GRADE_PARAMS,
     normalizeDeck,
     removeLayer,
     setBlend,
@@ -19,6 +20,7 @@ import {
     setBypass,
     setClip,
     setCrossfade,
+    setGrade,
     setMaster,
     setOpacity,
     setSide,
@@ -908,6 +910,27 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     />
                     <span className="vj-deck-number">{percent(deck.master)}</span>
                 </label>
+                <div className="vj-deck-grade" role="region" aria-label="Grade: level, contrast, exposure of the whole picture">
+                    {GRADE_PARAMS.map((item) => (
+                        <label key={item.name} className="vj-deck-grade-item" title={`${item.label} of the finished picture, whatever scene plays. Double-click the slider to put it back to ${item.neutral}.`}>
+                            <span className="vj-deck-label">{item.label}</span>
+                            <input
+                                type="range"
+                                min={item.min}
+                                max={item.max}
+                                step={item.step}
+                                value={deck.grade[item.name]}
+                                disabled={!editable}
+                                aria-label={item.label}
+                                data-grade={item.name}
+                                onChange={(event) => write(setGrade(latestDeck.current, item.name, event.target.value))}
+                                onDoubleClick={() => write(setGrade(latestDeck.current, item.name, item.neutral))}
+                            />
+                            <span className="vj-deck-number">{item.name === 'exposure' ? `${deck.grade.exposure > 0 ? '+' : ''}${deck.grade.exposure.toFixed(1)}` : percent(deck.grade[item.name])}</span>
+                        </label>
+                    ))}
+                    <button type="button" className="vj-deck-button" disabled={!editable} onClick={() => write(setGrade(latestDeck.current, null))} title="Level 100, contrast 100, exposure 0">Reset grade</button>
+                </div>
                 <div className="vj-deck-actions">
                     <button type="button" className="vj-deck-button" onClick={() => write(addLayer(latestDeck.current))} disabled={!editable}>+ Layer</button>
                     <button type="button" className="vj-deck-button" onClick={() => write(removeLayer(latestDeck.current, latestDeck.current.layers.length - 1))} disabled={!editable || deck.layers.length <= 1} aria-label="Remove the top layer">- Layer</button>

@@ -316,6 +316,9 @@ export function useTopNetwork({
     // state already travels on, so a page looking inside hears it too.
     useEffect(() => {
         if (!hasNodes) return undefined
+        // The wall output page (/map/…/out) shows the picture; the VJ deck page sends it. Two pages
+        // posting 1080p JPEGs under one name doubled the load on the dev server and stalled the wall.
+        if (/\/map\//.test(globalThis.location?.pathname || '')) return undefined
         const out = createPictureOut({
             drawNode: (nodeId, context) => {
                 const engine = engineRef.current
@@ -323,12 +326,9 @@ export function useTopNetwork({
                 engine.thumbnails(new Map([[nodeId, context]]))
                 return true
             },
-            size: () => {
-                const engine = engineRef.current
-                if (!engine) return null
-                const target = engine.gl?.canvas
-                return { width: target?.width || engine.width, height: target?.height || engine.height }
-            },
+            // Fixed 1920x1080: the sent size must not follow the window that happens to draw it
+            // (a small deck window sent 640x360, a big one 1920x1080, and Resolume saw the size flip).
+            size: () => (engineRef.current ? { width: 1920, height: 1080 } : null),
             onState: (nodeId, state) => reportTop(nodeId, { send: state })
         })
         outRef.current = out

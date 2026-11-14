@@ -25,7 +25,7 @@ describe('output controller', () => {
         const c = createOutputController({ spaceId: 's', projectId: 'p', open, createChannel: makeBus() })
         expect(c.getState().open).toBe(false)
         c.open({ features: 'left=1' })
-        expect(open).toHaveBeenCalledWith('/s/map/p/out', 'di-map-out-p', 'left=1')
+        expect(open).toHaveBeenCalledWith('/s/map/p/out?clean=1', 'di-map-out-p', 'left=1')
         expect(win.opener).toBe(null)
         expect(c.getState()).toMatchObject({ open: true, via: 'handle' })
         c.close()

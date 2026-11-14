@@ -322,6 +322,8 @@ a.map-action { display: inline-flex; align-items: center; text-decoration: none;
     overflow: hidden;
 }
 .map-output.is-idle { cursor: none; }
+/* ?clean=1 = the show wall: picture only. A missing camera's caption goes to the deck, never onto the wall. */
+.map-output.is-clean .map-source-camera-error { display: none; }
 
 @media (max-width: 900px) {
     .map-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr) auto; }
