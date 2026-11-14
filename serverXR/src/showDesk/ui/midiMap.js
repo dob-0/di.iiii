@@ -69,11 +69,13 @@
     // pad P is the one Blackout, every other button is spare; TURN = three faders (A1, the pair A10+A20, the rhythm layer), every
     // pot and encoder a job. Old rows (park, reset, scene next/prev, cube sizes) stay valid TARGETS for Learn, they are just not default.
     const sp = (control, kind, num) => ({ control, kind, num, target: 'spare', relative: false })
+    // 2026-11-14 (the owner: "yes" to pot 3 = Rot. pulse, encoder 2 = Phase beats): Height and X left the K2 for the new
+    // moves; both stay on the page's XY pad and its faders, and Learn can put them back on any control.
     const K2 = Object.freeze([
-        cc('encoder 1', 0, 'live:rotation', true), cc('encoder 2', 1, 'live:x', true), cc('encoder 3', 2, 'fx:mode', true), cc('encoder 4', 3, 'fx:spatial', true),
-        note('encoder 1 push', 52, 'reset:rotation'), note('encoder 2 push', 53, 'reset:x'), sp('encoder 3 push', 'note', 54), sp('encoder 4 push', 'note', 55),
-        cc('pot 1', 4, 'live:level'), cc('pot 2', 5, 'live:size'), cc('pot 3', 6, 'live:height'), cc('pot 4', 7, 'live:copies'),
-        note('pot switch 1', 48, 'park:live:level'), note('pot switch 2', 49, 'park:live:size'), note('pot switch 3', 50, 'park:live:height'), note('pot switch 4', 51, 'park:live:copies'),
+        cc('encoder 1', 0, 'live:rotation', true), cc('encoder 2', 1, 'live:phaseBeats', true), cc('encoder 3', 2, 'fx:mode', true), cc('encoder 4', 3, 'fx:spatial', true),
+        note('encoder 1 push', 52, 'reset:rotation'), note('encoder 2 push', 53, 'reset:phaseBeats'), sp('encoder 3 push', 'note', 54), sp('encoder 4 push', 'note', 55),
+        cc('pot 1', 4, 'live:level'), cc('pot 2', 5, 'live:size'), cc('pot 3', 6, 'live:rotationPulse'), cc('pot 4', 7, 'live:copies'),
+        note('pot switch 1', 48, 'park:live:level'), note('pot switch 2', 49, 'park:live:size'), note('pot switch 3', 50, 'park:live:rotationPulse'), note('pot switch 4', 51, 'park:live:copies'),
         cc('pot 5', 8, 'live:spin'), cc('pot 6', 9, 'layer:base:level'), cc('pot 7', 10, 'layer:accent:level'), cc('pot 8', 11, 'laser-master'),
         note('pot switch 5', 44, 'park:live:spin'), note('pot switch 6', 45, 'park:layer:base:level'), note('pot switch 7', 46, 'park:layer:accent:level'), note('pot switch 8', 47, 'park:laser-master'),
         cc('pot 9', 12, 'fx:depth'), cc('pot 10', 13, 'fx:bpm'), cc('pot 11', 14, 'live:pulse'), cc('pot 12', 15, 'light-master'),
@@ -96,8 +98,19 @@
     // A stored map (Learn) is kept whole and wins; the default rows it does not hold are added after it, so a K2 control
     // that is new to the defaults works in a browser that stored its map before. A default row stays out when the stored map
     // already has a row for its target or one on its control. Stored `spare` rows are old defaults, not choices: they go.
+    // 2026-11-14: default rows the owner moved. Learn stores the WHOLE map, so a browser that ever learned keeps the old defaults;
+    // a stored row still on the OLD default of a moved K2 control follows the move. A row learned onto that control (any other
+    // target) stays the person's.
+    const MOVED = Object.freeze([
+        { kind: 'cc', num: 6, from: 'live:height', to: 'live:rotationPulse' }, { kind: 'note', num: 50, from: 'park:live:height', to: 'park:live:rotationPulse' },
+        { kind: 'cc', num: 1, from: 'live:x', to: 'live:phaseBeats' }, { kind: 'note', num: 53, from: 'reset:x', to: 'reset:phaseBeats' }
+    ])
+    const followMoves = (rows) => rows.map((m) => {
+        const mv = m && m.ch === K2_CHANNEL && MOVED.find((x) => x.kind === m.kind && x.num === m.num && x.from === m.target)
+        return mv ? { ...m, target: mv.to } : m
+    })
     const mergeMaps = (saved, defaults) => {
-        const out = (Array.isArray(saved) ? saved : []).filter((m) => m && m.target !== 'spare').map((m) => ({ ...m }))
+        const out = followMoves(Array.isArray(saved) ? saved : []).filter((m) => m && m.target !== 'spare').map((m) => ({ ...m }))
         const stored = out.slice() // a target held by the STORED map keeps its default out; two default rows may share one (Blackout: pad P and Exit/Setup)
         for (const d of defaults) {
             const heldTarget = d.target !== 'spare' && !d.target.startsWith('blackout') && stored.some((m) => m.target === d.target)

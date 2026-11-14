@@ -63,27 +63,27 @@ describe('the K2 table against the maker\'s chart (Xone:K2 user guide AP8509)', 
     })
     it('keeps the laser controls the crew knew where they were (the controls v1 did not move)', () => {
         const rows = M.defaultMap()
-        const moved = new Set(['cc:2', 'cc:3', 'cc:9', 'cc:10', 'cc:12', 'cc:13', 'cc:14', 'cc:17', 'cc:18'])
+        const moved = new Set(['cc:2', 'cc:3', 'cc:9', 'cc:10', 'cc:12', 'cc:13', 'cc:14', 'cc:17', 'cc:18', 'cc:1', 'cc:6']) // cc 1 + 6: the owner moved them to Phase beats + Rot. pulse (2026-11-14)
         let kept = 0
         for (const [kind, num, target, relative] of TODAY) {
             if (kind === 'note' ? (num < 24 || num > 39) : moved.has(`cc:${num}`)) continue
             expect(rows.find((r) => r.kind === kind && r.num === num), `${kind} ${num}`).toEqual({ kind, ch: 14, num, target, ...(relative ? { relative: true } : {}) })
             kept += 1
         }
-        expect(kept).toBeGreaterThan(20)
+        expect(kept).toBe(19) // 21 until 2026-11-14, when the owner moved cc 1 and cc 6 to the new moves
     })
     it('K2 map v1: the owner\'s turn table, control by control', () => {
         const at = (control) => M.K2.find((r) => r.control === control).target
         expect(['fader 1', 'fader 2', 'fader 3', 'fader 4'].map(at)).toEqual(['lamp:0', 'lamp:1+2', 'layer:rhythm:level', 'spare'])
-        expect(Array.from({ length: 12 }, (_, i) => at(`pot ${i + 1}`))).toEqual(['live:level', 'live:size', 'live:height', 'live:copies', 'live:spin',
+        expect(Array.from({ length: 12 }, (_, i) => at(`pot ${i + 1}`))).toEqual(['live:level', 'live:size', 'live:rotationPulse', 'live:copies', 'live:spin',
             'layer:base:level', 'layer:accent:level', 'laser-master', 'fx:depth', 'fx:bpm', 'live:pulse', 'light-master'])
-        expect(Array.from({ length: 6 }, (_, i) => at(`encoder ${i + 1}`))).toEqual(['live:rotation', 'live:x', 'fx:mode', 'fx:spatial', 'live:pulseBeats', 'live:sweepBeats'])
+        expect(Array.from({ length: 6 }, (_, i) => at(`encoder ${i + 1}`))).toEqual(['live:rotation', 'live:phaseBeats', 'fx:mode', 'fx:spatial', 'live:pulseBeats', 'live:sweepBeats'])
         expect(M.K2.filter((r) => /^encoder \d$/.test(r.control)).every((r) => r.relative)).toBe(true)
         expect(M.K2.filter((r) => /^(pot|fader) /.test(r.control)).every((r) => !r.relative)).toBe(true)
     })
     it('the K2 can never arm, Go, resume, raise or switch anything: no default target names it, and the laser targets are the clamped ones', () => {
         for (const r of M.defaultMap()) expect(r.target.split(/[:+]/), r.control).not.toEqual(expect.arrayContaining(['arm']))
-        for (const r of M.defaultMap()) expect(r.target, r.control).toMatch(/^(spare|blackout:lights|scene:\d+|lamp:\d+(\+\d+)?|light-master|laser-master|scene:prev|reset:(rotation|x|pulseBeats|sweepBeats)|park:[a-z:+0-9A-Z-]+|layer:(base|rhythm|accent):level|fx:(depth|bpm|mode|spatial)|live:(level|size|height|x|copies|rotation|spin|pulse|pulseBeats|sweepBeats))$/) // the whole default vocabulary: no arm, Go, resume, On, Off, lift, Undo, Save, Release
+        for (const r of M.defaultMap()) expect(r.target, r.control).toMatch(/^(spare|blackout:lights|scene:\d+|lamp:\d+(\+\d+)?|light-master|laser-master|scene:prev|reset:(rotation|x|pulseBeats|sweepBeats|phaseBeats)|park:[a-z:+0-9A-Z-]+|layer:(base|rhythm|accent):level|fx:(depth|bpm|mode|spatial)|live:(level|size|height|x|copies|rotation|spin|pulse|pulseBeats|sweepBeats|rotationPulse|phaseBeats))$/) // the whole default vocabulary: no arm, Go, resume, On, Off, lift, Undo, Save, Release
         expect(M.isTarget('cube:on')).toBe(false)
         for (const t of ['live:size', 'live:x', 'live:height', 'live:copies', 'live:rotation', 'live:spin', 'live:level', 'laser-master']) expect(M.isLaserTarget(t), t).toBe(true)
         for (const t of ['light-master', 'lamp:0', 'layer:base:level', 'fx:depth', 'scene:3', 'blackout']) expect(M.isLaserTarget(t), t).toBe(false)
@@ -184,6 +184,18 @@ describe('a stored map and the defaults', () => {
         expect(merged.filter((r) => r.kind === 'note' && r.ch === 14 && r.num === 52)).toEqual([stored[1]])
         expect(merged.some((r) => r.target === 'reset:rotation')).toBe(false)
         expect(merged.every(M.validRow)).toBe(true)
+    })
+    it('a map stored before 2026-11-14 follows the owner\'s move (pot 3 = Rot. pulse, encoder 2 = Phase beats); a control learned onto stays', () => {
+        const old = defaults.map((r) => ({ ...r, target: { 'cc:6': 'live:height', 'note:50': 'park:live:height', 'cc:1': 'live:x', 'note:53': 'reset:x' }[`${r.kind}:${r.num}`] || r.target }))
+        const merged = M.mergeMaps(old, defaults)
+        const at = (kind, num) => merged.filter((r) => r.kind === kind && r.ch === 14 && r.num === num).map((r) => r.target)
+        expect([at('cc', 6), at('note', 50), at('cc', 1), at('note', 53)]).toEqual([['live:rotationPulse'], ['park:live:rotationPulse'], ['live:phaseBeats'], ['reset:phaseBeats']])
+        expect(merged.length).toBe(58)
+        expect(merged.every(M.validRow)).toBe(true)
+        const learned = M.mergeMaps([{ kind: 'cc', ch: 14, num: 6, target: 'live:level' }], defaults)
+        expect(learned.filter((r) => r.kind === 'cc' && r.num === 6).map((r) => r.target)).toEqual(['live:level'])
+        const otherChannel = M.mergeMaps([{ kind: 'cc', ch: 0, num: 6, target: 'live:height' }], defaults)
+        expect(otherChannel.filter((r) => r.kind === 'cc' && r.ch === 0 && r.num === 6).map((r) => r.target)).toEqual(['live:height'])
     })
     it('is the defaults when nothing is stored', () => {
         expect(M.mergeMaps(null, defaults)).toEqual(defaults)

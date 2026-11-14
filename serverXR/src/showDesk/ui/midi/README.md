@@ -46,20 +46,20 @@ are as printed on the unit.
 | Control | MIDI | Does |
 |---|---|---|
 | encoder 1 | CC 0 (relative) | Live look: rotation |
-| encoder 2 | CC 1 (relative) | Live look: x |
+| encoder 2 | CC 1 (relative) | Live look: phase beats |
 | encoder 3 | CC 2 (relative) | Effect mode (step) |
 | encoder 4 | CC 3 (relative) | Effect spread (step) |
 | encoder 1 push | note 52 | Reset rotation |
-| encoder 2 push | note 53 | Reset x |
+| encoder 2 push | note 53 | Reset phase beats |
 | encoder 3 push | note 54 | Spare, no action |
 | encoder 4 push | note 55 | Spare, no action |
 | pot 1 | CC 4 | Live look: level |
 | pot 2 | CC 5 | Live look: size |
-| pot 3 | CC 6 | Live look: height |
+| pot 3 | CC 6 | Live look: rotation pulse |
 | pot 4 | CC 7 | Live look: copies |
 | pot switch 1 | note 48 | Park level |
 | pot switch 2 | note 49 | Park size |
-| pot switch 3 | note 50 | Park height |
+| pot switch 3 | note 50 | Park rotation pulse |
 | pot switch 4 | note 51 | Park copies |
 | pot 5 | CC 8 | Live look: spin |
 | pot 6 | CC 9 | Layer base level |
