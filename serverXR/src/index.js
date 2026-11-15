@@ -2569,7 +2569,7 @@ registerShareRoutes(router, {
 
 registerAgentBoardRoutes(router)
 
-registerMonitorRoutes(router, {
+const monitorRoutes = registerMonitorRoutes(router, {
   deployEnv: () => releaseInfo.deployEnv,
   hub: createMonitorHub({
     store: createMonitorStore(),
@@ -3880,7 +3880,8 @@ initStorage()
       logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
       installShutdown({
         server: httpServer,
-        before: stopLasers,
+        // open Monitor streams count as requests in flight: end them first, or every stop waits
+        before: async (signal) => { try { monitorRoutes?.closeAll?.() } catch { /* the stop goes on */ } await stopLasers(signal) },
         inflight,
         timers: shutdownTimers,
         checkpoint: () => getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)'),

@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { createRequire } from 'node:module'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const express = require('express')
@@ -106,4 +106,83 @@ describe('GET /api/monitor/stream', () => {
     await new Promise((r) => setTimeout(r, 2600))
     expect(calls).toBe(after)
   }, 15000)
+})
+
+describe('refusals look like an unknown route', () => {
+  it('GET, stream, ask and report answer exactly what a made-up path answers (status and body)', async () => {
+    const hub = { reports: createReportStore(), asks: { add: () => ({ id: 'x' }) }, getSnapshot: async () => ({}) }
+    const others = [{ authenticated: false }, { ...owner, subject: 'admin-2' }, { ...owner, session: { subject: 'owner-1', via: 'token' } }]
+    for (const state of others) {
+      const base = (await start(hub, 'staging', state)).replace('/api/monitor/stream', '')
+      const probe = async (method, path) => {
+        const res = await fetch(base + path, { method, headers: { 'content-type': 'application/json' }, body: method === 'POST' ? '{}' : undefined })
+        return { status: res.status, body: await res.text() }
+      }
+      for (const [method, path] of [['GET', '/api/monitor'], ['GET', '/api/monitor/stream'], ['POST', '/api/monitor/ask'], ['POST', '/api/monitor/report']]) {
+        const madeUp = '/api/monitor-nothing-here'
+        const unknown = await probe(method, madeUp)
+        expect(unknown.status).toBe(404)
+        const refused = await probe(method, path)
+        // Express's default page names the path it was asked for; nothing else may differ
+        expect({ ...refused, body: refused.body.replace(path, madeUp) }, `${method} ${path}`).toEqual(unknown)
+      }
+      await new Promise((r) => server.close(r))
+    }
+  })
+})
+
+// the stream handler driven by hand: no sockets, fake timers
+function fakeStream({ destroyed = false } = {}) {
+  const routes = {}
+  const router = { get: (path, ...h) => { routes[path] = h }, post: () => {} }
+  const getSnapshot = vi.fn(async () => ({ value: 1 }))
+  const api = registerMonitorRoutes(router, { hub: { reports: createReportStore(), asks: {}, getSnapshot }, requireAuth: () => true, deployEnv: () => 'staging', ownerIds: () => ['owner-1'] })
+  const written = []
+  const listeners = {}
+  const res = { status: () => res, set: () => res, flushHeaders: () => {}, write: (t) => { written.push(t) }, end: vi.fn(() => { res.writableEnded = true }), writableEnded: false, writableLength: 0 }
+  const req = { authState: owner, destroyed, on: (ev, fn) => { listeners[ev] = fn } }
+  const open = () => routes['/api/monitor/stream'][1](req, res)
+  return { api, written, res, listeners, open, getSnapshot }
+}
+
+describe('stream lifecycle', () => {
+  it('closeAll() ends every open stream and stops the poller', async () => {
+    vi.useFakeTimers()
+    try {
+      const s = fakeStream()
+      s.open()
+      await vi.advanceTimersByTimeAsync(10)
+      expect(s.res.end).not.toHaveBeenCalled()
+      s.api.closeAll()
+      expect(s.res.end).toHaveBeenCalledTimes(1)
+      const calls = s.getSnapshot.mock.calls.length
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(s.getSnapshot.mock.calls.length).toBe(calls)
+    } finally { vi.useRealTimers() }
+  })
+
+  it('a client already gone when the handler runs is never kept (no poller, no 15-minute hold)', async () => {
+    vi.useFakeTimers()
+    try {
+      const s = fakeStream({ destroyed: true })
+      s.open()
+      await vi.advanceTimersByTimeAsync(10000)
+      expect(s.getSnapshot).not.toHaveBeenCalled()
+      expect(s.res.end).toHaveBeenCalledTimes(1)
+    } finally { vi.useRealTimers() }
+  })
+
+  it('sends a NAMED heartbeat event carrying {at}', async () => {
+    vi.useFakeTimers()
+    try {
+      const s = fakeStream()
+      s.open()
+      await vi.advanceTimersByTimeAsync(15000)
+      const beat = s.written.find((t) => t.startsWith('event: heartbeat\n'))
+      expect(beat).toBeTruthy()
+      const data = JSON.parse(beat.match(/data: (.*)\n/)[1])
+      expect(Number.isNaN(Date.parse(data.at))).toBe(false)
+      s.api.closeAll()
+    } finally { vi.useRealTimers() }
+  })
 })

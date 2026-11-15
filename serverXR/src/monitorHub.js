@@ -215,7 +215,7 @@ function createHub({
   let tierCache = null
   async function probeTier(id, url) {
     const started = now()
-    const base = { id, url, status: 0, ms: 0, commit: null, builtAt: null, behindDev: null }
+    const base = { id, url, source: 'probe', status: 0, ms: 0, commit: null, builtAt: null, behindDev: null }
     if (!fetchImpl) return base
     try {
       const res = await fetchImpl(`${url}/serverXR/api/health`, { signal: AbortSignal.timeout(TIER_TIMEOUT_MS), redirect: 'manual' })
@@ -254,18 +254,19 @@ function createHub({
     for (const [id, url] of Object.entries(tierSites)) {
       if (id === self) {
         const commit = typeof rel.gitCommit === 'string' && COMMIT_RE.test(rel.gitCommit) ? rel.gitCommit : null
-        rows.push({ id, url, status: 200, ms: 0, commit, builtAt: rel.generatedAt || null, behindDev: null })
+        rows.push({ id, url, source: 'self', status: 200, ms: 0, commit, builtAt: rel.generatedAt || null, behindDev: null })
       } else {
         rows.push(await probeTier(id, url))
       }
     }
     if (self.startsWith('local:')) {
-      rows.push({ id: self, url: '', status: 200, ms: 0, commit: rel.gitCommit || null, builtAt: rel.generatedAt || null, behindDev: null })
+      rows.push({ id: self, url: '', source: 'self', status: 200, ms: 0, commit: rel.gitCommit || null, builtAt: rel.generatedAt || null, behindDev: null })
     }
     for (const r of reports.raw()) {
       const id = `local:${r.host}`
       if (rows.some((x) => x.id === id)) continue
-      rows.push({ id, url: '', status: now() - r.reportedAt > STALE_MS ? 0 : 200, ms: 0, commit: r.commit, builtAt: r.builtAt, behindDev: null })
+      // a machine that only REPORTS was never probed: no status, a state from how fresh its report is
+      rows.push({ id, url: '', source: 'report', status: null, ms: null, state: now() - r.reportedAt > STALE_MS ? 'warn' : 'ok', commit: r.commit, builtAt: r.builtAt, behindDev: null })
     }
     const devCommit = rows.find((r) => r.id === 'dev')?.commit || null
     for (const row of rows) row.behindDev = row.id === 'dev' ? 0 : await behind(row.commit, devCommit)
@@ -340,14 +341,14 @@ function createHub({
     node('repo:di.iiii', 'repo', 'di.iiii', 'ok')
 
     for (const row of tierBlock.rows) {
-      const state = row.status === 0 ? 'off' : (!isUp(row.status) ? 'warn' : ((row.behindDev || 0) > 0 ? 'warn' : 'ok'))
+      const state = row.source === 'report' ? row.state : row.status === 0 ? 'off' : (!isUp(row.status) ? 'warn' : ((row.behindDev || 0) > 0 ? 'warn' : 'ok'))
       node(`tier:${row.id}`, 'tier', row.id, state)
     }
     const self = selfId()
     if (nodes.has(`tier:${self}`)) edge(`machine:${selfHost}`, `tier:${self}`, 'runs')
     // a report reached THIS tier, so this is the tier that machine follows; a local build is nobody's tier
     for (const r of reportRows) {
-      edge(`machine:${r.host}`, `tier:local:${r.host}`, 'runs')
+      edge(`machine:${r.host}`, `tier:local:${r.host}`, 'reports')
       if (!self.startsWith('local:')) edge(`tier:${self}`, `machine:${r.host}`, 'serves')
     }
 

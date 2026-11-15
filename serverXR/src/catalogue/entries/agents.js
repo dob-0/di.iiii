@@ -23,7 +23,7 @@ module.exports = [
     reach: "read",
     role: "guest",
     agent: false,
-    note: "lists machines, session titles, spaces and open asks — on a local server loopback + non-production (or DI_LOCAL=1) and admin, on the dev tier an admin session, 404 on prod; adds reports, tiers, spaces, asks and map; commands come only from ~/.di/monitor.json, never from the request."
+    note: "lists machines, session titles, spaces and open asks — on a local server loopback + non-production (or DI_LOCAL=1) and admin, on the dev tier only the account ids in MONITOR_OWNER_USER_IDS (everyone else, admins too, gets the unknown-route 404), 404 on prod; adds reports, tiers, spaces, asks and map; commands come only from ~/.di/monitor.json, never from the request."
   },
   {
     route: "GET /api/monitor/stream",
@@ -31,7 +31,7 @@ module.exports = [
     reach: "read",
     role: "guest",
     agent: false,
-    note: "same gate as GET /api/monitor: on the dev tier an admin session, 404 on prod, loopback + admin on a local server."
+    note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server."
   },
   {
     route: "POST /api/monitor/report",
@@ -39,7 +39,7 @@ module.exports = [
     reach: "private",
     role: "guest",
     agent: false,
-    note: "an admin session, or a terminal login (di login) whose account is an admin; 256 KB cap; 404 on prod. Telemetry only: it changes nothing else."
+    note: "the owner's browser session, or a terminal login (di login) whose account is in MONITOR_OWNER_USER_IDS on the dev tier (an admin on a local server); others 404; 256 KB cap; 404 on prod. Telemetry only: it changes nothing else."
   },
   {
     route: "POST /api/monitor/ask",
@@ -47,7 +47,7 @@ module.exports = [
     reach: "private",
     role: "guest",
     agent: false,
-    note: "admin session only (a terminal login is refused); 2000 characters, 30 per hour; 404 on prod."
+    note: "the owner only (MONITOR_OWNER_USER_IDS on the dev tier; others 404), a browser session, a terminal login is refused; 2000 characters, 30 per hour; 404 on prod."
   },
   {
     route: "GET /api/agent-board/session/:sessionId",

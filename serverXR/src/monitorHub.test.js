@@ -218,7 +218,18 @@ describe('hub snapshot', () => {
     t += STALE_MS + 1
     const snap = await hub.getSnapshot()
     expect(snap.map.nodes.find((n) => n.id === 'machine:aylmo').state).toBe('off')
-    expect(snap.tiers.rows.find((r) => r.id === 'local:aylmo').status).toBe(0)
+    expect(snap.tiers.rows.find((r) => r.id === 'local:aylmo')).toMatchObject({ source: 'report', status: null, ms: null, state: 'warn' })
+    expect(snap.map.nodes.find((n) => n.id === 'tier:local:aylmo').state).toBe('warn')
+    expect(snap.map.edges.some((e) => e.from === 'machine:aylmo' && e.to === 'tier:local:aylmo' && e.kind === 'runs')).toBe(false)
+  })
+
+  it('a fresh report-only machine is state ok with no invented probe; probed rows say so', async () => {
+    const { hub, reports } = build()
+    reports.put({ host: 'aylmo', panels })
+    const snap = await hub.getSnapshot()
+    expect(snap.tiers.rows.find((r) => r.id === 'local:aylmo')).toMatchObject({ source: 'report', status: null, state: 'ok' })
+    expect(snap.tiers.rows.find((r) => r.id === 'prod').source).toBe('probe')
+    expect(snap.map.nodes.find((n) => n.id === 'tier:local:aylmo').state).toBe('ok')
   })
 
   it('an unreachable tier is status 0 and ok false; behindDev is null without a git answer', async () => {

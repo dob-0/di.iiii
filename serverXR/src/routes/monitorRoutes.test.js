@@ -35,7 +35,8 @@ async function call(req, { requireAuth = true, deployEnv = null, route = 'GET /a
   const [gate, handler] = router.routes[route]
   const res = makeRes()
   let passed = false
-  gate(req, res, () => { passed = true })
+  // a refusal calls next('route'): the app's own answer for an unknown path takes over
+  gate(req, res, (arg) => { if (arg === 'route') { res.hidden = true; res.statusCode = 404 } else passed = true })
   if (passed) await handler(req, res)
   return res
 }
@@ -99,6 +100,7 @@ describe('monitor gate by tier', () => {
       'act token (di.bo)': { ...owner, actor: 'di.bo' },
       'sync key': { authenticated: true, role: 'admin', type: 'sync-key', subject: 'sync-key:abc' },
       'a member': { ...owner, role: 'editor', subject: 'member-3' },
+      'a session minted from an API token': { ...owner, session: { subject: 'owner-1', via: 'token' } },
       'a visitor': { authenticated: false },
       'the local owner': { authenticated: true, role: 'admin', type: 'session', subject: 'local-owner' }
     }
@@ -106,7 +108,7 @@ describe('monitor gate by tier', () => {
       for (const route of ROUTES) {
         const res = await call(withBody(state), { deployEnv: 'staging', route })
         expect(res.statusCode, `${who} ${route}`).toBe(404)
-        expect(res.body).toEqual({ error: 'not found' })
+        expect(res.hidden, `${who} ${route}`).toBe(true) // nothing of its own was written
       }
     }
   })

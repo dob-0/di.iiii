@@ -42,7 +42,10 @@ function registerMonitorRoutes(router, {
 } = {}) {
   const overview = hub || createHub({ store })
   const selfBase = () => `http://127.0.0.1:${config.port}${config.basePath || ''}`
-  const notFound = (res) => { res.status(404).json({ error: 'not found' }); return true }
+  // A refusal says nothing of its own: the request falls through to whatever answers a path
+  // that does not exist, so the page's existence is not shown (spec: "404, not 403").
+  const HIDDEN = 'hidden'
+  const notFound = () => HIDDEN
 
   // dev tier: the owner's own login. `actor` marks someone else's errand (di.bo) or a terminal
   // login; only the report route takes the second.
@@ -50,6 +53,8 @@ function registerMonitorRoutes(router, {
     const state = req.authState || {}
     if (!requireAuth() || !state.authenticated || !state.subject) return false
     if (state.type !== 'session' && state.type !== 'cli-token') return false
+    // a session minted from an API token is the token's, not the person signing in
+    if (state.session?.via === 'token') return false
     if (state.actor === 'di.cli' ? !(terminal && state.cliDbRole === 'admin') : Boolean(state.actor)) return false
     const list = (ownerIds() || []).map((id) => String(id).trim()).filter(Boolean)
     return list.includes(String(state.subject))
@@ -57,16 +62,20 @@ function registerMonitorRoutes(router, {
 
   const refuse = (req, res, opts) => {
     const tier = tierOfDeployEnv(deployEnv())
-    if (tier === 'prod') return notFound(res)
-    if (tier === 'dev') return isOwner(req, opts) ? false : notFound(res)
-    if (!isLocalOperatorRequest(req)) return notFound(res)
+    if (tier === 'prod') return notFound()
+    if (tier === 'dev') return isOwner(req, opts) ? false : notFound()
+    if (!isLocalOperatorRequest(req)) return notFound()
     if (!isAdminCaller(req, requireAuth())) {
       res.status(403).json({ error: 'admins only' })
       return true
     }
     return false
   }
-  const gate = (req, res, next) => { if (!refuse(req, res)) next() }
+  const gate = (req, res, next) => {
+    const out = refuse(req, res)
+    if (out === HIDDEN) next('route')
+    else if (!out) next()
+  }
 
   // A terminal login is capped below admin; its account's real role rides along
   // as cliDbRole (index.js). Only the report route reads it.
@@ -74,9 +83,9 @@ function registerMonitorRoutes(router, {
     const state = req.authState || {}
     if (state.actor === 'di.cli' && state.authenticated) {
       const tier = tierOfDeployEnv(deployEnv())
-      if (tier === 'prod') { notFound(res); return }
-      if (tier === 'dev') { if (isOwner(req, { terminal: true })) next(); else notFound(res); return }
-      if (!isLocalOperatorRequest(req)) { notFound(res); return }
+      if (tier === 'prod') { next('route'); return }
+      if (tier === 'dev') { if (isOwner(req, { terminal: true })) next(); else next('route'); return }
+      if (!isLocalOperatorRequest(req)) { next('route'); return }
       if (state.cliDbRole === 'admin') { next(); return }
       res.status(403).json({ error: 'admins only' })
       return
@@ -150,7 +159,7 @@ function registerMonitorRoutes(router, {
     lastPrint = null
     lastPayload = null
     poll = setInterval(tick, STREAM_MIN_MS)
-    beat = setInterval(() => { for (const client of [...clients]) send(client, ': heartbeat\n\n') }, HEARTBEAT_MS)
+    beat = setInterval(() => { for (const client of [...clients]) send(client, `event: heartbeat\ndata: ${JSON.stringify({ at: new Date(now()).toISOString() })}\n\n`) }, HEARTBEAT_MS)
     poll.unref?.()
     beat.unref?.()
   }
@@ -191,6 +200,8 @@ function registerMonitorRoutes(router, {
     const life = Math.max(0, Math.min(STREAM_MAX_MS, expires ? expires - now() : STREAM_MAX_MS))
     client.timer = setTimeout(client.close, life)
     client.timer.unref?.()
+    // gone before the listener below could hear it: never enters the set
+    if (req.destroyed || res.writableEnded || res.destroyed) { client.close(); return }
     clients.add(client)
     req.on('close', client.close)
 
@@ -202,6 +213,10 @@ function registerMonitorRoutes(router, {
       tick()
     }
   })
+
+  // Shutdown: an open stream counts as a request in flight, so the stop would wait for it.
+  const closeAll = () => { for (const client of [...clients]) client.close() }
+  return { closeAll }
 }
 
 module.exports = { registerMonitorRoutes, STREAM_MIN_MS, HEARTBEAT_MS, STREAM_MAX_MS, STREAMS_PER_SUBJECT }
