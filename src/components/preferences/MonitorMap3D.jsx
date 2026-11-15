@@ -86,21 +86,30 @@ function Ticker({ on }) {
 // Frame every node (and its card) in the stage: move the camera back along `dir`
 // until the farthest projected point sits at 82 % of the half-screen.
 const fitCamera = (camera, points, dir, size) => {
-    const box = new Box3().setFromPoints(points.map((p) => new Vector3(...p)))
-    const centre = box.getCenter(new Vector3())
+    const vs = points.map((p) => new Vector3(...p))
+    const centre = new Box3().setFromPoints(vs).getCenter(new Vector3())
     camera.aspect = size.width && size.height ? size.width / size.height : 1
+    const half = Math.tan((camera.fov * Math.PI) / 360)
+    const right = new Vector3()
+    const up = new Vector3()
     let d = 8
-    for (let i = 0; i < 10; i += 1) {
+    for (let i = 0; i < 14; i += 1) {
         camera.position.copy(centre).addScaledVector(dir, d)
         camera.lookAt(centre)
         camera.updateProjectionMatrix()
         camera.updateMatrixWorld()
-        let m = 0.01
-        for (const p of points) {
-            const v = new Vector3(...p).project(camera)
-            m = Math.max(m, Math.abs(v.x), Math.abs(v.y))
+        let x0 = Infinity
+        let x1 = -Infinity
+        let y0 = Infinity
+        let y1 = -Infinity
+        for (const v of vs) {
+            const q = v.clone().project(camera)
+            x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y)
         }
-        d = Math.max(2, d * (m / 0.82))
+        // centre the projected box on the screen, then scale so it takes 84 % of the tighter side
+        camera.matrixWorld.extractBasis(right, up, new Vector3())
+        centre.addScaledVector(right, ((x0 + x1) / 2) * d * half * camera.aspect).addScaledVector(up, ((y0 + y1) / 2) * d * half)
+        d = Math.max(2, d * (Math.max((x1 - x0) / 2, (y1 - y0) / 2, 0.01) / 0.84))
     }
     return { centre, dist: d }
 }

@@ -1880,6 +1880,10 @@
 .monitor-page.is-map .monitor-hero-text { font-size: var(--di-text-6); }
 .monitor-page.is-map .monitor-map-section { padding: 0; background: none; border: 0; }
 .monitor-page.is-map .monitor-map-section > .preferences-module-header { display: none; }
+@media (max-width: 600px) {
+    .monitor-page.is-map .monitor-tier-commit { display: none; }
+    .monitor-page.is-map .monitor-tier, .monitor-page.is-map .monitor-count { padding: 0 var(--di-space-2); }
+}
 @media (max-width: 900px) {
     .monitor-page.is-map .monitor-frame { grid-template-areas: "hero" "strip" "tabs" "main" "feed"; }
 }
