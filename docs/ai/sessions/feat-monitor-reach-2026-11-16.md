@@ -6,3 +6,12 @@
 - `POST /api/monitor/ask` (admin session only) stores the ask in table `monitor_asks`. It is NOT handed to agent mail: agentMailStore refuses a message to yourself and addresses people, not the owner's own chats. Open page asks are the inbox for the owner's agents (the `asks` list).
 - CLI: `di monitor report [--once] [--every N]`, `di monitor install-timer [--remove]` (user systemd timer, 30 s; scripts/di/monitorReport.mjs). A machine whose `ledger-open` has its own ledger sends its open rows as `asks` (source ledger).
 - Not done: the page (Part 2), running the timer on aylmo/studio-mac, a live run against the dev tier (needs this branch deployed there).
+
+## 2026-11-16 — owner-only gate and the security findings (backend)
+
+- Tier: only a missing/empty `deployEnv` is local; `dev`/`staging` dev; everything else (`standby`, `production`, unknown) prod = 404 for all, including a terminal login (was 403).
+- Dev gate: the four routes pass only for an account id in `MONITOR_OWNER_USER_IDS` (config.monitorOwnerUserIds) signed in as itself (session; terminal login for the report route only; di.bo act tokens, API tokens, sync keys, other admins, visitors: 404, same body as an unknown route). Empty list = nobody. Local loopback gate unchanged. Env path: docker-compose.dev.yml `MONITOR_OWNER_USER_IDS: ${DEV_MONITOR_OWNER_USER_IDS:-}`; on the Mac the value goes into the dev tier's `source.env` (di-atlas `tools/standby-deploy.sh env-set dev <file>`), and server.env is derived at the next `upgrade`.
+- Reports: bound to the sender's subject (409 while the host is fresh, 12 hosts per subject), ledger asks only through the gate, panel `url` http(s) only, panel strings capped at 400.
+- Stream: one shared poller (snapshot built once per tick), 4 streams per subject (429), 15 min or session expiry, a client with 1 MB queued is dropped; spaces cached 10 s; asks 30/hour per subject.
+- Builder bugs: `serves` edge from the tier that took the report, short host name on both sides, labels never "undefined", a 3xx tier answer is not up, ExecStart paths quoted for systemd.
+- Not tested: a live run on the dev tier (needs the branch deployed and the id written on the Mac); the 1 MB slow-client drop has no unit test.

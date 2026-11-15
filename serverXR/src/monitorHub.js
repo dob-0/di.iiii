@@ -17,6 +17,7 @@ const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
 const REPORT_MAX_BYTES = 256 * 1024
 const MAX_HOSTS = 40
+const MAX_HOSTS_PER_SUBJECT = 12
 const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
@@ -27,6 +28,7 @@ const COMMIT_RE = /^[0-9a-f]{7,40}$/
 
 const TIER_SITES = Object.freeze({ dev: 'https://dev.diiii.xyz', prod: 'https://diiii.xyz' })
 const TIER_CACHE_MS = 10 * 1000
+const SPACES_CACHE_MS = 10 * 1000
 const TIER_TIMEOUT_MS = 3000
 
 // Plain text only, like agent mail: tab and newline stay, other control
@@ -36,13 +38,43 @@ const CONTROL = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F‪-‮⁦-⁩]/g
 const cleanText = (value, max) => String(value ?? '').replace(/\r\n?/g, '\n').replace(CONTROL, '').trim().slice(0, max)
 const isPlainObject = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)
 
-/** 'dev' | 'prod' | 'local' from the release manifest (`staging` is the old name of dev). */
+/**
+ * 'dev' | 'prod' | 'local' from the release manifest. Fails closed: only a missing or empty
+ * deployEnv is a local machine; `staging` is the old name of dev; everything else
+ * ('production', 'prod', 'standby' = what the Mac's prod tier writes, anything unknown) is prod.
+ */
 function tierOfDeployEnv(deployEnv) {
-  const env = String(deployEnv || '').trim().toLowerCase()
+  const env = String(deployEnv ?? '').trim().toLowerCase()
+  if (!env) return 'local'
   if (env === 'dev' || env === 'staging') return 'dev'
-  if (env === 'production' || env === 'prod') return 'prod'
-  return 'local'
+  return 'prod'
 }
+
+/** A panel value's `url` keeps only http(s); anything else drops the field. Strings are capped like cleanText. */
+const PANEL_STRING_MAX = 400
+const PANEL_DEPTH_MAX = 6
+function cleanPanelValue(value, depth = 0, key = '') {
+  if (typeof value === 'string') {
+    const text = cleanText(value, PANEL_STRING_MAX)
+    if (key === 'url') {
+      try { return ['http:', 'https:'].includes(new URL(text).protocol) ? text : undefined } catch { return undefined }
+    }
+    return text
+  }
+  if (value === null || typeof value === 'number' || typeof value === 'boolean') return value
+  if (depth >= PANEL_DEPTH_MAX) return undefined
+  if (Array.isArray(value)) return value.map((v) => cleanPanelValue(v, depth + 1, key)).filter((v) => v !== undefined)
+  if (isPlainObject(value)) {
+    const out = {}
+    for (const [k, v] of Object.entries(value)) {
+      const clean = cleanPanelValue(v, depth + 1, k)
+      if (clean !== undefined) out[cleanText(k, 60)] = clean
+    }
+    return out
+  }
+  return undefined
+}
+const isUp = (status) => status >= 200 && status < 300
 
 // ---- reports from other machines -------------------------------------------
 
@@ -54,8 +86,12 @@ function createReportStore({ now = () => Date.now() } = {}) {
     for (const [host, rec] of byHost) if (t - rec.reportedAt > KEEP_MS) byHost.delete(host)
   }
 
-  /** Returns { ok: true } or { error, status }. */
-  function put(body) {
+  /**
+   * Returns { ok: true } or { error, status }. `subject` is who sent it: a host belongs to the
+   * subject that reported it until it goes stale (409 for anyone else), and one subject holds at
+   * most MAX_HOSTS_PER_SUBJECT hosts. `ledger` says the sender may bring ledger asks.
+   */
+  function put(body, { subject = null, ledger = false } = {}) {
     if (!isPlainObject(body)) return { error: 'bad_report', status: 400 }
     const host = typeof body.host === 'string' ? body.host.trim() : ''
     if (!HOST_RE.test(host)) return { error: 'bad_host', status: 400 }
@@ -64,13 +100,16 @@ function createReportStore({ now = () => Date.now() } = {}) {
     try { size = Buffer.byteLength(JSON.stringify(body)) } catch { return { error: 'bad_report', status: 400 } }
     if (size > REPORT_MAX_BYTES) return { error: 'too_large', status: 413, max: REPORT_MAX_BYTES }
     prune()
-    if (!byHost.has(host) && byHost.size >= MAX_HOSTS) return { error: 'too_many_hosts', status: 429 }
+    const held = byHost.get(host)
+    if (held && held.subject !== subject && now() - held.reportedAt <= STALE_MS) return { error: 'host_taken', status: 409 }
+    if (!held && byHost.size >= MAX_HOSTS) return { error: 'too_many_hosts', status: 429 }
+    if (!held && [...byHost.values()].filter((r) => r.subject === subject).length >= MAX_HOSTS_PER_SUBJECT) return { error: 'too_many_hosts', status: 429 }
 
     const panels = {}
     for (const name of PANEL_NAMES) {
-      if (isPlainObject(body.panels[name])) panels[name] = body.panels[name]
+      if (isPlainObject(body.panels[name])) panels[name] = cleanPanelValue(body.panels[name])
     }
-    const asks = (Array.isArray(body.asks) ? body.asks : [])
+    const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])
       .filter(isPlainObject)
       .slice(0, MAX_ASKS_PER_REPORT)
       .map((a) => ({
@@ -83,7 +122,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
       .filter((a) => a.id && a.text)
     const commit = typeof body.commit === 'string' && COMMIT_RE.test(body.commit.trim()) ? body.commit.trim() : null
     const builtAt = typeof body.builtAt === 'string' && !Number.isNaN(Date.parse(body.builtAt)) ? new Date(body.builtAt).toISOString() : null
-    byHost.set(host, { host, reportedAt: now(), panels, asks, commit, builtAt })
+    byHost.set(host, { host, subject, reportedAt: now(), panels, asks, commit, builtAt })
     return { ok: true, host }
   }
 
@@ -128,11 +167,12 @@ function createAskStore({ getDb, now = () => Date.now() }) {
     if (body.length > ASK_TEXT_MAX) return { error: 'too_long', status: 400, max: ASK_TEXT_MAX }
     const handle = db()
     const t = now()
-    const recent = Number(handle.prepare('SELECT COUNT(*) AS n FROM monitor_asks WHERE created_at > ?').get(t - 3600 * 1000)?.n || 0)
+    const who = by ? String(by).slice(0, 80) : null
+    const recent = Number(handle.prepare('SELECT COUNT(*) AS n FROM monitor_asks WHERE created_at > ? AND by_user IS ?').get(t - 3600 * 1000, who)?.n || 0)
     if (recent >= ASK_PER_HOUR) return { error: 'rate_limited', status: 429, retryAfterSeconds: 3600 }
     const id = `page-${crypto.randomUUID().slice(0, 8)}`
     handle.prepare('INSERT INTO monitor_asks (id, text, state, created_at, touched_at, by_user) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(id, body, 'open', t, t, by ? String(by).slice(0, 80) : null)
+      .run(id, body, 'open', t, t, who)
     return { id }
   }
 
@@ -162,14 +202,14 @@ function createHub({
   fetchImpl = (typeof fetch === 'function' ? fetch : null),
   git = runGit,
   repoDir = process.env.DI_REPO_DIR || process.cwd(),
-  hostname = () => os.hostname(),
+  hostname = () => os.hostname().split('.')[0],
   now = () => Date.now(),
   tierSites = TIER_SITES
 }) {
   const selfTier = () => tierOfDeployEnv(releaseInfo()?.deployEnv)
   const selfId = () => {
     const tier = selfTier()
-    return tier === 'local' ? `local:${hostname()}` : tier
+    return tier === 'local' ? `local:${String(hostname()).split('.')[0]}` : tier
   }
 
   let tierCache = null
@@ -229,12 +269,22 @@ function createHub({
     }
     const devCommit = rows.find((r) => r.id === 'dev')?.commit || null
     for (const row of rows) row.behindDev = row.id === 'dev' ? 0 : await behind(row.commit, devCommit)
-    const value = { ok: rows.some((r) => r.id === 'dev' && r.status > 0 && r.status < 500) && rows.some((r) => r.id === 'prod' && r.status > 0 && r.status < 500), rows }
+    const value = { ok: rows.some((r) => r.id === 'dev' && isUp(r.status)) && rows.some((r) => r.id === 'prod' && isUp(r.status)), rows }
     tierCache = { at: t, value, self }
     return value
   }
 
+  let spaceCache = null
   async function spaces() {
+    const t = now()
+    const self = selfId()
+    if (spaceCache && t - spaceCache.at < SPACES_CACHE_MS && spaceCache.self === self) return spaceCache.value
+    const value = await readSpaces()
+    spaceCache = { at: t, value, self }
+    return value
+  }
+
+  async function readSpaces() {
     const rows = []
     let ok = true
     const self = selfId()
@@ -274,24 +324,31 @@ function createHub({
   function buildMap({ base, reportRows, tierBlock, spaceBlock }) {
     const nodes = new Map()
     const edges = []
-    const node = (id, kind, label, state) => { if (!nodes.has(id)) nodes.set(id, { id, kind, label: String(label).slice(0, 60), state }) }
+    // a label is never "undefined": the given text, else the id's last part, else the kind
+    const node = (id, kind, label, state) => {
+      if (nodes.has(id)) return
+      const given = label === undefined || label === null ? '' : String(label).trim()
+      const text = (given && given !== 'undefined' && given !== 'null') ? given : (String(id).split(':').pop() || kind)
+      nodes.set(id, { id, kind, label: text.slice(0, 60), state })
+    }
     const edge = (from, to, kind) => { if (nodes.has(from) && nodes.has(to)) edges.push({ from, to, kind }) }
     const panelsState = (panels) => (Object.values(panels || {}).some((p) => p && p.ok === false) ? 'warn' : 'ok')
 
-    const selfHost = base.host
+    const selfHost = String(base.host || 'this machine').split('.')[0]
     node(`machine:${selfHost}`, 'machine', selfHost, panelsState(base.panels))
     for (const r of reportRows) node(`machine:${r.host}`, 'machine', r.host, r.stale ? 'off' : panelsState(r.panels))
     node('repo:di.iiii', 'repo', 'di.iiii', 'ok')
 
     for (const row of tierBlock.rows) {
-      const state = row.status === 0 ? 'off' : (row.status >= 500 ? 'warn' : ((row.behindDev || 0) > 0 ? 'warn' : 'ok'))
+      const state = row.status === 0 ? 'off' : (!isUp(row.status) ? 'warn' : ((row.behindDev || 0) > 0 ? 'warn' : 'ok'))
       node(`tier:${row.id}`, 'tier', row.id, state)
     }
     const self = selfId()
     if (nodes.has(`tier:${self}`)) edge(`machine:${selfHost}`, `tier:${self}`, 'runs')
+    // a report reached THIS tier, so this is the tier that machine follows; a local build is nobody's tier
     for (const r of reportRows) {
       edge(`machine:${r.host}`, `tier:local:${r.host}`, 'runs')
-      edge('tier:dev', `machine:${r.host}`, 'serves')
+      if (!self.startsWith('local:')) edge(`tier:${self}`, `machine:${r.host}`, 'serves')
     }
 
     for (const s of spaceBlock.rows.slice(0, 60)) {
@@ -303,16 +360,18 @@ function createHub({
     const sources = [{ host: selfHost, panels: base.panels }, ...reportRows.map((r) => ({ host: r.host, panels: r.panels }))]
     let agentCount = 0
     for (const src of sources) {
-      for (const show of (src.panels?.shows?.rows || []).slice(0, 12)) {
-        const id = `show:${src.host}:${show.id}`
+      for (const [i, show] of (src.panels?.shows?.rows || []).slice(0, 12).entries()) {
+        if (!isPlainObject(show)) continue
+        const id = `show:${src.host}:${show.id ?? i}`
         node(id, 'show', show.title || show.id, show.ok === false ? 'warn' : 'ok')
         edge(id, `machine:${src.host}`, 'shows-on')
       }
       for (const agent of (src.panels?.agents?.rows || []).slice(0, 30)) {
+        if (!isPlainObject(agent)) continue
         if (agentCount >= 40) break
         agentCount += 1
         const id = `agent:${src.host}:${String(agent.sessionId || agentCount).slice(0, 8)}`
-        node(id, 'agent', agent.title || agent.sessionId, agent.status === 'busy' ? 'ok' : 'warn')
+        node(id, 'agent', agent.title || agent.sessionId || `agent ${agentCount}`, agent.status === 'busy' ? 'ok' : 'warn')
         edge(`machine:${src.host}`, id, 'runs')
         edge(id, 'repo:di.iiii', 'works-on')
       }
@@ -353,5 +412,7 @@ module.exports = {
   createAskStore,
   createHub,
   fingerprint,
-  cleanText
+  cleanText,
+  cleanPanelValue,
+  MAX_HOSTS_PER_SUBJECT
 }

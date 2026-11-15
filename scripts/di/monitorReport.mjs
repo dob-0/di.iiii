@@ -111,6 +111,9 @@ export const sendOnce = async ({ target, token, body, fetchImpl = globalThis.fet
 const SERVICE = 'di-monitor-report.service'
 const TIMER = 'di-monitor-report.timer'
 
+/** One word of an ExecStart line, quoted for systemd: \\ and " escaped, % and $ doubled (specifiers, variables). */
+export const systemdQuote = (value) => `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/%/g, '%%').replace(/\$/g, '$$$$')}"`
+
 /** The two unit files. `node` and `cli` are absolute paths so the timer does not depend on a login shell. */
 export const timerUnits = ({ node, cli, every = EVERY_SECONDS }) => ({
     [SERVICE]: [
@@ -119,7 +122,7 @@ export const timerUnits = ({ node, cli, every = EVERY_SECONDS }) => ({
         '',
         '[Service]',
         'Type=oneshot',
-        `ExecStart=${node} ${cli} monitor report --once`,
+        `ExecStart=${systemdQuote(node)} ${systemdQuote(cli)} monitor report --once`,
         'TimeoutStartSec=60',
         ''
     ].join('\n'),

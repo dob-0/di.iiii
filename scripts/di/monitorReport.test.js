@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { parseMonitorArgs, parseLedgerOpen, buildBody, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
+import { parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -56,8 +56,14 @@ describe('body and timer units', () => {
     })
     it('the units run `monitor report --once` every 30 s', () => {
         const units = timerUnits({ node: '/usr/bin/node', cli: '/x/cli.mjs' })
-        expect(units['di-monitor-report.service']).toContain('ExecStart=/usr/bin/node /x/cli.mjs monitor report --once')
+        expect(units['di-monitor-report.service']).toContain('ExecStart="/usr/bin/node" "/x/cli.mjs" monitor report --once')
         expect(units['di-monitor-report.timer']).toContain('OnUnitActiveSec=30')
+    })
+    it('quotes the ExecStart paths for systemd: spaces kept, quote and backslash escaped, % and $ doubled', () => {
+        expect(systemdQuote('/Users/a b/node')).toBe('"/Users/a b/node"')
+        expect(systemdQuote('/x/"y"\\z')).toBe('"/x/\\"y\\"\\\\z"')
+        expect(systemdQuote('/a%h/$HOME')).toBe('"/a%%h/$$HOME"')
+        expect(timerUnits({ node: '/n d/node', cli: '/c d/cli.mjs' })['di-monitor-report.service']).toContain('ExecStart="/n d/node" "/c d/cli.mjs" monitor')
     })
     it('install writes both files and starts the timer; --remove undoes it', async () => {
         const home = tmpHome()

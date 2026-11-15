@@ -11,11 +11,12 @@ const { createReportStore } = require('../monitorHub.js')
 let server
 afterEach(() => new Promise((resolve) => { if (server) server.close(() => resolve()); else resolve(); server?.closeAllConnections?.() }))
 
-const start = async (hub, deployEnv = 'staging', authState = { authenticated: true, role: 'admin' }) => {
+const owner = { authenticated: true, role: 'admin', type: 'session', subject: 'owner-1' }
+const start = async (hub, deployEnv = 'staging', authState = owner, extra = {}) => {
   const app = express()
   app.use((req, _res, next) => { req.authState = authState; next() })
   const router = express.Router()
-  registerMonitorRoutes(router, { hub, requireAuth: () => true, deployEnv: () => deployEnv })
+  registerMonitorRoutes(router, { hub, requireAuth: () => true, deployEnv: () => deployEnv, ownerIds: () => ['owner-1'], ...extra })
   app.use(router)
   await new Promise((resolve) => { server = app.listen(0, '127.0.0.1', resolve) })
   return `http://127.0.0.1:${server.address().port}/api/monitor/stream`
@@ -57,12 +58,44 @@ describe('GET /api/monitor/stream', () => {
     expect(events).toHaveLength(1)
   }, 15000)
 
-  it('is 403 for a visitor and 404 on prod', async () => {
+  it('is 404 for a visitor, another admin and prod', async () => {
     const hub = { reports: createReportStore(), asks: {}, getSnapshot: async () => ({}) }
-    expect((await fetch(await start(hub, 'staging', { authenticated: false }))).status).toBe(403)
+    expect((await fetch(await start(hub, 'staging', { authenticated: false }))).status).toBe(404)
+    await new Promise((r) => server.close(r))
+    expect((await fetch(await start(hub, 'staging', { ...owner, subject: 'admin-2' }))).status).toBe(404)
     await new Promise((r) => server.close(r))
     expect((await fetch(await start(hub, 'production'))).status).toBe(404)
+    await new Promise((r) => server.close(r))
+    expect((await fetch(await start(hub, 'standby'))).status).toBe(404)
   })
+
+  it('builds the snapshot once per tick for all open streams, and a 5th stream of one subject is 429', async () => {
+    let calls = 0
+    const hub = { reports: createReportStore(), asks: {}, getSnapshot: async () => { calls += 1; return { value: 1 } } }
+    const url = await start(hub)
+    const open = []
+    for (let i = 0; i < 4; i += 1) {
+      const controller = new AbortController()
+      const res = await fetch(url, { signal: controller.signal })
+      expect(res.status).toBe(200)
+      open.push(controller)
+    }
+    const fifth = await fetch(url)
+    expect(fifth.status).toBe(429)
+    await new Promise((r) => setTimeout(r, 300))
+    expect(calls).toBe(1)
+    for (const c of open) c.abort()
+  }, 15000)
+
+  it('ends a stream at its session expiry so the client reconnects through the gate', async () => {
+    const hub = { reports: createReportStore(), asks: {}, getSnapshot: async () => ({ value: 1 }) }
+    const url = await start(hub, 'staging', { ...owner, session: { subject: 'owner-1', expiresAt: Date.now() + 400 } })
+    const res = await fetch(url)
+    const started = Date.now()
+    // the body ends by itself
+    for await (const chunk of res.body) void chunk
+    expect(Date.now() - started).toBeLessThan(3000)
+  }, 15000)
 
   it('stops its timers when the client goes away', async () => {
     let calls = 0
