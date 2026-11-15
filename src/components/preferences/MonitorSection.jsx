@@ -14,7 +14,7 @@ import MonitorWorkspace from './MonitorWorkspace.jsx'
 // triple for state, motion under 0.2 s on named properties only.
 
 const POLL_MS = 5000
-const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Workspace']]
+const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work']]
 const FLASH_MS = 2500
 
 export { timeAgo, formatBytes }
@@ -274,7 +274,7 @@ export default function MonitorSection({ onStats }) {
                         </ModuleSection>
                     ) : null}
                     {tab === 'workspace' ? (
-                        <ModuleSection title="Workspace" subtitle="Asks, agent lanes and machine reports">
+                        <ModuleSection title="Work" subtitle="Asks, what each agent is doing, and machine reports">
                             <MonitorWorkspace asks={snap?.asks} agents={panels.agents} reports={snap?.reports}
                                 onPick={(kind, row) => setSelected({ kind, id: rowId(row) })} />
                         </ModuleSection>

@@ -1504,6 +1504,7 @@
     min-width: 0;
     padding: var(--di-space-2) var(--di-space-3);
     background: var(--di-surface);
+    /* A 2px tone line on the leading edge, inset so it takes no layout; not a shadow. */
     box-shadow: inset 2px 0 0 var(--pref-tone);
 }
 .monitor-tier.tone-success { --pref-tone: var(--di-success); }
@@ -1520,11 +1521,13 @@
     border-radius: 0;
     font: inherit;
     cursor: pointer;
+    /* Holds the 2px underline's place so the active tab does not shift; inset, not a shadow. */
     box-shadow: inset 0 -2px 0 transparent;
     transition: color 0.18s ease-out, background-color 0.18s ease-out;
 }
 .monitor-tab:hover { background: rgba(255, 255, 255, 0.06); }
 .monitor-tab:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+/* The active tab's 2px underline, inset so it takes no layout; not a shadow. */
 .monitor-tab.is-active { color: var(--di-text); box-shadow: inset 0 -2px 0 var(--di-cyan); }
 /* Map */
 .monitor-map { min-width: 0; overflow-x: auto; }
@@ -1538,7 +1541,7 @@
 .monitor-node.tone-muted { --pref-tone: var(--pref-border); }
 .monitor-node-box { fill: var(--di-black); stroke: var(--pref-border); stroke-width: 1; }
 .monitor-node-edge { fill: var(--pref-tone); }
-.monitor-node-label { fill: var(--di-text); font-size: 13px; }
+.monitor-node-label { fill: var(--di-text); font-size: var(--di-text-3); }
 .monitor-node:hover .monitor-node-box { fill: rgba(255, 255, 255, 0.06); }
 .monitor-node:focus-visible .monitor-node-box, .monitor-node.is-selected .monitor-node-box { stroke: var(--di-cyan); }
 .monitor-map-key {
@@ -1556,6 +1559,7 @@
     --pref-tone: var(--di-cyan);
     padding: var(--di-space-2) var(--di-space-3);
     background: var(--di-surface);
+    /* A 2px tone line on the leading edge, inset so it takes no layout; not a shadow. */
     box-shadow: inset 2px 0 0 var(--pref-tone);
 }
 .monitor-ask.tone-danger { --pref-tone: var(--di-danger); }

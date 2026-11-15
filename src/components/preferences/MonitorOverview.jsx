@@ -8,7 +8,8 @@ export const shortCommit = (commit) => (commit ? String(commit).slice(0, 7) : 'â
 
 const isHealthy = (row) => {
     const s = row.status
-    if (typeof s === 'number') return s > 0 && s < 400
+    // Same rule as the server's isUp (monitorHub.js): only a 2xx answer is up; a redirect is not.
+    if (typeof s === 'number') return s >= 200 && s < 300
     return ['ok', 'up', 'live', 'online', '200'].includes(String(s ?? '').toLowerCase())
 }
 

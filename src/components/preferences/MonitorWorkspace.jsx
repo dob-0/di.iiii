@@ -75,7 +75,7 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
                 ))}
             </div>
 
-            <div className="monitor-group-title">Agent lanes <span className="preferences-tree-tag">{lanes.length}</span></div>
+            <div className="monitor-group-title">Agents at work <span className="preferences-tree-tag">{lanes.length}</span></div>
             {!lanes.length ? <div className="monitor-note">No live agent sessions.</div> : null}
             <div className="monitor-grid">
                 {lanes.map((a) => (
