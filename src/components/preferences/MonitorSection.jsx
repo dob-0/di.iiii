@@ -95,6 +95,10 @@ function Row({ id, selected, flash, tone, onSelect, children }) {
     )
 }
 
+const RECONNECT_MIN_MS = 3000
+const RECONNECT_MAX_MS = 30000
+export const nextBackoff = (ms) => Math.min(RECONNECT_MAX_MS, ms * 2)
+
 export default function MonitorSection({ onStats }) {
     const [snap, setSnap] = useState(null)
     const [unavailable, setUnavailable] = useState(false)
@@ -175,11 +179,14 @@ export default function MonitorSection({ onStats }) {
         }
     }, [apply])
 
-    // live: the stream carries every change; polling runs only while it does not
+    // live: the stream carries every change; polling runs only while it does not.
+    // A CLOSED source (an HTTP refusal, e.g. a 502 while serverXR restarts) is reopened with a backoff.
     useEffect(() => {
         if (paused || typeof EventSource === 'undefined') return undefined
-        let source
-        try { source = new EventSource(monitorStreamUrl(), { withCredentials: true }) } catch { return undefined }
+        let source = null
+        let retry = null
+        let delay = RECONNECT_MIN_MS
+        let stopped = false
         const onSnapshot = (ev) => {
             if (!alive.current) return
             try {
@@ -190,16 +197,41 @@ export default function MonitorSection({ onStats }) {
             } catch { /* a broken frame is skipped; the next one or the poll recovers */ }
         }
         const onHeartbeat = () => { if (alive.current) setHeardAt(Date.now()) }
-        source.addEventListener('snapshot', onSnapshot)
-        source.addEventListener('heartbeat', onHeartbeat)
-        source.onerror = () => {
-            // The server ends streams on purpose (15 min, session expiry, a slow client) and says
-            // retry: 3000, so the browser reconnects by itself: polling covers the gap and the next
-            // snapshot says "live" again. Only a CLOSED source (an HTTP refusal) is over for good.
-            if (source.readyState === EventSource.CLOSED) source.close()
-            if (alive.current) setStreaming(false)
+        const drop = () => {
+            if (!source) return
+            source.removeEventListener('snapshot', onSnapshot)
+            source.removeEventListener('heartbeat', onHeartbeat)
+            source.close()
+            source = null
         }
-        return () => { source.removeEventListener('snapshot', onSnapshot); source.removeEventListener('heartbeat', onHeartbeat); source.close(); setStreaming(false) }
+        const open = () => {
+            retry = null
+            try { source = new EventSource(monitorStreamUrl(), { withCredentials: true }) } catch { source = null; schedule(); return }
+            const mine = source
+            source.addEventListener('snapshot', onSnapshot)
+            source.addEventListener('heartbeat', onHeartbeat)
+            source.onopen = () => { delay = RECONNECT_MIN_MS }
+            source.onerror = () => {
+                // The server ends streams on purpose (15 min, session expiry, a slow client) and says
+                // retry: 3000, so the browser reconnects by itself: polling covers the gap and the next
+                // snapshot says "live" again. Only a CLOSED source is over: we open a new one later.
+                if (alive.current) setStreaming(false)
+                if (stopped || mine !== source) return
+                if (mine.readyState === EventSource.CLOSED) { drop(); schedule() }
+            }
+        }
+        function schedule() {
+            if (stopped || retry) return
+            retry = setTimeout(open, delay)
+            delay = nextBackoff(delay)
+        }
+        open()
+        return () => {
+            stopped = true
+            clearTimeout(retry)
+            drop()
+            setStreaming(false)
+        }
     }, [apply, paused])
 
     // one read at the start (it also finds out the page is refused); the stream
@@ -216,6 +248,9 @@ export default function MonitorSection({ onStats }) {
         const timer = setInterval(() => setNowMs(Date.now()), 1000)
         return () => clearInterval(timer)
     }, [])
+
+    // stable: the 3D map is memoized and must not wake up for the 1 s clock above it
+    const pickNode = useCallback((n) => setSelected({ kind: 'node', id: n.id }), [])
 
     const setFullScreen = useCallback((on) => {
         setFull(on)
@@ -407,7 +442,7 @@ export default function MonitorSection({ onStats }) {
                     {tab === 'map' ? (
                         <ModuleSection className="monitor-map-section" title="Map" subtitle="Machines, tiers, spaces and shows — select a node for its details">
                             <MonitorMap map={snap?.map} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
-                                live={streaming && !paused} onPick={(n) => setSelected({ kind: 'node', id: n.id })} />
+                                live={streaming && !paused} onPick={pickNode} />
                         </ModuleSection>
                     ) : null}
                     {tab === 'workspace' ? (

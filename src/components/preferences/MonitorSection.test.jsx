@@ -9,7 +9,7 @@ vi.mock('../../services/apiClient.js', () => ({
 }))
 
 import { getMonitor, postMonitorAsk } from '../../services/apiClient.js'
-import MonitorSection, { formatBytes, timeAgo } from './MonitorSection.jsx'
+import MonitorSection, { formatBytes, nextBackoff, timeAgo } from './MonitorSection.jsx'
 import { tierState, heroState } from './MonitorOverview.jsx'
 
 const snapshot = (over = {}) => ({
@@ -334,6 +334,59 @@ describe('MonitorSection overview, map, workspace and live', () => {
         await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
         expect(getMonitor.mock.calls.length).toBeGreaterThan(calls)
         expect(screen.getByText(/· polling ·/)).toBeTruthy()
+    })
+
+    it('a CLOSED stream is reopened with a backoff (3 s doubling, cap 30 s, reset on open); polling meanwhile', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        vi.stubGlobal('EventSource', FakeEventSource)
+        getMonitor.mockResolvedValue(snapshot())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const closeLatest = async () => { const es = FakeEventSource.instances.at(-1); es.readyState = 2; await act(async () => { es.onerror() }); return es }
+        const first = await closeLatest()
+        expect(first.closed).toBe(true)
+        expect(screen.getByText(/· polling ·/)).toBeTruthy()
+        await act(async () => { await vi.advanceTimersByTimeAsync(2900) })
+        expect(FakeEventSource.instances.length).toBe(1)
+        await act(async () => { await vi.advanceTimersByTimeAsync(200) })
+        expect(FakeEventSource.instances.length).toBe(2) // after 3 s
+        await closeLatest()
+        await act(async () => { await vi.advanceTimersByTimeAsync(5900) })
+        expect(FakeEventSource.instances.length).toBe(2)
+        await act(async () => { await vi.advanceTimersByTimeAsync(200) })
+        expect(FakeEventSource.instances.length).toBe(3) // after 6 s
+        const third = FakeEventSource.instances[2]
+        await act(async () => { third.onopen() })
+        await act(async () => { third.emit(snapshot()) })
+        expect(screen.getByText(/· live ·/)).toBeTruthy()
+        await closeLatest() // delay was reset by the open: 3 s again
+        await act(async () => { await vi.advanceTimersByTimeAsync(3100) })
+        expect(FakeEventSource.instances.length).toBe(4)
+        expect(nextBackoff(3000)).toBe(6000)
+        expect(nextBackoff(20000)).toBe(30000)
+        expect(nextBackoff(30000)).toBe(30000)
+    })
+
+    it('a pending reconnect is cleaned up on Pause and on unmount', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        vi.stubGlobal('EventSource', FakeEventSource)
+        getMonitor.mockResolvedValue(snapshot())
+        const { unmount } = render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const es = FakeEventSource.instances[0]
+        es.readyState = 2
+        await act(async () => { es.onerror() })
+        fireEvent.click(screen.getByRole('button', { name: 'Pause' }))
+        await act(async () => { await vi.advanceTimersByTimeAsync(40000) })
+        expect(FakeEventSource.instances.length).toBe(1)
+        fireEvent.click(screen.getByRole('button', { name: 'Resume' }))
+        expect(FakeEventSource.instances.length).toBe(2)
+        const e2 = FakeEventSource.instances[1]
+        e2.readyState = 2
+        await act(async () => { e2.onerror() })
+        unmount()
+        await act(async () => { await vi.advanceTimersByTimeAsync(40000) })
+        expect(FakeEventSource.instances.length).toBe(2)
     })
 
     it('a dropped stream is left to reconnect: polling meanwhile, live again on the next snapshot', async () => {

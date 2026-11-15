@@ -1,6 +1,6 @@
 /* global __APP_VERSION__ */
 import React from 'react'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import PreferencesPage from './PreferencesPage.jsx'
 import {
@@ -187,13 +187,22 @@ describe('PreferencesPage', () => {
         expect(await screen.findByRole('button', { name: /^Monitor/ })).toBeTruthy()
     })
 
-    it('opens straight on the Monitor from /admin#monitor and ignores an unknown hash', async () => {
-        vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
-        window.location.hash = '#monitor'
+    it('#monitor shows no Monitor text while the server has not answered, or on a 404; only a 200 mounts it', async () => {
+        const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
+        window.location.hash = '#monitor-full'
         const first = renderPreferencesPage()
-        expect(await screen.findByText('Everything that is going on')).toBeTruthy()
+        // pending or refused: the default admin section, nothing of the Monitor
+        expect(screen.getByText('Spaces and who can see them')).toBeTruthy()
+        await new Promise((r) => setTimeout(r, 50))
+        expect(screen.queryByText('Everything that is going on')).toBeNull()
+        expect(screen.queryByText(/lists machines and session titles/)).toBeNull()
+        expect(screen.queryByText(/Only on the machine you are sitting at/)).toBeNull()
         first.unmount?.()
+        spy.mockResolvedValue({ ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' })
+        renderPreferencesPage()
+        expect(await screen.findByText('Everything that is going on')).toBeTruthy()
         window.location.hash = '#nonsense'
+        cleanup()
         renderPreferencesPage()
         expect(screen.getByText('Spaces and who can see them')).toBeTruthy()
         window.location.hash = ''

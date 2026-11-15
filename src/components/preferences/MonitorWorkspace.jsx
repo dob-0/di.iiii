@@ -18,6 +18,12 @@ const ASK_TONE = { sending: 'accent', failed: 'danger' }
 
 const touchedMs = (a) => { const t = new Date(a.touched).getTime(); return Number.isFinite(t) ? t : 0 }
 
+export const dropSeen = (pending, serverRows) => {
+    const ids = new Set((serverRows || []).map((a) => String(a.id)))
+    const left = pending.filter((p) => !ids.has(String(p.id)))
+    return left.length === pending.length ? pending : left
+}
+
 export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
     const [text, setText] = useState('')
     const [pending, setPending] = useState([])
@@ -32,7 +38,11 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
     useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
 
     const serverRows = useMemo(() => asks?.rows || [], [asks])
-    // an optimistic ask goes away once the stream carries the same id
+    // an optimistic ask goes away once the server's list has shown the same id, and stays gone: the list is
+    // only the open asks, so an ask an agent finishes must not come back from `pending` as "open"
+    useEffect(() => {
+        setPending((p) => dropSeen(p, serverRows))
+    }, [serverRows])
     const shown = useMemo(() => {
         const ids = new Set(serverRows.map((a) => String(a.id)))
         const mine = pending.filter((p) => !ids.has(String(p.id)))

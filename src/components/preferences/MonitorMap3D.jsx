@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { Box3, Vector3 } from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Line, OrbitControls } from '@react-three/drei'
 import Canvas from '../GuardedCanvas.jsx'
+import { fitKey, layoutSignature, PULSE_MS, pulseEdgeIndexes, shouldAnimate } from './monitorMap3dPolicy.js'
 
 // The 3D view of the Monitor map: the same layout as the 2D graph, as bodies in
 // a room. Kind sets the height (tiers above machines above spaces); each node
@@ -46,6 +47,8 @@ const useReducedMotion = () => {
 
 const at = (p) => [p.x * S, p.h * S, p.y * S]
 const floor = (p) => [p.x * S, 0, p.y * S]
+const HUB = [0, 0.1, 0]
+const pulseIndexes = (edges, pulsing, hoverId) => pulseEdgeIndexes({ edges, pulsing, hoverId })
 
 function Body({ node, p, color, dim, sel, onHover, onPick }) {
     const k = node.kind
@@ -122,6 +125,7 @@ function Rig({ preset, points, fitDist }) {
     const controls = useThree((s) => s.controls)
     const invalidate = useThree((s) => s.invalidate)
     const size = useThree((s) => s.size)
+    // `points` changes only when the set of nodes does: a turn or zoom by hand survives every snapshot
     useEffect(() => {
         const { centre, dist } = fitCamera(camera, points, preset.name === 'top' ? FROM_ABOVE : ELEVATED, size)
         fitDist.current = dist
@@ -143,19 +147,58 @@ function Closeness({ fitDist, onClose }) {
     return null
 }
 
-export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
+const useVisible = () => {
+    const [visible, setVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden))
+    useEffect(() => {
+        const on = () => setVisible(!document.hidden)
+        document.addEventListener('visibilitychange', on)
+        return () => document.removeEventListener('visibilitychange', on)
+    }, [])
+    return visible
+}
+
+// Still = zero frames: the canvas draws on a change, a gesture, or a 3 s pulse after a snapshot that changed
+// something (and while a node is hovered). The page's 1 s clock never reaches this tree (memo + stable props).
+function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
     const reduced = useReducedMotion()
+    const visible = useVisible()
     const colors = useMemo(() => readColors(), [])
     const [hover, setHover] = useState(null)
     const [preset, setPreset] = useState({ name: 'fit', n: 0 })
     const [close, setClose] = useState(false)
+    const [pulsing, setPulsing] = useState(false)
     const fitDist = useRef(10)
+    // a snapshot that changed nothing visible keeps the same layout object: no rebuild, no frame
+    const sig = layoutSignature(incoming)
+    const layout = useMemo(() => incoming, [sig]) // eslint-disable-line react-hooks/exhaustive-deps
+    const idsKey = fitKey(layout)
     const points = useMemo(() => {
         const list = [[0, 0.6, 0]]
         for (const n of layout.nodes) { const p = layout.pos.get(n.id); list.push([p.x * S, 0, p.y * S], [p.x * S, p.h * S + 0.7, p.y * S]) }
         return list
-    }, [layout])
-    const animate = !!live && !reduced
+    }, [idsKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    const firstSig = useRef(true)
+    useEffect(() => {
+        if (firstSig.current) { firstSig.current = false; return undefined }
+        setPulsing(true)
+        const id = setTimeout(() => setPulsing(false), PULSE_MS)
+        return () => clearTimeout(id)
+    }, [sig])
+
+    const rings = useMemo(() => layout.radii.map((rad) => ({
+        r: rad,
+        pts: Array.from({ length: 97 }, (_, i) => {
+            const a = (i / 96) * Math.PI * 2
+            return [Math.cos(a) * rad * layout.aspect * S, 0, Math.sin(a) * rad * S]
+        })
+    })), [layout])
+    const hubLines = useMemo(() => layout.tierIds.map((id) => ({ id, pts: [HUB, at(layout.pos.get(id))] })), [layout])
+    const edgeLines = useMemo(() => layout.edges.map((e, i) => ({ e, i, a: at(layout.pos.get(e.from)), b: at(layout.pos.get(e.to)), pts: [at(layout.pos.get(e.from)), at(layout.pos.get(e.to))] })), [layout])
+    const stems = useMemo(() => layout.nodes.map((n) => ({ id: n.id, pts: [floor(layout.pos.get(n.id)), at(layout.pos.get(n.id))] })), [layout])
+    const stemOf = useMemo(() => new Map(stems.map((x) => [x.id, x.pts])), [stems])
+    const animate = shouldAnimate({ edges: layout.edges, pulsing, hoverId: hover, visible, reduced })
+    const pulseSet = useMemo(() => new Set(pulseIndexes(layout.edges, pulsing, hover)), [layout, pulsing, hover])
 
     const neighbours = useMemo(() => {
         const m = new Map()
@@ -172,7 +215,6 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
     const hot = (id) => !focus || id === focus || near.has(id)
     const toneColor = (state) => colors[STATE_TONE[state] || 'muted']
     const degree = (id) => (neighbours.get(id) || new Set()).size
-    const hubPoint = [0, 0.1, 0]
 
     return (
         <div className="monitor-map-stage monitor-map-stage-3d">
@@ -182,27 +224,17 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
                 <Closeness fitDist={fitDist} onClose={setClose} />
                 <Ticker on={animate} />
                 <OrbitControls makeDefault enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
-                {layout.radii.map((r) => (
-                    <Line key={r} color={colors.line} lineWidth={1}
-                        points={Array.from({ length: 97 }, (_, i) => {
-                            const a = (i / 96) * Math.PI * 2
-                            return [Math.cos(a) * r * layout.aspect * S, 0, Math.sin(a) * r * S]
-                        })} />
-                ))}
-                <mesh position={hubPoint}><boxGeometry args={[0.5, 0.2, 0.5]} /><meshBasicMaterial color={colors.cyan} /></mesh>
-                {layout.tierIds.map((id) => (
-                    <Line key={`hub-${id}`} color={colors.line} lineWidth={1} points={[hubPoint, at(layout.pos.get(id))]} />
-                ))}
-                {layout.edges.map((e, i) => {
-                    const a = at(layout.pos.get(e.from))
-                    const b = at(layout.pos.get(e.to))
+                {rings.map((ring) => <Line key={ring.r} color={colors.line} lineWidth={1} points={ring.pts} />)}
+                <mesh position={HUB}><boxGeometry args={[0.5, 0.2, 0.5]} /><meshBasicMaterial color={colors.cyan} /></mesh>
+                {hubLines.map((h) => <Line key={`hub-${h.id}`} color={colors.line} lineWidth={1} points={h.pts} />)}
+                {edgeLines.map(({ e, i, a, b, pts }) => {
                     const lit = !!focus && (e.from === focus || e.to === focus)
                     const isLive = LIVE_EDGES.has(e.kind)
                     return (
                         <group key={`${e.from}>${e.to}>${e.kind}>${i}`}>
-                            <Line points={[a, b]} color={lit ? colors.cyan : focus ? colors.line : isLive ? colors.live : colors.muted}
+                            <Line points={pts} color={lit ? colors.cyan : focus ? colors.line : isLive ? colors.live : colors.muted}
                                 lineWidth={lit ? 2 : 1} transparent opacity={focus && !lit ? 0.35 : 1} />
-                            {animate && isLive ? <Pulse a={a} b={b} offset={(i * 0.37) % 1} color={colors.live} /> : null}
+                            {animate && isLive && pulseSet.has(i) ? <Pulse a={a} b={b} offset={(i * 0.37) % 1} color={colors.live} /> : null}
                         </group>
                     )
                 })}
@@ -215,7 +247,7 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
                     const named = close || n.kind === 'tier' || n.kind === 'machine'
                     return (
                         <group key={n.id}>
-                            <Line points={[floor(p), at(p)]} color={colors.line} lineWidth={1} />
+                            <Line points={stemOf.get(n.id)} color={colors.line} lineWidth={1} />
                             <Body node={n} p={p} color={toneColor(n.state)} dim={dim} sel={sel} onHover={setHover} onPick={onPick} />
 {named || full ? (
                                 <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
@@ -246,3 +278,5 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
         </div>
     )
 }
+
+export default memo(MonitorMap3D)

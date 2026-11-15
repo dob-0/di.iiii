@@ -121,7 +121,7 @@ const sectionFromHash = () => {
 }
 
 export default function PreferencesPage({ onNavigateToEditor }) {
-    const [activeSection, setActiveSection] = useState(sectionFromHash)
+    const [requestedSection, setActiveSection] = useState(sectionFromHash)
     // a /admin#monitor link followed inside an open admin page switches section
     useEffect(() => {
         const onHash = () => {
@@ -140,6 +140,9 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         getMonitor().then(() => { if (alive) setMonitorAllowed(true) }).catch(() => { if (alive) setMonitorAllowed(false) })
         return () => { alive = false }
     }, [])
+    // #monitor / #monitor-full mount nothing of the Monitor (not even its header) until the server said 200:
+    // while pending, or on a 404, the page is the normal default admin section.
+    const activeSection = requestedSection === 'monitor' && !monitorAllowed ? 'manage' : requestedSection
     useDocumentTitle(pageTitle('admin', { section: SECTIONS.find((s) => s.key === activeSection)?.label }))
     const [headerCollapsed, setHeaderCollapsed] = useState(false)
     // Refresh loads the lists again by remounting the open section (each one
