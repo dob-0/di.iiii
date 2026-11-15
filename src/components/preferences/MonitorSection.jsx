@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { InfoPair, MetricCard, ModuleSection, formatTimestamp } from './PreferencesShared.jsx'
-import { getMonitor } from '../../services/apiClient.js'
+import { getMonitor, monitorStreamUrl } from '../../services/apiClient.js'
+import { timeAgo, formatBytes } from './monitorFormat.js'
+import MonitorOverview from './MonitorOverview.jsx'
+import MonitorMap, { useNarrow } from './MonitorMap.jsx'
+import MonitorWorkspace from './MonitorWorkspace.jsx'
 
 // One page for everything that is going on: machines, the network, agent
 // sessions (every Claude login on the machine), services, pull requests, and
@@ -10,30 +14,10 @@ import { getMonitor } from '../../services/apiClient.js'
 // triple for state, motion under 0.2 s on named properties only.
 
 const POLL_MS = 5000
+const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Workspace']]
 const FLASH_MS = 2500
 
-export const timeAgo = (iso, nowMs = Date.now()) => {
-    if (!iso) return 'never'
-    const ms = nowMs - new Date(iso).getTime()
-    if (!Number.isFinite(ms)) return 'n/a'
-    const s = Math.max(0, Math.floor(ms / 1000))
-    if (s < 10) return 'now'
-    if (s < 60) return `${s}s`
-    const m = Math.floor(s / 60)
-    if (m < 60) return `${m}m`
-    const h = Math.floor(m / 60)
-    if (h < 48) return `${h}h`
-    return `${Math.floor(h / 24)}d`
-}
-
-export const formatBytes = (bytes) => {
-    const n = Number(bytes)
-    if (!Number.isFinite(n) || n <= 0) return '—'
-    if (n < 1024) return `${n} B`
-    if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`
-    if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`
-    return `${(n / 1024 ** 3).toFixed(1)} GB`
-}
+export { timeAgo, formatBytes }
 
 // every row has one id the server made unique (tailnet address, URL, session id, unit, PR number)
 const rowId = (row) => row.id ?? row.sessionId ?? row.unit ?? row.number ?? row.name
@@ -87,6 +71,9 @@ export default function MonitorSection({ onStats }) {
     const [paused, setPaused] = useState(false)
     const [query, setQuery] = useState('')
     const [selected, setSelected] = useState(null)
+    const [tab, setTab] = useState('board')
+    const [streaming, setStreaming] = useState(false)
+    const narrow = useNarrow()
     const [flashing, setFlashing] = useState(() => new Set())
     const [, setTick] = useState(0)
     const previous = useRef(null)
@@ -100,40 +87,70 @@ export default function MonitorSection({ onStats }) {
         return () => { alive.current = false; clearTimeout(flashTimer.current) }
     }, [])
 
+    // one place that takes a snapshot, from a poll or from the stream
+    const apply = useCallback((next) => {
+        const sig = signatures(next.panels)
+        if (previous.current) {
+            const changed = Object.keys(sig).filter((k) => previous.current[k] !== sig[k])
+            if (changed.length) {
+                setFlashing(new Set(changed))
+                clearTimeout(flashTimer.current)
+                flashTimer.current = setTimeout(() => setFlashing(new Set()), FLASH_MS)
+            }
+        }
+        previous.current = sig
+        setSnap(next)
+        setUnavailable(false)
+        setError('')
+        const a = next.panels?.agents
+        onStats?.({ live: a?.live || 0, total: a?.total || 0 })
+    }, [onStats])
+
     const load = useCallback(async () => {
         const mine = ++seq.current
         try {
             const next = await getMonitor()
             // a slower, older answer must not overwrite a newer one (or land after unmount)
             if (!alive.current || mine !== seq.current) return
-            const sig = signatures(next.panels)
-            if (previous.current) {
-                const changed = Object.keys(sig).filter((k) => previous.current[k] !== sig[k])
-                if (changed.length) {
-                    setFlashing(new Set(changed))
-                    clearTimeout(flashTimer.current)
-                    flashTimer.current = setTimeout(() => setFlashing(new Set()), FLASH_MS)
-                }
-            }
-            previous.current = sig
-            setSnap(next)
-            setUnavailable(false)
-            setError('')
-            const a = next.panels?.agents
-            onStats?.({ live: a?.live || 0, total: a?.total || 0 })
+            apply(next)
         } catch (e) {
             if (!alive.current || mine !== seq.current) return
             if (e.status === 404) setUnavailable(true)
             else setError(e.message || 'Failed to load the monitor.')
         }
-    }, [onStats])
+    }, [apply])
 
+    // live: the stream carries every change; polling runs only while it does not
     useEffect(() => {
-        load()
-        if (paused) return undefined
+        if (paused || typeof EventSource === 'undefined') return undefined
+        let source
+        try { source = new EventSource(monitorStreamUrl(), { withCredentials: true }) } catch { return undefined }
+        const onSnapshot = (ev) => {
+            if (!alive.current) return
+            try {
+                const next = JSON.parse(ev.data)
+                seq.current += 1 // an older poll answer must not land over it
+                apply(next)
+                setStreaming(true)
+            } catch { /* a broken frame is skipped; the next one or the poll recovers */ }
+        }
+        source.addEventListener('snapshot', onSnapshot)
+        source.onerror = () => {
+            // 404 or a dropped connection: close for good and let polling carry on
+            source.close()
+            if (alive.current) setStreaming(false)
+        }
+        return () => { source.removeEventListener('snapshot', onSnapshot); source.close(); setStreaming(false) }
+    }, [apply, paused])
+
+    // one read at the start (it also finds out the page is refused); the stream
+    // flipping on or off must not trigger another, it would land over a newer snapshot
+    useEffect(() => { load() }, [load, paused])
+    useEffect(() => {
+        if (paused || streaming) return undefined
         const timer = setInterval(load, POLL_MS)
         return () => clearInterval(timer)
-    }, [load, paused])
+    }, [load, paused, streaming])
 
     // the "updated Ns ago" label moves every second without another request
     useEffect(() => {
@@ -184,10 +201,11 @@ export default function MonitorSection({ onStats }) {
         const pool = {
             machine: panels.machines?.rows, probe: panels.network?.rows, agent: panels.agents?.rows,
             service: panels.services?.rows, pr: panels.pullRequests?.rows,
-            thing: panels.connected?.rows, place: panels.presence?.rows
+            thing: panels.connected?.rows, place: panels.presence?.rows,
+            node: snap?.map?.nodes
         }[selected.kind] || []
         return pool.find((r) => rowId(r) === selected.id) || null
-    }, [selected, panels])
+    }, [selected, panels, snap])
 
     if (unavailable) {
         return (
@@ -210,7 +228,7 @@ export default function MonitorSection({ onStats }) {
         <>
             <ModuleSection
                 title="Monitor"
-                subtitle={`${snap?.host || 'this machine'} · ${live ? 'live' : paused ? 'paused' : 'offline'} · ${updated}`}
+                subtitle={`${snap?.host || 'this machine'} · ${live ? (streaming ? 'live' : 'polling') : paused ? 'paused' : 'offline'} · ${updated}`}
                 actions={(
                     <>
                         <input
@@ -229,6 +247,7 @@ export default function MonitorSection({ onStats }) {
                 )}
             >
                 {error ? <div className="preferences-empty">{error}</div> : null}
+                <MonitorOverview tiers={snap?.tiers} spaces={snap?.spaces} />
                 <div className="monitor-metrics">
                     <MetricCard label="Machines online" value={panels.machines?.ok ? `${panels.machines.online}/${panels.machines.total}` : '—'} tone={panels.machines?.ok ? (panels.machines.online ? 'success' : 'warning') : 'warning'} />
                     <MetricCard label="Network up" value={panels.network?.ok ? `${panels.network.up}/${panels.network.total}` : '—'} tone={panels.network?.up === panels.network?.total ? 'success' : 'warning'} />
@@ -238,10 +257,29 @@ export default function MonitorSection({ onStats }) {
                     <MetricCard label="Services failed" value={panels.services?.ok ? failed : '—'} tone={failed ? 'warning' : 'success'} />
                     <MetricCard label={`Open PRs · ${panels.pullRequests?.drafts ?? 0} draft`} value={panels.pullRequests?.ok ? panels.pullRequests.open : '—'} tone="accent" />
                 </div>
+                <div className="monitor-tabs" role="tablist" aria-label="Monitor views">
+                    {TABS.map(([id, label]) => (
+                        <button key={id} type="button" role="tab" aria-selected={tab === id} data-monitor-tab={id}
+                            className={`monitor-tab${tab === id ? ' is-active' : ''}`} onClick={() => setTab(id)}>{label}</button>
+                    ))}
+                </div>
             </ModuleSection>
 
             <div className="monitor-layout">
                 <div className="monitor-main">
+                    {tab === 'map' ? (
+                        <ModuleSection title="Map" subtitle="Machines, tiers, spaces and shows — select a node for its details">
+                            <MonitorMap map={snap?.map} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
+                                onPick={(n) => setSelected({ kind: 'node', id: n.id })} />
+                        </ModuleSection>
+                    ) : null}
+                    {tab === 'workspace' ? (
+                        <ModuleSection title="Workspace" subtitle="Asks, agent lanes and machine reports">
+                            <MonitorWorkspace asks={snap?.asks} agents={panels.agents} reports={snap?.reports}
+                                onPick={(kind, row) => setSelected({ kind, id: rowId(row) })} />
+                        </ModuleSection>
+                    ) : null}
+                    {tab === 'board' ? (<>
                     <ModuleSection title="Machines" subtitle="Tailnet — who is on, who was last seen">
                         <PanelNote panel={panels.machines} empty="No machines reported." />
                         <div className="monitor-grid">
@@ -354,10 +392,11 @@ export default function MonitorSection({ onStats }) {
                             ))}
                         </div>
                     </ModuleSection>
+                    </>) : null}
                 </div>
 
                 <aside className="monitor-inspector preferences-stage-sidebar-block preferences-node-inspector" aria-label="Inspector">
-                    <div className="preferences-stage-sidebar-title">Inspector{selectedRow ? ` — ${selectedRow.name || selectedRow.title || selectedRow.unit || selectedRow.target || `#${selectedRow.number}`}` : ''}</div>
+                    <div className="preferences-stage-sidebar-title">Inspector{selectedRow ? ` — ${selectedRow.name || selectedRow.label || selectedRow.title || selectedRow.unit || selectedRow.target || `#${selectedRow.number}`}` : ''}</div>
                     {!selectedRow ? <div className="preferences-empty">Select anything on the page to see its details.</div> : null}
                     {selected?.kind === 'machine' && selectedRow ? (
                         <>
@@ -408,6 +447,18 @@ export default function MonitorSection({ onStats }) {
                             <InfoPair label="Unit" value={selectedRow.unit} mono />
                             <InfoPair label="State" value={`${selectedRow.active} · ${selectedRow.sub}`} mono />
                             <InfoPair label="What" value={selectedRow.description || 'n/a'} />
+                        </>
+                    ) : null}
+                    {selected?.kind === 'node' && selectedRow ? (
+                        <>
+                            <InfoPair label={selectedRow.kind} value={selectedRow.label} />
+                            <InfoPair label="State" value={selectedRow.state} mono />
+                            <InfoPair label="Id" value={selectedRow.id} mono />
+                            {(snap?.map?.edges || []).filter((e) => e.from === selectedRow.id || e.to === selectedRow.id).map((e, i) => {
+                                const otherId = e.from === selectedRow.id ? e.to : e.from
+                                const other = (snap.map.nodes || []).find((n) => n.id === otherId)
+                                return <InfoPair key={`${e.kind}-${otherId}-${i}`} label={e.kind} value={other?.label || otherId} />
+                            })}
                         </>
                     ) : null}
                     {selected?.kind === 'pr' && selectedRow ? (

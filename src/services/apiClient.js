@@ -324,3 +324,13 @@ export const getMonitor = async () => apiFetch('/api/monitor')
 export const getAgentBoardSession = async (sessionId) => (
     apiFetch(`/api/agent-board/session/${encodeURIComponent(sessionId)}`)
 )
+
+// Live monitor: one SSE stream (event "snapshot", same JSON as getMonitor) and
+// the owner's "send an ask" box. The page falls back to polling when the
+// stream is missing or breaks.
+export const monitorStreamUrl = () => `${apiBaseUrl}/api/monitor/stream`
+
+export const postMonitorAsk = async (text) => apiFetch('/api/monitor/ask', {
+    method: 'POST',
+    body: { text }
+})

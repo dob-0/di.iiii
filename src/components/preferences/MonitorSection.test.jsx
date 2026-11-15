@@ -1,10 +1,14 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../../services/apiClient.js', () => ({ getMonitor: vi.fn() }))
+vi.mock('../../services/apiClient.js', () => ({
+    getMonitor: vi.fn(),
+    monitorStreamUrl: () => '/api/monitor/stream',
+    postMonitorAsk: vi.fn()
+}))
 
-import { getMonitor } from '../../services/apiClient.js'
+import { getMonitor, postMonitorAsk } from '../../services/apiClient.js'
 import MonitorSection, { formatBytes, timeAgo } from './MonitorSection.jsx'
 
 const snapshot = (over = {}) => ({
@@ -44,6 +48,54 @@ const snapshot = (over = {}) => ({
         ...over
     }
 })
+
+// the contract's new fields (tiers, spaces, asks, reports, map)
+const contract = (over = {}) => ({
+    ...snapshot(),
+    reports: [
+        { host: 'r-di', reportedAt: new Date().toISOString(), stale: false, panels: { agents: { live: 2 } } },
+        { host: 'asuz', reportedAt: '2026-11-15T00:00:00Z', stale: true, panels: {} }
+    ],
+    tiers: { ok: true, rows: [
+        { id: 'prod', url: 'https://diiii.xyz', status: 'ok', ms: 90, commit: 'aaaaaaa1111', builtAt: '2026-11-10T00:00:00Z', behindDev: 12 },
+        { id: 'dev', url: 'https://dev.diiii.xyz', status: 'ok', ms: 120, commit: 'bbbbbbb2222', builtAt: new Date().toISOString(), behindDev: 0 },
+        { id: 'local:aylmo', url: 'http://diiii.localhost', status: 'ok', ms: 8, commit: 'ccccccc3333', builtAt: new Date().toISOString(), behindDev: 0 },
+        { id: 'local:r-di', url: 'http://r-di', status: 'ok', ms: 30, commit: 'bbbbbbb2222', builtAt: new Date().toISOString(), behindDev: 0 }
+    ] },
+    spaces: { ok: true, rows: [
+        { tier: 'dev', slug: 'platina', visibility: 'private' }, { tier: 'dev', slug: 'docs', visibility: 'public' }, { tier: 'prod', slug: 'docs', visibility: 'public' }
+    ] },
+    asks: { ok: true, rows: [
+        { id: 'N1', state: 'open', touched: '2026-11-15T10:00:00Z', text: 'older ask', source: 'ledger' },
+        { id: 'N2', state: 'open', touched: '2026-11-16T10:00:00Z', text: 'newest ask', source: 'page' }
+    ] },
+    map: {
+        nodes: [
+            { id: 'machine:aylmo', kind: 'machine', label: 'aylmo', state: 'ok' },
+            { id: 'machine:asuz', kind: 'machine', label: 'asuz', state: 'off' },
+            { id: 'tier:dev', kind: 'tier', label: 'dev', state: 'ok' },
+            { id: 'space:platina', kind: 'space', label: 'platina', state: 'warn' },
+            { id: 'show:muth', kind: 'show', label: 'MUTH', state: 'ok' },
+            { id: 'agent:a1', kind: 'agent', label: 'Build the monitor', state: 'ok' }
+        ],
+        edges: [
+            { from: 'machine:aylmo', to: 'tier:dev', kind: 'runs' },
+            { from: 'tier:dev', to: 'space:platina', kind: 'holds' },
+            { from: 'space:platina', to: 'show:muth', kind: 'holds' },
+            { from: 'agent:a1', to: 'machine:aylmo', kind: 'works-on' }
+        ]
+    },
+    ...over
+})
+
+class FakeEventSource {
+    static instances = []
+    constructor(url) { this.url = url; this.listeners = {}; this.closed = false; FakeEventSource.instances.push(this) }
+    addEventListener(t, f) { this.listeners[t] = f }
+    removeEventListener(t) { delete this.listeners[t] }
+    close() { this.closed = true }
+    emit(data) { this.listeners.snapshot?.({ data: JSON.stringify(data) }) }
+}
 
 describe('MonitorSection', () => {
     beforeEach(() => { getMonitor.mockReset() })
@@ -144,5 +196,146 @@ describe('MonitorSection', () => {
         expect(formatBytes(0)).toBe('—')
         expect(formatBytes(1536)).toBe('2 KB')
         expect(formatBytes(5 * 1024 ** 3)).toBe('5.0 GB')
+    })
+})
+
+describe('MonitorSection overview, map, workspace and live', () => {
+    beforeEach(() => { getMonitor.mockReset(); postMonitorAsk.mockReset(); FakeEventSource.instances = [] })
+    afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); delete window.matchMedia })
+
+    it('overview shows each tier and paints drift in the warning colour', async () => {
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        const tone = (id) => document.querySelector(`[data-tier-id="${id}"]`).getAttribute('data-tier-tone')
+        expect(tone('prod')).toBe('warning') // 12 behind dev
+        expect(tone('dev')).toBe('success')
+        expect(tone('local:aylmo')).toBe('warning') // not on dev's commit
+        expect(tone('local:r-di')).toBe('success')
+        expect(screen.getByText('12 behind dev')).toBeTruthy()
+        expect(screen.getByText('bbbbbbb', { selector: '[data-tier-id="dev"] *' })).toBeTruthy()
+        expect(document.querySelector('[data-tier-id="dev"]').textContent).toMatch(/2 spaces/)
+    })
+
+    it('overview marks an unanswering tier as down', async () => {
+        const c = contract()
+        c.tiers.rows[0].status = 502
+        getMonitor.mockResolvedValue(c)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        expect(document.querySelector('[data-tier-id="prod"]').getAttribute('data-tier-tone')).toBe('danger')
+    })
+
+    it('map draws the nodes and a click opens the inspector', async () => {
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
+        expect(document.querySelector('[data-monitor-map="graph"]')).toBeTruthy()
+        expect(document.querySelectorAll('[data-map-node]').length).toBe(6)
+        expect(document.querySelectorAll('.monitor-edge').length).toBe(4)
+        fireEvent.click(document.querySelector('[data-map-node="space:platina"]'))
+        expect(screen.getByText('Inspector — platina')).toBeTruthy()
+        expect(screen.getByText('warn')).toBeTruthy()
+        expect(within(document.querySelector('.monitor-inspector')).getByText('MUTH')).toBeTruthy() // its neighbour, from the edges
+    })
+
+    it('map falls back to a grouped list at phone width', async () => {
+        window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
+        expect(document.querySelector('[data-monitor-map="list"]')).toBeTruthy()
+        expect(document.querySelector('svg')).toBeNull()
+        fireEvent.click(document.querySelector('[data-map-node="machine:asuz"]'))
+        expect(screen.getByText('Inspector — asuz')).toBeTruthy()
+    })
+
+    it('workspace lists asks newest first, lanes and reports', async () => {
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        const ids = [...document.querySelectorAll('[data-ask-id]')].map((n) => n.getAttribute('data-ask-id'))
+        expect(ids).toEqual(['N2', 'N1'])
+        const lanes = [...document.querySelectorAll('[data-lane-id]')].map((n) => n.getAttribute('data-lane-id'))
+        expect(lanes[0]).toBe('aaaaaaaa-1') // busy first
+        expect(document.querySelector('[data-report-host="asuz"]').textContent).toMatch(/stale/)
+    })
+
+    it('sending an ask shows it at once, then the stream carries it', async () => {
+        vi.stubGlobal('EventSource', FakeEventSource)
+        let resolveAsk
+        postMonitorAsk.mockReturnValue(new Promise((r) => { resolveAsk = r }))
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        fireEvent.change(screen.getByLabelText('Send an ask'), { target: { value: 'light the hall' } })
+        fireEvent.click(screen.getByText('Send ask'))
+        expect(screen.getByText('light the hall')).toBeTruthy() // before the server answered
+        expect(postMonitorAsk).toHaveBeenCalledWith('light the hall')
+        await act(async () => { resolveAsk({ id: 'N3' }) })
+        const next = contract()
+        next.asks.rows.push({ id: 'N3', state: 'open', touched: new Date().toISOString(), text: 'light the hall', source: 'page' })
+        await act(async () => { FakeEventSource.instances[0].emit(next) })
+        expect(screen.getAllByText('light the hall').length).toBe(1) // no duplicate
+        expect(document.querySelector('[data-ask-id="N3"]')).toBeTruthy()
+    })
+
+    it('a refused ask is marked and says why', async () => {
+        postMonitorAsk.mockRejectedValue(new Error('403 forbidden'))
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        fireEvent.change(screen.getByLabelText('Send an ask'), { target: { value: 'x' } })
+        fireEvent.click(screen.getByText('Send ask'))
+        await waitFor(() => expect(screen.getByText(/Not sent: 403 forbidden/)).toBeTruthy())
+    })
+
+    it('subscribes to the stream, shows its snapshots and stops polling', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        vi.stubGlobal('EventSource', FakeEventSource)
+        getMonitor.mockResolvedValue(snapshot())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const es = FakeEventSource.instances[0]
+        expect(es.url).toBe('/api/monitor/stream')
+        const next = snapshot()
+        next.panels.agents.rows[0].title = 'Streamed title'
+        await act(async () => { es.emit(next) })
+        expect(screen.getByText('Streamed title')).toBeTruthy()
+        expect(screen.getByText(/· live ·/)).toBeTruthy()
+        const calls = getMonitor.mock.calls.length
+        await act(async () => { await vi.advanceTimersByTimeAsync(16000) })
+        expect(getMonitor.mock.calls.length).toBe(calls)
+    })
+
+    it('falls back to polling when the stream fails', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        vi.stubGlobal('EventSource', FakeEventSource)
+        getMonitor.mockResolvedValue(snapshot())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const es = FakeEventSource.instances[0]
+        await act(async () => { es.emit(snapshot()) })
+        await act(async () => { es.onerror() })
+        expect(es.closed).toBe(true)
+        const calls = getMonitor.mock.calls.length
+        await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
+        expect(getMonitor.mock.calls.length).toBeGreaterThan(calls)
+        expect(screen.getByText(/· polling ·/)).toBeTruthy()
+    })
+
+    it('renders the new views under StrictMode', async () => {
+        vi.stubGlobal('EventSource', FakeEventSource)
+        getMonitor.mockResolvedValue(contract())
+        render(<React.StrictMode><MonitorSection /></React.StrictMode>)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        expect(screen.getByText('newest ask')).toBeTruthy()
+        expect(FakeEventSource.instances.filter((e) => !e.closed).length).toBe(1)
     })
 })
