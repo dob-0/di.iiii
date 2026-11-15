@@ -1,20 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
-// Live graph of the contract's `map`: repos and agents on the left, then
-// machines -> tiers -> spaces -> shows. Deterministic layered layout in plain
-// SVG (no graph library): a node's column comes from its kind, its row from
-// the average row of its neighbours in the column before. At phone width the
-// same nodes are a grouped list.
+// One map, three views of one layout (monitorMapLayout.js):
+//   2D   an SVG graph: hover lights a node's neighbours and dims the rest,
+//        drag pans, wheel / pinch zooms, Fit, live edges carry a moving dash;
+//   3D   the same nodes as bodies in a room, each with its 2D card (lazy chunk);
+//   List the grouped list, the default under 600 px.
+// The choice is remembered per browser.
 
-const COLUMNS = ['repo', 'agent', 'machine', 'tier', 'space', 'show']
-const KIND_TITLE = { repo: 'Repos', agent: 'Agents', machine: 'Machines', tier: 'Tiers', space: 'Spaces', show: 'Shows' }
+const Map3D = lazy(() => import('./MonitorMap3D.jsx'))
+
 const STATE_TONE = { ok: 'success', warn: 'warning', off: 'muted' }
-const COL_W = 154
-const NODE_W = 136
-const NODE_H = 28
-const ROW_H = 38
-const PAD = 12
+const LIVE_EDGES = new Set(['runs', 'serves'])
 const PHONE_QUERY = '(max-width: 600px)'
+const VIEW_KEY = 'di.monitor.map.view'
+const VIEWS = [['2d', '2D'], ['3d', '3D'], ['list', 'List']]
+const MIN_ZOOM = 0.25
+const MAX_ZOOM = 6
 
 export const useNarrow = () => {
     const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(PHONE_QUERY).matches : false)
@@ -30,113 +32,236 @@ export const useNarrow = () => {
     return narrow
 }
 
-export const layoutMap = (nodes = [], edges = []) => {
-    const byId = new Map(nodes.map((n) => [n.id, n]))
-    const cols = COLUMNS.map((kind) => nodes.filter((n) => n.kind === kind)).filter((c) => c.length)
-    const colOf = new Map()
-    cols.forEach((c, ci) => c.forEach((n) => colOf.set(n.id, ci)))
-    const rowOf = new Map()
-    cols.forEach((c, ci) => {
-        if (ci > 0) {
-            const score = (n) => {
-                const rows = edges
-                    .map((e) => (e.from === n.id ? e.to : e.to === n.id ? e.from : null))
-                    .filter((id) => id && colOf.get(id) < ci)
-                    .map((id) => rowOf.get(id))
-                return rows.length ? rows.reduce((a, b) => a + b, 0) / rows.length : Infinity
-            }
-            c.sort((a, b) => score(a) - score(b) || a.label.localeCompare(b.label))
-        }
-        c.forEach((n, i) => rowOf.set(n.id, i))
-    })
-    const pos = new Map()
-    for (const n of nodes) {
-        if (!colOf.has(n.id)) continue
-        pos.set(n.id, { x: PAD + colOf.get(n.id) * COL_W, y: PAD + rowOf.get(n.id) * ROW_H })
-    }
-    const rowsMax = Math.max(1, ...cols.map((c) => c.length))
-    return {
-        pos,
-        width: PAD * 2 + cols.length * COL_W - (COL_W - NODE_W),
-        height: PAD * 2 + rowsMax * ROW_H - (ROW_H - NODE_H),
-        edges: edges.filter((e) => pos.has(e.from) && pos.has(e.to) && byId.has(e.from) && byId.has(e.to))
-    }
+const readView = () => {
+    try {
+        const v = window.localStorage.getItem(VIEW_KEY)
+        return VIEWS.some(([id]) => id === v) ? v : null
+    } catch { return null }
+}
+const writeView = (v) => { try { window.localStorage.setItem(VIEW_KEY, v) } catch { /* private window: the choice just is not kept */ } }
+
+const clip = (text, n) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
+const toneOf = (state) => STATE_TONE[state] || 'muted'
+const edgeKey = (e, i) => `${e.from}>${e.to}>${e.kind}>${i}`
+
+function MapList({ nodes, selectedId, onPick }) {
+    return (
+        <div className="monitor-map-list" data-monitor-map="list">
+            {KIND_ORDER.map((kind) => {
+                const group = nodes.filter((n) => n.kind === kind)
+                if (!group.length) return null
+                return (
+                    <div key={kind} className="monitor-group">
+                        <div className="monitor-group-title">{KIND_TITLE[kind]} <span className="preferences-tree-tag">{group.length}</span></div>
+                        <div className="monitor-grid">
+                            {group.map((n) => (
+                                <button key={n.id} type="button" data-map-node={n.id}
+                                    className={`monitor-row tone-${toneOf(n.state)}${selectedId === n.id ? ' is-selected' : ''}`}
+                                    aria-pressed={selectedId === n.id} onClick={() => onPick(n)}>
+                                    <span className="monitor-name">{n.label}</span>
+                                    <span className="monitor-meta">{n.state}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    )
 }
 
-const clip = (text, n = 18) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
+const fitBox = (layout) => ({ ...layout.bounds })
 
-export default function MonitorMap({ map, selectedId, onPick, narrow }) {
-    const nodes = useMemo(() => map?.nodes || [], [map])
-    const edges = useMemo(() => map?.edges || [], [map])
-    const graph = useMemo(() => layoutMap(nodes, edges), [nodes, edges])
-    if (!nodes.length) return <div className="monitor-note">Nothing on the map yet. Machines, tiers and spaces appear when the server reports them.</div>
+function Map2D({ layout, selectedId, onPick, live }) {
+    const svgRef = useRef(null)
+    const [vb, setVb] = useState(() => fitBox(layout))
+    const [hover, setHover] = useState(null)
+    const drag = useRef({ pointers: new Map(), moved: false, last: null, pinch: 0 })
+    const vbRef = useRef(vb)
+    useEffect(() => { vbRef.current = vb }, [vb])
 
-    if (narrow) {
-        return (
-            <div className="monitor-map-list" data-monitor-map="list">
-                {COLUMNS.map((kind) => {
-                    const group = nodes.filter((n) => n.kind === kind)
-                    if (!group.length) return null
-                    return (
-                        <div key={kind} className="monitor-group">
-                            <div className="monitor-group-title">{KIND_TITLE[kind]} <span className="preferences-tree-tag">{group.length}</span></div>
-                            <div className="monitor-grid">
-                                {group.map((n) => (
-                                    <button key={n.id} type="button" data-map-node={n.id}
-                                        className={`monitor-row tone-${STATE_TONE[n.state] || 'muted'}${selectedId === n.id ? ' is-selected' : ''}`}
-                                        aria-pressed={selectedId === n.id} onClick={() => onPick(n)}>
-                                        <span className="monitor-name">{n.label}</span>
-                                        <span className="monitor-meta">{n.state}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
-        )
+    // a different set of nodes (not a state change) refits the view
+    const shape = layout.nodes.map((n) => n.id).join('|')
+    useEffect(() => { setVb(fitBox(layout)) }, [shape]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    const scaleOf = useCallback((box) => {
+        const r = svgRef.current?.getBoundingClientRect?.()
+        if (!r || !r.width || !r.height) return { s: 1, ox: 0, oy: 0, r: { left: 0, top: 0 } }
+        const s = Math.max(box.w / r.width, box.h / r.height)
+        return { s, ox: (r.width - box.w / s) / 2, oy: (r.height - box.h / s) / 2, r }
+    }, [])
+
+    const zoomAt = useCallback((factor, clientX, clientY) => {
+        const box = vbRef.current
+        const fit = layout.bounds
+        const { s, ox, oy, r } = scaleOf(box)
+        const px = clientX == null ? box.x + box.w / 2 : box.x + (clientX - r.left - ox) * s
+        const py = clientY == null ? box.y + box.h / 2 : box.y + (clientY - r.top - oy) * s
+        const w = Math.min(fit.w / MIN_ZOOM, Math.max(fit.w / MAX_ZOOM, box.w * factor))
+        const k = w / box.w
+        setVb({ x: px - (px - box.x) * k, y: py - (py - box.y) * k, w, h: box.h * k })
+    }, [layout.bounds, scaleOf])
+
+    useEffect(() => {
+        const el = svgRef.current
+        if (!el) return undefined
+        const onWheel = (ev) => { ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
+        el.addEventListener('wheel', onWheel, { passive: false })
+        return () => el.removeEventListener('wheel', onWheel)
+    }, [zoomAt])
+
+    const onPointerDown = (ev) => {
+        const d = drag.current
+        d.pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY })
+        d.last = { x: ev.clientX, y: ev.clientY }
+        d.moved = false
+        d.pinch = 0
     }
+    const onPointerMove = (ev) => {
+        const d = drag.current
+        if (!d.pointers.has(ev.pointerId)) return
+        const prev = d.pointers.get(ev.pointerId)
+        d.pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY })
+        if (d.pointers.size === 2) {
+            const [a, b] = [...d.pointers.values()]
+            const dist = Math.hypot(a.x - b.x, a.y - b.y)
+            if (d.pinch) zoomAt(d.pinch / dist, (a.x + b.x) / 2, (a.y + b.y) / 2)
+            d.pinch = dist
+            d.moved = true
+            return
+        }
+        if (!d.moved && Math.hypot(ev.clientX - d.last.x, ev.clientY - d.last.y) < 5) return
+        if (!d.moved) { d.moved = true; try { svgRef.current?.setPointerCapture?.(ev.pointerId) } catch { /* no capture: pan still works inside the svg */ } }
+        const { s } = scaleOf(vbRef.current)
+        const dx = (ev.clientX - prev.x) * s
+        const dy = (ev.clientY - prev.y) * s
+        setVb((b) => ({ ...b, x: b.x - dx, y: b.y - dy }))
+    }
+    const onPointerUp = (ev) => {
+        const d = drag.current
+        d.pointers.delete(ev.pointerId)
+        d.pinch = 0
+        if (!d.pointers.size) setTimeout(() => { d.moved = false }, 0)
+    }
+    const pick = (n) => { if (!drag.current.moved) onPick(n) }
+
+    const neighbours = useMemo(() => {
+        const m = new Map()
+        for (const e of layout.edges) {
+            if (!m.has(e.from)) m.set(e.from, new Set())
+            if (!m.has(e.to)) m.set(e.to, new Set())
+            m.get(e.from).add(e.to)
+            m.get(e.to).add(e.from)
+        }
+        return m
+    }, [layout.edges])
+
+    const focus = hover || selectedId || null
+    const near = focus ? neighbours.get(focus) || new Set() : null
+    const hot = (id) => !focus || id === focus || near.has(id)
+    const hovered = hover ? layout.nodes.find((n) => n.id === hover) : null
 
     return (
-        <div className="monitor-map" data-monitor-map="graph">
-            <svg viewBox={`0 0 ${graph.width} ${graph.height}`} role="group" aria-label="Map of machines, tiers, spaces and shows"
-                style={{ width: '100%', minWidth: '40rem', height: 'auto', aspectRatio: `${graph.width} / ${graph.height}` }}>
-                <g className="monitor-map-edges">
-                    {graph.edges.map((e, i) => {
-                        const a = graph.pos.get(e.from)
-                        const b = graph.pos.get(e.to)
-                        const x1 = a.x + NODE_W
-                        const x2 = b.x
-                        const flip = x2 < a.x
-                        const ax = flip ? a.x : x1
-                        const bx = flip ? b.x + NODE_W : x2
-                        const mx = (ax + bx) / 2
-                        const y1 = a.y + NODE_H / 2
-                        const y2 = b.y + NODE_H / 2
-                        const touch = selectedId && (e.from === selectedId || e.to === selectedId)
-                        return <path key={`${e.from}>${e.to}>${i}`} d={`M${ax},${y1} C${mx},${y1} ${mx},${y2} ${bx},${y2}`}
-                            className={`monitor-edge kind-${e.kind}${touch ? ' is-lit' : ''}`} />
+        <div className="monitor-map-stage">
+            <svg ref={svgRef} className="monitor-map-svg" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet"
+                role="group" aria-label="Map of machines, tiers, spaces and shows"
+                onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+                <g className="monitor-map-rings">
+                    {layout.radii.map((r) => <ellipse key={r} cx="0" cy="0" rx={r * layout.aspect} ry={r} className="monitor-ring" />)}
+                </g>
+                <g className="monitor-map-hub-lines">
+                    {layout.tierIds.map((id) => {
+                        const p = layout.pos.get(id)
+                        return <line key={id} x1="0" y1="0" x2={p.x} y2={p.y} className="monitor-hub-line" />
                     })}
                 </g>
-                {nodes.filter((n) => graph.pos.has(n.id)).map((n) => {
-                    const p = graph.pos.get(n.id)
+                <g className="monitor-map-edges">
+                    {layout.edges.map((e, i) => {
+                        const a = layout.pos.get(e.from)
+                        const b = layout.pos.get(e.to)
+                        const lit = !!focus && (e.from === focus || e.to === focus)
+                        const cls = `monitor-edge kind-${e.kind}${lit ? ' is-lit' : focus ? ' is-dim' : ''}${live && LIVE_EDGES.has(e.kind) ? ' is-live' : ''}`
+                        return <line key={edgeKey(e, i)} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={cls} />
+                    })}
+                </g>
+                <g className="monitor-hub" aria-hidden="true">
+                    <rect x="-46" y="-20" width="92" height="40" className="monitor-hub-box" />
+                    <text x="0" y="5" textAnchor="middle" className="monitor-hub-label">di.iiii</text>
+                </g>
+                {layout.nodes.map((n) => {
+                    const p = layout.pos.get(n.id)
+                    const { w, h } = sizeOf(n.kind)
                     const sel = selectedId === n.id
+                    const cls = `monitor-node kind-${n.kind} tone-${toneOf(n.state)}${sel ? ' is-selected' : ''}${hover === n.id ? ' is-hover' : ''}${focus && !hot(n.id) ? ' is-dim' : ''}`
                     return (
-                        <g key={n.id} transform={`translate(${p.x},${p.y})`} data-map-node={n.id} role="button" tabIndex={0}
-                            aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
-                            className={`monitor-node tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}`}
-                            onClick={() => onPick(n)}
+                        <g key={n.id} transform={`translate(${p.x - w / 2},${p.y - h / 2})`} data-map-node={n.id} role="button" tabIndex={0}
+                            aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`} className={cls}
+                            onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h0) => (h0 === n.id ? null : h0))}
+                            onFocus={() => setHover(n.id)} onBlur={() => setHover((h0) => (h0 === n.id ? null : h0))}
+                            onClick={() => pick(n)}
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
-                            <rect width={NODE_W} height={NODE_H} className="monitor-node-box" />
-                            <rect width="3" height={NODE_H} className="monitor-node-edge" />
-                            <text x="11" y={NODE_H / 2 + 4} className="monitor-node-label">{clip(n.label)}</text>
+                            <rect width={w} height={h} className="monitor-node-box" />
+                            <rect width="6" height={h} className="monitor-node-edge" />
+                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 9.6))}</text>
+                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{`${n.state} · ${n.kind}`}</text>
                             <title>{`${n.kind}: ${n.label} (${n.state})`}</title>
                         </g>
                     )
                 })}
+                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 9.6) ? (() => {
+                    const p = layout.pos.get(hovered.id)
+                    const { h } = sizeOf(hovered.kind)
+                    const text = hovered.label
+                    const w = Math.max(120, text.length * 9 + 28)
+                    return (
+                        <g className={`monitor-tip tone-${toneOf(hovered.state)}`} transform={`translate(${p.x - w / 2},${p.y - h / 2 - 58})`} pointerEvents="none">
+                            <rect width={w} height="46" className="monitor-tip-box" />
+                            <text x="12" y="20" className="monitor-tip-label">{text}</text>
+                            <text x="12" y="38" className="monitor-tip-meta">{`${hovered.kind} · ${hovered.state}`}</text>
+                        </g>
+                    )
+                })() : null}
             </svg>
+            <div className="monitor-map-tools" role="group" aria-label="Map zoom">
+                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout))}>Fit</button>
+                <button type="button" className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
+                <button type="button" className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
+            </div>
+            <div className="monitor-map-hint">Drag to move · scroll or pinch to zoom · hover to light a node&apos;s links</div>
+        </div>
+    )
+}
+
+export default function MonitorMap({ map, selectedId, onPick, narrow, live = false }) {
+    const nodes = useMemo(() => map?.nodes || [], [map])
+    const layout = useMemo(() => layoutMap(map, narrow ? 1 : ASPECT), [map, narrow])
+    const [stored, setStored] = useState(readView)
+    const view = stored || (narrow ? 'list' : '2d')
+    const choose = (v) => { setStored(v); writeView(v) }
+
+    if (!nodes.length) return <div className="monitor-note">Nothing on the map yet. Machines, tiers and spaces appear when the server reports them.</div>
+
+    return (
+        <div className="monitor-map" data-monitor-map-view={view}>
+            <div className="monitor-map-views" role="group" aria-label="Map view">
+                {VIEWS.map(([id, label]) => (
+                    <button key={id} type="button" data-map-view={id} className={`monitor-map-view${view === id ? ' is-active' : ''}`}
+                        aria-pressed={view === id} onClick={() => choose(id)}>{label}</button>
+                ))}
+            </div>
+            {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={onPick} /> : null}
+            {view === '2d' ? (
+                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} /></div>
+            ) : null}
+            {view === '3d' ? (
+                <div data-monitor-map="3d">
+                    <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
+                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} />
+                    </Suspense>
+                </div>
+            ) : null}
             <div className="monitor-map-key">
-                {COLUMNS.filter((k) => nodes.some((n) => n.kind === k)).map((k) => <span key={k}>{KIND_TITLE[k]}</span>)}
+                {KIND_ORDER.filter((k) => nodes.some((n) => n.kind === k)).map((k) => <span key={k}>{KIND_TITLE[k]}</span>)}
             </div>
         </div>
     )
