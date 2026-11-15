@@ -1567,8 +1567,8 @@
 .monitor-node-box { fill: var(--di-surface); stroke: var(--pref-tone); stroke-width: 1.5; }
 .monitor-node.kind-tier .monitor-node-box, .monitor-node.kind-machine .monitor-node-box { fill: var(--di-surface-2); }
 .monitor-node-edge { fill: var(--pref-tone); }
-.monitor-node-label { fill: var(--di-text); font-size: var(--di-text-4); }
-.monitor-node-state { fill: var(--pref-tone); font-size: var(--di-text-3); font-family: var(--di-mono); }
+.monitor-node-label { fill: var(--di-text); font-size: var(--di-text-6); }
+.monitor-node-state { fill: var(--pref-tone); font-size: var(--di-text-4); font-family: var(--di-mono); }
 .monitor-node.tone-muted .monitor-node-state { fill: var(--ui-text-muted); }
 .monitor-node:hover .monitor-node-box, .monitor-node.is-hover .monitor-node-box { fill: var(--di-surface-3); stroke-width: 3; }
 .monitor-node:focus-visible .monitor-node-box, .monitor-node.is-selected .monitor-node-box { stroke: var(--di-cyan); stroke-width: 3; }
@@ -1598,7 +1598,7 @@
 .monitor-card3d.tone-warning { --pref-tone: var(--di-warning); }
 .monitor-card3d.is-dim { opacity: 0.3; }
 .monitor-card3d:hover, .monitor-card3d.is-selected, .monitor-card3d:focus-visible { border-color: var(--di-cyan); outline: none; }
-.monitor-card3d.is-hub { border-color: var(--di-cyan); cursor: default; min-width: 0; }
+.monitor-card3d.is-hub { border-color: var(--di-cyan); cursor: default; min-width: 0; white-space: nowrap; }
 .monitor-card3d-name { font-size: var(--di-text-4); overflow-wrap: anywhere; }
 .monitor-card3d-state { font-size: var(--di-text-3); font-family: var(--di-mono); color: var(--pref-tone); }
 .monitor-card3d-fact { font-size: var(--di-text-2); font-family: var(--di-mono); color: var(--ui-text-muted); }

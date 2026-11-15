@@ -81,18 +81,20 @@ function Ticker({ on }) {
     return null
 }
 
-function Rig({ preset, outer }) {
+function Rig({ preset, outer, aspect }) {
     const camera = useThree((s) => s.camera)
     const controls = useThree((s) => s.controls)
     const invalidate = useThree((s) => s.invalidate)
+    const size = useThree((s) => s.size)
     useEffect(() => {
-        const d = outer * S * 2.7
+        const stage = size.height ? Math.min(1.15, size.width / size.height) : 1
+        const d = (outer * S * aspect * 2.6) / stage
         if (preset.name === 'top') camera.position.set(0, d * 1.15, 0.001)
         else camera.position.set(0, d * 0.62, d * 0.92)
         camera.lookAt(0, 0, 0)
         if (controls) { controls.target.set(0, 0, 0); controls.update() }
         invalidate()
-    }, [preset, outer, camera, controls, invalidate])
+    }, [preset, outer, aspect, size, camera, controls, invalidate])
     return null
 }
 
@@ -124,14 +126,14 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
         <div className="monitor-map-stage monitor-map-stage-3d">
             <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
-                <Rig preset={preset} outer={layout.outer} />
+                <Rig preset={preset} outer={layout.outer} aspect={layout.aspect} />
                 <Ticker on={animate} />
                 <OrbitControls makeDefault enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
                 {layout.radii.map((r) => (
                     <Line key={r} color={colors.line} lineWidth={1}
                         points={Array.from({ length: 97 }, (_, i) => {
                             const a = (i / 96) * Math.PI * 2
-                            return [Math.cos(a) * r * 1.45 * S, 0, Math.sin(a) * r * S]
+                            return [Math.cos(a) * r * layout.aspect * S, 0, Math.sin(a) * r * S]
                         })} />
                 ))}
                 <mesh position={hubPoint}><boxGeometry args={[0.5, 0.2, 0.5]} /><meshBasicMaterial color={colors.cyan} /></mesh>
@@ -159,7 +161,7 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
                         <group key={n.id}>
                             <Line points={[floor(p), at(p)]} color={colors.line} lineWidth={1} />
                             <Body node={n} p={p} color={toneColor(n.state)} dim={dim} sel={sel} />
-                            <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center distanceFactor={9} zIndexRange={[20, 0]}>
+                            <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center distanceFactor={5.5} zIndexRange={[20, 0]}>
                                 <button type="button" data-map-node={n.id}
                                     className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}`}
                                     aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
@@ -174,7 +176,7 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
                         </group>
                     )
                 })}
-                <Html position={[0, 0.5, 0]} center distanceFactor={9} zIndexRange={[20, 0]}>
+                <Html position={[0, 0.5, 0]} center distanceFactor={5.5} zIndexRange={[20, 0]}>
                     <div className="monitor-card3d is-hub"><span className="monitor-card3d-name">di.iiii</span></div>
                 </Html>
             </Canvas>

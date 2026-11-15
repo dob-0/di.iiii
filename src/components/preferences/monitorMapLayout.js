@@ -10,12 +10,12 @@ export const KIND_TITLE = { repo: 'Repos', agent: 'Agents', machine: 'Machines',
 export const KIND_HEIGHT = { tier: 240, machine: 140, agent: 100, space: 60, show: 60, repo: 30 }
 // Card size per kind (2D), also the room each node needs on its ring.
 export const KIND_SIZE = {
-    tier: { w: 168, h: 52 },
-    machine: { w: 150, h: 46 },
-    agent: { w: 136, h: 38 },
-    space: { w: 136, h: 38 },
-    show: { w: 136, h: 38 },
-    repo: { w: 136, h: 38 }
+    tier: { w: 190, h: 60 },
+    machine: { w: 170, h: 56 },
+    agent: { w: 160, h: 52 },
+    space: { w: 160, h: 52 },
+    show: { w: 160, h: 52 },
+    repo: { w: 160, h: 52 }
 }
 export const sizeOf = (kind) => KIND_SIZE[kind] || KIND_SIZE.space
 
@@ -37,7 +37,8 @@ const meanAngle = (angles) => {
     return norm(Math.atan2(s, c))
 }
 
-export const layoutMap = (map) => {
+// `aspect` is the ellipse width / height: wide on a desk, round on a phone.
+export const layoutMap = (map, aspect = ASPECT) => {
     const seen = new Set()
     const nodes = []
     for (const n of map?.nodes || []) {
@@ -53,9 +54,9 @@ export const layoutMap = (map) => {
 
     // radii from how many nodes a ring has to carry, never smaller than a floor
     const lanes3 = Math.max(1, Math.min(3, Math.ceil(rings[3].length / MAX_PER_LANE)))
-    const r1 = Math.max(rings[1].length ? 130 : 0, (rings[1].length * 190) / TAU)
-    const r2 = Math.max(r1 + 150, (rings[2].length * 160) / TAU)
-    const r3 = Math.max(r2 + 160, (rings[3].length * 150) / TAU / lanes3 + 40)
+    const r1 = Math.max(rings[1].length ? Math.max(105, (190 / aspect) * 0.75) : 0, (rings[1].length * 200) / TAU)
+    const r2 = Math.max(r1 + 120, (rings[2].length * 170) / TAU)
+    const r3 = Math.max(r2 + 125, (rings[3].length * 160) / TAU / lanes3 + 30)
     const radius = { 1: r1, 2: r2, 3: r3 }
 
     const pos = new Map()
@@ -68,7 +69,7 @@ export const layoutMap = (map) => {
             angleOf.set(node.id, norm(a))
             const r = radius[ring] + (i % lanes) * LANE_GAP
             pos.set(node.id, {
-                x: Math.round(Math.cos(a) * r * ASPECT * 100) / 100,
+                x: Math.round(Math.cos(a) * r * aspect * 100) / 100,
                 y: Math.round(Math.sin(a) * r * 100) / 100,
                 h: KIND_HEIGHT[node.kind] ?? 60,
                 ring,
@@ -91,9 +92,9 @@ export const layoutMap = (map) => {
     }
 
     const outer = Math.max(...[1, 2, 3].filter((r) => rings[r].length).map((r) => radius[r] + (r === 3 ? (lanes3 - 1) * LANE_GAP : 0)), 130)
-    const padX = 110
+    const padX = 100
     const padY = 50
-    const halfW = outer * ASPECT + padX
+    const halfW = outer * aspect + padX
     const halfH = outer + padY
     return {
         nodes,
@@ -103,6 +104,7 @@ export const layoutMap = (map) => {
         hub: { x: 0, y: 0 },
         tierIds: rings[1].map((n) => n.id),
         bounds: { x: -halfW, y: -halfH, w: halfW * 2, h: halfH * 2 },
-        outer
+        outer,
+        aspect
     }
 }

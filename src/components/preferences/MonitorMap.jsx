@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
+import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
 //   2D   an SVG graph: hover lights a node's neighbours and dims the rest,
@@ -167,7 +167,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
                 role="group" aria-label="Map of machines, tiers, spaces and shows"
                 onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
                 <g className="monitor-map-rings">
-                    {layout.radii.map((r) => <ellipse key={r} cx="0" cy="0" rx={r * 1.45} ry={r} className="monitor-ring" />)}
+                    {layout.radii.map((r) => <ellipse key={r} cx="0" cy="0" rx={r * layout.aspect} ry={r} className="monitor-ring" />)}
                 </g>
                 <g className="monitor-map-hub-lines">
                     {layout.tierIds.map((id) => {
@@ -202,8 +202,8 @@ function Map2D({ layout, selectedId, onPick, live }) {
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
-                            <text x="16" y={h / 2 - 2} className="monitor-node-label">{clip(n.label, Math.floor((w - 24) / 8.2))}</text>
-                            <text x="16" y={h / 2 + 14} className="monitor-node-state">{`${n.state} · ${n.kind}`}</text>
+                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 9.6))}</text>
+                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{`${n.state} · ${n.kind}`}</text>
                             <title>{`${n.kind}: ${n.label} (${n.state})`}</title>
                         </g>
                     )
@@ -234,7 +234,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
 
 export default function MonitorMap({ map, selectedId, onPick, narrow, live = false }) {
     const nodes = useMemo(() => map?.nodes || [], [map])
-    const layout = useMemo(() => layoutMap(map), [map])
+    const layout = useMemo(() => layoutMap(map, narrow ? 1 : ASPECT), [map, narrow])
     const [stored, setStored] = useState(readView)
     const view = stored || (narrow ? 'list' : '2d')
     const choose = (v) => { setStored(v); writeView(v) }
