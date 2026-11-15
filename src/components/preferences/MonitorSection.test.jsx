@@ -59,7 +59,7 @@ const contract = (over = {}) => ({
     ],
     tiers: { ok: true, rows: [
         { id: 'prod', url: 'https://diiii.xyz', status: 'ok', ms: 90, commit: 'aaaaaaa1111', builtAt: '2026-11-10T00:00:00Z', behindDev: 12 },
-        { id: 'dev', url: 'https://dev.diiii.xyz', status: 'ok', ms: 120, commit: 'bbbbbbb2222', builtAt: new Date().toISOString(), behindDev: 0 },
+        { id: 'dev', source: 'self', url: 'https://dev.diiii.xyz', status: 'ok', ms: 120, commit: 'bbbbbbb2222', builtAt: new Date().toISOString(), behindDev: 0 },
         { id: 'local:aylmo', url: 'http://diiii.localhost', status: 'ok', ms: 8, commit: 'ccccccc3333', builtAt: new Date().toISOString(), behindDev: 0 },
         { id: 'local:r-di', url: 'http://r-di', status: 'ok', ms: 30, commit: 'bbbbbbb2222', builtAt: new Date().toISOString(), behindDev: 0 }
     ] },
@@ -91,11 +91,13 @@ const contract = (over = {}) => ({
 
 class FakeEventSource {
     static instances = []
-    constructor(url) { this.url = url; this.listeners = {}; this.closed = false; FakeEventSource.instances.push(this) }
+    static CLOSED = 2
+    constructor(url) { this.url = url; this.listeners = {}; this.closed = false; this.readyState = 1; FakeEventSource.instances.push(this) }
     addEventListener(t, f) { this.listeners[t] = f }
     removeEventListener(t) { delete this.listeners[t] }
     close() { this.closed = true }
     emit(data) { this.listeners.snapshot?.({ data: JSON.stringify(data) }) }
+    beat() { this.listeners.heartbeat?.({ data: JSON.stringify({ at: new Date().toISOString() }) }) }
 }
 
 describe('MonitorSection', () => {
@@ -322,12 +324,51 @@ describe('MonitorSection overview, map, workspace and live', () => {
         await waitFor(() => screen.getByText('Build the monitor'))
         const es = FakeEventSource.instances[0]
         await act(async () => { es.emit(snapshot()) })
+        es.readyState = 2 // CLOSED: the browser gave up (an HTTP refusal)
         await act(async () => { es.onerror() })
         expect(es.closed).toBe(true)
         const calls = getMonitor.mock.calls.length
         await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
         expect(getMonitor.mock.calls.length).toBeGreaterThan(calls)
         expect(screen.getByText(/· polling ·/)).toBeTruthy()
+    })
+
+    it('a dropped stream is left to reconnect: polling meanwhile, live again on the next snapshot', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        vi.stubGlobal('EventSource', FakeEventSource)
+        getMonitor.mockResolvedValue(snapshot())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const es = FakeEventSource.instances[0]
+        await act(async () => { es.emit(snapshot()) })
+        expect(screen.getByText(/· live ·/)).toBeTruthy()
+        es.readyState = 0 // CONNECTING: the server ended it on purpose, retry 3000 is running
+        await act(async () => { es.onerror() })
+        expect(es.closed).toBe(false)
+        expect(FakeEventSource.instances.length).toBe(1)
+        expect(screen.getByText(/· polling ·/)).toBeTruthy()
+        const calls = getMonitor.mock.calls.length
+        await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
+        expect(getMonitor.mock.calls.length).toBeGreaterThan(calls)
+        es.readyState = 1
+        await act(async () => { es.emit(snapshot()) })
+        expect(screen.getByText(/· live ·/)).toBeTruthy()
+    })
+
+    it('"updated" is when the page last heard from the server, snapshot or heartbeat, not the snapshot\'s own time', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        vi.stubGlobal('EventSource', FakeEventSource)
+        // built two hours ago, but just delivered
+        getMonitor.mockResolvedValue(snapshot({ generatedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString() }))
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(screen.getByText(/updated now/)).toBeTruthy()
+        const es = FakeEventSource.instances[0]
+        await act(async () => { es.emit(snapshot({ generatedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString() })) })
+        await act(async () => { await vi.advanceTimersByTimeAsync(5 * 60 * 1000) })
+        expect(screen.getByText(/updated 5m/)).toBeTruthy()
+        await act(async () => { es.beat() })
+        expect(screen.getByText(/updated now/)).toBeTruthy()
     })
 
     it('renders the new views under StrictMode', async () => {
@@ -341,7 +382,61 @@ describe('MonitorSection overview, map, workspace and live', () => {
     })
 })
 
+describe('overview when a tier is down', () => {
+    it('prod down: the rows are still drawn, dev as a card and prod as a red one; only no rows at all shows the note', async () => {
+        const c = contract()
+        c.tiers.ok = false
+        c.tiers.rows[0] = { ...c.tiers.rows[0], status: 0, ms: 3000, commit: null }
+        getMonitor.mockResolvedValue(c)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        expect(document.querySelector('[data-tier-id="dev"]').getAttribute('data-tier-tone')).toBe('success')
+        const prod = document.querySelector('[data-tier-id="prod"]')
+        expect(prod.getAttribute('data-tier-tone')).toBe('danger')
+        expect(prod.textContent).toMatch(/not answering/)
+        expect(screen.queryByText(/Tiers unavailable/)).toBeNull()
+    })
+
+    it('no rows and not ok: the unavailable note', async () => {
+        const c = contract()
+        c.tiers = { ok: false, rows: [], error: 'no probe' }
+        getMonitor.mockResolvedValue(c)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText(/Tiers unavailable here: no probe/))
+    })
+
+    it('other tiers count PUBLIC spaces only, said on the card; the tier itself counts all', async () => {
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        expect(document.querySelector('[data-tier-id="prod"]').textContent).toMatch(/1 public space(?!s)/)
+        expect(document.querySelector('[data-tier-id="dev"]').textContent).toMatch(/2 spaces/)
+    })
+
+    it('a failed ask read says nothing invented', async () => {
+        const c = contract()
+        c.asks = { ok: false, rows: [] }
+        getMonitor.mockResolvedValue(c)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        expect(screen.getByText('Asks unavailable here')).toBeTruthy()
+        expect(screen.queryByText(/undefined/)).toBeNull()
+    })
+})
+
 describe('tierState', () => {
+    it('both commits known and different, with no git count: amber on any tier, prod included', () => {
+        expect(tierState({ id: 'prod', status: 200, commit: 'aaa', behindDev: null }, 'bbb')).toEqual({ tone: 'warning', note: 'not on dev’s commit' })
+        expect(tierState({ id: 'prod', status: 200, commit: 'bbb', behindDev: null }, 'bbb').note).toBe('with dev')
+        expect(tierState({ id: 'prod', status: 200, commit: 'aaa', behindDev: 3 }, 'bbb').note).toBe('3 behind dev')
+    })
+
+    it('a machine that only reports is judged by its report, never "not answering"', () => {
+        expect(tierState({ id: 'local:x', source: 'report', status: null, state: 'ok', commit: 'bbb' }, 'bbb').tone).toBe('success')
+        expect(tierState({ id: 'local:x', source: 'report', status: null, state: 'warn', commit: 'bbb' }, 'bbb').tone).toBe('danger')
+    })
+
     it('never says "with dev" for a tier whose commit is unknown', () => {
         expect(tierState({ id: 'local:studio-mac', status: 200, commit: null, behindDev: null }, 'abc')).toEqual({ tone: 'warning', note: 'commit unknown' })
         expect(tierState({ id: 'local:aylmo', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('with dev')

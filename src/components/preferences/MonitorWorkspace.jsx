@@ -64,7 +64,7 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
             </form>
 
             <div className="monitor-group-title">Open asks <span className="preferences-tree-tag">{shown.length}</span></div>
-            {asks && asks.ok === false ? <div className="monitor-note is-down">Asks unavailable here: {asks.error}</div> : null}
+            {asks && asks.ok === false ? <div className="monitor-note is-down">Asks unavailable here{asks.error ? `: ${asks.error}` : ''}</div> : null}
             {!shown.length && asks?.ok !== false ? <div className="monitor-note">No open asks.</div> : null}
             <div className="monitor-asks">
                 {shown.map((a) => (

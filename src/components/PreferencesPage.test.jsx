@@ -173,6 +173,20 @@ function renderPreferencesPage() {
 
 
 describe('PreferencesPage', () => {
+    it('the Monitor entry shows only after GET /api/monitor answered 200; a 404 hides it silently', async () => {
+        window.location.hash = ''
+        const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
+        const hidden = renderPreferencesPage()
+        await screen.findByText('Spaces and who can see them')
+        await new Promise((r) => setTimeout(r, 50))
+        expect(spy.mock.calls.filter(([url]) => String(url).includes('/api/monitor')).length).toBe(1)
+        expect(screen.queryByRole('button', { name: /^Monitor/ })).toBeNull()
+        hidden.unmount?.()
+        spy.mockResolvedValue({ ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' })
+        renderPreferencesPage()
+        expect(await screen.findByRole('button', { name: /^Monitor/ })).toBeTruthy()
+    })
+
     it('opens straight on the Monitor from /admin#monitor and ignores an unknown hash', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
         window.location.hash = '#monitor'

@@ -3,7 +3,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { pageTitle } from '../hooks/pageTitles.js'
 import { usePreferencesData } from '../hooks/usePreferencesData.js'
 import useAuthSession from '../hooks/useAuthSession.js'
-import { hasServerApi } from '../services/apiClient.js'
+import { getMonitor, hasServerApi } from '../services/apiClient.js'
 import { buildSpacesPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import {
     ArchitectureCanvas,
@@ -131,6 +131,14 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         window.addEventListener('hashchange', onHash)
         return () => window.removeEventListener('hashchange', onHash)
     }, [])
+    // The Monitor is for ONE account on the dev tier: the tab appears only after the server
+    // answered 200; a 404 (everyone else) hides it without a word.
+    const [monitorAllowed, setMonitorAllowed] = useState(false)
+    useEffect(() => {
+        let alive = true
+        getMonitor().then(() => { if (alive) setMonitorAllowed(true) }).catch(() => { if (alive) setMonitorAllowed(false) })
+        return () => { alive = false }
+    }, [])
     useDocumentTitle(pageTitle('admin', { section: SECTIONS.find((s) => s.key === activeSection)?.label }))
     const [headerCollapsed, setHeaderCollapsed] = useState(false)
     // Refresh loads the lists again by remounting the open section (each one
@@ -223,7 +231,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         )
     }
 
-    const sections = SECTIONS.map((section) => {
+    const sections = SECTIONS.filter((section) => section.key !== 'monitor' || monitorAllowed).map((section) => {
         if (section.key === 'agents' || section.key === 'monitor') return { ...section, badge: agentStats?.live || 0 }
         if (section.key === 'inspect') return { ...section, badge: objects?.length || 0 }
         if (section.key === 'system') return { ...section, badge: entries.length }

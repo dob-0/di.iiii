@@ -73,6 +73,8 @@ export default function MonitorSection({ onStats }) {
     const [selected, setSelected] = useState(null)
     const [tab, setTab] = useState('board')
     const [streaming, setStreaming] = useState(false)
+    // when the page last heard from the server (a snapshot or a heartbeat), not when the data was built
+    const [heardAt, setHeardAt] = useState(null)
     const narrow = useNarrow()
     const [flashing, setFlashing] = useState(() => new Set())
     const [, setTick] = useState(0)
@@ -99,6 +101,7 @@ export default function MonitorSection({ onStats }) {
             }
         }
         previous.current = sig
+        setHeardAt(Date.now())
         setSnap(next)
         setUnavailable(false)
         setError('')
@@ -134,13 +137,17 @@ export default function MonitorSection({ onStats }) {
                 setStreaming(true)
             } catch { /* a broken frame is skipped; the next one or the poll recovers */ }
         }
+        const onHeartbeat = () => { if (alive.current) setHeardAt(Date.now()) }
         source.addEventListener('snapshot', onSnapshot)
+        source.addEventListener('heartbeat', onHeartbeat)
         source.onerror = () => {
-            // 404 or a dropped connection: close for good and let polling carry on
-            source.close()
+            // The server ends streams on purpose (15 min, session expiry, a slow client) and says
+            // retry: 3000, so the browser reconnects by itself: polling covers the gap and the next
+            // snapshot says "live" again. Only a CLOSED source (an HTTP refusal) is over for good.
+            if (source.readyState === EventSource.CLOSED) source.close()
             if (alive.current) setStreaming(false)
         }
-        return () => { source.removeEventListener('snapshot', onSnapshot); source.close(); setStreaming(false) }
+        return () => { source.removeEventListener('snapshot', onSnapshot); source.removeEventListener('heartbeat', onHeartbeat); source.close(); setStreaming(false) }
     }, [apply, paused])
 
     // one read at the start (it also finds out the page is refused); the stream
@@ -220,7 +227,7 @@ export default function MonitorSection({ onStats }) {
 
     const failed = panels.services?.failed || 0
     const live = !paused && !error
-    const updated = snap ? `updated ${timeAgo(snap.generatedAt)}` : 'loading…'
+    const updated = snap ? `updated ${heardAt ? timeAgo(new Date(heardAt).toISOString()) : 'now'}` : 'loading…'
 
     const flash = (id) => flashing.has(id)
 

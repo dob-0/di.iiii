@@ -7,6 +7,8 @@ import { ago } from './monitorFormat.js'
 export const shortCommit = (commit) => (commit ? String(commit).slice(0, 7) : '—')
 
 const isHealthy = (row) => {
+    // a machine that only reports was never probed: its freshness is its health
+    if (row.source === 'report') return row.state !== 'warn' && row.state !== 'off'
     const s = row.status
     // Same rule as the server's isUp (monitorHub.js): only a 2xx answer is up; a redirect is not.
     if (typeof s === 'number') return s >= 200 && s < 300
@@ -21,7 +23,8 @@ export const tierState = (row, devCommit) => {
     if (typeof row.behindDev === 'number' && row.behindDev > 0) {
         return { tone: 'warning', note: `${row.behindDev} behind dev` }
     }
-    if (row.id.startsWith('local:') && devCommit && row.commit && row.commit !== devCommit) {
+    // both commits known and different, and no git count to say how far: not on dev's commit (any tier)
+    if (devCommit && row.commit && row.commit !== devCommit) {
         return { tone: 'warning', note: 'not on dev’s commit' }
     }
     // No commit known (a local build without a release manifest): say so, never claim it is with dev.
@@ -31,8 +34,9 @@ export const tierState = (row, devCommit) => {
 
 export default function MonitorOverview({ tiers, spaces }) {
     if (!tiers) return null
-    if (!tiers.ok) return <div className="monitor-note is-down">Tiers unavailable here{tiers.error ? `: ${tiers.error}` : ''}</div>
     const rows = tiers.rows || []
+    // `ok` only says dev AND prod both answered: with prod down the rows are still the news
+    if (!rows.length && tiers.ok === false) return <div className="monitor-note is-down">Tiers unavailable here{tiers.error ? `: ${tiers.error}` : ''}</div>
     if (!rows.length) return <div className="monitor-note">No tiers reported yet.</div>
     const dev = rows.find((r) => r.id === 'dev')
     const counts = {}
@@ -47,7 +51,7 @@ export default function MonitorOverview({ tiers, spaces }) {
                         <div className="monitor-tier-commit">{shortCommit(row.commit)}</div>
                         <div className="monitor-meta">built {row.builtAt ? ago(row.builtAt) : 'n/a'}</div>
                         <div className="monitor-meta">{row.status ?? '—'}{typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}</div>
-                        <div className="monitor-meta">{spaces?.ok === false ? 'spaces n/a' : `${counts[row.id] || 0} space${counts[row.id] === 1 ? '' : 's'}`}</div>
+                        <div className="monitor-meta">{spaces?.ok === false ? 'spaces n/a' : `${counts[row.id] || 0} ${row.source === 'self' ? '' : 'public '}space${counts[row.id] === 1 ? '' : 's'}`}</div>
                         <div className="monitor-tier-note">{state.note}</div>
                     </div>
                 )
