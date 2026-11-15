@@ -23,7 +23,31 @@ module.exports = [
     reach: "read",
     role: "guest",
     agent: false,
-    note: "lists machines and session titles — loopback + non-production (or DI_LOCAL=1) and admin only, 404 otherwise; commands come only from ~/.di/monitor.json, never from the request."
+    note: "lists machines, session titles, spaces and open asks — on a local server loopback + non-production (or DI_LOCAL=1) and admin, on the dev tier an admin session, 404 on prod; adds reports, tiers, spaces, asks and map; commands come only from ~/.di/monitor.json, never from the request."
+  },
+  {
+    route: "GET /api/monitor/stream",
+    summary: "the monitor snapshot as server-sent events: one `snapshot` event whenever it changes (at most every 2 s), a heartbeat every 15 s",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "same gate as GET /api/monitor: on the dev tier an admin session, 404 on prod, loopback + admin on a local server."
+  },
+  {
+    route: "POST /api/monitor/report",
+    summary: "a machine sends its own monitor panels (and, from aylmo, the open ledger asks); kept in memory, stale after 120 s",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "an admin session, or a terminal login (di login) whose account is an admin; 256 KB cap; 404 on prod. Telemetry only: it changes nothing else."
+  },
+  {
+    route: "POST /api/monitor/ask",
+    summary: "the owner types an ask on the overview page; stored and shown in the open asks",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "admin session only (a terminal login is refused); 2000 characters, 30 per hour; 404 on prod."
   },
   {
     route: "GET /api/agent-board/session/:sessionId",

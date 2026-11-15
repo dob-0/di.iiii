@@ -81,6 +81,8 @@ const { registerWifiDoorRoutes } = require('./routes/wifiDoorRoutes')
 const { createShareService } = require('./share/shareService')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerMonitorRoutes } = require('./routes/monitorRoutes')
+const { createMonitorStore } = require('./monitorStore')
+const { createHub: createMonitorHub, createAskStore: createMonitorAskStore } = require('./monitorHub')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
@@ -920,6 +922,7 @@ const resolveCliTokenState = (req, token) => {
           session: { subject: claim.userId, expiresAt: claim.expiresAt }
         }),
         actor: 'di.cli',
+        cliDbRole: fresh.dbRole,
         cliTokenId: claim.tokenId,
         cliTokenLabel: claim.label,
         cliTokenExpiresAt: claim.expiresAt
@@ -2566,7 +2569,15 @@ registerShareRoutes(router, {
 
 registerAgentBoardRoutes(router)
 
-registerMonitorRoutes(router)
+registerMonitorRoutes(router, {
+  deployEnv: () => releaseInfo.deployEnv,
+  hub: createMonitorHub({
+    store: createMonitorStore(),
+    asks: createMonitorAskStore({ getDb }),
+    releaseInfo: () => releaseInfo,
+    listSpaces
+  })
+})
 
 registerAiChatRoutes(router)
 
