@@ -3,7 +3,7 @@ import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { pageTitle } from '../hooks/pageTitles.js'
 import { usePreferencesData } from '../hooks/usePreferencesData.js'
 import useAuthSession from '../hooks/useAuthSession.js'
-import { hasServerApi } from '../services/apiClient.js'
+import { getMonitor, hasServerApi } from '../services/apiClient.js'
 import { buildSpacesPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import {
     ArchitectureCanvas,
@@ -112,7 +112,8 @@ function ManagementButton({ button }) {
 // ("open the monitor") instead of "open admin, then click Monitor".
 const sectionFromHash = () => {
     try {
-        const key = String(window.location.hash || '').replace(/^#/, '')
+        // #monitor-full is the Monitor already in full screen (a link for the phone)
+        const key = String(window.location.hash || '').replace(/^#/, '').replace(/^monitor-full$/, 'monitor')
         return SECTIONS.some((section) => section.key === key) ? key : 'manage'
     } catch {
         return 'manage'
@@ -120,17 +121,28 @@ const sectionFromHash = () => {
 }
 
 export default function PreferencesPage({ onNavigateToEditor }) {
-    const [activeSection, setActiveSection] = useState(sectionFromHash)
+    const [requestedSection, setActiveSection] = useState(sectionFromHash)
     // a /admin#monitor link followed inside an open admin page switches section
     useEffect(() => {
         const onHash = () => {
             // only a hash that names a section moves us; clearing it leaves the open section alone
-            const key = String(window.location.hash || '').replace(/^#/, '')
+            const key = String(window.location.hash || '').replace(/^#/, '').replace(/^monitor-full$/, 'monitor')
             if (SECTIONS.some((section) => section.key === key)) setActiveSection(key)
         }
         window.addEventListener('hashchange', onHash)
         return () => window.removeEventListener('hashchange', onHash)
     }, [])
+    // The Monitor is for ONE account on the dev tier: the tab appears only after the server
+    // answered 200; a 404 (everyone else) hides it without a word.
+    const [monitorAllowed, setMonitorAllowed] = useState(false)
+    useEffect(() => {
+        let alive = true
+        getMonitor().then(() => { if (alive) setMonitorAllowed(true) }).catch(() => { if (alive) setMonitorAllowed(false) })
+        return () => { alive = false }
+    }, [])
+    // #monitor / #monitor-full mount nothing of the Monitor (not even its header) until the server said 200:
+    // while pending, or on a 404, the page is the normal default admin section.
+    const activeSection = requestedSection === 'monitor' && !monitorAllowed ? 'manage' : requestedSection
     useDocumentTitle(pageTitle('admin', { section: SECTIONS.find((s) => s.key === activeSection)?.label }))
     const [headerCollapsed, setHeaderCollapsed] = useState(false)
     // Refresh loads the lists again by remounting the open section (each one
@@ -223,7 +235,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         )
     }
 
-    const sections = SECTIONS.map((section) => {
+    const sections = SECTIONS.filter((section) => section.key !== 'monitor' || monitorAllowed).map((section) => {
         if (section.key === 'agents' || section.key === 'monitor') return { ...section, badge: agentStats?.live || 0 }
         if (section.key === 'inspect') return { ...section, badge: objects?.length || 0 }
         if (section.key === 'system') return { ...section, badge: entries.length }
