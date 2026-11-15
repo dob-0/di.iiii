@@ -67,6 +67,7 @@ import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
 import { runPost } from './post.mjs'
 import { runAgentMail } from './agentMail.mjs'
+import { runMonitor } from './monitorReport.mjs'
 import { runAgents } from './agentsRemote.mjs'
 import { runWifi } from './wifiCmd.mjs'
 import {
@@ -1816,6 +1817,7 @@ const COMMANDS = {
     tell: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
     inbox: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
     contacts: async (args) => { process.exitCode = await runAgentMail(args, { say, fail }) },
+    monitor: async (args) => { process.exitCode = await runMonitor(args, { say, fail }) },
     agents: (args) => { process.exitCode = runAgents(args, { say, fail }) },
     unfollow: cmdUnfollow,
     down: cmdDown,

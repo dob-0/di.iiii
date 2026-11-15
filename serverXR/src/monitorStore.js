@@ -15,7 +15,6 @@ const os = require('node:os')
 const path = require('node:path')
 const { execFile } = require('node:child_process')
 const { createAgentBoardStore } = require('./agentBoardStore')
-const socketHandlers = require('./socketHandlers')
 
 const CACHE_TTL_MS = 5000
 const PANEL_TIMEOUT_MS = 4000
@@ -123,10 +122,15 @@ function createMonitorStore({
   fetchImpl = (typeof fetch === 'function' ? fetch : null),
   repoDir = process.env.DI_REPO_DIR || process.cwd(),
   // who is connected right now: the realtime hub's own maps (space/project id -> socket id -> person)
-  connections = { spaces: socketHandlers.spaceConnections, projects: socketHandlers.projectConnections },
+  // (loaded lazily: the `di monitor report` CLI builds this store without a realtime hub)
+  connections = null,
   now = () => Date.now()
 } = {}) {
   const boardStores = new Map()
+  const hub = () => connections || (() => {
+    const sh = require('./socketHandlers')
+    return { spaces: sh.spaceConnections, projects: sh.projectConnections }
+  })()
   let cache = null
 
   async function machines() {
@@ -234,7 +238,8 @@ function createMonitorStore({
   // public page); the account behind a name is never shown here.
   async function presence() {
     const rows = []
-    for (const [kind, map] of [['space', connections.spaces], ['project', connections.projects]]) {
+    const live = hub()
+    for (const [kind, map] of [['space', live.spaces], ['project', live.projects]]) {
       for (const [id, members] of map || []) {
         const people = [...members.values()].map((m) => ({
           name: String(m.userName || m.userId || 'guest').slice(0, 60),
