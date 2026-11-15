@@ -93,7 +93,12 @@ export default function MonitorSection({ onStats }) {
     const seq = useRef(0)
     const flashTimer = useRef(null)
     const alive = useRef(true)
-    useEffect(() => () => { alive.current = false; clearTimeout(flashTimer.current) }, [])
+    // set on every mount: StrictMode (src/index.jsx) mounts, unmounts and mounts again in dev,
+    // and a flag left false by that first cleanup drops every answer (the page stayed "loading…")
+    useEffect(() => {
+        alive.current = true
+        return () => { alive.current = false; clearTimeout(flashTimer.current) }
+    }, [])
 
     const load = useCallback(async () => {
         const mine = ++seq.current

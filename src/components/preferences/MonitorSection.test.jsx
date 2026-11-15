@@ -49,6 +49,13 @@ describe('MonitorSection', () => {
     beforeEach(() => { getMonitor.mockReset() })
     afterEach(() => { vi.useRealTimers() })
 
+    it('shows its data under StrictMode (mount, unmount, mount again)', async () => {
+        getMonitor.mockResolvedValue(snapshot())
+        render(<React.StrictMode><MonitorSection /></React.StrictMode>)
+        await waitFor(() => expect(screen.getByText('2/3')).toBeTruthy())
+        expect(screen.queryByText(/loading…/)).toBeNull()
+    })
+
     it('shows every panel and greys only the broken one', async () => {
         getMonitor.mockResolvedValue(snapshot())
         render(<MonitorSection />)
