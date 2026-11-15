@@ -123,9 +123,11 @@ describe('MonitorMap views', () => {
         expect(document.querySelector('[data-map-node="space:platina"]').classList.contains('is-dim')).toBe(false)
         expect(document.querySelectorAll('.monitor-edge.is-lit').length).toBe(2)
         expect(document.querySelectorAll('.monitor-edge.is-dim').length).toBe(2)
-        expect(document.querySelector('.monitor-tip')).toBeTruthy()
+        expect(document.querySelector('.monitor-tip')).toBeNull() // a short label is not cut: no tip
         fireEvent.mouseLeave(document.querySelector('[data-map-node="tier:dev"]'))
         expect(document.querySelectorAll('.is-dim').length).toBe(0)
+        fireEvent.mouseEnter(document.querySelector('[data-map-node="agent:a1"]'))
+        expect(document.querySelector('.monitor-tip')).toBeTruthy() // a cut label gets its full name
     })
 
     it('live edges move only while live', () => {
