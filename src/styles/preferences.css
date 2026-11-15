@@ -1600,12 +1600,12 @@
 .monitor-card3d:hover, .monitor-card3d.is-selected, .monitor-card3d:focus-visible { border-color: var(--di-cyan); outline: none; }
 .monitor-card3d.is-hub { border-color: var(--di-cyan); cursor: default; min-width: 0; white-space: nowrap; }
 .monitor-card3d-name { font-size: var(--di-text-4); overflow-wrap: anywhere; }
+.monitor-card3d:not(.is-full) .monitor-card3d-state, .monitor-card3d:not(.is-full) .monitor-card3d-fact { display: none; }
 .monitor-card3d-state { font-size: var(--di-text-3); font-family: var(--di-mono); color: var(--pref-tone); }
 .monitor-card3d-fact { font-size: var(--di-text-2); font-family: var(--di-mono); color: var(--ui-text-muted); }
 .monitor-map-key {
     display: flex; flex-wrap: wrap; gap: var(--di-space-3);
-    color: var(--ui-text-muted); font-size: var(--di-text-2);
-    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ui-text-muted); font-size: var(--di-text-3);
 }
 @media (max-width: 600px) {
     .monitor-map-stage { height: clamp(22rem, 62vh, 36rem); }

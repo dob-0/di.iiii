@@ -208,13 +208,13 @@ function Map2D({ layout, selectedId, onPick, live }) {
                         </g>
                     )
                 })}
-                {hovered ? (() => {
+                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 9.6) ? (() => {
                     const p = layout.pos.get(hovered.id)
                     const { h } = sizeOf(hovered.kind)
                     const text = hovered.label
                     const w = Math.max(120, text.length * 9 + 28)
                     return (
-                        <g className={`monitor-tip tone-${toneOf(hovered.state)}`} transform={`translate(${p.x - w / 2},${p.y - h / 2 - 54})`} pointerEvents="none">
+                        <g className={`monitor-tip tone-${toneOf(hovered.state)}`} transform={`translate(${p.x - w / 2},${p.y - h / 2 - 58})`} pointerEvents="none">
                             <rect width={w} height="46" className="monitor-tip-box" />
                             <text x="12" y="20" className="monitor-tip-label">{text}</text>
                             <text x="12" y="38" className="monitor-tip-meta">{`${hovered.kind} · ${hovered.state}`}</text>

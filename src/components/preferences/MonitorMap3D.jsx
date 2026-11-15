@@ -88,9 +88,9 @@ function Rig({ preset, outer, aspect }) {
     const size = useThree((s) => s.size)
     useEffect(() => {
         const stage = size.height ? Math.min(1.15, size.width / size.height) : 1
-        const d = (outer * S * aspect * 2.6) / stage
+        const d = (outer * S * aspect * 3.0) / stage
         if (preset.name === 'top') camera.position.set(0, d * 1.15, 0.001)
-        else camera.position.set(0, d * 0.62, d * 0.92)
+        else camera.position.set(0, d * 0.82, d * 0.57) // 55 degrees above the floor
         camera.lookAt(0, 0, 0)
         if (controls) { controls.target.set(0, 0, 0); controls.update() }
         invalidate()
@@ -161,9 +161,9 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
                         <group key={n.id}>
                             <Line points={[floor(p), at(p)]} color={colors.line} lineWidth={1} />
                             <Body node={n} p={p} color={toneColor(n.state)} dim={dim} sel={sel} />
-                            <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center distanceFactor={5.5} zIndexRange={[20, 0]}>
+                            <Html position={[p.x * S, p.h * S + 0.4, p.y * S]} center distanceFactor={5.5} zIndexRange={sel || hover === n.id ? [1000, 900] : [200, 0]}>
                                 <button type="button" data-map-node={n.id}
-                                    className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}`}
+                                    className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}${sel || hover === n.id ? ' is-full' : ''}`}
                                     aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
                                     onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h) => (h === n.id ? null : h))}
                                     onFocus={() => setHover(n.id)} onBlur={() => setHover((h) => (h === n.id ? null : h))}
