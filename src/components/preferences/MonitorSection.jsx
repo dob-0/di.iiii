@@ -353,7 +353,7 @@ export default function MonitorSection({ onStats }) {
     const devCommit = snap?.tiers?.rows?.find((r) => r.id === 'dev')?.commit
 
     return (
-        <div className={`monitor-page${full ? ' is-full' : ''}`} data-monitor-full={full ? 'on' : 'off'}>
+        <div className={`monitor-page${full ? ' is-full' : ''}${tab === 'map' ? ' is-map' : ''}`} data-monitor-full={full ? 'on' : 'off'}>
             <header className="monitor-bar">
                 <div className="monitor-bar-title">
                     <h2>Monitor</h2>
@@ -385,13 +385,15 @@ export default function MonitorSection({ onStats }) {
                     ) : null}
                 </section>
 
-                <div className="monitor-area-tiers">
-                    <MonitorOverview tiers={snap?.tiers} spaces={snap?.spaces} history={history} flashing={flashing}
-                        selectedId={selected?.kind === 'tier' ? selected.id : null} onPick={(row) => setSelected({ kind: 'tier', id: row.id })} />
-                </div>
+                <div className="monitor-area-strip">
+                    <div className="monitor-area-tiers">
+                        <MonitorOverview tiers={snap?.tiers} spaces={snap?.spaces} history={history} flashing={flashing}
+                            selectedId={selected?.kind === 'tier' ? selected.id : null} onPick={(row) => setSelected({ kind: 'tier', id: row.id })} />
+                    </div>
 
-                <div className="monitor-area-counts">
-                    <CountTiles tiles={countTiles} flashing={flashing} onPick={jumpTo} />
+                    <div className="monitor-area-counts">
+                        <CountTiles tiles={countTiles} flashing={flashing} onPick={jumpTo} />
+                    </div>
                 </div>
 
                 <div className="monitor-area-tabs monitor-tabs" role="tablist" aria-label="Monitor views">
@@ -403,7 +405,7 @@ export default function MonitorSection({ onStats }) {
 
                 <div className="monitor-area-main monitor-main">
                     {tab === 'map' ? (
-                        <ModuleSection title="Map" subtitle="Machines, tiers, spaces and shows — select a node for its details">
+                        <ModuleSection className="monitor-map-section" title="Map" subtitle="Machines, tiers, spaces and shows — select a node for its details">
                             <MonitorMap map={snap?.map} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
                                 live={streaming && !paused} onPick={(n) => setSelected({ kind: 'node', id: n.id })} />
                         </ModuleSection>

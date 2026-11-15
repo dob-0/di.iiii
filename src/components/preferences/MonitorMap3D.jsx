@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Box3, Vector3 } from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Line, OrbitControls } from '@react-three/drei'
 import Canvas from '../GuardedCanvas.jsx'
@@ -46,12 +47,13 @@ const useReducedMotion = () => {
 const at = (p) => [p.x * S, p.h * S, p.y * S]
 const floor = (p) => [p.x * S, 0, p.y * S]
 
-function Body({ node, p, color, dim, sel }) {
+function Body({ node, p, color, dim, sel, onHover, onPick }) {
     const k = node.kind
-    const size = k === 'tier' ? 0.5 : k === 'machine' ? 0.42 : 0.3
+    const size = k === 'tier' ? 0.55 : k === 'machine' ? 0.46 : 0.36
     return (
         <group position={at(p)}>
-            <mesh>
+            <mesh onPointerOver={(e) => { e.stopPropagation(); onHover(node.id) }} onPointerOut={() => onHover(null)}
+                onClick={(e) => { e.stopPropagation(); onPick(node) }}>
                 {k === 'tier' ? <cylinderGeometry args={[size / 2, size / 2, size * 0.7, 4]} /> : <boxGeometry args={[size, size * 0.7, size]} />}
                 <meshBasicMaterial color={color} transparent opacity={dim ? 0.25 : 1} />
             </mesh>
@@ -81,20 +83,54 @@ function Ticker({ on }) {
     return null
 }
 
-function Rig({ preset, outer, aspect }) {
+// Frame every node (and its card) in the stage: move the camera back along `dir`
+// until the farthest projected point sits at 82 % of the half-screen.
+const fitCamera = (camera, points, dir, size) => {
+    const box = new Box3().setFromPoints(points.map((p) => new Vector3(...p)))
+    const centre = box.getCenter(new Vector3())
+    camera.aspect = size.width && size.height ? size.width / size.height : 1
+    let d = 8
+    for (let i = 0; i < 10; i += 1) {
+        camera.position.copy(centre).addScaledVector(dir, d)
+        camera.lookAt(centre)
+        camera.updateProjectionMatrix()
+        camera.updateMatrixWorld()
+        let m = 0.01
+        for (const p of points) {
+            const v = new Vector3(...p).project(camera)
+            m = Math.max(m, Math.abs(v.x), Math.abs(v.y))
+        }
+        d = Math.max(2, d * (m / 0.82))
+    }
+    return { centre, dist: d }
+}
+
+const ELEVATED = new Vector3(0, Math.sin((55 * Math.PI) / 180), Math.cos((55 * Math.PI) / 180)) // 55 degrees above the floor
+const FROM_ABOVE = new Vector3(0, 1, 0.02).normalize()
+
+function Rig({ preset, points, fitDist }) {
     const camera = useThree((s) => s.camera)
     const controls = useThree((s) => s.controls)
     const invalidate = useThree((s) => s.invalidate)
     const size = useThree((s) => s.size)
     useEffect(() => {
-        const stage = size.height ? Math.min(1.15, size.width / size.height) : 1
-        const d = (outer * S * aspect * 3.0) / stage
-        if (preset.name === 'top') camera.position.set(0, d * 1.15, 0.001)
-        else camera.position.set(0, d * 0.82, d * 0.57) // 55 degrees above the floor
-        camera.lookAt(0, 0, 0)
-        if (controls) { controls.target.set(0, 0, 0); controls.update() }
+        const { centre, dist } = fitCamera(camera, points, preset.name === 'top' ? FROM_ABOVE : ELEVATED, size)
+        fitDist.current = dist
+        if (controls) { controls.target.copy(centre); controls.update() }
         invalidate()
-    }, [preset, outer, aspect, size, camera, controls, invalidate])
+    }, [preset, points, size, camera, controls, invalidate, fitDist])
+    return null
+}
+
+// tells the page whether the camera is close enough for every node to carry its name
+function Closeness({ fitDist, onClose }) {
+    const controls = useThree((s) => s.controls)
+    useEffect(() => {
+        if (!controls) return undefined
+        const on = () => onClose(controls.object.position.distanceTo(controls.target) < fitDist.current * 0.6)
+        controls.addEventListener('change', on)
+        return () => controls.removeEventListener('change', on)
+    }, [controls, fitDist, onClose])
     return null
 }
 
@@ -103,6 +139,13 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
     const colors = useMemo(() => readColors(), [])
     const [hover, setHover] = useState(null)
     const [preset, setPreset] = useState({ name: 'fit', n: 0 })
+    const [close, setClose] = useState(false)
+    const fitDist = useRef(10)
+    const points = useMemo(() => {
+        const list = [[0, 0.6, 0]]
+        for (const n of layout.nodes) { const p = layout.pos.get(n.id); list.push([p.x * S, 0, p.y * S], [p.x * S, p.h * S + 0.7, p.y * S]) }
+        return list
+    }, [layout])
     const animate = !!live && !reduced
 
     const neighbours = useMemo(() => {
@@ -126,7 +169,8 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
         <div className="monitor-map-stage monitor-map-stage-3d">
             <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
-                <Rig preset={preset} outer={layout.outer} aspect={layout.aspect} />
+                <Rig preset={preset} points={points} fitDist={fitDist} />
+                <Closeness fitDist={fitDist} onClose={setClose} />
                 <Ticker on={animate} />
                 <OrbitControls makeDefault enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
                 {layout.radii.map((r) => (
@@ -157,26 +201,31 @@ export default function MonitorMap3D({ layout, selectedId, onPick, live }) {
                     const p = layout.pos.get(n.id)
                     const sel = selectedId === n.id
                     const dim = !!focus && !hot(n.id)
+                    const full = sel || hover === n.id
+                    // at fit zoom only tiers and machines carry a name; the rest show it on hover, when selected, or up close
+                    const named = close || n.kind === 'tier' || n.kind === 'machine'
                     return (
                         <group key={n.id}>
                             <Line points={[floor(p), at(p)]} color={colors.line} lineWidth={1} />
-                            <Body node={n} p={p} color={toneColor(n.state)} dim={dim} sel={sel} />
-                            <Html position={[p.x * S, p.h * S + 0.4, p.y * S]} center distanceFactor={5.5} zIndexRange={sel || hover === n.id ? [1000, 900] : [200, 0]}>
-                                <button type="button" data-map-node={n.id}
-                                    className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}${sel || hover === n.id ? ' is-full' : ''}`}
-                                    aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
-                                    onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h) => (h === n.id ? null : h))}
-                                    onFocus={() => setHover(n.id)} onBlur={() => setHover((h) => (h === n.id ? null : h))}
-                                    onClick={() => onPick(n)}>
-                                    <span className="monitor-card3d-name">{n.label}</span>
-                                    <span className="monitor-card3d-state">{n.state}</span>
-                                    <span className="monitor-card3d-fact">{`${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
-                                </button>
-                            </Html>
+                            <Body node={n} p={p} color={toneColor(n.state)} dim={dim} sel={sel} onHover={setHover} onPick={onPick} />
+{named || full ? (
+                                <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
+                                    <button type="button" data-map-node={n.id}
+                                        className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}${full ? ' is-full' : ''}`}
+                                        aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
+                                        onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h) => (h === n.id ? null : h))}
+                                        onFocus={() => setHover(n.id)} onBlur={() => setHover((h) => (h === n.id ? null : h))}
+                                        onClick={() => onPick(n)}>
+                                        <span className="monitor-card3d-name">{n.label}</span>
+                                        <span className="monitor-card3d-state">{n.state}</span>
+                                        <span className="monitor-card3d-fact">{`${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
+                                    </button>
+                                </Html>
+                            ) : null}
                         </group>
                     )
                 })}
-                <Html position={[0, 0.5, 0]} center distanceFactor={5.5} zIndexRange={[20, 0]}>
+                <Html position={[0, 0.5, 0]} center zIndexRange={[20, 0]}>
                     <div className="monitor-card3d is-hub"><span className="monitor-card3d-name">di.iiii</span></div>
                 </Html>
             </Canvas>

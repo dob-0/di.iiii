@@ -92,10 +92,21 @@ export const layoutMap = (map, aspect = ASPECT) => {
     }
 
     const outer = Math.max(...[1, 2, 3].filter((r) => rings[r].length).map((r) => radius[r] + (r === 3 ? (lanes3 - 1) * LANE_GAP : 0)), 130)
-    const padX = 100
-    const padY = 50
-    const halfW = outer * aspect + padX
-    const halfH = outer + padY
+    // the box that holds every card (and the hub), so Fit fills the stage with the nodes, not with empty ring
+    let minX = -50
+    let maxX = 50
+    let minY = -24
+    let maxY = 24
+    for (const n of nodes) {
+        const p = pos.get(n.id)
+        const { w, h } = sizeOf(n.kind)
+        minX = Math.min(minX, p.x - w / 2)
+        maxX = Math.max(maxX, p.x + w / 2)
+        minY = Math.min(minY, p.y - h / 2 - 60) // room for the hover tip above
+        maxY = Math.max(maxY, p.y + h / 2)
+    }
+    const pad = 36
+    const bounds = { x: minX - pad, y: minY - pad, w: maxX - minX + pad * 2, h: maxY - minY + pad * 2 }
     return {
         nodes,
         edges,
@@ -103,7 +114,7 @@ export const layoutMap = (map, aspect = ASPECT) => {
         radii: [1, 2, 3].filter((r) => rings[r].length).map((r) => radius[r]),
         hub: { x: 0, y: 0 },
         tierIds: rings[1].map((n) => n.id),
-        bounds: { x: -halfW, y: -halfH, w: halfW * 2, h: halfH * 2 },
+        bounds,
         outer,
         aspect
     }

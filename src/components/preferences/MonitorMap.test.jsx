@@ -36,7 +36,38 @@ const map = () => ({
 beforeEach(() => { window.localStorage.clear() })
 afterEach(() => { cleanup(); window.localStorage.clear() })
 
+// 36 nodes shaped like the real map (many spaces, few machines): generated, never the real names
+const synthetic = () => {
+    const nodes = []
+    const edges = []
+    for (let i = 0; i < 3; i += 1) nodes.push({ id: `tier:t${i}`, kind: 'tier', label: `tier ${i}`, state: 'ok' })
+    nodes.push({ id: 'machine:m0', kind: 'machine', label: 'machine 0', state: 'ok' })
+    for (let i = 0; i < 29; i += 1) {
+        nodes.push({ id: `space:s${i}`, kind: 'space', label: `space number ${i}`, state: i % 7 === 0 ? 'warn' : 'ok' })
+        edges.push({ from: `tier:t${i % 3}`, to: `space:s${i}`, kind: 'holds' })
+    }
+    for (let i = 0; i < 2; i += 1) nodes.push({ id: `agent:a${i}`, kind: 'agent', label: `agent ${i}`, state: 'ok' })
+    nodes.push({ id: 'repo:r0', kind: 'repo', label: 'repo', state: 'ok' })
+    return { nodes, edges }
+}
+
 describe('layoutMap', () => {
+    it('36 nodes: all placed apart, and the fit box holds every card tightly', () => {
+        const m = synthetic()
+        expect(m.nodes.length).toBe(36)
+        const l = layoutMap(m)
+        expect(l.pos.size).toBe(36)
+        expect(new Set([...l.pos.values()].map((p) => `${p.x},${p.y}`)).size).toBe(36)
+        for (const p of l.pos.values()) {
+            expect(p.x).toBeGreaterThan(l.bounds.x)
+            expect(p.x).toBeLessThan(l.bounds.x + l.bounds.w)
+            expect(p.y).toBeGreaterThan(l.bounds.y)
+            expect(p.y).toBeLessThan(l.bounds.y + l.bounds.h)
+        }
+        expect(l.bounds.w / l.bounds.h).toBeLessThan(2.2) // a map, not a ribbon: fills a desk stage
+        expect(layoutMap(synthetic()).bounds).toEqual(l.bounds)
+    })
+
     it('is stable: same input, same positions', () => {
         const a = layoutMap(map())
         const reversed = map()
@@ -148,6 +179,12 @@ describe('MonitorMap views', () => {
         fireEvent.click(document.querySelector('[data-map-view="3d"]'))
         fireEvent.click(await screen.findByTestId('map3d-pick'))
         expect(onPick).toHaveBeenCalledTimes(3)
+    })
+
+    it('sizes its stage from where it starts, never under 420 px', () => {
+        render(<div className="monitor-page"><MonitorMap map={synthetic()} onPick={() => {}} /></div>)
+        const h = parseInt(document.querySelector('.monitor-map').style.getPropertyValue('--monitor-map-h'), 10)
+        expect(h).toBeGreaterThanOrEqual(420)
     })
 
     it('hands `live` to the 3D view and shows a note on an empty map', async () => {

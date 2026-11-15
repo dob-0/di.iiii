@@ -28,7 +28,8 @@ export const tierState = (row, devCommit) => {
         return { tone: 'warning', note: 'not on dev’s commit' }
     }
     // No commit known (a local build without a release manifest): say so, never claim it is with dev.
-    if (row.id !== 'dev' && !row.commit) return { tone: 'warning', note: 'commit unknown' }
+    // A local tree has no release manifest, so this is no action for the owner: `quiet` keeps it out of the status line.
+    if (row.id !== 'dev' && !row.commit) return { tone: 'warning', note: 'commit unknown', quiet: row.id.startsWith('local:') }
     return { tone: 'success', note: row.id === 'dev' ? 'the reference' : 'with dev' }
 }
 
@@ -39,7 +40,7 @@ export const heroState = (snap) => {
     const dev = rows.find((r) => r.id === 'dev')
     for (const row of rows) {
         const state = tierState(row, dev?.commit)
-        if (state.tone === 'success') continue
+        if (state.tone === 'success' || state.quiet) continue
         const name = tierLabel(row.id).replace('local · ', 'local ')
         const text = state.tone === 'danger' || /^\d+ behind/.test(state.note) ? `${name} is ${state.note}` : `${name}: ${state.note}`
         issues.push({ tone: state.tone, text, tier: row.id })

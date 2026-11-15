@@ -1528,7 +1528,7 @@
 /* The active tab's 2px underline, inset so it takes no layout; not a shadow. */
 .monitor-tab.is-active { color: var(--di-text); box-shadow: inset 0 -2px 0 var(--di-cyan); }
 /* Map */
-.monitor-map { min-width: 0; display: flex; flex-direction: column; gap: var(--di-space-2); }
+.monitor-map { --monitor-map-h: clamp(26rem, 68vh, 46rem); min-width: 0; display: flex; flex-direction: column; gap: var(--di-space-2); }
 .monitor-map-views { display: flex; align-self: flex-start; background: var(--pref-border); }
 .monitor-map-view + .monitor-map-view, .monitor-map-tool + .monitor-map-tool { border-left: 1px solid var(--pref-border); }
 .monitor-map-view {
@@ -1540,7 +1540,7 @@
 .monitor-map-view:hover { background: var(--di-surface-2); color: var(--di-text); }
 .monitor-map-view:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: -1px; }
 .monitor-map-view.is-active { background: var(--di-cyan); color: var(--di-black); }
-.monitor-map-stage { position: relative; height: clamp(26rem, 68vh, 46rem); min-width: 0; background: var(--di-black); border: 1px solid var(--pref-border); overflow: hidden; touch-action: none; }
+.monitor-map-stage { position: relative; height: var(--monitor-map-h); min-width: 0; background: var(--di-black); border: 1px solid var(--pref-border); overflow: hidden; touch-action: none; }
 .monitor-map-svg { display: block; width: 100%; height: 100%; cursor: grab; user-select: none; }
 .monitor-map-svg:active { cursor: grabbing; }
 .monitor-ring { fill: none; stroke: var(--pref-border); stroke-width: 1; }
@@ -1597,6 +1597,7 @@
 .monitor-card3d.is-dim { opacity: 0.3; }
 .monitor-card3d:hover, .monitor-card3d.is-selected, .monitor-card3d:focus-visible { border-color: var(--di-cyan); outline: none; }
 .monitor-card3d.is-hub { border-color: var(--di-cyan); cursor: default; min-width: 0; white-space: nowrap; }
+.monitor-card3d:not(.is-full):not(.is-hub) { min-width: 0; max-width: none; white-space: nowrap; padding: var(--di-space-1) var(--di-space-2) var(--di-space-1) var(--di-space-3); }
 .monitor-card3d-name { font-size: var(--di-text-4); overflow-wrap: anywhere; }
 .monitor-card3d:not(.is-full) .monitor-card3d-state, .monitor-card3d:not(.is-full) .monitor-card3d-fact { display: none; }
 .monitor-card3d-state { font-size: var(--di-text-3); font-family: var(--di-mono); color: var(--pref-tone); }
@@ -1606,7 +1607,7 @@
     color: var(--ui-text-muted); font-size: var(--di-text-3);
 }
 @media (max-width: 600px) {
-    .monitor-map-stage { height: clamp(22rem, 62vh, 36rem); }
+    .monitor-map { --monitor-map-h: clamp(22rem, 62vh, 36rem); }
     .monitor-map-views { align-self: stretch; }
     .monitor-map-view { flex: 1; }
     .monitor-map-hint { display: none; }
@@ -1677,6 +1678,7 @@
     min-width: 0;
 }
 .monitor-hero { grid-area: hero; }
+.monitor-area-strip { display: contents; }
 .monitor-area-tiers { grid-area: tiers; min-width: 0; }
 .monitor-area-counts { grid-area: counts; min-width: 0; }
 .monitor-area-tabs { grid-area: tabs; margin-top: 0; }
@@ -1851,6 +1853,36 @@
 .monitor-fresh { display: block; height: 4px; background: var(--pref-border); }
 .monitor-fresh i { display: block; height: 100%; background: var(--pref-tone); transition: width var(--di-motion-base) ease-out; }
 
+/* Map tab: the tier and count tiles shrink to one strip of chips (same colours, same clicks)
+   and the status line slims down, so the map gets the screen. */
+.monitor-page.is-map .monitor-frame {
+    grid-template-areas:
+        "hero feed"
+        "strip feed"
+        "tabs feed"
+        "main feed";
+}
+.monitor-page.is-map .monitor-area-strip { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--di-space-2); grid-area: strip; min-width: 0; }
+.monitor-page.is-map .monitor-area-tiers, .monitor-page.is-map .monitor-area-counts { display: contents; }
+.monitor-page.is-map .monitor-overview, .monitor-page.is-map .monitor-counts { display: contents; }
+.monitor-page.is-map .monitor-tier, .monitor-page.is-map .monitor-count {
+    flex-direction: row; align-items: center; gap: var(--di-space-2);
+    min-height: 44px; padding: 0 var(--di-space-3);
+    border-top-width: 3px;
+}
+.monitor-page.is-map .monitor-tier > .monitor-meta, .monitor-page.is-map .monitor-spark, .monitor-page.is-map .monitor-dots { display: none; }
+.monitor-page.is-map .monitor-tier-name { font-size: var(--di-text-4); }
+.monitor-page.is-map .monitor-tier-commit { font-size: var(--di-text-3); }
+.monitor-page.is-map .monitor-tier-note { font-size: var(--di-text-3); }
+.monitor-page.is-map .monitor-count-value { font-size: var(--di-text-5); }
+.monitor-page.is-map .monitor-count-label { font-size: var(--di-text-3); }
+.monitor-page.is-map .monitor-hero { padding: var(--di-space-2) var(--di-space-4); }
+.monitor-page.is-map .monitor-hero-text { font-size: var(--di-text-6); }
+.monitor-page.is-map .monitor-map-section { padding: 0; background: none; border: 0; }
+.monitor-page.is-map .monitor-map-section > .preferences-module-header { display: none; }
+@media (max-width: 900px) {
+    .monitor-page.is-map .monitor-frame { grid-template-areas: "hero" "strip" "tabs" "main" "feed"; }
+}
 @media (max-width: 900px) {
     .monitor-frame {
         grid-template-columns: minmax(0, 1fr);

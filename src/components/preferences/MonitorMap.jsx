@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
@@ -39,6 +39,32 @@ const readView = () => {
     } catch { return null }
 }
 const writeView = (v) => { try { window.localStorage.setItem(VIEW_KEY, v) } catch { /* private window: the choice just is not kept */ } }
+
+// The stage takes the screen that is left below it: measured from where it starts
+// (as if the page were scrolled to the top), never guessed. Min 420 px.
+const MIN_STAGE = 420
+const useFillHeight = (rootRef, view) => {
+    useLayoutEffect(() => {
+        const root = rootRef.current
+        if (!root || view === 'list') return undefined
+        const measure = () => {
+            const stage = root.querySelector('.monitor-map-stage')
+            if (!stage) return
+            const scroller = root.closest('.monitor-page.is-full')
+            const scrolled = scroller ? scroller.scrollTop : window.scrollY || 0
+            const top = stage.getBoundingClientRect().top + scrolled
+            const key = root.querySelector('.monitor-map-key')
+            const below = (key ? key.offsetHeight : 0) + 16
+            root.style.setProperty('--monitor-map-h', `${Math.max(MIN_STAGE, Math.round(window.innerHeight - top - below))}px`)
+        }
+        measure()
+        window.addEventListener('resize', measure)
+        const page = root.closest('.monitor-page')
+        const ro = typeof ResizeObserver === 'function' && page ? new ResizeObserver(measure) : null
+        ro?.observe(page)
+        return () => { window.removeEventListener('resize', measure); ro?.disconnect() }
+    }, [rootRef, view])
+}
 
 const clip = (text, n) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
 const toneOf = (state) => STATE_TONE[state] || 'muted'
@@ -238,11 +264,13 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
     const [stored, setStored] = useState(readView)
     const view = stored || (narrow ? 'list' : '2d')
     const choose = (v) => { setStored(v); writeView(v) }
+    const rootRef = useRef(null)
+    useFillHeight(rootRef, view)
 
     if (!nodes.length) return <div className="monitor-note">Nothing on the map yet. Machines, tiers and spaces appear when the server reports them.</div>
 
     return (
-        <div className="monitor-map" data-monitor-map-view={view}>
+        <div className="monitor-map" data-monitor-map-view={view} ref={rootRef}>
             <div className="monitor-map-views" role="group" aria-label="Map view">
                 {VIEWS.map(([id, label]) => (
                     <button key={id} type="button" data-map-view={id} className={`monitor-map-view${view === id ? ' is-active' : ''}`}

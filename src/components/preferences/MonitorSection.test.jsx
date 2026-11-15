@@ -234,6 +234,9 @@ describe('MonitorSection overview, map, workspace and live', () => {
         render(<MonitorSection />)
         await waitFor(() => screen.getByLabelText('Tiers overview'))
         fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
+        expect(document.querySelector('.monitor-page').classList.contains('is-map')).toBe(true) // tiles shrink to one strip
+        expect(document.querySelector('.monitor-area-strip [data-tier-id]')).toBeTruthy()
+        expect(document.querySelector('.monitor-area-strip [data-count-id]')).toBeTruthy()
         expect(document.querySelector('[data-monitor-map="graph"]')).toBeTruthy()
         expect(document.querySelectorAll('[data-map-node]').length).toBe(6)
         expect(document.querySelectorAll('.monitor-edge').length).toBe(4)
@@ -438,7 +441,7 @@ describe('tierState', () => {
     })
 
     it('never says "with dev" for a tier whose commit is unknown', () => {
-        expect(tierState({ id: 'local:studio-mac', status: 200, commit: null, behindDev: null }, 'abc')).toEqual({ tone: 'warning', note: 'commit unknown' })
+        expect(tierState({ id: 'local:studio-mac', status: 200, commit: null, behindDev: null }, 'abc')).toEqual({ tone: 'warning', note: 'commit unknown', quiet: true })
         expect(tierState({ id: 'local:aylmo', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('with dev')
         expect(tierState({ id: 'dev', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('the reference')
     })
@@ -587,5 +590,19 @@ describe('heroState', () => {
             { id: 'dev', status: 'ok', commit: 'b' }, { id: 'prod', status: 'ok', commit: 'a', behindDev: 1274 }
         ] }, panels: {} })
         expect(state.headline).toBe('1 thing needs you: prod is 1274 behind dev')
+    })
+    it('a local tree without a release manifest keeps its amber note but is not counted', () => {
+        const snap = { tiers: { rows: [
+            { id: 'dev', status: 'ok', commit: 'b' },
+            { id: 'prod', status: 'ok', commit: 'a', behindDev: 12 },
+            { id: 'local:studio-mac', status: 200, commit: null, behindDev: null }
+        ] }, panels: {} }
+        const state = heroState(snap)
+        expect(state.headline).toBe('1 thing needs you: prod is 12 behind dev')
+        expect(state.issues.map((i) => i.tier)).toEqual(['prod'])
+        expect(tierState(snap.tiers.rows[2], 'b')).toMatchObject({ tone: 'warning', note: 'commit unknown' })
+        expect(heroState({ tiers: { rows: [snap.tiers.rows[0], snap.tiers.rows[2]] }, panels: {} }).headline).toBe('All well')
+        // a hosted tier (prod) with no commit is still an action
+        expect(heroState({ tiers: { rows: [snap.tiers.rows[0], { id: 'prod', status: 'ok', commit: null }] }, panels: {} }).issues.length).toBe(1)
     })
 })
