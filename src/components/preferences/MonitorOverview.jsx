@@ -24,6 +24,8 @@ export const tierState = (row, devCommit) => {
     if (row.id.startsWith('local:') && devCommit && row.commit && row.commit !== devCommit) {
         return { tone: 'warning', note: 'not on dev’s commit' }
     }
+    // No commit known (a local build without a release manifest): say so, never claim it is with dev.
+    if (row.id !== 'dev' && !row.commit) return { tone: 'warning', note: 'commit unknown' }
     return { tone: 'success', note: row.id === 'dev' ? 'the reference' : 'with dev' }
 }
 

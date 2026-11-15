@@ -10,6 +10,7 @@ vi.mock('../../services/apiClient.js', () => ({
 
 import { getMonitor, postMonitorAsk } from '../../services/apiClient.js'
 import MonitorSection, { formatBytes, timeAgo } from './MonitorSection.jsx'
+import { tierState } from './MonitorOverview.jsx'
 
 const snapshot = (over = {}) => ({
     generatedAt: new Date().toISOString(),
@@ -337,5 +338,13 @@ describe('MonitorSection overview, map, workspace and live', () => {
         fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
         expect(screen.getByText('newest ask')).toBeTruthy()
         expect(FakeEventSource.instances.filter((e) => !e.closed).length).toBe(1)
+    })
+})
+
+describe('tierState', () => {
+    it('never says "with dev" for a tier whose commit is unknown', () => {
+        expect(tierState({ id: 'local:studio-mac', status: 200, commit: null, behindDev: null }, 'abc')).toEqual({ tone: 'warning', note: 'commit unknown' })
+        expect(tierState({ id: 'local:aylmo', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('with dev')
+        expect(tierState({ id: 'dev', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('the reference')
     })
 })
