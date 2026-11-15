@@ -112,7 +112,8 @@ function ManagementButton({ button }) {
 // ("open the monitor") instead of "open admin, then click Monitor".
 const sectionFromHash = () => {
     try {
-        const key = String(window.location.hash || '').replace(/^#/, '')
+        // #monitor-full is the Monitor already in full screen (a link for the phone)
+        const key = String(window.location.hash || '').replace(/^#/, '').replace(/^monitor-full$/, 'monitor')
         return SECTIONS.some((section) => section.key === key) ? key : 'manage'
     } catch {
         return 'manage'
@@ -125,7 +126,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     useEffect(() => {
         const onHash = () => {
             // only a hash that names a section moves us; clearing it leaves the open section alone
-            const key = String(window.location.hash || '').replace(/^#/, '')
+            const key = String(window.location.hash || '').replace(/^#/, '').replace(/^monitor-full$/, 'monitor')
             if (SECTIONS.some((section) => section.key === key)) setActiveSection(key)
         }
         window.addEventListener('hashchange', onHash)

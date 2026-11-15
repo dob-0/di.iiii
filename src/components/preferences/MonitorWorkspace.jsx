@@ -2,8 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { postMonitorAsk } from '../../services/apiClient.js'
 import { ago } from './monitorFormat.js'
 
-// The workspace: the owner's open asks (newest first), what each agent lane is
-// doing, which machines reported lately, and one box to send a new ask.
+// Work: one big ask bar on top, the open asks (newest first), what each agent is
+// doing (a live square when busy), and which machines reported lately, each with
+// a freshness bar that runs down as its last report ages toward stale (120 s).
+export const STALE_MS = 120000
+export const freshness = (iso, nowMs = Date.now()) => {
+    const age = nowMs - new Date(iso).getTime()
+    if (!Number.isFinite(age)) return 0
+    return Math.max(0, Math.min(1, 1 - age / STALE_MS))
+}
 
 const LANE_TONE = { busy: 'success', blocked: 'warning', idle: 'muted', shell: 'accent' }
 const LANE_ORDER = { busy: 0, blocked: 1, idle: 2, shell: 3 }
@@ -15,6 +22,11 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
     const [text, setText] = useState('')
     const [pending, setPending] = useState([])
     const [problem, setProblem] = useState('')
+    const [now, setNow] = useState(() => Date.now())
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 1000)
+        return () => clearInterval(timer)
+    }, [])
     const alive = useRef(true)
     const counter = useRef(0)
     useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
@@ -51,16 +63,19 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
         }
     }
 
+    const onKey = (ev) => {
+        // Enter sends, Shift+Enter is a new line
+        if (ev.key === 'Enter' && !ev.shiftKey && !ev.nativeEvent?.isComposing) send(ev)
+    }
+
     return (
         <div className="monitor-workspace">
             <form className="monitor-ask-form" onSubmit={send}>
-                <label className="monitor-group-title" htmlFor="monitor-ask-text">Send an ask</label>
-                <textarea id="monitor-ask-text" className="monitor-filter monitor-ask-text" rows={3} value={text}
-                    placeholder="What should the agents do next?" onChange={(e) => setText(e.target.value)} />
-                <div className="monitor-ask-actions">
-                    <button type="submit" className="preferences-inline-action" disabled={!text.trim()}>Send ask</button>
-                    {problem ? <span className="monitor-note is-down">{problem}</span> : null}
-                </div>
+                <textarea id="monitor-ask-text" className="monitor-ask-text" rows={2} value={text} aria-label="Send an ask"
+                    placeholder="Tell the agents…" onChange={(e) => setText(e.target.value)} onKeyDown={onKey} />
+                <button type="submit" className="monitor-ask-send" disabled={!text.trim()}>Send ask</button>
+                <span className="monitor-meta monitor-ask-hint">Enter sends · Shift+Enter new line</span>
+                {problem ? <span className="monitor-note is-down">{problem}</span> : null}
             </form>
 
             <div className="monitor-group-title">Open asks <span className="preferences-tree-tag">{shown.length}</span></div>
@@ -68,7 +83,7 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
             {!shown.length && asks?.ok !== false ? <div className="monitor-note">No open asks.</div> : null}
             <div className="monitor-asks">
                 {shown.map((a) => (
-                    <div key={a.id} className={`monitor-ask tone-${ASK_TONE[a.state] || 'accent'}`} data-ask-id={a.id}>
+                    <div key={a.id} className={`monitor-ask tone-${ASK_TONE[a.state] || 'accent'}${a.state === 'sending' ? ' is-sending' : ''}`} data-ask-id={a.id}>
                         <div className="monitor-ask-text-line">{a.text}</div>
                         <div className="monitor-meta">{a.state} · {a.source === 'ledger' ? 'ledger' : 'sent here'} · {ago(a.touched)}</div>
                     </div>
@@ -77,11 +92,14 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
 
             <div className="monitor-group-title">Agents at work <span className="preferences-tree-tag">{lanes.length}</span></div>
             {!lanes.length ? <div className="monitor-note">No live agent sessions.</div> : null}
-            <div className="monitor-grid">
+            <div className="monitor-agent-grid">
                 {lanes.map((a) => (
                     <button key={a.sessionId} type="button" data-lane-id={a.sessionId}
-                        className={`monitor-row tone-${LANE_TONE[a.status] || 'accent'}`} onClick={() => onPick('agent', a)}>
-                        <span className="monitor-name">{a.title}</span>
+                        className={`monitor-agent tone-${LANE_TONE[a.status] || 'accent'}`} onClick={() => onPick('agent', a)}>
+                        <span className="monitor-agent-head">
+                            {a.status === 'busy' ? <i className="monitor-live-square" aria-label="busy" /> : <i className="monitor-live-square is-off" aria-hidden="true" />}
+                            <span className="monitor-name">{a.title}</span>
+                        </span>
                         <span className="monitor-meta">{a.status}{a.machine ? ` · ${a.machine}` : ''} · {ago(a.lastActivity)}</span>
                         <span className="monitor-meta">{a.branch || 'no branch'}</span>
                     </button>
@@ -92,10 +110,11 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
             {!(reports || []).length ? <div className="monitor-note">No other machine has reported yet.</div> : null}
             <div className="monitor-grid">
                 {(reports || []).map((r) => (
-                    <div key={r.host} className={`monitor-row tone-${r.stale ? 'warning' : 'success'}`} data-report-host={r.host}>
+                    <div key={r.host} className={`monitor-row monitor-report tone-${r.stale ? 'warning' : 'success'}`} data-report-host={r.host}>
                         <span className="monitor-name">{r.host}</span>
                         <span className="monitor-meta">{r.stale ? 'stale' : 'reporting'} · {ago(r.reportedAt)}</span>
                         <span className="monitor-meta">{r.panels?.agents?.live ?? 0} agents live</span>
+                        <span className="monitor-fresh" aria-hidden="true"><i style={{ width: `${Math.round(freshness(r.reportedAt, now) * 100)}%` }} /></span>
                     </div>
                 ))}
             </div>

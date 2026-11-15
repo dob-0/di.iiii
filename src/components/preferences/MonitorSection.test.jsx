@@ -10,7 +10,7 @@ vi.mock('../../services/apiClient.js', () => ({
 
 import { getMonitor, postMonitorAsk } from '../../services/apiClient.js'
 import MonitorSection, { formatBytes, timeAgo } from './MonitorSection.jsx'
-import { tierState } from './MonitorOverview.jsx'
+import { tierState, heroState } from './MonitorOverview.jsx'
 
 const snapshot = (over = {}) => ({
     generatedAt: new Date().toISOString(),
@@ -441,5 +441,151 @@ describe('tierState', () => {
         expect(tierState({ id: 'local:studio-mac', status: 200, commit: null, behindDev: null }, 'abc')).toEqual({ tone: 'warning', note: 'commit unknown' })
         expect(tierState({ id: 'local:aylmo', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('with dev')
         expect(tierState({ id: 'dev', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('the reference')
+    })
+})
+
+describe('MonitorSection look: full screen, status line, tiles, feed, drawer, keys', () => {
+    beforeEach(() => {
+        getMonitor.mockReset(); postMonitorAsk.mockReset(); FakeEventSource.instances = []
+        try { window.localStorage.clear() } catch { /* none */ }
+        window.history.replaceState(null, '', '/')
+    })
+    afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); delete window.matchMedia })
+    const open = async (data = contract()) => {
+        getMonitor.mockResolvedValue(data)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+    }
+    const page = () => document.querySelector('.monitor-page')
+
+    it('Full screen button and Esc turn the page over the admin frame and back, remembered per browser', async () => {
+        await open()
+        expect(page().getAttribute('data-monitor-full')).toBe('off')
+        fireEvent.click(screen.getByText('Full screen'))
+        expect(page().getAttribute('data-monitor-full')).toBe('on')
+        expect(page().classList.contains('is-full')).toBe(true)
+        expect(window.localStorage.getItem('di.monitor.full')).toBe('1')
+        expect(window.location.hash).toBe('#monitor-full')
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(page().getAttribute('data-monitor-full')).toBe('off')
+        expect(window.localStorage.getItem('di.monitor.full')).toBe('0')
+    })
+
+    it('starts in full screen from #monitor-full or from what the browser remembered', async () => {
+        window.history.replaceState(null, '', '/#monitor-full')
+        await open()
+        expect(page().getAttribute('data-monitor-full')).toBe('on')
+    })
+
+    it('keys: 1 2 3 switch tabs, f toggles full screen, ? shows the card, none while typing', async () => {
+        await open()
+        fireEvent.keyDown(window, { key: '2' })
+        expect(document.querySelector('[data-monitor-tab="map"]').getAttribute('aria-selected')).toBe('true')
+        fireEvent.keyDown(window, { key: '3' })
+        expect(document.querySelector('[data-monitor-tab="workspace"]').getAttribute('aria-selected')).toBe('true')
+        fireEvent.keyDown(window, { key: 'f' })
+        expect(page().getAttribute('data-monitor-full')).toBe('on')
+        fireEvent.keyDown(window, { key: '?' })
+        expect(screen.getByRole('dialog', { name: 'Keys' })).toBeTruthy()
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(screen.queryByRole('dialog', { name: 'Keys' })).toBeNull()
+        // typing in the filter: the letters are text, not commands
+        const filter = screen.getByLabelText('Filter every panel')
+        filter.focus()
+        fireEvent.keyDown(filter, { key: 'f' })
+        fireEvent.keyDown(filter, { key: '1' })
+        expect(page().getAttribute('data-monitor-full')).toBe('on')
+        expect(document.querySelector('[data-monitor-tab="workspace"]').getAttribute('aria-selected')).toBe('true')
+        fireEvent.keyDown(window, { key: '/' })
+        expect(document.activeElement).toBe(filter)
+    })
+
+    it('the status line says what needs him, worst first, and "All well" when nothing does', async () => {
+        await open()
+        const hero = document.querySelector('.monitor-hero')
+        expect(hero.textContent).toMatch(/3 things need you: /)
+        expect(hero.textContent).toMatch(/prod is 12 behind dev/)
+        expect(hero.getAttribute('data-hero-tone')).toBe('danger') // a failed service is the worst thing and leads
+        expect(hero.textContent).toMatch(/heard just now|heard \d+ s ago/)
+    })
+
+    it('All well when tiers agree and nothing failed', async () => {
+        const calm = contract()
+        calm.tiers.rows = calm.tiers.rows.filter((r) => r.id !== 'prod' && r.id !== 'local:aylmo')
+        calm.panels.services.failed = 0
+        await open(calm)
+        expect(document.querySelector('.monitor-hero-text').textContent).toBe('All well')
+    })
+
+    it('count tiles carry one square per thing and jump to their panel', async () => {
+        await open()
+        const dots = document.querySelectorAll('[data-count-id="machines"] .monitor-dot')
+        expect(dots.length).toBe(3)
+        expect(document.querySelectorAll('[data-count-id="machines"] .monitor-dot.tone-success').length).toBe(2)
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        fireEvent.click(document.querySelector('[data-count-id="agents"]'))
+        expect(document.querySelector('[data-monitor-tab="board"]').getAttribute('aria-selected')).toBe('true')
+    })
+
+    it('a tier tile opens the drawer; Esc and the cross close it; no empty inspector box', async () => {
+        await open()
+        expect(document.querySelector('.monitor-drawer')).toBeNull()
+        fireEvent.click(document.querySelector('[data-tier-id="prod"]'))
+        const drawer = document.querySelector('.monitor-drawer')
+        expect(drawer).toBeTruthy()
+        expect(within(drawer).getByText('Inspector — prod')).toBeTruthy()
+        expect(within(drawer).getByText('12 behind dev')).toBeTruthy()
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(document.querySelector('.monitor-drawer')).toBeNull()
+        fireEvent.click(document.querySelector('[data-tier-id="dev"]'))
+        fireEvent.click(screen.getByLabelText('Close inspector'))
+        expect(document.querySelector('.monitor-drawer')).toBeNull()
+    })
+
+    it('What changed lists the difference between two snapshots, newest on top', async () => {
+        vi.stubGlobal('EventSource', FakeEventSource)
+        await open()
+        expect(screen.getByText(/Nothing has changed since you opened/)).toBeTruthy()
+        const next = contract()
+        next.panels.agents.rows[0].status = 'idle'
+        next.asks.rows.push({ id: 'N3', state: 'open', touched: new Date().toISOString(), text: 'light the hall', source: 'page' })
+        await act(async () => { FakeEventSource.instances[0].emit(next) })
+        const items = [...document.querySelectorAll('.monitor-event-text')].map((n) => n.textContent)
+        expect(items).toContain("agent 'Build the monitor' busy → idle")
+        expect(items).toContain('new ask: light the hall')
+        expect(document.querySelectorAll('.monitor-event').length).toBe(2)
+    })
+
+    it('Enter sends the ask, Shift+Enter is a new line', async () => {
+        postMonitorAsk.mockResolvedValue({ id: 'N9' })
+        await open()
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        const box = screen.getByLabelText('Send an ask')
+        fireEvent.change(box, { target: { value: 'line one' } })
+        fireEvent.keyDown(box, { key: 'Enter', shiftKey: true })
+        expect(postMonitorAsk).not.toHaveBeenCalled()
+        fireEvent.keyDown(box, { key: 'Enter' })
+        expect(postMonitorAsk).toHaveBeenCalledWith('line one')
+        expect(screen.getByText('line one')).toBeTruthy()
+    })
+
+    it('reports show a freshness bar', async () => {
+        await open()
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        expect(document.querySelector('[data-report-host="r-di"] .monitor-fresh i').style.width).not.toBe('0%')
+        expect(document.querySelector('[data-report-host="asuz"] .monitor-fresh i').style.width).toBe('0%')
+    })
+})
+
+describe('heroState', () => {
+    it('dev not answering is one plain sentence, danger', () => {
+        const state = heroState({ tiers: { rows: [{ id: 'dev', status: 502 }] }, panels: {} })
+        expect(state).toMatchObject({ tone: 'danger', headline: 'dev is not answering (502)' })
+    })
+    it('one amber thing is counted: 1 thing needs you', () => {
+        const state = heroState({ tiers: { rows: [
+            { id: 'dev', status: 'ok', commit: 'b' }, { id: 'prod', status: 'ok', commit: 'a', behindDev: 1274 }
+        ] }, panels: {} })
+        expect(state.headline).toBe('1 thing needs you: prod is 1274 behind dev')
     })
 })
