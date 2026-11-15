@@ -1663,7 +1663,7 @@
 }
 
 /* tier tiles */
-.monitor-overview { grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); margin-bottom: 0; }
+.monitor-overview { grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr)); margin-bottom: 0; }
 .monitor-tier {
     align-items: stretch;
     padding: var(--di-space-3) var(--di-space-4);
@@ -1688,7 +1688,7 @@
 .monitor-spark.is-empty { color: var(--ui-text-muted); font-size: var(--di-text-2); line-height: 1.75rem; }
 
 /* count tiles */
-.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: var(--di-space-2); }
+.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: var(--di-space-2); }
 .monitor-count {
     display: flex;
     flex-direction: column;

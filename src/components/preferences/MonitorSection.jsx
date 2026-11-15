@@ -380,7 +380,7 @@ export default function MonitorSection({ onStats }) {
                     </div>
                     {snap && !paused && !error && hero.issues.length > 1 ? (
                         <ul className="monitor-hero-issues">
-                            {hero.issues.map((i) => <li key={i.text} className={`tone-${i.tone}`}>{i.text}</li>)}
+                            {hero.issues.slice(1).map((i) => <li key={i.text} className={`tone-${i.tone}`}>{i.text}</li>)}
                         </ul>
                     ) : null}
                 </section>
