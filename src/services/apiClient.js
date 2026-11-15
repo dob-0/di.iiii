@@ -319,6 +319,8 @@ export const disconnectAiKey = async (provider) => apiFetch('/api/integrations/a
 // local dev serverXR over loopback — callers treat that as "unavailable".
 export const getAgentBoard = async () => apiFetch('/api/agent-board')
 
+export const getMonitor = async () => apiFetch('/api/monitor')
+
 export const getAgentBoardSession = async (sessionId) => (
     apiFetch(`/api/agent-board/session/${encodeURIComponent(sessionId)}`)
 )

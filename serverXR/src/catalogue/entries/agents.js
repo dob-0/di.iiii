@@ -18,6 +18,14 @@ module.exports = [
     note: "reads ~/.claude, whose transcripts can contain secrets — loopback + non-production (or DI_LOCAL=1) only, 404 otherwise. Not session-role gated."
   },
   {
+    route: "GET /api/monitor",
+    summary: "one snapshot of machines, network probes, agent sessions (every Claude login here), services, open PRs and operator feeds (tasks, shows) for Preferences → Monitor",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "lists machines and session titles — loopback + non-production (or DI_LOCAL=1) and admin only, 404 otherwise; commands come only from ~/.di/monitor.json, never from the request."
+  },
+  {
     route: "GET /api/agent-board/session/:sessionId",
     summary: "one local Claude Code session's detail from the agent board",
     reach: "read",
