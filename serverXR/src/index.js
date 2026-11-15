@@ -81,6 +81,8 @@ const { registerWifiDoorRoutes } = require('./routes/wifiDoorRoutes')
 const { createShareService } = require('./share/shareService')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerMonitorRoutes } = require('./routes/monitorRoutes')
+const { createMonitorStore } = require('./monitorStore')
+const { createHub: createMonitorHub, createAskStore: createMonitorAskStore } = require('./monitorHub')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
@@ -920,6 +922,7 @@ const resolveCliTokenState = (req, token) => {
           session: { subject: claim.userId, expiresAt: claim.expiresAt }
         }),
         actor: 'di.cli',
+        cliDbRole: fresh.dbRole,
         cliTokenId: claim.tokenId,
         cliTokenLabel: claim.label,
         cliTokenExpiresAt: claim.expiresAt
@@ -2566,7 +2569,15 @@ registerShareRoutes(router, {
 
 registerAgentBoardRoutes(router)
 
-registerMonitorRoutes(router)
+const monitorRoutes = registerMonitorRoutes(router, {
+  deployEnv: () => releaseInfo.deployEnv,
+  hub: createMonitorHub({
+    store: createMonitorStore(),
+    asks: createMonitorAskStore({ getDb }),
+    releaseInfo: () => releaseInfo,
+    listSpaces
+  })
+})
 
 registerAiChatRoutes(router)
 
@@ -3869,7 +3880,8 @@ initStorage()
       logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
       installShutdown({
         server: httpServer,
-        before: stopLasers,
+        // open Monitor streams count as requests in flight: end them first, or every stop waits
+        before: async (signal) => { try { monitorRoutes?.closeAll?.() } catch { /* the stop goes on */ } await stopLasers(signal) },
         inflight,
         timers: shutdownTimers,
         checkpoint: () => getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)'),
