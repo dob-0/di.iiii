@@ -180,10 +180,14 @@ button.admin-chip:hover, button.admin-chip[aria-pressed="true"] { border-color: 
 .admin-home-tiles .admin-tile-open { flex: 1 1 auto; }
 .admin-home-activity { min-height: 0; overflow: auto; }
 .admin-home-activity .monitor-activity { position: static; max-height: none; height: 100%; }
-@media (max-width: 599px) {
+/* Under 900 px the home stacks (needs, tiles, Activity). At 600-899 px it used to stay a grid with a 340 px Activity column:
+   the tile rows were squeezed under their content and drew over the group titles (the half window, 640 px). */
+@media (max-width: 899px) {
     .admin-home.has-monitor { display: flex; }
     .admin-home > *, .admin-home-tiles .admin-tiles { flex-shrink: 0; flex-grow: 0; }
     .admin-home-tiles .admin-group { flex: 0 0 auto; }
+}
+@media (max-width: 599px) {
     .admin-home-tiles .admin-tile { flex-basis: calc(50% - var(--di-space-3)); min-height: 120px; }
 }
 
