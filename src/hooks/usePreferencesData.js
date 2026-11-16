@@ -497,7 +497,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
         { key: 'ui-default', kind: 'switch', label: 'Panels at open', checked: Boolean(ui?.uiDefaultVisible), onClick: () => ui?.toggleUiDefaultVisible?.() },
         { key: 'interaction', label: `Mode ${ui?.interactionMode === 'edit' ? 'Edit' : 'Navigate'}`, isActive: ui?.interactionMode === 'edit', onClick: () => ui?.toggleInteractionMode?.() },
         { key: 'selection-lock', kind: 'switch', label: 'Lock selection', checked: Boolean(ui?.isSelectionLocked), variant: 'warning', detail: 'Clicks in the scene stop changing the selection.', onClick: () => ui?.setIsSelectionLocked?.((prev) => !prev) },
-        { key: 'offline', kind: 'switch', label: 'Work offline', checked: Boolean(sync?.isOfflineMode), variant: 'warning', detail: 'Changes stay on this computer until you turn it off.', onClick: () => sync?.setOfflineMode?.(!sync?.isOfflineMode) },
+        { key: 'offline', kind: 'switch', label: 'Offline', checked: Boolean(sync?.isOfflineMode), variant: 'warning', detail: 'Changes stay on this computer until you turn it off.', onClick: () => sync?.setOfflineMode?.(!sync?.isOfflineMode) },
         {
             key: 'live-sync',
             kind: 'switch',
@@ -511,7 +511,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
         },
         { key: 'edit-lock', kind: 'switch', label: 'Lock editing', checked: Boolean(sync?.isReadOnly), variant: 'warning', detail: 'When on, nobody can change this space. Turn it off to undo.', onClick: toggleEditLock, disabled: !sync?.supportsServerSpaces || !sync?.spaceId },
         { key: 'copy-space-link', label: 'Copy link', onClick: () => actions?.handleCopySpaceLink?.(sync?.spaceId), disabled: !actions?.handleCopySpaceLink || !sync?.spaceId },
-        { key: 'reload-server', label: 'Reload Server', onClick: () => actions?.handleReloadFromServer?.(), disabled: !actions?.handleReloadFromServer || !sync?.canPublishToServer },
+        { key: 'reload-server', label: 'Reload', title: 'Reload this space from the server', onClick: () => actions?.handleReloadFromServer?.(), disabled: !actions?.handleReloadFromServer || !sync?.canPublishToServer },
         { key: 'publish', label: 'Publish now', variant: 'success', onClick: () => actions?.handlePublishToServer?.(), disabled: !actions?.handlePublishToServer || !sync?.canPublishToServer }
     ]
 

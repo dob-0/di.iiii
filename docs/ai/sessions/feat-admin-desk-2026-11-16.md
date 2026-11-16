@@ -11,3 +11,11 @@
 - Home (AdminHome.jsx): the calm Monitor's Needs-you rows (read-only; the action opens the Monitor window) or "All well", tiles in a flex grid that fills the width and height, the calm Activity list beside. Without the Monitor: tiles only.
 - Text diet: Status Signals, Manage Traffic lists and Asset commons became folds, an empty sweep box and an empty Objects box are gone, the Map legend became the Map hint. Wiki article admin-desk added.
 - Owed: opening the Monitor on a chosen drawer (the Needs-you action opens the window only; the drawer state lives in MonitorSection, another branch), a Helpers tile of its own (helpers are a chip in the Agents tile and window), 3D idle-frame re-measure.
+
+## 2026-11-16 (round 3) — Skills, waiting requests, fewer words
+
+- Skills window and tile (owner-only, after GET /api/monitor answered 200): name and scope chip per row, description in the drawer, filter chips by scope, tile number = skills count. Rows come from `knowledgeSkills` (merged in from #1294).
+- Requests: ledger rows as before plus a group "Waiting for the ledger" from `monitorKnowledge(snapshot).waiting` (guarded: `waiting?.rows || []`, so it is empty until #1294 carries it); tile number = open ledger rows + waiting count. Tested with a made-up `waiting` (KnowledgeWaiting.test.jsx).
+- First-screen words (desk 1440x1000, whole screen incl. bar): Scene objects 77 to 59, Switches 78 to 60 (phone 48 / 57). Scene objects: the node inspector opens on a click, not by itself. Switches: no "Command deck" title; shorter labels (Admin tools, Editor panels, Panels at open, Lock selection, Offline, Copy link, Reload, Publish now); the "?" sits beside its switch, not over the On/Off box. No control or gate removed.
+- Calm branch merged in (heartbeat mark no longer draws a white box over "heard ... ago").
+- Owed: Skills 68 words and Requests 203 words on the first screen (not in the 60-word list); rAF idle re-measure of 3D Monitor.
