@@ -87,7 +87,40 @@ describe('body and timer units', () => {
 describe('sending', () => {
     const snapshot = { panels: { agents: { ok: true, rows: [] } } }
     const deps = (home, fetchImpl, extra = {}) => ({
-        home, env: {}, hostname: 'studio.local', fetchImpl, collect: async () => snapshot, release: async () => ({ commit: 'abc1234', builtAt: null }), ledger: async () => '', ...extra
+        home, env: {}, hostname: 'studio.local', fetchImpl, collect: async () => snapshot, release: async () => ({ commit: 'abc1234', builtAt: null }), ledger: async () => '', inventory: async () => null, ...extra
+    })
+
+    it('the inventory panel rides in the report; the body is sent again only when the server asks, and the send is recorded once', async () => {
+        const home = tmpHome()
+        writeLogin({ home, key: 'dev', entry: entry('tok-inv') })
+        const bodies = []
+        let wantOnce = true
+        const fetchImpl = async (_url, init) => {
+            bodies.push(JSON.parse(init.body))
+            const wanted = wantOnce && !bodies[bodies.length - 1].panels.inventory?.body
+            wantOnce = false
+            return { ok: true, status: 200, json: async () => ({ ok: true, ...(wanted ? { inventoryWanted: true } : {}) }) }
+        }
+        let sentCalls = 0
+        const panel = { hash: 'd'.repeat(64), counts: { updates: 2 } }
+        const inventory = async ({ wanted } = {}) => ({ panel: wanted ? { ...panel, body: { schema: 1 } } : panel, withBody: Boolean(wanted), sent: () => { sentCalls += 1 } })
+        const io = quiet()
+        const code = await runMonitor(parseArgs(['monitor', 'report', '--once']), { ...deps(home, fetchImpl, { inventory }), ...io })
+        expect(code).toBe(0)
+        expect(bodies).toHaveLength(2)
+        expect(bodies[0].panels.inventory).toEqual(panel)
+        expect(bodies[1].panels.inventory.body).toEqual({ schema: 1 })
+        expect(sentCalls).toBe(1)
+    })
+
+    it('an inventory that fails never stops the report', async () => {
+        const home = tmpHome()
+        writeLogin({ home, key: 'dev', entry: entry('tok-inv') })
+        let sends = 0
+        const io = quiet()
+        const code = await runMonitor(parseArgs(['monitor', 'report', '--once']), { ...deps(home, async () => { sends += 1; return { ok: true, status: 200, json: async () => ({}) } }, { inventory: async () => { throw new Error('boom') } }), ...io })
+        expect(code).toBe(0)
+        expect(sends).toBe(1)
     })
 
     it('without a login it says so and sends nothing', async () => {

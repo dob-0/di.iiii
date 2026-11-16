@@ -15,7 +15,7 @@
 // only thing the cap is lifted for.
 
 const { createMonitorStore } = require('../monitorStore')
-const { createHub, createAskStore, fingerprint, tierOfDeployEnv, REPORT_MAX_BYTES } = require('../monitorHub')
+const { createHub, fingerprint, tierOfDeployEnv, REPORT_MAX_BYTES } = require('../monitorHub')
 const { config } = require('../config')
 const { isLocalOperatorRequest, isAdminCaller } = require('./agentBoardRoutes')
 
@@ -107,7 +107,15 @@ function registerMonitorRoutes(router, {
     // past the gate the sender is the owner (dev) or this machine's admin (local): ledger asks are theirs
     const result = overview.reports.put(req.body, { subject: req.authState?.subject || 'local', ledger: true })
     if (result.error) { res.status(result.status).json({ error: result.error, ...(result.max ? { max: result.max } : {}) }); return }
-    res.json({ ok: true, host: result.host })
+    res.json({ ok: true, host: result.host, ...(result.inventoryWanted ? { inventoryWanted: true } : {}) })
+  })
+
+  // The full inventory of one machine (packages, units, ports, updates): too big for the stream, so the snapshot
+  // carries only its summary and the page asks for the body here. Same gate as every other monitor route.
+  router.get('/api/monitor/inventory/:host', gate, (req, res) => {
+    const found = overview.reports.inventory(String(req.params?.host || ''))
+    if (!found) { res.status(404).json({ error: 'no_inventory' }); return }
+    res.json(found)
   })
 
   router.post('/api/monitor/ask', gate, (req, res) => {

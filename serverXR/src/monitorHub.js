@@ -16,13 +16,15 @@ const { execFile } = require('node:child_process')
 const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
 const REPORT_MAX_BYTES = 256 * 1024
+const INVENTORY_MAX_BYTES = 256 * 1024 // the inventory body is kept apart from the 256 KB a report may weigh
+const HASH_RE = /^[0-9a-f]{64}$/
 const MAX_HOSTS = 40
 const MAX_HOSTS_PER_SUBJECT = 12
 const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
 const ASKS_MAX = 100
-const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'rules', 'hooks', 'skills', 'spool']
+const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'rules', 'hooks', 'skills', 'spool', 'inventory']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
 
@@ -80,10 +82,13 @@ const isUp = (status) => status >= 200 && status < 300
 
 function createReportStore({ now = () => Date.now() } = {}) {
   const byHost = new Map()
+  // The last full inventory per host: { hash, body, receivedAt }. Kept apart from the report (which is replaced on every
+  // send) so a report with only the hash keeps the body the machine sent hours ago. It leaves with its host.
+  const inventories = new Map()
 
   const prune = () => {
     const t = now()
-    for (const [host, rec] of byHost) if (t - rec.reportedAt > KEEP_MS) byHost.delete(host)
+    for (const [host, rec] of byHost) if (t - rec.reportedAt > KEEP_MS) { byHost.delete(host); inventories.delete(host) }
   }
 
   /**
@@ -97,7 +102,13 @@ function createReportStore({ now = () => Date.now() } = {}) {
     if (!HOST_RE.test(host)) return { error: 'bad_host', status: 400 }
     if (!isPlainObject(body.panels)) return { error: 'bad_panels', status: 400 }
     let size
-    try { size = Buffer.byteLength(JSON.stringify(body)) } catch { return { error: 'bad_report', status: 400 } }
+    // the inventory panel: its body (if the machine sent one) is weighed on its own, the rest of the report as before
+    const inv = isPlainObject(body.panels.inventory) ? body.panels.inventory : null
+    const invBody = inv && isPlainObject(inv.body) ? inv.body : null
+    let invSize = 0
+    if (invBody) { try { invSize = Buffer.byteLength(JSON.stringify(invBody)) } catch { return { error: 'bad_report', status: 400 } } }
+    if (invSize > INVENTORY_MAX_BYTES) return { error: 'inventory_too_large', status: 413, max: INVENTORY_MAX_BYTES }
+    try { size = Buffer.byteLength(JSON.stringify(body)) - invSize } catch { return { error: 'bad_report', status: 400 } }
     if (size > REPORT_MAX_BYTES) return { error: 'too_large', status: 413, max: REPORT_MAX_BYTES }
     prune()
     const held = byHost.get(host)
@@ -107,7 +118,19 @@ function createReportStore({ now = () => Date.now() } = {}) {
 
     const panels = {}
     for (const name of PANEL_NAMES) {
+      if (name === 'inventory') continue
       if (isPlainObject(body.panels[name])) panels[name] = cleanPanelValue(body.panels[name])
+    }
+    // inventory: the panel keeps the summary (hash, counts, ...), the body goes to the per-host store
+    let inventoryWanted = false
+    if (inv) {
+      const { body: _omit, ...summary } = inv
+      const hash = typeof inv.hash === 'string' && HASH_RE.test(inv.hash) ? inv.hash : null
+      if (hash) {
+        panels.inventory = { ...cleanPanelValue(summary), hash }
+        if (invBody) inventories.set(host, { hash, body: cleanPanelValue(invBody), receivedAt: now() })
+        else if (inventories.get(host)?.hash !== hash) inventoryWanted = true
+      }
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])
       .filter(isPlainObject)
@@ -123,7 +146,14 @@ function createReportStore({ now = () => Date.now() } = {}) {
     const commit = typeof body.commit === 'string' && COMMIT_RE.test(body.commit.trim()) ? body.commit.trim() : null
     const builtAt = typeof body.builtAt === 'string' && !Number.isNaN(Date.parse(body.builtAt)) ? new Date(body.builtAt).toISOString() : null
     byHost.set(host, { host, subject, reportedAt: now(), panels, asks, commit, builtAt })
-    return { ok: true, host }
+    return { ok: true, host, ...(inventoryWanted ? { inventoryWanted: true } : {}) }
+  }
+
+  /** The last inventory a host sent, { hash, receivedAt (ISO), body }, or null. Stale hosts keep theirs until an hour passes. */
+  function inventory(host) {
+    prune()
+    const rec = inventories.get(host)
+    return rec ? { hash: rec.hash, receivedAt: new Date(rec.receivedAt).toISOString(), body: rec.body } : null
   }
 
   /** The `reports` contract rows, newest first. Stale ones stay (flagged) until an hour passes. */
@@ -136,8 +166,8 @@ function createReportStore({ now = () => Date.now() } = {}) {
   }
 
   const raw = () => { prune(); return [...byHost.values()] }
-  const clear = () => byHost.clear()
-  return { put, list, raw, clear }
+  const clear = () => { byHost.clear(); inventories.clear() }
+  return { put, list, raw, clear, inventory }
 }
 
 // ---- asks sent from the page ------------------------------------------------
@@ -407,6 +437,7 @@ function fingerprint(snapshot) {
 module.exports = {
   STALE_MS,
   REPORT_MAX_BYTES,
+  INVENTORY_MAX_BYTES,
   PANEL_NAMES,
   tierOfDeployEnv,
   createReportStore,

@@ -130,6 +130,48 @@ describe('report store', () => {
   })
 })
 
+describe('inventory panel', () => {
+  const HASH_A = 'a'.repeat(64)
+  const HASH_B = 'b'.repeat(64)
+  const inv = (hash, body) => ({ inventory: { hash, collectedAt: '2026-11-16T00:00:00.000Z', counts: { updates: 3 }, ...(body ? { body } : {}) } })
+  const BODY = { schema: 1, packages: { explicit: [{ name: 'alpha', version: '1.0-1' }] }, updates: { rows: [] } }
+
+  it('keeps the summary in the panel and the body apart, per host', () => {
+    const store = createReportStore()
+    expect(store.put({ host: 'aylmo', panels: inv(HASH_A, BODY) })).toEqual({ ok: true, host: 'aylmo' })
+    expect(store.list()[0].panels.inventory).toEqual({ hash: HASH_A, collectedAt: '2026-11-16T00:00:00.000Z', counts: { updates: 3 } })
+    expect(store.inventory('aylmo')).toMatchObject({ hash: HASH_A, body: BODY })
+    expect(store.inventory('nobody')).toBe(null)
+  })
+
+  it('a report with only the hash keeps the stored body; a new hash without a body asks for it', () => {
+    const store = createReportStore()
+    store.put({ host: 'aylmo', panels: inv(HASH_A, BODY) })
+    expect(store.put({ host: 'aylmo', panels: inv(HASH_A) })).toEqual({ ok: true, host: 'aylmo' })
+    expect(store.inventory('aylmo').body).toEqual(BODY)
+    expect(store.put({ host: 'aylmo', panels: inv(HASH_B) })).toEqual({ ok: true, host: 'aylmo', inventoryWanted: true })
+    expect(store.put({ host: 'fresh', panels: inv(HASH_A) })).toEqual({ ok: true, host: 'fresh', inventoryWanted: true })
+    store.put({ host: 'aylmo', panels: inv(HASH_B, { schema: 1 }) })
+    expect(store.inventory('aylmo').hash).toBe(HASH_B)
+  })
+
+  it('a bad hash is dropped, the body is weighed on its own (256 KB), and it leaves with its host', () => {
+    let t = 1000
+    const store = createReportStore({ now: () => t })
+    store.put({ host: 'aylmo', panels: inv('not-a-hash', BODY) })
+    expect(store.list()[0].panels.inventory).toBeUndefined()
+    expect(store.inventory('aylmo')).toBe(null)
+    const big = { rows: Array.from({ length: 3000 }, (_, i) => ({ name: `package-${i}`, version: '1.0-1' })) }
+    expect(Buffer.byteLength(JSON.stringify(big))).toBeGreaterThan(60 * 1024)
+    expect(store.put({ host: 'aylmo', panels: inv(HASH_A, big) }).ok).toBe(true) // a report may weigh 256 KB beside it
+    const huge = { rows: Array.from({ length: 12000 }, (_, i) => ({ name: `package-${i}`, version: '1.0-1' })) }
+    expect(store.put({ host: 'aylmo', panels: inv(HASH_B, huge) })).toMatchObject({ error: 'inventory_too_large', status: 413 })
+    t += 3600 * 1000 + 1
+    store.list()
+    expect(store.inventory('aylmo')).toBe(null)
+  })
+})
+
 describe('ask store', () => {
   const make = (now) => createAskStore({ getDb: (() => { const db = new DatabaseSync(':memory:'); return () => db })(), now })
 

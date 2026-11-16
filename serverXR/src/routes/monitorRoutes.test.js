@@ -187,6 +187,29 @@ describe('POST /api/monitor/report', () => {
   })
 })
 
+describe('inventory over the monitor routes', () => {
+  const H = 'c'.repeat(64)
+  const report = (state, deployEnv, panels) => call({ socket: remote, authState: state, body: { host: 'inv-host', panels }, headers: {} }, { deployEnv, route: 'POST /api/monitor/report' })
+  const read = (state, deployEnv, host = 'inv-host') => call({ socket: remote, authState: state, params: { host }, headers: {} }, { deployEnv, route: 'GET /api/monitor/inventory/:host' })
+
+  it('the report answers inventoryWanted for a hash it holds no body for; the owner reads the body back', async () => {
+    const first = await report(owner, 'staging', { inventory: { hash: H, counts: { updates: 1 } } })
+    expect(first.body).toEqual({ ok: true, host: 'inv-host', inventoryWanted: true })
+    const second = await report(owner, 'staging', { inventory: { hash: H, counts: { updates: 1 }, body: { schema: 1, updates: { rows: [] } } } })
+    expect(second.body).toEqual({ ok: true, host: 'inv-host' })
+    const got = await read(owner, 'staging')
+    expect(got.statusCode).toBe(200)
+    expect(got.body).toMatchObject({ hash: H, body: { schema: 1 } })
+    expect((await read(owner, 'staging', 'unknown-host')).statusCode).toBe(404)
+  })
+
+  it('same gate as every monitor route: another admin, prod and an off-machine local request are the hidden 404', async () => {
+    expect((await read({ ...owner, subject: 'admin-2' }, 'staging')).statusCode).toBe(404)
+    expect((await read(owner, 'production')).statusCode).toBe(404)
+    expect((await read(owner, null)).statusCode).toBe(404)
+  })
+})
+
 describe('POST /api/monitor/ask', () => {
   it('the owner gets an id; a terminal login is refused; empty text is 400', async () => {
     const route = 'POST /api/monitor/ask'

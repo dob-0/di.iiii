@@ -20,6 +20,7 @@ import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { readLogin } from './loginStore.mjs'
 import { resolveTarget } from './login.mjs'
+import { inventoryPanel } from './monitorInventory.mjs'
 
 export const USAGE = [
     'di monitor report [--once] [--every N] [--tier dev|prod | --to URL]   send this machine\'s panels to the overview',
@@ -398,7 +399,7 @@ export const sendOnce = async ({ target, token, body, fetchImpl = globalThis.fet
             signal: AbortSignal.timeout(15000)
         })
         const answer = await response.json().catch(() => ({}))
-        return { ok: response.ok, status: response.status, error: response.ok ? null : (answer?.error || `failed (${response.status})`) }
+        return { ok: response.ok, status: response.status, error: response.ok ? null : (answer?.error || `failed (${response.status})`), inventoryWanted: Boolean(answer?.inventoryWanted) }
     } catch {
         return { ok: false, status: 0, error: `${target.host} is not reachable` }
     }
@@ -460,7 +461,7 @@ export const installTimer = async ({ home = os.homedir(), node = process.execPat
 /** Runs `di monitor …`; returns the exit code. deps are injectable for tests. */
 export const runMonitor = async (args, deps = {}) => {
     const { env = process.env, home = os.homedir(), hostname = os.hostname(), fetchImpl = globalThis.fetch, say = console.log, fail = console.error,
-        collect = collectSnapshot, release = readRelease, ledger = () => execText('ledger-open', []), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), loops = Infinity } = deps
+        collect = collectSnapshot, release = readRelease, inventory = (options) => inventoryPanel(options), ledger = () => execText('ledger-open', []), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), loops = Infinity } = deps
     const parsed = parseMonitorArgs(args)
     if (parsed.error) { fail(parsed.error); return 1 }
     if (parsed.sub === 'install-timer') return installTimer({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
@@ -477,7 +478,17 @@ export const runMonitor = async (args, deps = {}) => {
         try { snapshot = withKnowledge(await collect(), { home, root: repoRoot() }) } catch (error) { fail(`could not read this machine: ${String(error?.message || error).split('\n')[0]}`); return 1 }
         const { commit, builtAt } = await release()
         const asks = parseLedgerOpen(await ledger())
-        const result = await sendOnce({ target, token, body: buildBody({ host: String(hostname).split('.')[0], snapshot, asks, commit, builtAt }), fetchImpl })
+        // The inventory panel: collected when due (6 h or a package database changed), the body sent only when its hash is new.
+        // A failure here never stops the report; the other panels go without it.
+        const inv = await Promise.resolve().then(() => inventory({ home })).catch(() => null)
+        const bodyWith = (panel) => buildBody({ host: String(hostname).split('.')[0], snapshot: panel ? { ...snapshot, panels: { ...snapshot.panels, inventory: panel } } : snapshot, asks, commit, builtAt })
+        let result = await sendOnce({ target, token, body: bodyWith(inv?.panel), fetchImpl })
+        // the server lost its copy (restart) or never had it: send the body once more, in this round
+        if (result.ok && result.inventoryWanted && inv && !inv.withBody) {
+            const again = await inventory({ home, wanted: true })
+            result = await sendOnce({ target, token, body: bodyWith(again.panel), fetchImpl })
+            if (result.ok) again.sent()
+        } else if (result.ok && inv?.withBody) inv.sent()
         if (!result.ok) {
             const why = result.status === 401 ? `not signed in to ${target.host}: run di login`
                 : result.status === 403 ? `${target.host} says this login is not an admin`
