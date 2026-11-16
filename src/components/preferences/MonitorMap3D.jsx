@@ -138,7 +138,8 @@ function Rig({ preset, points, fitDist }) {
 
 // Projects every label's anchor to the screen and nudges overlapping names apart. Runs when the camera
 // moves (a gesture, a fit) or the stage resizes, never on its own: still stays zero frames.
-const LABEL_H = 30
+// a one-line card is 44 px tall on the screen (measured on a 390 px phone, 2026-11-16); 30 let cards sit on each other
+const LABEL_H = 44
 // a long name (an agent's title) is cut so it fits the screen; the full name stays in the title
 const short = (t) => (String(t).length > 20 ? `${String(t).slice(0, 19)}…` : String(t))
 const labelWidth = (text) => Math.round(String(text).length * 8.4 + 30)
@@ -146,6 +147,7 @@ function Nudge({ labels, onNudge }) {
     const camera = useThree((s) => s.camera)
     const controls = useThree((s) => s.controls)
     const size = useThree((s) => s.size)
+    const gl = useThree((s) => s.gl)
     useEffect(() => {
         const run = () => {
             camera.updateMatrixWorld()
@@ -153,13 +155,21 @@ function Nudge({ labels, onNudge }) {
                 const v = new Vector3(...l.pos).project(camera)
                 return { id: l.id, x: (v.x * 0.5 + 0.5) * size.width, y: (0.5 - v.y * 0.5) * size.height, w: labelWidth(l.text), h: LABEL_H, fixed: l.fixed }
             })
-            onNudge(nudgeLabels(items))
+            // the map's own buttons (Fit, Turn) sit on the stage: cards keep off them, measured from the page
+            const stage = gl.domElement.getBoundingClientRect()
+            const tools = [...(gl.domElement.closest('[data-monitor-map]')?.querySelectorAll('[data-map-tool]') || [])].map((t, i) => {
+                const r = t.getBoundingClientRect()
+                return { id: `tool:${i}`, x: r.left - stage.left + r.width / 2, y: r.top - stage.top + r.height / 2, w: r.width, h: r.height, fixed: true }
+            })
+            const moved = nudgeLabels([...items, ...tools])
+            for (const t of tools) delete moved[t.id]
+            onNudge(moved)
         }
         run()
         if (!controls) return undefined
         controls.addEventListener('change', run)
         return () => controls.removeEventListener('change', run)
-    }, [camera, controls, size, labels, onNudge])
+    }, [camera, controls, size, gl, labels, onNudge])
     return null
 }
 

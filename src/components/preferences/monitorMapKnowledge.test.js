@@ -38,7 +38,7 @@ describe('knowledgeNodes', () => {
         const s = { ...snap(), asks: { rows: [] } }
         s.reports = [{ ...s.reports[0], panels: { ...s.reports[0].panels, spool: { ok: true, rows: [{ at: '2026-11-16T10:00:00Z', text: 'demo one' }, { at: '2026-11-16T10:01:00Z', text: 'demo two' }] } } }]
         const todo = knowledgeNodes(map(), monitorKnowledge(s), s).nodes.filter((n) => n.part === 'todo')
-        expect(todo.map((n) => [n.id, n.label, n.sub])).toEqual([['know:demo-two:todo', 'To do 2', 'waiting for the ledger']])
+        expect(todo.map((n) => [n.id, n.label, n.sub])).toEqual([['know:demo-two:todo', 'To do 2', 'waiting']])
     })
     it('marks an unreadable panel warn', () => {
         const s = snap()

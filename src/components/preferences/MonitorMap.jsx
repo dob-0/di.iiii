@@ -73,6 +73,8 @@ const useFillHeight = (rootRef, view) => {
 
 // the second line of a card: where a space lives, how to open a group, else kind and state
 const subText = (n) => (n.sub ? n.sub : n.kind === 'space' && n.tiers?.length ? n.tiers.join(' · ') : n.kind === 'group' ? `open it · ${n.tiers.join(' ')}` : `${n.kind} · ${n.state}`)
+// a card letter is about 10.2 map units wide (getBBox on the preview, 2026-11-16); 10.4 keeps both lines inside
+const CHAR = 10.4
 const clip = (text, n) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
 const toneOf = (state) => STATE_TONE[state] || 'muted'
 const edgeKey = (e, i) => `${e.from}>${e.to}>${e.kind}>${i}`
@@ -236,13 +238,13 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
-                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 8.6))}</text>
-                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{subText(n)}</text>
+                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / CHAR))}</text>
+                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{clip(subText(n), Math.floor((w - 24) / CHAR))}</text>
                             <title>{`${n.kind}: ${n.label} (${n.state})`}</title>
                         </g>
                     )
                 })}
-                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 8.6) ? (() => {
+                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / CHAR) ? (() => {
                     const p = layout.pos.get(hovered.id)
                     const { h } = sizeOf(hovered.kind)
                     const text = hovered.label

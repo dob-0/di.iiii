@@ -43,7 +43,7 @@ export const knowledgeNodes = (map, knowledge, snap) => {
     hosts.forEach(({ host, panels }) => {
         const machine = `machine:${host}`
         const todo = host !== todoHost ? null : ledger ? partNode(host, 'todo', 'To do', null, ledger)
-            : { id: `know:${host}:todo`, kind: 'knowledge', part: 'todo', label: `To do ${waiting.count}`, state: 'ok', sub: 'waiting for the ledger', count: waiting.count }
+            : { id: `know:${host}:todo`, kind: 'knowledge', part: 'todo', label: `To do ${waiting.count}`, state: 'ok', sub: 'waiting', count: waiting.count }
         const parts = [
             todo,
             partNode(host, 'rules', 'Rules', panels.rules),
