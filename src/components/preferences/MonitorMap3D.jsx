@@ -1,14 +1,15 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box3, Vector3 } from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Line, OrbitControls } from '@react-three/drei'
 import Canvas from '../GuardedCanvas.jsx'
-import { fitKey, layoutSignature, PULSE_MS, pulseEdgeIndexes, shouldAnimate } from './monitorMap3dPolicy.js'
+import { fitKey, layoutSignature, nudgeLabels, PULSE_MS, pulseEdgeIndexes, shouldAnimate } from './monitorMap3dPolicy.js'
+import { visibleEdges } from './monitorMapGroups.js'
 
 // The 3D view of the Monitor map: the same layout as the 2D graph, as bodies in
 // a room. Kind sets the height (tiers above machines above spaces); each node
 // carries its 2D card (drei Html), so 2D cards live in 3D like Raw's world
-// windows. frameloop="demand": nothing is drawn while still. A light travels
+// windows. Every node carries its name, and names that would overlap on the screen are nudged apart. frameloop="demand": nothing is drawn while still. A light travels
 // along live edges only while `live` and not under reduced motion.
 
 const S = 0.01 // layout units -> room units
@@ -52,7 +53,7 @@ const pulseIndexes = (edges, pulsing, hoverId) => pulseEdgeIndexes({ edges, puls
 
 function Body({ node, p, color, dim, sel, onHover, onPick }) {
     const k = node.kind
-    const size = k === 'tier' ? 0.55 : k === 'machine' ? 0.46 : 0.36
+    const size = k === 'tier' ? 0.55 : k === 'machine' ? 0.46 : k === 'group' ? 0.5 : 0.36
     return (
         <group position={at(p)}>
             <mesh onPointerOver={(e) => { e.stopPropagation(); onHover(node.id) }} onPointerOut={() => onHover(null)}
@@ -135,15 +136,30 @@ function Rig({ preset, points, fitDist }) {
     return null
 }
 
-// tells the page whether the camera is close enough for every node to carry its name
-function Closeness({ fitDist, onClose }) {
+// Projects every label's anchor to the screen and nudges overlapping names apart. Runs when the camera
+// moves (a gesture, a fit) or the stage resizes, never on its own: still stays zero frames.
+const LABEL_H = 30
+// a long name (an agent's title) is cut so it fits the screen; the full name stays in the title
+const short = (t) => (String(t).length > 20 ? `${String(t).slice(0, 19)}…` : String(t))
+const labelWidth = (text) => Math.round(String(text).length * 8.4 + 30)
+function Nudge({ labels, onNudge }) {
+    const camera = useThree((s) => s.camera)
     const controls = useThree((s) => s.controls)
+    const size = useThree((s) => s.size)
     useEffect(() => {
+        const run = () => {
+            camera.updateMatrixWorld()
+            const items = labels.map((l) => {
+                const v = new Vector3(...l.pos).project(camera)
+                return { id: l.id, x: (v.x * 0.5 + 0.5) * size.width, y: (0.5 - v.y * 0.5) * size.height, w: labelWidth(l.text), h: LABEL_H, fixed: l.fixed }
+            })
+            onNudge(nudgeLabels(items))
+        }
+        run()
         if (!controls) return undefined
-        const on = () => onClose(controls.object.position.distanceTo(controls.target) < fitDist.current * 0.6)
-        controls.addEventListener('change', on)
-        return () => controls.removeEventListener('change', on)
-    }, [controls, fitDist, onClose])
+        controls.addEventListener('change', run)
+        return () => controls.removeEventListener('change', run)
+    }, [camera, controls, size, labels, onNudge])
     return null
 }
 
@@ -165,7 +181,8 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
     const colors = useMemo(() => readColors(), [])
     const [hover, setHover] = useState(null)
     const [preset, setPreset] = useState({ name: 'fit', n: 0 })
-    const [close, setClose] = useState(false)
+    const [offsets, setOffsets] = useState({})
+    const onNudge = useCallback((next) => setOffsets((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next)), [])
     const [pulsing, setPulsing] = useState(false)
     const fitDist = useRef(10)
     // a snapshot that changed nothing visible keeps the same layout object: no rebuild, no frame
@@ -177,6 +194,11 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
         for (const n of layout.nodes) { const p = layout.pos.get(n.id); list.push([p.x * S, 0, p.y * S], [p.x * S, p.h * S + 0.7, p.y * S]) }
         return list
     }, [idsKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+    const labels = useMemo(() => [
+        { id: 'hub', text: 'di.iiii', pos: [0, 0.5, 0], fixed: true },
+        ...layout.nodes.map((n) => { const p = layout.pos.get(n.id); return { id: n.id, text: short(n.label), pos: [p.x * S, p.h * S + 0.45, p.y * S] } })
+    ], [idsKey, layout]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const firstSig = useRef(true)
     useEffect(() => {
@@ -213,6 +235,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
     const focus = hover || selectedId || null
     const near = focus ? neighbours.get(focus) || new Set() : null
     const hot = (id) => !focus || id === focus || near.has(id)
+    const shown = new Set(visibleEdges(layout.edges, focus))
     const toneColor = (state) => colors[STATE_TONE[state] || 'muted']
     const degree = (id) => (neighbours.get(id) || new Set()).size
 
@@ -221,13 +244,13 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
             <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
                 <Rig preset={preset} points={points} fitDist={fitDist} />
-                <Closeness fitDist={fitDist} onClose={setClose} />
+                <Nudge labels={labels} onNudge={onNudge} />
                 <Ticker on={animate} />
                 <OrbitControls makeDefault enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
                 {rings.map((ring) => <Line key={ring.r} color={colors.line} lineWidth={1} points={ring.pts} />)}
                 <mesh position={HUB}><boxGeometry args={[0.5, 0.2, 0.5]} /><meshBasicMaterial color={colors.cyan} /></mesh>
                 {hubLines.map((h) => <Line key={`hub-${h.id}`} color={colors.line} lineWidth={1} points={h.pts} />)}
-                {edgeLines.map(({ e, i, a, b, pts }) => {
+                {edgeLines.filter(({ e }) => shown.has(e)).map(({ e, i, a, b, pts }) => {
                     const lit = !!focus && (e.from === focus || e.to === focus)
                     const isLive = LIVE_EDGES.has(e.kind)
                     return (
@@ -243,26 +266,24 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
                     const sel = selectedId === n.id
                     const dim = !!focus && !hot(n.id)
                     const full = sel || hover === n.id
-                    // at fit zoom only tiers and machines carry a name; the rest show it on hover, when selected, or up close
-                    const named = close || n.kind === 'tier' || n.kind === 'machine'
+                    const off = offsets[n.id]
                     return (
                         <group key={n.id}>
                             <Line points={stemOf.get(n.id)} color={colors.line} lineWidth={1} />
                             <Body node={n} p={p} color={toneColor(n.state)} dim={dim} sel={sel} onHover={setHover} onPick={onPick} />
-{named || full ? (
-                                <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
+<Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
                                     <button type="button" data-map-node={n.id}
                                         className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}${full ? ' is-full' : ''}`}
                                         aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
                                         onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h) => (h === n.id ? null : h))}
                                         onFocus={() => setHover(n.id)} onBlur={() => setHover((h) => (h === n.id ? null : h))}
+                                        style={off ? { transform: `translate(${off.dx}px, ${off.dy}px)` } : undefined}
                                         onClick={() => onPick(n)}>
-                                        <span className="monitor-card3d-name">{n.label}</span>
+                                        <span className="monitor-card3d-name" title={n.label}>{short(n.label)}</span>
                                         <span className="monitor-card3d-state">{n.state}</span>
-                                        <span className="monitor-card3d-fact">{`${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
+                                        <span className="monitor-card3d-fact">{n.tiers?.length ? n.tiers.join(' · ') : `${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
                                     </button>
                                 </Html>
-                            ) : null}
                         </group>
                     )
                 })}

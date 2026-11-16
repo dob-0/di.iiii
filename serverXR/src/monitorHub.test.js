@@ -28,6 +28,19 @@ describe('tier from the release manifest', () => {
   })
 })
 
+describe('rules and hooks panels', () => {
+  it('are kept (cleaned, capped); an unknown panel is still dropped', () => {
+    const store = createReportStore({ now: () => 1000 })
+    const rules = { ok: true, count: 1, rows: [{ title: 'T', date: null, lines: 2, text: 'x'.repeat(900) }] }
+    const hooks = { ok: false, why: 'could not be read' }
+    store.put({ host: 'a', panels: { rules, hooks, secrets: { ok: true, rows: [{ a: 1 }] } } })
+    const kept = store.list()[0].panels
+    expect(Object.keys(kept).sort()).toEqual(['hooks', 'rules'])
+    expect(kept.rules.rows[0].text).toHaveLength(400)
+    expect(kept.hooks).toEqual(hooks)
+  })
+})
+
 describe('report store', () => {
   it('stores per host and flags a report stale after 120 s', () => {
     let t = 1000

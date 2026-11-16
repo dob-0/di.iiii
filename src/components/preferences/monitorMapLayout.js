@@ -4,24 +4,27 @@
 // nothing jumps between snapshots. 2D uses (x, y); 3D uses the same (x, y) as
 // floor (x, z) and adds a height by kind, so "Top view" in 3D IS the 2D map.
 
-export const KIND_ORDER = ['tier', 'machine', 'agent', 'space', 'show', 'repo']
-export const KIND_TITLE = { repo: 'Repos', agent: 'Agents', machine: 'Machines', tier: 'Tiers', space: 'Spaces', show: 'Shows' }
+export const KIND_ORDER = ['tier', 'machine', 'agent', 'space', 'group', 'show', 'repo']
+export const KIND_TITLE = { repo: 'Repos', agent: 'Agents', machine: 'Machines', tier: 'Tiers', space: 'Spaces', group: 'Spaces', show: 'Shows' }
 // Height of a body above the floor, in the same units as x and y (3D only).
-export const KIND_HEIGHT = { tier: 240, machine: 140, agent: 100, space: 60, show: 60, repo: 30 }
+export const KIND_HEIGHT = { tier: 240, machine: 140, agent: 100, space: 60, group: 60, show: 60, repo: 30 }
 // Card size per kind (2D), also the room each node needs on its ring.
 export const KIND_SIZE = {
     tier: { w: 190, h: 60 },
     machine: { w: 170, h: 56 },
     agent: { w: 160, h: 52 },
     space: { w: 160, h: 52 },
+    group: { w: 160, h: 52 },
     show: { w: 160, h: 52 },
     repo: { w: 160, h: 52 }
 }
 export const sizeOf = (kind) => KIND_SIZE[kind] || KIND_SIZE.space
 
 // The map is drawn on ellipses (wider than tall) because screens are.
-export const ASPECT = 1.45
+export const ASPECT = 1.8
 const LANE_GAP = 74
+// ring spacing: a card is 52 high, so rings 95 apart never touch even with a few nodes per ring
+const RING_GAP = 95
 const MAX_PER_LANE = 14
 const TAU = Math.PI * 2
 
@@ -54,9 +57,9 @@ export const layoutMap = (map, aspect = ASPECT) => {
 
     // radii from how many nodes a ring has to carry, never smaller than a floor
     const lanes3 = Math.max(1, Math.min(3, Math.ceil(rings[3].length / MAX_PER_LANE)))
-    const r1 = Math.max(rings[1].length ? Math.max(105, (190 / aspect) * 0.75) : 0, (rings[1].length * 200) / TAU)
-    const r2 = Math.max(r1 + 120, (rings[2].length * 170) / TAU)
-    const r3 = Math.max(r2 + 125, (rings[3].length * 160) / TAU / lanes3 + 30)
+    const r1 = Math.max(rings[1].length ? Math.max(95, (190 / aspect) * 0.75) : 0, (rings[1].length * 200) / TAU)
+    const r2 = Math.max(r1 + RING_GAP, (rings[2].length * 170) / TAU)
+    const r3 = Math.max(r2 + RING_GAP, (rings[3].length * 160) / TAU / lanes3 + 30)
     const radius = { 1: r1, 2: r2, 3: r3 }
 
     const pos = new Map()
@@ -102,7 +105,7 @@ export const layoutMap = (map, aspect = ASPECT) => {
         const { w, h } = sizeOf(n.kind)
         minX = Math.min(minX, p.x - w / 2)
         maxX = Math.max(maxX, p.x + w / 2)
-        minY = Math.min(minY, p.y - h / 2 - 60) // room for the hover tip above
+        minY = Math.min(minY, p.y - h / 2)
         maxY = Math.max(maxY, p.y + h / 2)
     }
     const pad = 36

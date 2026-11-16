@@ -37,3 +37,39 @@ export const shouldAnimate = ({ edges, pulsing, hoverId, visible = true, reduced
     if (reduced || !visible) return false
     return pulseEdgeIndexes({ edges, pulsing, hoverId }).length > 0
 }
+
+// Names that never sit on each other: the labels are screen boxes (centre x, y, width w, height h in px).
+// Two that overlap are pushed apart along the axis where they overlap least, half each; a `fixed` one
+// (the hub) does not move. Same input, same answer. Returns { id: { dx, dy } } for those that moved.
+export const nudgeLabels = (items, { gap = 4, passes = 40, limit = 160 } = {}) => {
+    const list = (items || []).map((it) => ({ ...it, ox: 0, oy: 0 }))
+    for (let pass = 0; pass < passes; pass += 1) {
+        let moved = false
+        for (let i = 0; i < list.length; i += 1) {
+            for (let j = i + 1; j < list.length; j += 1) {
+                const a = list[i]
+                const b = list[j]
+                const dx = b.x + b.ox - (a.x + a.ox)
+                const dy = b.y + b.oy - (a.y + a.oy)
+                const needX = (a.w + b.w) / 2 + gap - Math.abs(dx)
+                const needY = (a.h + b.h) / 2 + gap - Math.abs(dy)
+                if (needX <= 0 || needY <= 0) continue
+                moved = true
+                const alongY = needY <= needX
+                const dir = (alongY ? dy : dx) >= 0 ? 1 : -1
+                const push = (alongY ? needY : needX) / (a.fixed || b.fixed ? 1 : 2)
+                const share = (it, sign) => {
+                    if (it.fixed) return
+                    if (alongY) it.oy = Math.max(-limit, Math.min(limit, it.oy + sign * push))
+                    else it.ox = Math.max(-limit, Math.min(limit, it.ox + sign * push))
+                }
+                share(a, -dir)
+                share(b, dir)
+            }
+        }
+        if (!moved) break
+    }
+    const out = {}
+    for (const it of list) if (Math.round(it.ox) || Math.round(it.oy)) out[it.id] = { dx: Math.round(it.ox), dy: Math.round(it.oy) }
+    return out
+}

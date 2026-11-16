@@ -10,7 +10,7 @@ vi.mock('../../services/apiClient.js', () => ({
 
 import { getMonitor, postMonitorAsk } from '../../services/apiClient.js'
 import MonitorSection, { formatBytes, nextBackoff, timeAgo } from './MonitorSection.jsx'
-import { tierState, heroState } from './MonitorOverview.jsx'
+import { tierState } from './MonitorOverview.jsx'
 
 const snapshot = (over = {}) => ({
     generatedAt: new Date().toISOString(),
@@ -107,16 +107,16 @@ describe('MonitorSection', () => {
     it('shows its data under StrictMode (mount, unmount, mount again)', async () => {
         getMonitor.mockResolvedValue(snapshot())
         render(<React.StrictMode><MonitorSection /></React.StrictMode>)
-        await waitFor(() => expect(screen.getByText('2/3')).toBeTruthy())
-        expect(screen.queryByText(/loading…/)).toBeNull()
+        await waitFor(() => expect(screen.getByText('Build the monitor')).toBeTruthy())
+        expect(screen.queryByText(/Reading the monitor/)).toBeNull()
     })
 
     it('shows every panel and greys only the broken one', async () => {
         getMonitor.mockResolvedValue(snapshot())
         render(<MonitorSection />)
-        await waitFor(() => expect(screen.getByText('2/3')).toBeTruthy())
-        expect(screen.getByText('Build the monitor')).toBeTruthy()
+        await waitFor(() => expect(screen.getByText('Build the monitor')).toBeTruthy())
         expect(screen.getByText('Platina lights')).toBeTruthy()
+        fireEvent.click(document.querySelector('[data-monitor-tab="lists"]'))
         expect(screen.getByText(/gh not installed/)).toBeTruthy()
         expect(screen.getByText(/N1 fix lights/)).toBeTruthy()
         // failed services sort first
@@ -142,12 +142,17 @@ describe('MonitorSection', () => {
         const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
         render(<MonitorSection />)
         await waitFor(() => screen.getByText('Build the monitor'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="lists"]'))
+        fireEvent.click(document.querySelector('[data-fold="off"]')) // the off machines are folded
         const twins = document.querySelectorAll('[data-monitor-id="m:100.1.1.2"],[data-monitor-id="m:100.1.1.9"]')
         expect(twins.length).toBe(2)
         fireEvent.click(twins[1])
         expect(twins[1].getAttribute('aria-pressed')).toBe('true')
         expect(twins[0].getAttribute('aria-pressed')).toBe('false')
         expect(screen.getByText('100.1.1.9')).toBeTruthy()
+        // the same name on two devices shows the system, never two identical rows
+        expect(screen.getByText(/^r-di · linux/)).toBeTruthy()
+        expect(screen.getByText(/^r-di · windows/)).toBeTruthy()
         expect(spy.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
         spy.mockRestore()
     })
@@ -155,9 +160,11 @@ describe('MonitorSection', () => {
     it('lists connected things and the people in each space, with names in the inspector', async () => {
         getMonitor.mockResolvedValue(snapshot())
         render(<MonitorSection />)
-        await waitFor(() => screen.getByText('Lasers'))
-        expect(screen.getByText('People now · 1 place')).toBeTruthy()
-        expect(screen.getByText('3')).toBeTruthy()
+        await waitFor(() => screen.getByText('Build the monitor'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="lists"]'))
+        expect(screen.getByText('3 people in 1 space')).toBeTruthy()
+        expect(screen.getAllByText('Show gear').length).toBeGreaterThan(0) // the chip and the list block
+        expect(screen.queryByText(/Things connected/)).toBeNull()
         expect(screen.getByText(/0\/6 cubes connected/)).toBeTruthy()
         fireEvent.click(screen.getByText('space platina'))
         expect(screen.getByText('Emilya')).toBeTruthy()
@@ -206,18 +213,19 @@ describe('MonitorSection overview, map, workspace and live', () => {
     beforeEach(() => { getMonitor.mockReset(); postMonitorAsk.mockReset(); FakeEventSource.instances = [] })
     afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); delete window.matchMedia })
 
-    it('overview shows each tier and paints drift in the warning colour', async () => {
+    it('the vital strip shows each tier and paints drift in the warning colour', async () => {
         getMonitor.mockResolvedValue(contract())
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         const tone = (id) => document.querySelector(`[data-tier-id="${id}"]`).getAttribute('data-tier-tone')
         expect(tone('prod')).toBe('warning') // 12 behind dev
         expect(tone('dev')).toBe('success')
         expect(tone('local:aylmo')).toBe('warning') // not on dev's commit
         expect(tone('local:r-di')).toBe('success')
-        expect(screen.getByText('12 behind dev')).toBeTruthy()
-        expect(screen.getByText('bbbbbbb', { selector: '[data-tier-id="dev"] *' })).toBeTruthy()
-        expect(document.querySelector('[data-tier-id="dev"]').textContent).toMatch(/2 spaces/)
+        // the number lives once, in Needs you; the chip keeps only its state
+        expect(document.querySelector('[data-tier-id="prod"]').textContent).not.toMatch(/12/)
+        expect(document.querySelector('.monitor-needs').textContent).toMatch(/12 commits behind/)
+        expect(screen.getByText('✓ bbbbbbb', { selector: '[data-tier-id="dev"] *' })).toBeTruthy()
     })
 
     it('overview marks an unanswering tier as down', async () => {
@@ -225,32 +233,31 @@ describe('MonitorSection overview, map, workspace and live', () => {
         c.tiers.rows[0].status = 502
         getMonitor.mockResolvedValue(c)
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(document.querySelector('[data-tier-id="prod"]').getAttribute('data-tier-tone')).toBe('danger')
     })
 
     it('map draws the nodes and a click opens the inspector', async () => {
         getMonitor.mockResolvedValue(contract())
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
-        expect(document.querySelector('.monitor-page').classList.contains('is-map')).toBe(true) // tiles shrink to one strip
-        expect(document.querySelector('.monitor-area-strip [data-tier-id]')).toBeTruthy()
-        expect(document.querySelector('.monitor-area-strip [data-count-id]')).toBeTruthy()
+        expect(document.querySelector('.monitor-page').classList.contains('is-map')).toBe(true)
+        expect(document.querySelector('.monitor-vital [data-tier-id]')).toBeTruthy() // the strip stays on every tab
         expect(document.querySelector('[data-monitor-map="graph"]')).toBeTruthy()
         expect(document.querySelectorAll('[data-map-node]').length).toBe(6)
-        expect(document.querySelectorAll('.monitor-edge').length).toBe(4)
+        expect(document.querySelectorAll('.monitor-edge').length).toBe(2) // runs and works-on; holds only on hover
         fireEvent.click(document.querySelector('[data-map-node="space:platina"]'))
         expect(screen.getByText('Inspector — platina')).toBeTruthy()
         expect(screen.getByText('warn')).toBeTruthy()
-        expect(within(document.querySelector('.monitor-inspector')).getByText('MUTH')).toBeTruthy() // its neighbour, from the edges
+        expect(within(document.querySelector('.monitor-inspector')).getByText('MUTH')).toBeTruthy() // its neighbour, from the edges (holds are in the drawer)
     })
 
     it('map falls back to a grouped list at phone width', async () => {
         window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })
         getMonitor.mockResolvedValue(contract())
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
         expect(document.querySelector('[data-monitor-map="list"]')).toBeTruthy()
         expect(document.querySelector('svg')).toBeNull()
@@ -258,15 +265,15 @@ describe('MonitorSection overview, map, workspace and live', () => {
         expect(screen.getByText('Inspector — asuz')).toBeTruthy()
     })
 
-    it('workspace lists asks newest first, lanes and reports', async () => {
+    it('Now lists asks newest first and busy agents first; reports are in Lists', async () => {
         getMonitor.mockResolvedValue(contract())
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
-        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         const ids = [...document.querySelectorAll('[data-ask-id]')].map((n) => n.getAttribute('data-ask-id'))
         expect(ids).toEqual(['N2', 'N1'])
         const lanes = [...document.querySelectorAll('[data-lane-id]')].map((n) => n.getAttribute('data-lane-id'))
         expect(lanes[0]).toBe('aaaaaaaa-1') // busy first
+        fireEvent.click(document.querySelector('[data-monitor-tab="lists"]')) // machine reports are a list
         expect(document.querySelector('[data-report-host="asuz"]').textContent).toMatch(/stale/)
     })
 
@@ -276,8 +283,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         postMonitorAsk.mockReturnValue(new Promise((r) => { resolveAsk = r }))
         getMonitor.mockResolvedValue(contract())
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
-        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.change(screen.getByLabelText('Send an ask'), { target: { value: 'light the hall' } })
         fireEvent.click(screen.getByText('Send ask'))
         expect(screen.getByText('light the hall')).toBeTruthy() // before the server answered
@@ -294,8 +300,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         postMonitorAsk.mockRejectedValue(new Error('403 forbidden'))
         getMonitor.mockResolvedValue(contract())
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
-        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.change(screen.getByLabelText('Send an ask'), { target: { value: 'x' } })
         fireEvent.click(screen.getByText('Send ask'))
         await waitFor(() => expect(screen.getByText(/Not sent: 403 forbidden/)).toBeTruthy())
@@ -313,7 +318,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         next.panels.agents.rows[0].title = 'Streamed title'
         await act(async () => { es.emit(next) })
         expect(screen.getByText('Streamed title')).toBeTruthy()
-        expect(screen.getByText(/· live ·/)).toBeTruthy()
+        expect(document.querySelector('.monitor-live-mark').className).toMatch(/tone-live/)
         const calls = getMonitor.mock.calls.length
         await act(async () => { await vi.advanceTimersByTimeAsync(16000) })
         expect(getMonitor.mock.calls.length).toBe(calls)
@@ -333,7 +338,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         const calls = getMonitor.mock.calls.length
         await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
         expect(getMonitor.mock.calls.length).toBeGreaterThan(calls)
-        expect(screen.getByText(/· polling ·/)).toBeTruthy()
+        expect(document.querySelector('.monitor-live-mark').className).toMatch(/tone-warning/)
     })
 
     it('a CLOSED stream is reopened with a backoff (3 s doubling, cap 30 s, reset on open); polling meanwhile', async () => {
@@ -345,7 +350,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         const closeLatest = async () => { const es = FakeEventSource.instances.at(-1); es.readyState = 2; await act(async () => { es.onerror() }); return es }
         const first = await closeLatest()
         expect(first.closed).toBe(true)
-        expect(screen.getByText(/· polling ·/)).toBeTruthy()
+        expect(document.querySelector('.monitor-live-mark').className).toMatch(/tone-warning/)
         await act(async () => { await vi.advanceTimersByTimeAsync(2900) })
         expect(FakeEventSource.instances.length).toBe(1)
         await act(async () => { await vi.advanceTimersByTimeAsync(200) })
@@ -358,7 +363,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         const third = FakeEventSource.instances[2]
         await act(async () => { third.onopen() })
         await act(async () => { third.emit(snapshot()) })
-        expect(screen.getByText(/· live ·/)).toBeTruthy()
+        expect(document.querySelector('.monitor-live-mark').className).toMatch(/tone-live/)
         await closeLatest() // delay was reset by the open: 3 s again
         await act(async () => { await vi.advanceTimersByTimeAsync(3100) })
         expect(FakeEventSource.instances.length).toBe(4)
@@ -397,18 +402,18 @@ describe('MonitorSection overview, map, workspace and live', () => {
         await waitFor(() => screen.getByText('Build the monitor'))
         const es = FakeEventSource.instances[0]
         await act(async () => { es.emit(snapshot()) })
-        expect(screen.getByText(/· live ·/)).toBeTruthy()
+        expect(document.querySelector('.monitor-live-mark').className).toMatch(/tone-live/)
         es.readyState = 0 // CONNECTING: the server ended it on purpose, retry 3000 is running
         await act(async () => { es.onerror() })
         expect(es.closed).toBe(false)
         expect(FakeEventSource.instances.length).toBe(1)
-        expect(screen.getByText(/· polling ·/)).toBeTruthy()
+        expect(document.querySelector('.monitor-live-mark').className).toMatch(/tone-warning/)
         const calls = getMonitor.mock.calls.length
         await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
         expect(getMonitor.mock.calls.length).toBeGreaterThan(calls)
         es.readyState = 1
         await act(async () => { es.emit(snapshot()) })
-        expect(screen.getByText(/· live ·/)).toBeTruthy()
+        expect(document.querySelector('.monitor-live-mark').className).toMatch(/tone-live/)
     })
 
     it('"updated" is when the page last heard from the server, snapshot or heartbeat, not the snapshot\'s own time', async () => {
@@ -418,55 +423,58 @@ describe('MonitorSection overview, map, workspace and live', () => {
         getMonitor.mockResolvedValue(snapshot({ generatedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString() }))
         render(<MonitorSection />)
         await waitFor(() => screen.getByText('Build the monitor'))
-        expect(screen.getByText(/updated now/)).toBeTruthy()
+        expect(screen.getByText(/heard (just now|\d+ s ago)/)).toBeTruthy()
         const es = FakeEventSource.instances[0]
         await act(async () => { es.emit(snapshot({ generatedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString() })) })
         await act(async () => { await vi.advanceTimersByTimeAsync(5 * 60 * 1000) })
-        expect(screen.getByText(/updated 5m/)).toBeTruthy()
+        expect(screen.getByText(/heard [45] min ago/)).toBeTruthy() // 5 min, the clock ticks each second
         await act(async () => { es.beat() })
-        expect(screen.getByText(/updated now/)).toBeTruthy()
+        expect(screen.getByText(/heard (just now|\d+ s ago)/)).toBeTruthy()
     })
 
     it('renders the new views under StrictMode', async () => {
         vi.stubGlobal('EventSource', FakeEventSource)
         getMonitor.mockResolvedValue(contract())
         render(<React.StrictMode><MonitorSection /></React.StrictMode>)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
-        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(screen.getByText('newest ask')).toBeTruthy()
         expect(FakeEventSource.instances.filter((e) => !e.closed).length).toBe(1)
     })
 })
 
-describe('overview when a tier is down', () => {
-    it('prod down: the rows are still drawn, dev as a card and prod as a red one; only no rows at all shows the note', async () => {
+describe('vital strip when a tier is down', () => {
+    it('prod down: dev stays calm, prod is red; no tier rows at all draws no tier chip and does not crash', async () => {
         const c = contract()
         c.tiers.ok = false
         c.tiers.rows[0] = { ...c.tiers.rows[0], status: 0, ms: 3000, commit: null }
         getMonitor.mockResolvedValue(c)
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(document.querySelector('[data-tier-id="dev"]').getAttribute('data-tier-tone')).toBe('success')
         const prod = document.querySelector('[data-tier-id="prod"]')
         expect(prod.getAttribute('data-tier-tone')).toBe('danger')
         expect(prod.textContent).toMatch(/not answering/)
-        expect(screen.queryByText(/Tiers unavailable/)).toBeNull()
+        expect(document.querySelector('.monitor-needs').textContent).toMatch(/prod is not answering/)
     })
 
-    it('no rows and not ok: the unavailable note', async () => {
+    it('no tier rows: no tier chip, the rest of the strip still shows', async () => {
         const c = contract()
         c.tiers = { ok: false, rows: [], error: 'no probe' }
         getMonitor.mockResolvedValue(c)
         render(<MonitorSection />)
-        await waitFor(() => screen.getByText(/Tiers unavailable here: no probe/))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
+        expect(document.querySelector('[data-tier-id]')).toBeNull()
+        expect(document.querySelector('[data-count-id="machines"]')).toBeTruthy()
     })
 
-    it('other tiers count PUBLIC spaces only, said on the card; the tier itself counts all', async () => {
+    it('other tiers count PUBLIC spaces only, said in the drawer; the tier itself counts all', async () => {
         getMonitor.mockResolvedValue(contract())
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
-        expect(document.querySelector('[data-tier-id="prod"]').textContent).toMatch(/1 public space(?!s)/)
-        expect(document.querySelector('[data-tier-id="dev"]').textContent).toMatch(/2 spaces/)
+        await waitFor(() => screen.getByLabelText('Vital signs'))
+        fireEvent.click(document.querySelector('[data-tier-id="prod"]'))
+        expect(within(document.querySelector('.monitor-drawer')).getByText('1 public')).toBeTruthy()
+        fireEvent.click(document.querySelector('[data-tier-id="dev"]'))
+        expect(within(document.querySelector('.monitor-drawer')).getByText('2')).toBeTruthy()
     })
 
     it('a failed ask read says nothing invented', async () => {
@@ -474,8 +482,7 @@ describe('overview when a tier is down', () => {
         c.asks = { ok: false, rows: [] }
         getMonitor.mockResolvedValue(c)
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
-        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(screen.getByText('Asks unavailable here')).toBeTruthy()
         expect(screen.queryByText(/undefined/)).toBeNull()
     })
@@ -494,9 +501,11 @@ describe('tierState', () => {
     })
 
     it('never says "with dev" for a tier whose commit is unknown', () => {
-        expect(tierState({ id: 'local:studio-mac', status: 200, commit: null, behindDev: null }, 'abc')).toEqual({ tone: 'warning', note: 'commit unknown', quiet: true })
+        expect(tierState({ id: 'local:studio-mac', status: 200, commit: null, behindDev: null }, 'abc')).toEqual({ tone: 'warning', note: 'not a release build', quiet: true })
         expect(tierState({ id: 'local:aylmo', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('with dev')
-        expect(tierState({ id: 'dev', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('the reference')
+        expect(tierState({ id: 'dev', status: 200, commit: 'abc', behindDev: 0 }, 'abc').note).toBe('newest')
+        // a hosted tier with no commit is still an action, said as it is
+        expect(tierState({ id: 'prod', status: 200, commit: null, behindDev: null }, 'abc')).toEqual({ tone: 'warning', note: 'commit unknown', quiet: false })
     })
 })
 
@@ -510,7 +519,7 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
     const open = async (data = contract()) => {
         getMonitor.mockResolvedValue(data)
         render(<MonitorSection />)
-        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        await waitFor(() => screen.getByLabelText('Vital signs'))
     }
     const page = () => document.querySelector('.monitor-page')
 
@@ -538,7 +547,10 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
         fireEvent.keyDown(window, { key: '2' })
         expect(document.querySelector('[data-monitor-tab="map"]').getAttribute('aria-selected')).toBe('true')
         fireEvent.keyDown(window, { key: '3' })
-        expect(document.querySelector('[data-monitor-tab="workspace"]').getAttribute('aria-selected')).toBe('true')
+        expect(document.querySelector('[data-monitor-tab="lists"]').getAttribute('aria-selected')).toBe('true')
+        fireEvent.keyDown(window, { key: 'r' }) // r reads the server again; Refresh left the bar
+        await waitFor(() => expect(getMonitor.mock.calls.length).toBeGreaterThan(1))
+        expect(screen.queryByText('Refresh')).toBeNull()
         fireEvent.keyDown(window, { key: 'f' })
         expect(page().getAttribute('data-monitor-full')).toBe('on')
         fireEvent.keyDown(window, { key: '?' })
@@ -551,39 +563,66 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
         fireEvent.keyDown(filter, { key: 'f' })
         fireEvent.keyDown(filter, { key: '1' })
         expect(page().getAttribute('data-monitor-full')).toBe('on')
-        expect(document.querySelector('[data-monitor-tab="workspace"]').getAttribute('aria-selected')).toBe('true')
+        expect(document.querySelector('[data-monitor-tab="lists"]').getAttribute('aria-selected')).toBe('true')
         fireEvent.keyDown(window, { key: '/' })
         expect(document.activeElement).toBe(filter)
     })
 
-    it('the status line says what needs him, worst first, and "All well" when nothing does', async () => {
+    it('Needs you: one row per item, worst first, each with what, why and ONE action that opens the drawer', async () => {
         await open()
-        const hero = document.querySelector('.monitor-hero')
-        expect(hero.textContent).toMatch(/3 things need you: /)
-        expect(hero.textContent).toMatch(/prod is 12 behind dev/)
-        expect(hero.getAttribute('data-hero-tone')).toBe('danger') // a failed service is the worst thing and leads
-        expect(hero.textContent).toMatch(/heard just now|heard \d+ s ago/)
+        const rows = [...document.querySelectorAll('[data-need-id]')]
+        expect(rows.map((r) => r.getAttribute('data-need-id'))).toEqual(['service:broken.service', 'probe:https://prod.example', 'tier:prod', 'tier:local:aylmo']) // danger first
+        const prod = document.querySelector('[data-need-id="tier:prod"]')
+        expect(prod.querySelector('.monitor-need-what').textContent).toBe('prod is behind dev')
+        expect(prod.querySelector('.monitor-need-why').textContent).toMatch(/12 commits behind/)
+        expect(prod.querySelectorAll('button').length).toBe(1)
+        expect(document.querySelector('.monitor-drawer')).toBeNull()
+        fireEvent.click(prod.querySelector('button')) // one click from the need to its detail
+        const drawer = document.querySelector('.monitor-drawer')
+        expect(within(drawer).getByText('Inspector — prod')).toBeTruthy()
+        expect(within(drawer).getByText('Dev commit')).toBeTruthy()
+        expect(within(drawer).getByText('12 commits')).toBeTruthy()
     })
 
-    it('All well when tiers agree and nothing failed', async () => {
+    it('Needs you says one calm line when nothing needs him', async () => {
         const calm = contract()
         calm.tiers.rows = calm.tiers.rows.filter((r) => r.id !== 'prod' && r.id !== 'local:aylmo')
         calm.panels.services.failed = 0
+        calm.panels.services.rows = calm.panels.services.rows.filter((r) => r.active !== 'failed')
+        calm.panels.network.rows = calm.panels.network.rows.map((r) => ({ ...r, ok: true, status: 200 }))
         await open(calm)
-        expect(document.querySelector('.monitor-hero-text').textContent).toBe('All well')
+        expect(document.querySelector('.monitor-needs').textContent).toMatch(/^All well · checked \d+ s ago$/)
+        expect(document.querySelector('[data-need-id]')).toBeNull()
     })
 
-    it('count tiles carry one square per thing and jump to their panel', async () => {
+    it('a count shown in Needs you is not repeated as a headline: 12 appears once', async () => {
         await open()
-        const dots = document.querySelectorAll('[data-count-id="machines"] .monitor-dot')
-        expect(dots.length).toBe(3)
-        expect(document.querySelectorAll('[data-count-id="machines"] .monitor-dot.tone-success').length).toBe(2)
-        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
-        fireEvent.click(document.querySelector('[data-count-id="agents"]'))
-        expect(document.querySelector('[data-monitor-tab="board"]').getAttribute('aria-selected')).toBe('true')
+        expect(document.body.textContent.match(/12 commits behind/g).length).toBe(1)
+        expect(document.querySelector('[data-tier-id="prod"]').textContent).not.toMatch(/\d/)
     })
 
-    it('a tier tile opens the drawer; Esc and the cross close it; no empty inspector box', async () => {
+    it('the strip is one row of chips that read in plain words', async () => {
+        await open()
+        const strip = document.querySelector('.monitor-vital')
+        expect(strip.textContent).toMatch(/Machines2 of 3/)
+        expect(strip.textContent).toMatch(/Show gear1 of 2 ready/)
+        expect(strip.textContent).toMatch(/Services2 of 3 running|Services.*running/)
+        expect(strip.textContent).not.toMatch(/Things connected|workspace|lane/i)
+        expect(document.querySelector('[data-tier-id="local:aylmo"]').textContent).toMatch(/this machine/)
+    })
+
+    it('a chip opens its list in the drawer, and a row of it opens its own detail', async () => {
+        await open()
+        fireEvent.click(document.querySelector('[data-count-id="machines"]'))
+        const drawer = document.querySelector('.monitor-drawer')
+        expect(within(drawer).getByText('Inspector — Machines')).toBeTruthy()
+        expect(drawer.querySelectorAll('.monitor-dot').length).toBe(3)
+        expect(drawer.querySelectorAll('.monitor-dot.tone-success').length).toBe(2)
+        fireEvent.click(drawer.querySelector('[data-vital-row]'))
+        expect(within(document.querySelector('.monitor-drawer')).getByText('Address')).toBeTruthy()
+    })
+
+    it('a tier chip opens the drawer; Esc and the cross close it; no empty inspector box', async () => {
         await open()
         expect(document.querySelector('.monitor-drawer')).toBeNull()
         fireEvent.click(document.querySelector('[data-tier-id="prod"]'))
@@ -598,24 +637,24 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
         expect(document.querySelector('.monitor-drawer')).toBeNull()
     })
 
-    it('What changed lists the difference between two snapshots, newest on top', async () => {
+    it('Activity shows live changes on top and earlier items from the snapshot below, never empty', async () => {
         vi.stubGlobal('EventSource', FakeEventSource)
         await open()
-        expect(screen.getByText(/Nothing has changed since you opened/)).toBeTruthy()
+        expect(screen.getByText(/Nothing new since you opened/)).toBeTruthy()
+        expect(document.querySelectorAll('[data-activity="earlier"] .monitor-event').length).toBeGreaterThan(0)
         const next = contract()
         next.panels.agents.rows[0].status = 'idle'
         next.asks.rows.push({ id: 'N3', state: 'open', touched: new Date().toISOString(), text: 'light the hall', source: 'page' })
         await act(async () => { FakeEventSource.instances[0].emit(next) })
-        const items = [...document.querySelectorAll('.monitor-event-text')].map((n) => n.textContent)
+        const items = [...document.querySelectorAll('[data-activity="live"] .monitor-event-text')].map((n) => n.textContent)
         expect(items).toContain("agent 'Build the monitor' busy → idle")
         expect(items).toContain('new ask: light the hall')
-        expect(document.querySelectorAll('.monitor-event').length).toBe(2)
+        expect(items.length).toBe(2)
     })
 
     it('Enter sends the ask, Shift+Enter is a new line', async () => {
         postMonitorAsk.mockResolvedValue({ id: 'N9' })
         await open()
-        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
         const box = screen.getByLabelText('Send an ask')
         fireEvent.change(box, { target: { value: 'line one' } })
         fireEvent.keyDown(box, { key: 'Enter', shiftKey: true })
@@ -627,35 +666,8 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
 
     it('reports show a freshness bar', async () => {
         await open()
-        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="lists"]'))
         expect(document.querySelector('[data-report-host="r-di"] .monitor-fresh i').style.width).not.toBe('0%')
         expect(document.querySelector('[data-report-host="asuz"] .monitor-fresh i').style.width).toBe('0%')
-    })
-})
-
-describe('heroState', () => {
-    it('dev not answering is one plain sentence, danger', () => {
-        const state = heroState({ tiers: { rows: [{ id: 'dev', status: 502 }] }, panels: {} })
-        expect(state).toMatchObject({ tone: 'danger', headline: 'dev is not answering (502)' })
-    })
-    it('one amber thing is counted: 1 thing needs you', () => {
-        const state = heroState({ tiers: { rows: [
-            { id: 'dev', status: 'ok', commit: 'b' }, { id: 'prod', status: 'ok', commit: 'a', behindDev: 1274 }
-        ] }, panels: {} })
-        expect(state.headline).toBe('1 thing needs you: prod is 1274 behind dev')
-    })
-    it('a local tree without a release manifest keeps its amber note but is not counted', () => {
-        const snap = { tiers: { rows: [
-            { id: 'dev', status: 'ok', commit: 'b' },
-            { id: 'prod', status: 'ok', commit: 'a', behindDev: 12 },
-            { id: 'local:studio-mac', status: 200, commit: null, behindDev: null }
-        ] }, panels: {} }
-        const state = heroState(snap)
-        expect(state.headline).toBe('1 thing needs you: prod is 12 behind dev')
-        expect(state.issues.map((i) => i.tier)).toEqual(['prod'])
-        expect(tierState(snap.tiers.rows[2], 'b')).toMatchObject({ tone: 'warning', note: 'commit unknown' })
-        expect(heroState({ tiers: { rows: [snap.tiers.rows[0], snap.tiers.rows[2]] }, panels: {} }).headline).toBe('All well')
-        // a hosted tier (prod) with no commit is still an action
-        expect(heroState({ tiers: { rows: [snap.tiers.rows[0], { id: 'prod', status: 'ok', commit: null }] }, panels: {} }).issues.length).toBe(1)
     })
 })

@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
+import { parseMonitorArgs, parseLedgerOpen, buildBody, parseRules, rulesPanel, hookName, hooksPanel, readHelpers, withKnowledge, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -134,5 +134,79 @@ describe('sending', () => {
         await runMonitor(parseArgs(['monitor', 'report', '--every', '45']), { ...deps(home, async () => { sends += 1; return { ok: true, status: 200, json: async () => ({}) } }, { loops: 3, sleep: async (ms) => { waits.push(ms) } }), ...io })
         expect(sends).toBe(3)
         expect(waits).toEqual([45000, 45000])
+    })
+})
+
+describe('rules, hooks and helpers panels (made-up files)', () => {
+    const lines = (n) => Array.from({ length: n }, (_, i) => `line ${i} of a made-up rule`)
+    const claudeHome = (home, files) => { const d = path.join(home, '.claude'); fs.mkdirSync(d, { recursive: true }); for (const [n, t] of Object.entries(files)) fs.writeFileSync(path.join(d, n), t); return d }
+
+    it('parseRules: one row per heading, the date from the heading or null, body lines, capped text', () => {
+        const text = ['preface is ignored', '# First rule (2026-01-02)', 'a', '', 'b', '', '# Undated rule', ...lines(60), '## sub stays in the body'].join('\n')
+        const rows = parseRules(text)
+        expect(rows.map((r) => [r.title, r.date])).toEqual([['First rule (2026-01-02)', '2026-01-02'], ['Undated rule', null]])
+        expect(rows[0]).toMatchObject({ lines: 3, text: 'a\n\nb' })
+        expect(rows[1].lines).toBe(61)
+        expect(rows[1].text.length).toBeLessThanOrEqual(400)
+        expect(parseRules('')).toEqual([])
+    })
+    it('rulesPanel reads the file, and fails loudly when it is missing', () => {
+        const home = tmpHome()
+        expect(rulesPanel({ home })).toEqual({ ok: false, why: expect.stringMatching(/could not be read/) })
+        claudeHome(home, { 'CLAUDE.md': '# A (2026-02-03)\nbody\n# B\nmore' })
+        expect(rulesPanel({ home })).toMatchObject({ ok: true, file: '~/.claude/CLAUDE.md', count: 2, rows: [{ title: 'A (2026-02-03)' }, { title: 'B' }] })
+    })
+    it('hookName keeps the tool and subcommand only, never a path, env value, redirect or flag value', () => {
+        expect(hookName('python3 -I -B /home/x/secret-dir/di-hooks resume-guard')).toBe('di-hooks resume-guard')
+        expect(hookName('TOKEN=hunter2 /opt/a/b/tool 2>/dev/null || true')).toBe('tool')
+        expect(hookName('env KEY=abc node /p/q/run.mjs intake --token abc')).toBe('run.mjs intake')
+        expect(hookName('/p/q/script /etc/passwd')).toBe('script')
+        expect(hookName('')).toBe('unknown')
+        expect(hookName('bash -c "TOKEN=hunter2 curl -H x https://a/b?k=abc"')).toBe('curl')
+        expect(hookName("sh -c 'KEY=abc /p/q/tool run'")).toBe('tool run')
+        expect(hookName('nice -n 19 node /p/q/a.js')).toBe('a.js')
+        expect(hookName('"A=hunter2"')).toBe('unknown')
+        for (const c of ['TOKEN=hunter2 /opt/a/b/tool', 'python3 /home/x/secret-dir/t sub --token abc', 'bash -c "TOKEN=hunter2 x"', "sh -c 'A=abc b'"]) expect(hookName(c)).not.toMatch(/hunter2|secret-dir|abc|\//)
+    })
+    it('hooksPanel: user and repo scope, per-event counts, and a missing user file is ok:false', () => {
+        const home = tmpHome()
+        const root = tmpHome()
+        expect(hooksPanel({ home }).ok).toBe(false)
+        claudeHome(home, { 'settings.json': JSON.stringify({ env: { SECRET: 'x' }, hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'python3 /a/b/guard check' }] }], Stop: [{ hooks: [{ command: '/a/b/end' }, { command: '/a/b/end2 x' }] }] } }) })
+        claudeHome(root, { 'settings.json': JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ command: 'node /r/start.mjs' }] }] } }) })
+        const panel = hooksPanel({ home, root })
+        expect(panel).toMatchObject({ ok: true, count: 4, events: { PreToolUse: 1, Stop: 2, SessionStart: 1 } })
+        expect(panel.rows[0]).toEqual({ scope: 'user', event: 'PreToolUse', matcher: 'Bash', name: 'guard check' })
+        expect(panel.rows.at(-1)).toMatchObject({ scope: 'repo', name: 'start.mjs' })
+        expect(JSON.stringify(panel)).not.toMatch(/SECRET|\/a\/b/)
+    })
+    it('readHelpers lists recent helpers from file names, mtimes and the label only', () => {
+        const home = tmpHome()
+        const dir = path.join(home, '.claude', 'projects', 'p1', 'abcdef1234567890', 'subagents')
+        fs.mkdirSync(dir, { recursive: true })
+        const now = Date.now()
+        const make = (id, ageMs, meta) => { const f = path.join(dir, `agent-${id}.jsonl`); fs.writeFileSync(f, 'TRANSCRIPT-NEVER-READ'); fs.utimesSync(f, (now - ageMs) / 1000, (now - ageMs) / 1000); if (meta) fs.writeFileSync(path.join(dir, `agent-${id}.meta.json`), JSON.stringify(meta)) }
+        make('aaa', 30 * 1000, { agentType: 'general-purpose', description: 'a made-up label' })
+        make('bbb', 10 * 60 * 1000, null)
+        make('ccc', 3 * 3600 * 1000, { description: 'too old' })
+        const rows = readHelpers({ home, now })
+        expect(rows).toHaveLength(2)
+        expect(rows[0]).toMatchObject({ parent: 'abcdef12', label: 'a made-up label', type: 'general-purpose', model: null, busy: true })
+        expect(rows[1]).toMatchObject({ label: null, busy: false })
+        expect(JSON.stringify(rows)).not.toContain('TRANSCRIPT')
+        expect(readHelpers({ home: tmpHome() })).toEqual([])
+    })
+    it('withKnowledge adds the panels; a 40-rule file and 100 asks keep the whole body under the server cap', () => {
+        const home = tmpHome()
+        const big = Array.from({ length: 40 }, (_, i) => `# Rule ${i} (2026-03-0${(i % 9) + 1})\n${'x'.repeat(900)}`).join('\n')
+        const hooks = { hooks: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`Event${i}`, [{ matcher: 'Bash', hooks: Array.from({ length: 10 }, (_, j) => ({ command: `python3 -I /p/tool${j} sub-${j}` }))}]])) }
+        claudeHome(home, { 'CLAUDE.md': big, 'settings.json': JSON.stringify(hooks) })
+        const snap = withKnowledge({ panels: { agents: { rows: [] } } }, { home })
+        expect(snap.panels.rules.count).toBe(40)
+        expect(snap.panels.hooks.count).toBe(120)
+        expect(snap.panels.agents.helpers).toEqual([])
+        const asks = Array.from({ length: 100 }, (_, i) => ({ id: `N${i}`, touched: '11-16 00:00', state: 'NEW', text: 'y'.repeat(400) }))
+        const body = JSON.stringify(buildBody({ host: 'h', snapshot: snap, asks }))
+        expect(Buffer.byteLength(body)).toBeLessThan(256 * 1024)
     })
 })

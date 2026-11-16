@@ -22,7 +22,7 @@ const map = () => ({
         { id: 'machine:asuz', kind: 'machine', label: 'asuz', state: 'off' },
         { id: 'space:platina', kind: 'space', label: 'platina', state: 'warn' },
         { id: 'show:muth', kind: 'show', label: 'MUTH', state: 'ok' },
-        { id: 'agent:a1', kind: 'agent', label: 'PC performance', state: 'ok' },
+        { id: 'agent:a1', kind: 'agent', label: 'PC performance optimization', state: 'ok' },
         { id: 'repo:di', kind: 'repo', label: 'di.iiii', state: 'ok' }
     ],
     edges: [
@@ -110,7 +110,7 @@ describe('MonitorMap views', () => {
         render(<MonitorMap map={map()} onPick={() => {}} />)
         expect(document.querySelector('[data-monitor-map="graph"]')).toBeTruthy()
         expect(document.querySelectorAll('[data-map-node]').length).toBe(8)
-        expect(document.querySelectorAll('.monitor-edge').length).toBe(4)
+        expect(document.querySelectorAll('.monitor-edge').length).toBe(3) // the holds line (space to show) is hidden until hover
     })
 
     it('toggle 2D / 3D / List switches and remembers per browser', async () => {
@@ -153,12 +153,36 @@ describe('MonitorMap views', () => {
         expect(document.querySelector('[data-map-node="machine:aylmo"]').classList.contains('is-dim')).toBe(false)
         expect(document.querySelector('[data-map-node="space:platina"]').classList.contains('is-dim')).toBe(false)
         expect(document.querySelectorAll('.monitor-edge.is-lit').length).toBe(2)
-        expect(document.querySelectorAll('.monitor-edge.is-dim').length).toBe(2)
+        expect(document.querySelectorAll('.monitor-edge.is-dim').length).toBe(1)
         expect(document.querySelector('.monitor-tip')).toBeNull() // a short label is not cut: no tip
         fireEvent.mouseLeave(document.querySelector('[data-map-node="tier:dev"]'))
         expect(document.querySelectorAll('.is-dim').length).toBe(0)
         fireEvent.mouseEnter(document.querySelector('[data-map-node="agent:a1"]'))
         expect(document.querySelector('.monitor-tip')).toBeTruthy() // a cut label gets its full name
+    })
+
+    it('holds lines appear when their node is hovered', () => {
+        render(<MonitorMap map={map()} onPick={() => {}} />)
+        const before = document.querySelectorAll('.monitor-edge').length
+        fireEvent.mouseEnter(document.querySelector('[data-map-node="space:platina"]'))
+        expect(document.querySelectorAll('.monitor-edge').length).toBe(before + 1)
+    })
+
+    it('a family of spaces folds into one group node that opens on click, and the filter opens it', () => {
+        const nodes = [{ id: 'tier:dev', kind: 'tier', label: 'dev', state: 'ok' }]
+        const edges = []
+        for (let i = 0; i < 10; i += 1) { nodes.push({ id: `space:dev:s${i}`, kind: 'space', label: `s${i}`, state: 'ok' }); edges.push({ from: 'tier:dev', to: `space:dev:s${i}`, kind: 'holds' }) }
+        const picked = []
+        const { rerender } = render(<MonitorMap map={{ nodes, edges }} onPick={(n) => picked.push(n.id)} />)
+        expect(document.querySelectorAll('[data-map-node]').length).toBe(2)
+        fireEvent.click(document.querySelector('[data-map-node^="group:"]'))
+        expect(picked).toEqual([]) // a group opens, it is not a detail
+        expect(document.querySelectorAll('[data-map-node]').length).toBe(11)
+        expect(screen.getByText('Fold spaces')).toBeTruthy()
+        fireEvent.click(screen.getByText('Fold spaces'))
+        expect(document.querySelectorAll('[data-map-node]').length).toBe(2)
+        rerender(<MonitorMap map={{ nodes, edges }} onPick={() => {}} query="s1" />)
+        expect(document.querySelectorAll('[data-map-node]').length).toBe(11)
     })
 
     it('live edges move only while live', () => {
