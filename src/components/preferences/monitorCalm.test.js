@@ -164,3 +164,18 @@ describe('seedActivity', () => {
         expect(seedActivity(snap(), Date.now(), 2).length).toBeLessThanOrEqual(2)
     })
 })
+
+describe('tierState: a 429 is a limited probe, not an outage', () => {
+    it('reads 429 as a quiet warning and keeps 5xx and no answer as danger', async () => {
+        const { tierState } = await import('./monitorTier.js')
+        expect(tierState({ id: 'dev', status: 429 }, null)).toMatchObject({ tone: 'warning', quiet: true })
+        expect(tierState({ id: 'dev', status: 502 }, null).tone).toBe('danger')
+        expect(tierState({ id: 'prod', status: 0 }, null).tone).toBe('danger')
+    })
+    it('puts no "not answering" row in Needs you for a 429, and does for a 502', () => {
+        const limited = needsYou({ tiers: { rows: [{ id: 'dev', status: 429, url: 'https://dev.example' }] } })
+        expect(JSON.stringify(limited)).not.toMatch(/not answering/)
+        const down = needsYou({ tiers: { rows: [{ id: 'dev', status: 502, url: 'https://dev.example' }] } })
+        expect(JSON.stringify(down)).toMatch(/not answering/)
+    })
+})

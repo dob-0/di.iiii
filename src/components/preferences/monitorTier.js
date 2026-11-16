@@ -16,6 +16,8 @@ export const tierLabel = (id) => (id.startsWith('local:') ? `local · ${id.slice
 
 // 'down' | 'drift' | 'ok' and the reason in words
 export const tierState = (row, devCommit) => {
+    // 429: the tier answered and asked us to check less often — it is up, our probe is limited (not an outage)
+    if (row.status === 429) return { tone: 'warning', note: 'limits our checks (429)', quiet: true }
     if (!isHealthy(row)) return { tone: 'danger', note: `not answering${row.status ? ` (${row.status})` : ''}` }
     if (typeof row.behindDev === 'number' && row.behindDev > 0) {
         return { tone: 'warning', note: `${row.behindDev} behind dev` }
