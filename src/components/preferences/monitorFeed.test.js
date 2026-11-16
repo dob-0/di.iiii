@@ -38,6 +38,16 @@ describe('diffSnapshots', () => {
         expect(diffSnapshots(base(), next, 5)[0]).toMatchObject({ tone: 'danger', at: 5 })
     })
 
+    it('a 429 is limited checks, not "stopped answering"', () => {
+        const next = clone(base())
+        next.tiers.rows[0].status = 429
+        const text = diffSnapshots(base(), next, 5).map((e) => e.text)
+        expect(text).not.toContain('prod stopped answering')
+        const back = clone(next)
+        back.tiers.rows[0].status = 502
+        expect(diffSnapshots(next, back, 6).map((e) => e.text)).toContain('prod stopped answering')
+    })
+
     it('agent busy to idle, a new agent, one that left', () => {
         const next = clone(base())
         next.panels.agents.rows = [{ machine: 'aylmo', sessionId: 's1', title: 'PC performance', status: 'idle' }, { machine: 'r-di', sessionId: 's2', title: 'Lights', status: 'busy' }]

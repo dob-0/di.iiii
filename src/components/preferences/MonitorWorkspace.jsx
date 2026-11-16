@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { postMonitorAsk } from '../../services/apiClient.js'
 import { ago } from './monitorFormat.js'
 
-// Work: one big ask bar on top, the open asks (newest first), what each agent is
-// doing (a live square when busy), and which machines reported lately, each with
-// a freshness bar that runs down as its last report ages toward stale (120 s).
+// Now, the left column: the agents at work (a live square when busy), the ask bar right under them,
+// then the open asks (newest first). The machine reports (a freshness bar that runs down as the last
+// report ages toward stale, 120 s) are a list and live in Lists.
 export const STALE_MS = 120000
 export const freshness = (iso, nowMs = Date.now()) => {
     const age = nowMs - new Date(iso).getTime()
@@ -24,15 +24,18 @@ export const dropSeen = (pending, serverRows) => {
     return left.length === pending.length ? pending : left
 }
 
-export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
+
+// where an agent works: the folder's name, and the branch only when it is a real one ("HEAD" is no branch)
+export const agentPlace = (a) => {
+    const folder = String(a.cwd || '').split('/').filter(Boolean).pop() || 'home'
+    const branch = a.branch && a.branch !== 'HEAD' ? ` · ${a.branch}` : ''
+    return `in ${folder}${branch}`
+}
+
+export default function MonitorWorkspace({ asks, agents, flashing, onPick }) {
     const [text, setText] = useState('')
     const [pending, setPending] = useState([])
     const [problem, setProblem] = useState('')
-    const [now, setNow] = useState(() => Date.now())
-    useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 1000)
-        return () => clearInterval(timer)
-    }, [])
     const alive = useRef(true)
     const counter = useRef(0)
     useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
@@ -80,7 +83,23 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
 
     return (
         <div className="monitor-workspace">
-            <form className="monitor-ask-form" onSubmit={send}>
+            <div className="monitor-group-title">Agents at work <span className="preferences-tree-tag">{lanes.length}</span></div>
+            {!lanes.length ? <div className="monitor-note" data-box="agents">No live agent sessions.</div> : null}
+            <div className="monitor-agent-grid">
+                {lanes.map((a) => (
+                    <button key={a.sessionId} type="button" data-lane-id={a.sessionId} data-monitor-id={`a:${a.sessionId}`} data-box="agent"
+                        className={`monitor-agent tone-${LANE_TONE[a.status] || 'accent'}${flashing?.has(`a:${a.machine || ''}${a.sessionId}`) ? ' is-changed' : ''}`} onClick={() => onPick('agent', a)}>
+                        <span className="monitor-agent-head">
+                            {a.status === 'busy' ? <i className="monitor-live-square" aria-label="busy" /> : <i className="monitor-live-square is-off" aria-hidden="true" />}
+                            <span className="monitor-name">{a.title}</span>
+                        </span>
+                        <span className="monitor-meta">{a.status}{a.machine ? ` · ${a.machine}` : ''} · active {ago(a.lastActivity)}</span>
+                        <span className="monitor-meta">{agentPlace(a)}</span>
+                    </button>
+                ))}
+            </div>
+
+            <form className="monitor-ask-form" data-box="ask" onSubmit={send}>
                 <textarea id="monitor-ask-text" className="monitor-ask-text" rows={2} value={text} aria-label="Send an ask"
                     placeholder="Tell the agents…" onChange={(e) => setText(e.target.value)} onKeyDown={onKey} />
                 <button type="submit" className="monitor-ask-send" disabled={!text.trim()}>Send ask</button>
@@ -88,43 +107,13 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
                 {problem ? <span className="monitor-note is-down">{problem}</span> : null}
             </form>
 
-            <div className="monitor-group-title">Open asks <span className="preferences-tree-tag">{shown.length}</span></div>
+            {shown.length || asks?.ok === false ? <div className="monitor-group-title">Open asks <span className="preferences-tree-tag">{shown.length}</span></div> : null}
             {asks && asks.ok === false ? <div className="monitor-note is-down">Asks unavailable here{asks.error ? `: ${asks.error}` : ''}</div> : null}
-            {!shown.length && asks?.ok !== false ? <div className="monitor-note">No open asks.</div> : null}
             <div className="monitor-asks">
                 {shown.map((a) => (
-                    <div key={a.id} className={`monitor-ask tone-${ASK_TONE[a.state] || 'accent'}${a.state === 'sending' ? ' is-sending' : ''}`} data-ask-id={a.id}>
+                    <div key={a.id} className={`monitor-ask tone-${ASK_TONE[a.state] || 'accent'}${a.state === 'sending' ? ' is-sending' : ''}`} data-ask-id={a.id} data-box="ask-row">
                         <div className="monitor-ask-text-line">{a.text}</div>
                         <div className="monitor-meta">{a.state} · {a.source === 'ledger' ? 'ledger' : 'sent here'} · {ago(a.touched)}</div>
-                    </div>
-                ))}
-            </div>
-
-            <div className="monitor-group-title">Agents at work <span className="preferences-tree-tag">{lanes.length}</span></div>
-            {!lanes.length ? <div className="monitor-note">No live agent sessions.</div> : null}
-            <div className="monitor-agent-grid">
-                {lanes.map((a) => (
-                    <button key={a.sessionId} type="button" data-lane-id={a.sessionId}
-                        className={`monitor-agent tone-${LANE_TONE[a.status] || 'accent'}`} onClick={() => onPick('agent', a)}>
-                        <span className="monitor-agent-head">
-                            {a.status === 'busy' ? <i className="monitor-live-square" aria-label="busy" /> : <i className="monitor-live-square is-off" aria-hidden="true" />}
-                            <span className="monitor-name">{a.title}</span>
-                        </span>
-                        <span className="monitor-meta">{a.status}{a.machine ? ` · ${a.machine}` : ''} · {ago(a.lastActivity)}</span>
-                        <span className="monitor-meta">{a.branch || 'no branch'}</span>
-                    </button>
-                ))}
-            </div>
-
-            <div className="monitor-group-title">Reports from machines <span className="preferences-tree-tag">{(reports || []).length}</span></div>
-            {!(reports || []).length ? <div className="monitor-note">No other machine has reported yet.</div> : null}
-            <div className="monitor-grid">
-                {(reports || []).map((r) => (
-                    <div key={r.host} className={`monitor-row monitor-report tone-${r.stale ? 'warning' : 'success'}`} data-report-host={r.host}>
-                        <span className="monitor-name">{r.host}</span>
-                        <span className="monitor-meta">{r.stale ? 'stale' : 'reporting'} · {ago(r.reportedAt)}</span>
-                        <span className="monitor-meta">{r.panels?.agents?.live ?? 0} agents live</span>
-                        <span className="monitor-fresh" aria-hidden="true"><i style={{ width: `${Math.round(freshness(r.reportedAt, now) * 100)}%` }} /></span>
                     </div>
                 ))}
             </div>

@@ -1,11 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
+import { groupMap, visibleEdges } from './monitorMapGroups.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
 //   2D   an SVG graph: hover lights a node's neighbours and dims the rest,
 //        drag pans, wheel / pinch zooms, Fit, live edges carry a moving dash;
 //   3D   the same nodes as bodies in a room, each with its 2D card (lazy chunk);
 //   List the grouped list, the default under 600 px.
+// All three draw the GROUPED map (monitorMapGroups.js): one node per space name, big families folded.
 // The choice is remembered per browser.
 
 const Map3D = lazy(() => import('./MonitorMap3D.jsx'))
@@ -15,6 +17,8 @@ const LIVE_EDGES = new Set(['runs', 'serves'])
 const PHONE_QUERY = '(max-width: 600px)'
 const VIEW_KEY = 'di.monitor.map.view'
 const VIEWS = [['2d', '2D'], ['3d', '3D'], ['list', 'List']]
+// the 2D map is a desk view: its 150 px cards shrink to 7 px text on a phone, so a phone gets 3D and List only
+const PHONE_VIEWS = VIEWS.filter(([id]) => id !== '2d')
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 6
 
@@ -66,6 +70,8 @@ const useFillHeight = (rootRef, view) => {
     }, [rootRef, view])
 }
 
+// the second line of a card: where a space lives, how to open a group, else kind and state
+const subText = (n) => (n.kind === 'space' && n.tiers?.length ? n.tiers.join(' · ') : n.kind === 'group' ? `open it · ${n.tiers.join(' ')}` : `${n.kind} · ${n.state}`)
 const clip = (text, n) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
 const toneOf = (state) => STATE_TONE[state] || 'muted'
 const edgeKey = (e, i) => `${e.from}>${e.to}>${e.kind}>${i}`
@@ -74,7 +80,8 @@ function MapList({ nodes, selectedId, onPick }) {
     return (
         <div className="monitor-map-list" data-monitor-map="list">
             {KIND_ORDER.map((kind) => {
-                const group = nodes.filter((n) => n.kind === kind)
+                if (kind === 'group') return null
+                const group = nodes.filter((n) => n.kind === kind || (kind === 'space' && n.kind === 'group'))
                 if (!group.length) return null
                 return (
                     <div key={kind} className="monitor-group">
@@ -85,7 +92,7 @@ function MapList({ nodes, selectedId, onPick }) {
                                     className={`monitor-row tone-${toneOf(n.state)}${selectedId === n.id ? ' is-selected' : ''}`}
                                     aria-pressed={selectedId === n.id} onClick={() => onPick(n)}>
                                     <span className="monitor-name">{n.label}</span>
-                                    <span className="monitor-meta">{n.state}</span>
+                                    <span className="monitor-meta">{subText(n)}</span>
                                 </button>
                             ))}
                         </div>
@@ -98,7 +105,7 @@ function MapList({ nodes, selectedId, onPick }) {
 
 const fitBox = (layout) => ({ ...layout.bounds })
 
-function Map2D({ layout, selectedId, onPick, live }) {
+function Map2D({ layout, selectedId, onPick, live, onFold }) {
     const svgRef = useRef(null)
     const [vb, setVb] = useState(() => fitBox(layout))
     const [hover, setHover] = useState(null)
@@ -186,6 +193,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
     const near = focus ? neighbours.get(focus) || new Set() : null
     const hot = (id) => !focus || id === focus || near.has(id)
     const hovered = hover ? layout.nodes.find((n) => n.id === hover) : null
+    const edgesShown = visibleEdges(layout.edges, focus, 12)
 
     return (
         <div className="monitor-map-stage">
@@ -202,7 +210,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
                     })}
                 </g>
                 <g className="monitor-map-edges">
-                    {layout.edges.map((e, i) => {
+                    {edgesShown.map((e, i) => {
                         const a = layout.pos.get(e.from)
                         const b = layout.pos.get(e.to)
                         const lit = !!focus && (e.from === focus || e.to === focus)
@@ -211,8 +219,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
                     })}
                 </g>
                 <g className="monitor-hub" aria-hidden="true">
-                    <rect x="-46" y="-20" width="92" height="40" className="monitor-hub-box" />
-                    <text x="0" y="5" textAnchor="middle" className="monitor-hub-label">di.iiii</text>
+                    <rect x="-8" y="-8" width="16" height="16" className="monitor-hub-box" />
                 </g>
                 {layout.nodes.map((n) => {
                     const p = layout.pos.get(n.id)
@@ -228,13 +235,13 @@ function Map2D({ layout, selectedId, onPick, live }) {
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
-                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 9.6))}</text>
-                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{`${n.state} · ${n.kind}`}</text>
+                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 8.6))}</text>
+                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{subText(n)}</text>
                             <title>{`${n.kind}: ${n.label} (${n.state})`}</title>
                         </g>
                     )
                 })}
-                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 9.6) ? (() => {
+                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 8.6) ? (() => {
                     const p = layout.pos.get(hovered.id)
                     const { h } = sizeOf(hovered.kind)
                     const text = hovered.label
@@ -252,17 +259,28 @@ function Map2D({ layout, selectedId, onPick, live }) {
                 <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout))}>Fit</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
+                {onFold ? <button type="button" className="monitor-map-tool" data-map-tool="fold" onClick={onFold}>Fold spaces</button> : null}
             </div>
-            <div className="monitor-map-hint">Drag to move · scroll or pinch to zoom · hover to light a node&apos;s links</div>
+            <div className="monitor-map-hint">Drag to move · scroll or pinch to zoom · hover a node for its links</div>
         </div>
     )
 }
 
-export default function MonitorMap({ map, selectedId, onPick, narrow, live = false }) {
-    const nodes = useMemo(() => map?.nodes || [], [map])
-    const layout = useMemo(() => layoutMap(map, narrow ? 1 : ASPECT), [map, narrow])
+export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, query = '' }) {
+    // group ids the person opened; a filter opens every group so a match is never hidden in one
+    const [expanded, setExpanded] = useState([])
+    const grouped = useMemo(() => groupMap(map, { expanded, open: !!query.trim() }), [map, expanded, query])
+    const nodes = grouped.nodes
+    const layout = useMemo(() => layoutMap(grouped, narrow ? 1 : ASPECT), [grouped, narrow])
+    // a group opens on click; every other node goes to the page (the drawer)
+    const pick = useCallback((n) => {
+        if (n.kind === 'group') setExpanded((e) => (e.includes(n.id) ? e : [...e, n.id]))
+        else onPick(n)
+    }, [onPick])
+    const fold = expanded.length && !query.trim() ? () => setExpanded([]) : null
     const [stored, setStored] = useState(readView)
-    const view = stored || (narrow ? 'list' : '2d')
+    const views = narrow ? PHONE_VIEWS : VIEWS
+    const view = views.some(([id]) => id === stored) ? stored : (narrow ? 'list' : '2d')
     const choose = (v) => { setStored(v); writeView(v) }
     const rootRef = useRef(null)
     useFillHeight(rootRef, view)
@@ -272,24 +290,24 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
     return (
         <div className="monitor-map" data-monitor-map-view={view} ref={rootRef}>
             <div className="monitor-map-views" role="group" aria-label="Map view">
-                {VIEWS.map(([id, label]) => (
+                {views.map(([id, label]) => (
                     <button key={id} type="button" data-map-view={id} className={`monitor-map-view${view === id ? ' is-active' : ''}`}
                         aria-pressed={view === id} onClick={() => choose(id)}>{label}</button>
                 ))}
             </div>
-            {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={onPick} /> : null}
+            {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={pick} /> : null}
             {view === '2d' ? (
-                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} /></div>
+                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={pick} live={live} onFold={fold} /></div>
             ) : null}
             {view === '3d' ? (
                 <div data-monitor-map="3d">
                     <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
-                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} />
+                        <Map3D layout={layout} selectedId={selectedId} onPick={pick} live={live} />
                     </Suspense>
                 </div>
             ) : null}
             <div className="monitor-map-key">
-                {KIND_ORDER.filter((k) => nodes.some((n) => n.kind === k)).map((k) => <span key={k}>{KIND_TITLE[k]}</span>)}
+                {[...new Set(KIND_ORDER.filter((k) => nodes.some((n) => n.kind === k)).map((k) => KIND_TITLE[k]))].map((t) => <span key={t}>{t}</span>)}
             </div>
         </div>
     )
