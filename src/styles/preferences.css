@@ -1566,8 +1566,8 @@
 .monitor-node-box { fill: var(--di-surface); stroke: var(--pref-tone); stroke-width: 1.5; }
 .monitor-node.kind-tier .monitor-node-box, .monitor-node.kind-machine .monitor-node-box { fill: var(--di-surface-2); }
 .monitor-node-edge { fill: var(--pref-tone); }
-.monitor-node-label { fill: var(--di-text); font-size: var(--di-text-6); }
-.monitor-node-state { fill: var(--pref-tone); font-size: var(--di-text-5); font-family: var(--di-mono); }
+.monitor-node-label { fill: var(--di-text); font-size: var(--di-text-5); }
+.monitor-node-state { fill: var(--pref-tone); font-size: var(--di-text-4); font-family: var(--di-mono); }
 .monitor-node.tone-muted .monitor-node-state { fill: var(--ui-text-muted); }
 .monitor-node:hover .monitor-node-box, .monitor-node.is-hover .monitor-node-box { fill: var(--di-surface-3); stroke-width: 3; }
 .monitor-node:focus-visible .monitor-node-box, .monitor-node.is-selected .monitor-node-box { stroke: var(--di-cyan); stroke-width: 3; }
@@ -1962,7 +1962,7 @@
 @container monitor-place (max-width: 839px) {
     .mp-alert { max-width: 34%; }
     .mp-alert-go { max-width: 8em; overflow: hidden; text-overflow: ellipsis; }
-    .mp-filter { width: 40px; }
+    .mp-filter { width: 44px; min-width: 44px; }
     .mp-filter::placeholder { color: var(--ui-text-muted); }
     .mp-filter:focus { width: 120px; }
 }
@@ -2010,12 +2010,28 @@
 .monitor-place[data-view="far"] .mp-tools { display: none; }
 
 @media (prefers-reduced-motion: reduce) { .mp-arow.is-busy .mp-dot { animation: none; } .mp-filter, .mp-chip { transition: none; } }
-/* phone: the window strip (live and session counts, More) repeats the rail's chips and costs a row; the rail keeps the room */
+/* round 2: the window strip lives in the rail at every width (counts + menu), the rail stays one line on a phone, the worst need gets its own line */
+.admin-window:has(.monitor-place) > .admin-strip { display: none; }
+.mp-sess { flex: none; color: var(--ui-text-muted); white-space: nowrap; font-family: var(--di-mono); font-size: var(--di-text-2); }
+.mp-sess b { color: var(--di-cyan); }
+.mp-find, .mp-ico { display: none; }
+.mp-menu { position: absolute; z-index: 45; top: 100%; right: 0; min-width: 12rem; display: flex; flex-direction: column; background: var(--di-surface-2); border: 1px solid var(--pref-border-active); }
+.mp-menu-sess { padding: var(--di-space-2); color: var(--ui-text-muted); border-bottom: 1px solid var(--pref-border); }
+.mp-menu-sess b { color: var(--di-cyan); }
+.mp-menu-item { min-height: var(--mp-hit); padding: 0 var(--di-space-3); text-align: left; background: transparent; color: var(--di-text); border: 0; cursor: pointer; }
+.mp-menu-item:hover { background: var(--di-surface-4); }
+.mp-menu-narrow { display: none; }
 @media (max-width: 599px) {
-    .admin-window:has(.monitor-place) > .admin-strip { display: none; }
-    .mp-alert { max-width: 40%; }
-    .mp-alert-go { max-width: 5.5em; overflow: hidden; text-overflow: ellipsis; }
-    .mp-btn[aria-label="Show keys"], .mp-btn[aria-label="Full screen"], .mp-btn[aria-label="Leave full screen"] { display: none; }
-    .mp-filter { width: 44px; }
-    .mp-filter:focus { width: 110px; }
+    .mp-rail { flex-wrap: wrap; row-gap: 0; }
+    .mp-sess, .mp-wide-only, .mp-filter { display: none; }
+    .mp-rail[data-search="open"] .mp-filter { display: block; order: 10; flex: 1 1 100%; width: 100%; height: var(--mp-hit); }
+    .mp-find, .mp-layout .mp-ico { display: inline-flex; }
+    .mp-layout .mp-lbl { display: none; }
+    .mp-layout { box-shadow: none; }
+    .mp-menu-narrow { display: block; }
+    .mp-alert { order: 9; flex: 1 1 100%; max-width: none; padding-right: 0; }
+    .mp-alert-t { flex: 1 1 auto; }
+    .mp-alert-go { max-width: none; }
 }
+.monitor-ring, .monitor-hub-line, .monitor-edge { vector-effect: non-scaling-stroke; }
+

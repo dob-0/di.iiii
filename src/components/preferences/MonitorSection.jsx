@@ -380,7 +380,7 @@ export default function MonitorSection({ onStats, layout: layoutProp }) {
     if (place) {
         return (
             <>
-                <MonitorPlace snap={snap} panels={panels} query={query} setQuery={setQuery} filterRef={filterRef} paused={paused} setPaused={setPaused}
+                <MonitorPlace onReload={load} sessions={snap?.panels?.agents ? { live: snap.panels.agents.live || 0, total: snap.panels.agents.total || 0 } : null} snap={snap} panels={panels} query={query} setQuery={setQuery} filterRef={filterRef} paused={paused} setPaused={setPaused}
                     markTone={markTone} heardAt={heardAt} nowMs={nowMs} error={error} needs={needs} chips={chips} flashing={flashing}
                     selected={selected} selectedRow={selectedRow} view={view} history={history} feed={feed} earlier={earlier} knowledge={knowledge}
                     shownAgents={shownAgents} narrow={narrow} streaming={streaming} full={full} setFullScreen={setFullScreen} setKeysOpen={setKeysOpen}

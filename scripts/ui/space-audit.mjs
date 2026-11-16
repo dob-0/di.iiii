@@ -97,6 +97,7 @@ function collect({ COMPONENTS, CHROME, CHROME_TEXT, DATA_BOX, INTERACTIVE, HANDL
         texts.push({ s: s.slice(0, 30), data: !isChrome && (/\d/.test(s) || !!el.closest(DATA_BOX)), chrome: isChrome, font: px(getComputedStyle(el).fontSize), rects: rects.map(R) })
     }
     // components
+    const el_skip = (e) => !!e.closest('script,style,noscript,title')
     const comps = []
     for (const [cls, sel] of Object.entries(COMPONENTS)) {
         for (const el of document.querySelectorAll(sel)) {
@@ -155,7 +156,28 @@ function collect({ COMPONENTS, CHROME, CHROME_TEXT, DATA_BOX, INTERACTIVE, HANDL
         const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
         if (ox > 1 && oy > 1) overlaps.push(`${a.id} x ${b.id}`)
     }
+    // text over text: any two visible text boxes (one rect per text node line) that intersect by more than 2 px both ways
+    // a text box counts only where the text is the top thing: clipped or covered text is not on screen
+    const shown = (pe, q) => { const h = document.elementFromPoint(Math.min(vw - 1, Math.max(0, q.left + q.width / 2)), Math.min(vh - 1, Math.max(0, q.top + q.height / 2))); return !!h && (pe.contains(h) || h.contains(pe)) }
+    const tb = []
+    const tw2 = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+    for (let n = tw2.nextNode(); n; n = tw2.nextNode()) {
+        const pe = n.parentElement
+        if (!n.nodeValue.trim() || !pe || el_skip(pe) || !vis(pe) || pe.closest('[class*="scratch"], [data-scratch-banner]') || /^dev copy ·/.test(n.nodeValue.trim())) continue
+        const rg = document.createRange(); rg.selectNodeContents(n)
+        const pr = pe.getBoundingClientRect()
+        // a text clipped by its box (an ellipsis) counts only inside that box
+        for (const q0 of rg.getClientRects()) { const q = { left: Math.max(q0.left, pr.left), top: Math.max(q0.top, pr.top), right: Math.min(q0.right, pr.right), bottom: Math.min(q0.bottom, pr.bottom) }; q.width = q.right - q.left; q.height = q.bottom - q.top; if (q.width > 1 && q.height > 1 && q.right > 0 && q.bottom > 0 && q.left < vw && q.top < vh && shown(pe, q)) tb.push({ x: q.left, y: q.top, w: q.width, h: q.height, t: n.nodeValue.trim().slice(0, 18), p: pe }) }
+    }
+    const tt = []
+    for (let i = 0; i < tb.length; i++) for (let j = i + 1; j < tb.length; j++) {
+        const a = tb[i], b = tb[j]
+        if (a.p === b.p) continue
+        const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+        if (ox > 2 && oy > 2) tt.push(`${a.t} x ${b.t}`)
+    }
     return {
+        textOverText: tt.slice(0, 10), textOverTextCount: tt.length,
         stageTop, mapNodes: nodeBoxes.length, mapOverlaps: overlaps.slice(0, 10), mapOverlapCount: overlaps.length,
         pointer: matchMedia('(pointer:coarse)').matches ? 'coarse' : 'fine', vw, vh,
         docOverflow: de.scrollWidth - de.clientWidth, wide: wide.slice(0, 8), wideCount: wide.length, scrollX: scrollX.slice(0, 8),
@@ -218,6 +240,7 @@ export function summarise(raw, vp) {
         overflow: { docPx: raw.docOverflow, wideCount: raw.wideCount, wide: raw.wide, scrollX: raw.scrollX },
         mapView: raw.mapView,
         stage: { topPx: raw.stageTop == null ? null : Math.round(raw.stageTop), share: raw.stageTop == null ? null : +(raw.stageTop / raw.vh).toFixed(3) },
+        textOverText: { count: raw.textOverTextCount, pairs: raw.textOverTextPairs || raw.textOverText },
         map2d: { nodes: raw.mapNodes, overlaps: raw.mapOverlapCount, pairs: raw.mapOverlaps }
     }
 }
@@ -289,7 +312,7 @@ async function main() {
                     r.picture = join(shotDir, st + '.png'); r.state = st
                     results[st] = r
                     await page.screenshot({ path: r.picture })
-                    console.log(`${vp.name} ${st}: stage ${r.stage.topPx} (${r.stage.share}) overlaps ${r.map2d.overlaps} main ${r.mainViewStarts.px} facts ${r.facts} ink ${(r.inkShare * 100).toFixed(1)}% small ${r.touch.small.length} overflow ${r.overflow.docPx}`)
+                    console.log(`${vp.name} ${st}: stage ${r.stage.topPx} (${r.stage.share}) overlaps ${r.map2d.overlaps} textOverText ${r.textOverText.count} main ${r.mainViewStarts.px} facts ${r.facts} ink ${(r.inkShare * 100).toFixed(1)}% small ${r.touch.small.length} overflow ${r.overflow.docPx}`)
                 } catch (e) { console.error(`${vp.name} ${st}: FAILED ${String(e.message).split('\n')[0]}`); results[st] = { state: st, error: String(e.message).split('\n')[0], viewport: vp.name, classes: [], instances: [], facts: 0, textNodes: 0, inkShare: 0, mainViewStarts: {}, touch: { small: [], oversize: [] }, overflow: {} } }
             }
         } finally { await browser.close() }

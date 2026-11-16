@@ -118,13 +118,15 @@ export default function MonitorPlace(p) {
     const {
         snap, panels, query, setQuery, filterRef, paused, setPaused, markTone, heardAt, nowMs, error, needs, chips, flashing,
         selected, selectedRow, view, history, feed, earlier, knowledge, shownAgents, narrow, streaming, full, setFullScreen,
-        setKeysOpen, overlay, setOverlay, far, onToggleFar, onToggleLayout, onSelectNode, onPick, onOpenTarget, onKnowledge, onPanel, onClosePanel, matches
+        setKeysOpen, overlay, setOverlay, far, onToggleFar, onToggleLayout, onSelectNode, onPick, onOpenTarget, onKnowledge, onPanel, onClosePanel, matches, onReload, sessions
     } = p
     const ws = useWorkspace({ asks: snap?.asks, agents: shownAgents, helpers: knowledge?.agents?.helpers || [] })
     const wide = useMedia(PANEL_WIDE, true)
     const [dockFold, setDockFold] = useState(() => readFlag(DOCK_KEY))
     const [sheet, setSheet] = useState('half')
     const [hiddenIds, setHiddenIds] = useState([])
+    const [searchOpen, setSearchOpen] = useState(false)
+    const [menuOpen, setMenuOpen] = useState(false)
     const stageRef = useRef(null)
     const stage = useSize(stageRef)
     // the 2D map lays itself out for the stage's own shape (rounded, so a small resize does not shuffle the nodes)
@@ -231,11 +233,14 @@ export default function MonitorPlace(p) {
     return (
         <div className={`monitor-place${full ? ' is-full' : ''}`} data-monitor-layout="place" data-monitor-full={full ? 'on' : 'off'} data-view={far ? 'far' : 'near'}
             data-dock={dockFold ? 'fold' : 'open'} data-panel={panelOpen ? 'open' : 'none'}>
-            <header className="mp-rail" data-box="rail">
+            <header className="mp-rail" data-box="rail" data-search={searchOpen ? 'open' : 'closed'} data-alert={worst || error ? 'yes' : 'no'}>
                 <span className="mp-live" title={heardTitle}>
                     <i key={heardAt || 'none'} className={`monitor-live-mark tone-${markTone}${heardAt ? ' is-beat' : ''}`} aria-hidden="true" />
                     <span className="monitor-hero-heard">{heard}</span>
                 </span>
+                {sessions ? (
+                    <span className="mp-sess" data-sessions="1" title={`${sessions.live} live, ${sessions.total} sessions`}><b>{sessions.live}</b> Live <b>{sessions.total}</b> Sessions</span>
+                ) : null}
                 <ChipRegion chips={chips} flashing={flashing} selected={selected} onPick={onChip} onHidden={setHiddenIds}
                     onMore={() => setOverlay(overlay === 'chips' ? null : 'chips')} moreOpen={overlay === 'chips'} />
                 {error ? (
@@ -251,12 +256,22 @@ export default function MonitorPlace(p) {
                     </span>
                 ) : null}
                 <span className="mp-tools">
+ <button type="button" className="mp-btn mp-find" title="Search every panel" aria-label="Search" aria-expanded={searchOpen} onClick={() => { setSearchOpen((o) => !o); setTimeout(() => filterRef?.current?.focus?.(), 0) }}>&#9906;</button>
                     <input ref={filterRef} className="mp-filter" type="search" placeholder="Filter /" aria-label="Filter every panel" value={query} onChange={(e) => setQuery(e.target.value)} />
                     <button type="button" className="mp-btn" title={paused ? 'Resume the live feed' : 'Pause the live feed'} aria-label={paused ? 'Resume' : 'Pause'} onClick={() => setPaused((x) => !x)}>{paused ? '▶' : 'II'}</button>
-                    <button type="button" className="mp-btn" title="Keys" aria-label="Show keys" onClick={() => setKeysOpen((o) => !o)}>?</button>
-                    <button type="button" className="mp-btn" title={full ? 'Leave full screen' : 'Full screen'} aria-label={full ? 'Leave full screen' : 'Full screen'} aria-pressed={full} onClick={() => setFullScreen(!full)}>{full ? '▣' : '□'}</button>
-                    <button type="button" className="mp-btn mp-layout" title="Switch to the tabbed Monitor" aria-label="Switch to tabs" data-layout-toggle="tabs" onClick={onToggleLayout}>Tabs</button>
+                    <button type="button" className="mp-btn mp-wide-only" title="Keys" aria-label="Show keys" onClick={() => setKeysOpen((o) => !o)}>?</button>
+                    <button type="button" className="mp-btn mp-wide-only" title={full ? 'Leave full screen' : 'Full screen'} aria-label={full ? 'Leave full screen' : 'Full screen'} aria-pressed={full} onClick={() => setFullScreen(!full)}>{full ? '▣' : '□'}</button>
+                    <button type="button" className="mp-btn mp-layout" title="Switch to the tabbed Monitor" aria-label="Switch to tabs" data-layout-toggle="tabs" onClick={onToggleLayout}><span className="mp-lbl">Tabs</span><span className="mp-ico" aria-hidden="true">&#9636;</span></button>
+                    <button type="button" className="mp-btn mp-menu-btn" title="More" aria-label="More" aria-haspopup="true" aria-expanded={menuOpen} onClick={() => setMenuOpen((o) => !o)}>&#8943;</button>
                 </span>
+                {menuOpen ? (
+                    <div className="mp-menu" role="menu" aria-label="More">
+                        {sessions ? <div className="mp-menu-sess" role="presentation"><b>{sessions.live}</b> Live · <b>{sessions.total}</b> Sessions</div> : null}
+                        <button type="button" role="menuitem" className="mp-menu-item" onClick={() => { setMenuOpen(false); onReload?.() }}>Reload</button>
+                        <button type="button" role="menuitem" className="mp-menu-item mp-menu-narrow" onClick={() => { setMenuOpen(false); setKeysOpen((o) => !o) }}>Keys</button>
+                        <button type="button" role="menuitem" className="mp-menu-item mp-menu-narrow" onClick={() => { setMenuOpen(false); setFullScreen(!full) }}>{full ? 'Leave full screen' : 'Full screen'}</button>
+                    </div>
+                ) : null}
                 {overlay === 'chips' && hiddenChips.length ? (
                     <div className="mp-overlay" role="dialog" aria-label="More vital signs">
                         {hiddenChips.map((c) => <Chip key={c.id} c={c} flashing={flashing} selected={selected} onPick={onChip} />)}
@@ -282,7 +297,7 @@ export default function MonitorPlace(p) {
 
                 <main className="mp-stage" data-box="stage" ref={stageRef}>
                     <MonitorMap map={snap?.map} knowledge={knowledge} snap={snap} onKnowledge={onKnowledge} selectedId={selected?.kind === 'node' ? selected.id : null}
-                        narrow={narrow} live={streaming && !paused} query={query} onPick={onSelectNode} aspect={aspect} />
+                        narrow={narrow} live={streaming && !paused} query={query} onPick={onSelectNode} aspect={aspect} allViews />
                     {far ? <button type="button" className="mp-farx" onClick={onToggleFar}>Leave far view</button> : null}
                 </main>
 
