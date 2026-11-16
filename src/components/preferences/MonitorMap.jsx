@@ -144,7 +144,7 @@ const fitBox = (layout, size = null, r = 1) => {
     return { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - (INSET_TOP + band / 2) * s, w, h }
 }
 
-function Map2D({ layout, selectedId, onPick, live, onFold }) {
+function Map2D({ layout, selectedId, onPick, live, onFold, flow = null }) {
     const svgRef = useRef(null)
     const rem = useRem()
     const [size, setSize] = useState({ w: 0, h: 0 })
@@ -248,6 +248,17 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
     const hovered = hover ? layout.nodes.find((n) => n.id === hover) : null
     const edgesShown = visibleEdges(layout.edges, focus, 12)
 
+    // what the last snapshot sent: reports along their edge, changes onto their node (the real stream; empty when paused)
+    const pulseOf = useMemo(() => {
+        const edges = new Map()
+        const nodes = new Map()
+        for (const p of flow?.pulses || []) {
+            if (p.kind === 'report') edges.set(`${p.from}>${p.to}`, p.tone)
+            nodes.set(p.to, p.tone)
+        }
+        return { edges, nodes }
+    }, [flow?.pulses])
+
     // screen scale (world units per px) and the nudge: cards that would sit on each other are pushed apart in px
     const k = size.w && size.h ? Math.max(vb.w / size.w, vb.h / size.h) : 1
     const eff = useMemo(() => {
@@ -285,8 +296,10 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
                         const a = eff.get(e.from)
                         const b = eff.get(e.to)
                         const lit = !!focus && (e.from === focus || e.to === focus)
-                        const cls = `monitor-edge kind-${e.kind}${lit ? ' is-lit' : focus ? ' is-dim' : ''}${live && LIVE_EDGES.has(e.kind) ? ' is-live' : ''}`
-                        return <line key={edgeKey(e, i)} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={cls} />
+                        const hit = pulseOf.edges.get(`${e.from}>${e.to}`)
+                        const rate = e.kind === 'reports' ? flow?.rates?.[String(e.from).slice(8)] : null
+                        const cls = `monitor-edge kind-${e.kind}${lit ? ' is-lit' : focus ? ' is-dim' : ''}${live && LIVE_EDGES.has(e.kind) ? ' is-live' : ''}${hit ? ` is-pulse pulse-${hit}` : ''}${rate?.silent ? ' is-silent' : ''}`
+                        return <line key={edgeKey(e, i)} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={cls} data-rate={rate ? rate.perMin : undefined} />
                     })}
                 </g>
                 <g className="monitor-hub" aria-hidden="true">
@@ -297,7 +310,7 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
                     const { w, h } = cardPx(n, rem)
                     const compact = isCompact(n)
                     const sel = selectedId === n.id
-                    const cls = `monitor-node kind-${n.kind} tone-${toneOf(n.state)}${sel ? ' is-selected' : ''}${hover === n.id ? ' is-hover' : ''}${focus && !hot(n.id) ? ' is-dim' : ''}`
+                    const cls = `monitor-node kind-${n.kind} tone-${toneOf(n.state)}${sel ? ' is-selected' : ''}${hover === n.id ? ' is-hover' : ''}${focus && !hot(n.id) ? ' is-dim' : ''}${pulseOf.nodes.has(n.id) ? ` is-pulse pulse-${pulseOf.nodes.get(n.id)}` : ''}`
                     return (
                         <g key={n.id} transform={`translate(${p.x - (w / 2) * k},${p.y - (h / 2) * k}) scale(${k})`} data-map-node={n.id} role="button" tabIndex={0}
                             aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`} className={cls}
@@ -339,7 +352,7 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
 }
 
 // `knowledge` + `snap` (optional) add the to do, rules, skills, hooks and helpers; `onKnowledge(part)` opens that list
-export default function MonitorMap({ map, knowledge = null, snap = null, selectedId, onPick, onKnowledge, narrow, live = false, query = '', aspect = null, allViews = false }) {
+export default function MonitorMap({ flow = null, map, knowledge = null, snap = null, selectedId, onPick, onKnowledge, narrow, live = false, query = '', aspect = null, allViews = false }) {
     // group ids the person opened; a filter opens every group so a match is never hidden in one
     const [expanded, setExpanded] = useState([])
     const full = useMemo(() => mergeKnowledge(map, knowledge, snap), [map, knowledge, snap])
@@ -372,7 +385,7 @@ export default function MonitorMap({ map, knowledge = null, snap = null, selecte
             </div>
             {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={pick} /> : null}
             {view === '2d' ? (
-                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={pick} live={live} onFold={fold} /></div>
+                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={pick} live={live} onFold={fold} flow={flow} /></div>
             ) : null}
             {view === '3d' ? (
                 <div data-monitor-map="3d">

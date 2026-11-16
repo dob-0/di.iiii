@@ -3,6 +3,7 @@ import { ModuleSection } from './PreferencesShared.jsx'
 import { getMonitor, monitorStreamUrl } from '../../services/apiClient.js'
 import { timeAgo, formatBytes } from './monitorFormat.js'
 import { diffSnapshots, pushEvents } from './monitorFeed.js'
+import { flowPulses, flowRates } from './monitorFlow.js'
 import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
 import { NeedsYou, VitalStrip } from './MonitorVital.jsx'
@@ -114,6 +115,10 @@ export default function MonitorSection({ onStats, layout: layoutProp }) {
     // response times of each tier, the last SPARK_SAMPLES snapshots, kept in the page only
     const [history, setHistory] = useState({})
     const [feed, setFeed] = useState([])
+    // the flow: what the last snapshot sent along an edge or onto a node (cleared after a moment), and a log of every one for the Flow panel
+    const [pulses, setPulses] = useState([])
+    const [flowLog, setFlowLog] = useState([])
+    const pulseTimer = useRef(null)
     const narrow = useNarrow()
     const [flashing, setFlashing] = useState(() => new Set())
     const [nowMs, setNowMs] = useState(() => Date.now())
@@ -128,7 +133,7 @@ export default function MonitorSection({ onStats, layout: layoutProp }) {
     // and a flag left false by that first cleanup drops every answer (the page stayed "loading…")
     useEffect(() => {
         alive.current = true
-        return () => { alive.current = false; clearTimeout(flashTimer.current) }
+        return () => { alive.current = false; clearTimeout(flashTimer.current); clearTimeout(pulseTimer.current) }
     }, [])
 
     // one place that takes a snapshot, from a poll or from the stream
@@ -144,6 +149,14 @@ export default function MonitorSection({ onStats, layout: layoutProp }) {
         }
         previous.current = sig
         const events = diffSnapshots(previousSnap.current, next)
+        const sent = flowPulses(previousSnap.current, next, events)
+        if (sent.length) {
+            const t = Date.now()
+            setPulses(sent)
+            setFlowLog((l) => [...l, ...sent.map((p) => ({ t, kind: p.kind, host: p.host, node: p.to, tone: p.tone, text: p.text || `${p.host} reported` }))].slice(-300))
+            clearTimeout(pulseTimer.current)
+            pulseTimer.current = setTimeout(() => setPulses([]), 2200)
+        }
         previousSnap.current = next
         if (events.length) {
             const stamped = events.map((e) => ({ ...e, id: ++eventCount.current }))
@@ -340,6 +353,8 @@ export default function MonitorSection({ onStats, layout: layoutProp }) {
 
     const needs = useMemo(() => needsYou(snap), [snap])
     const chips = useMemo(() => vitalChips(snap, snap?.host), [snap])
+    const flowTick = Math.floor(nowMs / 15000)
+    const flowStats = useMemo(() => flowRates(flowLog, snap?.reports, nowMs), [flowLog, snap, flowTick]) // eslint-disable-line react-hooks/exhaustive-deps
     const earlier = useMemo(() => seedActivity(snap, nowMs), [snap]) // eslint-disable-line react-hooks/exhaustive-deps
     // what drives the agents, from every machine's report: to do, rules, skills, hooks, helpers
     const knowledge = useMemo(() => (snap ? monitorKnowledge(snap) : null), [snap])
@@ -380,7 +395,7 @@ export default function MonitorSection({ onStats, layout: layoutProp }) {
     if (place) {
         return (
             <>
-                <MonitorPlace onReload={load} sessions={snap?.panels?.agents ? { live: snap.panels.agents.live || 0, total: snap.panels.agents.total || 0 } : null} snap={snap} panels={panels} query={query} setQuery={setQuery} filterRef={filterRef} paused={paused} setPaused={setPaused}
+                <MonitorPlace flow={{ pulses: paused ? [] : pulses, log: flowLog, rates: flowStats }} onReload={load} sessions={snap?.panels?.agents ? { live: snap.panels.agents.live || 0, total: snap.panels.agents.total || 0 } : null} snap={snap} panels={panels} query={query} setQuery={setQuery} filterRef={filterRef} paused={paused} setPaused={setPaused}
                     markTone={markTone} heardAt={heardAt} nowMs={nowMs} error={error} needs={needs} chips={chips} flashing={flashing}
                     selected={selected} selectedRow={selectedRow} view={view} history={history} feed={feed} earlier={earlier} knowledge={knowledge}
                     shownAgents={shownAgents} narrow={narrow} streaming={streaming} full={full} setFullScreen={setFullScreen} setKeysOpen={setKeysOpen}

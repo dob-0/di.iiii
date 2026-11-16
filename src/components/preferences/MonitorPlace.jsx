@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import MonitorMap from './MonitorMap.jsx'
+import MonitorFlow from './MonitorFlow.jsx'
 import { useWorkspace, AskForm, AskRows } from './MonitorWorkspace.jsx'
 import { NeedsYou } from './MonitorVital.jsx'
 import MonitorActivity from './MonitorActivity.jsx'
@@ -118,7 +119,7 @@ export default function MonitorPlace(p) {
     const {
         snap, panels, query, setQuery, filterRef, paused, setPaused, markTone, heardAt, nowMs, error, needs, chips, flashing,
         selected, selectedRow, view, history, feed, earlier, knowledge, shownAgents, narrow, streaming, full, setFullScreen,
-        setKeysOpen, overlay, setOverlay, far, onToggleFar, onToggleLayout, onSelectNode, onPick, onOpenTarget, onKnowledge, onPanel, onClosePanel, matches, onReload, sessions
+        setKeysOpen, overlay, setOverlay, far, onToggleFar, onToggleLayout, onSelectNode, onPick, onOpenTarget, onKnowledge, onPanel, onClosePanel, matches, onReload, sessions, flow
     } = p
     const ws = useWorkspace({ asks: snap?.asks, agents: shownAgents, helpers: knowledge?.agents?.helpers || [] })
     const wide = useMedia(PANEL_WIDE, true)
@@ -223,6 +224,9 @@ export default function MonitorPlace(p) {
     } else if (view?.mode === 'activity') {
         panelTitle = 'Activity'
         panelBody = <MonitorActivity feed={feed} earlier={earlier} />
+    } else if (view?.mode === 'flow') {
+        panelTitle = 'Flow'
+        panelBody = <MonitorFlow log={flow?.log || []} rates={flow?.rates || {}} nowMs={nowMs} paused={paused} onPause={() => setPaused((x) => !x)} />
     } else if (view?.mode === 'dock') {
         panelTitle = 'Agents and asks'
         panelBody = <div className="mp-dock-body">{dockBody}</div>
@@ -234,10 +238,10 @@ export default function MonitorPlace(p) {
         <div className={`monitor-place${full ? ' is-full' : ''}`} data-monitor-layout="place" data-monitor-full={full ? 'on' : 'off'} data-view={far ? 'far' : 'near'}
             data-dock={dockFold ? 'fold' : 'open'} data-panel={panelOpen ? 'open' : 'none'}>
             <header className="mp-rail" data-box="rail" data-search={searchOpen ? 'open' : 'closed'} data-alert={worst || error ? 'yes' : 'no'}>
-                <span className="mp-live" title={heardTitle}>
+                <button type="button" className="mp-live" data-flow-open="1" aria-label="Flow: how the info arrives" title={heardTitle} onClick={() => onPanel({ mode: 'flow' })}>
                     <i key={heardAt || 'none'} className={`monitor-live-mark tone-${markTone}${heardAt ? ' is-beat' : ''}`} aria-hidden="true" />
                     <span className="monitor-hero-heard">{heard}</span>
-                </span>
+                </button>
                 {sessions ? (
                     <span className="mp-sess" data-sessions="1" title={`${sessions.live} live, ${sessions.total} sessions`}><b>{sessions.live}</b> Live <b>{sessions.total}</b> Sessions</span>
                 ) : null}
@@ -296,7 +300,7 @@ export default function MonitorPlace(p) {
                 </aside>
 
                 <main className="mp-stage" data-box="stage" ref={stageRef}>
-                    <MonitorMap map={snap?.map} knowledge={knowledge} snap={snap} onKnowledge={onKnowledge} selectedId={selected?.kind === 'node' ? selected.id : null}
+                    <MonitorMap flow={flow} map={snap?.map} knowledge={knowledge} snap={snap} onKnowledge={onKnowledge} selectedId={selected?.kind === 'node' ? selected.id : null}
                         narrow={narrow} live={streaming && !paused} query={query} onPick={onSelectNode} aspect={aspect} allViews />
                     {far ? <button type="button" className="mp-farx" onClick={onToggleFar}>Leave far view</button> : null}
                 </main>

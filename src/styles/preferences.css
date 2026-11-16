@@ -2035,3 +2035,21 @@
 }
 .monitor-ring, .monitor-hub-line, .monitor-edge { vector-effect: non-scaling-stroke; }
 
+/* flow: pulses from the real stream (reports along an edge, changes on a node); a short flash with reduced motion */
+.monitor-edge.is-pulse { stroke: var(--pulse, var(--di-cyan)); stroke-width: 3; stroke-dasharray: 6 6; }
+.monitor-edge.is-silent { stroke-dasharray: 3 6; opacity: 0.55; }
+.monitor-node.is-pulse .monitor-node-box { stroke: var(--pulse, var(--di-cyan)); stroke-width: 3; }
+.pulse-accent { --pulse: var(--di-cyan); } .pulse-success { --pulse: var(--di-success); } .pulse-warning { --pulse: var(--di-warning); } .pulse-danger { --pulse: var(--di-danger); } .pulse-muted { --pulse: var(--ui-text-muted); }
+@media (prefers-reduced-motion: no-preference) {
+    .monitor-edge.is-pulse { animation: monitor-edge-flow 0.9s linear infinite; }
+    .monitor-node.is-pulse .monitor-node-box { animation: monitor-pulse-box 1.1s ease-out 2; }
+}
+@keyframes monitor-pulse-box { 0% { stroke-width: 7; } 100% { stroke-width: 3; } }
+button.mp-live { background: transparent; border: 0; color: inherit; padding: 0; min-height: var(--mp-hit); cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: var(--di-space-2); }
+.mp-flow { display: grid; gap: var(--di-space-2); padding: var(--di-space-2); align-content: start; }
+.mp-flow-head { display: flex; justify-content: space-between; align-items: center; gap: var(--di-space-2); }
+.mp-flow-h { margin: var(--di-space-2) 0 0; font-size: var(--di-text-4); color: var(--ui-text-muted); font-weight: 400; }
+.mp-flow-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.mp-flow-list li { display: flex; gap: var(--di-space-3); justify-content: space-between; padding: var(--di-space-1) 0; border-bottom: 1px solid var(--pref-border); }
+.mp-flow-list li.is-silent { color: var(--di-warning); }
+.mp-flow-list.is-stream li { justify-content: flex-start; }

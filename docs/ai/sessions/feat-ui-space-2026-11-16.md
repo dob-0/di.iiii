@@ -13,3 +13,11 @@
 - Tests: MonitorPlace.test.jsx (7), monitorPlaceFit.test.js (7); MonitorSection.test.jsx now renders `layout="tabs"` in all 29 tests (they assume tabs).
 - Measured (scratch preview, 9 viewports): stage top 10.7-23.7 % of the height, 0 horizontal overflow. Not met: small map-node targets at 640 wide (21-23 px cards with 25 nodes; List view has full-size targets), tablet desk chrome buttons (32 px, not Monitor), 2D label overlaps 1 at 2560 and 6 at 768x1024.
 - Separate commit: desk home at 600-899 px stacks (tiles no longer cover group titles).
+
+## Round 2 (2026-11-16)
+- MonitorMap.jsx: semantic zoom on the 2D map. Node positions follow the view; cards keep their px size and type (two lines, one line for helpers, to do and repos; width follows the text); the nudge (monitorMap3dPolicy.js nudgeLabels) runs on screen positions; Fit shows every node and keeps them off the view switch, zoom tools and key. The minCard zoom and the Readable button were removed.
+- MonitorPlace.jsx / MonitorSection.jsx / preferences.css: Live/Sessions numbers, search icon, more menu, phones may use 2D, 3D or List, legend hidden in List.
+- adminDesk.css: 44 px desk controls for a coarse pointer at any width; adminDeskCss.test.js guards it and the under-900 px home stacking (known-fixes entry, wiki line).
+- space-audit.mjs: counts text over text (two visible text boxes, clipped to their own box and on top at their centre, intersecting by more than 2 px; the dev-copy banner is skipped).
+- Flow (own commit): monitorFlow.js (pure: flowPulses, flowRates, perMinute, nodeOfKey; test monitorFlow.test.js), MonitorFlow.jsx (the Flow panel, opened from the rail's live mark, with Pause), pulses on edges and nodes in the 2D map, dashed silent edges, a short flash under reduced motion.
+- Tested: vitest on Monitor*, monitor*, AdminDesk*, adminDesk* and scripts/ui; the browser side ran on a scratch preview stack (after2/).
