@@ -6,15 +6,27 @@
 const list = (value) => (Array.isArray(value) ? value : [])
 const plain = (value) => (value && typeof value === 'object' && !Array.isArray(value) ? value : {})
 
-/** [{ host, panels, stale }] for this server and every report, this server first, a host once. */
+/**
+ * [{ host, panels, stale }] for this server and every report, this server first, a host once.
+ * A host seen twice (a local tier serves AND reports the same machine) is one entry: a fresh report's panels are laid
+ * over the server's own, so its rules, hooks, skills and helpers are not lost behind the server's first entry;
+ * a stale report only fills panels the server does not have.
+ */
 export const hostsOf = (snapshot) => {
-    const seen = new Set()
+    const byName = new Map()
     const out = []
     const add = (host, panels, stale = false) => {
         const name = String(host || '').trim()
-        if (!name || seen.has(name)) return
-        seen.add(name)
-        out.push({ host: name, panels: plain(panels), stale })
+        if (!name) return
+        const seen = byName.get(name)
+        if (seen) {
+            // fresh: the report wins; stale: it only fills what the server lacks (rules change seldom, still worth showing)
+            seen.panels = stale ? { ...plain(panels), ...seen.panels } : { ...seen.panels, ...plain(panels) }
+            return
+        }
+        const entry = { host: name, panels: plain(panels), stale }
+        byName.set(name, entry)
+        out.push(entry)
     }
     if (snapshot?.panels) add(String(snapshot.host || 'this server').split('.')[0], snapshot.panels)
     for (const r of list(snapshot?.reports)) add(r?.host, r?.panels, Boolean(r?.stale))
@@ -68,6 +80,11 @@ export const knowledgeHooks = (hosts) => {
     return { sets: groups.map((g) => ({ ...withSame(g), events: plain(g.panel.events) })), unreadable }
 }
 
+export const knowledgeSkills = (hosts) => {
+    const { groups, unreadable } = groupPanels(hosts, 'skills')
+    return { sets: groups.map((g) => ({ ...withSame(g), counts: plain(g.panel.counts) })), unreadable }
+}
+
 const OPEN_STATES = new Set(['NEW', 'WAITING', 'OPEN', 'BLOCKED', 'RUNNING', 'IN-PROGRESS'])
 
 /** Ledger rows (source 'ledger'), newest touched first, with counts by state. */
@@ -82,5 +99,5 @@ export const knowledgeRows = (snapshot) => {
 
 export const monitorKnowledge = (snapshot) => {
     const hosts = hostsOf(snapshot)
-    return { hosts: hosts.map((h) => h.host), agents: knowledgeAgents(hosts), rules: knowledgeRules(hosts), hooks: knowledgeHooks(hosts), rows: knowledgeRows(snapshot) }
+    return { hosts: hosts.map((h) => h.host), agents: knowledgeAgents(hosts), rules: knowledgeRules(hosts), hooks: knowledgeHooks(hosts), skills: knowledgeSkills(hosts), rows: knowledgeRows(snapshot) }
 }
