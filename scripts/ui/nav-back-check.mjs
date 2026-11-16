@@ -65,6 +65,12 @@ try {
     s = await state(page); check('Esc leaves full screen', s.full === 'off' && s.windows === 1, JSON.stringify(s))
     await page.goBack(); await settle(page)
     s = await state(page); check('one Back after open/leave/open/Esc = desk home (no orphan entries)', s.path === '/admin' && s.windows === 0, JSON.stringify(s))
+    // the desk's key card with the Monitor in front: Esc closes it, Back closes it
+    await openMonitor(page)
+    await page.getByRole('button', { name: 'Keys', exact: true }).click(); await settle(page, 500)
+    check('desk key card open', await page.getByRole('dialog', { name: /keys/i }).count() > 0)
+    await page.keyboard.press('Escape'); await settle(page, 500)
+    check('Esc closes the desk key card (Monitor in front)', await page.getByRole('dialog', { name: /keys/i }).count() === 0)
     await page.close(); await ctx.close()
 
     // 3. deep link

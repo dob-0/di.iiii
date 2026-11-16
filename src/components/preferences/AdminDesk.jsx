@@ -280,7 +280,7 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
             const action = adminKeyAction(event)
             if (!action) return
             const monitorFront = front === 'monitor'
-            if (monitorFront && (action === 'help' || action === 'add' || action === 'escape')) return
+            if (monitorFront && !(action === 'escape' && keysOpen) && (action === 'help' || action === 'add' || action === 'escape')) return
             if (action === 'help') { setKeysOpen((v) => !v); return }
             if (action === 'escape') {
                 if (keysOpen) setKeysOpen(false)
