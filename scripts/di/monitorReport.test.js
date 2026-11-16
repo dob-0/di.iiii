@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { parseMonitorArgs, parseLedgerOpen, buildBody, parseRules, rulesPanel, hookName, hooksPanel, readHelpers, withKnowledge, skillsPanel, parseSkillFrontmatter, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
+import { parseMonitorArgs, parseLedgerOpen, buildBody, parseRules, rulesPanel, hookName, hooksPanel, readHelpers, withKnowledge, skillsPanel, parseSkillFrontmatter, parseSpool, spoolPanel, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -252,5 +252,68 @@ describe('skills panel (made-up skills)', () => {
         expect(snap.panels.skills.counts.user).toBe(200)
         const asks = Array.from({ length: 100 }, (_, i) => ({ id: `N${i}`, touched: '11-16 00:00', state: 'NEW', text: 'y'.repeat(400) }))
         expect(Buffer.byteLength(JSON.stringify(buildBody({ host: 'h', snapshot: snap, asks })))).toBeLessThan(256 * 1024)
+    })
+})
+
+describe('spool panel (made-up spool file)', () => {
+    const mtime = new Date(2026, 10, 16, 5, 18).getTime()
+    const entry = (stamp, id, words) => `- [${stamp}] session ${id} · spooled for aylmo (made-up)\n  words: ${words}\n`
+    it('parseSpool: entries newest first, session cut to 8, text capped, year from the file time', () => {
+        const text = entry('11-15 10:00', 'aaaaaaaa1111', 'first made-up words') + 'a stray line\n' + entry('11-16 05:18', 'bbbbbbbb', 'x'.repeat(900)) + '- [bad stamp] session zzzzzzzz\n'
+        const rows = parseSpool(text, mtime)
+        expect(rows.map((r) => r.session)).toEqual(['bbbbbbbb', 'aaaaaaaa'])
+        expect(rows[0].text).toHaveLength(400)
+        expect(rows[1]).toEqual({ at: new Date(2026, 10, 15, 10, 0).toISOString(), session: 'aaaaaaaa', text: 'first made-up words' })
+    })
+    it('parseSpool: an entry with no words line keeps an empty text; empty input is no rows', () => {
+        expect(parseSpool('- [11-16 01:00] session abcd1234 · spooled\n', mtime)).toEqual([{ at: new Date(2026, 10, 16, 1, 0).toISOString(), session: 'abcd1234', text: '' }])
+        expect(parseSpool('', mtime)).toEqual([])
+        expect(parseSpool(null, mtime)).toEqual([])
+    })
+    it('parseSpool: a December entry read in January belongs to the year before', () => {
+        const rows = parseSpool(entry('12-31 23:50', 'cccccccc', 'old') + entry('01-02 00:10', 'dddddddd', 'new'), new Date(2027, 0, 2, 0, 20).getTime())
+        expect(rows.map((r) => [r.session, new Date(r.at).getFullYear()])).toEqual([['dddddddd', 2027], ['cccccccc', 2026]])
+    })
+    it('parseSpool: keeps only the last 100', () => {
+        const text = Array.from({ length: 130 }, (_, i) => entry(`11-${String(1 + Math.floor(i / 10)).padStart(2, '0')} ${String(i % 10).padStart(2, '0')}:00`, `s${String(i).padStart(7, '0')}`, `w${i}`)).join('')
+        expect(parseSpool(text, mtime)).toHaveLength(100)
+    })
+    it('spoolPanel: reads the file; a missing file is ok:false and never invents rows', () => {
+        const home = tmpHome()
+        expect(spoolPanel({ home })).toEqual({ ok: false, why: 'no spool file on this machine' })
+        fs.mkdirSync(path.join(home, 'di-health', 'intake'), { recursive: true })
+        fs.writeFileSync(path.join(home, 'di-health', 'intake', 'FALLBACK.md'), entry('11-16 01:00', 'eeeeeeee', 'made-up'))
+        expect(spoolPanel({ home })).toMatchObject({ ok: true, file: '~/di-health/intake/FALLBACK.md', count: 1 })
+    })
+    it('100 rows of 400 characters plus the other panels stay under the server cap', () => {
+        const home = tmpHome()
+        fs.mkdirSync(path.join(home, 'di-health', 'intake'), { recursive: true })
+        fs.writeFileSync(path.join(home, 'di-health', 'intake', 'FALLBACK.md'), Array.from({ length: 100 }, (_, i) => entry(`11-16 ${String(i % 24).padStart(2, '0')}:00`, `s${String(i).padStart(7, '0')}`, 'y'.repeat(400))).join(''))
+        for (let i = 0; i < 200; i += 1) skillAt(home, `s${i}`)
+        const snap = withKnowledge({ panels: {} }, { home })
+        expect(snap.panels.spool.count).toBe(100)
+        const asks = Array.from({ length: 100 }, (_, i) => ({ id: `N${i}`, touched: '11-16 00:00', state: 'NEW', text: 'y'.repeat(400) }))
+        expect(Buffer.byteLength(JSON.stringify(buildBody({ host: 'h', snapshot: snap, asks })))).toBeLessThan(256 * 1024)
+    })
+})
+
+const skillAt = (home, name, sub = []) => {
+    const dir = path.join(home, '.claude', 'skills', ...sub, name)
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${name}\ndescription: d\nextra: nope\n---\nBODY\n`)
+}
+
+describe('user skills at any depth', () => {
+    it('finds SKILL.md in group folders, name + description only; a symlink loop ends; the count is capped', () => {
+        const home = tmpHome()
+        skillAt(home, 'top')
+        skillAt(home, 'deep', ['group', 'inner'])
+        fs.symlinkSync(path.join(home, '.claude', 'skills'), path.join(home, '.claude', 'skills', 'group', 'loop'))
+        const panel = skillsPanel({ home })
+        expect(panel.rows.map((r) => r.name).sort()).toEqual(['deep', 'top'])
+        expect(Object.keys(panel.rows[0]).sort()).toEqual(['description', 'name', 'plugin', 'scope'])
+        const big = tmpHome()
+        for (let i = 0; i < 320; i += 1) skillAt(big, `k${i}`)
+        expect(skillsPanel({ home: big }).rows.length).toBeLessThanOrEqual(300)
     })
 })

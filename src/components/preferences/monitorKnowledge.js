@@ -85,6 +85,21 @@ export const knowledgeSkills = (hosts) => {
     return { sets: groups.map((g) => ({ ...withSame(g), counts: plain(g.panel.counts) })), unreadable }
 }
 
+/** Messages spooled on machines without the ledger, over all hosts, newest first: { rows (each with host), count, hosts }. */
+export const knowledgeSpool = (hosts) => {
+    const rows = []
+    const from = []
+    for (const { host, panels } of hosts) {
+        const panel = panels.spool
+        if (!panel || panel.ok === false) continue
+        const mine = list(panel.rows).filter((r) => r && typeof r === 'object')
+        if (mine.length) from.push(host)
+        for (const r of mine) rows.push({ ...r, host })
+    }
+    rows.sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
+    return { rows, count: rows.length, hosts: from }
+}
+
 const OPEN_STATES = new Set(['NEW', 'WAITING', 'OPEN', 'BLOCKED', 'RUNNING', 'IN-PROGRESS'])
 
 /** Ledger rows (source 'ledger'), newest touched first, with counts by state. */
@@ -99,5 +114,5 @@ export const knowledgeRows = (snapshot) => {
 
 export const monitorKnowledge = (snapshot) => {
     const hosts = hostsOf(snapshot)
-    return { hosts: hosts.map((h) => h.host), agents: knowledgeAgents(hosts), rules: knowledgeRules(hosts), hooks: knowledgeHooks(hosts), skills: knowledgeSkills(hosts), rows: knowledgeRows(snapshot) }
+    return { hosts: hosts.map((h) => h.host), agents: knowledgeAgents(hosts), rules: knowledgeRules(hosts), hooks: knowledgeHooks(hosts), skills: knowledgeSkills(hosts), rows: knowledgeRows(snapshot), waiting: knowledgeSpool(hosts) }
 }
