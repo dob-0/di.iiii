@@ -59,6 +59,140 @@ export const parseLedgerOpen = (text) => {
     return rows
 }
 
+// ---- rules, hooks and helpers: what guards and drives the agents --------------
+// Read from this machine's own files; the panels carry titles, dates, counts and a short body cap, never a
+// command line, an env value or a path beyond a file's basename. A file that cannot be read says so ({ ok:false, why }).
+
+const RULE_TEXT_MAX = 400
+const RULES_MAX = 80
+const HOOKS_MAX = 120
+const HELPERS_MAX = 40
+const HELPER_RECENT_MS = 15 * 60 * 1000
+const HELPER_BUSY_MS = 2 * 60 * 1000
+const INTERPRETERS = new Set(['python', 'python3', 'node', 'bash', 'sh', 'zsh', 'env', 'nice', 'timeout'])
+
+const mtimeIso = (file) => { try { return fs.statSync(file).mtime.toISOString() } catch { return null } }
+
+/** One row per `# ` heading of a CLAUDE.md text: { title, date|null, lines, text }, in file order. */
+export const parseRules = (text) => {
+    const rows = []
+    let current = null
+    for (const line of String(text || '').split(/\r?\n/)) {
+        const m = /^# +(.+?)\s*$/.exec(line)
+        if (m) {
+            current = { title: m[1].slice(0, 160), date: /\b(\d{4}-\d\d-\d\d)\b/.exec(m[1])?.[1] || null, body: [] }
+            rows.push(current)
+        } else if (current) current.body.push(line)
+    }
+    return rows.slice(0, RULES_MAX).map((r) => {
+        while (r.body.length && !r.body[r.body.length - 1].trim()) r.body.pop()
+        return { title: r.title, date: r.date, lines: r.body.length, text: r.body.join('\n').trim().slice(0, RULE_TEXT_MAX) }
+    })
+}
+
+export const rulesPanel = ({ home = os.homedir() } = {}) => {
+    const file = path.join(home, '.claude', 'CLAUDE.md')
+    try {
+        const rows = parseRules(fs.readFileSync(file, 'utf8'))
+        return { ok: true, file: '~/.claude/CLAUDE.md', changed: mtimeIso(file), count: rows.length, rows }
+    } catch { return { ok: false, why: 'the standing-rules file could not be read here' } }
+}
+
+/** The tool and its subcommand only: `python3 -I -B /x/di-hooks resume-guard 2>/dev/null` -> `di-hooks resume-guard`. */
+export const hookName = (command) => {
+    const words = String(command || '').trim().split(/\s+/).filter(Boolean)
+    let i = 0
+    const skipEnv = () => { while (i < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[i])) i += 1 } // env values never leave
+    skipEnv()
+    while (i < words.length && INTERPRETERS.has(path.basename(words[i]))) {
+        i += 1
+        while (i < words.length && words[i].startsWith('-')) i += 1
+        skipEnv()
+    }
+    if (i >= words.length) return 'unknown'
+    const tool = path.basename(words[i].replace(/^["']|["']$/g, '')).slice(0, 60) || 'unknown'
+    const sub = words[i + 1]
+    return /^[a-z][a-z0-9-]{0,30}$/.test(sub || '') ? `${tool} ${sub}` : tool
+}
+
+/** hook rows { scope, event, matcher|null, name } from a parsed settings object. */
+export const hookRows = (settings, scope) => {
+    const rows = []
+    const hooks = settings && typeof settings === 'object' ? settings.hooks : null
+    if (!hooks || typeof hooks !== 'object') return rows
+    for (const [event, groups] of Object.entries(hooks)) {
+        for (const group of Array.isArray(groups) ? groups : []) {
+            for (const hook of Array.isArray(group?.hooks) ? group.hooks : []) {
+                rows.push({ scope, event: String(event).slice(0, 40), matcher: typeof group.matcher === 'string' ? group.matcher.slice(0, 80) : null, name: hookName(hook?.command) })
+            }
+        }
+    }
+    return rows
+}
+
+export const hooksPanel = ({ home = os.homedir(), root = null } = {}) => {
+    const rows = []
+    const files = [[path.join(home, '.claude', 'settings.json'), 'user'], ...(root ? [[path.join(root, '.claude', 'settings.json'), 'repo']] : [])]
+    let userOk = false
+    let changed = null
+    for (const [file, scope] of files) {
+        try {
+            rows.push(...hookRows(JSON.parse(fs.readFileSync(file, 'utf8')), scope))
+            if (scope === 'user') { userOk = true; changed = mtimeIso(file) }
+        } catch { /* a repo without settings is normal; the user file is checked below */ }
+    }
+    if (!userOk) return { ok: false, why: 'the user hook settings could not be read here' }
+    const events = {}
+    for (const r of rows) events[r.event] = (events[r.event] || 0) + 1
+    return { ok: true, changed, count: rows.length, events, rows: rows.slice(0, HOOKS_MAX) }
+}
+
+/**
+ * Helpers (subagents) of the chats here, from file names, sizes-free mtimes and the small meta file's type and label only;
+ * never a transcript. Recent = touched within 15 min; busy = touched within 2 min. The model is not in these files: owed.
+ */
+export const readHelpers = ({ home = os.homedir(), now = Date.now() } = {}) => {
+    const rows = []
+    const base = path.join(home, '.claude', 'projects')
+    let projects
+    try { projects = fs.readdirSync(base) } catch { return rows }
+    for (const project of projects) {
+        let sessions
+        try { sessions = fs.readdirSync(path.join(base, project)) } catch { continue }
+        for (const session of sessions) {
+            const dir = path.join(base, project, session, 'subagents')
+            let names
+            try { names = fs.readdirSync(dir) } catch { continue }
+            for (const name of names) {
+                if (!/^agent-[A-Za-z0-9]+\.jsonl$/.test(name)) continue
+                let mtime
+                try { mtime = fs.statSync(path.join(dir, name)).mtimeMs } catch { continue }
+                if (now - mtime > HELPER_RECENT_MS) continue
+                let meta = {}
+                try { meta = JSON.parse(fs.readFileSync(path.join(dir, name.replace(/\.jsonl$/, '.meta.json')), 'utf8')) } catch { /* no label */ }
+                rows.push({
+                    parent: session.slice(0, 8),
+                    label: typeof meta.description === 'string' ? meta.description.slice(0, 80) : null,
+                    type: typeof meta.agentType === 'string' ? meta.agentType.slice(0, 40) : null,
+                    model: null,
+                    since: new Date(mtime).toISOString(),
+                    busy: now - mtime <= HELPER_BUSY_MS
+                })
+            }
+        }
+    }
+    return rows.sort((a, b) => b.since.localeCompare(a.since)).slice(0, HELPERS_MAX)
+}
+
+/** Adds rules, hooks and the agents' helpers to a snapshot's panels (a copy). */
+export const withKnowledge = (snapshot, { home = os.homedir(), root = null, now = Date.now() } = {}) => {
+    const panels = { ...(snapshot?.panels || {}) }
+    panels.rules = rulesPanel({ home })
+    panels.hooks = hooksPanel({ home, root })
+    if (panels.agents && typeof panels.agents === 'object') panels.agents = { ...panels.agents, helpers: readHelpers({ home, now }) }
+    return { ...(snapshot || {}), panels }
+}
+
 export const buildBody = ({ host, snapshot, asks = [], commit = null, builtAt = null }) => ({
     host,
     panels: snapshot?.panels || {},
@@ -178,7 +312,7 @@ export const runMonitor = async (args, deps = {}) => {
     for (;;) {
         round += 1
         let snapshot
-        try { snapshot = await collect() } catch (error) { fail(`could not read this machine: ${String(error?.message || error).split('\n')[0]}`); return 1 }
+        try { snapshot = withKnowledge(await collect(), { home, root: repoRoot() }) } catch (error) { fail(`could not read this machine: ${String(error?.message || error).split('\n')[0]}`); return 1 }
         const { commit, builtAt } = await release()
         const asks = parseLedgerOpen(await ledger())
         const result = await sendOnce({ target, token, body: buildBody({ host: String(hostname).split('.')[0], snapshot, asks, commit, builtAt }), fetchImpl })
