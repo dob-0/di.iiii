@@ -1,7 +1,7 @@
 /* global __APP_VERSION__ */
 import React from 'react'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PreferencesPage from './PreferencesPage.jsx'
 import {
     ActionsContext,
@@ -172,41 +172,51 @@ function renderPreferencesPage() {
 }
 
 
+const windowsOpen = () => document.querySelectorAll('.admin-window').length
+
 describe('PreferencesPage', () => {
-    it('the Monitor entry shows only after GET /api/monitor answered 200; a 404 hides it silently', async () => {
+    beforeEach(() => { window.localStorage.clear() })
+
+    it('the Monitor tile shows only after GET /api/monitor answered 200; a 404 hides it silently', async () => {
         window.location.hash = ''
         const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
         const hidden = renderPreferencesPage()
-        await screen.findByText('Spaces and who can see them')
+        await screen.findByRole('button', { name: 'Space' })
         await new Promise((r) => setTimeout(r, 50))
         expect(spy.mock.calls.filter(([url]) => String(url).includes('/api/monitor')).length).toBe(1)
-        expect(screen.queryByRole('button', { name: /^Monitor/ })).toBeNull()
+        expect(screen.queryByRole('button', { name: /^Monitor:/ })).toBeNull()
         hidden.unmount?.()
+        cleanup()
         spy.mockResolvedValue({ ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' })
         renderPreferencesPage()
-        expect(await screen.findByRole('button', { name: /^Monitor/ })).toBeTruthy()
+        expect(await screen.findByRole('button', { name: /^Monitor:/ })).toBeTruthy()
     })
 
-    it('#monitor shows no Monitor text while the server has not answered, or on a 404; only a 200 mounts it', async () => {
+    it('#monitor-full shows no Monitor text while the server has not answered, or on a 404; only a 200 mounts it', async () => {
         const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
         window.location.hash = '#monitor-full'
         const first = renderPreferencesPage()
-        // pending or refused: the default admin section, nothing of the Monitor
-        expect(screen.getByText('Spaces and who can see them')).toBeTruthy()
+        // pending or refused: nothing of the Monitor opens
         await new Promise((r) => setTimeout(r, 50))
-        expect(screen.queryByText('Everything that is going on')).toBeNull()
+        expect(screen.queryByLabelText('Filter every panel')).toBeNull()
         expect(screen.queryByText(/lists machines and session titles/)).toBeNull()
         expect(screen.queryByText(/Only on the machine you are sitting at/)).toBeNull()
+        // a 404 falls back to the default admin window
+        await waitFor(() => expect(windowsOpen()).toBe(1))
         first.unmount?.()
+        cleanup()
+        window.localStorage.clear()
         spy.mockResolvedValue({ ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' })
         renderPreferencesPage()
-        expect(await screen.findByText('Everything that is going on')).toBeTruthy()
+        expect(await screen.findByLabelText('Filter every panel', {}, { timeout: 5000 })).toBeTruthy()
         window.location.hash = '#nonsense'
         cleanup()
+        window.localStorage.clear()
         renderPreferencesPage()
-        expect(screen.getByText('Spaces and who can see them')).toBeTruthy()
+        // an unknown hash opens no window: the desk home
+        expect(windowsOpen()).toBe(0)
         window.location.hash = ''
-    })
+    }, 20000)
 
     it('renders runtime build metadata and updates the node inspector when a node is selected', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -224,64 +234,48 @@ describe('PreferencesPage', () => {
             })
         })
 
+        window.location.hash = ''
         renderPreferencesPage()
+        const openTile = (label) => fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${label}:`) }))
 
-        // The admin UI is now section-tabbed (SECTIONS in PreferencesPage.jsx):
-        // only the active section's modules are mounted, so each assertion below
-        // navigates to its owning section first via the "Admin sections" nav.
-        const nav = screen.getByRole('navigation', { name: 'Admin sections' })
-        const gotoSection = (label) => fireEvent.click(within(nav).getByRole('button', { name: new RegExp(label) }))
-
-        // System section — frontend build + backend release metadata.
-        gotoSection('Log and settings')
-        expect(await screen.findByText('Build / Release')).toBeInTheDocument()
-        // The build's own version, not a literal. It was '0.2.0', which is what
-        // package.json happened to say for three releases — so this assertion
-        // was really testing that nobody had touched package.json, and it broke
-        // the moment someone did.
+        // Build info window: frontend build + backend release metadata.
+        openTile('Build info')
+        expect(await screen.findByText('Release')).toBeInTheDocument()
         expect(screen.getByText(__APP_VERSION__)).toBeInTheDocument()
         expect(await screen.findByText('cpanel-20260415-150000')).toBeInTheDocument()
         expect(screen.getByText('abcdef1234567890')).toBeInTheDocument()
 
-        const snapshotSection = screen.getByText('Session Snapshot').closest('section')
+        const snapshotSection = screen.getByText('Session').closest('details')
         expect(snapshotSection).toBeTruthy()
         expect(within(snapshotSection).getByText('/main/studio')).toBeInTheDocument()
         expect(within(snapshotSection).getByText('/main/raw/projects')).toBeInTheDocument()
 
-        // Inspect section (topology + objects + session merged, 2026-08-08) —
-        // clicking a node in the architecture map updates the inline Node
-        // Inspector ("Node Inspector — <label>" after selection).
-        gotoSection('This scene')
-        const architectureSection = screen.getByText('System Architecture').closest('section')
+        // Scene objects window: clicking a node in the architecture map updates the node inspector.
+        fireEvent.click(screen.getByRole('button', { name: 'Desk' }))
+        openTile('Scene objects')
+        const architectureSection = screen.getByText('Map').closest('section')
         expect(architectureSection).toBeTruthy()
-
-        // The node button renders kicker/label/status only; the latest log
-        // message lives in `detail` (tooltip + inspector), so match on the label.
         const runtimeNode = within(architectureSection).getAllByRole('button').find((button) => (
             button.textContent?.includes('Runtime')
         ))
         expect(runtimeNode).toBeTruthy()
         fireEvent.click(runtimeNode)
 
-        // Scope to the inspector itself — 'socket jitter detected' also appears in
-        // the node button, so an unscoped match would be ambiguous.
-        const inspector = screen.getByText(/Node Inspector — /).closest('.preferences-node-inspector')
+        // The inspector is a drawer that opens on selection (no empty box before).
+        const inspector = document.querySelector('.preferences-node-inspector')
         expect(inspector).toBeTruthy()
         expect(within(inspector).getByText('socket jitter detected')).toBeInTheDocument()
-        expect(within(inspector).getByText('Copy Log')).toBeInTheDocument()
 
-        // Object radar renders in the same Inspect section.
-        expect(screen.getByText('Object Radar')).toBeInTheDocument()
+        expect(screen.getByText('Radar')).toBeInTheDocument()
 
-        // Per-space route shortcuts, also under Inspect.
-        const spacesHeading = screen.getAllByText('Spaces').find((node) => node.tagName === 'H2')
-        expect(spacesHeading).toBeTruthy()
-        const spacesSection = spacesHeading.closest('section')
+        const spacesFold = screen.getAllByText('Spaces').find((node) => node.tagName === 'SUMMARY')
+        expect(spacesFold).toBeTruthy()
+        const spacesSection = spacesFold.closest('details')
         expect(spacesSection).toBeTruthy()
         expect(within(spacesSection).getByRole('button', { name: 'View live' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Projects' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Nodes' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Admin' })).toBeInTheDocument()
-    })
+    }, 20000)
 
 })

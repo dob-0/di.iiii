@@ -78,7 +78,7 @@ describe('AgentsSection', () => {
         render(<AgentsSection />)
 
         await waitFor(() => {
-            expect(screen.getByText(/1 live session · 2 total on this machine/)).toBeTruthy()
+            expect(screen.getByText(/1 live · 2 total/)).toBeTruthy()
         })
         // session node on the map + its checkout node, linked
         expect(screen.getAllByText('Build the agents map').length).toBeGreaterThan(0)

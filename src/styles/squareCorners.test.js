@@ -242,13 +242,12 @@ describe('raw: focus you can see, a name you can read', () => {
     })
 })
 
-describe('preferences draws its chevron, not a glyph Inter lacks', () => {
-    it('draws the header toggle as an SVG chevron, no ▸ or ▾ glyph', () => {
-        const page = read('components/PreferencesPage.jsx')
-        const at = page.indexOf('className="preferences-collapse-toggle"')
+describe('the admin desk draws its marks, not a glyph Inter lacks', () => {
+    it('draws the More mark as an SVG, and uses no ▸ or ▾ glyph', () => {
+        const desk = read('components/preferences/AdminDesk.jsx')
+        expect(desk).not.toMatch(/\u25B8|\u25BE/)
+        const at = desk.indexOf('const MoreMark')
         expect(at).toBeGreaterThan(-1)
-        const button = page.slice(at, page.indexOf('</button>', at))
-        expect(button).not.toMatch(/'\u25B8'|'\u25BE'/)
-        expect(button).toMatch(/<svg [^>]*aria-hidden="true"/)
+        expect(desk.slice(at, at + 400)).toMatch(/<svg [^>]*aria-hidden="true"/)
     })
 })
