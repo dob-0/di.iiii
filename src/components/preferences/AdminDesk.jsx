@@ -26,6 +26,8 @@ import {
 } from './adminWindows.js'
 import useAdminTiles from './useAdminTiles.js'
 import useMonitorSnap from './useMonitorSnap.js'
+import useDeskHistory from './useDeskHistory.js'
+import useBackEntry from '../../hooks/useBackEntry.js'
 import AdminHome from './AdminHome.jsx'
 import { monitorKnowledge } from './monitorKnowledge.js'
 import '../../styles/adminDesk.css'
@@ -212,6 +214,21 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
         setLayout((prev) => openWindow(restrictLayout(prev, allowed), key, { narrow, ...opts }))
     }, [allowed, narrow])
 
+    // Back: every window set is one history entry (useDeskHistory); the key card is one too.
+    const applyKeys = useCallback((keys) => {
+        setLayout((prev) => {
+            let next = restrictLayout(prev, allowed)
+            for (const key of next.open) if (!keys.includes(key)) next = closeWindow(next, key)
+            for (const key of keys) if (!next.open.includes(key)) next = openWindow(next, key, { narrow })
+            return next
+        })
+    }, [allowed, narrow])
+    const deskHistory = useDeskHistory({
+        openKeys: shown.open.filter((key) => kindOf(key)),
+        front: shown.order[shown.order.length - 1] || null,
+        apply: applyKeys
+    })
+
     // /admin#<section> opens that window (on a phone it fills the screen; #monitor-full fills the desk).
     // A #monitor link opens nothing of the Monitor until the server said 200; a 404 opens Spaces and users.
     useEffect(() => {
@@ -219,13 +236,16 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
             const hit = parseAdminHash(window.location.hash)
             if (!hit) return
             if (hit.key === 'monitor' && monitorState === 'pending') return
+            deskHistory.prepareDeepLink()
             if (hit.key === 'monitor' && monitorState === 'no') { open('manage'); return }
             open(hit.key, { full: hit.full })
         }
+        // a hash change that Back or Forward made is already described by its history entry
+        const onHash = () => { if (!window.history.state?.diBack) apply() }
         apply()
-        window.addEventListener('hashchange', apply)
-        return () => window.removeEventListener('hashchange', apply)
-    }, [monitorState, open])
+        window.addEventListener('hashchange', onHash)
+        return () => window.removeEventListener('hashchange', onHash)
+    }, [monitorState, open, deskHistory])
 
     // The desk area: below the bar, edge to edge, on the 12 x 8 unit grid.
     const barRef = useRef(null)
@@ -252,6 +272,7 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
     const [keysOpen, setKeysOpen] = useState(false)
     const findRef = useRef(null)
     const front = shown.order[shown.order.length - 1] || null
+    useBackEntry(keysOpen, () => setKeysOpen(false), { id: 'desk-keys' })
 
     // Keys, from the table in adminWindows.js. Never while typing; the Monitor window keeps /, ? and Esc for itself.
     useEffect(() => {
@@ -259,7 +280,7 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
             const action = adminKeyAction(event)
             if (!action) return
             const monitorFront = front === 'monitor'
-            if (monitorFront && (action === 'help' || action === 'add' || action === 'escape')) return
+            if (monitorFront && !(action === 'escape' && keysOpen) && (action === 'help' || action === 'add' || action === 'escape')) return
             if (action === 'help') { setKeysOpen((v) => !v); return }
             if (action === 'escape') {
                 if (keysOpen) setKeysOpen(false)
@@ -295,7 +316,7 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
                     </span>
                 </div>
                 <div className="admin-bar-right">
-                    <button type="button" className="admin-bar-button" onClick={() => setLayout(closeAll())} disabled={!openKinds.length}>{narrow ? 'Back' : 'Desk'}</button>
+                    <button type="button" className="admin-bar-button" onClick={() => { if (narrow && deskHistory.canStepBack()) deskHistory.stepBack(); else setLayout(closeAll()) }} disabled={!openKinds.length}>{narrow ? 'Back' : 'Desk'}</button>
                     <WindowsMenu kinds={kinds} openKeys={openKinds} onChoose={(key) => open(key)} onCloseAll={() => setLayout(closeAll())} />
                     <Find kinds={kinds} onOpen={(key) => open(key)} inputRef={findRef} />
                     {narrow ? null : <button type="button" className="admin-bar-button" aria-label="Keys" onClick={() => setKeysOpen((v) => !v)}>?</button>}
