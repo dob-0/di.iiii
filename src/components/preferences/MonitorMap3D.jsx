@@ -161,7 +161,7 @@ function Nudge({ labels, onNudge }) {
                 const r = t.getBoundingClientRect()
                 return { id: `tool:${i}`, x: r.left - stage.left + r.width / 2, y: r.top - stage.top + r.height / 2, w: r.width, h: r.height, fixed: true }
             })
-            const moved = nudgeLabels([...items, ...tools])
+            const moved = nudgeLabels([...items, ...tools], { bounds: { width: size.width, height: size.height }, passes: 120, limit: Math.max(size.width, size.height) })
             for (const t of tools) delete moved[t.id]
             onNudge(moved)
         }
