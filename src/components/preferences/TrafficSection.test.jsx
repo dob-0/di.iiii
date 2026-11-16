@@ -35,7 +35,7 @@ describe('TrafficSection', () => {
     it('says so when nothing was counted, and when the counts cannot be read', async () => {
         getSiteStats.mockResolvedValueOnce({ windowDays: 30, totals: {}, byDay: [], topPaths: [], topReferrers: [] })
         const { unmount } = render(<TrafficSection />)
-        await waitFor(() => expect(screen.getByText('No page views counted in this window yet.')).toBeTruthy())
+        await waitFor(() => expect(screen.getByText('No views yet.')).toBeTruthy())
         unmount()
 
         getSiteStats.mockRejectedValueOnce(new Error('Admins only.'))

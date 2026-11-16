@@ -238,12 +238,14 @@ describe('SweepSection', () => {
         expect(screen.getByText('2026-11-06 · trash (idle 31 days)')).toBeInTheDocument()
         expect(screen.getByText('2026-11-06 · keep (published)')).toBeInTheDocument()
         expect(screen.getByText('2026-11-06 trashed sandbox-x')).toBeInTheDocument()
-        expect(screen.getByText('Idle spaces the sweep reaches in the next 14 days')).toBeInTheDocument()
+        expect(screen.getByTitle('Idle spaces the sweep reaches in the next 14 days')).toBeInTheDocument()
     })
 
-    it('says so when nothing comes due', async () => {
-        render(<SweepSection />)
-        expect(await screen.findByText('Nothing comes due in the next 14 days.')).toBeInTheDocument()
+    it('shows no box at all when nothing comes due and nothing was done', async () => {
+        const { container } = render(<SweepSection />)
+        await waitFor(() => expect(screen.queryByLabelText('Loading the sweep')).toBeNull())
+        expect(container.textContent).toBe('')
+        expect(screen.queryByText('Nothing due.')).toBeNull()
     })
 })
 

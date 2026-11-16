@@ -1239,6 +1239,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-29'
     },
     {
+        id: 'admin-desk',
+        category: 'Spaces & access',
+        title: 'The admin desk — windows, keys and where each section went',
+        summary: 'The admin console is a desk: a tile per section, a click opens it as a window; several side by side, remembered on this device.',
+        body: [
+            '/admin opens on the desk. The top row shows what needs you (owner only: the Monitor\u2019s rows, or "All well"), then one tile per section with its live number or state, then Activity. A click on a tile opens that section as a window; open several, drag, resize, maximise, close. The arrangement is remembered per device. On a phone the desk is the tile grid and a window fills the screen, one at a time; Back returns to the desk.',
+            'Keys: Ctrl+` next window, Ctrl+Shift+` previous, M maximise or restore, / find a window, Shift+A arrange all, Esc restore, ? the key card. They are not read while you type. The Windows menu in the top bar reopens a closed one; each window has one \u22ef menu for copy and reload. A "?" on a control explains it, on a tap on the phone too.',
+            'Old links keep working: /admin#manage, #opencall, #monitor, #agents, #visitors, #overview, #inspect, #system, #log, #build, #estate open that window, and #monitor-full opens the Monitor maximised.',
+            { list: [
+                'Spaces and users, Open call, Agents, Visitors: as before (Agents shows each chat\u2019s helpers).',
+                'Status is the old Overview; Scene objects is the old "This scene"; Visitors is "Apps that visit"; Staff tools is "Operator tools"; Machines is the old Estate.',
+                'Switches, Log and Build info came out of "Log and settings": the switches, the runtime log, and the browser and release facts.',
+                'Owner only, after the server answers the Monitor: Monitor, Rules (the standing rules, newest first, the text on a click), Hooks (by event: name, matcher, user or repo) and Requests (the ledger rows, newest first).'
+            ] }
+        ],
+        tags: ['admin', 'desk', 'windows', 'monitor', 'rules', 'hooks', 'requests', 'keys'],
+        updated: '2026-11-16'
+    },
+    {
         id: 'admin-estate',
         category: 'Spaces & access',
         title: 'Machines — the computers behind di.iiii',
@@ -1276,13 +1295,13 @@ export const WIKI_ARTICLES = [
         id: 'monitor-board',
         category: 'Spaces & access',
         title: 'Monitor — everything going on, in one place',
-        summary: 'An owner-only live page: tiers overview, map, a work view with your asks, machines, network, agent sessions, services, pull requests, and your own task and show feeds.',
+        summary: 'An owner-only live page: what needs you first, one strip of vital signs, then Now (agents, your asks, activity), Map and Lists.',
         body: [
             'Monitor, in the admin console, is one live page for everything that is going on: which machines are on the tailnet, whether the tiers answer, who is connected right now in which space or project, which things di.iiii drives are up (lasers, laser desk, show machine, NDI, OSC, visiting apps), which agent sessions are running (every Claude login on this machine), which services run or failed, which pull requests are open, and your own feeds for tasks and shows.',
             'It refreshes live: the server pushes every change, and when that stream is not there the page asks every five seconds instead (the subtitle says "live" or "polling"). A row whose state just changed flashes for two seconds. Select anything to see its details in the inspector; the filter box narrows every block at once; Pause stops the refresh.',
-            'The strip at the top shows each tier: prod, dev and every local di, with its commit, how old the build is, how far behind dev it is, whether it answers, and how many spaces it holds. Amber means drift: a local di that is not on dev\u2019s commit, or a tier behind dev. Three views sit under it. Board is the blocks below. Map draws machines, tiers, spaces and shows as one graph; select a node to see it in the inspector (on a phone it is a grouped list). Work lists your open asks newest first, what each agent is doing, which machines reported lately, and one box to send a new ask: it shows at once and is then confirmed by the server.',
-            'The page opens with one status line in the state colour: "All well", or how many things need you and the worst one ("prod is 1274 behind dev"). Next to it a square blinks on every update and "heard 2 s ago" ticks every second. Tier tiles show the commit big, how far behind dev, and a small line of the last 30 response times. Count tiles show each number with one square per machine, agent or pull request, so 4 of 11 is seen, not read; click one to jump to its panel. A "What changed" column lists the last 50 changes between updates, newest on top (an agent going busy to idle, a tier that stopped answering, a new ask). Selecting anything opens a drawer on the right (a sheet from the bottom on a phone). The Work view has a big ask bar: Enter sends, Shift+Enter is a new line.',
-            'Full screen turns the Monitor into its own page over the admin frame and is remembered per browser; /admin#monitor-full opens it that way. Keys: 1 2 3 switch Board, Map and Work; / filters; f toggles full screen; Esc closes the drawer, then leaves full screen; ? shows the key card. Keys are ignored while you type in a field.',
+            'Under the bar, "Needs you" lists what wants your hand: one row each with what, why in one line, and one button that opens the details. When nothing needs you it says "All well" and when it last checked. The vital strip is one row of chips: dev, prod and this machine (state only), then Machines, Agents, Pull requests, Services, Show gear and People. Click a chip and its list opens in the drawer. Amber means drift: a tier behind dev, or a local di that is not on dev\u2019s commit; a local tree that is not a release build says so quietly.',
+            'Three views: Now is the default, with the agents at work, the ask bar right under them, your open asks and an Activity column (changes since you opened the page, then earlier things the snapshot dates). Map draws one node per space name with the tiers it lives on; a family of more than eight spaces folds into one "15 spaces" node that opens on click or while you filter, and the lines between spaces and tiers show on hover. 2D, 3D and List stay; every name is shown. Lists holds machines (online first, the off ones folded), people, show gear, services (failed first), pull requests and the other addresses we probe.',
+            'Full screen turns the Monitor into its own page over the admin frame and is remembered per browser; /admin#monitor-full opens it that way. Keys: 1 2 3 switch Now, Map and Lists; / filters; r reads the server again; f toggles full screen; Esc closes the drawer, then leaves full screen; ? shows the key card. Keys are ignored while you type in a field.',
             { list: [
                 'Each block is collected on its own: a missing tool greys that block and says why, the rest keep moving.',
                 'Your feeds live in ~/.di/monitor.json: each one has a panel ("tasks" or "shows") and a command, a file or a URL to read. Only that file decides what runs, never a request.',

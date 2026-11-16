@@ -22,7 +22,7 @@ const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
 const ASKS_MAX = 100
-const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows']
+const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'rules', 'hooks', 'skills', 'spool']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
 

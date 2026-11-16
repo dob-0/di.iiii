@@ -46,7 +46,7 @@ describe('EstateSection', () => {
         getEstateMap.mockRejectedValue(Object.assign(new Error('nope'), { status: 404 }))
         render(<EstateSection />)
         await waitFor(() => {
-            expect(screen.getByText(/No map on this host/i)).toBeTruthy()
+            expect(screen.getByText(/No map here/i)).toBeTruthy()
         })
         expect(document.querySelector('iframe')).toBeNull()
     })
@@ -55,9 +55,9 @@ describe('EstateSection', () => {
         getEstateMap.mockRejectedValue(Object.assign(new Error('disk on fire'), { status: 500 }))
         render(<EstateSection />)
         await waitFor(() => {
-            expect(screen.getByText(/Could not read the map/i)).toBeTruthy()
+            expect(screen.getByText(/Map unreadable/i)).toBeTruthy()
         })
-        expect(screen.queryByText(/No map on this host/i)).toBeNull()
+        expect(screen.queryByText(/No map here/i)).toBeNull()
     })
 
     it('shows where the file came from and when, so a stale map is visible', async () => {

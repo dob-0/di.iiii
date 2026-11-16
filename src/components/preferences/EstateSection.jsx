@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getEstateMap, hasServerApi } from '../../services/apiClient.js'
-import { MetricCard, ModuleSection } from './PreferencesShared.jsx'
+import { Hint, MetricCard, ModuleSection } from './PreferencesShared.jsx'
 
 // The estate map — every machine, address and store the studio owns — is
 // authored in the PRIVATE di-atlas repo. di.iiii is public, so the file is never
@@ -88,20 +88,20 @@ export default function EstateSection() {
 
             {status === 'error' && error?.kind === 'absent' ? (
                 <p className="preferences-empty">
-                    No map on this host. It is written in the private <code>di-atlas</code> repo and placed here out of
-                    band — set <code>ESTATE_MAP_PATH</code> to <code>map/estate-map.html</code> from that checkout.
+                    No map here.
+                    <Hint text="It is written in the private di-atlas repo and placed on the host out of band: set ESTATE_MAP_PATH to map/estate-map.html from that checkout." />
                 </p>
             ) : null}
 
             {status === 'error' && error?.kind === 'no-server' ? (
-                <p className="preferences-empty">No server API configured, so there is nothing to read the map from.</p>
+                <p className="preferences-empty">No server.</p>
             ) : null}
 
             {status === 'error' && error?.kind === 'failed' ? (
-                <p className="preferences-empty">Could not read the map — {error.message || 'unknown error'}.</p>
+                <p className="preferences-empty">Map unreadable.</p>
             ) : null}
 
-            {status === 'loading' ? <p className="preferences-empty">Reading the atlas…</p> : null}
+            {status === 'loading' ? <p className="preferences-empty">Reading…</p> : null}
         </ModuleSection>
     )
 }

@@ -1,6 +1,6 @@
 import React from 'react'
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import PreferencesPage from './PreferencesPage.jsx'
 
 // UX audit 2026-10-28 (F045, F108, F109, F110, F150): the admin console was
@@ -32,55 +32,57 @@ vi.mock('../hooks/usePreferencesData.js', () => ({
         activityPreviewItems: [],
         managementButtons: [
             { key: 'edit-lock', kind: 'switch', label: 'Lock editing', checked: false, detail: 'When on, nobody can change this space. Turn it off to undo.', onClick: toggleEditLock },
-            { key: 'publish', label: 'Publish to the server now', onClick: vi.fn() }
+            { key: 'publish', label: 'Publish now', onClick: vi.fn() }
         ]
     })
 }))
 
 const renderAdmin = () => render(<PreferencesPage onNavigateToEditor={vi.fn()} />)
+const openTile = (label) => fireEvent.click(screen.getByRole('button', { name: new RegExp(`^${label}:`) }))
 
 describe('admin console in plain words', () => {
+    beforeEach(() => { window.localStorage.clear(); window.location.hash = '' })
+
     it('names the page by its job, not "Ops Graph", "Socket", "Estate" or "Inspect"', () => {
         renderAdmin()
-        expect(screen.getByRole('heading', { level: 1, name: 'Spaces and who can see them' })).toBeInTheDocument()
+        expect(screen.getByText('Admin')).toBeInTheDocument()
         const text = document.body.textContent
         for (const word of ['Ops Graph', 'Admin Management', 'Socket', 'Estate', 'Inspect', 'Back to Editor']) {
             expect(text).not.toContain(word)
         }
-        expect(screen.getByRole('button', { name: 'Back to the space' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Space' })).toBeInTheDocument()
     })
 
-    it('the nav is plain labels in two named groups, no glyph icons', () => {
+    it('the desk is plain tiles in two named groups, no glyph icons', () => {
         const { container } = renderAdmin()
-        const nav = screen.getByRole('navigation', { name: 'Admin sections' })
-        expect(within(nav).getByText('Spaces and people')).toBeInTheDocument()
-        expect(within(nav).getByText('Operator tools (staff)')).toBeInTheDocument()
-        expect(within(nav).getByRole('button', { name: 'Machines' })).toBeInTheDocument()
+        expect(screen.getByRole('region', { name: 'Manage' })).toBeInTheDocument()
+        expect(screen.getByRole('region', { name: 'Staff tools' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /^Machines:/ })).toBeInTheDocument()
         expect(container.querySelectorAll('.preferences-nav-glyph')).toHaveLength(0)
     })
 
     it('a quick action that is on or off is a switch with its state, who it touches, and the same click to undo', () => {
         renderAdmin()
-        fireEvent.click(screen.getByRole('button', { name: 'Overview' }))
-        expect(screen.getByRole('heading', { level: 1, name: 'Operator tools' })).toBeInTheDocument()
+        openTile('Status')
         const lock = screen.getByRole('switch', { name: 'Lock editing' })
         expect(lock).toHaveAttribute('aria-checked', 'false')
         expect(lock).toHaveTextContent('Off')
-        expect(lock).toHaveAccessibleDescription('When on, nobody can change this space. Turn it off to undo.')
+        // the sentence is a hint on the switch (tooltip + focusable), not text on the page
+        expect(screen.getByRole('button', { name: 'About Lock editing' })).toHaveAttribute('title', 'When on, nobody can change this space. Turn it off to undo.')
         fireEvent.click(lock)
         expect(toggleEditLock).toHaveBeenCalledTimes(1)
         // Publish is an action, so it stays a button named as one.
-        expect(screen.getByRole('button', { name: 'Publish to the server now' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Publish now' })).toBeInTheDocument()
     })
 
-    it('Refresh loads the list again and keeps the open section, without reloading the page', () => {
+    it('Reload loads the list again and keeps the window open, without reloading the page', () => {
         renderAdmin()
-        fireEvent.click(screen.getByRole('button', { name: 'Machines' }))
-        fireEvent.click(screen.getByRole('button', { name: 'Spaces and users' }))
+        openTile('Spaces and users')
+        expect(screen.getByText('manage list')).toBeInTheDocument()
         const before = manageMounts.mock.calls.length
-        fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+        fireEvent.click(screen.getByRole('button', { name: 'More' }))
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Reload' }))
         expect(manageMounts.mock.calls.length).toBe(before + 1)
         expect(screen.getByText('manage list')).toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Spaces and users' })).toHaveAttribute('aria-current', 'page')
     })
 })

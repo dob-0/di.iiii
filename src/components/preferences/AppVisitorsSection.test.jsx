@@ -34,7 +34,7 @@ describe('AppVisitorsSection', () => {
         expect(screen.getByText('ops@example.org').getAttribute('href')).toBe('mailto:ops@example.org')
         expect(screen.getByText(/3 today · 12 in 7 days/)).toBeTruthy()
         expect(screen.queryByText('browser')).toBeNull()
-        expect(screen.getByText('Browsers · today')).toBeTruthy()
+        expect(screen.getByText('Browsers')).toBeTruthy()
     })
 
     it('blocks a program after confirming, and shows it blocked', async () => {
@@ -51,7 +51,7 @@ describe('AppVisitorsSection', () => {
     it('says a local install keeps no guest book', async () => {
         getAppVisitors.mockResolvedValue({ enabled: false, agents: [], totals: {} })
         render(<AppVisitorsSection />)
-        await waitFor(() => expect(screen.getByText(/A local install keeps no guest book/)).toBeTruthy())
+        await waitFor(() => expect(screen.getByTitle(/A local install keeps no guest book/)).toBeTruthy())
     })
 
     // The contact is text a stranger typed into a header.

@@ -33,3 +33,29 @@ describe('MonitorWorkspace asks', () => {
         expect(screen.queryByText('light the hall')).toBeNull()
     })
 })
+
+describe('MonitorWorkspace helpers', () => {
+    const chat = { sessionId: 'aaaa1111-2222-3333-4444-555566667777', title: 'Desk work', status: 'busy', lastActivity: new Date().toISOString(), cwd: '/home/x' }
+    const since = new Date(Date.now() - 5 * 60000).toISOString()
+
+    it('lists a chat\'s helpers under its card, and a helper of an unlisted chat in its own group', () => {
+        const helpers = [
+            { parent: 'aaaa1111', label: 'Back fix round 1', busy: true, since },
+            { parent: 'bbbb2222', label: 'Old audit', busy: false, since },
+        ]
+        const { container } = render(<MonitorWorkspace asks={{ ok: true, rows: [] }} agents={{ rows: [chat] }} helpers={helpers} onPick={() => {}} />)
+        const card = container.querySelector('[data-box="agent"]')
+        expect(card.textContent).toContain('Back fix round 1')
+        expect(card.textContent).not.toContain('Old audit')
+        const group = container.querySelector('[data-box="helpers"]')
+        expect(group.textContent).toContain('Old audit')
+        expect(group.textContent).toContain('of bbbb2222')
+        expect(container.textContent).toContain('Helpers')
+    })
+
+    it('shows no helper lines and no Helpers group when no machine reports any', () => {
+        const { container } = render(<MonitorWorkspace asks={{ ok: true, rows: [] }} agents={{ rows: [chat] }} onPick={() => {}} />)
+        expect(container.querySelector('[data-helper]')).toBeNull()
+        expect(container.querySelector('[data-box="helpers"]')).toBeNull()
+    })
+})

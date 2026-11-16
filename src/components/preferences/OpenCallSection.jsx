@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { deleteOpenCallApplication, listOpenCallApplications, updateOpenCallApplication } from '../../services/openCallApi.js'
-import { MetricCard, ModuleSection } from './PreferencesShared.jsx'
+import { ModuleSection } from './PreferencesShared.jsx'
 
 const OPEN_CALLS = [
     { id: 'beyond_form', label: 'Beyond Form — Gyumri Art Week' }
@@ -195,15 +195,9 @@ export default function OpenCallSection() {
                 </button>
             }
         >
-            <div className="preferences-status-grid">
-                <MetricCard label="New" value={counts.new || 0} tone={counts.new ? 'accent' : 'default'} />
-                <MetricCard label="Shortlist" value={counts.shortlist || 0} tone="warning" />
-                <MetricCard label="Accepted" value={counts.accepted || 0} tone="success" />
-                <MetricCard label="Declined" value={counts.declined || 0} />
-            </div>
             <div className="preferences-command-grid">
                 <button type="button" className={`toggle-button${filter === '' ? ' active' : ''}`} onClick={() => setFilter('')}>
-                    All
+                    All {applications?.length || 0}
                 </button>
                 {STATUSES.map((s) => (
                     <button
@@ -212,7 +206,7 @@ export default function OpenCallSection() {
                         className={`toggle-button${filter === s ? ' active' : ''}`}
                         onClick={() => setFilter(s)}
                     >
-                        {s}
+                        {s} {counts[s] || 0}
                     </button>
                 ))}
             </div>

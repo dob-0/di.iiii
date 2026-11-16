@@ -1,0 +1,456 @@
+/* The admin desk (components/preferences/AdminDesk.jsx): /admin as tiles and windows in di.iiii's own
+   window style. Born on the spine: tokens from base.css only, square corners, no glow, no shadow, font
+   sizes from --di-text-1..7, motion from --di-motion-*, looping motion only on the live mark and none
+   under prefers-reduced-motion. The window frame (.raw-window) comes from raw.css on the other desks;
+   admin does not load that sheet (it declares :root), so the few rules a window needs are here,
+   scoped under .admin-desk. */
+
+.admin-desk {
+    --admin-line: rgba(255, 255, 255, 0.1);
+    --admin-bar: 48px;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: block;
+    background: var(--di-black);
+    color: var(--di-text);
+    font-family: var(--di-sans);
+}
+
+/* ─── The slim bar ─────────────────────────────────────────── */
+.admin-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    min-height: var(--admin-bar);
+    padding: 0 var(--di-space-3);
+    background: var(--di-surface);
+    border-bottom: 1px solid var(--admin-line);
+}
+
+.admin-bar-left, .admin-bar-right { display: flex; align-items: center; gap: var(--di-space-3); min-width: 0; }
+
+.admin-bar-title {
+    font-size: var(--di-text-4);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-cyan);
+}
+
+.admin-chip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--di-space-2);
+    padding: var(--di-space-1) var(--di-space-2);
+    background: var(--di-surface-3);
+    border: 1px solid var(--admin-line);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    color: var(--ui-text-muted);
+}
+
+.admin-chip b { font-weight: 700; color: var(--di-text); }
+button.admin-chip { font: inherit; cursor: pointer; }
+button.admin-chip:hover, button.admin-chip[aria-pressed="true"] { border-color: var(--di-cyan); }
+.admin-chip.tone-success { border-color: rgba(var(--di-success-rgb), 0.5); }
+.admin-chip.tone-warning { border-color: rgba(var(--di-warning-rgb), 0.5); }
+.admin-chip.tone-danger { border-color: rgba(var(--di-danger-rgb), 0.5); }
+
+.admin-live { display: inline-flex; align-items: center; gap: var(--di-space-2); font-size: var(--di-text-3); color: var(--ui-text-muted); }
+.admin-live i { width: 8px; height: 8px; background: var(--di-warning); }
+.admin-live.is-live { color: rgb(var(--di-live-rgb)); }
+.admin-live.is-live i { background: rgb(var(--di-live-rgb)); }
+
+@media (prefers-reduced-motion: no-preference) {
+    .admin-live.is-live i { animation: admin-live-pulse 2.4s ease-in-out infinite; }
+}
+@keyframes admin-live-pulse { 50% { opacity: 0.35; } }
+
+.admin-bar-button {
+    min-height: 32px;
+    padding: 0 var(--di-space-3);
+    background: transparent;
+    border: 1px solid var(--admin-line);
+    border-radius: 0;
+    color: var(--di-text);
+    font: inherit;
+    font-size: var(--di-text-3);
+    cursor: pointer;
+    transition: border-color var(--di-motion-fast), background var(--di-motion-fast);
+}
+.admin-bar-button:hover:not(:disabled), .admin-bar-button:focus-visible { border-color: var(--di-cyan); background: rgba(var(--di-cyan-rgb), 0.08); outline: none; }
+.admin-bar-button:disabled { opacity: 0.4; cursor: default; }
+.admin-more { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; padding: 0; }
+
+.admin-find-input {
+    width: 120px;
+    min-height: 32px;
+    padding: 0 var(--di-space-2);
+    background: var(--di-surface-2);
+    border: 1px solid var(--admin-line);
+    border-radius: 0;
+    color: var(--di-text);
+    font: inherit;
+    font-size: var(--di-text-3);
+}
+.admin-find-input:focus { border-color: var(--di-cyan); outline: none; }
+.admin-find, .admin-menu-anchor { position: relative; display: inline-block; }
+
+/* The menus sit on the desk edge-to-edge with one line, no shadow. */
+.admin-menu {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    background: var(--di-surface-2);
+    border: 1px solid var(--admin-line);
+}
+.admin-menu-right { left: auto; right: 0; }
+.admin-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-height: 36px;
+    padding: 0 var(--di-space-3);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: var(--di-text);
+    font: inherit;
+    font-size: var(--di-text-3);
+    text-align: left;
+    cursor: pointer;
+}
+.admin-menu-item:hover:not(:disabled), .admin-menu-item:focus-visible { background: rgba(var(--di-cyan-rgb), 0.1); outline: none; }
+.admin-menu-item:disabled { opacity: 0.4; cursor: default; }
+.admin-menu-sep { border-top: 1px solid var(--admin-line); }
+.admin-menu-mark { width: 8px; height: 8px; border: 1px solid var(--ui-text-muted); }
+.admin-menu-item.is-on .admin-menu-mark { background: var(--di-cyan); border-color: var(--di-cyan); }
+
+.admin-keycard {
+    position: fixed;
+    top: calc(var(--admin-bar) + 8px);
+    right: var(--di-space-3);
+    z-index: 400;
+    min-width: 280px;
+    padding: var(--di-space-3);
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-cyan);
+    font-size: var(--di-text-3);
+}
+.admin-keycard-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--di-space-2); font-weight: 600; }
+.admin-keycard-row { display: flex; gap: var(--di-space-3); padding: var(--di-space-1) 0; }
+.admin-keycard-row kbd { min-width: 96px; font-family: var(--di-mono); color: var(--di-cyan); }
+
+/* ─── The tiles: the desk home ─────────────────────────────── */
+.admin-home {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: auto;
+    padding: var(--di-space-4);
+}
+.admin-group + .admin-group { margin-top: var(--di-space-4); }
+
+/* The home fills the desk: needs on top, the tiles stretch to the height that is left, Activity beside. */
+.admin-home { display: flex; flex-direction: column; gap: var(--di-space-4); }
+.admin-home.has-monitor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: stretch;
+}
+.admin-home[hidden] { display: none; }
+.admin-home-needs { grid-column: 1 / -1; }
+.admin-home-tiles { display: flex; flex-direction: column; min-height: 0; min-width: 0; flex: 1 1 auto; }
+.admin-home-tiles .admin-group { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
+.admin-home-tiles .admin-tiles { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-content: stretch; }
+.admin-home-tiles .admin-tile { flex: 1 1 160px; min-height: 110px; display: flex; }
+.admin-home-tiles .admin-tile-open { flex: 1 1 auto; }
+.admin-home-activity { min-height: 0; overflow: auto; }
+.admin-home-activity .monitor-activity { position: static; max-height: none; height: 100%; }
+@media (max-width: 599px) {
+    .admin-home.has-monitor { display: flex; }
+    .admin-home > *, .admin-home-tiles .admin-tiles { flex-shrink: 0; flex-grow: 0; }
+    .admin-home-tiles .admin-group { flex: 0 0 auto; }
+    .admin-home-tiles .admin-tile { flex-basis: calc(50% - var(--di-space-3)); min-height: 120px; }
+}
+
+/* ─── Knowledge windows: rows you read ─────────────────────── */
+.admin-knowledge { display: flex; flex-direction: column; gap: var(--di-space-3); position: relative; }
+.admin-knowledge-head { display: flex; flex-wrap: wrap; gap: var(--di-space-2); align-items: center; }
+.admin-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.admin-row {
+    display: flex; align-items: center; gap: var(--di-space-3); width: 100%; min-height: 44px; text-align: left;
+    padding: var(--di-space-2) var(--di-space-3); background: var(--di-surface); border: 1px solid var(--pref-border, var(--admin-line));
+    color: inherit; font: inherit; cursor: pointer; box-sizing: border-box;
+}
+.admin-row.is-static { cursor: default; }
+.admin-row:hover:not(.is-static), .admin-row[aria-pressed="true"] { border-color: var(--di-cyan); }
+.admin-row-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-row-id { font-family: var(--di-mono); color: var(--di-cyan); flex: 0 0 auto; }
+.admin-row-meta { flex: 0 0 auto; font-family: var(--di-mono); font-size: var(--di-text-3); color: var(--ui-text-muted); }
+.admin-square { flex: 0 0 auto; width: 10px; height: 10px; background: var(--admin-tone, var(--ui-text-muted)); }
+.admin-square.tone-success { --admin-tone: var(--di-success); }
+.admin-square.tone-warning { --admin-tone: var(--di-warning); }
+.admin-square.tone-danger { --admin-tone: var(--di-danger); }
+.admin-rule-text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 var(--di-space-3); }
+.admin-note-list { list-style: none; margin: 0; padding: 0; }
+.admin-note { padding: var(--di-space-2) var(--di-space-3); border-left: 4px solid var(--di-warning); background: var(--di-surface); }
+
+.admin-group-title {
+    margin: 0 0 var(--di-space-3);
+    font-size: var(--di-text-3);
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ui-text-muted);
+}
+.admin-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--di-space-3); }
+
+.admin-tile { position: relative; min-width: 0; }
+.admin-tile-open {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: var(--di-space-1);
+    width: 100%;
+    min-height: 132px;
+    padding: var(--di-space-4) var(--di-space-3) var(--di-space-3) var(--di-space-4);
+    background: var(--di-surface);
+    border: 1px solid var(--admin-line);
+    border-radius: 0;
+    color: var(--di-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--di-motion-fast), background var(--di-motion-fast);
+}
+.admin-tile-open:hover, .admin-tile-open:focus-visible { border-color: var(--di-cyan); background: var(--di-surface-3); outline: none; }
+/* The state colour: a 4px band on the leading edge. */
+.admin-tile-band { position: absolute; top: 0; bottom: 0; left: 0; width: 4px; background: var(--admin-tone, var(--admin-line)); }
+.admin-tile.tone-success { --admin-tone: var(--di-success); }
+.admin-tile.tone-warning { --admin-tone: var(--di-warning); }
+.admin-tile.tone-danger { --admin-tone: var(--di-danger); }
+.admin-tile-name { font-size: var(--di-text-3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ui-text-muted); }
+.admin-tile-value { align-self: center; font-family: var(--di-mono); font-size: var(--di-text-7); font-weight: 700; line-height: 1; overflow-wrap: anywhere; }
+.admin-tile-word { font-size: var(--di-text-3); color: var(--ui-text-muted); }
+.admin-tile-hint { position: absolute; top: var(--di-space-2); right: var(--di-space-2); }
+
+/* ─── The "?" hint, wherever a sentence used to be ─────────── */
+.preferences-hint { position: relative; display: inline-flex; vertical-align: middle; margin-left: var(--di-space-2); }
+.preferences-hint-button {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--admin-line, var(--pref-border));
+    border-radius: 0;
+    color: var(--ui-text-muted);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    line-height: 1;
+    cursor: help;
+}
+.preferences-hint-button:hover, .preferences-hint-button:focus-visible { color: var(--di-cyan); border-color: var(--di-cyan); outline: none; }
+.preferences-hint-card {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 250;
+    width: max-content;
+    max-width: min(260px, 70vw);
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-surface-2);
+    border: 1px solid var(--di-cyan);
+    color: var(--di-text);
+    font-family: var(--di-sans);
+    font-size: var(--di-text-3);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    text-align: left;
+    line-height: 1.4;
+}
+.admin-tile-hint .preferences-hint-card { left: auto; right: 0; }
+
+/* ─── A window ─────────────────────────────────────────────── */
+.admin-desk .raw-window {
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: var(--di-black);
+    border: 0;
+    border-right: 1px solid var(--admin-line);
+    border-bottom: 1px solid var(--admin-line);
+    border-radius: 0;
+    box-shadow: none;
+}
+.admin-desk .raw-window-header {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-2);
+    min-height: 32px;
+    padding: 0 0 0 var(--di-space-3);
+    background: var(--di-surface);
+    border-bottom: 1px solid var(--admin-line);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+.admin-desk .raw-window-header h3 {
+    margin: 0;
+    font-size: var(--di-text-3);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.admin-desk .raw-window-header:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: -1px; }
+.admin-desk .raw-window-actions { display: flex; }
+.admin-desk .raw-window-actions button {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    color: var(--ui-text-muted);
+    font: inherit;
+    cursor: pointer;
+}
+.admin-desk .raw-window-actions button:hover, .admin-desk .raw-window-actions button:focus-visible { color: var(--di-cyan); background: rgba(var(--di-cyan-rgb), 0.08); outline: none; }
+.admin-desk .raw-window-body { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+.admin-desk .raw-window-handle { position: absolute; z-index: 12; touch-action: none; }
+.admin-desk .raw-window-handle.n, .admin-desk .raw-window-handle.s { left: 8px; right: 8px; height: 6px; cursor: ns-resize; }
+.admin-desk .raw-window-handle.e, .admin-desk .raw-window-handle.w { top: 8px; bottom: 8px; width: 6px; cursor: ew-resize; }
+.admin-desk .raw-window-handle.n { top: 0; }
+.admin-desk .raw-window-handle.s { bottom: 0; }
+.admin-desk .raw-window-handle.e { right: 0; }
+.admin-desk .raw-window-handle.w { left: 0; }
+.admin-desk .raw-window-handle.ne, .admin-desk .raw-window-handle.nw, .admin-desk .raw-window-handle.sw { width: 12px; height: 12px; }
+.admin-desk .raw-window-handle.ne { top: 0; right: 0; cursor: nesw-resize; }
+.admin-desk .raw-window-handle.nw { top: 0; left: 0; cursor: nwse-resize; }
+.admin-desk .raw-window-handle.sw { bottom: 0; left: 0; cursor: nesw-resize; }
+.admin-desk .raw-window-resizer {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    z-index: 13;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    background: linear-gradient(135deg, transparent 52%, rgba(var(--di-cyan-rgb), 0.5) 52%, rgba(var(--di-cyan-rgb), 0.5) 62%, transparent 62%, transparent 72%, rgba(var(--di-cyan-rgb), 0.5) 72%, rgba(var(--di-cyan-rgb), 0.5) 82%, transparent 82%);
+    border: 0;
+    border-radius: 0;
+    cursor: nwse-resize;
+    touch-action: none;
+}
+
+.admin-window { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.admin-strip {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2) var(--di-space-3);
+    border-bottom: 1px solid var(--admin-line);
+    background: var(--di-surface-2);
+}
+.admin-chips { display: flex; flex-wrap: wrap; gap: var(--di-space-2); min-width: 0; }
+.admin-window-scroll { flex: 1 1 auto; align-content: start; min-height: 0; overflow: auto; padding: var(--di-space-3); }
+
+/* Inside a window, the page's own header furniture is gone; the section's own title row stays one line. */
+.admin-window .preferences-module { padding: var(--di-space-3); }
+.admin-window .preferences-module-header { margin-bottom: var(--di-space-3); }
+
+/* ─── Switches as tiles with a state colour ────────────────── */
+.admin-window .preferences-switch { display: flex; flex-direction: row; align-items: stretch; gap: var(--di-space-1); min-width: 0; }
+.admin-window .preferences-switch .preferences-switch-control { flex: 1 1 auto; min-width: 0; }
+.admin-window .preferences-switch .preferences-hint { flex: none; align-self: center; margin: 0; }
+.admin-window .preferences-switch-control { border-left: 4px solid var(--pref-border); }
+.admin-window .preferences-switch-control.is-on { border-left-color: var(--di-success); background: rgba(var(--di-success-rgb), 0.06); }
+.admin-window .preferences-switch-control.is-warning { border-left-color: var(--di-warning); background: rgba(var(--di-warning-rgb), 0.06); }
+
+/* ─── Phone: the tiles are the desk; a window fills the screen ─ */
+@media (max-width: 599px) {
+    .admin-bar { flex-wrap: wrap; padding: var(--di-space-2) var(--di-space-3); }
+    .admin-bar-right { flex-wrap: wrap; }
+    .admin-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-bar-button, .admin-find-input, .admin-more { min-height: 44px; }
+    .admin-more { min-width: 44px; }
+    .admin-find-input { width: 96px; }
+    .admin-desk .raw-window-actions button { min-width: 44px; min-height: 44px; }
+    .admin-desk .raw-window-header { min-height: 44px; }
+    .preferences-hint-button { min-width: 44px; min-height: 44px; }
+    .admin-tile-open { min-height: 120px; }
+    .admin-tile-name { padding-right: 48px; }
+    .admin-menu { min-width: 170px; }
+    .admin-desk .raw-window-resizer, .admin-desk .raw-window-handle { display: none; }
+    .admin-menu-item { min-height: 44px; }
+    .admin-desk .admin-window button, .admin-desk .admin-window input, .admin-desk .admin-window select, .admin-desk .admin-window summary { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-bar-button, .admin-tile-open { transition: none; }
+}
+
+.admin-home[hidden] { display: none; }
+
+/* ─── The drawer: a detail that opens on selection ─────────── */
+/* A window is transformed, so a fixed child is placed against the window itself. */
+.admin-drawer {
+    position: fixed;
+    top: 76px;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    width: min(440px, 100%);
+    background: var(--di-surface-2);
+    border-left: 1px solid var(--di-cyan);
+}
+.admin-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2); padding: var(--di-space-2) var(--di-space-3); border-bottom: 1px solid var(--admin-line); }
+.admin-drawer-head h3 { margin: 0; min-width: 0; overflow: hidden; font-size: var(--di-text-4); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.admin-drawer-body { flex: 1 1 auto; display: grid; align-content: start; gap: var(--di-space-3); min-height: 0; overflow: auto; padding: var(--di-space-3); }
+@media (max-width: 599px) { .admin-drawer { top: 96px; } }
+
+/* ─── A fold: facts closed until asked for ─────────────────── */
+.admin-fold { background: var(--di-surface); border: 1px solid var(--pref-border, var(--admin-line)); }
+.admin-fold > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 44px;
+    padding: 0 var(--di-space-3);
+    font-size: var(--di-text-3);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.admin-fold > summary:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: -1px; }
+.admin-fold-count { font-family: var(--di-mono); color: var(--ui-text-muted); }
+.admin-fold-body { padding: var(--di-space-3); border-top: 1px solid var(--admin-line); }
+
+/* knowledge lists stay inside their window at any width (500 px measured 1106 px wide: long rule and request rows pushed
+   the flex items to their min-content width). min-width 0 lets the row titles take their ellipsis instead. */
+.admin-knowledge, .admin-knowledge-set, .admin-rows { min-width: 0; max-width: 100%; }

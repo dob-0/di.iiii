@@ -492,12 +492,12 @@ export function usePreferencesData({ onNavigateToEditor }) {
         // On/off settings are switches (kind 'switch'): the label is what the
         // switch does, `checked` its state, `detail` who or what it touches
         // (UX audit 2026-10-28, F108). Actions stay buttons named as actions.
-        { key: 'admin-mode', kind: 'switch', label: 'Admin tools in the editor', checked: Boolean(ui?.isAdminMode), detail: 'Only for you, on this screen.', onClick: () => ui?.setIsAdminMode?.((prev) => !prev) },
-        { key: 'ui-visible', kind: 'switch', label: 'Show the editor panels', checked: Boolean(ui?.isUiVisible), detail: 'Only for you, on this screen.', onClick: () => ui?.setIsUiVisible?.((prev) => !prev) },
-        { key: 'ui-default', kind: 'switch', label: 'Panels shown when the editor opens', checked: Boolean(ui?.uiDefaultVisible), onClick: () => ui?.toggleUiDefaultVisible?.() },
+        { key: 'admin-mode', kind: 'switch', label: 'Admin tools', checked: Boolean(ui?.isAdminMode), detail: 'Only for you, on this screen.', onClick: () => ui?.setIsAdminMode?.((prev) => !prev) },
+        { key: 'ui-visible', kind: 'switch', label: 'Editor panels', checked: Boolean(ui?.isUiVisible), detail: 'Only for you, on this screen.', onClick: () => ui?.setIsUiVisible?.((prev) => !prev) },
+        { key: 'ui-default', kind: 'switch', label: 'Panels at open', checked: Boolean(ui?.uiDefaultVisible), onClick: () => ui?.toggleUiDefaultVisible?.() },
         { key: 'interaction', label: `Mode ${ui?.interactionMode === 'edit' ? 'Edit' : 'Navigate'}`, isActive: ui?.interactionMode === 'edit', onClick: () => ui?.toggleInteractionMode?.() },
-        { key: 'selection-lock', kind: 'switch', label: 'Lock what is selected', checked: Boolean(ui?.isSelectionLocked), variant: 'warning', detail: 'Clicks in the scene stop changing the selection.', onClick: () => ui?.setIsSelectionLocked?.((prev) => !prev) },
-        { key: 'offline', kind: 'switch', label: 'Work offline', checked: Boolean(sync?.isOfflineMode), variant: 'warning', detail: 'Changes stay on this computer until you turn it off.', onClick: () => sync?.setOfflineMode?.(!sync?.isOfflineMode) },
+        { key: 'selection-lock', kind: 'switch', label: 'Lock selection', checked: Boolean(ui?.isSelectionLocked), variant: 'warning', detail: 'Clicks in the scene stop changing the selection.', onClick: () => ui?.setIsSelectionLocked?.((prev) => !prev) },
+        { key: 'offline', kind: 'switch', label: 'Offline', checked: Boolean(sync?.isOfflineMode), variant: 'warning', detail: 'Changes stay on this computer until you turn it off.', onClick: () => sync?.setOfflineMode?.(!sync?.isOfflineMode) },
         {
             key: 'live-sync',
             kind: 'switch',
@@ -510,9 +510,9 @@ export function usePreferencesData({ onNavigateToEditor }) {
             disabled: !sync?.liveSyncFeatureEnabled || !sync?.canSyncServerScene
         },
         { key: 'edit-lock', kind: 'switch', label: 'Lock editing', checked: Boolean(sync?.isReadOnly), variant: 'warning', detail: 'When on, nobody can change this space. Turn it off to undo.', onClick: toggleEditLock, disabled: !sync?.supportsServerSpaces || !sync?.spaceId },
-        { key: 'copy-space-link', label: 'Copy Space Link', onClick: () => actions?.handleCopySpaceLink?.(sync?.spaceId), disabled: !actions?.handleCopySpaceLink || !sync?.spaceId },
-        { key: 'reload-server', label: 'Reload Server', onClick: () => actions?.handleReloadFromServer?.(), disabled: !actions?.handleReloadFromServer || !sync?.canPublishToServer },
-        { key: 'publish', label: 'Publish to the server now', variant: 'success', onClick: () => actions?.handlePublishToServer?.(), disabled: !actions?.handlePublishToServer || !sync?.canPublishToServer }
+        { key: 'copy-space-link', label: 'Copy link', onClick: () => actions?.handleCopySpaceLink?.(sync?.spaceId), disabled: !actions?.handleCopySpaceLink || !sync?.spaceId },
+        { key: 'reload-server', label: 'Reload', title: 'Reload this space from the server', onClick: () => actions?.handleReloadFromServer?.(), disabled: !actions?.handleReloadFromServer || !sync?.canPublishToServer },
+        { key: 'publish', label: 'Publish now', variant: 'success', onClick: () => actions?.handlePublishToServer?.(), disabled: !actions?.handlePublishToServer || !sync?.canPublishToServer }
     ]
 
     const ambientLightSummary = sceneSettings?.ambientLight

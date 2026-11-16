@@ -59,6 +59,302 @@ export const parseLedgerOpen = (text) => {
     return rows
 }
 
+// ---- rules, hooks and helpers: what guards and drives the agents --------------
+// Read from this machine's own files; the panels carry titles, dates, counts and a short body cap, never a
+// command line, an env value or a path beyond a file's basename. A file that cannot be read says so ({ ok:false, why }).
+
+const RULE_TEXT_MAX = 400
+const RULES_MAX = 80
+const HOOKS_MAX = 120
+const HELPERS_MAX = 40
+const HELPER_RECENT_MS = 15 * 60 * 1000
+const HELPER_BUSY_MS = 2 * 60 * 1000
+const INTERPRETERS = new Set(['python', 'python3', 'node', 'bash', 'sh', 'zsh', 'env', 'nice', 'timeout'])
+
+const mtimeIso = (file) => { try { return fs.statSync(file).mtime.toISOString() } catch { return null } }
+
+/** One row per `# ` heading of a CLAUDE.md text: { title, date|null, lines, text }, in file order. */
+export const parseRules = (text) => {
+    const rows = []
+    let current = null
+    for (const line of String(text || '').split(/\r?\n/)) {
+        const m = /^# +(.+?)\s*$/.exec(line)
+        if (m) {
+            current = { title: m[1].slice(0, 160), date: /\b(\d{4}-\d\d-\d\d)\b/.exec(m[1])?.[1] || null, body: [] }
+            rows.push(current)
+        } else if (current) current.body.push(line)
+    }
+    return rows.slice(0, RULES_MAX).map((r) => {
+        while (r.body.length && !r.body[r.body.length - 1].trim()) r.body.pop()
+        return { title: r.title, date: r.date, lines: r.body.length, text: r.body.join('\n').trim().slice(0, RULE_TEXT_MAX) }
+    })
+}
+
+export const rulesPanel = ({ home = os.homedir() } = {}) => {
+    const file = path.join(home, '.claude', 'CLAUDE.md')
+    try {
+        const rows = parseRules(fs.readFileSync(file, 'utf8'))
+        return { ok: true, file: '~/.claude/CLAUDE.md', changed: mtimeIso(file), count: rows.length, rows }
+    } catch { return { ok: false, why: 'the standing-rules file could not be read here' } }
+}
+
+/** The tool and its subcommand only: `python3 -I -B /x/di-hooks resume-guard 2>/dev/null` -> `di-hooks resume-guard`. */
+export const hookName = (command) => {
+    // quotes are stripped from every word first, so a quoted `bash -c "KEY=value …"` cannot carry a value past skipEnv
+    const words = String(command || '').trim().split(/\s+/).map((w) => w.replace(/^["']+|["']+$/g, '')).filter(Boolean)
+    let i = 0
+    const skipEnv = () => { while (i < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[i])) i += 1 } // env values never leave
+    skipEnv()
+    while (i < words.length && INTERPRETERS.has(path.basename(words[i]))) {
+        i += 1
+        while (i < words.length && (words[i].startsWith('-') || /^\d+$/.test(words[i]))) i += 1 // flags and their numbers (nice -n 19)
+        skipEnv()
+    }
+    if (i >= words.length) return 'unknown'
+    const tool = path.basename(words[i]).slice(0, 60)
+    if (!tool || tool.includes('=')) return 'unknown' // never a value, whatever the shape
+    const sub = words[i + 1]
+    return /^[a-z][a-z0-9-]{0,30}$/.test(sub || '') ? `${tool} ${sub}` : tool
+}
+
+/** hook rows { scope, event, matcher|null, name } from a parsed settings object. */
+export const hookRows = (settings, scope) => {
+    const rows = []
+    const hooks = settings && typeof settings === 'object' ? settings.hooks : null
+    if (!hooks || typeof hooks !== 'object') return rows
+    for (const [event, groups] of Object.entries(hooks)) {
+        for (const group of Array.isArray(groups) ? groups : []) {
+            for (const hook of Array.isArray(group?.hooks) ? group.hooks : []) {
+                rows.push({ scope, event: String(event).slice(0, 40), matcher: typeof group.matcher === 'string' ? group.matcher.slice(0, 80) : null, name: hookName(hook?.command) })
+            }
+        }
+    }
+    return rows
+}
+
+export const hooksPanel = ({ home = os.homedir(), root = null } = {}) => {
+    const rows = []
+    const files = [[path.join(home, '.claude', 'settings.json'), 'user'], ...(root ? [[path.join(root, '.claude', 'settings.json'), 'repo']] : [])]
+    let userOk = false
+    let changed = null
+    for (const [file, scope] of files) {
+        try {
+            rows.push(...hookRows(JSON.parse(fs.readFileSync(file, 'utf8')), scope))
+            if (scope === 'user') { userOk = true; changed = mtimeIso(file) }
+        } catch { /* a repo without settings is normal; the user file is checked below */ }
+    }
+    if (!userOk) return { ok: false, why: 'the user hook settings could not be read here' }
+    const events = {}
+    for (const r of rows) events[r.event] = (events[r.event] || 0) + 1
+    return { ok: true, changed, count: rows.length, events, rows: rows.slice(0, HOOKS_MAX) }
+}
+
+// ---- spool: the owner's messages waiting for the ledger ----------------------
+// A machine without the ledger spools each message to ~/di-health/intake/FALLBACK.md; aylmo's ledger-relay takes the
+// whole file (rename, one ledger row per entry, delete the taken copy), so an entry still in the file is still waiting
+// and the file carries no per-entry "taken" mark (decisions/2026-11-05-ledger-relay.md).
+
+const SPOOL_MAX = 100
+const SPOOL_TEXT_MAX = 400
+const SPOOL_HEAD = /^- \[(\d{2})-(\d{2}) (\d{2}):(\d{2})\]\s+session\s+(\S+)/
+
+/** Entries of a FALLBACK.md text: header line + `  words:` line. The year comes from `fileTime` (the file's mtime). Newest first, last 100. */
+export const parseSpool = (text, fileTime = Date.now()) => {
+    const ref = new Date(fileTime)
+    const refYear = ref.getFullYear()
+    const entries = []
+    let cur = null
+    for (const line of String(text || '').split(/\r?\n/)) {
+        const m = SPOOL_HEAD.exec(line)
+        if (m) {
+            const [, mo, d, h, mi, id] = m
+            let at = new Date(refYear, Number(mo) - 1, Number(d), Number(h), Number(mi))
+            // an entry dated after the file's own time belongs to the year before (December entries read in January)
+            if (at.getTime() > ref.getTime() + 24 * 3600 * 1000) at = new Date(refYear - 1, Number(mo) - 1, Number(d), Number(h), Number(mi))
+            cur = Number.isNaN(at.getTime()) ? null : { at: at.toISOString(), session: id.slice(0, 8), text: '' }
+            if (cur) entries.push(cur)
+            continue
+        }
+        const w = /^\s+words:\s?(.*)$/.exec(line)
+        if (w && cur && !cur.text) cur.text = w[1].trim().slice(0, SPOOL_TEXT_MAX)
+    }
+    return entries.sort((a, b) => b.at.localeCompare(a.at)).slice(0, SPOOL_MAX)
+}
+
+export const spoolPanel = ({ home = os.homedir() } = {}) => {
+    const file = path.join(home, 'di-health', 'intake', 'FALLBACK.md')
+    let text
+    let stat
+    try { text = fs.readFileSync(file, 'utf8'); stat = fs.statSync(file) } catch (e) { return { ok: false, why: e?.code === 'ENOENT' ? 'no spool file on this machine' : 'the spool file could not be read here' } }
+    const rows = parseSpool(text, stat.mtimeMs)
+    return { ok: true, file: '~/di-health/intake/FALLBACK.md', count: rows.length, rows }
+}
+
+// ---- skills: what the agents can be told to do --------------------------------
+// Only the SKILL.md frontmatter `name:` and `description:` (description capped); the body is never read past the
+// closing `---` and never sent, and no path leaves except a plugin's name.
+
+const SKILLS_MAX = 300
+const SKILL_DESC_MAX = 200
+const SKILL_NAME_MAX = 80
+
+const unquote = (v) => v.replace(/^(["'])(.*)\1$/, '$2')
+
+/** { name, description } from a SKILL.md text's frontmatter only; null when there is none or no name. */
+export const parseSkillFrontmatter = (text) => {
+    const lines = String(text || '').split(/\r?\n/)
+    if (lines[0]?.trim() !== '---') return null
+    const end = lines.indexOf('---', 1)
+    if (end < 0) return null
+    const fm = lines.slice(1, end)
+    const field = (key) => {
+        const i = fm.findIndex((l) => l.startsWith(`${key}:`))
+        if (i < 0) return ''
+        let v = fm[i].slice(key.length + 1).trim()
+        if (/^[>|][+-]?$/.test(v)) { // folded or literal block: the indented lines that follow
+            const parts = []
+            for (let j = i + 1; j < fm.length && /^\s+\S/.test(fm[j]); j += 1) parts.push(fm[j].trim())
+            v = parts.join(' ')
+        } else if (v === '') { // plain multi-line scalar
+            const parts = []
+            for (let j = i + 1; j < fm.length && /^\s+\S/.test(fm[j]); j += 1) parts.push(fm[j].trim())
+            v = parts.join(' ')
+        }
+        return unquote(v).replace(/\s+/g, ' ').trim()
+    }
+    const name = field('name').slice(0, SKILL_NAME_MAX)
+    if (!name) return null
+    return { name, description: field('description').slice(0, SKILL_DESC_MAX) }
+}
+
+const SKILL_DEPTH_MAX = 6
+const SKILL_DIRS_MAX = 2000
+
+/**
+ * SKILL.md at any depth under `dir` (a skill folder may sit in a group folder). Symlinks are followed once per real
+ * folder (a loop is skipped), hidden and node_modules folders are skipped, and the walk stops at SKILL_DIRS_MAX folders.
+ */
+const readSkillDir = (dir, scope, plugin) => {
+    const rows = []
+    const seen = new Set()
+    let visited = 0
+    const walk = (current, depth) => {
+        if (visited >= SKILL_DIRS_MAX || rows.length >= SKILLS_MAX) return
+        let real
+        try { real = fs.realpathSync(current) } catch { return }
+        if (seen.has(real)) return
+        seen.add(real)
+        visited += 1
+        let entries
+        try { entries = fs.readdirSync(current, { withFileTypes: true }) } catch { return }
+        let text = null
+        try { text = fs.readFileSync(path.join(current, 'SKILL.md'), 'utf8') } catch { /* no skill here */ }
+        if (text !== null && depth > 0) {
+            const fm = parseSkillFrontmatter(text.slice(0, 8192))
+            if (fm) rows.push({ scope, plugin, name: fm.name, description: fm.description })
+        }
+        if (depth >= SKILL_DEPTH_MAX) return
+        for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+            if (e.name.startsWith('.') || e.name === 'node_modules') continue
+            const child = path.join(current, e.name)
+            let isDir = e.isDirectory()
+            if (!isDir && e.isSymbolicLink()) { try { isDir = fs.statSync(child).isDirectory() } catch { isDir = false } }
+            if (isDir) walk(child, depth + 1)
+        }
+    }
+    walk(dir, 0)
+    return rows
+}
+
+/** skills/*\/SKILL.md directories under ~/.claude/plugins/cache, with the plugin's name from the path (depth <= 5). */
+const pluginSkillDirs = (cache) => {
+    const found = []
+    const walk = (dir, parts, depth) => {
+        let entries
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return }
+        for (const e of entries) {
+            if (!e.isDirectory()) continue
+            if (e.name === 'skills') { found.push({ dir: path.join(dir, e.name), parts }); continue }
+            if (depth < 5 && e.name !== 'node_modules' && !e.name.startsWith('.')) walk(path.join(dir, e.name), [...parts, e.name], depth + 1)
+        }
+    }
+    walk(cache, [], 0)
+    return found
+}
+
+/** One row per skill: user, repo and plugin scope; a plugin cached in several versions counts once. */
+export const skillsPanel = ({ home = os.homedir(), root = null } = {}) => {
+    const claude = path.join(home, '.claude')
+    try { fs.accessSync(claude, fs.constants.R_OK) } catch { return { ok: false, why: 'the skills folder could not be read here' } }
+    // one row per name in a scope: the same skill often sits in two folders (a copy at the top and one inside a pack);
+    // 63 rows held 12 such doubles on the reporting machine. The first found (shallowest) stays.
+    const once = (list) => { const names = new Set(); return list.filter((r) => !names.has(r.name) && names.add(r.name)) }
+    const rows = once(readSkillDir(path.join(claude, 'skills'), 'user', null))
+    if (root) rows.push(...once(readSkillDir(path.join(root, '.claude', 'skills'), 'repo', null)))
+    const seen = new Set()
+    for (const { dir, parts } of pluginSkillDirs(path.join(claude, 'plugins', 'cache'))) {
+        // cache/<marketplace>/<plugin>/<version>/skills: the plugin is the folder two above `skills` when there are 3 parts
+        const plugin = (parts.length >= 3 ? parts[parts.length - 2] : parts[parts.length - 1] || 'plugin').slice(0, 60)
+        for (const r of readSkillDir(dir, 'plugin', plugin)) {
+            const key = `${r.plugin}\u0000${r.name}`
+            if (seen.has(key)) continue
+            seen.add(key)
+            rows.push(r)
+        }
+    }
+    const counts = { user: 0, repo: 0, plugin: 0 }
+    for (const r of rows) counts[r.scope] += 1
+    return { ok: true, count: rows.length, counts, rows: rows.slice(0, SKILLS_MAX) }
+}
+
+/**
+ * Helpers (subagents) of the chats here, from file names, sizes-free mtimes and the small meta file's type and label only;
+ * never a transcript. Recent = touched within 15 min; busy = touched within 2 min. The model is not in these files: owed.
+ */
+export const readHelpers = ({ home = os.homedir(), now = Date.now() } = {}) => {
+    const rows = []
+    const base = path.join(home, '.claude', 'projects')
+    let projects
+    try { projects = fs.readdirSync(base) } catch { return rows }
+    for (const project of projects) {
+        let sessions
+        try { sessions = fs.readdirSync(path.join(base, project)) } catch { continue }
+        for (const session of sessions) {
+            const dir = path.join(base, project, session, 'subagents')
+            let names
+            try { names = fs.readdirSync(dir) } catch { continue }
+            for (const name of names) {
+                if (!/^agent-[A-Za-z0-9]+\.jsonl$/.test(name)) continue
+                let mtime
+                try { mtime = fs.statSync(path.join(dir, name)).mtimeMs } catch { continue }
+                if (now - mtime > HELPER_RECENT_MS) continue
+                let meta = {}
+                try { meta = JSON.parse(fs.readFileSync(path.join(dir, name.replace(/\.jsonl$/, '.meta.json')), 'utf8')) } catch { /* no label */ }
+                rows.push({
+                    parent: session.slice(0, 8),
+                    label: typeof meta.description === 'string' ? meta.description.slice(0, 80) : null,
+                    type: typeof meta.agentType === 'string' ? meta.agentType.slice(0, 40) : null,
+                    model: null,
+                    since: new Date(mtime).toISOString(),
+                    busy: now - mtime <= HELPER_BUSY_MS
+                })
+            }
+        }
+    }
+    return rows.sort((a, b) => b.since.localeCompare(a.since)).slice(0, HELPERS_MAX)
+}
+
+/** Adds rules, hooks, skills and the agents' helpers to a snapshot's panels (a copy). */
+export const withKnowledge = (snapshot, { home = os.homedir(), root = null, now = Date.now() } = {}) => {
+    const panels = { ...(snapshot?.panels || {}) }
+    panels.rules = rulesPanel({ home })
+    panels.hooks = hooksPanel({ home, root })
+    panels.skills = skillsPanel({ home, root })
+    panels.spool = spoolPanel({ home })
+    if (panels.agents && typeof panels.agents === 'object') panels.agents = { ...panels.agents, helpers: readHelpers({ home, now }) }
+    return { ...(snapshot || {}), panels }
+}
+
 export const buildBody = ({ host, snapshot, asks = [], commit = null, builtAt = null }) => ({
     host,
     panels: snapshot?.panels || {},
@@ -178,7 +474,7 @@ export const runMonitor = async (args, deps = {}) => {
     for (;;) {
         round += 1
         let snapshot
-        try { snapshot = await collect() } catch (error) { fail(`could not read this machine: ${String(error?.message || error).split('\n')[0]}`); return 1 }
+        try { snapshot = withKnowledge(await collect(), { home, root: repoRoot() }) } catch (error) { fail(`could not read this machine: ${String(error?.message || error).split('\n')[0]}`); return 1 }
         const { commit, builtAt } = await release()
         const asks = parseLedgerOpen(await ledger())
         const result = await sendOnce({ target, token, body: buildBody({ host: String(hostname).split('.')[0], snapshot, asks, commit, builtAt }), fetchImpl })
