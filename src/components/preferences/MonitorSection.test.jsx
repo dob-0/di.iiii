@@ -539,10 +539,21 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
         expect(page().getAttribute('data-monitor-full')).toBe('on')
         expect(page().classList.contains('is-full')).toBe(true)
         expect(window.localStorage.getItem('di.monitor.full')).toBe('1')
-        expect(window.location.hash).toBe('#monitor-full')
+        // the full screen is a history entry that carries #monitor-full (Back leaves it), pushed one tick after the click
+        await waitFor(() => expect(window.location.hash).toBe('#monitor-full'))
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(page().getAttribute('data-monitor-full')).toBe('off')
         expect(window.localStorage.getItem('di.monitor.full')).toBe('0')
+        await waitFor(() => expect(window.location.hash).not.toBe('#monitor-full'))
+    })
+
+    it('Back leaves full screen, then the inspector, and the page stays', async () => {
+        await open()
+        fireEvent.click(screen.getByText('Full screen'))
+        await waitFor(() => expect(window.location.hash).toBe('#monitor-full'))
+        await act(async () => { window.history.back(); await new Promise((r) => setTimeout(r, 50)) })
+        expect(page().getAttribute('data-monitor-full')).toBe('off')
+        expect(page()).toBeTruthy()
     })
 
     it('starts in full screen from #monitor-full or from what the browser remembered', async () => {

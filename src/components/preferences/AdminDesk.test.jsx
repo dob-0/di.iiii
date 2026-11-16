@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 
 vi.mock('./AdminWindowBodies.jsx', () => ({
     default: ({ kind }) => <div data-testid={`body-${kind}`}>body {kind}</div>,
@@ -60,6 +60,7 @@ describe('AdminDesk', () => {
         expect(screen.getByRole('dialog', { name: 'Spaces and users' })).toBeTruthy()
         cleanup()
         window.localStorage.clear()
+        window.location.hash = '#monitor-full' // the desk moves the hash to the front window it opened
         desk({ monitorState: 'yes' })
         expect(screen.getByRole('dialog', { name: 'Monitor' })).toBeTruthy()
     })
@@ -96,11 +97,12 @@ describe('AdminDesk', () => {
         expect(screen.queryByRole('dialog')).toBeNull()
     })
 
-    it('a phone shows one window at a time', () => {
+    it('a phone shows one window at a time; its Back button is the browser Back', async () => {
         window.innerWidth = 390
         desk()
         fireEvent.click(screen.getByRole('button', { name: /^Log:/ }))
         fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+        await waitFor(() => expect(screen.queryAllByRole('dialog')).toHaveLength(0))
         fireEvent.click(screen.getByRole('button', { name: /^Machines:/ }))
         expect(screen.getAllByRole('dialog')).toHaveLength(1)
     })

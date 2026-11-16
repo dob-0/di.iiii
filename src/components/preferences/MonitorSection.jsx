@@ -9,6 +9,7 @@ import { NeedsYou, VitalStrip } from './MonitorVital.jsx'
 import MonitorActivity from './MonitorActivity.jsx'
 import MonitorLists from './MonitorLists.jsx'
 import MonitorDrawer from './MonitorDrawer.jsx'
+import useBackEntry from '../../hooks/useBackEntry.js'
 import { needsYou, vitalChips, seedActivity } from './monitorCalm.js'
 import { monitorKnowledge } from './monitorKnowledge.js'
 import { HooksBody, RequestsBody, RulesBody, SkillsBody } from './KnowledgeWindows.jsx'
@@ -243,8 +244,15 @@ export default function MonitorSection({ onStats }) {
     const setFullScreen = useCallback((on) => {
         setFull(on)
         try { window.localStorage.setItem(FULL_KEY, on ? '1' : '0') } catch { /* storage blocked: the choice lasts this visit */ }
-        try { window.history.replaceState(null, '', on ? '#monitor-full' : '#monitor') } catch { /* no history here */ }
     }, [])
+
+    // Back: each place is one history entry, so Back leaves full screen, closes the inspector or the keys card, and the
+    // Map or Lists tab goes back to Now, before it leaves the Monitor (it used to replace the entry and leave /admin).
+    // Leaving by the page's own button or Esc removes the entry again. See src/hooks/useBackEntry.js.
+    useBackEntry(full, () => setFullScreen(false), { id: 'monitor-full', url: '#monitor-full' })
+    useBackEntry(!!selected, () => setSelected(null), { id: 'monitor-inspector' })
+    useBackEntry(keysOpen, () => setKeysOpen(false), { id: 'monitor-keys' })
+    useBackEntry(tab !== 'now', () => setTab('now'), { id: 'monitor-tab' })
 
     // keys: ignored while typing in a field (Esc still works: it closes things)
     useEffect(() => {
