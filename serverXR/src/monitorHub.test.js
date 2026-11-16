@@ -39,6 +39,13 @@ describe('rules and hooks panels', () => {
     expect(kept.rules.rows[0].text).toHaveLength(400)
     expect(kept.hooks).toEqual(hooks)
   })
+  it('spool panel is kept, an unknown panel still dropped', () => {
+    const store = createReportStore({ now: () => 1000 })
+    const spool = { ok: true, file: '~/di-health/intake/FALLBACK.md', count: 1, rows: [{ at: '2026-11-16T01:00:00.000Z', session: 'abcd1234', text: 'made-up' }] }
+    store.put({ host: 'a', panels: { spool, spoolish: { ok: true, rows: [] } } })
+    expect(Object.keys(store.list()[0].panels)).toEqual(['spool'])
+    expect(store.list()[0].panels.spool).toEqual(spool)
+  })
   it('skills panel is kept', () => {
     const store = createReportStore({ now: () => 1000 })
     const skills = { ok: true, count: 1, counts: { user: 1, repo: 0, plugin: 0 }, rows: [{ scope: 'user', plugin: null, name: 'n', description: 'd' }] }

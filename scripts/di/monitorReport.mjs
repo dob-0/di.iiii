@@ -149,6 +149,47 @@ export const hooksPanel = ({ home = os.homedir(), root = null } = {}) => {
     return { ok: true, changed, count: rows.length, events, rows: rows.slice(0, HOOKS_MAX) }
 }
 
+// ---- spool: the owner's messages waiting for the ledger ----------------------
+// A machine without the ledger spools each message to ~/di-health/intake/FALLBACK.md; aylmo's ledger-relay takes the
+// whole file (rename, one ledger row per entry, delete the taken copy), so an entry still in the file is still waiting
+// and the file carries no per-entry "taken" mark (decisions/2026-11-05-ledger-relay.md).
+
+const SPOOL_MAX = 100
+const SPOOL_TEXT_MAX = 400
+const SPOOL_HEAD = /^- \[(\d{2})-(\d{2}) (\d{2}):(\d{2})\]\s+session\s+(\S+)/
+
+/** Entries of a FALLBACK.md text: header line + `  words:` line. The year comes from `fileTime` (the file's mtime). Newest first, last 100. */
+export const parseSpool = (text, fileTime = Date.now()) => {
+    const ref = new Date(fileTime)
+    const refYear = ref.getFullYear()
+    const entries = []
+    let cur = null
+    for (const line of String(text || '').split(/\r?\n/)) {
+        const m = SPOOL_HEAD.exec(line)
+        if (m) {
+            const [, mo, d, h, mi, id] = m
+            let at = new Date(refYear, Number(mo) - 1, Number(d), Number(h), Number(mi))
+            // an entry dated after the file's own time belongs to the year before (December entries read in January)
+            if (at.getTime() > ref.getTime() + 24 * 3600 * 1000) at = new Date(refYear - 1, Number(mo) - 1, Number(d), Number(h), Number(mi))
+            cur = Number.isNaN(at.getTime()) ? null : { at: at.toISOString(), session: id.slice(0, 8), text: '' }
+            if (cur) entries.push(cur)
+            continue
+        }
+        const w = /^\s+words:\s?(.*)$/.exec(line)
+        if (w && cur && !cur.text) cur.text = w[1].trim().slice(0, SPOOL_TEXT_MAX)
+    }
+    return entries.sort((a, b) => b.at.localeCompare(a.at)).slice(0, SPOOL_MAX)
+}
+
+export const spoolPanel = ({ home = os.homedir() } = {}) => {
+    const file = path.join(home, 'di-health', 'intake', 'FALLBACK.md')
+    let text
+    let stat
+    try { text = fs.readFileSync(file, 'utf8'); stat = fs.statSync(file) } catch (e) { return { ok: false, why: e?.code === 'ENOENT' ? 'no spool file on this machine' : 'the spool file could not be read here' } }
+    const rows = parseSpool(text, stat.mtimeMs)
+    return { ok: true, file: '~/di-health/intake/FALLBACK.md', count: rows.length, rows }
+}
+
 // ---- skills: what the agents can be told to do --------------------------------
 // Only the SKILL.md frontmatter `name:` and `description:` (description capped); the body is never read past the
 // closing `---` and never sent, and no path leaves except a plugin's name.
@@ -186,16 +227,42 @@ export const parseSkillFrontmatter = (text) => {
     return { name, description: field('description').slice(0, SKILL_DESC_MAX) }
 }
 
+const SKILL_DEPTH_MAX = 6
+const SKILL_DIRS_MAX = 2000
+
+/**
+ * SKILL.md at any depth under `dir` (a skill folder may sit in a group folder). Symlinks are followed once per real
+ * folder (a loop is skipped), hidden and node_modules folders are skipped, and the walk stops at SKILL_DIRS_MAX folders.
+ */
 const readSkillDir = (dir, scope, plugin) => {
-    let names
-    try { names = fs.readdirSync(dir) } catch { return [] }
     const rows = []
-    for (const entry of names.sort()) {
-        let text
-        try { text = fs.readFileSync(path.join(dir, entry, 'SKILL.md'), 'utf8') } catch { continue }
-        const fm = parseSkillFrontmatter(text.slice(0, 8192))
-        if (fm) rows.push({ scope, plugin, name: fm.name, description: fm.description })
+    const seen = new Set()
+    let visited = 0
+    const walk = (current, depth) => {
+        if (visited >= SKILL_DIRS_MAX || rows.length >= SKILLS_MAX) return
+        let real
+        try { real = fs.realpathSync(current) } catch { return }
+        if (seen.has(real)) return
+        seen.add(real)
+        visited += 1
+        let entries
+        try { entries = fs.readdirSync(current, { withFileTypes: true }) } catch { return }
+        let text = null
+        try { text = fs.readFileSync(path.join(current, 'SKILL.md'), 'utf8') } catch { /* no skill here */ }
+        if (text !== null && depth > 0) {
+            const fm = parseSkillFrontmatter(text.slice(0, 8192))
+            if (fm) rows.push({ scope, plugin, name: fm.name, description: fm.description })
+        }
+        if (depth >= SKILL_DEPTH_MAX) return
+        for (const e of entries.sort((a, b) => (a.name < b.name ? -1 : 1))) {
+            if (e.name.startsWith('.') || e.name === 'node_modules') continue
+            const child = path.join(current, e.name)
+            let isDir = e.isDirectory()
+            if (!isDir && e.isSymbolicLink()) { try { isDir = fs.statSync(child).isDirectory() } catch { isDir = false } }
+            if (isDir) walk(child, depth + 1)
+        }
     }
+    walk(dir, 0)
     return rows
 }
 
@@ -219,8 +286,11 @@ const pluginSkillDirs = (cache) => {
 export const skillsPanel = ({ home = os.homedir(), root = null } = {}) => {
     const claude = path.join(home, '.claude')
     try { fs.accessSync(claude, fs.constants.R_OK) } catch { return { ok: false, why: 'the skills folder could not be read here' } }
-    const rows = readSkillDir(path.join(claude, 'skills'), 'user', null)
-    if (root) rows.push(...readSkillDir(path.join(root, '.claude', 'skills'), 'repo', null))
+    // one row per name in a scope: the same skill often sits in two folders (a copy at the top and one inside a pack);
+    // 63 rows held 12 such doubles on the reporting machine. The first found (shallowest) stays.
+    const once = (list) => { const names = new Set(); return list.filter((r) => !names.has(r.name) && names.add(r.name)) }
+    const rows = once(readSkillDir(path.join(claude, 'skills'), 'user', null))
+    if (root) rows.push(...once(readSkillDir(path.join(root, '.claude', 'skills'), 'repo', null)))
     const seen = new Set()
     for (const { dir, parts } of pluginSkillDirs(path.join(claude, 'plugins', 'cache'))) {
         // cache/<marketplace>/<plugin>/<version>/skills: the plugin is the folder two above `skills` when there are 3 parts
@@ -280,6 +350,7 @@ export const withKnowledge = (snapshot, { home = os.homedir(), root = null, now 
     panels.rules = rulesPanel({ home })
     panels.hooks = hooksPanel({ home, root })
     panels.skills = skillsPanel({ home, root })
+    panels.spool = spoolPanel({ home })
     if (panels.agents && typeof panels.agents === 'object') panels.agents = { ...panels.agents, helpers: readHelpers({ home, now }) }
     return { ...(snapshot || {}), panels }
 }
