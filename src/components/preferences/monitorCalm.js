@@ -83,7 +83,7 @@ export const vitalChips = (snap, host = snap?.host) => {
         out.push({ id: 'agents', label: 'Agents', value: p.agents.ok ? `${p.agents.live} · ${p.agents.busy} busy` : dash, tone: blocked ? 'warning' : 'accent', target: { kind: 'vital', id: 'agents' } })
     }
     if (p.pullRequests) {
-        out.push({ id: 'prs', label: 'Pull requests', value: p.pullRequests.ok ? String(p.pullRequests.open) : dash, tone: 'accent', target: { kind: 'vital', id: 'prs' } })
+        out.push({ id: 'prs', label: 'PRs', value: p.pullRequests.ok ? String(p.pullRequests.open) : dash, tone: 'accent', target: { kind: 'vital', id: 'prs' } })
     }
     if (p.services) {
         const total = rows(p.services).length

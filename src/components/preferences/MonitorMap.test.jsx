@@ -110,7 +110,7 @@ describe('MonitorMap views', () => {
         render(<MonitorMap map={map()} onPick={() => {}} />)
         expect(document.querySelector('[data-monitor-map="graph"]')).toBeTruthy()
         expect(document.querySelectorAll('[data-map-node]').length).toBe(8)
-        expect(document.querySelectorAll('.monitor-edge').length).toBe(3) // the holds line (space to show) is hidden until hover
+        expect(document.querySelectorAll('.monitor-edge').length).toBe(4) // the holds line (space to its tier) is drawn too: every node shows its parent link
     })
 
     it('toggle 2D / 3D / List switches and remembers per browser', async () => {
@@ -140,9 +140,17 @@ describe('MonitorMap views', () => {
         expect(document.querySelector('[data-monitor-map="list"]')).toBeTruthy()
         expect(document.querySelector('svg')).toBeNull()
         unmount()
+        window.localStorage.setItem('di.monitor.map.view', '3d')
+        render(<MonitorMap map={map()} onPick={() => {}} narrow />)
+        expect(document.querySelector('[data-monitor-map="3d"]')).toBeTruthy()
+    })
+
+    it('the phone has no 2D map (7 px text); a stored 2D choice falls back to List', () => {
         window.localStorage.setItem('di.monitor.map.view', '2d')
         render(<MonitorMap map={map()} onPick={() => {}} narrow />)
-        expect(document.querySelector('[data-monitor-map="graph"]')).toBeTruthy()
+        expect([...document.querySelectorAll('[data-map-view]')].map((b) => b.getAttribute('data-map-view'))).toEqual(['3d', 'list'])
+        expect(document.querySelector('[data-monitor-map="list"]')).toBeTruthy()
+        expect(document.querySelector('[data-monitor-map="graph"]')).toBeNull()
     })
 
     it('hover lights the node, its neighbours and edges, and dims the rest', () => {
@@ -153,7 +161,7 @@ describe('MonitorMap views', () => {
         expect(document.querySelector('[data-map-node="machine:aylmo"]').classList.contains('is-dim')).toBe(false)
         expect(document.querySelector('[data-map-node="space:platina"]').classList.contains('is-dim')).toBe(false)
         expect(document.querySelectorAll('.monitor-edge.is-lit').length).toBe(2)
-        expect(document.querySelectorAll('.monitor-edge.is-dim').length).toBe(1)
+        expect(document.querySelectorAll('.monitor-edge.is-dim').length).toBe(2)
         expect(document.querySelector('.monitor-tip')).toBeNull() // a short label is not cut: no tip
         fireEvent.mouseLeave(document.querySelector('[data-map-node="tier:dev"]'))
         expect(document.querySelectorAll('.is-dim').length).toBe(0)
@@ -161,11 +169,13 @@ describe('MonitorMap views', () => {
         expect(document.querySelector('.monitor-tip')).toBeTruthy() // a cut label gets its full name
     })
 
-    it('holds lines appear when their node is hovered', () => {
+    it('every holds line (the link to its tier) is drawn at fit and lights on hover', () => {
         render(<MonitorMap map={map()} onPick={() => {}} />)
-        const before = document.querySelectorAll('.monitor-edge').length
+        const before = document.querySelectorAll('.monitor-edge.kind-holds').length
+        expect(before).toBeGreaterThan(0)
         fireEvent.mouseEnter(document.querySelector('[data-map-node="space:platina"]'))
-        expect(document.querySelectorAll('.monitor-edge').length).toBe(before + 1)
+        expect(document.querySelectorAll('.monitor-edge.kind-holds').length).toBe(before)
+        expect(document.querySelectorAll('.monitor-edge.kind-holds.is-lit').length).toBe(1)
     })
 
     it('a family of spaces folds into one group node that opens on click, and the filter opens it', () => {

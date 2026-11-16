@@ -246,7 +246,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         expect(document.querySelector('.monitor-vital [data-tier-id]')).toBeTruthy() // the strip stays on every tab
         expect(document.querySelector('[data-monitor-map="graph"]')).toBeTruthy()
         expect(document.querySelectorAll('[data-map-node]').length).toBe(6)
-        expect(document.querySelectorAll('.monitor-edge').length).toBe(2) // runs and works-on; holds only on hover
+        expect(document.querySelectorAll('.monitor-edge').length).toBe(4) // runs, works-on and the 2 holds (every node shows its link to its tier)
         fireEvent.click(document.querySelector('[data-map-node="space:platina"]'))
         expect(screen.getByText('Inspector — platina')).toBeTruthy()
         expect(screen.getByText('warn')).toBeTruthy()
