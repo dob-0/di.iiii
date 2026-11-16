@@ -68,6 +68,13 @@ describe('groupMap', () => {
         expect(visibleEdges(edges, 'a').map((e) => e.kind)).toEqual(['holds', 'runs', 'works-on'])
         expect(visibleEdges(edges, 'd').map((e) => e.kind)).toEqual(['runs', 'works-on'])
     })
+
+    it('holdsMax: a small map draws every holds line (each node shows its tier link); a big one keeps focus-only', () => {
+        const edges = [{ from: 'a', to: 'b', kind: 'holds' }, { from: 'a', to: 'c', kind: 'holds' }]
+        expect(visibleEdges(edges, null, 12)).toHaveLength(2)
+        expect(visibleEdges(edges, null, 1)).toHaveLength(0)
+        expect(visibleEdges(edges, 'b', 1)).toHaveLength(1)
+    })
 })
 
 describe('nudgeLabels', () => {

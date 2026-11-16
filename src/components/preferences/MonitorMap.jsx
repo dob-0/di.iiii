@@ -17,6 +17,8 @@ const LIVE_EDGES = new Set(['runs', 'serves'])
 const PHONE_QUERY = '(max-width: 600px)'
 const VIEW_KEY = 'di.monitor.map.view'
 const VIEWS = [['2d', '2D'], ['3d', '3D'], ['list', 'List']]
+// the 2D map is a desk view: its 150 px cards shrink to 7 px text on a phone, so a phone gets 3D and List only
+const PHONE_VIEWS = VIEWS.filter(([id]) => id !== '2d')
 const MIN_ZOOM = 0.25
 const MAX_ZOOM = 6
 
@@ -191,7 +193,7 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
     const near = focus ? neighbours.get(focus) || new Set() : null
     const hot = (id) => !focus || id === focus || near.has(id)
     const hovered = hover ? layout.nodes.find((n) => n.id === hover) : null
-    const edgesShown = visibleEdges(layout.edges, focus)
+    const edgesShown = visibleEdges(layout.edges, focus, 12)
 
     return (
         <div className="monitor-map-stage">
@@ -217,8 +219,7 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
                     })}
                 </g>
                 <g className="monitor-hub" aria-hidden="true">
-                    <rect x="-46" y="-20" width="92" height="40" className="monitor-hub-box" />
-                    <text x="0" y="5" textAnchor="middle" className="monitor-hub-label">di.iiii</text>
+                    <rect x="-8" y="-8" width="16" height="16" className="monitor-hub-box" />
                 </g>
                 {layout.nodes.map((n) => {
                     const p = layout.pos.get(n.id)
@@ -278,7 +279,8 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
     }, [onPick])
     const fold = expanded.length && !query.trim() ? () => setExpanded([]) : null
     const [stored, setStored] = useState(readView)
-    const view = stored || (narrow ? 'list' : '2d')
+    const views = narrow ? PHONE_VIEWS : VIEWS
+    const view = views.some(([id]) => id === stored) ? stored : (narrow ? 'list' : '2d')
     const choose = (v) => { setStored(v); writeView(v) }
     const rootRef = useRef(null)
     useFillHeight(rootRef, view)
@@ -288,7 +290,7 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
     return (
         <div className="monitor-map" data-monitor-map-view={view} ref={rootRef}>
             <div className="monitor-map-views" role="group" aria-label="Map view">
-                {VIEWS.map(([id, label]) => (
+                {views.map(([id, label]) => (
                     <button key={id} type="button" data-map-view={id} className={`monitor-map-view${view === id ? ' is-active' : ''}`}
                         aria-pressed={view === id} onClick={() => choose(id)}>{label}</button>
                 ))}

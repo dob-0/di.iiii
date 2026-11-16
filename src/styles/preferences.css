@@ -1545,7 +1545,7 @@
 .monitor-map-svg:active { cursor: grabbing; }
 .monitor-ring { fill: none; stroke: var(--pref-border); stroke-width: 1; }
 .monitor-hub-line { stroke: var(--pref-border); stroke-width: 1; }
-.monitor-hub-box { fill: var(--di-black); stroke: var(--di-cyan); stroke-width: 2; }
+.monitor-hub-box { fill: var(--di-cyan); stroke: var(--di-cyan); stroke-width: 2; }
 .monitor-hub-label { fill: var(--di-cyan); font-size: var(--di-text-5); font-family: var(--di-mono); }
 .monitor-edge { fill: none; stroke: var(--ui-text-muted); stroke-width: 1.5; transition: stroke var(--di-motion-fast), opacity var(--di-motion-fast); }
 .monitor-edge.kind-shows-on, .monitor-edge.kind-works-on { stroke-dasharray: 3 5; }
@@ -1689,7 +1689,7 @@
 
 /* the vital strip: ONE surface, flat chips (state as a left band, label then value); wraps on the phone */
 .monitor-vital { display: flex; flex-wrap: wrap; gap: var(--di-space-1); background: var(--di-surface-2); border: 1px solid var(--pref-border-active); }
-.monitor-chip { display: inline-flex; align-items: baseline; gap: var(--di-space-2); min-height: 44px; padding: 0 var(--di-space-3); box-sizing: border-box; color: var(--di-text); background: rgba(var(--tone-rgb), 0.08); border: none; border-left: 4px solid rgb(var(--tone-rgb)); border-radius: 0; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--di-motion-fast) ease-out; align-items: center; }
+.monitor-chip { display: inline-flex; align-items: baseline; gap: var(--di-space-1); min-height: 44px; padding: 0 var(--di-space-2); box-sizing: border-box; color: var(--di-text); background: rgba(var(--tone-rgb), 0.08); border: none; border-left: 4px solid rgb(var(--tone-rgb)); border-radius: 0; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--di-motion-fast) ease-out; align-items: center; }
 .monitor-chip:hover { background: rgba(var(--tone-rgb), 0.18); }
 .monitor-chip:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: -2px; }
 .monitor-chip.is-selected { outline: 2px solid var(--di-cyan); outline-offset: -2px; }
@@ -1698,9 +1698,12 @@
 .monitor-chip-value { font-family: var(--di-mono); font-size: var(--di-text-4); font-variant-numeric: tabular-nums; }
 
 /* Now: agents and the ask on the left, Activity on the right (one column on the phone) */
-.monitor-now { display: grid; grid-template-columns: minmax(0, 1fr) minmax(16rem, 22.5rem); gap: var(--di-space-4); align-items: start; min-width: 0; }
+.monitor-now { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--di-space-4); align-items: start; min-width: 0; }
 .monitor-workspace { display: flex; flex-direction: column; gap: var(--di-space-3); min-width: 0; }
-.monitor-activity { position: sticky; top: var(--di-space-3); max-height: calc(100vh - 6rem); overflow-y: auto; min-width: 0; padding: var(--di-space-3); background: var(--di-surface); }
+/* Activity spans the width under the agents: its events flow in columns, so the page has no empty column */
+.monitor-activity { min-width: 0; padding: var(--di-space-3); background: var(--di-surface); }
+.monitor-activity { display: flex; flex-direction: column; gap: var(--di-space-3); }
+.monitor-activity .monitor-events { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: var(--di-space-2); }
 .monitor-events.is-earlier .monitor-event { animation: none; opacity: 0.85; }
 
 /* Lists: one block per list, a fold line for the quiet rest */
@@ -1740,7 +1743,7 @@
 .monitor-event {
     display: flex;
     flex-direction: column;
-    padding: var(--di-space-2) var(--di-space-3);
+    padding: var(--di-space-3);
     background: rgba(var(--tone-rgb), 0.1);
     /* state is a 4px leading edge, drawn inset, not a shadow */
     box-shadow: inset 4px 0 0 rgb(var(--tone-rgb));
@@ -1809,8 +1812,7 @@
 .monitor-page.is-map .monitor-map-section { padding: 0; background: none; border: 0; }
 .monitor-page.is-map .monitor-map-section > .preferences-module-header { display: none; }
 @media (max-width: 900px) {
-    .monitor-now { grid-template-columns: minmax(0, 1fr); }
-    .monitor-activity { position: static; max-height: 18rem; }
+    .monitor-activity { max-height: 18rem; overflow-y: auto; }
 }
 @media (max-width: 600px) {
     .monitor-page.is-full { padding: var(--di-space-3); }

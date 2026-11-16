@@ -104,4 +104,10 @@ export const groupMap = (map, { expanded = [], open = false } = {}) => {
 }
 
 // the lines drawn now: every default edge, and a 'holds' line only next to the node in focus
-export const visibleEdges = (edges, focusId) => (edges || []).filter((e) => e.kind !== HOLDS || (!!focusId && (e.from === focusId || e.to === focusId)))
+// `holdsMax`: when the whole map has at most that many 'holds' lines they are all drawn, so every node shows the
+// link to its parent tier; a bigger map (groups opened) keeps them to the node in focus. Default 0 = focus only.
+export const visibleEdges = (edges, focusId, holdsMax = 0) => {
+    const all = edges || []
+    const showHolds = all.filter((e) => e.kind === HOLDS).length <= holdsMax
+    return all.filter((e) => e.kind !== HOLDS || showHolds || (!!focusId && (e.from === focusId || e.to === focusId)))
+}
