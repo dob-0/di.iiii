@@ -1722,9 +1722,11 @@
     background: rgb(var(--tone-rgb));
 }
 .monitor-live-mark.is-beat { animation: monitor-beat 0.7s ease-out 1; }
+/* The beat is a fade of the mark's own colour. It used to scale the square to 2x in the text colour, which
+   drew a white box over the "heard ... ago" label beside it on every heartbeat. */
 @keyframes monitor-beat {
-    from { transform: scale(2); background: var(--di-text); }
-    to { transform: scale(1); }
+    from { opacity: 0.3; }
+    to { opacity: 1; }
 }
 
 .monitor-spark { display: block; width: 100%; height: 1.75rem; color: rgb(var(--tone-rgb)); }

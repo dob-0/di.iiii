@@ -11,3 +11,9 @@
 - 2D map: every holds line (the link from a space or group to its tier) is drawn when the map has at most 12 of them (visibleEdges holdsMax); the centre "di.iiii" text box became a plain square mark. At fit: 11 labelled nodes, min text 14.3 px (was 13.1), 0 overlaps, 0 repeated names.
 - Phone: List is the default under 600 px and the 2D button is gone there (3D and List only); a stored 2D choice falls back to List.
 - Owed: idle rAF in 3D varies 212 to 587 per 10 s between runs (hooks/useCameraControls.js, app-wide, unchanged here).
+
+## 2026-11-16 (round 3) — white box over "heard ... ago"
+
+- Cause: the heartbeat mark (`.monitor-live-mark.is-beat`) is re-keyed on every snapshot and its `monitor-beat` keyframe scaled the 1 rem square to 2x in the white text colour (`--di-text`), a 2 rem white box over the label beside it. Seen in monitor-look/calm2/desk-now.png.
+- Fix: the beat now fades the mark's own colour (opacity 0.3 to 1); no scale, no white. Still off under reduced motion.
+- Test: src/styles/monitorBeat.test.js (the keyframe has no transform, scale or text colour; reduced motion turns it off). Monitor tests + guards: 479 passed.
