@@ -2,18 +2,15 @@
 // as a list of events the page shows newest first. No clock of its own: `now`
 // is passed in so a test can pin it. Each event is { key, tone, text, at }.
 
+import { tierAnswers } from './monitorTier.js'
+
 const rows = (panel) => (Array.isArray(panel?.rows) ? panel.rows : [])
 const byKey = (list, keyOf) => new Map(list.map((r) => [keyOf(r), r]))
 const tierName = (id) => (String(id).startsWith('local:') ? `local ${String(id).slice(6)}` : String(id))
 const clip = (text, n = 60) => { const s = String(text ?? ''); return s.length > n ? `${s.slice(0, n - 1)}…` : s }
 
-// a tier answers when its status is a 2xx number or a known ok word (same reading as MonitorOverview)
-const tierUp = (row) => {
-    if (row.source === 'report') return row.state !== 'warn' && row.state !== 'off'
-    const s = row.status
-    if (typeof s === 'number') return s >= 200 && s < 300
-    return ['ok', 'up', 'live', 'online', '200'].includes(String(s ?? '').toLowerCase())
-}
+// a tier answers: the one reading in monitorTier.js (a 2xx, a known ok word, or a 429 = limited checks)
+const tierUp = tierAnswers
 
 export const diffSnapshots = (prev, next, now = Date.now()) => {
     if (!prev || !next) return []

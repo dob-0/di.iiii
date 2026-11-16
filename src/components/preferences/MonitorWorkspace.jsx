@@ -25,6 +25,20 @@ export const dropSeen = (pending, serverRows) => {
 }
 
 
+// a chat's short id: the 8 first characters of its session id (what a helper names as its parent)
+const chatId = (a) => String(a?.sessionId || '').slice(0, 8)
+
+// one helper: a square (lit while it works), what it does, since when
+function HelperLine({ h, withParent = false }) {
+    return (
+        <span className="monitor-meta monitor-helper" data-helper={h.label || h.type || 'helper'}>
+            <i className={`monitor-helper-square${h.busy ? '' : ' is-off'}`} aria-label={h.busy ? 'working' : 'done'} />
+            <span className="monitor-helper-label">{h.label || h.type || 'helper'}</span>
+            <span>{withParent && h.parent ? ` · of ${h.parent}` : ''}{h.since ? ` · ${ago(h.since)}` : ''}</span>
+        </span>
+    )
+}
+
 // where an agent works: the folder's name, and the branch only when it is a real one ("HEAD" is no branch)
 export const agentPlace = (a) => {
     const folder = String(a.cwd || '').split('/').filter(Boolean).pop() || 'home'
@@ -32,7 +46,7 @@ export const agentPlace = (a) => {
     return `in ${folder}${branch}`
 }
 
-export default function MonitorWorkspace({ asks, agents, flashing, onPick }) {
+export default function MonitorWorkspace({ asks, agents, helpers = [], flashing, onPick }) {
     const [text, setText] = useState('')
     const [pending, setPending] = useState([])
     const [problem, setProblem] = useState('')
@@ -56,6 +70,17 @@ export default function MonitorWorkspace({ asks, agents, flashing, onPick }) {
         (a, b) => (LANE_ORDER[a.status] ?? 9) - (LANE_ORDER[b.status] ?? 9)
             || new Date(b.lastActivity || 0) - new Date(a.lastActivity || 0)
     ), [agents])
+    // each chat's helpers (subagents) under its card; a helper whose chat is not listed gets its own group
+    const { helpersOf, orphans } = useMemo(() => {
+        const ids = new Set(lanes.map((a) => chatId(a)))
+        const of = new Map()
+        const lost = []
+        for (const h of helpers || []) {
+            if (h?.parent && ids.has(h.parent)) of.set(h.parent, [...(of.get(h.parent) || []), h])
+            else lost.push(h)
+        }
+        return { helpersOf: of, orphans: lost }
+    }, [lanes, helpers])
 
     const send = async (ev) => {
         ev.preventDefault()
@@ -83,7 +108,8 @@ export default function MonitorWorkspace({ asks, agents, flashing, onPick }) {
 
     return (
         <div className="monitor-workspace">
-            <div className="monitor-group-title">Agents at work <span className="preferences-tree-tag">{lanes.length}</span></div>
+            <div className="monitor-group-title">Agents at work <span className="preferences-tree-tag">{lanes.length}</span>
+                {helpers?.length ? <> Helpers <span className="preferences-tree-tag">{helpers.length}</span></> : null}</div>
             {!lanes.length ? <div className="monitor-note" data-box="agents">No live agent sessions.</div> : null}
             <div className="monitor-agent-grid">
                 {lanes.map((a) => (
@@ -95,9 +121,17 @@ export default function MonitorWorkspace({ asks, agents, flashing, onPick }) {
                         </span>
                         <span className="monitor-meta">{a.status}{a.machine ? ` · ${a.machine}` : ''} · active {ago(a.lastActivity)}</span>
                         <span className="monitor-meta">{agentPlace(a)}</span>
+                        {(helpersOf.get(chatId(a)) || []).map((h, i) => <HelperLine key={`${chatId(a)}:${i}`} h={h} />)}
                     </button>
                 ))}
             </div>
+
+            {orphans.length ? (
+                <div className="monitor-helper-group" data-box="helpers">
+                    <div className="monitor-group-title">Helpers <span className="preferences-tree-tag">{orphans.length}</span></div>
+                    {orphans.map((h, i) => <HelperLine key={`o:${i}`} h={h} withParent />)}
+                </div>
+            ) : null}
 
             <form className="monitor-ask-form" data-box="ask" onSubmit={send}>
                 <textarea id="monitor-ask-text" className="monitor-ask-text" rows={2} value={text} aria-label="Send an ask"

@@ -138,6 +138,12 @@ describe('vitalChips and vitalDetail', () => {
         expect(by.gear).toMatchObject({ label: 'Show gear', value: '1 of 3 ready' })
         expect(chips.every((c) => c.target)).toBe(true)
     })
+
+    it('the Agents chip counts the helpers a machine reports', () => {
+        const s = snap()
+        s.reports = [{ host: 'box', panels: { agents: { ok: true, rows: [], helpers: [{ parent: 'aaaa1111', label: 'audit', busy: true, since: '2026-11-16T08:00:00Z' }] } } }]
+        expect(Object.fromEntries(vitalChips(s).map((c) => [c.id, c])).agents.value).toBe('1 · 1 busy · 1 helper')
+    })
     it('a chip names its list: rows open their own detail', () => {
         const d = vitalDetail(snap(), 'machines')
         expect(d.title).toBe('Machines')

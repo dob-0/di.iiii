@@ -1836,3 +1836,13 @@
     .monitor-live-mark.is-beat, .monitor-live-square, .monitor-event, .monitor-ask.is-sending { animation: none; }
     .monitor-chip, .monitor-need-action, .monitor-fresh i { transition: none; }
 }
+
+/* Monitor: each chat's helpers under its card, and the Work view (to do, rules, skills, hooks side by side) */
+.monitor-helper { display: flex; align-items: center; gap: var(--di-space-2); min-width: 0; }
+.monitor-helper-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.monitor-helper-square { flex: none; display: inline-block; width: 0.5rem; height: 0.5rem; background: rgb(var(--di-live-rgb)); }
+.monitor-helper-square.is-off { background: transparent; outline: 1px solid currentColor; opacity: 0.5; }
+.monitor-helper-group { display: grid; gap: var(--di-space-1); margin-top: var(--di-space-3); }
+.monitor-work { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); gap: var(--di-space-4); align-items: start; min-width: 0; }
+.monitor-work-part { min-width: 0; max-height: 70vh; overflow: auto; display: grid; gap: var(--di-space-2); align-content: start; }
+.monitor-helper > span:last-child { flex: none; white-space: nowrap; }

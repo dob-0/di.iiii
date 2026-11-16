@@ -111,6 +111,15 @@ describe('MonitorSection', () => {
         expect(screen.queryByText(/Reading the monitor/)).toBeNull()
     })
 
+    it('Work shows to do, rules, skills and hooks side by side', async () => {
+        getMonitor.mockResolvedValue(snapshot())
+        render(<MonitorSection />)
+        await waitFor(() => expect(screen.getByText('Build the monitor')).toBeTruthy())
+        fireEvent.click(document.querySelector('[data-monitor-tab="work"]'))
+        const parts = [...document.querySelectorAll('[data-work]')].map((n) => n.getAttribute('data-work'))
+        expect(parts).toEqual(['todo', 'rules', 'skills', 'hooks'])
+    })
+
     it('shows every panel and greys only the broken one', async () => {
         getMonitor.mockResolvedValue(snapshot())
         render(<MonitorSection />)

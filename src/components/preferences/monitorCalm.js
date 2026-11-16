@@ -8,6 +8,7 @@
 
 import { ago } from './monitorFormat.js'
 import { shortCommit, tierLabel, tierState } from './monitorTier.js'
+import { monitorKnowledge } from './monitorKnowledge.js'
 
 const rows = (panel) => (Array.isArray(panel?.rows) ? panel.rows : [])
 const clip = (text, n = 40) => { const s = String(text ?? ''); return s.length > n ? `${s.slice(0, n - 1)}…` : s }
@@ -80,7 +81,9 @@ export const vitalChips = (snap, host = snap?.host) => {
     }
     if (p.agents) {
         const blocked = rows(p.agents).some((a) => a.status === 'blocked')
-        out.push({ id: 'agents', label: 'Agents', value: p.agents.ok ? `${p.agents.live} · ${p.agents.busy} busy` : dash, tone: blocked ? 'warning' : 'accent', target: { kind: 'vital', id: 'agents' } })
+        const helpers = monitorKnowledge(snap).agents.helpers.length
+        const value = p.agents.ok ? `${p.agents.live} · ${p.agents.busy} busy${helpers ? ` · ${helpers} helper${helpers === 1 ? '' : 's'}` : ''}` : dash
+        out.push({ id: 'agents', label: 'Agents', value, tone: blocked ? 'warning' : 'accent', target: { kind: 'vital', id: 'agents' } })
     }
     if (p.pullRequests) {
         out.push({ id: 'prs', label: 'PRs', value: p.pullRequests.ok ? String(p.pullRequests.open) : dash, tone: 'accent', target: { kind: 'vital', id: 'prs' } })
