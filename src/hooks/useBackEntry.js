@@ -82,7 +82,7 @@ export const goBack = (steps = 1) => { try { hist().go(-steps) } catch { /* no h
 // mount-unmount-mount (src/index.jsx) never pushes or pops twice.
 export default function useBackEntry(active, onBack, { id = 'view', url } = {}) {
     const cb = useRef(onBack)
-    cb.current = onBack
+    useEffect(() => { cb.current = onBack })
     useEffect(() => {
         if (!active) return undefined
         let mine = null

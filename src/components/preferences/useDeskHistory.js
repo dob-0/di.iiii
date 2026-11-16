@@ -30,7 +30,7 @@ export default function useDeskHistory({ openKeys, front, apply }) {
     const stale = useRef(null)        // the entry under us must be rewritten to this set when Back reaches it
     const deepLink = useRef(false)    // the first push replaces the linked entry with the desk home first
     const applyRef = useRef(apply)
-    applyRef.current = apply
+    useEffect(() => { applyRef.current = apply })
 
     // a link with #<window> on load: the desk home sits under it, so Back never leaves the site
     const prepareDeepLink = useCallback(() => {
