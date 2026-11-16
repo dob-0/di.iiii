@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
-import { nudgeLabels } from './monitorMap3dPolicy.js'
+import { nudgeLabels, packLabels } from './monitorMap3dPolicy.js'
 import { groupMap, visibleEdges } from './monitorMapGroups.js'
 import { mergeKnowledge } from './monitorMapKnowledge.js'
 
@@ -114,9 +114,11 @@ function MapList({ nodes, selectedId, onPick }) {
 // The width follows the text (never wider than the kind's room): short names make short cards, so a crowded map fits.
 const COMPACT = new Set(['helper', 'knowledge', 'repo'])
 const isCompact = (n) => COMPACT.has(n.kind)
-const cardPx = (n, r = 1) => {
-    const chars = isCompact(n) ? String(n.label || '').length : Math.max(String(n.label || '').length, String(subText(n) || '').length)
-    return { w: Math.min(sizeOf(n.kind).w * r, Math.max(84 * r, (28 + CARD_CHAR * chars) * r)), h: (isCompact(n) ? 30 : 48) * r }
+// on a coarse pointer a card is a touch target: 44 px tall; `dense` draws every card on one line when the two-line cards cannot fit
+const cardPx = (n, r = 1, coarse = false, dense = false) => {
+    const one = dense || isCompact(n)
+    const chars = one ? String(n.label || '').length : Math.max(String(n.label || '').length, String(subText(n) || '').length)
+    return { w: Math.min(sizeOf(n.kind).w * r, Math.max(84 * r, (28 + CARD_CHAR * chars) * r)), h: (one ? (coarse ? 46 : 30) : (coarse ? 54 : 48)) * r }
 }
 const useRem = () => {
     const get = () => (typeof window !== 'undefined' && window.getComputedStyle ? (parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16) / 16 : 1)
@@ -124,16 +126,17 @@ const useRem = () => {
     useEffect(() => { const on = () => setR(get()); window.addEventListener('resize', on); return () => window.removeEventListener('resize', on) }, [])
     return r
 }
+const useCoarse = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false)
 // the view buttons, zoom tools and the key sit on the stage: Fit keeps the nodes out of those bands (px)
 const INSET_TOP = 40
 const INSET_BOTTOM = 40
-const fitBox = (layout, size = null, r = 1) => {
+const fitBox = (layout, size = null, r = 1, coarse = false) => {
     if (!size || !size.w || !size.h) return { ...layout.bounds }
     let x0 = 0, x1 = 0, y0 = 0, y1 = 0
     let mx = 50, my = 24
     for (const n of layout.nodes) {
         const p = layout.pos.get(n.id)
-        const c = cardPx(n, r)
+        const c = cardPx(n, r, coarse)
         x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y)
         mx = Math.max(mx, c.w / 2 + 8); my = Math.max(my, c.h / 2 + 8)
     }
@@ -144,12 +147,14 @@ const fitBox = (layout, size = null, r = 1) => {
     return { x: (x0 + x1) / 2 - w / 2, y: (y0 + y1) / 2 - (INSET_TOP + band / 2) * s, w, h }
 }
 
-function Map2D({ layout, selectedId, onPick, live, onFold, flow = null }) {
+function Map2D({ layout, selectedId, onPick, live, onFold, onList, flow = null }) {
     const svgRef = useRef(null)
     const rem = useRem()
+    const coarse = useCoarse()
     const [size, setSize] = useState({ w: 0, h: 0 })
     const [vb, setVb] = useState(() => fitBox(layout))
     const [hover, setHover] = useState(null)
+    const [force, setForce] = useState(false)
     const drag = useRef({ pointers: new Map(), moved: false, last: null, pinch: 0 })
     const vbRef = useRef(vb)
     const fitRef = useRef(vb)
@@ -168,7 +173,7 @@ function Map2D({ layout, selectedId, onPick, live, onFold, flow = null }) {
 
     // a different set of nodes (not a state change) or a different stage size refits the view
     const shape = layout.nodes.map((n) => n.id).join('|')
-    useEffect(() => { const f = fitBox(layout, size, rem); fitRef.current = f; setVb(f) }, [shape, size.w, size.h, rem]) // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { const f = fitBox(layout, size, rem, coarse); fitRef.current = f; setVb(f) }, [shape, size.w, size.h, rem]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const scaleOf = useCallback((box) => {
         const r = svgRef.current?.getBoundingClientRect?.()
@@ -262,39 +267,54 @@ function Map2D({ layout, selectedId, onPick, live, onFold, flow = null }) {
     // screen scale (world units per px) and the nudge: cards that would sit on each other are pushed apart in px
     const k = size.w && size.h ? Math.max(vb.w / size.w, vb.h / size.h) : 1
     const eff = useMemo(() => {
-        const items = layout.nodes.map((n) => {
+        const atFit = Math.abs(vb.w - fitBox(layout, size, rem, coarse).w) < 1
+        const bounds = atFit && size.w ? { width: size.w, height: Math.max(1, size.h - INSET_TOP - INSET_BOTTOM) } : null
+        const itemsOf = (dense) => layout.nodes.map((n) => {
             const p = layout.pos.get(n.id)
-            const c = cardPx(n, rem)
+            const c = cardPx(n, rem, coarse, dense)
             return { id: n.id, x: (p.x - vb.x) / k, y: (p.y - vb.y) / k - INSET_TOP, w: c.w, h: c.h }
         })
-        const moved = size.w ? nudgeLabels(items, { gap: 4, passes: 200, limit: Math.max(size.w, size.h), bounds: { width: size.w, height: Math.max(1, size.h - INSET_TOP - INSET_BOTTOM) } }) : {}
-        const out = new Map()
+        // the cards are searched a free place (two-line cards, then one-line cards when the stage is too full), the push is the last resort
+        let dense = false
+        let moved = {}
+        let fail = false
+        if (size.w) {
+            let packed = packLabels(itemsOf(false), { gap: 4, bounds })
+            if (!packed.ok) { dense = true; packed = packLabels(itemsOf(true), { gap: 4, bounds }) }
+            fail = !packed.ok && !!bounds
+            moved = packed.ok ? packed.offsets : nudgeLabels(itemsOf(dense), { gap: 4, passes: 200, limit: Math.max(size.w, size.h), bounds })
+        }
+        const pos = new Map()
         for (const n of layout.nodes) {
             const p = layout.pos.get(n.id)
             const d = moved[n.id]
-            out.set(n.id, d ? { x: p.x + d.dx * k, y: p.y + d.dy * k } : p)
+            pos.set(n.id, d ? { x: p.x + d.dx * k, y: p.y + d.dy * k } : p)
         }
-        return out
-    }, [layout, vb, k, size.w, size.h, rem])
+        return { pos, dense, fail }
+    }, [layout, vb, k, size, rem, coarse])
+
+    // too many cards for this stage even on one line: say so, offer the list, or draw them anyway
+    const crowded = eff.fail && !force
+    const hideIf = crowded ? { display: 'none' } : undefined
 
     return (
         <div className="monitor-map-stage">
             <svg ref={svgRef} className="monitor-map-svg" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet"
                 role="group" aria-label="Map of machines, tiers, spaces and shows"
                 onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-                <g className="monitor-map-rings">
+                <g className="monitor-map-rings" style={hideIf}>
                     {layout.radii.map((r) => <ellipse key={r} cx="0" cy="0" rx={r * layout.aspect} ry={r} className="monitor-ring" />)}
                 </g>
-                <g className="monitor-map-hub-lines">
+                <g className="monitor-map-hub-lines" style={hideIf}>
                     {layout.tierIds.map((id) => {
-                        const p = eff.get(id)
+                        const p = eff.pos.get(id)
                         return <line key={id} x1="0" y1="0" x2={p.x} y2={p.y} className="monitor-hub-line" />
                     })}
                 </g>
-                <g className="monitor-map-edges">
+                <g className="monitor-map-edges" style={hideIf}>
                     {edgesShown.map((e, i) => {
-                        const a = eff.get(e.from)
-                        const b = eff.get(e.to)
+                        const a = eff.pos.get(e.from)
+                        const b = eff.pos.get(e.to)
                         const lit = !!focus && (e.from === focus || e.to === focus)
                         const hit = pulseOf.edges.get(`${e.from}>${e.to}`)
                         const rate = e.kind === 'reports' ? flow?.rates?.[String(e.from).slice(8)] : null
@@ -302,13 +322,13 @@ function Map2D({ layout, selectedId, onPick, live, onFold, flow = null }) {
                         return <line key={edgeKey(e, i)} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={cls} data-rate={rate ? rate.perMin : undefined} />
                     })}
                 </g>
-                <g className="monitor-hub" aria-hidden="true">
+                <g className="monitor-hub" aria-hidden="true" style={hideIf}>
                     <rect x="-8" y="-8" width="16" height="16" className="monitor-hub-box" />
                 </g>
-                {layout.nodes.map((n) => {
-                    const p = eff.get(n.id)
-                    const { w, h } = cardPx(n, rem)
-                    const compact = isCompact(n)
+                {crowded ? null : layout.nodes.map((n) => {
+                    const p = eff.pos.get(n.id)
+                    const { w, h } = cardPx(n, rem, coarse, eff.dense)
+                    const compact = isCompact(n) || eff.dense
                     const sel = selectedId === n.id
                     const cls = `monitor-node kind-${n.kind} tone-${toneOf(n.state)}${sel ? ' is-selected' : ''}${hover === n.id ? ' is-hover' : ''}${focus && !hot(n.id) ? ' is-dim' : ''}${pulseOf.nodes.has(n.id) ? ` is-pulse pulse-${pulseOf.nodes.get(n.id)}` : ''}`
                     return (
@@ -326,9 +346,9 @@ function Map2D({ layout, selectedId, onPick, live, onFold, flow = null }) {
                         </g>
                     )
                 })}
-                {hovered && hovered.label.length > Math.floor((cardPx(hovered, rem).w / rem - 28) / CARD_CHAR) ? (() => {
-                    const p = eff.get(hovered.id)
-                    const { h } = cardPx(hovered, rem)
+                {hovered && hovered.label.length > Math.floor((cardPx(hovered, rem, coarse, eff.dense).w / rem - 28) / CARD_CHAR) ? (() => {
+                    const p = eff.pos.get(hovered.id)
+                    const { h } = cardPx(hovered, rem, coarse, eff.dense)
                     const text = hovered.label
                     const w = Math.max(120, text.length * 9 + 28)
                     return (
@@ -340,8 +360,15 @@ function Map2D({ layout, selectedId, onPick, live, onFold, flow = null }) {
                     )
                 })() : null}
             </svg>
+            {crowded ? (
+                <div className="monitor-map-crowd" data-map-crowd="1">
+                    <p>{layout.nodes.length} cards do not fit this screen without touching. Open the list, or draw them anyway.</p>
+                    <button type="button" className="monitor-map-tool" data-map-crowd-list="1" onClick={onList}>List</button>
+                    <button type="button" className="monitor-map-tool" data-map-crowd-draw="1" onClick={() => setForce(true)}>Draw anyway</button>
+                </div>
+            ) : null}
             <div className="monitor-map-tools" role="group" aria-label="Map zoom">
-                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => { const f = fitBox(layout, size, rem); fitRef.current = f; setVb(f) }}>Fit</button>
+                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => { const f = fitBox(layout, size, rem, coarse); fitRef.current = f; setVb(f) }}>Fit</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
                 {onFold ? <button type="button" className="monitor-map-tool" data-map-tool="fold" onClick={onFold}>Fold spaces</button> : null}
@@ -385,7 +412,7 @@ export default function MonitorMap({ flow = null, map, knowledge = null, snap = 
             </div>
             {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={pick} /> : null}
             {view === '2d' ? (
-                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={pick} live={live} onFold={fold} flow={flow} /></div>
+                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={pick} live={live} onFold={fold} onList={() => choose('list')} flow={flow} /></div>
             ) : null}
             {view === '3d' ? (
                 <div data-monitor-map="3d">

@@ -400,7 +400,7 @@ button.admin-chip:hover, button.admin-chip[aria-pressed="true"] { border-color: 
     .admin-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .admin-bar-button, .admin-find-input, .admin-more { min-height: 44px; }
     .admin-more { min-width: 44px; }
-    .admin-find-input { width: 96px; }
+    .admin-find-input { width: 60px; }
     .admin-desk .raw-window-actions button { min-width: 44px; min-height: 44px; }
     .admin-desk .raw-window-header { min-height: 44px; }
     .preferences-hint-button { min-width: 44px; min-height: 44px; }

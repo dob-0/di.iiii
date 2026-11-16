@@ -83,3 +83,42 @@ export const nudgeLabels = (items, { gap = 4, passes = 40, limit = 160, bounds =
     for (const it of list) if (Math.round(it.ox) || Math.round(it.oy)) out[it.id] = { dx: Math.round(it.ox), dy: Math.round(it.oy) }
     return out
 }
+
+// Cards that never sit on each other, found by search instead of by pushing: items go in a fixed order (biggest first, then id);
+// an item whose own place is free stays; otherwise it takes the nearest free place on a `step` px grid round it, kept whole inside
+// `bounds` ({ width, height } px) when given. Returns { ok, offsets: { id: { dx, dy } } }; ok is false when some item found no place
+// (the stage is too full), and that item stays where it was. Same input, same answer.
+export const packLabels = (items, { gap = 4, step = 6, bounds = null, reach = 600 } = {}) => {
+    const order = [...(items || [])].sort((a, b) => (b.w * b.h) - (a.w * a.h) || String(a.id).localeCompare(String(b.id)))
+    const placed = []
+    const offsets = {}
+    let ok = true
+    const free = (x, y, it) => {
+        if (bounds && (x - it.w / 2 < 0 || x + it.w / 2 > bounds.width || y - it.h / 2 < 0 || y + it.h / 2 > bounds.height)) return false
+        for (const p of placed) if (Math.abs(x - p.x) < (it.w + p.w) / 2 + gap && Math.abs(y - p.y) < (it.h + p.h) / 2 + gap) return false
+        return true
+    }
+    for (const it of order) {
+        let spot = free(it.x, it.y, it) ? { x: it.x, y: it.y } : null
+        for (let r = step; !spot && r <= reach; r += step) {
+            let best = null
+            let bestD = Infinity
+            const n = Math.max(8, Math.round((2 * Math.PI * r) / step))
+            for (let i = 0; i < n; i += 1) {
+                const a = (i / n) * 2 * Math.PI
+                const x = it.x + Math.cos(a) * r
+                const y = it.y + Math.sin(a) * r
+                if (!free(x, y, it)) continue
+                const d = Math.abs(x - it.x) + Math.abs(y - it.y)
+                if (d < bestD) { best = { x, y }; bestD = d }
+            }
+            spot = best
+        }
+        if (!spot) { ok = false; spot = { x: it.x, y: it.y } }
+        placed.push({ ...it, x: spot.x, y: spot.y })
+        const dx = Math.round(spot.x - it.x)
+        const dy = Math.round(spot.y - it.y)
+        if (dx || dy) offsets[it.id] = { dx, dy }
+    }
+    return { ok, offsets }
+}

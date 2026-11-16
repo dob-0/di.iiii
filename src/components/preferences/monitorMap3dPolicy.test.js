@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fitKey, shouldRefit, layoutSignature, pulseEdgeIndexes, shouldAnimate, hasLiveEdge, nudgeLabels } from './monitorMap3dPolicy.js'
+import { fitKey, shouldRefit, layoutSignature, pulseEdgeIndexes, shouldAnimate, hasLiveEdge, nudgeLabels, packLabels } from './monitorMap3dPolicy.js'
 import { layoutMap } from './monitorMapLayout.js'
 
 const map = (state = 'ok') => ({
@@ -65,5 +65,32 @@ describe('nudgeLabels', () => {
         const [c] = place(items, nudgeLabels(items, { bounds: { width: 390, height: 420 } }))
         expect(c.x - c.w / 2).toBeGreaterThanOrEqual(0)
         expect(c.y + c.h / 2).toBeLessThanOrEqual(420)
+    })
+})
+
+describe('packLabels', () => {
+    const overlap = (a, b) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 && Math.abs(a.y - b.y) < (a.h + b.h) / 2
+    const apply = (items, off) => items.map((i) => ({ ...i, x: i.x + (off[i.id]?.dx || 0), y: i.y + (off[i.id]?.dy || 0) }))
+    const pairs = (l) => l.flatMap((a, i) => l.slice(i + 1).filter((b) => overlap(a, b)))
+    it('leaves a free card where it is and moves a crowded one to a free place', () => {
+        const items = [{ id: 'a', x: 50, y: 50, w: 80, h: 30 }, { id: 'b', x: 55, y: 52, w: 80, h: 30 }, { id: 'c', x: 400, y: 50, w: 80, h: 30 }]
+        const { ok, offsets } = packLabels(items)
+        expect(ok).toBe(true)
+        expect(offsets.c).toBeUndefined()
+        expect(pairs(apply(items, offsets))).toHaveLength(0)
+    })
+    it('packs thirty crowded cards inside the stage with no overlap, the same way twice', () => {
+        const items = Array.from({ length: 30 }, (_, i) => ({ id: `n${i}`, x: 300 + (i % 6) * 12, y: 200 + Math.floor(i / 6) * 9, w: 110, h: 40 }))
+        const bounds = { width: 640, height: 480 }
+        const a = packLabels(items, { bounds })
+        expect(a.ok).toBe(true)
+        const out = apply(items, a.offsets)
+        expect(pairs(out)).toHaveLength(0)
+        expect(out.every((i) => i.x - i.w / 2 >= 0 && i.x + i.w / 2 <= 640 && i.y - i.h / 2 >= 0 && i.y + i.h / 2 <= 480)).toBe(true)
+        expect(packLabels(items, { bounds })).toEqual(a)
+    })
+    it('says not ok when the stage is too small for them', () => {
+        const items = Array.from({ length: 6 }, (_, i) => ({ id: `n${i}`, x: 40, y: 40, w: 100, h: 40 }))
+        expect(packLabels(items, { bounds: { width: 120, height: 60 } }).ok).toBe(false)
     })
 })

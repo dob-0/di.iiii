@@ -2045,7 +2045,7 @@
     .monitor-node.is-pulse .monitor-node-box { animation: monitor-pulse-box 1.1s ease-out 2; }
 }
 @keyframes monitor-pulse-box { 0% { stroke-width: 7; } 100% { stroke-width: 3; } }
-button.mp-live { background: transparent; border: 0; color: inherit; padding: 0; min-height: var(--mp-hit); cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: var(--di-space-2); }
+button.mp-live { min-width: var(--mp-hit); justify-content: center; background: transparent; border: 0; color: inherit; padding: 0; min-height: var(--mp-hit); cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: var(--di-space-2); }
 .mp-flow { display: grid; gap: var(--di-space-2); padding: var(--di-space-2); align-content: start; }
 .mp-flow-head { display: flex; justify-content: space-between; align-items: center; gap: var(--di-space-2); }
 .mp-flow-h { margin: var(--di-space-2) 0 0; font-size: var(--di-text-4); color: var(--ui-text-muted); font-weight: 400; }
@@ -2053,3 +2053,6 @@ button.mp-live { background: transparent; border: 0; color: inherit; padding: 0;
 .mp-flow-list li { display: flex; gap: var(--di-space-3); justify-content: space-between; padding: var(--di-space-1) 0; border-bottom: 1px solid var(--pref-border); }
 .mp-flow-list li.is-silent { color: var(--di-warning); }
 .mp-flow-list.is-stream li { justify-content: flex-start; }
+
+.monitor-map-crowd { position: absolute; inset: 0; display: flex; flex-wrap: wrap; gap: var(--di-space-2); align-content: center; justify-content: center; padding: var(--di-space-4); text-align: center; z-index: 1; }
+.monitor-map-crowd p { flex: 1 1 100%; margin: 0; color: var(--ui-text-muted); }
