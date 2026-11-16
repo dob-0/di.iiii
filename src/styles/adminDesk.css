@@ -458,3 +458,14 @@ button.admin-chip:hover, button.admin-chip[aria-pressed="true"] { border-color: 
 /* knowledge lists stay inside their window at any width (500 px measured 1106 px wide: long rule and request rows pushed
    the flex items to their min-content width). min-width 0 lets the row titles take their ellipsis instead. */
 .admin-knowledge, .admin-knowledge-set, .admin-rows { min-width: 0; max-width: 100%; }
+
+/* ─── Touch: every desk control is at least 44 px, at any width (the 599 px block above only covers phones) ─ */
+@media (pointer: coarse) {
+    .admin-bar-button, .admin-find-input, .admin-more { min-height: 44px; }
+    .admin-bar-button { min-width: 44px; }
+    .admin-more { min-width: 44px; }
+    .admin-desk .raw-window-actions button { min-width: 44px; min-height: 44px; }
+    .admin-desk .raw-window-header { min-height: 44px; }
+    .preferences-hint-button { min-width: 44px; min-height: 44px; }
+    .admin-menu-item { min-height: 44px; }
+}

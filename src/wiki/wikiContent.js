@@ -1246,6 +1246,7 @@ export const WIKI_ARTICLES = [
         body: [
             '/admin opens on the desk. The top row shows what needs you (owner only: the Monitor\u2019s rows, or "All well"), then one tile per section with its live number or state, then Activity. A click on a tile opens that section as a window; open several, drag, resize, maximise, close. The arrangement is remembered per device. On a phone the desk is the tile grid and a window fills the screen, one at a time; Back returns to the desk.',
             'Keys: Ctrl+` next window, Ctrl+Shift+` previous, M maximise or restore, / find a window, Shift+A arrange all, Esc restore, ? the key card. They are not read while you type. The Windows menu in the top bar reopens a closed one; each window has one \u22ef menu for copy and reload. A "?" on a control explains it, on a tap on the phone too.',
+            'Under 900 px the home stacks (needs, tiles, Activity) so nothing covers a group title; on a touch screen every desk control is at least 44 px tall at any width.',
             'Old links keep working: /admin#manage, #opencall, #monitor, #agents, #visitors, #overview, #inspect, #system, #log, #build, #estate open that window, and #monitor-full opens the Monitor maximised.',
             { list: [
                 'Spaces and users, Open call, Agents, Visitors: as before (Agents shows each chat\u2019s helpers).',

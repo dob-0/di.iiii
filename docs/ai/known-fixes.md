@@ -3,6 +3,12 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Admin desk home drew tiles over the group titles at 600-899 px, and desk controls were 32 px on touch (2026-11-16, ui-space)
+
+Symptom: in a half window (640 px) the desk home kept a grid with a 340 px Activity column; the tile rows were squeezed under their content and covered the group titles. On a tablet the bar buttons, the find box and the window header were 32 px, under the 44 px touch minimum.
+Cause: the stacking rule lived in `@media (max-width: 599px)` only; the 44 px controls were set only under 600 px, not for `(pointer: coarse)`.
+Fix: `src/styles/adminDesk.css` stacks the home under 900 px (`.admin-home.has-monitor { display: flex }`) and a `(pointer: coarse)` block sets the 44 px minimum at any width. Guard: `src/components/preferences/adminDeskCss.test.js` reads the stylesheet and fails when either rule is gone.
+
 ## Nodes on the bar at space level opened the project list, not your project (2026-11-12, reach batch 2, N3851.19)
 
 Symptom: from a space's page the bar's Nodes opened the list of projects, and the person had to pick the project they had just left ("for reaching this UI i need to do many steps").
