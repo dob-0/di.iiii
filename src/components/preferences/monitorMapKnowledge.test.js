@@ -34,6 +34,12 @@ describe('knowledgeNodes', () => {
         expect(nodes.find((n) => n.id === 'know:demo-one:todo').label).toBe('To do 1')
         expect(edges.filter((e) => e.kind === 'has').every((e) => e.from.startsWith('machine:'))).toBe(true)
     })
+    it('with no ledger on hand, the to do counts the waiting messages, on the machine that holds them', () => {
+        const s = { ...snap(), asks: { rows: [] } }
+        s.reports = [{ ...s.reports[0], panels: { ...s.reports[0].panels, spool: { ok: true, rows: [{ at: '2026-11-16T10:00:00Z', text: 'demo one' }, { at: '2026-11-16T10:01:00Z', text: 'demo two' }] } } }]
+        const todo = knowledgeNodes(map(), monitorKnowledge(s), s).nodes.filter((n) => n.part === 'todo')
+        expect(todo.map((n) => [n.id, n.label, n.sub])).toEqual([['know:demo-two:todo', 'To do 2', 'waiting for the ledger']])
+    })
     it('marks an unreadable panel warn', () => {
         const s = snap()
         const n = knowledgeNodes(map(), monitorKnowledge(s), s).nodes.find((x) => x.id === 'know:demo-two:rules')

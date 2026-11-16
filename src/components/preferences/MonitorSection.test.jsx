@@ -262,6 +262,22 @@ describe('MonitorSection overview, map, workspace and live', () => {
         expect(within(document.querySelector('.monitor-inspector')).getByText('MUTH')).toBeTruthy() // its neighbour, from the edges (holds are in the drawer)
     })
 
+    it('a map node jumps to its Work list, and Back returns to the Map', async () => {
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Vital signs'))
+        const wait = (ms) => act(async () => { await new Promise((r) => setTimeout(r, ms)) })
+        fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
+        await wait(30)
+        const know = document.querySelector('[data-map-node^="know:"]')
+        expect(know).toBeTruthy()
+        fireEvent.click(know)
+        expect(document.querySelector('[data-monitor-tab="work"]').classList.contains('is-active')).toBe(true)
+        await wait(30)
+        await act(async () => { window.history.back(); await new Promise((r) => setTimeout(r, 40)) })
+        expect(document.querySelector('[data-monitor-tab="map"]').classList.contains('is-active')).toBe(true)
+    })
+
     it('map falls back to a grouped list at phone width', async () => {
         window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })
         getMonitor.mockResolvedValue(contract())

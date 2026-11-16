@@ -35,11 +35,17 @@ export const knowledgeNodes = (map, knowledge, snap) => {
     const nodes = []
     const edges = []
     const hosts = hostsOf(snap).filter((h) => have.has(`machine:${h.host}`))
-    hosts.forEach(({ host, panels }, i) => {
+    // the ledger lives on one machine: its To do hangs on the first host only, never repeated; with no ledger
+    // on hand, the messages spooled for it are the to do, on the machine that holds them
+    const ledger = knowledge?.rows?.count ? knowledge.rows : null
+    const waiting = !ledger && knowledge?.waiting?.count ? knowledge.waiting : null
+    const todoHost = ledger ? hosts[0]?.host : waiting ? (hosts.find((h) => list(waiting.hosts).includes(h.host)) || hosts[0])?.host : null
+    hosts.forEach(({ host, panels }) => {
         const machine = `machine:${host}`
+        const todo = host !== todoHost ? null : ledger ? partNode(host, 'todo', 'To do', null, ledger)
+            : { id: `know:${host}:todo`, kind: 'knowledge', part: 'todo', label: `To do ${waiting.count}`, state: 'ok', sub: 'waiting for the ledger', count: waiting.count }
         const parts = [
-            // the ledger lives on one machine: its To do hangs on the first host only, never repeated
-            i === 0 && knowledge?.rows?.count ? partNode(host, 'todo', 'To do', null, knowledge.rows) : null,
+            todo,
             partNode(host, 'rules', 'Rules', panels.rules),
             partNode(host, 'skills', 'Skills', panels.skills),
             partNode(host, 'hooks', 'Hooks', panels.hooks)
