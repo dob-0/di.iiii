@@ -42,7 +42,7 @@ export const buildTiles = ({ remote = {}, page = {}, overrides = {}, knowledge =
         rules: { value: num(rules?.count), word: 'Rules', tone: 'default', chips: [{ label: 'Rules', value: num(rules?.count) }, { label: 'Machines', value: rules?.same ?? DASH }] },
         hooks: { value: num(hooks?.count), word: 'Hooks', tone: 'default', chips: [{ label: 'Hooks', value: num(hooks?.count) }, { label: 'Events', value: hooks ? Object.keys(hooks.events || {}).length : DASH }] },
         skills: { value: num(skills?.count), word: 'Skills', tone: 'default', chips: [{ label: 'Skills', value: num(skills?.count) }, { label: 'Machines', value: skills?.same ?? DASH }] },
-        requests: { value: num(openRows), word: 'Open rows', tone: openRows > 0 ? 'warning' : 'default', chips: [{ label: 'Open', value: num(asks?.open) }, { label: 'Waiting', value: num(waiting) }] },
+        requests: { value: num(openRows), word: 'Open and waiting', tone: openRows > 0 ? 'warning' : 'default', chips: [{ label: 'Open', value: num(asks?.open) }, { label: 'Waiting', value: num(waiting) }] },
         manage: { value: num(spaces), word: 'Spaces', tone: 'default', chips: [{ label: 'Spaces', value: num(spaces) }, { label: 'Users', value: num(users) }] },
         opencall: { value: num(calls), word: 'Applications', tone: newCalls > 0 ? 'warning' : 'default', chips: [{ label: 'Total', value: num(calls) }, { label: 'New', value: num(newCalls), tone: newCalls > 0 ? 'warning' : 'default' }] },
         monitor: { value: num(live), word: 'Live', tone: liveTone(live), chips: [{ label: 'Live', value: num(live), tone: liveTone(live) }, { label: 'Sessions', value: num(total) }] },

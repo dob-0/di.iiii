@@ -45,3 +45,15 @@ describe('requests waiting for the ledger', () => {
         expect(buildTiles({ knowledge: monitorKnowledge({ asks: { rows: [] }, __waiting: waiting }) }).requests.value).toBe(2)
     })
 })
+
+describe('localStamp', () => {
+    it('shows a UTC time in the viewer clock and is empty for no time', async () => {
+        const { localStamp } = await import('./KnowledgeWindows.jsx')
+        const iso = '2026-11-16T01:18:00.000Z'
+        const d = new Date(iso)
+        const p = (n) => String(n).padStart(2, '0')
+        expect(localStamp(iso)).toBe(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`)
+        expect(localStamp('')).toBe('')
+        expect(localStamp('not a date')).toBe('')
+    })
+})

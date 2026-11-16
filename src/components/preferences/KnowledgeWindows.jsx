@@ -3,6 +3,14 @@ import { Drawer, Fold } from './PreferencesShared.jsx'
 import { monitorKnowledge } from './monitorKnowledge.js'
 import { ago } from './monitorFormat.js'
 
+/** 'YYYY-MM-DD HH:MM' in the viewer's own clock (the rows are stored in UTC; slicing the ISO showed them 4 h early in Tbilisi). */
+export const localStamp = (iso) => {
+    const d = new Date(iso)
+    if (!iso || Number.isNaN(d.getTime())) return ''
+    const p = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
 // The knowledge windows of the owner's desk: Rules, Hooks, Requests, and the helpers list the Agents
 // window wears. All of it comes from monitorKnowledge(snapshot) and nothing else; a window says "Reading"
 // until the first snapshot, and an unreadable file is said, never invented.
@@ -186,7 +194,7 @@ export function RequestsBody({ snap, error }) {
                     <ul className="admin-rows" data-testid="waiting">
                         {waiting.map((row, i) => (
                             <li key={`${row.host}:${row.at}:${i}`} className="admin-row is-static">
-                                <span className="admin-row-meta">{String(row.at || '').slice(0, 16).replace('T', ' ')}</span>
+                                <span className="admin-row-meta">{localStamp(row.at)}</span>
                                 <span className="admin-row-title">{clip(row.text, 140)}</span>
                                 <span className="admin-row-meta">{row.host}</span>
                             </li>

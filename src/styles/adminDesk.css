@@ -450,3 +450,7 @@ button.admin-chip:hover, button.admin-chip[aria-pressed="true"] { border-color: 
 .admin-fold > summary:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: -1px; }
 .admin-fold-count { font-family: var(--di-mono); color: var(--ui-text-muted); }
 .admin-fold-body { padding: var(--di-space-3); border-top: 1px solid var(--admin-line); }
+
+/* knowledge lists stay inside their window at any width (500 px measured 1106 px wide: long rule and request rows pushed
+   the flex items to their min-content width). min-width 0 lets the row titles take their ellipsis instead. */
+.admin-knowledge, .admin-knowledge-set, .admin-rows { min-width: 0; max-width: 100%; }
