@@ -1239,6 +1239,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-10-29'
     },
     {
+        id: 'admin-desk',
+        category: 'Spaces & access',
+        title: 'The admin desk — windows, keys and where each section went',
+        summary: 'The admin console is a desk: a tile per section, a click opens it as a window; several side by side, remembered on this device.',
+        body: [
+            '/admin opens on the desk. The top row shows what needs you (owner only: the Monitor\u2019s rows, or "All well"), then one tile per section with its live number or state, then Activity. A click on a tile opens that section as a window; open several, drag, resize, maximise, close. The arrangement is remembered per device. On a phone the desk is the tile grid and a window fills the screen, one at a time; Back returns to the desk.',
+            'Keys: Ctrl+` next window, Ctrl+Shift+` previous, M maximise or restore, / find a window, Shift+A arrange all, Esc restore, ? the key card. They are not read while you type. The Windows menu in the top bar reopens a closed one; each window has one \u22ef menu for copy and reload. A "?" on a control explains it, on a tap on the phone too.',
+            'Old links keep working: /admin#manage, #opencall, #monitor, #agents, #visitors, #overview, #inspect, #system, #log, #build, #estate open that window, and #monitor-full opens the Monitor maximised.',
+            { list: [
+                'Spaces and users, Open call, Agents, Visitors: as before (Agents shows each chat\u2019s helpers).',
+                'Status is the old Overview; Scene objects is the old "This scene"; Visitors is "Apps that visit"; Staff tools is "Operator tools"; Machines is the old Estate.',
+                'Switches, Log and Build info came out of "Log and settings": the switches, the runtime log, and the browser and release facts.',
+                'Owner only, after the server answers the Monitor: Monitor, Rules (the standing rules, newest first, the text on a click), Hooks (by event: name, matcher, user or repo) and Requests (the ledger rows, newest first).'
+            ] }
+        ],
+        tags: ['admin', 'desk', 'windows', 'monitor', 'rules', 'hooks', 'requests', 'keys'],
+        updated: '2026-11-16'
+    },
+    {
         id: 'admin-estate',
         category: 'Spaces & access',
         title: 'Machines — the computers behind di.iiii',

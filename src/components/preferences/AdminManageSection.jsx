@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ModuleSection, MetricCard, InfoPair } from './PreferencesShared.jsx'
+import { Fold, ModuleSection, MetricCard, InfoPair } from './PreferencesShared.jsx'
 import GithubSyncSection from './GithubSyncSection.jsx'
 import {
     listServerSpaces,
@@ -408,17 +408,21 @@ export function TrafficSection() {
                         <MetricCard label="Busiest day (UTC)" value={busiest ? `${busiest.day} · ${busiest.count}` : '—'} />
                     </div>
                     {views === 0 && <div className="preferences-empty">No views yet.</div>}
-                    {stats.topPaths?.length > 0 && (
-                        <>
-                            <div className="preferences-info-label">Most viewed pages</div>
-                            {stats.topPaths.map((row) => <InfoPair key={row.path} label={row.path} value={row.count} mono />)}
-                        </>
-                    )}
-                    {stats.topReferrers?.length > 0 && (
-                        <>
-                            <div className="preferences-info-label">Where visitors came from</div>
-                            {stats.topReferrers.map((row) => <InfoPair key={row.referrer_host} label={row.referrer_host} value={row.count} mono />)}
-                        </>
+                    {(stats.topPaths?.length > 0 || stats.topReferrers?.length > 0) && (
+                        <Fold title="Top pages and sources" count={(stats.topPaths?.length || 0) + (stats.topReferrers?.length || 0)}>
+                            {stats.topPaths?.length > 0 && (
+                                <>
+                                    <div className="preferences-info-label">Most viewed pages</div>
+                                    {stats.topPaths.map((row) => <InfoPair key={row.path} label={row.path} value={row.count} mono />)}
+                                </>
+                            )}
+                            {stats.topReferrers?.length > 0 && (
+                                <>
+                                    <div className="preferences-info-label">Where visitors came from</div>
+                                    {stats.topReferrers.map((row) => <InfoPair key={row.referrer_host} label={row.referrer_host} value={row.count} mono />)}
+                                </>
+                            )}
+                        </Fold>
                     )}
                 </>
             )}
@@ -442,6 +446,8 @@ export function SweepSection() {
     }, [])
     const { loading, error, report } = state
     const days = Math.round((report?.horizonMs || 0) / (24 * 60 * 60 * 1000)) || 14
+    // Nothing due and nothing done: no box (an empty box says nothing).
+    if (report && !error && report.due.length === 0 && report.log.length === 0) return null
     return (
         <ModuleSection title="Due for the sweep" subtitle={`Idle spaces the sweep reaches in the next ${days} days`}>
             {loading && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading the sweep" text="loading the sweep" /></div>}
@@ -755,7 +761,7 @@ function CommonsModerationSection() {
     }
 
     return (
-        <ModuleSection title="Asset commons" subtitle={items === null ? 'Loading…' : `${items.length} publicly shared asset${items.length === 1 ? '' : 's'}`}>
+        <Fold title="Asset commons" count={items === null ? '…' : items.length}>
             <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); load(query.trim()) }}>
                 <input
                     className="preferences-input"
@@ -795,7 +801,7 @@ function CommonsModerationSection() {
                 )}
             </div>
             {error && <div className="preferences-empty">{error}</div>}
-        </ModuleSection>
+        </Fold>
     )
 }
 

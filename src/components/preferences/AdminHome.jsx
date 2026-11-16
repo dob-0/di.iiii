@@ -32,7 +32,7 @@ export default function AdminHome({ top, hidden, groups, tiles, monitorAllowed, 
         return () => clearInterval(timer)
     }, [monitorAllowed])
     const needs = useMemo(() => (snap ? needsYou(snap) : []), [snap])
-    const earlier = useMemo(() => (snap ? seedActivity(snap, nowMs) : []), [snap]) // eslint-disable-line react-hooks/exhaustive-deps
+    const earlier = useMemo(() => (snap ? seedActivity(snap, nowMs, 24) : []), [snap]) // eslint-disable-line react-hooks/exhaustive-deps
     const checked = at ? `checked ${Math.max(0, Math.floor((nowMs - at) / 1000))} s ago` : 'checking'
     const showMonitor = monitorAllowed
     return (
@@ -44,7 +44,7 @@ export default function AdminHome({ top, hidden, groups, tiles, monitorAllowed, 
             ) : null}
             <div className="admin-home-tiles">
                 {groups.filter((group) => group.kinds.length).map((group) => (
-                    <section key={group.key} className="admin-group" aria-label={group.label} style={{ flexGrow: Math.max(1, Math.ceil(group.kinds.length / 5)) }}>
+                    <section key={group.key} className="admin-group" aria-label={group.label} style={{ flexGrow: Math.max(1, Math.ceil(group.kinds.length / 6)) }}>
                         <h2 className="admin-group-title">{group.label}</h2>
                         <div className="admin-tiles">
                             {group.kinds.map((kind) => <Tile key={kind.key} kind={kind} tile={tiles[kind.key]} onOpen={onOpen} />)}

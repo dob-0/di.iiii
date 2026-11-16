@@ -1,6 +1,5 @@
 import {
     ArchitectureCanvas,
-    ArchitectureLegend,
     CollaboratorCard,
     Fold,
     Hint,
@@ -82,13 +81,13 @@ function StatusBody({ data, openKind }) {
                     {quick.map((button) => <ManagementButton key={button.key} button={button} />)}
                 </div>
             </ModuleSection>
-            <ModuleSection title="Signals">
+            <Fold title="Signals" count={data.signalNodes.length}>
                 <div className="preferences-signal-grid">
                     {data.signalNodes.map((node) => (
                         <SignalNode key={node.key} label={node.label} value={node.value} tone={node.tone} />
                     ))}
                 </div>
-            </ModuleSection>
+            </Fold>
             {data.activityPreviewItems.length ? (
                 <Fold title="Activity" count={data.activityPreviewItems.length}>
                     <div className="preferences-status-grid">
@@ -110,7 +109,7 @@ function ObjectsBody({ data }) {
     const { sync, actions, objects, selectedObject, selectedObjectId, activeArchitectureNode: node } = data
     return (
         <>
-            <ModuleSection title="Map" subtitle="Live control map — click a node to inspect it" actions={<ArchitectureLegend />}>
+            <ModuleSection title="Map" subtitle="Click a node to inspect it. Scene graph, live and attention are the node states.">
                 <div className="preferences-stage-layout">
                     <ArchitectureCanvas
                         nodes={data.architectureNodes}
@@ -140,11 +139,13 @@ function ObjectsBody({ data }) {
             </ModuleSection>
 
             <div className="preferences-objects-top">
+                {objects?.length ? (
                 <ModuleSection title="Radar" subtitle={`${objects?.length || 0} objects`}>
                     <div className="preferences-stage-radar">
                         <ScenePreviewMap dots={data.scenePreviewDots} backgroundColor={data.sceneSettings?.backgroundColor} onSelectObject={actions?.selectObject} />
                     </div>
                 </ModuleSection>
+                ) : null}
 
                 <Fold title="Types" count={data.objectTypeEntries.length}>
                     <div className="preferences-type-list">
@@ -181,13 +182,13 @@ function ObjectsBody({ data }) {
                 ) : null}
             </div>
 
-            <ModuleSection title="Objects" subtitle={`${objects?.length || 0} tracked`}>
+            {objects?.length ? <ModuleSection title="Objects" subtitle={`${objects.length} tracked`}>
                 <div className="preferences-object-feed">
                     {data.objectFeedEntries.length ? data.objectFeedEntries.map((obj) => (
                         <ObjectFeedRow key={obj.id} obj={obj} isSelected={obj.id === selectedObjectId} onSelect={actions?.selectObject} />
                     )) : <div className="preferences-empty">No objects yet.</div>}
                 </div>
-            </ModuleSection>
+            </ModuleSection> : null}
 
             <Fold title="People" count={sync?.participantRoster?.length || 0}>
                 <label className="preferences-field">

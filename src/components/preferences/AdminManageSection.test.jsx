@@ -241,9 +241,11 @@ describe('SweepSection', () => {
         expect(screen.getByTitle('Idle spaces the sweep reaches in the next 14 days')).toBeInTheDocument()
     })
 
-    it('says so when nothing comes due', async () => {
-        render(<SweepSection />)
-        expect(await screen.findByText('Nothing due.')).toBeInTheDocument()
+    it('shows no box at all when nothing comes due and nothing was done', async () => {
+        const { container } = render(<SweepSection />)
+        await waitFor(() => expect(screen.queryByLabelText('Loading the sweep')).toBeNull())
+        expect(container.textContent).toBe('')
+        expect(screen.queryByText('Nothing due.')).toBeNull()
     })
 })
 

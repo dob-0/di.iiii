@@ -173,13 +173,15 @@
 .admin-home-needs { grid-column: 1 / -1; }
 .admin-home-tiles { display: flex; flex-direction: column; min-height: 0; min-width: 0; flex: 1 1 auto; }
 .admin-home-tiles .admin-group { display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; }
-.admin-home-tiles .admin-tiles { flex: 1 1 auto; grid-auto-rows: minmax(110px, 1fr); }
+.admin-home-tiles .admin-tiles { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-content: stretch; }
+.admin-home-tiles .admin-tile { flex: 1 1 160px; min-height: 110px; display: flex; }
+.admin-home-tiles .admin-tile-open { flex: 1 1 auto; }
 .admin-home-activity { min-height: 0; overflow: auto; }
 .admin-home-activity .monitor-activity { position: static; max-height: none; height: 100%; }
 @media (max-width: 599px) {
     .admin-home.has-monitor { display: flex; }
     .admin-home-tiles .admin-group { flex: 0 0 auto; }
-    .admin-home-tiles .admin-tiles { grid-auto-rows: minmax(120px, auto); }
+    .admin-home-tiles .admin-tile { flex-basis: calc(50% - var(--di-space-3)); min-height: 120px; }
 }
 
 /* ─── Knowledge windows: rows you read ─────────────────────── */
