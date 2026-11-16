@@ -121,6 +121,9 @@ function createMonitorStore({
   runCommand = run,
   fetchImpl = (typeof fetch === 'function' ? fetch : null),
   repoDir = process.env.DI_REPO_DIR || process.cwd(),
+  // the installed server runs from ~/.di/current, which is no git checkout, so gh cannot find the repo from the
+  // directory: name it (owner/name) instead; DI_MONITOR_REPO overrides it for a fork
+  repo = process.env.DI_MONITOR_REPO || 'dob-0/di.iiii',
   // who is connected right now: the realtime hub's own maps (space/project id -> socket id -> person)
   // (loaded lazily: the `di monitor report` CLI builds this store without a realtime hub)
   connections = null,
@@ -321,7 +324,7 @@ function createMonitorStore({
   }
 
   async function pullRequests() {
-    const out = await runCommand('gh', ['pr', 'list', '--limit', '30', '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
+    const out = await runCommand('gh', ['pr', 'list', '--repo', repo, '--limit', '30', '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
     const rows = JSON.parse(out).map((p) => ({
       number: p.number,
       title: p.title,

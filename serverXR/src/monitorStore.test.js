@@ -48,6 +48,16 @@ describe('monitor snapshot', () => {
     expect(panels.machines.ok).toBe(true)
   })
 
+  it('the PRs panel names the repo, so it works where the server dir is no git checkout', async () => {
+    const home = tmp()
+    let seen = null
+    const gh = (args) => { seen = args; return JSON.stringify([{ number: 7, title: 't', headRefName: 'b', isDraft: true, updatedAt: 'x', url: 'u' }]) }
+    const store = createMonitorStore({ home, runCommand: fakeRun({ tailscale: () => tailscale, gh }), fetchImpl: null, repo: 'dob-0/di.iiii' })
+    const { panels } = await store.getMonitor()
+    expect(seen).toEqual(expect.arrayContaining(['--repo', 'dob-0/di.iiii']))
+    expect(panels.pullRequests).toMatchObject({ ok: true, open: 1, drafts: 1 })
+  })
+
   it('probes report status and mark a refusing server down', async () => {
     const home = tmp()
     fs.mkdirSync(path.join(home, '.di'))
