@@ -11,7 +11,12 @@ const norm = (keys) => [...new Set(keys)].sort()
 const same = (a, b) => a.length === b.length && a.every((k, i) => k === b[i])
 const read = () => { try { return window.history.state } catch { return null } }
 const homeUrl = () => `${window.location.pathname}${window.location.search}`
-const urlFor = (front) => (front ? `${homeUrl()}#${front}` : homeUrl())
+let deepFull = false  // the page was opened at #monitor-full: its first entry keeps that hash so the Monitor mounts in full screen
+const urlFor = (front) => {
+    if (!front) return homeUrl()
+    if (front === 'monitor' && deepFull) { deepFull = false; return `${homeUrl()}#monitor-full` }
+    return `${homeUrl()}#${front}`
+}
 
 // openKeys: the windows open now; front: the one on top (or null); apply(keys): make the desk show exactly these.
 export default function useDeskHistory({ openKeys, front, apply }) {
@@ -23,6 +28,7 @@ export default function useDeskHistory({ openKeys, front, apply }) {
     const lastFront = useRef(null)
     const applying = useRef(null)     // a set a Back asked for, waiting for the layout to catch up
     const stale = useRef(null)        // the entry under us must be rewritten to this set when Back reaches it
+    const deepLink = useRef(false)    // the first push replaces the linked entry with the desk home first
     const applyRef = useRef(apply)
     applyRef.current = apply
 
@@ -30,7 +36,8 @@ export default function useDeskHistory({ openKeys, front, apply }) {
     const prepareDeepLink = useCallback(() => {
         const s = read()
         if (s?.diBack || depthOf(s) > 0) return
-        try { window.history.replaceState(null, '', homeUrl()) } catch { /* no history here */ }
+        deepFull = window.location.hash === '#monitor-full'
+        deepLink.current = true
     }, [])
 
     useEffect(() => subscribeBack((state, depth) => {
@@ -88,6 +95,10 @@ export default function useDeskHistory({ openKeys, front, apply }) {
                 stale.current = sig                // another view sits above; rewrite when Back reaches us
             }
             return
+        }
+        if (deepLink.current) {
+            deepLink.current = false
+            try { window.history.replaceState(null, '', homeUrl()) } catch { /* no history here */ }
         }
         const r = pushEntry(ID, { open: sig }, urlFor(front))
         if (r) { top.current = { depth: r.depth, seq: r.seq }; stack.current.set(r.depth, sig) }

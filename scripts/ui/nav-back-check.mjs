@@ -23,7 +23,7 @@ const shot = async (page, name) => { if (out) await page.screenshot({ path: path
 const settle = (page, ms = 700) => page.waitForTimeout(ms)
 const openMonitor = async (page) => {
     await page.getByRole('button', { name: 'Windows' }).click()
-    await page.getByRole('menuitem', { name: /monitor/i }).first().click()
+    await page.getByRole('menuitemcheckbox', { name: /monitor/i }).first().click()
     await page.waitForSelector('.monitor-page', { timeout: 15000 })
     await settle(page)
 }
@@ -33,6 +33,7 @@ const newDesk = async (viewport, url = `${base}/admin`) => {
     await page.goto(url, { waitUntil: 'domcontentloaded' })
     await page.waitForSelector('.admin-desk', { timeout: 30000 })
     await settle(page, 1500)
+    if (url.includes('#')) await page.waitForSelector('.monitor-page', { timeout: 20000 })
     return { ctx, page }
 }
 
@@ -67,14 +68,13 @@ try {
     await page.close(); await ctx.close()
 
     // 3. deep link
-    ;({ ctx, page } = await newDesk({ width: 1440, height: 1000 }))
-    await page.goto(`${base}/admin#monitor-full`, { waitUntil: 'domcontentloaded' })
+    ;({ ctx, page } = await newDesk({ width: 1440, height: 1000 }, `${base}/admin#monitor-full`))
     await page.waitForSelector('.monitor-page', { timeout: 20000 }); await settle(page, 1200)
     s = await state(page); check('deep link #monitor-full opens the Monitor in full screen', s.full === 'on', JSON.stringify(s))
     await page.goBack(); await settle(page)
-    s = await state(page); check('Back from the deep link stays on /admin, full screen off', s.path === '/admin' && s.full !== 'on', JSON.stringify(s))
+    s = await state(page); check('Back from the deep link = Monitor window, still on /admin', s.path === '/admin' && s.full === 'off' && s.windows === 1, JSON.stringify(s))
     await page.goBack(); await settle(page)
-    s = await state(page); check('Back again: desk home, still /admin', s.path === '/admin' && s.windows === 0, JSON.stringify(s))
+    s = await state(page); check('Back again = desk home, still on /admin (never off the site)', s.path === '/admin' && s.windows === 0, JSON.stringify(s))
     await page.close(); await ctx.close()
 
     // 4. phone
