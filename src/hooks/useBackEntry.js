@@ -18,7 +18,12 @@ let lastDepth = 0
 const hist = () => (typeof window !== 'undefined' ? window.history : null)
 const readState = () => { try { return hist()?.state ?? null } catch { return null } }
 
-export const depthOf = (state) => (state && Number.isFinite(state.diDepth) ? state.diDepth : 0)
+// the place of an entry in the session list: react-router's history.state.idx when the entry has one (every router entry does,
+// ours carry it too), else our own diDepth. One number for every entry, so Back is never read as Forward after a router push.
+export const depthOf = (state) => {
+    if (state && Number.isFinite(state.idx)) return state.idx
+    return state && Number.isFinite(state.diDepth) ? state.diDepth : 0
+}
 export const isDead = (state) => !!(state && state.diSession === SESSION && state.diSeq && !live.has(state.diSeq))
 
 function onPop() {
@@ -35,6 +40,16 @@ function install() {
     installed = true
     lastDepth = depthOf(readState())
     window.addEventListener('popstate', onPop)
+    // a router push or replace moves us too: keep the position current so the next Back is read from where we really were
+    for (const name of ['pushState', 'replaceState']) {
+        const orig = window.history[name]
+        if (typeof orig !== 'function') continue
+        window.history[name] = function patched(...args) {
+            const out = orig.apply(this, args)
+            lastDepth = depthOf(readState())
+            return out
+        }
+    }
 }
 
 // fn(state, depth) runs after every Back/Forward that lands on an entry that is not dead
@@ -52,6 +67,7 @@ export function pushEntry(id, extra = {}, url) {
     const seq = ++seqCounter
     const depth = depthOf(readState()) + 1
     const state = { ...extra, diBack: id, diSession: SESSION, diSeq: seq, diDepth: depth }
+    if (Number.isFinite(readState()?.idx)) state.idx = depth // keep the router's own counter in step
     try { if (url == null) h.pushState(state, ''); else h.pushState(state, '', url) } catch { return null }
     live.add(seq)
     lastDepth = depth
@@ -67,6 +83,7 @@ export function replaceEntry(id, extra = {}, url) {
     const seq = cur?.diSeq && cur.diSession === SESSION ? cur.diSeq : ++seqCounter
     const depth = depthOf(cur)
     const state = { ...extra, diBack: id, diSession: SESSION, diSeq: seq, diDepth: depth }
+    if (Number.isFinite(cur?.idx)) state.idx = cur.idx
     try { if (url == null) h.replaceState(state, ''); else h.replaceState(state, '', url) } catch { return null }
     live.add(seq)
     return { seq, depth }

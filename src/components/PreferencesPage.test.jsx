@@ -207,6 +207,7 @@ describe('PreferencesPage', () => {
         cleanup()
         window.localStorage.clear()
         spy.mockResolvedValue({ ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' })
+        window.location.hash = '#monitor-full' // the 404 fallback opened the manage window, which rewrote the hash: set it again
         renderPreferencesPage()
         expect(await screen.findByLabelText('Filter every panel', {}, { timeout: 5000 })).toBeTruthy()
         window.location.hash = '#nonsense'
