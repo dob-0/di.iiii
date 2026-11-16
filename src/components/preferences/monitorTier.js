@@ -12,6 +12,10 @@ const isHealthy = (row) => {
     return ['ok', 'up', 'live', 'online', '200'].includes(String(s ?? '').toLowerCase())
 }
 
+// Answered at all: a 2xx, or a 429 (it answered and asked us to check less often). The activity feed's
+// "stopped answering" reads this, so a limited probe never shows as an outage there either.
+export const tierAnswers = (row) => row?.status === 429 || isHealthy(row)
+
 export const tierLabel = (id) => (id.startsWith('local:') ? `local · ${id.slice(6)}` : id)
 
 // 'down' | 'drift' | 'ok' and the reason in words
