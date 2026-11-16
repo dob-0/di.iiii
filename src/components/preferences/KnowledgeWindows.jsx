@@ -104,6 +104,53 @@ export function HooksBody({ snap, error }) {
     )
 }
 
+const SKILL_SCOPES = ['user', 'repo', 'plugin']
+
+export function SkillsBody({ snap, error }) {
+    const k = useMemo(() => (snap ? monitorKnowledge(snap) : null), [snap])
+    const [scope, setScope] = useState('all')
+    const [picked, setPicked] = useState(null)
+    if (!k) return <Waiting snap={snap} error={error} />
+    const { sets, unreadable } = k.skills || { sets: [], unreadable: [] }
+    if (!sets.length) return <><div className="preferences-empty">No skills reported yet.</div><Unreadable list={unreadable} /></>
+    return (
+        <div className="admin-knowledge">
+            {sets.map((set) => {
+                const tally = (name) => set.rows.filter((row) => row.scope === name).length
+                const rows = scope === 'all' ? set.rows : set.rows.filter((row) => row.scope === scope)
+                return (
+                    <section key={set.hosts.join(',')} className="admin-knowledge-set" aria-label={set.hosts.join(', ')}>
+                        <div className="admin-knowledge-head">
+                            <button type="button" className="admin-chip" aria-pressed={scope === 'all'} onClick={() => setScope('all')}><b>{set.count}</b> all</button>
+                            {SKILL_SCOPES.filter((name) => tally(name) > 0).map((name) => (
+                                <button key={name} type="button" className={`admin-chip scope-${name}`} aria-pressed={scope === name} onClick={() => setScope(name)}><b>{tally(name)}</b> {name}</button>
+                            ))}
+                            <span className="admin-chip" title={set.hosts.join(', ')}>{set.sameText || set.hosts[0]}</span>
+                        </div>
+                        <ul className="admin-rows">
+                            {rows.map((row, i) => (
+                                <li key={`${row.scope}:${row.name}:${i}`}>
+                                    <button type="button" className="admin-row" aria-pressed={picked?.name === row.name && picked?.scope === row.scope} onClick={() => setPicked(row)}>
+                                        <span className={`admin-chip scope-${row.scope}`}>{row.scope}</span>
+                                        <span className="admin-row-title">{row.name}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )
+            })}
+            <Unreadable list={unreadable} />
+            {picked ? (
+                <Drawer title={picked.name} onClose={() => setPicked(null)}>
+                    <p className="admin-rule-text">{picked.description || 'No description written.'}</p>
+                    <div className="admin-row-meta">{picked.scope}</div>
+                </Drawer>
+            ) : null}
+        </div>
+    )
+}
+
 const STATE_TONE = { NEW: 'warning', WAITING: 'warning', BLOCKED: 'danger', OPEN: 'default', RUNNING: 'success', DONE: 'muted', CLOSED: 'muted' }
 
 export function RequestsBody({ snap, error }) {
@@ -111,12 +158,13 @@ export function RequestsBody({ snap, error }) {
     const [picked, setPicked] = useState(null)
     if (!k) return <Waiting snap={snap} error={error} />
     const { rows, empty, byState } = k.rows
-    if (empty) return <div className="preferences-empty">Rows come from aylmo’s ledger when it reports.</div>
+    const waiting = k.waiting?.rows || []
+    if (empty && !waiting.length) return <div className="preferences-empty">Rows come from aylmo’s ledger when it reports.</div>
     return (
         <div className="admin-knowledge">
-            <div className="admin-knowledge-head">
+            {empty ? null : <div className="admin-knowledge-head">
                 {Object.entries(byState).map(([state, n]) => <span key={state} className={`admin-chip tone-${STATE_TONE[String(state).toUpperCase()] || 'default'}`}><b>{n}</b> {state}</span>)}
-            </div>
+            </div>}
             <ul className="admin-rows">
                 {rows.map((row) => (
                     <li key={row.id}>
@@ -129,6 +177,23 @@ export function RequestsBody({ snap, error }) {
                     </li>
                 ))}
             </ul>
+            {waiting.length ? (
+                <section className="admin-knowledge-set" aria-label="Waiting for the ledger">
+                    <div className="admin-knowledge-head">
+                        <span className="admin-chip tone-warning"><b>{waiting.length}</b> Waiting for the ledger</span>
+                        <span className="admin-row-meta">aylmo’s ledger adds these when it is on.</span>
+                    </div>
+                    <ul className="admin-rows" data-testid="waiting">
+                        {waiting.map((row, i) => (
+                            <li key={`${row.host}:${row.at}:${i}`} className="admin-row is-static">
+                                <span className="admin-row-meta">{String(row.at || '').slice(0, 16).replace('T', ' ')}</span>
+                                <span className="admin-row-title">{clip(row.text, 140)}</span>
+                                <span className="admin-row-meta">{row.host}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            ) : null}
             {picked ? (
                 <Drawer title={String(picked.id)} onClose={() => setPicked(null)}>
                     <p className="admin-rule-text">{picked.text || ''}</p>

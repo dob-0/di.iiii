@@ -57,6 +57,8 @@
 }
 
 .admin-chip b { font-weight: 700; color: var(--di-text); }
+button.admin-chip { font: inherit; cursor: pointer; }
+button.admin-chip:hover, button.admin-chip[aria-pressed="true"] { border-color: var(--di-cyan); }
 .admin-chip.tone-success { border-color: rgba(var(--di-success-rgb), 0.5); }
 .admin-chip.tone-warning { border-color: rgba(var(--di-warning-rgb), 0.5); }
 .admin-chip.tone-danger { border-color: rgba(var(--di-danger-rgb), 0.5); }
@@ -380,8 +382,9 @@
 .admin-window .preferences-module-header { margin-bottom: var(--di-space-3); }
 
 /* ─── Switches as tiles with a state colour ────────────────── */
-.admin-window .preferences-switch { position: relative; }
-.admin-window .preferences-switch .preferences-hint { position: absolute; top: var(--di-space-1); right: var(--di-space-1); margin: 0; }
+.admin-window .preferences-switch { display: flex; flex-direction: row; align-items: stretch; gap: var(--di-space-1); min-width: 0; }
+.admin-window .preferences-switch .preferences-switch-control { flex: 1 1 auto; min-width: 0; }
+.admin-window .preferences-switch .preferences-hint { flex: none; align-self: center; margin: 0; }
 .admin-window .preferences-switch-control { border-left: 4px solid var(--pref-border); }
 .admin-window .preferences-switch-control.is-on { border-left-color: var(--di-success); background: rgba(var(--di-success-rgb), 0.06); }
 .admin-window .preferences-switch-control.is-warning { border-left-color: var(--di-warning); background: rgba(var(--di-warning-rgb), 0.06); }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
     ArchitectureCanvas,
     CollaboratorCard,
@@ -17,7 +18,7 @@ import AdminManageSection from './AdminManageSection.jsx'
 import OpenCallSection from './OpenCallSection.jsx'
 import AgentsSection from './AgentsSection.jsx'
 import MonitorSection from './MonitorSection.jsx'
-import { HelpersList, HooksBody, RequestsBody, RulesBody } from './KnowledgeWindows.jsx'
+import { HelpersList, HooksBody, RequestsBody, RulesBody, SkillsBody } from './KnowledgeWindows.jsx'
 import EstateSection from './EstateSection.jsx'
 import AppVisitorsSection from './AppVisitorsSection.jsx'
 
@@ -106,7 +107,10 @@ function StatusBody({ data, openKind }) {
 }
 
 function ObjectsBody({ data }) {
-    const { sync, actions, objects, selectedObject, selectedObjectId, activeArchitectureNode: node } = data
+    const { sync, actions, objects, selectedObject, selectedObjectId } = data
+    // The node inspector opens on a click, never by itself: the first screen is the map and the counts.
+    const [pickedNodeId, setPickedNodeId] = useState(null)
+    const node = pickedNodeId ? (data.architectureNodes || []).find((n) => n.id === pickedNodeId) || null : null
     return (
         <>
             <ModuleSection title="Map" subtitle="Click a node to inspect it. Scene graph, live and attention are the node states.">
@@ -115,7 +119,7 @@ function ObjectsBody({ data }) {
                         nodes={data.architectureNodes}
                         links={data.architectureLinks}
                         selectedNodeId={node?.id}
-                        onSelectNode={data.setSelectedNodeId}
+                        onSelectNode={(id) => { setPickedNodeId(id); data.setSelectedNodeId?.(id) }}
                     />
                     {/* The inspector exists only while a node is picked: no empty box waiting. */}
                     {node ? (
@@ -230,11 +234,9 @@ function SwitchesBody({ data }) {
     const { sceneSettings } = data
     return (
         <>
-            <ModuleSection title="Command deck">
-                <div className="preferences-command-grid">
-                    {data.managementButtons.map((button) => <ManagementButton key={button.key} button={button} />)}
-                </div>
-            </ModuleSection>
+            <div className="preferences-command-grid admin-switch-deck">
+                {data.managementButtons.map((button) => <ManagementButton key={button.key} button={button} />)}
+            </div>
 
             <Fold title="Panels" count={data.panelButtons.length}>
                 <div className="preferences-panel-grid">
@@ -339,6 +341,7 @@ export default function AdminWindowBody({ kind, data, openKind, onStats, monitor
         case 'agents': return <><AgentsSection onBoardStats={(s) => onStats('agents', s)} /><HelpersList snap={monitor.snap} /></>
         case 'rules': return <RulesBody snap={monitor.snap} error={monitor.error} />
         case 'hooks': return <HooksBody snap={monitor.snap} error={monitor.error} />
+        case 'skills': return <SkillsBody snap={monitor.snap} error={monitor.error} />
         case 'requests': return <RequestsBody snap={monitor.snap} error={monitor.error} />
         case 'visitors': return <AppVisitorsSection />
         case 'estate': return <EstateSection />

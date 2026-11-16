@@ -32,7 +32,7 @@ vi.mock('../hooks/usePreferencesData.js', () => ({
         activityPreviewItems: [],
         managementButtons: [
             { key: 'edit-lock', kind: 'switch', label: 'Lock editing', checked: false, detail: 'When on, nobody can change this space. Turn it off to undo.', onClick: toggleEditLock },
-            { key: 'publish', label: 'Publish to the server now', onClick: vi.fn() }
+            { key: 'publish', label: 'Publish now', onClick: vi.fn() }
         ]
     })
 }))
@@ -72,7 +72,7 @@ describe('admin console in plain words', () => {
         fireEvent.click(lock)
         expect(toggleEditLock).toHaveBeenCalledTimes(1)
         // Publish is an action, so it stays a button named as one.
-        expect(screen.getByRole('button', { name: 'Publish to the server now' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Publish now' })).toBeInTheDocument()
     })
 
     it('Reload loads the list again and keeps the window open, without reloading the page', () => {
