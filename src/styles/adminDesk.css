@@ -191,7 +191,7 @@
 .admin-row {
     display: flex; align-items: center; gap: var(--di-space-3); width: 100%; min-height: 44px; text-align: left;
     padding: var(--di-space-2) var(--di-space-3); background: var(--di-surface); border: 1px solid var(--pref-border, var(--admin-line));
-    color: inherit; font: inherit; cursor: pointer;
+    color: inherit; font: inherit; cursor: pointer; box-sizing: border-box;
 }
 .admin-row.is-static { cursor: default; }
 .admin-row:hover:not(.is-static), .admin-row[aria-pressed="true"] { border-color: var(--di-cyan); }
