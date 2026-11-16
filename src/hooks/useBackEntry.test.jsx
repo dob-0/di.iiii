@@ -65,6 +65,24 @@ describe('useBackEntry', () => {
         expect(screen.getByTestId('s-a').textContent).toBe('closed')
     })
 
+    it('a router push over an open view, then the page unmounts: Back lands once on the page below and stays there (no bounce forward)', async () => {
+        window.history.replaceState({ usr: null, key: 'default', idx: 0 }, '', '/admin') // the router stamps idx 0 on its first entry
+        const { unmount } = render(<View />)
+        await act(async () => { screen.getByText('open-v').click() })
+        await tick()
+        // what react-router does on a push: a new entry whose idx is the current idx + 1 (no diDepth of ours)
+        const cur = window.history.state
+        window.history.pushState({ usr: null, key: 'k1', idx: (Number.isFinite(cur?.idx) ? cur.idx : 0) + 1 }, '', '/space/x')
+        unmount()
+        await tick()
+        const paths = [window.location.pathname]
+        await back(); paths.push(window.location.pathname)
+        await tick(80); paths.push(window.location.pathname)
+        expect(paths).toEqual(['/space/x', '/admin', '/admin'])
+        expect(paths[1]).toBe('/admin')
+        expect(paths[2]).toBe('/admin')
+    })
+
     it('a view closed under another leaves a dead entry that Back skips', async () => {
         render(<><View id="a" /><View id="b" /></>)
         await act(async () => { screen.getByText('open-a').click() })
