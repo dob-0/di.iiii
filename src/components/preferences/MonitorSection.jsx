@@ -10,6 +10,8 @@ import MonitorActivity from './MonitorActivity.jsx'
 import MonitorLists from './MonitorLists.jsx'
 import MonitorDrawer from './MonitorDrawer.jsx'
 import { needsYou, vitalChips, seedActivity } from './monitorCalm.js'
+import { monitorKnowledge } from './monitorKnowledge.js'
+import { HooksBody, RequestsBody, RulesBody, SkillsBody } from './KnowledgeWindows.jsx'
 
 // One page for everything that is going on, in the order a person needs it:
 // the bar, what needs him (one row, one action), the vital strip, then Now / Map / Lists.
@@ -17,12 +19,12 @@ import { needsYou, vitalChips, seedActivity } from './monitorCalm.js'
 // motion under 0.2 s on named properties only.
 
 const POLL_MS = 5000
-const TABS = [['now', 'Now'], ['map', 'Map'], ['lists', 'Lists']]
+const TABS = [['now', 'Now'], ['map', 'Map'], ['lists', 'Lists'], ['work', 'Work']]
 const FLASH_MS = 2500
 const FULL_KEY = 'di.monitor.full'
 const SPARK_SAMPLES = 30
-const TAB_KEYS = { 1: 'now', 2: 'map', 3: 'lists' }
-const KEYS_HELP = [['1  2  3', 'Now, Map, Lists'], ['/', 'Filter everything'], ['r', 'Read the server again'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
+const TAB_KEYS = { 1: 'now', 2: 'map', 3: 'lists', 4: 'work' }
+const KEYS_HELP = [['1  2  3  4', 'Now, Map, Lists, Work'], ['/', 'Filter everything'], ['r', 'Read the server again'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
 
 // remembered per browser; storage can be blocked, so every touch is guarded
 const readFull = () => {
@@ -279,6 +281,8 @@ export default function MonitorSection({ onStats }) {
     const needs = useMemo(() => needsYou(snap), [snap])
     const chips = useMemo(() => vitalChips(snap, snap?.host), [snap])
     const earlier = useMemo(() => seedActivity(snap, nowMs), [snap]) // eslint-disable-line react-hooks/exhaustive-deps
+    // what drives the agents, from every machine's report: to do, rules, skills, hooks, helpers
+    const knowledge = useMemo(() => (snap ? monitorKnowledge(snap) : null), [snap])
     const shownAgents = useMemo(() => {
         const rows = (panels.agents?.rows || []).filter((a) => matches(query, a.title, a.account, a.machine, a.branch, a.cwd, a.status))
         return { ...(panels.agents || {}), rows }
@@ -330,7 +334,7 @@ export default function MonitorSection({ onStats }) {
             <div className="monitor-main">
                 {tab === 'now' ? (
                     <div className="monitor-now">
-                        <MonitorWorkspace asks={snap?.asks} agents={shownAgents} flashing={flashing} onPick={pick} />
+                        <MonitorWorkspace asks={snap?.asks} agents={shownAgents} helpers={knowledge?.agents?.helpers || []} flashing={flashing} onPick={pick} />
                         <MonitorActivity feed={feed} earlier={earlier} />
                     </div>
                 ) : null}
@@ -339,6 +343,16 @@ export default function MonitorSection({ onStats }) {
                         <MonitorMap map={snap?.map} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
                             live={streaming && !paused} query={query} onPick={pickNode} />
                     </ModuleSection>
+                ) : null}
+                {tab === 'work' ? (
+                    <div className="monitor-work" data-box="work">
+                        {[['todo', 'To do', RequestsBody], ['rules', 'Rules', RulesBody], ['skills', 'Skills', SkillsBody], ['hooks', 'Hooks', HooksBody]].map(([id, title, Body]) => (
+                            <section key={id} className="monitor-work-part" data-work={id} aria-label={title}>
+                                <div className="monitor-group-title">{title}</div>
+                                <Body snap={snap} error={error} />
+                            </section>
+                        ))}
+                    </div>
                 ) : null}
                 {tab === 'lists' ? (
                     <MonitorLists snap={snap} panels={panels} query={query} selected={selected} flashing={flashing} nowMs={nowMs} matches={matches} onPick={pick} />
