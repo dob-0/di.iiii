@@ -162,7 +162,11 @@ describe('rules, hooks and helpers panels (made-up files)', () => {
         expect(hookName('env KEY=abc node /p/q/run.mjs intake --token abc')).toBe('run.mjs intake')
         expect(hookName('/p/q/script /etc/passwd')).toBe('script')
         expect(hookName('')).toBe('unknown')
-        for (const c of ['TOKEN=hunter2 /opt/a/b/tool', 'python3 /home/x/secret-dir/t sub --token abc']) expect(hookName(c)).not.toMatch(/hunter2|secret-dir|abc|\//)
+        expect(hookName('bash -c "TOKEN=hunter2 curl -H x https://a/b?k=abc"')).toBe('curl')
+        expect(hookName("sh -c 'KEY=abc /p/q/tool run'")).toBe('tool run')
+        expect(hookName('nice -n 19 node /p/q/a.js')).toBe('a.js')
+        expect(hookName('"A=hunter2"')).toBe('unknown')
+        for (const c of ['TOKEN=hunter2 /opt/a/b/tool', 'python3 /home/x/secret-dir/t sub --token abc', 'bash -c "TOKEN=hunter2 x"', "sh -c 'A=abc b'"]) expect(hookName(c)).not.toMatch(/hunter2|secret-dir|abc|\//)
     })
     it('hooksPanel: user and repo scope, per-event counts, and a missing user file is ok:false', () => {
         const home = tmpHome()

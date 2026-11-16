@@ -100,17 +100,19 @@ export const rulesPanel = ({ home = os.homedir() } = {}) => {
 
 /** The tool and its subcommand only: `python3 -I -B /x/di-hooks resume-guard 2>/dev/null` -> `di-hooks resume-guard`. */
 export const hookName = (command) => {
-    const words = String(command || '').trim().split(/\s+/).filter(Boolean)
+    // quotes are stripped from every word first, so a quoted `bash -c "KEY=value …"` cannot carry a value past skipEnv
+    const words = String(command || '').trim().split(/\s+/).map((w) => w.replace(/^["']+|["']+$/g, '')).filter(Boolean)
     let i = 0
     const skipEnv = () => { while (i < words.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[i])) i += 1 } // env values never leave
     skipEnv()
     while (i < words.length && INTERPRETERS.has(path.basename(words[i]))) {
         i += 1
-        while (i < words.length && words[i].startsWith('-')) i += 1
+        while (i < words.length && (words[i].startsWith('-') || /^\d+$/.test(words[i]))) i += 1 // flags and their numbers (nice -n 19)
         skipEnv()
     }
     if (i >= words.length) return 'unknown'
-    const tool = path.basename(words[i].replace(/^["']|["']$/g, '')).slice(0, 60) || 'unknown'
+    const tool = path.basename(words[i]).slice(0, 60)
+    if (!tool || tool.includes('=')) return 'unknown' // never a value, whatever the shape
     const sub = words[i + 1]
     return /^[a-z][a-z0-9-]{0,30}$/.test(sub || '') ? `${tool} ${sub}` : tool
 }
