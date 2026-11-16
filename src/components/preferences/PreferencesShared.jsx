@@ -151,6 +151,16 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
 
 // A "?" on its control: the sentence that used to sit under it. Hover or focus shows it (title), a tap or
 // Enter opens it under the control (the phone has no hover). Nothing is drawn until it is asked for.
+// A group of facts closed until it is asked for: the summary is its name and its count.
+export function Fold({ title, count, open = false, children }) {
+    return (
+        <details className="admin-fold" open={open}>
+            <summary>{title}{count != null ? <span className="admin-fold-count">{count}</span> : null}</summary>
+            <div className="admin-fold-body">{children}</div>
+        </details>
+    )
+}
+
 export function Hint({ text, label = 'What is this?' }) {
     const [open, setOpen] = useState(false)
     if (!text) return null

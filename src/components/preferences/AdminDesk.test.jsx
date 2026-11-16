@@ -10,6 +10,8 @@ vi.mock('./useAdminTiles.js', () => ({
     buildTiles: () => ({})
 }))
 
+vi.mock('./useMonitorSnap.js', () => ({ default: () => ({ snap: null, error: null, at: 0, refresh: () => {} }) }))
+
 import AdminDesk from './AdminDesk.jsx'
 import { ModuleSection, Hint } from './PreferencesShared.jsx'
 

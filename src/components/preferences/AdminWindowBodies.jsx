@@ -2,6 +2,7 @@ import {
     ArchitectureCanvas,
     ArchitectureLegend,
     CollaboratorCard,
+    Fold,
     Hint,
     InfoPair,
     ModuleSection,
@@ -17,6 +18,7 @@ import AdminManageSection from './AdminManageSection.jsx'
 import OpenCallSection from './OpenCallSection.jsx'
 import AgentsSection from './AgentsSection.jsx'
 import MonitorSection from './MonitorSection.jsx'
+import { HelpersList, HooksBody, RequestsBody, RulesBody } from './KnowledgeWindows.jsx'
 import EstateSection from './EstateSection.jsx'
 import AppVisitorsSection from './AppVisitorsSection.jsx'
 
@@ -53,16 +55,6 @@ function ManagementButton({ button }) {
         <button type="button" className={getActionButtonClassName(button)} onClick={button.onClick} disabled={button.disabled} title={button.title}>
             {button.label}
         </button>
-    )
-}
-
-// A group of facts closed until it is asked for: the summary is its name and its count.
-function Fold({ title, count, open = false, children }) {
-    return (
-        <details className="admin-fold" open={open}>
-            <summary>{title}{count != null ? <span className="admin-fold-count">{count}</span> : null}</summary>
-            <div className="admin-fold-body">{children}</div>
-        </details>
     )
 }
 
@@ -338,12 +330,15 @@ function BuildBody({ data }) {
 }
 
 /** The body of one desk window. `data` is the page's usePreferencesData bag; `onStats` feeds the tiles. */
-export default function AdminWindowBody({ kind, data, openKind, onStats }) {
+export default function AdminWindowBody({ kind, data, openKind, onStats, monitor = {} }) {
     switch (kind) {
         case 'manage': return <AdminManageSection onStats={(s) => onStats('manage', s)} />
         case 'opencall': return <OpenCallSection />
         case 'monitor': return <MonitorSection onStats={(s) => onStats('monitor', s)} />
-        case 'agents': return <AgentsSection onBoardStats={(s) => onStats('agents', s)} />
+        case 'agents': return <><AgentsSection onBoardStats={(s) => onStats('agents', s)} /><HelpersList snap={monitor.snap} /></>
+        case 'rules': return <RulesBody snap={monitor.snap} error={monitor.error} />
+        case 'hooks': return <HooksBody snap={monitor.snap} error={monitor.error} />
+        case 'requests': return <RequestsBody snap={monitor.snap} error={monitor.error} />
         case 'visitors': return <AppVisitorsSection />
         case 'estate': return <EstateSection />
         case 'overview': return <StatusBody data={data} openKind={openKind} />

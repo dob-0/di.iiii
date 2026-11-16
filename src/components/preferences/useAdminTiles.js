@@ -13,7 +13,7 @@ const DASH = '—'
 const num = (value) => (Number.isFinite(value) ? value : DASH)
 
 /** Pure: the tiles from what was fetched and what the page knows. Tested. */
-export const buildTiles = ({ remote = {}, page = {}, overrides = {} } = {}) => {
+export const buildTiles = ({ remote = {}, page = {}, overrides = {}, knowledge = null } = {}) => {
     const spaces = overrides.manage?.spaces ?? remote.spaces
     const users = overrides.manage?.users ?? remote.users
     const live = overrides.agents?.live ?? overrides.monitor?.live ?? remote.agentsLive
@@ -29,11 +29,20 @@ export const buildTiles = ({ remote = {}, page = {}, overrides = {} } = {}) => {
     const health = String(page.backendHealthStatus || '')
     const healthy = /^(ok|healthy|up|ready|connected|online)$/i.test(health)
     const liveTone = (n) => (n > 0 ? 'success' : 'default')
+    const rules = knowledge?.rules?.sets?.[0]
+    const hooks = knowledge?.hooks?.sets?.[0]
+    const helpers = knowledge?.agents?.helpers?.length
+    const asks = knowledge?.rows
+    const agentChips = [{ label: 'Live', value: num(live), tone: liveTone(live) }, { label: 'Sessions', value: num(total) }]
+    if (Number.isFinite(helpers)) agentChips.push({ label: 'Helpers', value: helpers })
     return {
+        rules: { value: num(rules?.count), word: 'Rules', tone: 'default', chips: [{ label: 'Rules', value: num(rules?.count) }, { label: 'Machines', value: rules?.same ?? DASH }] },
+        hooks: { value: num(hooks?.count), word: 'Hooks', tone: 'default', chips: [{ label: 'Hooks', value: num(hooks?.count) }, { label: 'Events', value: hooks ? Object.keys(hooks.events || {}).length : DASH }] },
+        requests: { value: num(asks?.open), word: 'Open rows', tone: asks?.open > 0 ? 'warning' : 'default', chips: [{ label: 'Open', value: num(asks?.open) }, { label: 'Rows', value: num(asks?.count) }] },
         manage: { value: num(spaces), word: 'Spaces', tone: 'default', chips: [{ label: 'Spaces', value: num(spaces) }, { label: 'Users', value: num(users) }] },
         opencall: { value: num(calls), word: 'Applications', tone: newCalls > 0 ? 'warning' : 'default', chips: [{ label: 'Total', value: num(calls) }, { label: 'New', value: num(newCalls), tone: newCalls > 0 ? 'warning' : 'default' }] },
         monitor: { value: num(live), word: 'Live', tone: liveTone(live), chips: [{ label: 'Live', value: num(live), tone: liveTone(live) }, { label: 'Sessions', value: num(total) }] },
-        agents: { value: num(live), word: 'Live chats', tone: liveTone(live), chips: [{ label: 'Live', value: num(live), tone: liveTone(live) }, { label: 'Sessions', value: num(total) }] },
+        agents: { value: num(live), word: 'Live chats', tone: liveTone(live), chips: agentChips },
         visitors: { value: num(programs), word: 'Programs', tone: 'default', chips: [{ label: 'Programs', value: num(programs) }] },
         overview: { value: page.connected ? 'On' : 'Off', word: 'Live link', tone: page.connected ? 'success' : 'warning', chips: [{ label: 'Live link', value: page.connected ? 'On' : 'Off', tone: page.connected ? 'success' : 'warning' }] },
         inspect: { value: num(page.objectCount), word: 'Objects', tone: 'default', chips: [{ label: 'Objects', value: num(page.objectCount) }, { label: 'People', value: num(page.people) }] },
@@ -46,7 +55,7 @@ export const buildTiles = ({ remote = {}, page = {}, overrides = {} } = {}) => {
 
 const first = (promise) => promise.then((value) => ({ ok: true, value }), () => ({ ok: false }))
 
-export default function useAdminTiles({ monitorAllowed = false, page = {} } = {}) {
+export default function useAdminTiles({ monitorAllowed = false, page = {}, knowledge = null } = {}) {
     const [remote, setRemote] = useState({})
     const [overrides, setOverrides] = useState({})
     const [tick, setTick] = useState(0)
@@ -82,6 +91,6 @@ export default function useAdminTiles({ monitorAllowed = false, page = {} } = {}
         })
     }, [])
     const refresh = useCallback(() => setTick((n) => n + 1), [])
-    const tiles = useMemo(() => buildTiles({ remote, page, overrides }), [remote, page, overrides])
+    const tiles = useMemo(() => buildTiles({ remote, page, overrides, knowledge }), [remote, page, overrides, knowledge])
     return { tiles, report, refresh }
 }

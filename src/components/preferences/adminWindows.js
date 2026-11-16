@@ -19,6 +19,7 @@ import { isTypingTarget, windowKeyAction } from '../../perform/windowKeys.js'
 // their own windows (`log`, `build`) because "Log and settings" was three jobs.
 export const ADMIN_GROUPS = [
     { key: 'admin', label: 'Manage' },
+    { key: 'knowledge', label: 'Knowledge' },
     { key: 'diagnostics', label: 'Staff tools' }
 ]
 
@@ -27,6 +28,9 @@ export const ADMIN_WINDOW_KINDS = [
     { key: 'opencall', label: 'Open call', group: 'admin', hint: 'Applications to the open call: review and decide.' },
     // Owner-only: the kind exists in the desk only after GET /api/monitor answered 200.
     { key: 'monitor', label: 'Monitor', group: 'admin', hint: 'Machines, agents, services and pull requests, live.', gate: 'monitor' },
+    { key: 'rules', label: 'Rules', group: 'knowledge', hint: 'The standing rules, newest first. Click one to read it.', gate: 'monitor' },
+    { key: 'hooks', label: 'Hooks', group: 'knowledge', hint: 'The hooks that guard the agents, by event.', gate: 'monitor' },
+    { key: 'requests', label: 'Requests', group: 'knowledge', hint: 'The request rows from the ledger, newest first.', gate: 'monitor' },
     { key: 'agents', label: 'Agents', group: 'admin', hint: 'Agent chats and topics, live first, then recent.' },
     { key: 'visitors', label: 'Visitors', group: 'admin', hint: 'Programs that called di.iiii, with a block switch.' },
     { key: 'overview', label: 'Status', group: 'diagnostics', hint: 'The quick switches, the signal chain and the last log lines.' },

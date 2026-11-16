@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import DesktopWindow from '../../raw/components/DesktopWindow.jsx'
 import { framesFromRects, snapFrame, unitSize } from '../../perform/presets.js'
 import { nextWindowId } from '../../perform/windowKeys.js'
-import { Hint } from './PreferencesShared.jsx'
 import AdminWindowBody, { windowMoreItems } from './AdminWindowBodies.jsx'
 import {
     ADMIN_GROUPS,
@@ -26,6 +25,9 @@ import {
     toggleMaximize
 } from './adminWindows.js'
 import useAdminTiles from './useAdminTiles.js'
+import useMonitorSnap from './useMonitorSnap.js'
+import AdminHome from './AdminHome.jsx'
+import { monitorKnowledge } from './monitorKnowledge.js'
 import '../../styles/adminDesk.css'
 
 // THE ADMIN DESK. /admin is one desk in di.iiii's window style: a tile per section (a number or a
@@ -148,21 +150,6 @@ function KeyCard({ onClose }) {
     )
 }
 
-function Tile({ kind, tile, onOpen }) {
-    const tone = tile?.tone || 'default'
-    return (
-        <div className={`admin-tile tone-${tone}`}>
-            <button type="button" className="admin-tile-open" onClick={() => onOpen(kind.key)} aria-label={`${kind.label}: ${tile?.value ?? '—'} ${tile?.word || ''}`.trim()}>
-                <span className="admin-tile-band" aria-hidden="true" />
-                <span className="admin-tile-name">{kind.label}</span>
-                <span className="admin-tile-value">{tile?.value ?? '—'}</span>
-                <span className="admin-tile-word">{tile?.word || ''}</span>
-            </button>
-            <span className="admin-tile-hint"><Hint text={kind.hint} label={`About ${kind.label}`} /></span>
-        </div>
-    )
-}
-
 /** The strip at the top of a window: the section's facts as chips, and one "more" menu. */
 function WindowStrip({ chips, items, onReload }) {
     const { open, setOpen, ref } = useMenu()
@@ -206,7 +193,9 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
         objectCount: data.objects?.length || 0,
         people: data.sync?.participantRoster?.length || 0
     }), [data.entries, data.managementButtons, data.backendHealthStatus, connected, data.objects, data.sync?.participantRoster])
-    const { tiles, report, refresh } = useAdminTiles({ monitorAllowed, page })
+    const monitor = useMonitorSnap({ enabled: monitorAllowed })
+    const knowledge = useMemo(() => (monitor.snap ? monitorKnowledge(monitor.snap) : null), [monitor.snap])
+    const { tiles, report, refresh } = useAdminTiles({ monitorAllowed, page, knowledge })
 
     // The layout of this device and width class. The Monitor kind is dropped until the server said 200.
     const [layout, setLayout] = useState(() => loadLayout(widthClass, null))
@@ -314,16 +303,15 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
                 </div>
             </header>
 
-            <div className="admin-home" style={{ top: area.top }} data-testid="admin-desk" hidden={openKinds.length > 0}>
-                {groups.map((group) => (
-                    <section key={group.key} className="admin-group" aria-label={group.label}>
-                        <h2 className="admin-group-title">{group.label}</h2>
-                        <div className="admin-tiles">
-                            {group.kinds.map((kind) => <Tile key={kind.key} kind={kind} tile={tiles[kind.key]} onOpen={(key) => open(key)} />)}
-                        </div>
-                    </section>
-                ))}
-            </div>
+            <AdminHome
+                top={area.top}
+                hidden={openKinds.length > 0}
+                groups={groups}
+                tiles={tiles}
+                monitorAllowed={monitorAllowed}
+                monitor={monitor}
+                onOpen={(key) => open(key)}
+            />
 
             {shown.order.map((key) => {
                 const kind = kindOf(key)
@@ -351,10 +339,10 @@ export default function AdminDesk({ data, monitorState = 'pending', spaceId = 'm
                             <WindowStrip
                                 chips={chips}
                                 items={windowMoreItems(key, data)}
-                                onReload={() => { setReloads((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 })); refresh() }}
+                                onReload={() => { setReloads((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 })); refresh(); monitor.refresh() }}
                             />
                             <div className="admin-window-scroll preferences-content" key={reloads[key] || 0}>
-                                <AdminWindowBody kind={key} data={data} openKind={(k) => open(k)} onStats={onStats} />
+                                <AdminWindowBody kind={key} data={data} openKind={(k) => open(k)} onStats={onStats} monitor={monitor} />
                             </div>
                         </div>
                     </DesktopWindow>
