@@ -30,6 +30,12 @@ export const STATES = {
     full: ['#monitor-full', null, '.monitor-agent-grid, .monitor-workspace']
 }
 // Component classes: name -> selector. Containers are measured for empty area against their children.
+// layout "place" (the one-place Monitor): the stage is the main view; there are no tabs to click
+export const PLACE_STATES = {
+    home: STATES.home,
+    place: ['#monitor', null, '[data-box="stage"] [data-monitor-map]'],
+    full: ['#monitor-full', null, '[data-box="stage"] [data-monitor-map]']
+}
 export const COMPONENTS = {
     'desk bar': '.admin-bar',
     'window header': '.raw-window-header',
@@ -51,7 +57,14 @@ export const COMPONENTS = {
     'activity event': '.monitor-event',
     'ask form': '.monitor-ask-form',
     'list block': '.monitor-block',
-    'work part': '.monitor-work-part'
+    'work part': '.monitor-work-part',
+    'place rail': '.mp-rail',
+    'rail chip': '.mp-chips > .mp-chip',
+    'rail alert': '.mp-alert',
+    'dock': '.mp-dock',
+    'stage': '.mp-stage',
+    'panel': '.mp-panel',
+    'ask line': '.mp-ask'
 }
 const CHROME = '.mode-mark, .tree-chip'  // dev-stack overlays, not part of the product screen
 // Text that is a label or chrome, not data. Everything else with a digit, or inside a data container, counts as a fact.
@@ -132,7 +145,18 @@ function collect({ COMPONENTS, CHROME, CHROME_TEXT, DATA_BOX, INTERACTIVE, HANDL
         if (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && /(auto|scroll)/.test(getComputedStyle(el).overflowX) && vis(el)) scrollX.push({ cls: (el.tagName + '.' + String(el.className)).slice(0, 50), over: el.scrollWidth - el.clientWidth })
     }
     const top = (sel) => { const e = [...document.querySelectorAll(sel)].find((x) => vis(x) && x.getBoundingClientRect().height > 0); return e ? e.getBoundingClientRect().top : null }
+    // the one-place stage: where it starts, and the 2D map labels that overlap (node boxes, pairwise)
+    const stageEl = [...document.querySelectorAll('.mp-stage')].find((x) => vis(x))
+    const stageTop = stageEl ? stageEl.getBoundingClientRect().top : null
+    const nodeBoxes = [...document.querySelectorAll('[data-monitor-map="graph"] [data-map-node]')].filter(vis).map((e) => { const r = e.getBoundingClientRect(); return { id: e.getAttribute('data-map-node'), x: r.left, y: r.top, w: r.width, h: r.height } })
+    const overlaps = []
+    for (let i = 0; i < nodeBoxes.length; i++) for (let j = i + 1; j < nodeBoxes.length; j++) {
+        const a = nodeBoxes[i], b = nodeBoxes[j]
+        const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+        if (ox > 1 && oy > 1) overlaps.push(`${a.id} x ${b.id}`)
+    }
     return {
+        stageTop, mapNodes: nodeBoxes.length, mapOverlaps: overlaps.slice(0, 10), mapOverlapCount: overlaps.length,
         pointer: matchMedia('(pointer:coarse)').matches ? 'coarse' : 'fine', vw, vh,
         docOverflow: de.scrollWidth - de.clientWidth, wide: wide.slice(0, 8), wideCount: wide.length, scrollX: scrollX.slice(0, 8),
         mainTabTop: top('.monitor-main'), firstContentTop: top(mainSel),
@@ -192,7 +216,9 @@ export function summarise(raw, vp) {
         classes, instances,
         touch: { targets: raw.targets.length, small, oversize: over, resizeHandlesSkipped: raw.handles, oversizeWastePx2: Math.round(overWastePx2) },
         overflow: { docPx: raw.docOverflow, wideCount: raw.wideCount, wide: raw.wide, scrollX: raw.scrollX },
-        mapView: raw.mapView
+        mapView: raw.mapView,
+        stage: { topPx: raw.stageTop == null ? null : Math.round(raw.stageTop), share: raw.stageTop == null ? null : +(raw.stageTop / raw.vh).toFixed(3) },
+        map2d: { nodes: raw.mapNodes, overlaps: raw.mapOverlapCount, pairs: raw.mapOverlaps }
     }
 }
 
@@ -216,6 +242,8 @@ async function main() {
     if (!base || !outdir) { console.error('usage: space-audit.mjs <base> <outdir> [--viewports a,b] [--label before] [--settle ms]'); process.exit(2) }
     const only = flag('viewports', '') ? flag('viewports').split(',') : null
     const label = flag('label', 'before'), settle = Number(flag('settle', 2500))
+    const layout = flag('layout', 'tabs')
+    const STATE_SET = layout === 'place' ? PLACE_STATES : STATES
     const pwPath = process.env.SPACE_AUDIT_PLAYWRIGHT || '/home/dob/work/di.iiii-monitor-map/node_modules/playwright/index.mjs'
     const { chromium } = await import(pwPath)
     const origin = new URL(base).origin
@@ -232,9 +260,11 @@ async function main() {
                 if (u.startsWith('data:') || u.startsWith('blob:') || u.startsWith('about:') || new URL(u).origin === origin || /^https?:\/\/(?:[a-z0-9-]+\.)*(?:localhost|127\.0\.0\.1)(?::\d+)?\//i.test(u)) return route.continue()
                 return route.abort()
             })
+            // the layout and the map view are remembered per browser: set them before the page loads (2D, never the 3D stage)
+            await ctx.addInitScript(([lay]) => { try { localStorage.setItem('di.monitor.layout', lay); localStorage.setItem('di.monitor.map.view', '2d') } catch { /* none */ } }, [layout])
             const page = await ctx.newPage()
             const shotDir = join(outdir, label, vp.name); mkdirSync(shotDir, { recursive: true })
-            for (const [st, [hash, tab, mainSel]] of Object.entries(STATES)) {
+            for (const [st, [hash, tab, mainSel]] of Object.entries(STATE_SET)) {
                 try {
                     await page.goto('about:blank')
                     await page.goto(base.replace(/\/$/, '') + '/admin' + hash, { waitUntil: 'domcontentloaded' })
@@ -259,7 +289,7 @@ async function main() {
                     r.picture = join(shotDir, st + '.png'); r.state = st
                     results[st] = r
                     await page.screenshot({ path: r.picture })
-                    console.log(`${vp.name} ${st}: main ${r.mainViewStarts.px} facts ${r.facts} ink ${(r.inkShare * 100).toFixed(1)}% small ${r.touch.small.length} overflow ${r.overflow.docPx}`)
+                    console.log(`${vp.name} ${st}: stage ${r.stage.topPx} (${r.stage.share}) overlaps ${r.map2d.overlaps} main ${r.mainViewStarts.px} facts ${r.facts} ink ${(r.inkShare * 100).toFixed(1)}% small ${r.touch.small.length} overflow ${r.overflow.docPx}`)
                 } catch (e) { console.error(`${vp.name} ${st}: FAILED ${String(e.message).split('\n')[0]}`); results[st] = { state: st, error: String(e.message).split('\n')[0], viewport: vp.name, classes: [], instances: [], facts: 0, textNodes: 0, inkShare: 0, mainViewStarts: {}, touch: { small: [], oversize: [] }, overflow: {} } }
             }
         } finally { await browser.close() }

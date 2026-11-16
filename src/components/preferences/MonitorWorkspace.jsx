@@ -46,7 +46,9 @@ export const agentPlace = (a) => {
     return `in ${folder}${branch}`
 }
 
-export default function MonitorWorkspace({ asks, agents, helpers = [], flashing, onPick }) {
+// All the state of the Now column in one hook: the optimistic asks, the lanes, each chat's helpers, the send.
+// MonitorWorkspace (the Now tab) and MonitorPlace (the dock and the ask line) both use it, so they cannot drift.
+export function useWorkspace({ asks, agents, helpers = [] }) {
     const [text, setText] = useState('')
     const [pending, setPending] = useState([])
     const [problem, setProblem] = useState('')
@@ -105,11 +107,43 @@ export default function MonitorWorkspace({ asks, agents, helpers = [], flashing,
         // Enter sends, Shift+Enter is a new line
         if (ev.key === 'Enter' && !ev.shiftKey && !ev.nativeEvent?.isComposing) send(ev)
     }
+    return { text, setText, problem, shown, lanes, helpersOf, orphans, send, onKey }
+}
 
+export function AskForm({ ws, id = 'monitor-ask-text', rows = 2, compact = false }) {
     return (
-        <div className="monitor-workspace">
-            <div className="monitor-group-title">Agents at work <span className="preferences-tree-tag">{lanes.length}</span>
-                {helpers?.length ? <> Helpers <span className="preferences-tree-tag">{helpers.length}</span></> : null}</div>
+        <form className={`monitor-ask-form${compact ? ' is-line' : ''}`} data-box="ask" onSubmit={ws.send}>
+            <textarea id={id} className="monitor-ask-text" rows={rows} value={ws.text} aria-label="Send an ask"
+                placeholder="Tell the agents…" onChange={(e) => ws.setText(e.target.value)} onKeyDown={ws.onKey} />
+            <button type="submit" className="monitor-ask-send" disabled={!ws.text.trim()}>Send ask</button>
+            {compact ? null : <span className="monitor-meta monitor-ask-hint">Enter sends · Shift+Enter new line</span>}
+            {ws.problem ? <span className="monitor-note is-down">{ws.problem}</span> : null}
+        </form>
+    )
+}
+
+export function AskRows({ ws, asks }) {
+    const { shown } = ws
+    return (
+        <>
+            {shown.length || asks?.ok === false ? <div className="monitor-group-title">Open asks <span className="preferences-tree-tag">{shown.length}</span></div> : null}
+            {asks && asks.ok === false ? <div className="monitor-note is-down">Asks unavailable here{asks.error ? `: ${asks.error}` : ''}</div> : null}
+            <div className="monitor-asks">
+                {shown.map((a) => (
+                    <div key={a.id} className={`monitor-ask tone-${ASK_TONE[a.state] || 'accent'}${a.state === 'sending' ? ' is-sending' : ''}`} data-ask-id={a.id} data-box="ask-row">
+                        <div className="monitor-ask-text-line">{a.text}</div>
+                        <div className="monitor-meta">{a.state} · {a.source === 'ledger' ? 'ledger' : 'sent here'} · {ago(a.touched)}</div>
+                    </div>
+                ))}
+            </div>
+        </>
+    )
+}
+
+export function AgentCards({ ws, flashing, onPick }) {
+    const { lanes, helpersOf, orphans } = ws
+    return (
+        <>
             {!lanes.length ? <div className="monitor-note" data-box="agents">No live agent sessions.</div> : null}
             <div className="monitor-agent-grid">
                 {lanes.map((a) => (
@@ -125,32 +159,25 @@ export default function MonitorWorkspace({ asks, agents, helpers = [], flashing,
                     </button>
                 ))}
             </div>
-
             {orphans.length ? (
                 <div className="monitor-helper-group" data-box="helpers">
                     <div className="monitor-group-title">Helpers <span className="preferences-tree-tag">{orphans.length}</span></div>
                     {orphans.map((h, i) => <HelperLine key={`o:${i}`} h={h} withParent />)}
                 </div>
             ) : null}
+        </>
+    )
+}
 
-            <form className="monitor-ask-form" data-box="ask" onSubmit={send}>
-                <textarea id="monitor-ask-text" className="monitor-ask-text" rows={2} value={text} aria-label="Send an ask"
-                    placeholder="Tell the agents…" onChange={(e) => setText(e.target.value)} onKeyDown={onKey} />
-                <button type="submit" className="monitor-ask-send" disabled={!text.trim()}>Send ask</button>
-                <span className="monitor-meta monitor-ask-hint">Enter sends · Shift+Enter new line</span>
-                {problem ? <span className="monitor-note is-down">{problem}</span> : null}
-            </form>
-
-            {shown.length || asks?.ok === false ? <div className="monitor-group-title">Open asks <span className="preferences-tree-tag">{shown.length}</span></div> : null}
-            {asks && asks.ok === false ? <div className="monitor-note is-down">Asks unavailable here{asks.error ? `: ${asks.error}` : ''}</div> : null}
-            <div className="monitor-asks">
-                {shown.map((a) => (
-                    <div key={a.id} className={`monitor-ask tone-${ASK_TONE[a.state] || 'accent'}${a.state === 'sending' ? ' is-sending' : ''}`} data-ask-id={a.id} data-box="ask-row">
-                        <div className="monitor-ask-text-line">{a.text}</div>
-                        <div className="monitor-meta">{a.state} · {a.source === 'ledger' ? 'ledger' : 'sent here'} · {ago(a.touched)}</div>
-                    </div>
-                ))}
-            </div>
+export default function MonitorWorkspace({ asks, agents, helpers = [], flashing, onPick }) {
+    const ws = useWorkspace({ asks, agents, helpers })
+    return (
+        <div className="monitor-workspace">
+            <div className="monitor-group-title">Agents at work <span className="preferences-tree-tag">{ws.lanes.length}</span>
+                {helpers?.length ? <> Helpers <span className="preferences-tree-tag">{helpers.length}</span></> : null}</div>
+            <AgentCards ws={ws} flashing={flashing} onPick={onPick} />
+            <AskForm ws={ws} />
+            <AskRows ws={ws} asks={asks} />
         </div>
     )
 }

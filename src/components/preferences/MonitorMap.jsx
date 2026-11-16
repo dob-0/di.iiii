@@ -270,13 +270,13 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
 }
 
 // `knowledge` + `snap` (optional) add the to do, rules, skills, hooks and helpers; `onKnowledge(part)` opens that list
-export default function MonitorMap({ map, knowledge = null, snap = null, selectedId, onPick, onKnowledge, narrow, live = false, query = '' }) {
+export default function MonitorMap({ map, knowledge = null, snap = null, selectedId, onPick, onKnowledge, narrow, live = false, query = '', aspect = null }) {
     // group ids the person opened; a filter opens every group so a match is never hidden in one
     const [expanded, setExpanded] = useState([])
     const full = useMemo(() => mergeKnowledge(map, knowledge, snap), [map, knowledge, snap])
     const grouped = useMemo(() => groupMap(full, { expanded, open: !!query.trim() }), [full, expanded, query])
     const nodes = grouped.nodes
-    const layout = useMemo(() => layoutMap(grouped, narrow ? 1 : ASPECT), [grouped, narrow])
+    const layout = useMemo(() => layoutMap(grouped, aspect || (narrow ? 1 : ASPECT)), [grouped, narrow, aspect])
     // a group opens on click; every other node goes to the page (the drawer)
     const pick = useCallback((n) => {
         if (n.kind === 'group') setExpanded((e) => (e.includes(n.id) ? e : [...e, n.id]))

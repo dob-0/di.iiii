@@ -6,3 +6,10 @@
 - Measures per screen: where the main view starts, facts shown, ink share, per-component box numbers, empty area, small and oversize touch targets, horizontal overflow.
 - Tested: space-audit-lib.test.mjs (11 tests). The browser side was run against a scratch preview stack, not in CI.
 - Not tested: output stays outside the repo (JSON, pictures, report are not committed).
+
+## Monitor "One place" layout (same branch)
+- New default layout "place": rail (live mark, priority+ vital chips with "+N", worst need with its action, filter, Pause, Keys, Full, layout toggle), dock (agents, helpers, asks; folds), stage (the map fills it), panel (detail, Work, lists, Activity; a bottom sheet on phones), ask line with the activity ticker. The tabbed layout stays as mode "tabs" (rail toggle "Tabs", old bar button "One place"). Choice in localStorage `di.monitor.layout`, `layout` prop overrides.
+- Files: MonitorPlace.jsx, monitorPlaceFit.js (pure fit function, own test), MonitorWorkspace.jsx (split into hook + parts, same DOM), MonitorMap.jsx (`aspect` prop), MonitorSection.jsx (state kept, two renders), preferences.css (.monitor-place / .mp-*), space-audit.mjs (`--layout place|tabs`, stage-top and 2D-overlap metrics).
+- Tests: MonitorPlace.test.jsx (7), monitorPlaceFit.test.js (7); MonitorSection.test.jsx now renders `layout="tabs"` in all 29 tests (they assume tabs).
+- Measured (scratch preview, 9 viewports): stage top 10.7-23.7 % of the height, 0 horizontal overflow. Not met: small map-node targets at 640 wide (21-23 px cards with 25 nodes; List view has full-size targets), tablet desk chrome buttons (32 px, not Monitor), 2D label overlaps 1 at 2560 and 6 at 768x1024.
+- Separate commit: desk home at 600-899 px stacks (tiles no longer cover group titles).

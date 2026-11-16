@@ -106,14 +106,14 @@ describe('MonitorSection', () => {
 
     it('shows its data under StrictMode (mount, unmount, mount again)', async () => {
         getMonitor.mockResolvedValue(snapshot())
-        render(<React.StrictMode><MonitorSection /></React.StrictMode>)
+        render(<React.StrictMode><MonitorSection layout="tabs" /></React.StrictMode>)
         await waitFor(() => expect(screen.getByText('Build the monitor')).toBeTruthy())
         expect(screen.queryByText(/Reading the monitor/)).toBeNull()
     })
 
     it('Work shows to do, rules, skills and hooks side by side', async () => {
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => expect(screen.getByText('Build the monitor')).toBeTruthy())
         fireEvent.click(document.querySelector('[data-monitor-tab="work"]'))
         const parts = [...document.querySelectorAll('[data-work]')].map((n) => n.getAttribute('data-work'))
@@ -122,7 +122,7 @@ describe('MonitorSection', () => {
 
     it('shows every panel and greys only the broken one', async () => {
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => expect(screen.getByText('Build the monitor')).toBeTruthy())
         expect(screen.getByText('Platina lights')).toBeTruthy()
         fireEvent.click(document.querySelector('[data-monitor-tab="lists"]'))
@@ -135,7 +135,7 @@ describe('MonitorSection', () => {
 
     it('filters every panel and opens the inspector', async () => {
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         fireEvent.change(screen.getByLabelText('Filter every panel'), { target: { value: 'platina' } })
         expect(screen.queryByText('Build the monitor')).toBeNull()
@@ -149,7 +149,7 @@ describe('MonitorSection', () => {
         snap.panels.machines.rows.push({ id: '100.1.1.9', name: 'r-di', os: 'windows', ip: '100.1.1.9', online: false, lastSeen: null, tx: 0, rx: 0 })
         getMonitor.mockResolvedValue(snap)
         const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         fireEvent.click(document.querySelector('[data-monitor-tab="lists"]'))
         fireEvent.click(document.querySelector('[data-fold="off"]')) // the off machines are folded
@@ -168,7 +168,7 @@ describe('MonitorSection', () => {
 
     it('lists connected things and the people in each space, with names in the inspector', async () => {
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         fireEvent.click(document.querySelector('[data-monitor-tab="lists"]'))
         expect(screen.getByText('3 people in 1 space')).toBeTruthy()
@@ -182,14 +182,14 @@ describe('MonitorSection', () => {
 
     it('says plainly when the server refuses (not local, not admin)', async () => {
         getMonitor.mockRejectedValue(Object.assign(new Error('not found'), { status: 404 }))
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => expect(screen.getByText(/runs on a local di/)).toBeTruthy())
     })
 
     it('flashes a row whose state changed between two polls', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true })
         getMonitor.mockResolvedValueOnce(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         const next = snapshot()
         next.panels.agents.rows[0].status = 'idle'
@@ -201,7 +201,7 @@ describe('MonitorSection', () => {
     it('pause stops polling', async () => {
         vi.useFakeTimers({ shouldAdvanceTime: true })
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         fireEvent.click(screen.getByText('Pause'))
         const calls = getMonitor.mock.calls.length
@@ -224,7 +224,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
 
     it('the vital strip shows each tier and paints drift in the warning colour', async () => {
         getMonitor.mockResolvedValue(contract())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         const tone = (id) => document.querySelector(`[data-tier-id="${id}"]`).getAttribute('data-tier-tone')
         expect(tone('prod')).toBe('warning') // 12 behind dev
@@ -241,14 +241,14 @@ describe('MonitorSection overview, map, workspace and live', () => {
         const c = contract()
         c.tiers.rows[0].status = 502
         getMonitor.mockResolvedValue(c)
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(document.querySelector('[data-tier-id="prod"]').getAttribute('data-tier-tone')).toBe('danger')
     })
 
     it('map draws the nodes and a click opens the inspector', async () => {
         getMonitor.mockResolvedValue(contract())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
         expect(document.querySelector('.monitor-page').classList.contains('is-map')).toBe(true)
@@ -264,7 +264,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
 
     it('a map node jumps to its Work list, and Back returns to the Map', async () => {
         getMonitor.mockResolvedValue(contract())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         const wait = (ms) => act(async () => { await new Promise((r) => setTimeout(r, ms)) })
         fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
@@ -281,7 +281,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
     it('map falls back to a grouped list at phone width', async () => {
         window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })
         getMonitor.mockResolvedValue(contract())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
         expect(document.querySelector('[data-monitor-map="list"]')).toBeTruthy()
@@ -292,7 +292,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
 
     it('Now lists asks newest first and busy agents first; reports are in Lists', async () => {
         getMonitor.mockResolvedValue(contract())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         const ids = [...document.querySelectorAll('[data-ask-id]')].map((n) => n.getAttribute('data-ask-id'))
         expect(ids).toEqual(['N2', 'N1'])
@@ -307,7 +307,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         let resolveAsk
         postMonitorAsk.mockReturnValue(new Promise((r) => { resolveAsk = r }))
         getMonitor.mockResolvedValue(contract())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.change(screen.getByLabelText('Send an ask'), { target: { value: 'light the hall' } })
         fireEvent.click(screen.getByText('Send ask'))
@@ -324,7 +324,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
     it('a refused ask is marked and says why', async () => {
         postMonitorAsk.mockRejectedValue(new Error('403 forbidden'))
         getMonitor.mockResolvedValue(contract())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.change(screen.getByLabelText('Send an ask'), { target: { value: 'x' } })
         fireEvent.click(screen.getByText('Send ask'))
@@ -335,7 +335,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         vi.useFakeTimers({ shouldAdvanceTime: true })
         vi.stubGlobal('EventSource', FakeEventSource)
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         const es = FakeEventSource.instances[0]
         expect(es.url).toBe('/api/monitor/stream')
@@ -353,7 +353,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         vi.useFakeTimers({ shouldAdvanceTime: true })
         vi.stubGlobal('EventSource', FakeEventSource)
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         const es = FakeEventSource.instances[0]
         await act(async () => { es.emit(snapshot()) })
@@ -370,7 +370,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         vi.useFakeTimers({ shouldAdvanceTime: true })
         vi.stubGlobal('EventSource', FakeEventSource)
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         const closeLatest = async () => { const es = FakeEventSource.instances.at(-1); es.readyState = 2; await act(async () => { es.onerror() }); return es }
         const first = await closeLatest()
@@ -401,7 +401,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         vi.useFakeTimers({ shouldAdvanceTime: true })
         vi.stubGlobal('EventSource', FakeEventSource)
         getMonitor.mockResolvedValue(snapshot())
-        const { unmount } = render(<MonitorSection />)
+        const { unmount } = render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         const es = FakeEventSource.instances[0]
         es.readyState = 2
@@ -423,7 +423,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         vi.useFakeTimers({ shouldAdvanceTime: true })
         vi.stubGlobal('EventSource', FakeEventSource)
         getMonitor.mockResolvedValue(snapshot())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         const es = FakeEventSource.instances[0]
         await act(async () => { es.emit(snapshot()) })
@@ -446,7 +446,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         vi.stubGlobal('EventSource', FakeEventSource)
         // built two hours ago, but just delivered
         getMonitor.mockResolvedValue(snapshot({ generatedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString() }))
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByText('Build the monitor'))
         expect(screen.getByText(/heard (just now|\d+ s ago)/)).toBeTruthy()
         const es = FakeEventSource.instances[0]
@@ -460,7 +460,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
     it('renders the new views under StrictMode', async () => {
         vi.stubGlobal('EventSource', FakeEventSource)
         getMonitor.mockResolvedValue(contract())
-        render(<React.StrictMode><MonitorSection /></React.StrictMode>)
+        render(<React.StrictMode><MonitorSection layout="tabs" /></React.StrictMode>)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(screen.getByText('newest ask')).toBeTruthy()
         expect(FakeEventSource.instances.filter((e) => !e.closed).length).toBe(1)
@@ -473,7 +473,7 @@ describe('vital strip when a tier is down', () => {
         c.tiers.ok = false
         c.tiers.rows[0] = { ...c.tiers.rows[0], status: 0, ms: 3000, commit: null }
         getMonitor.mockResolvedValue(c)
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(document.querySelector('[data-tier-id="dev"]').getAttribute('data-tier-tone')).toBe('success')
         const prod = document.querySelector('[data-tier-id="prod"]')
@@ -486,7 +486,7 @@ describe('vital strip when a tier is down', () => {
         const c = contract()
         c.tiers = { ok: false, rows: [], error: 'no probe' }
         getMonitor.mockResolvedValue(c)
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(document.querySelector('[data-tier-id]')).toBeNull()
         expect(document.querySelector('[data-count-id="machines"]')).toBeTruthy()
@@ -494,7 +494,7 @@ describe('vital strip when a tier is down', () => {
 
     it('other tiers count PUBLIC spaces only, said in the drawer; the tier itself counts all', async () => {
         getMonitor.mockResolvedValue(contract())
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         fireEvent.click(document.querySelector('[data-tier-id="prod"]'))
         expect(within(document.querySelector('.monitor-drawer')).getByText('1 public')).toBeTruthy()
@@ -506,7 +506,7 @@ describe('vital strip when a tier is down', () => {
         const c = contract()
         c.asks = { ok: false, rows: [] }
         getMonitor.mockResolvedValue(c)
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
         expect(screen.getByText('Asks unavailable here')).toBeTruthy()
         expect(screen.queryByText(/undefined/)).toBeNull()
@@ -543,7 +543,7 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
     afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); delete window.matchMedia })
     const open = async (data = contract()) => {
         getMonitor.mockResolvedValue(data)
-        render(<MonitorSection />)
+        render(<MonitorSection layout="tabs" />)
         await waitFor(() => screen.getByLabelText('Vital signs'))
     }
     const page = () => document.querySelector('.monitor-page')

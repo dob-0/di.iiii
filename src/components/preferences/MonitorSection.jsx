@@ -9,6 +9,7 @@ import { NeedsYou, VitalStrip } from './MonitorVital.jsx'
 import MonitorActivity from './MonitorActivity.jsx'
 import MonitorLists from './MonitorLists.jsx'
 import MonitorDrawer from './MonitorDrawer.jsx'
+import MonitorPlace from './MonitorPlace.jsx'
 import useBackEntry from '../../hooks/useBackEntry.js'
 import { needsYou, vitalChips, seedActivity } from './monitorCalm.js'
 import { monitorKnowledge } from './monitorKnowledge.js'
@@ -25,8 +26,16 @@ const FLASH_MS = 2500
 const FULL_KEY = 'di.monitor.full'
 const SPARK_SAMPLES = 30
 const TAB_KEYS = { 1: 'now', 2: 'map', 3: 'lists', 4: 'work' }
+const LAYOUT_KEY = 'di.monitor.layout'
+const FAR_KEY = 'di.monitor.far'
+const PLACE_KEYS_HELP = [['1  2  3  4', 'Activity, the map alone, Lists, Work'], ['/', 'Filter everything'], ['a', 'Tell the agents'], ['r', 'Read the server again'], ['f', 'Full screen on or off'], ['Esc', 'Close the overlay, the panel, then leave full screen'], ['?', 'This card']]
 const KEYS_HELP = [['1  2  3  4', 'Now, Map, Lists, Work'], ['/', 'Filter everything'], ['r', 'Read the server again'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
 
+// the layout is remembered per browser: "place" (one place, the default) or "tabs" (the older tabbed Monitor)
+const readLayout = () => {
+    try { return window.localStorage.getItem(LAYOUT_KEY) === 'tabs' ? 'tabs' : 'place' } catch { return 'place' }
+}
+const readFar = () => { try { return window.localStorage.getItem(FAR_KEY) === '1' } catch { return false } }
 // remembered per browser; storage can be blocked, so every touch is guarded
 const readFull = () => {
     try {
@@ -82,7 +91,7 @@ const RECONNECT_MIN_MS = 3000
 const RECONNECT_MAX_MS = 30000
 export const nextBackoff = (ms) => Math.min(RECONNECT_MAX_MS, ms * 2)
 
-export default function MonitorSection({ onStats }) {
+export default function MonitorSection({ onStats, layout: layoutProp }) {
     const [snap, setSnap] = useState(null)
     const [unavailable, setUnavailable] = useState(false)
     const [error, setError] = useState('')
@@ -95,6 +104,13 @@ export default function MonitorSection({ onStats }) {
     const [heardAt, setHeardAt] = useState(null)
     const [full, setFull] = useState(readFull)
     const [keysOpen, setKeysOpen] = useState(false)
+    const [layoutPref, setLayoutPref] = useState(readLayout)
+    const layout = layoutProp === 'tabs' || layoutProp === 'place' ? layoutProp : layoutPref
+    const place = layout === 'place'
+    // one place: what the panel shows besides a selection ({ mode: 'work' | 'lists' | 'activity' | 'dock', ... }), an overlay, the far view
+    const [view, setView] = useState(null)
+    const [overlay, setOverlay] = useState(null)
+    const [far, setFar] = useState(readFar)
     // response times of each tier, the last SPARK_SAMPLES snapshots, kept in the page only
     const [history, setHistory] = useState({})
     const [feed, setFeed] = useState([])
@@ -233,17 +249,18 @@ export default function MonitorSection({ onStats }) {
     }, [])
 
     // stable: the 3D map is memoized and must not wake up for the 1 s clock above it
-    const pickNode = useCallback((n) => setSelected({ kind: 'node', id: n.id, node: n }), [])
+    const pickNode = useCallback((n) => { setView(null); setSelected({ kind: 'node', id: n.id, node: n }) }, [])
 
     // a to do / rules / skills / hooks node on the map opens that part of the Work view
     // that jump is its own history entry (jumpFrom = the tab it came from): Back returns there, e.g. to the Map
     const [jumpFrom, setJumpFrom] = useState(null)
     const pickTab = useCallback((id) => { setJumpFrom(null); setTab(id) }, [])
     const openWork = useCallback((part) => {
+        if (place) { setSelected(null); setView({ mode: 'work', part }); return }
         setJumpFrom(tab === 'work' ? null : tab)
         setTab('work')
         setTimeout(() => document.querySelector(`[data-work="${part}"]`)?.scrollIntoView?.({ block: 'start' }), 0)
-    }, [tab])
+    }, [tab, place])
 
     const setFullScreen = useCallback((on) => {
         setFull(on)
@@ -254,10 +271,27 @@ export default function MonitorSection({ onStats }) {
     // Map or Lists tab goes back to Now, before it leaves the Monitor (it used to replace the entry and leave /admin).
     // Leaving by the page's own button or Esc removes the entry again. See src/hooks/useBackEntry.js.
     useBackEntry(full, () => setFullScreen(false), { id: 'monitor-full', url: '#monitor-full' })
-    useBackEntry(!!selected, () => setSelected(null), { id: 'monitor-inspector' })
+    useBackEntry(!place && !!selected, () => setSelected(null), { id: 'monitor-inspector' })
     useBackEntry(keysOpen, () => setKeysOpen(false), { id: 'monitor-keys' })
-    useBackEntry(tab !== 'now', () => setTab('now'), { id: 'monitor-tab' })
-    useBackEntry(!!jumpFrom, () => { setTab(jumpFrom || 'now'); setJumpFrom(null) }, { id: 'monitor-jump' })
+    useBackEntry(!place && tab !== 'now', () => setTab('now'), { id: 'monitor-tab' })
+    useBackEntry(!place && !!jumpFrom, () => { setTab(jumpFrom || 'now'); setJumpFrom(null) }, { id: 'monitor-jump' })
+    // one place: a panel (a detail, Work, Lists, Activity, the agents) is one entry, an overlay is one entry
+    const closePanel = useCallback(() => { setSelected(null); setView(null) }, [])
+    useBackEntry(place && (!!selected || !!view), closePanel, { id: 'monitor-panel' })
+    useBackEntry(place && !!overlay, () => setOverlay(null), { id: 'monitor-overlay' })
+    const openPanel = useCallback((v) => { setSelected(null); setView(v) }, [])
+    const toggleLayout = useCallback(() => {
+        const next = place ? 'tabs' : 'place'
+        setLayoutPref(next)
+        try { window.localStorage.setItem(LAYOUT_KEY, next) } catch { /* storage blocked: the choice lasts this visit */ }
+        setTab('now'); setJumpFrom(null); setSelected(null); setView(null); setOverlay(null)
+    }, [place])
+    const toggleFar = useCallback(() => {
+        setFar((f) => {
+            try { window.localStorage.setItem(FAR_KEY, f ? '0' : '1') } catch { /* storage blocked */ }
+            return !f
+        })
+    }, [])
 
     // keys: ignored while typing in a field (Esc still works: it closes things)
     useEffect(() => {
@@ -265,13 +299,20 @@ export default function MonitorSection({ onStats }) {
             if (ev.ctrlKey || ev.metaKey || ev.altKey) return
             if (ev.key === 'Escape') {
                 if (keysOpen) setKeysOpen(false)
-                else if (selected) setSelected(null)
+                else if (overlay) setOverlay(null)
+                else if (selected || view) closePanel()
                 else if (full) setFullScreen(false)
                 else if (typing(ev.target)) ev.target.blur?.()
                 return
             }
             if (typing(ev.target)) return
-            if (TAB_KEYS[ev.key]) { pickTab(TAB_KEYS[ev.key]); return }
+            if (place) {
+                if (ev.key === '1') { openPanel({ mode: 'activity' }); return }
+                if (ev.key === '2') { closePanel(); return }
+                if (ev.key === '3') { openPanel({ mode: 'lists' }); return }
+                if (ev.key === '4') { openPanel({ mode: 'work', part: 'todo' }); return }
+                if (ev.key === 'a' || ev.key === 'A') { ev.preventDefault(); document.getElementById('monitor-ask-text')?.focus(); return }
+            } else if (TAB_KEYS[ev.key]) { pickTab(TAB_KEYS[ev.key]); return }
             if (ev.key === 'r' || ev.key === 'R') { load(); return }
             if (ev.key === '/') { ev.preventDefault(); filterRef.current?.focus(); return }
             if (ev.key === 'f' || ev.key === 'F') { setFullScreen(!full); return }
@@ -279,11 +320,11 @@ export default function MonitorSection({ onStats }) {
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [full, selected, keysOpen, setFullScreen, load, pickTab])
+    }, [full, selected, keysOpen, overlay, view, place, setFullScreen, load, pickTab, closePanel, openPanel])
 
     const panels = useMemo(() => snap?.panels || {}, [snap])
-    const pick = (kind, row) => setSelected({ kind, id: rowId(row) })
-    const openTarget = useCallback((t) => setSelected({ kind: t.kind, id: t.id }), [])
+    const pick = (kind, row) => { setView(null); setSelected({ kind, id: rowId(row) }) }
+    const openTarget = useCallback((t) => { setView(null); setSelected({ kind: t.kind, id: t.id }) }, [])
 
     const selectedRow = useMemo(() => {
         if (!selected) return null
@@ -321,6 +362,35 @@ export default function MonitorSection({ onStats }) {
     const markTone = paused ? 'muted' : streaming ? 'live' : 'warning'
     const checked = heardAt ? `checked ${Math.max(0, Math.floor((nowMs - heardAt) / 1000))} s ago` : 'checking'
 
+    const keysCard = keysOpen ? (
+        <div className="monitor-keys" role="dialog" aria-label="Keys">
+            <div className="monitor-drawer-head">
+                <div className="preferences-stage-sidebar-title">Keys</div>
+                <button type="button" className="preferences-inline-action monitor-drawer-close" aria-label="Close keys" onClick={() => setKeysOpen(false)}>×</button>
+            </div>
+            {(place ? PLACE_KEYS_HELP : KEYS_HELP).map(([k, what]) => (
+                <div key={k} className="monitor-keys-row"><kbd>{k}</kbd><span>{what}</span></div>
+            ))}
+            {place ? (
+                <div className="monitor-keys-row"><button type="button" className="preferences-inline-action" aria-pressed={far} data-far-toggle="1" onClick={toggleFar}>{far ? 'Leave far view' : 'Far view'}</button><span>Big type: the rail, the map and what needs you</span></div>
+            ) : null}
+        </div>
+    ) : null
+
+    if (place) {
+        return (
+            <>
+                <MonitorPlace snap={snap} panels={panels} query={query} setQuery={setQuery} filterRef={filterRef} paused={paused} setPaused={setPaused}
+                    markTone={markTone} heardAt={heardAt} nowMs={nowMs} error={error} needs={needs} chips={chips} flashing={flashing}
+                    selected={selected} selectedRow={selectedRow} view={view} history={history} feed={feed} earlier={earlier} knowledge={knowledge}
+                    shownAgents={shownAgents} narrow={narrow} streaming={streaming} full={full} setFullScreen={setFullScreen} setKeysOpen={setKeysOpen}
+                    overlay={overlay} setOverlay={setOverlay} far={far} onToggleFar={toggleFar} onToggleLayout={toggleLayout}
+                    onSelectNode={pickNode} onPick={pick} onOpenTarget={openTarget} onKnowledge={openWork} onPanel={openPanel} onClosePanel={closePanel} matches={matches} />
+                {keysCard}
+            </>
+        )
+    }
+
     return (
         <div className={`monitor-page${full ? ' is-full' : ''}${tab === 'map' ? ' is-map' : ''}`} data-monitor-full={full ? 'on' : 'off'}>
             <header className="monitor-bar" data-box="bar">
@@ -335,6 +405,7 @@ export default function MonitorSection({ onStats }) {
                     <button type="button" className="preferences-inline-action" onClick={() => setPaused((p) => !p)}>{paused ? 'Resume' : 'Pause'}</button>
                     <button type="button" className="preferences-inline-action" aria-label="Show keys" onClick={() => setKeysOpen((o) => !o)}>Keys ?</button>
                     <button type="button" className="preferences-inline-action" aria-pressed={full} onClick={() => setFullScreen(!full)}>{full ? 'Leave full screen' : 'Full screen'}</button>
+                    <button type="button" className="preferences-inline-action" data-layout-toggle="place" onClick={toggleLayout}>One place</button>
                 </div>
             </header>
 
@@ -382,17 +453,7 @@ export default function MonitorSection({ onStats }) {
                 <MonitorDrawer selected={selected} row={selectedRow} snap={snap} history={history} onClose={() => setSelected(null)} onPick={pick} />
             ) : null}
 
-            {keysOpen ? (
-                <div className="monitor-keys" role="dialog" aria-label="Keys">
-                    <div className="monitor-drawer-head">
-                        <div className="preferences-stage-sidebar-title">Keys</div>
-                        <button type="button" className="preferences-inline-action monitor-drawer-close" aria-label="Close keys" onClick={() => setKeysOpen(false)}>×</button>
-                    </div>
-                    {KEYS_HELP.map(([k, what]) => (
-                        <div key={k} className="monitor-keys-row"><kbd>{k}</kbd><span>{what}</span></div>
-                    ))}
-                </div>
-            ) : null}
+            {keysCard}
         </div>
     )
 }
