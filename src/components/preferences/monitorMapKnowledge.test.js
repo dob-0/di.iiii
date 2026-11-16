@@ -30,7 +30,7 @@ describe('knowledgeNodes', () => {
         const { nodes, edges } = knowledgeNodes(map(), monitorKnowledge(s), s)
         const ids = nodes.filter((n) => n.kind === 'knowledge').map((n) => n.id).sort()
         expect(ids).toEqual(['know:demo-one:hooks', 'know:demo-one:rules', 'know:demo-one:skills', 'know:demo-one:todo', 'know:demo-two:rules', 'know:demo-two:skills'])
-        expect(nodes.find((n) => n.id === 'know:demo-one:skills').sub).toBe('4 user · 5 repo')
+        expect(nodes.find((n) => n.id === 'know:demo-one:skills').sub).toBe('5 repo · 4 user')
         expect(nodes.find((n) => n.id === 'know:demo-one:todo').label).toBe('To do 1')
         expect(edges.filter((e) => e.kind === 'has').every((e) => e.from.startsWith('machine:'))).toBe(true)
     })

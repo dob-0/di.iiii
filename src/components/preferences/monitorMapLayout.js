@@ -17,7 +17,7 @@ export const KIND_SIZE = {
     group: { w: 160, h: 52 },
     show: { w: 160, h: 52 },
     repo: { w: 160, h: 52 },
-    knowledge: { w: 160, h: 52 },
+    knowledge: { w: 180, h: 52 },
     helper: { w: 150, h: 46 }
 }
 export const sizeOf = (kind) => KIND_SIZE[kind] || KIND_SIZE.space

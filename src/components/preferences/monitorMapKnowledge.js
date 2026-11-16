@@ -11,17 +11,17 @@ export const HELPER_FOLD = 8
 const list = (v) => (Array.isArray(v) ? v : [])
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 
-// the second line of a skills card: how many by scope, e.g. "12 user · 5 repo"
-const scopeText = (counts) => Object.entries(counts || {}).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(' · ')
+// the second line of a skills card: the two biggest scopes (a card is 160 px wide), e.g. "12 user · 5 repo"
+const scopeText = (counts) => Object.entries(counts || {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k, n]) => `${n} ${k}`).join(' · ')
 
 const partNode = (host, part, title, panel, ask) => {
     const id = `know:${host}:${part}`
-    if (ask) return { id, kind: 'knowledge', part, label: `${title} ${ask.open}`, state: ask.open ? 'ok' : 'off', sub: `${ask.count} rows · ${ask.open} open`, count: ask.count }
+    if (ask) return { id, kind: 'knowledge', part, label: `${title} ${ask.open}`, state: ask.open ? 'ok' : 'off', sub: `${ask.open} of ${ask.count} open`, count: ask.count }
     if (!panel) return null
     if (panel.ok === false) return { id, kind: 'knowledge', part, label: `${title} ?`, state: 'warn', sub: 'could not be read', count: 0 }
     const count = panel.count ?? list(panel.rows).length
     const sub = part === 'skills' ? scopeText(panel.counts) : part === 'hooks' ? plural(Object.keys(panel.events || {}).length, 'event', 'events') : null
-    return { id, kind: 'knowledge', part, label: `${title} ${count}`, state: 'ok', sub: sub || `${count} on this machine`, count }
+    return { id, kind: 'knowledge', part, label: `${title} ${count}`, state: 'ok', sub: sub || `this machine`, count }
 }
 
 /**

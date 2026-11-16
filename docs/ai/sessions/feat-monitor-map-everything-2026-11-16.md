@@ -1,0 +1,7 @@
+## 2026-11-16 — the Monitor map shows to do, rules, skills, hooks and helpers
+
+- New pure module `src/components/preferences/monitorMapKnowledge.js` (+ test): from `monitorKnowledge(snap)` and the server's map it adds, per machine that is on the map, one node each for Rules, Skills (two biggest scopes) and Hooks, one To do node on the first machine (the ledger is held once), and one node per helper (busy = ok, done = off; more than 8 helpers on one machine fold into one "N helpers" node). An unreadable panel is a warn node. Edges: machine to its knowledge nodes (`has`); chat (or machine) to its helpers (`helps`).
+- Layout: kinds `knowledge` and `helper` sit in their own outer band (ring 4) in `monitorMapLayout.js`; on a round (phone) map the band is 175 apart from the spaces, so cards of 160 px never touch.
+- MonitorMap.jsx takes `knowledge`, `snap`, `onKnowledge`; 2D, 3D and List draw the new kinds with the same cards. A click on a To do / Rules / Skills / Hooks node opens that part of the Work tab (MonitorSection `openWork`); a helper node opens the inspector like any node. No server change.
+- Tests: monitorMapKnowledge.test.js (nodes, edges, folding, no card overlap at desk and phone ratio); MonitorSection.test.jsx counts the map's own nodes and edges apart from the new kinds.
+- Owed: the Work-tab jump does not yet write a Back entry (the nav branch owns Back); helper nodes have no list of their own in the inspector.
