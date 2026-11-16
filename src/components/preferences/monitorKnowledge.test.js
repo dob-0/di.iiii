@@ -55,3 +55,20 @@ describe('monitorKnowledge', () => {
         expect(Object.keys(monitorKnowledge(snapshot))).toEqual(['hosts', 'agents', 'rules', 'hooks', 'skills', 'rows'])
     })
 })
+
+describe('hostsOf: one machine that serves and reports', () => {
+    it('lays a fresh report over the server entry of the same host, and a stale one only fills what is missing', () => {
+        const snapshot = {
+            host: 'box.local',
+            panels: { agents: { rows: [{ id: 'a' }] } },
+            reports: [{ host: 'box', stale: false, panels: { rules: { ok: true, rows: [{ title: 'R' }] }, agents: { rows: [{ id: 'a' }], helpers: [{ label: 'h' }] } } }],
+        }
+        const hosts = hostsOf(snapshot)
+        expect(hosts).toHaveLength(1)
+        expect(hosts[0].panels.rules.rows).toHaveLength(1)
+        expect(hosts[0].panels.agents.helpers).toHaveLength(1)
+        const stale = hostsOf({ ...snapshot, reports: [{ ...snapshot.reports[0], stale: true }] })
+        expect(stale[0].panels.rules.rows).toHaveLength(1)
+        expect(stale[0].panels.agents.helpers).toBeUndefined()
+    })
+})
