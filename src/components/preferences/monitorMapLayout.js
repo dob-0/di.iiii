@@ -66,7 +66,7 @@ export const layoutMap = (map, aspect = ASPECT) => {
     const r3out = r3 + (lanes3 - 1) * LANE_GAP
     const lanes4 = Math.max(1, Math.min(3, Math.ceil(rings[4].length / MAX_PER_LANE)))
     // a round (phone) map has cards side by side on the flanks, where only a card's width keeps two rings apart
-    const r4 = Math.max((rings[3].length ? r3out : r2) + (aspect < 1.4 ? 175 : RING_GAP), (rings[4].length * 160) / TAU / lanes4 + 30)
+    const r4 = Math.max((rings[3].length ? r3out : r2) + (aspect < 1.4 ? 175 : 115), (rings[4].length * 160) / TAU / lanes4 + 30)
     const radius = { 1: r1, 2: r2, 3: r3, 4: r4 }
 
     const pos = new Map()
