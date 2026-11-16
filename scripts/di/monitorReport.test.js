@@ -316,4 +316,13 @@ describe('user skills at any depth', () => {
         for (let i = 0; i < 320; i += 1) skillAt(big, `k${i}`)
         expect(skillsPanel({ home: big }).rows.length).toBeLessThanOrEqual(300)
     })
+    it('lists a skill found twice (top and inside a pack) once', () => {
+        const home = tmpHome()
+        skillAt(home, 'twice')
+        skillAt(home, 'twice', ['pack'])
+        skillAt(home, 'once', ['pack'])
+        const panel = skillsPanel({ home })
+        expect(panel.rows.map((r) => r.name).sort()).toEqual(['once', 'twice'])
+        expect(panel.counts.user).toBe(2)
+    })
 })

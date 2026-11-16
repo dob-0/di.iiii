@@ -286,8 +286,11 @@ const pluginSkillDirs = (cache) => {
 export const skillsPanel = ({ home = os.homedir(), root = null } = {}) => {
     const claude = path.join(home, '.claude')
     try { fs.accessSync(claude, fs.constants.R_OK) } catch { return { ok: false, why: 'the skills folder could not be read here' } }
-    const rows = readSkillDir(path.join(claude, 'skills'), 'user', null)
-    if (root) rows.push(...readSkillDir(path.join(root, '.claude', 'skills'), 'repo', null))
+    // one row per name in a scope: the same skill often sits in two folders (a copy at the top and one inside a pack);
+    // 63 rows held 12 such doubles on the reporting machine. The first found (shallowest) stays.
+    const once = (list) => { const names = new Set(); return list.filter((r) => !names.has(r.name) && names.add(r.name)) }
+    const rows = once(readSkillDir(path.join(claude, 'skills'), 'user', null))
+    if (root) rows.push(...once(readSkillDir(path.join(root, '.claude', 'skills'), 'repo', null)))
     const seen = new Set()
     for (const { dir, parts } of pluginSkillDirs(path.join(claude, 'plugins', 'cache'))) {
         // cache/<marketplace>/<plugin>/<version>/skills: the plugin is the folder two above `skills` when there are 3 parts
