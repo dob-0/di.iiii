@@ -16,12 +16,21 @@ export const diffSnapshots = (prev, next, now = Date.now()) => {
     if (!prev || !next) return []
     const out = []
     const add = (key, tone, text) => out.push({ key, tone, text, at: now })
-    const pp = prev.panels || {}
-    const np = next.panels || {}
+    // a part that did not answer this round (ok: false) is a gap, not an empty list: compare it only
+    // when both rounds answered, or every agent would "end" and "start" again (seen 2026-11-16 15:59)
+    const gap = (a, b) => a?.ok === false || b?.ok === false
+    const pp = {}
+    const np = {}
+    for (const k of new Set([...Object.keys(prev.panels || {}), ...Object.keys(next.panels || {})])) {
+        if (gap(prev.panels?.[k], next.panels?.[k])) continue
+        pp[k] = prev.panels?.[k]
+        np[k] = next.panels?.[k]
+    }
 
     // tiers: answering or not, a new commit, caught up with dev or fallen behind
-    const prevTiers = byKey(rows(prev.tiers), (r) => r.id)
-    for (const t of rows(next.tiers)) {
+    const tiersGap = gap(prev.tiers, next.tiers)
+    const prevTiers = byKey(tiersGap ? [] : rows(prev.tiers), (r) => r.id)
+    for (const t of tiersGap ? [] : rows(next.tiers)) {
         const old = prevTiers.get(t.id)
         const name = tierName(t.id)
         if (!old) { add(`tier:${t.id}:new`, 'accent', `${name} appeared`); continue }
@@ -100,8 +109,9 @@ export const diffSnapshots = (prev, next, now = Date.now()) => {
     for (const n of prevPrs.keys()) if (!nextPrs.has(n)) add(`pr:${n}:gone`, 'muted', `PR #${n} closed`)
 
     // asks
-    const prevAsks = byKey(rows(prev.asks), (r) => String(r.id))
-    const nextAsks = byKey(rows(next.asks), (r) => String(r.id))
+    const asksGap = gap(prev.asks, next.asks)
+    const prevAsks = byKey(asksGap ? [] : rows(prev.asks), (r) => String(r.id))
+    const nextAsks = byKey(asksGap ? [] : rows(next.asks), (r) => String(r.id))
     for (const [id, a] of nextAsks) if (!prevAsks.has(id)) add(`ask:${id}:new`, 'accent', `new ask: ${clip(a.text, 50)}`)
     for (const [id, a] of prevAsks) if (!nextAsks.has(id)) add(`ask:${id}:gone`, 'muted', `ask done: ${clip(a.text, 50)}`)
 

@@ -58,6 +58,17 @@ describe('diffSnapshots', () => {
         expect(diffSnapshots(base(), gone).map((e) => e.text)).toContain("agent 'PC performance' ended")
     })
 
+    it('a part that did not answer is a gap: no agent "ended" then "started" again', () => {
+        const a = base()
+        const failed = base()
+        failed.panels.agents = { ok: false, error: 'timed out', rows: [] }
+        expect(diffSnapshots(a, failed, 1)).toEqual([])
+        expect(diffSnapshots(failed, base(), 2)).toEqual([])
+        const tiersDown = { ...base(), tiers: { ok: false, rows: [] } }
+        const withTiers = { ...base(), tiers: { ok: true, rows: [{ id: 'dev', ok: true }] } }
+        expect(diffSnapshots(tiersDown, withTiers, 3)).toEqual([])
+    })
+
     it('a report, a new ask, a machine going offline, a failed service', () => {
         const next = clone(base())
         next.reports.push({ host: 'studio-mac', stale: false })
