@@ -112,11 +112,13 @@ async function auditRoute(page, base, url, label, cap, shots, outdir, tag, seenA
         row.visibleBack = backs.length > 0
         row.visibleBackNames = backs.slice(0, 3)
         let shotFile = null
+        // the picture is of the NEW view (taken before Back), saved only when this control fails
+        const newView = await page.screenshot().catch(() => null)
         const shot = async (why) => {
-            if (shots.n >= 40) return
+            if (shots.n >= 40 || !newView) return
             shots.n += 1
             shotFile = `${tag}-${String(shots.n).padStart(2, '0')}-${why}.png`
-            await page.screenshot({ path: path.join(outdir, 'pictures', shotFile) }).catch(() => { shotFile = null })
+            fs.writeFileSync(path.join(outdir, 'pictures', shotFile), newView)
         }
         if (!row.visibleBack) await shot('noback')
         // Back
@@ -126,8 +128,7 @@ async function auditRoute(page, base, url, label, cap, shots, outdir, tag, seenA
             const ab = await snapshot(page)
             const v = backVerdict(before, ab, new URL(base).origin)
             row.backOk = v.ok; row.backWhy = v.why
-            if (!v.ok && !row.visibleBack === false) await shot('backfail')
-            else if (!v.ok && !shotFile) await shot('backfail')
+            if (!v.ok && !shotFile) await shot('backfail')
         } catch (e) { row.backOk = false; row.backWhy = `error ${String(e.message).slice(0, 60)}` }
         // Escape: only an overlay or full-screen view must close on it
         if (kind === 'overlay' || kind === 'fullscreen') try {
@@ -227,4 +228,4 @@ export async function main() {
     console.log(JSON.stringify(sum.total))
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main().catch((e) => { console.error(e); process.exit(1) })
+if (import.meta.url === `file://${process.argv[1]}`) main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1) })
