@@ -234,6 +234,12 @@ export default function MonitorSection({ onStats }) {
     // stable: the 3D map is memoized and must not wake up for the 1 s clock above it
     const pickNode = useCallback((n) => setSelected({ kind: 'node', id: n.id, node: n }), [])
 
+    // a to do / rules / skills / hooks node on the map opens that part of the Work view
+    const openWork = useCallback((part) => {
+        setTab('work')
+        setTimeout(() => document.querySelector(`[data-work="${part}"]`)?.scrollIntoView?.({ block: 'start' }), 0)
+    }, [])
+
     const setFullScreen = useCallback((on) => {
         setFull(on)
         try { window.localStorage.setItem(FULL_KEY, on ? '1' : '0') } catch { /* storage blocked: the choice lasts this visit */ }
@@ -340,7 +346,7 @@ export default function MonitorSection({ onStats }) {
                 ) : null}
                 {tab === 'map' ? (
                     <ModuleSection className="monitor-map-section" title="Map" subtitle="Spaces by name, with the tiers they live on — select a node for its details">
-                        <MonitorMap map={snap?.map} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
+                        <MonitorMap map={snap?.map} knowledge={knowledge} snap={snap} onKnowledge={openWork} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
                             live={streaming && !paused} query={query} onPick={pickNode} />
                     </ModuleSection>
                 ) : null}

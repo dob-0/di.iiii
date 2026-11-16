@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 import { groupMap, visibleEdges } from './monitorMapGroups.js'
+import { mergeKnowledge } from './monitorMapKnowledge.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
 //   2D   an SVG graph: hover lights a node's neighbours and dims the rest,
@@ -71,7 +72,7 @@ const useFillHeight = (rootRef, view) => {
 }
 
 // the second line of a card: where a space lives, how to open a group, else kind and state
-const subText = (n) => (n.kind === 'space' && n.tiers?.length ? n.tiers.join(' · ') : n.kind === 'group' ? `open it · ${n.tiers.join(' ')}` : `${n.kind} · ${n.state}`)
+const subText = (n) => (n.sub ? n.sub : n.kind === 'space' && n.tiers?.length ? n.tiers.join(' · ') : n.kind === 'group' ? `open it · ${n.tiers.join(' ')}` : `${n.kind} · ${n.state}`)
 const clip = (text, n) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
 const toneOf = (state) => STATE_TONE[state] || 'muted'
 const edgeKey = (e, i) => `${e.from}>${e.to}>${e.kind}>${i}`
@@ -266,17 +267,20 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
     )
 }
 
-export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, query = '' }) {
+// `knowledge` + `snap` (optional) add the to do, rules, skills, hooks and helpers; `onKnowledge(part)` opens that list
+export default function MonitorMap({ map, knowledge = null, snap = null, selectedId, onPick, onKnowledge, narrow, live = false, query = '' }) {
     // group ids the person opened; a filter opens every group so a match is never hidden in one
     const [expanded, setExpanded] = useState([])
-    const grouped = useMemo(() => groupMap(map, { expanded, open: !!query.trim() }), [map, expanded, query])
+    const full = useMemo(() => mergeKnowledge(map, knowledge, snap), [map, knowledge, snap])
+    const grouped = useMemo(() => groupMap(full, { expanded, open: !!query.trim() }), [full, expanded, query])
     const nodes = grouped.nodes
     const layout = useMemo(() => layoutMap(grouped, narrow ? 1 : ASPECT), [grouped, narrow])
     // a group opens on click; every other node goes to the page (the drawer)
     const pick = useCallback((n) => {
         if (n.kind === 'group') setExpanded((e) => (e.includes(n.id) ? e : [...e, n.id]))
+        else if (n.kind === 'knowledge' && onKnowledge) onKnowledge(n.part)
         else onPick(n)
-    }, [onPick])
+    }, [onPick, onKnowledge])
     const fold = expanded.length && !query.trim() ? () => setExpanded([]) : null
     const [stored, setStored] = useState(readView)
     const views = narrow ? PHONE_VIEWS : VIEWS

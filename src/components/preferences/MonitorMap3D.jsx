@@ -281,7 +281,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
                                         onClick={() => onPick(n)}>
                                         <span className="monitor-card3d-name" title={n.label}>{short(n.label)}</span>
                                         <span className="monitor-card3d-state">{n.state}</span>
-                                        <span className="monitor-card3d-fact">{n.tiers?.length ? n.tiers.join(' · ') : `${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
+                                        <span className="monitor-card3d-fact">{n.tiers?.length ? n.tiers.join(' · ') : n.sub ? n.sub : `${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
                                     </button>
                                 </Html>
                         </group>
