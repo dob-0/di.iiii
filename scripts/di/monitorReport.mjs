@@ -149,6 +149,94 @@ export const hooksPanel = ({ home = os.homedir(), root = null } = {}) => {
     return { ok: true, changed, count: rows.length, events, rows: rows.slice(0, HOOKS_MAX) }
 }
 
+// ---- skills: what the agents can be told to do --------------------------------
+// Only the SKILL.md frontmatter `name:` and `description:` (description capped); the body is never read past the
+// closing `---` and never sent, and no path leaves except a plugin's name.
+
+const SKILLS_MAX = 300
+const SKILL_DESC_MAX = 200
+const SKILL_NAME_MAX = 80
+
+const unquote = (v) => v.replace(/^(["'])(.*)\1$/, '$2')
+
+/** { name, description } from a SKILL.md text's frontmatter only; null when there is none or no name. */
+export const parseSkillFrontmatter = (text) => {
+    const lines = String(text || '').split(/\r?\n/)
+    if (lines[0]?.trim() !== '---') return null
+    const end = lines.indexOf('---', 1)
+    if (end < 0) return null
+    const fm = lines.slice(1, end)
+    const field = (key) => {
+        const i = fm.findIndex((l) => l.startsWith(`${key}:`))
+        if (i < 0) return ''
+        let v = fm[i].slice(key.length + 1).trim()
+        if (/^[>|][+-]?$/.test(v)) { // folded or literal block: the indented lines that follow
+            const parts = []
+            for (let j = i + 1; j < fm.length && /^\s+\S/.test(fm[j]); j += 1) parts.push(fm[j].trim())
+            v = parts.join(' ')
+        } else if (v === '') { // plain multi-line scalar
+            const parts = []
+            for (let j = i + 1; j < fm.length && /^\s+\S/.test(fm[j]); j += 1) parts.push(fm[j].trim())
+            v = parts.join(' ')
+        }
+        return unquote(v).replace(/\s+/g, ' ').trim()
+    }
+    const name = field('name').slice(0, SKILL_NAME_MAX)
+    if (!name) return null
+    return { name, description: field('description').slice(0, SKILL_DESC_MAX) }
+}
+
+const readSkillDir = (dir, scope, plugin) => {
+    let names
+    try { names = fs.readdirSync(dir) } catch { return [] }
+    const rows = []
+    for (const entry of names.sort()) {
+        let text
+        try { text = fs.readFileSync(path.join(dir, entry, 'SKILL.md'), 'utf8') } catch { continue }
+        const fm = parseSkillFrontmatter(text.slice(0, 8192))
+        if (fm) rows.push({ scope, plugin, name: fm.name, description: fm.description })
+    }
+    return rows
+}
+
+/** skills/*\/SKILL.md directories under ~/.claude/plugins/cache, with the plugin's name from the path (depth <= 5). */
+const pluginSkillDirs = (cache) => {
+    const found = []
+    const walk = (dir, parts, depth) => {
+        let entries
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }) } catch { return }
+        for (const e of entries) {
+            if (!e.isDirectory()) continue
+            if (e.name === 'skills') { found.push({ dir: path.join(dir, e.name), parts }); continue }
+            if (depth < 5 && e.name !== 'node_modules' && !e.name.startsWith('.')) walk(path.join(dir, e.name), [...parts, e.name], depth + 1)
+        }
+    }
+    walk(cache, [], 0)
+    return found
+}
+
+/** One row per skill: user, repo and plugin scope; a plugin cached in several versions counts once. */
+export const skillsPanel = ({ home = os.homedir(), root = null } = {}) => {
+    const claude = path.join(home, '.claude')
+    try { fs.accessSync(claude, fs.constants.R_OK) } catch { return { ok: false, why: 'the skills folder could not be read here' } }
+    const rows = readSkillDir(path.join(claude, 'skills'), 'user', null)
+    if (root) rows.push(...readSkillDir(path.join(root, '.claude', 'skills'), 'repo', null))
+    const seen = new Set()
+    for (const { dir, parts } of pluginSkillDirs(path.join(claude, 'plugins', 'cache'))) {
+        // cache/<marketplace>/<plugin>/<version>/skills: the plugin is the folder two above `skills` when there are 3 parts
+        const plugin = (parts.length >= 3 ? parts[parts.length - 2] : parts[parts.length - 1] || 'plugin').slice(0, 60)
+        for (const r of readSkillDir(dir, 'plugin', plugin)) {
+            const key = `${r.plugin}\u0000${r.name}`
+            if (seen.has(key)) continue
+            seen.add(key)
+            rows.push(r)
+        }
+    }
+    const counts = { user: 0, repo: 0, plugin: 0 }
+    for (const r of rows) counts[r.scope] += 1
+    return { ok: true, count: rows.length, counts, rows: rows.slice(0, SKILLS_MAX) }
+}
+
 /**
  * Helpers (subagents) of the chats here, from file names, sizes-free mtimes and the small meta file's type and label only;
  * never a transcript. Recent = touched within 15 min; busy = touched within 2 min. The model is not in these files: owed.
@@ -186,11 +274,12 @@ export const readHelpers = ({ home = os.homedir(), now = Date.now() } = {}) => {
     return rows.sort((a, b) => b.since.localeCompare(a.since)).slice(0, HELPERS_MAX)
 }
 
-/** Adds rules, hooks and the agents' helpers to a snapshot's panels (a copy). */
+/** Adds rules, hooks, skills and the agents' helpers to a snapshot's panels (a copy). */
 export const withKnowledge = (snapshot, { home = os.homedir(), root = null, now = Date.now() } = {}) => {
     const panels = { ...(snapshot?.panels || {}) }
     panels.rules = rulesPanel({ home })
     panels.hooks = hooksPanel({ home, root })
+    panels.skills = skillsPanel({ home, root })
     if (panels.agents && typeof panels.agents === 'object') panels.agents = { ...panels.agents, helpers: readHelpers({ home, now }) }
     return { ...(snapshot || {}), panels }
 }

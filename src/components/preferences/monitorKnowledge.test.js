@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hostsOf, knowledgeAgents, knowledgeRules, knowledgeHooks, knowledgeRows, monitorKnowledge } from './monitorKnowledge'
+import { hostsOf, knowledgeAgents, knowledgeRules, knowledgeHooks, knowledgeSkills, knowledgeRows, monitorKnowledge } from './monitorKnowledge'
 
 const rules = (n) => ({ ok: true, file: '~/.claude/CLAUDE.md', changed: '2026-11-16T01:00:00.000Z', count: n, rows: Array.from({ length: n }, (_, i) => ({ title: `Rule ${i}`, date: null, lines: 1, text: 't' })) })
 const hooks = { ok: true, count: 1, events: { Stop: 1 }, rows: [{ scope: 'user', event: 'Stop', matcher: null, name: 'tool sub' }] }
@@ -36,6 +36,14 @@ describe('monitorKnowledge', () => {
         expect(h.sets[0]).toMatchObject({ same: 2, events: { Stop: 1 } })
         expect(h.unreadable).toEqual([{ host: 'three', why: 'could not be read' }])
     })
+    it('skills: equal ones once with "same on N machines", unreadable apart', () => {
+        const skills = { ok: true, count: 1, counts: { user: 1, repo: 0, plugin: 0 }, rows: [{ scope: 'user', plugin: null, name: 'made-up', description: 'd' }] }
+        const snap = { host: 'box.local', panels: { skills }, reports: [{ host: 'two', panels: { skills } }, { host: 'three', panels: { skills: { ok: false, why: 'nope' } } }] }
+        const k = knowledgeSkills(hostsOf(snap))
+        expect(k.sets).toHaveLength(1)
+        expect(k.sets[0]).toMatchObject({ same: 2, sameText: 'same on 2 machines', count: 1, counts: { user: 1 } })
+        expect(k.unreadable).toEqual([{ host: 'three', why: 'nope' }])
+    })
     it('rows: ledger asks only, newest first, counts, and one line when none', () => {
         const rows = knowledgeRows(snapshot)
         expect(rows.rows.map((r) => r.id)).toEqual(['N2', 'N1'])
@@ -44,6 +52,6 @@ describe('monitorKnowledge', () => {
         expect(knowledgeRows(null).count).toBe(0)
     })
     it('the whole is one object', () => {
-        expect(Object.keys(monitorKnowledge(snapshot))).toEqual(['hosts', 'agents', 'rules', 'hooks', 'rows'])
+        expect(Object.keys(monitorKnowledge(snapshot))).toEqual(['hosts', 'agents', 'rules', 'hooks', 'skills', 'rows'])
     })
 })

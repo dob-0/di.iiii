@@ -68,6 +68,11 @@ export const knowledgeHooks = (hosts) => {
     return { sets: groups.map((g) => ({ ...withSame(g), events: plain(g.panel.events) })), unreadable }
 }
 
+export const knowledgeSkills = (hosts) => {
+    const { groups, unreadable } = groupPanels(hosts, 'skills')
+    return { sets: groups.map((g) => ({ ...withSame(g), counts: plain(g.panel.counts) })), unreadable }
+}
+
 const OPEN_STATES = new Set(['NEW', 'WAITING', 'OPEN', 'BLOCKED', 'RUNNING', 'IN-PROGRESS'])
 
 /** Ledger rows (source 'ledger'), newest touched first, with counts by state. */
@@ -82,5 +87,5 @@ export const knowledgeRows = (snapshot) => {
 
 export const monitorKnowledge = (snapshot) => {
     const hosts = hostsOf(snapshot)
-    return { hosts: hosts.map((h) => h.host), agents: knowledgeAgents(hosts), rules: knowledgeRules(hosts), hooks: knowledgeHooks(hosts), rows: knowledgeRows(snapshot) }
+    return { hosts: hosts.map((h) => h.host), agents: knowledgeAgents(hosts), rules: knowledgeRules(hosts), hooks: knowledgeHooks(hosts), skills: knowledgeSkills(hosts), rows: knowledgeRows(snapshot) }
 }

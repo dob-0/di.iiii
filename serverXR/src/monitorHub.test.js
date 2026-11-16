@@ -39,6 +39,12 @@ describe('rules and hooks panels', () => {
     expect(kept.rules.rows[0].text).toHaveLength(400)
     expect(kept.hooks).toEqual(hooks)
   })
+  it('skills panel is kept', () => {
+    const store = createReportStore({ now: () => 1000 })
+    const skills = { ok: true, count: 1, counts: { user: 1, repo: 0, plugin: 0 }, rows: [{ scope: 'user', plugin: null, name: 'n', description: 'd' }] }
+    store.put({ host: 'a', panels: { skills } })
+    expect(store.list()[0].panels.skills).toEqual(skills)
+  })
 })
 
 describe('report store', () => {

@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { parseMonitorArgs, parseLedgerOpen, buildBody, parseRules, rulesPanel, hookName, hooksPanel, readHelpers, withKnowledge, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
+import { parseMonitorArgs, parseLedgerOpen, buildBody, parseRules, rulesPanel, hookName, hooksPanel, readHelpers, withKnowledge, skillsPanel, parseSkillFrontmatter, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -208,5 +208,49 @@ describe('rules, hooks and helpers panels (made-up files)', () => {
         const asks = Array.from({ length: 100 }, (_, i) => ({ id: `N${i}`, touched: '11-16 00:00', state: 'NEW', text: 'y'.repeat(400) }))
         const body = JSON.stringify(buildBody({ host: 'h', snapshot: snap, asks }))
         expect(Buffer.byteLength(body)).toBeLessThan(256 * 1024)
+    })
+})
+
+describe('skills panel (made-up skills)', () => {
+    const skill = (dir, name, fm = {}, body = 'BODY-NEVER-LEAVES secret-body-text') => {
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${name}\ndescription: ${fm.description ?? `about ${name}`}\n---\n${body}\n`)
+    }
+    it('parseSkillFrontmatter: name and description only, folded blocks, quotes, cap; none without frontmatter', () => {
+        expect(parseSkillFrontmatter('---\nname: a\ndescription: "quoted one"\n---\nbody')).toEqual({ name: 'a', description: 'quoted one' })
+        expect(parseSkillFrontmatter('---\nname: b\ndescription: >-\n  folded\n  line\nother: x\n---\n')).toEqual({ name: 'b', description: 'folded line' })
+        expect(parseSkillFrontmatter(`---\nname: c\ndescription: ${'z'.repeat(500)}\n---\n`).description).toHaveLength(200)
+        expect(parseSkillFrontmatter('no frontmatter\nname: x')).toBeNull()
+        expect(parseSkillFrontmatter('---\ndescription: only\n---\n')).toBeNull()
+    })
+    it('skillsPanel: user, repo and plugin scope; plugin versions deduped; body and paths never leave', () => {
+        const home = tmpHome()
+        const root = tmpHome()
+        const claude = path.join(home, '.claude')
+        skill(path.join(claude, 'skills', 'u1'), 'user-one')
+        skill(path.join(claude, 'skills', 'u2'), 'user-two')
+        fs.mkdirSync(path.join(claude, 'skills', 'empty-dir'), { recursive: true })
+        skill(path.join(root, '.claude', 'skills', 'r1'), 'repo-one')
+        for (const v of ['1.0.0', '1.1.0']) skill(path.join(claude, 'plugins', 'cache', 'mkt', 'plug', v, 'skills', 'p1'), 'plug-skill')
+        skill(path.join(claude, 'plugins', 'cache', 'mkt', 'other', '2.0.0', 'skills', 'o1'), 'other-skill')
+        const panel = skillsPanel({ home, root })
+        expect(panel).toMatchObject({ ok: true, count: 5, counts: { user: 2, repo: 1, plugin: 2 } })
+        expect(panel.rows.find((r) => r.name === 'plug-skill')).toEqual({ scope: 'plugin', plugin: 'plug', name: 'plug-skill', description: 'about plug-skill' })
+        const wire = JSON.stringify(panel)
+        expect(wire).not.toMatch(/BODY-NEVER-LEAVES|secret-body-text|SKILL\.md|\/tmp|mkt|1\.1\.0/)
+    })
+    it('a missing skills folder is an empty list; an unreadable ~/.claude is ok:false', () => {
+        const home = tmpHome()
+        fs.mkdirSync(path.join(home, '.claude'), { recursive: true })
+        expect(skillsPanel({ home })).toMatchObject({ ok: true, count: 0, counts: { user: 0, repo: 0, plugin: 0 }, rows: [] })
+        expect(skillsPanel({ home: tmpHome() })).toEqual({ ok: false, why: expect.stringMatching(/could not be read/) })
+    })
+    it('200 skills with 200-char descriptions keep the whole report under the server cap', () => {
+        const home = tmpHome()
+        for (let i = 0; i < 200; i += 1) skill(path.join(home, '.claude', 'skills', `s${i}`), `skill-${i}`, { description: 'd'.repeat(300) })
+        const snap = withKnowledge({ panels: {} }, { home })
+        expect(snap.panels.skills.counts.user).toBe(200)
+        const asks = Array.from({ length: 100 }, (_, i) => ({ id: `N${i}`, touched: '11-16 00:00', state: 'NEW', text: 'y'.repeat(400) }))
+        expect(Buffer.byteLength(JSON.stringify(buildBody({ host: 'h', snapshot: snap, asks })))).toBeLessThan(256 * 1024)
     })
 })
