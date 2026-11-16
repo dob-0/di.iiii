@@ -1845,3 +1845,4 @@
 .monitor-helper-group { display: grid; gap: var(--di-space-1); margin-top: var(--di-space-3); }
 .monitor-work { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); gap: var(--di-space-4); align-items: start; min-width: 0; }
 .monitor-work-part { min-width: 0; max-height: 70vh; overflow: auto; display: grid; gap: var(--di-space-2); align-content: start; }
+.monitor-helper > span:last-child { flex: none; white-space: nowrap; }
