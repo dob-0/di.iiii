@@ -1550,6 +1550,7 @@
 .monitor-edge { fill: none; stroke: var(--ui-text-muted); stroke-width: 1.5; transition: stroke var(--di-motion-fast), opacity var(--di-motion-fast); }
 .monitor-edge.kind-shows-on, .monitor-edge.kind-works-on { stroke-dasharray: 3 5; }
 .monitor-edge.kind-reports { stroke-dasharray: 2 6; }
+.monitor-edge.kind-helps { stroke-dasharray: 3 5; }
 .monitor-edge.is-dim { opacity: 0.15; }
 .monitor-edge.is-lit { stroke: var(--di-cyan); stroke-width: 3; }
 .monitor-edge.is-live { stroke: rgb(var(--di-live-rgb)); stroke-dasharray: 8 8; }

@@ -41,7 +41,8 @@ export const shouldAnimate = ({ edges, pulsing, hoverId, visible = true, reduced
 // Names that never sit on each other: the labels are screen boxes (centre x, y, width w, height h in px).
 // Two that overlap are pushed apart along the axis where they overlap least, half each; a `fixed` one
 // (the hub) does not move. Same input, same answer. Returns { id: { dx, dy } } for those that moved.
-export const nudgeLabels = (items, { gap = 4, passes = 40, limit = 160 } = {}) => {
+// `bounds` ({ width, height } of the stage, px) keeps every moved name whole on the stage.
+export const nudgeLabels = (items, { gap = 4, passes = 40, limit = 160, bounds = null } = {}) => {
     const list = (items || []).map((it) => ({ ...it, ox: 0, oy: 0 }))
     for (let pass = 0; pass < passes; pass += 1) {
         let moved = false
@@ -65,6 +66,15 @@ export const nudgeLabels = (items, { gap = 4, passes = 40, limit = 160 } = {}) =
                 }
                 share(a, -dir)
                 share(b, dir)
+            }
+        }
+        if (bounds) {
+            for (const it of list) {
+                if (it.fixed) continue
+                // whole on the stage: centre between half a card from each edge (a card wider than the stage sits at the left)
+                const keep = (off, at, size, room) => { const lo = size / 2 - at; return Math.min(Math.max(off, lo), Math.max(lo, room - size / 2 - at)) }
+                it.ox = keep(it.ox, it.x, it.w, bounds.width)
+                it.oy = keep(it.oy, it.y, it.h, bounds.height)
             }
         }
         if (!moved) break

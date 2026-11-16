@@ -254,12 +254,28 @@ describe('MonitorSection overview, map, workspace and live', () => {
         expect(document.querySelector('.monitor-page').classList.contains('is-map')).toBe(true)
         expect(document.querySelector('.monitor-vital [data-tier-id]')).toBeTruthy() // the strip stays on every tab
         expect(document.querySelector('[data-monitor-map="graph"]')).toBeTruthy()
-        expect(document.querySelectorAll('[data-map-node]').length).toBe(6)
-        expect(document.querySelectorAll('.monitor-edge').length).toBe(4) // runs, works-on and the 2 holds (every node shows its link to its tier)
+        expect(document.querySelectorAll('[data-map-node]:not([data-map-node^="know:"]):not([data-map-node^="helper:"])').length).toBe(6) // the map's own nodes; knowledge nodes are counted in monitorMapKnowledge.test.js
+        expect(document.querySelectorAll('.monitor-edge:not(.kind-has):not(.kind-helps)').length).toBe(4) // runs, works-on and the 2 holds (every node shows its link to its tier)
         fireEvent.click(document.querySelector('[data-map-node="space:platina"]'))
         expect(screen.getByText('Inspector — platina')).toBeTruthy()
         expect(screen.getByText('warn')).toBeTruthy()
         expect(within(document.querySelector('.monitor-inspector')).getByText('MUTH')).toBeTruthy() // its neighbour, from the edges (holds are in the drawer)
+    })
+
+    it('a map node jumps to its Work list, and Back returns to the Map', async () => {
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Vital signs'))
+        const wait = (ms) => act(async () => { await new Promise((r) => setTimeout(r, ms)) })
+        fireEvent.click(document.querySelector('[data-monitor-tab="map"]'))
+        await wait(30)
+        const know = document.querySelector('[data-map-node^="know:"]')
+        expect(know).toBeTruthy()
+        fireEvent.click(know)
+        expect(document.querySelector('[data-monitor-tab="work"]').classList.contains('is-active')).toBe(true)
+        await wait(30)
+        await act(async () => { window.history.back(); await new Promise((r) => setTimeout(r, 40)) })
+        expect(document.querySelector('[data-monitor-tab="map"]').classList.contains('is-active')).toBe(true)
     })
 
     it('map falls back to a grouped list at phone width', async () => {

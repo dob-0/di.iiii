@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 import { groupMap, visibleEdges } from './monitorMapGroups.js'
+import { mergeKnowledge } from './monitorMapKnowledge.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
 //   2D   an SVG graph: hover lights a node's neighbours and dims the rest,
@@ -71,7 +72,9 @@ const useFillHeight = (rootRef, view) => {
 }
 
 // the second line of a card: where a space lives, how to open a group, else kind and state
-const subText = (n) => (n.kind === 'space' && n.tiers?.length ? n.tiers.join(' · ') : n.kind === 'group' ? `open it · ${n.tiers.join(' ')}` : `${n.kind} · ${n.state}`)
+const subText = (n) => (n.sub ? n.sub : n.kind === 'space' && n.tiers?.length ? n.tiers.join(' · ') : n.kind === 'group' ? `open it · ${n.tiers.join(' ')}` : `${n.kind} · ${n.state}`)
+// a card letter is about 10.2 map units wide (getBBox on the preview, 2026-11-16); 10.4 keeps both lines inside
+const CHAR = 10.4
 const clip = (text, n) => (text.length > n ? `${text.slice(0, n - 1)}…` : text)
 const toneOf = (state) => STATE_TONE[state] || 'muted'
 const edgeKey = (e, i) => `${e.from}>${e.to}>${e.kind}>${i}`
@@ -235,13 +238,13 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
-                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 8.6))}</text>
-                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{subText(n)}</text>
+                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / CHAR))}</text>
+                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{clip(subText(n), Math.floor((w - 24) / CHAR))}</text>
                             <title>{`${n.kind}: ${n.label} (${n.state})`}</title>
                         </g>
                     )
                 })}
-                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 8.6) ? (() => {
+                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / CHAR) ? (() => {
                     const p = layout.pos.get(hovered.id)
                     const { h } = sizeOf(hovered.kind)
                     const text = hovered.label
@@ -266,17 +269,20 @@ function Map2D({ layout, selectedId, onPick, live, onFold }) {
     )
 }
 
-export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, query = '' }) {
+// `knowledge` + `snap` (optional) add the to do, rules, skills, hooks and helpers; `onKnowledge(part)` opens that list
+export default function MonitorMap({ map, knowledge = null, snap = null, selectedId, onPick, onKnowledge, narrow, live = false, query = '' }) {
     // group ids the person opened; a filter opens every group so a match is never hidden in one
     const [expanded, setExpanded] = useState([])
-    const grouped = useMemo(() => groupMap(map, { expanded, open: !!query.trim() }), [map, expanded, query])
+    const full = useMemo(() => mergeKnowledge(map, knowledge, snap), [map, knowledge, snap])
+    const grouped = useMemo(() => groupMap(full, { expanded, open: !!query.trim() }), [full, expanded, query])
     const nodes = grouped.nodes
     const layout = useMemo(() => layoutMap(grouped, narrow ? 1 : ASPECT), [grouped, narrow])
     // a group opens on click; every other node goes to the page (the drawer)
     const pick = useCallback((n) => {
         if (n.kind === 'group') setExpanded((e) => (e.includes(n.id) ? e : [...e, n.id]))
+        else if (n.kind === 'knowledge' && onKnowledge) onKnowledge(n.part)
         else onPick(n)
-    }, [onPick])
+    }, [onPick, onKnowledge])
     const fold = expanded.length && !query.trim() ? () => setExpanded([]) : null
     const [stored, setStored] = useState(readView)
     const views = narrow ? PHONE_VIEWS : VIEWS

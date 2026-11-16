@@ -235,6 +235,16 @@ export default function MonitorSection({ onStats }) {
     // stable: the 3D map is memoized and must not wake up for the 1 s clock above it
     const pickNode = useCallback((n) => setSelected({ kind: 'node', id: n.id, node: n }), [])
 
+    // a to do / rules / skills / hooks node on the map opens that part of the Work view
+    // that jump is its own history entry (jumpFrom = the tab it came from): Back returns there, e.g. to the Map
+    const [jumpFrom, setJumpFrom] = useState(null)
+    const pickTab = useCallback((id) => { setJumpFrom(null); setTab(id) }, [])
+    const openWork = useCallback((part) => {
+        setJumpFrom(tab === 'work' ? null : tab)
+        setTab('work')
+        setTimeout(() => document.querySelector(`[data-work="${part}"]`)?.scrollIntoView?.({ block: 'start' }), 0)
+    }, [tab])
+
     const setFullScreen = useCallback((on) => {
         setFull(on)
         try { window.localStorage.setItem(FULL_KEY, on ? '1' : '0') } catch { /* storage blocked: the choice lasts this visit */ }
@@ -247,6 +257,7 @@ export default function MonitorSection({ onStats }) {
     useBackEntry(!!selected, () => setSelected(null), { id: 'monitor-inspector' })
     useBackEntry(keysOpen, () => setKeysOpen(false), { id: 'monitor-keys' })
     useBackEntry(tab !== 'now', () => setTab('now'), { id: 'monitor-tab' })
+    useBackEntry(!!jumpFrom, () => { setTab(jumpFrom || 'now'); setJumpFrom(null) }, { id: 'monitor-jump' })
 
     // keys: ignored while typing in a field (Esc still works: it closes things)
     useEffect(() => {
@@ -260,7 +271,7 @@ export default function MonitorSection({ onStats }) {
                 return
             }
             if (typing(ev.target)) return
-            if (TAB_KEYS[ev.key]) { setTab(TAB_KEYS[ev.key]); return }
+            if (TAB_KEYS[ev.key]) { pickTab(TAB_KEYS[ev.key]); return }
             if (ev.key === 'r' || ev.key === 'R') { load(); return }
             if (ev.key === '/') { ev.preventDefault(); filterRef.current?.focus(); return }
             if (ev.key === 'f' || ev.key === 'F') { setFullScreen(!full); return }
@@ -268,7 +279,7 @@ export default function MonitorSection({ onStats }) {
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-    }, [full, selected, keysOpen, setFullScreen, load])
+    }, [full, selected, keysOpen, setFullScreen, load, pickTab])
 
     const panels = useMemo(() => snap?.panels || {}, [snap])
     const pick = (kind, row) => setSelected({ kind, id: rowId(row) })
@@ -335,7 +346,7 @@ export default function MonitorSection({ onStats }) {
             <div className="monitor-tabs" data-box="tabs" role="tablist" aria-label="Monitor views">
                 {TABS.map(([id, label], i) => (
                     <button key={id} type="button" role="tab" aria-selected={tab === id} data-monitor-tab={id}
-                        className={`monitor-tab${tab === id ? ' is-active' : ''}`} onClick={() => setTab(id)}>{label}<i className="monitor-tab-key" data-key={i + 1} aria-hidden="true" /></button>
+                        className={`monitor-tab${tab === id ? ' is-active' : ''}`} onClick={() => pickTab(id)}>{label}<i className="monitor-tab-key" data-key={i + 1} aria-hidden="true" /></button>
                 ))}
             </div>
 
@@ -348,7 +359,7 @@ export default function MonitorSection({ onStats }) {
                 ) : null}
                 {tab === 'map' ? (
                     <ModuleSection className="monitor-map-section" title="Map" subtitle="Spaces by name, with the tiers they live on — select a node for its details">
-                        <MonitorMap map={snap?.map} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
+                        <MonitorMap map={snap?.map} knowledge={knowledge} snap={snap} onKnowledge={openWork} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
                             live={streaming && !paused} query={query} onPick={pickNode} />
                     </ModuleSection>
                 ) : null}
