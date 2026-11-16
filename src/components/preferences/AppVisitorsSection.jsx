@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getAppVisitors, setAppVisitorBlocked } from '../../services/appVisitorsApi.js'
-import { MetricCard, ModuleSection } from './PreferencesShared.jsx'
+import { Hint, MetricCard, ModuleSection } from './PreferencesShared.jsx'
 
 // The guest book (Ops Graph → Visitors): the programs that reached di.iiii — AI
 // agents, crawlers, apps that identified themselves, and anonymous scripts — with
@@ -119,7 +119,7 @@ export default function AppVisitorsSection() {
         ? 'Loading…'
         : data.enabled === false
             ? 'Not kept on this install'
-            : `${programs.length} program${programs.length === 1 ? '' : 's'} in the last ${data.retentionDays || 90} days`
+            : `${programs.length} program${programs.length === 1 ? '' : 's'} · ${data.retentionDays || 90} days`
 
     return (
         <ModuleSection
@@ -133,21 +133,16 @@ export default function AppVisitorsSection() {
         >
             {data?.enabled === false ? (
                 <div className="preferences-empty">
-                    A local install keeps no guest book — everyone reaching it is you. On a hosted
-                    di.iiii this lists the apps, crawlers and scripts that called, and lets you block one.
+                    No guest book here.
+                    <Hint text="A local install keeps no guest book: everyone reaching it is you. On a hosted di.iiii this lists the apps, crawlers and scripts that called, and lets you block one." />
                 </div>
             ) : (
                 <>
                     <div className="preferences-status-grid">
-                        <MetricCard label="Apps · 7 days" value={totals.app?.week || 0} tone={totals.app?.week ? 'success' : 'default'} />
-                        <MetricCard label="Crawlers · 7 days" value={totals.crawler?.week || 0} tone={totals.crawler?.week ? 'accent' : 'default'} />
-                        <MetricCard label="Anonymous · 7 days" value={totals.anonymous?.week || 0} tone={totals.anonymous?.week ? 'warning' : 'default'} />
-                        <MetricCard label="Browsers · today" value={browserRow?.today || 0} />
-                    </div>
-                    <div className="preferences-tree-note">
-                        Counts per day and program name only — no addresses, no pages, no people.
-                        A name is what the program says it is and can be faked; the per-address
-                        limits are what actually hold. Programs are asked to identify at /for-apps.
+                        <MetricCard label="Apps" value={totals.app?.week || 0} tone={totals.app?.week ? 'success' : 'default'} />
+                        <MetricCard label="Crawlers" value={totals.crawler?.week || 0} tone={totals.crawler?.week ? 'accent' : 'default'} />
+                        <MetricCard label="Anonymous" value={totals.anonymous?.week || 0} tone={totals.anonymous?.week ? 'warning' : 'default'} />
+                        <MetricCard label="Browsers" value={browserRow?.today || 0} />
                     </div>
                     <div className="preferences-command-grid">
                         <button type="button" className={`toggle-button${filter === '' ? ' active' : ''}`} onClick={() => setFilter('')}>
@@ -166,6 +161,7 @@ export default function AppVisitorsSection() {
                         <button type="button" className={`toggle-button${filter === 'blocked' ? ' active' : ''}`} onClick={() => setFilter('blocked')}>
                             blocked
                         </button>
+                        <Hint text="Counts per day and program name only: no addresses, no pages, no people. Apps, crawlers and anonymous programs are the last 7 days, browsers today. A name is what the program says it is and can be faked; the per-address limits are what actually hold. Programs are asked to identify at /for-apps." />
                     </div>
                     <div className="preferences-space-list">
                         {visible.map((entry) => (
@@ -177,7 +173,7 @@ export default function AppVisitorsSection() {
                             />
                         ))}
                         {data !== null && visible.length === 0 && !error && (
-                            <div className="preferences-space-row"><div className="preferences-empty">No programs have called yet.</div></div>
+                            <div className="preferences-space-row"><div className="preferences-empty">No visits yet.</div></div>
                         )}
                     </div>
                 </>

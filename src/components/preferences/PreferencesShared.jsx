@@ -149,13 +149,58 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
     )
 }
 
+// A "?" on its control: the sentence that used to sit under it. Hover or focus shows it (title), a tap or
+// Enter opens it under the control (the phone has no hover). Nothing is drawn until it is asked for.
+export function Hint({ text, label = 'What is this?' }) {
+    const [open, setOpen] = useState(false)
+    if (!text) return null
+    return (
+        <span className="preferences-hint">
+            <button
+                type="button"
+                className="preferences-hint-button"
+                aria-label={label}
+                aria-expanded={open}
+                title={text}
+                onClick={() => setOpen((v) => !v)}
+                onBlur={() => setOpen(false)}
+            >?</button>
+            {open ? <span className="preferences-hint-card" role="note">{text}</span> : null}
+        </span>
+    )
+}
+
+// A detail that opens on selection and goes away with it: a panel at the right edge of its window,
+// never an empty box waiting for a pick (the MonitorDrawer pattern).
+export function Drawer({ title, onClose, children }) {
+    useEffect(() => {
+        const onKey = (event) => { if (event.key === 'Escape') onClose?.() }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [onClose])
+    return (
+        <aside className="admin-drawer" aria-label={title}>
+            <div className="admin-drawer-head">
+                <h3>{title}</h3>
+                <button type="button" className="preferences-inline-action" onClick={onClose}>Close</button>
+            </div>
+            <div className="admin-drawer-body">{children}</div>
+        </aside>
+    )
+}
+
+const wordCount = (value) => String(value || '').trim().split(/\s+/).filter(Boolean).length
+
+// A subtitle of up to three words is a fact ("2 spaces") and stays, and so does a short count line with a number in it;
+// a longer one is a sentence and becomes a hint.
 export function ModuleSection({ title, subtitle, className = '', actions = null, children }) {
+    const sentence = typeof subtitle === 'string' && wordCount(subtitle) > (/\d/.test(subtitle) ? 6 : 3)
     return (
         <section className={['preferences-module', className].filter(Boolean).join(' ')}>
             <header className="preferences-module-header">
                 <div>
-                    <h2>{title}</h2>
-                    {subtitle ? <span>{subtitle}</span> : null}
+                    <h2>{title}{sentence ? <Hint text={subtitle} /> : null}</h2>
+                    {subtitle && !sentence ? <span>{subtitle}</span> : null}
                 </div>
                 {actions ? <div className="preferences-module-actions">{actions}</div> : null}
             </header>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArchitectureCanvas, InfoPair, ModuleSection, formatTimestamp } from './PreferencesShared.jsx'
+import { ArchitectureCanvas, Drawer, InfoPair, ModuleSection, formatTimestamp } from './PreferencesShared.jsx'
 import { getAgentBoard, getAgentBoardSession } from '../../services/apiClient.js'
 
 const POLL_MS = 10000
@@ -195,12 +195,7 @@ export default function AgentsSection({ onBoardStats }) {
     if (unavailable) {
         return (
             <ModuleSection title="Agents" subtitle="Operator mode only">
-                <div className="preferences-empty">
-                    The agent board reads this machine&apos;s local Claude data, so it is
-                    only available when serverXR runs on your own machine in dev mode
-                    (loopback, non-production). Nothing is served here in deployed
-                    environments.
-                </div>
+                <div className="preferences-empty">Only on the operator machine.</div>
             </ModuleSection>
         )
     }
@@ -227,7 +222,7 @@ export default function AgentsSection({ onBoardStats }) {
         <>
             <ModuleSection
                 title="Agent Map"
-                subtitle={`${liveSessions.length} live session${liveSessions.length === 1 ? '' : 's'} · ${board?.totalSessions ?? 0} total on this machine`}
+                subtitle={`${liveSessions.length} live · ${board?.totalSessions ?? 0} total`}
                 actions={
                     <button type="button" className="preferences-inline-action" onClick={loadBoard}>
                         Refresh
@@ -243,9 +238,10 @@ export default function AgentsSection({ onBoardStats }) {
                         onSelectNode={onSelectMapNode}
                     />
 
+                    {(selectedSession || selectedTreePath) ? (
                     <div className="preferences-stage-sidebar-block preferences-node-inspector">
                         <div className="preferences-stage-sidebar-title">
-                            Inspector — {selectedSession ? sessionLabel(selectedSession) : (selectedTreePath ? treeLabel(selectedTreePath) : 'none')}
+                            {selectedSession ? sessionLabel(selectedSession) : treeLabel(selectedTreePath)}
                         </div>
                         {selectedSession ? (
                             <>
@@ -272,19 +268,15 @@ export default function AgentsSection({ onBoardStats }) {
                                     />
                                 ))}
                             </>
-                        ) : (
-                            <div className="preferences-empty">
-                                Select a session or checkout on the map to inspect it.
-                            </div>
-                        )}
+                        ) : null}
                     </div>
+                    ) : null}
                 </div>
             </ModuleSection>
 
-            <ModuleSection title="Sessions" subtitle="Chats and topics — live first, then recent">
+            <ModuleSection title="Sessions">
                 <div className="preferences-manage-layout">
                     <div className="preferences-stage-sidebar-block">
-                        <div className="preferences-stage-sidebar-title">Directory</div>
                         <div className="preferences-tree">
                             <div className="preferences-tree-group">
                                 <div className="preferences-tree-row">
@@ -293,25 +285,16 @@ export default function AgentsSection({ onBoardStats }) {
                                 </div>
                                 {liveSessions.map((session) => renderSessionRow(session, true))}
                             </div>
-                            <div className="preferences-tree-group">
-                                <div className="preferences-tree-row">
-                                    <span className="preferences-tree-name">Recent</span>
-                                    <span className="preferences-tree-tag">{recentSessions.length}</span>
-                                </div>
+                            <details className="admin-fold preferences-tree-group">
+                                <summary>Recent<span className="admin-fold-count">{recentSessions.length}</span></summary>
                                 {recentSessions.map((session) => renderSessionRow(session, true))}
-                            </div>
+                            </details>
                         </div>
                     </div>
 
                     <div className="preferences-manage-detail">
-                        {!selectedSession ? (
-                            <ModuleSection title="Session detail" subtitle="Nothing selected">
-                                <div className="preferences-empty">
-                                    Pick a session from the directory or the map to read its
-                                    conversation tail and agent tree.
-                                </div>
-                            </ModuleSection>
-                        ) : (
+                        {selectedSession ? (
+                            <Drawer title={sessionLabel(selectedSession)} onClose={() => setSelectedSessionId(null)}>
                             <>
                                 <ModuleSection
                                     title={sessionLabel(selectedSession)}
@@ -377,7 +360,8 @@ export default function AgentsSection({ onBoardStats }) {
                                     </div>
                                 </ModuleSection>
                             </>
-                        )}
+                            </Drawer>
+                        ) : null}
                     </div>
                 </div>
             </ModuleSection>

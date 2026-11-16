@@ -371,7 +371,7 @@ export default function AdminManageSection({ onStats }) {
                 )}
 
                 {selection.type === 'project' && !selectedProject && (
-                    <div className="preferences-empty">Select a project from the directory.</div>
+                    <div className="preferences-empty">Pick a project.</div>
                 )}
             </div>
         </div>
@@ -407,7 +407,7 @@ export function TrafficSection() {
                         <MetricCard label="Sign-ups" value={signups} />
                         <MetricCard label="Busiest day (UTC)" value={busiest ? `${busiest.day} · ${busiest.count}` : '—'} />
                     </div>
-                    {views === 0 && <div className="preferences-empty">No page views counted in this window yet.</div>}
+                    {views === 0 && <div className="preferences-empty">No views yet.</div>}
                     {stats.topPaths?.length > 0 && (
                         <>
                             <div className="preferences-info-label">Most viewed pages</div>
@@ -448,7 +448,7 @@ export function SweepSection() {
             {error && <div className="preferences-empty">{error}</div>}
             {report && (
                 <>
-                    {report.due.length === 0 && <div className="preferences-empty">Nothing comes due in the next {days} days.</div>}
+                    {report.due.length === 0 && <div className="preferences-empty">Nothing due.</div>}
                     {report.due.map((entry) => (
                         <InfoPair
                             key={entry.spaceId}
@@ -479,19 +479,6 @@ export function SweepSection() {
 function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, onCreateSpace, onPatchUser, spaceLimit }) {
     return (
         <>
-            <ModuleSection title="Overview" subtitle="Everything you can manage from here">
-                <div className="preferences-status-grid">
-                    <MetricCard label="Spaces" value={spaces.length} />
-                    <MetricCard label="Accounts" value={Array.isArray(users) ? users.length : '—'} />
-                    <MetricCard
-                        label="Guest entry"
-                        value={globalSpaceId ? 'Shared space' : 'Private sandbox'}
-                        tone={globalSpaceId ? 'success' : 'accent'}
-                    />
-                    <MetricCard label="Guest space" value={globalSpaceId || '—'} />
-                </div>
-            </ModuleSection>
-
             <TrafficSection />
 
             <SweepSection />
@@ -513,7 +500,6 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     />
                     <button type="submit" className="toggle-button" disabled={!draftSpace.trim()}>Create space</button>
                 </form>
-                <div className="preferences-empty">Pick a space on the left to manage its projects and access.</div>
             </ModuleSection>
 
             <CommonsModerationSection />
@@ -521,7 +507,7 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
             <ModuleSection title="People" subtitle="Account roles and overall reach">
                 {users === null && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading accounts" text="loading accounts" /></div>}
                 {Array.isArray(users) && users.length === 0 && (
-                    <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
+                    <div className="preferences-empty">No accounts.</div>
                 )}
                 <div className="preferences-collaborator-list">
                     {Array.isArray(users) && users.map((u) => (
@@ -682,7 +668,7 @@ function SpaceDetail({
                 />
                 {users === null && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading accounts" text="loading accounts" /></div>}
                 {Array.isArray(users) && users.length === 0 && (
-                    <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
+                    <div className="preferences-empty">No accounts.</div>
                 )}
                 <div className="preferences-collaborator-list">
                     {Array.isArray(users) && users.map((u) => {
