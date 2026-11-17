@@ -464,7 +464,7 @@ export default function MonitorSection({ onStats }) {
                             {machines.map((m) => (
                                 <Row key={m.id} id={`m:${m.id}`} tone={m.online ? 'success' : 'muted'} flash={flash(`m:${m.id}`)}
                                     selected={selected?.kind === 'machine' && selected.id === m.id} onSelect={() => pick('machine', m)}>
-                                    <span className="monitor-name">{m.name}{m.self ? ' · this' : ''}</span>
+                                    <span className="monitor-name" data-fit-ok>{m.name}{m.self ? ' · this' : ''}</span>
                                     <span className="monitor-meta">{m.online ? 'online' : `off · ${timeAgo(m.lastSeen)}`} · {m.os || '—'}</span>
                                 </Row>
                             ))}
@@ -477,7 +477,7 @@ export default function MonitorSection({ onStats }) {
                             {probes.map((n) => (
                                 <Row key={n.id} id={`n:${n.id}`} tone={n.ok ? 'success' : 'danger'} flash={flash(`n:${n.id}`)}
                                     selected={selected?.kind === 'probe' && selected.id === n.id} onSelect={() => pick('probe', n)}>
-                                    <span className="monitor-name">{n.name}</span>
+                                    <span className="monitor-name" data-fit-ok>{n.name}</span>
                                     <span className="monitor-meta">{n.ok ? `${n.status} · ${n.ms} ms` : `down · ${n.status || String(n.error || 'no answer').slice(0, 30)}`}</span>
                                 </Row>
                             ))}
@@ -490,7 +490,7 @@ export default function MonitorSection({ onStats }) {
                             {things.map((c) => (
                                 <Row key={c.id} id={`c:${c.id}`} tone={THING_TONE[c.state] || 'muted'} flash={flash(`c:${c.id}`)}
                                     selected={selected?.kind === 'thing' && selected.id === c.id} onSelect={() => pick('thing', c)}>
-                                    <span className="monitor-name">{c.title}</span>
+                                    <span className="monitor-name" data-fit-ok>{c.title}</span>
                                     <span className="monitor-meta">{c.state} · {c.detail}</span>
                                 </Row>
                             ))}
@@ -503,7 +503,7 @@ export default function MonitorSection({ onStats }) {
                             {places.map((u) => (
                                 <Row key={u.id} id={`u:${u.id}`} tone="success" flash={flash(`u:${u.id}`)}
                                     selected={selected?.kind === 'place' && selected.id === u.id} onSelect={() => pick('place', u)}>
-                                    <span className="monitor-name">{u.kind} {u.target}</span>
+                                    <span className="monitor-name" data-fit-ok>{u.kind} {u.target}</span>
                                     <span className="monitor-meta">{u.people.length} here · {u.people.slice(0, 3).map((p) => p.name).join(', ')}{u.people.length > 3 ? '…' : ''}</span>
                                 </Row>
                             ))}
@@ -522,7 +522,7 @@ export default function MonitorSection({ onStats }) {
                                     {rows.map((a) => (
                                         <Row key={a.sessionId} id={`a:${a.sessionId}`} tone={AGENT_TONE[a.status] || 'accent'} flash={flash(`a:${a.sessionId}`)}
                                             selected={selected?.kind === 'agent' && selected.id === a.sessionId} onSelect={() => pick('agent', a)}>
-                                            <span className="monitor-name">{a.title}</span>
+                                            <span className="monitor-name" data-fit-ok>{a.title}</span>
                                             <span className="monitor-meta">{a.status} · {timeAgo(a.lastActivity)}</span>
                                         </Row>
                                     ))}
@@ -551,7 +551,7 @@ export default function MonitorSection({ onStats }) {
                             {services.map((sv) => (
                                 <Row key={sv.unit} id={`s:${sv.unit}`} tone={sv.active === 'failed' ? 'danger' : 'success'} flash={flash(`s:${sv.unit}`)}
                                     selected={selected?.kind === 'service' && selected.id === sv.unit} onSelect={() => pick('service', sv)}>
-                                    <span className="monitor-name">{sv.unit.replace(/\.service$/, '')}</span>
+                                    <span className="monitor-name" data-fit-ok>{sv.unit.replace(/\.service$/, '')}</span>
                                     <span className="monitor-meta">{sv.active} · {sv.sub}</span>
                                 </Row>
                             ))}
@@ -564,7 +564,7 @@ export default function MonitorSection({ onStats }) {
                             {prs.map((p) => (
                                 <Row key={p.number} id={`p:${p.number}`} tone={p.draft ? 'muted' : 'accent'} flash={flash(`p:${p.number}`)}
                                     selected={selected?.kind === 'pr' && selected.id === p.number} onSelect={() => pick('pr', p)}>
-                                    <span className="monitor-name">#{p.number} {p.title}</span>
+                                    <span className="monitor-name" data-fit-ok>#{p.number} {p.title}</span>
                                     <span className="monitor-meta">{p.draft ? 'draft' : 'open'} · {timeAgo(p.updatedAt)}</span>
                                 </Row>
                             ))}

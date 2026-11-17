@@ -479,7 +479,7 @@ export function ArchitectureCanvas({ nodes = [], links = [], selectedNodeId, onS
                     >
                         <span className="preferences-architecture-node-dot" aria-hidden="true" />
                         <span className="preferences-architecture-node-kicker">{node.kicker}</span>
-                        <strong className="preferences-architecture-node-title">{node.label}</strong>
+                        <strong className="preferences-architecture-node-title" data-fit-ok>{node.label}</strong>
                         <span className="preferences-architecture-node-status mono">{node.status}</span>
                     </button>
                 ))}

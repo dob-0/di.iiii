@@ -217,7 +217,7 @@ export default function AgentsSection({ onBoardStats }) {
                     setSelectedSessionId(session.sessionId)
                 }}
             >
-                <span className="preferences-tree-name">{shortLabel(session)}</span>
+                <span className="preferences-tree-name" data-fit-ok>{shortLabel(session)}</span>
                 <span className="preferences-tree-tag">{status || timeAgo(session.lastActivity)}</span>
             </button>
         )
@@ -288,14 +288,14 @@ export default function AgentsSection({ onBoardStats }) {
                         <div className="preferences-tree">
                             <div className="preferences-tree-group">
                                 <div className="preferences-tree-row">
-                                    <span className="preferences-tree-name">Live</span>
+                                    <span className="preferences-tree-name" data-fit-ok>Live</span>
                                     <span className="preferences-tree-tag">{liveSessions.length}</span>
                                 </div>
                                 {liveSessions.map((session) => renderSessionRow(session, true))}
                             </div>
                             <div className="preferences-tree-group">
                                 <div className="preferences-tree-row">
-                                    <span className="preferences-tree-name">Recent</span>
+                                    <span className="preferences-tree-name" data-fit-ok>Recent</span>
                                     <span className="preferences-tree-tag">{recentSessions.length}</span>
                                 </div>
                                 {recentSessions.map((session) => renderSessionRow(session, true))}
@@ -339,7 +339,7 @@ export default function AgentsSection({ onBoardStats }) {
                                                     key={agent.agentId}
                                                     className={`preferences-tree-row${(agent.spawnDepth ?? 1) > 1 ? ' is-child' : ''} is-leaf`}
                                                 >
-                                                    <span className="preferences-tree-name">
+                                                    <span className="preferences-tree-name" data-fit-ok>
                                                         {(agent.description || agent.agentId).slice(0, 44)}
                                                     </span>
                                                     <span className="preferences-tree-tag">{agent.agentType || 'agent'}</span>

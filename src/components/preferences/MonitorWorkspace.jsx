@@ -108,7 +108,7 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
                         className={`monitor-agent tone-${LANE_TONE[a.status] || 'accent'}`} onClick={() => onPick('agent', a)}>
                         <span className="monitor-agent-head">
                             {a.status === 'busy' ? <i className="monitor-live-square" aria-label="busy" /> : <i className="monitor-live-square is-off" aria-hidden="true" />}
-                            <span className="monitor-name">{a.title}</span>
+                            <span className="monitor-name" data-fit-ok>{a.title}</span>
                         </span>
                         <span className="monitor-meta">{a.status}{a.machine ? ` · ${a.machine}` : ''} · {ago(a.lastActivity)}</span>
                         <span className="monitor-meta">{a.branch || 'no branch'}</span>
@@ -121,7 +121,7 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
             <div className="monitor-grid">
                 {(reports || []).map((r) => (
                     <div key={r.host} className={`monitor-row monitor-report tone-${r.stale ? 'warning' : 'success'}`} data-report-host={r.host}>
-                        <span className="monitor-name">{r.host}</span>
+                        <span className="monitor-name" data-fit-ok>{r.host}</span>
                         <span className="monitor-meta">{r.stale ? 'stale' : 'reporting'} · {ago(r.reportedAt)}</span>
                         <span className="monitor-meta">{r.panels?.agents?.live ?? 0} agents live</span>
                         <span className="monitor-fresh" aria-hidden="true"><i style={{ width: `${Math.round(freshness(r.reportedAt, now) * 100)}%` }} /></span>

@@ -84,6 +84,7 @@
         "verify:capture": "node scripts/verify-capture.mjs",
         "verify:surfaces:mobile": "node scripts/verify-surfaces.mjs --mobile-only",
         "check:toolbar-overlap": "node scripts/check-toolbar-overlap.mjs",
+        "check:fit": "node scripts/check-fit.mjs",
         "verify:algovrithm": "node scripts/verify-algovrithm.mjs",
         "verify:algovrithm:remote": "node scripts/verify-algovrithm-remote.mjs",
         "test:schema-sync": "vitest run serverXR/src/schemaSync.test.js",

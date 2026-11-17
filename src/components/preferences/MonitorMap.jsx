@@ -84,7 +84,7 @@ function MapList({ nodes, selectedId, onPick }) {
                                 <button key={n.id} type="button" data-map-node={n.id}
                                     className={`monitor-row tone-${toneOf(n.state)}${selectedId === n.id ? ' is-selected' : ''}`}
                                     aria-pressed={selectedId === n.id} onClick={() => onPick(n)}>
-                                    <span className="monitor-name">{n.label}</span>
+                                    <span className="monitor-name" data-fit-ok>{n.label}</span>
                                     <span className="monitor-meta">{n.state}</span>
                                 </button>
                             ))}

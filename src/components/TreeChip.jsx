@@ -19,6 +19,7 @@ export default function TreeChip({ env, inline = false }) {
         <div
             className={inline ? 'tree-chip tree-chip--inline' : 'tree-chip'}
             data-mode={info.mode}
+            data-fit-ok // dev-only banner, ellipsis on purpose, full text in its title
             role="status"
             title={devTreeChipTitle(info)}
         >

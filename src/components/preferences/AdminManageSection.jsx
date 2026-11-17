@@ -257,7 +257,7 @@ export default function AdminManageSection({ onStats }) {
                         onClick={() => setSelection({ type: 'root' })}
                     >
                         <span className="preferences-tree-caret" aria-hidden="true">▾</span>
-                        <span className="preferences-tree-name">Spaces</span>
+                        <span className="preferences-tree-name" data-fit-ok>Spaces</span>
                         <span className="preferences-tree-tag">{spaces.length}</span>
                     </button>
 
@@ -285,7 +285,7 @@ export default function AdminManageSection({ onStats }) {
                                     <span className="preferences-tree-caret" aria-hidden="true">
                                         {isOpen ? '▾' : '▸'}
                                     </span>
-                                    <span className="preferences-tree-name">{space.label || space.id}</span>
+                                    <span className="preferences-tree-name" data-fit-ok>{space.label || space.id}</span>
                                     {globalSpaceId === space.id && <span className="preferences-badge success">guest</span>}
                                     {space.isPublic && <span className="preferences-badge">live</span>}
                                 </button>
@@ -304,7 +304,7 @@ export default function AdminManageSection({ onStats }) {
                                                 onClick={() => setSelection({ type: 'project', spaceId: space.id, projectId: project.id })}
                                             >
                                                 <span className="preferences-tree-caret" aria-hidden="true">·</span>
-                                                <span className="preferences-tree-name">{project.title || 'Untitled'}</span>
+                                                <span className="preferences-tree-name" data-fit-ok>{project.title || 'Untitled'}</span>
                                             </button>
                                         ))}
                                     </>
