@@ -77,7 +77,7 @@ describe('monitor gate', () => {
 const admin = { authenticated: true, role: 'admin', type: 'session', subject: 'admin-2' }
 const owner = { authenticated: true, role: 'admin', type: 'session', subject: 'owner-1' }
 const remote = { remoteAddress: '203.0.113.9' }
-const ROUTES = ['GET /api/monitor', 'GET /api/monitor/stream', 'POST /api/monitor/ask', 'POST /api/monitor/report']
+const ROUTES = ['GET /api/monitor', 'GET /api/monitor/prs', 'GET /api/monitor/stream', 'POST /api/monitor/ask', 'POST /api/monitor/report']
 const withBody = (authState) => ({ socket: remote, authState, body: { text: 'hi', host: 'aylmo', panels: {} }, headers: {} })
 
 describe('monitor gate by tier', () => {
@@ -196,5 +196,15 @@ describe('POST /api/monitor/ask', () => {
     expect(viaCli.statusCode).toBe(404)
     const empty = await call({ socket: remote, authState: owner, body: {} }, { deployEnv: 'staging', route })
     expect(empty.statusCode).toBe(400)
+  })
+})
+
+describe('GET /api/monitor/prs', () => {
+  it('answers "no source" instead of failing when the server has no PR list', async () => {
+    process.env.NODE_ENV = 'production'
+    const res = await call(withBody(owner), { deployEnv: 'staging', route: 'GET /api/monitor/prs' })
+    expect(res.statusCode).toBe(200)
+    expect(res.body.ok).toBe(false)
+    expect(res.body.reason).toBe('no-source')
   })
 })
