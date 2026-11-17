@@ -13,8 +13,41 @@ const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
+const https = require('node:https')
 const { execFile } = require('node:child_process')
 const { createAgentBoardStore } = require('./agentBoardStore')
+
+// A server with a TLS certificate speaks https on its port. The certificate is for a name
+// (local.thedi.studio), never for 127.0.0.1, so reading our OWN loopback address cannot verify
+// it. That one address, and only it, is read without verification; every other fetch keeps
+// the default. Same answer shape as fetch: { ok, status, json() }.
+const LOOPBACK_BODY_MAX = 1024 * 1024
+const isLoopbackHttps = (url) => {
+  try { const u = new URL(url); return u.protocol === 'https:' && u.hostname === '127.0.0.1' } catch { return false }
+}
+function loopbackHttpsFetch(url, { signal } = {}) {
+  if (!isLoopbackHttps(url)) return Promise.reject(new Error('loopback only'))
+  return new Promise((resolve, reject) => {
+    // agent: false = one connection per read, so nothing keeps the server's close waiting
+    const req = https.request(new URL(url), { method: 'GET', rejectUnauthorized: false, agent: false, signal }, (res) => {
+      const chunks = []
+      let size = 0
+      res.on('error', reject)
+      res.on('aborted', () => reject(new Error('answer cut off')))
+      res.on('data', (c) => {
+        size += c.length
+        if (size > LOOPBACK_BODY_MAX) { reject(new Error('answer too large')); res.destroy(); return }
+        chunks.push(c)
+      })
+      res.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8')
+        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: async () => JSON.parse(body) })
+      })
+    })
+    req.on('error', reject)
+    req.end()
+  })
+}
 
 const CACHE_TTL_MS = 5000
 const PANEL_TIMEOUT_MS = 4000
@@ -120,6 +153,8 @@ function createMonitorStore({
   configPath = process.env.DI_MONITOR_CONFIG || path.join(home, '.di', 'monitor.json'),
   runCommand = run,
   fetchImpl = (typeof fetch === 'function' ? fetch : null),
+  // reads our own https loopback address (certificate names another host); injectable for tests
+  loopbackFetch = loopbackHttpsFetch,
   repoDir = process.env.DI_REPO_DIR || process.cwd(),
   // the installed server runs from ~/.di/current, which is no git checkout, so gh cannot find the repo from the
   // directory: name it (owner/name) instead; DI_MONITOR_REPO overrides it for a fork
@@ -259,9 +294,12 @@ function createMonitorStore({
   // status routes (loopback, same machine). A thing that is not there is
   // "off", not an error: a laptop without lasers is normal.
   async function connected(selfBase) {
-    if (!fetchImpl || !selfBase) throw new Error('no local address to read from')
+    if (!selfBase) throw new Error('no local address to read from')
     const get = async (route) => {
-      const res = await fetchImpl(`${selfBase}${route}`, { signal: AbortSignal.timeout(3000) })
+      const url = `${selfBase}${route}`
+      const read = isLoopbackHttps(url) ? loopbackFetch : fetchImpl
+      if (!read) throw new Error('no fetch available')
+      const res = await read(url, { signal: AbortSignal.timeout(3000) })
       if (!res.ok) throw new Error(`${route} answered ${res.status}`)
       return res.json()
     }

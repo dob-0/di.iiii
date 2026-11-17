@@ -4,6 +4,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
+import https from 'node:https'
+import { execFileSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
@@ -144,6 +146,45 @@ describe('monitor snapshot', () => {
     expect(panels.presence.places).toBe(2)
     expect(panels.presence.rows[0]).toMatchObject({ id: 'space:platina', kind: 'space' })
     expect(panels.presence.rows[0].people.map((p) => p.name)).toEqual(['Emilya', 'u9'])
+  })
+
+  // Regression (11-17): the installed server speaks https with a certificate for local.thedi.studio, and
+  // every connected-thing row said "off · fetch failed" because the probe used plain http on that port.
+  // openssl is needed here on purpose: with no skip, a machine without it fails loudly instead of losing the guard
+  it('reads connected things from this server over https on 127.0.0.1 (certificate for another name)', async () => {
+    const dir = tmp()
+    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=local.thedi.studio',
+      '-keyout', path.join(dir, 'k.pem'), '-out', path.join(dir, 'c.pem')], { stdio: 'ignore' })
+    const server = https.createServer({ key: fs.readFileSync(path.join(dir, 'k.pem')), cert: fs.readFileSync(path.join(dir, 'c.pem')) }, (req, res) => {
+      res.setHeader('content-type', 'application/json')
+      if (req.url === '/serverXR/osc/api/state') res.end(JSON.stringify({ listeners: [{}], sent: { messages: 2 } }))
+      else { res.statusCode = 404; res.end('{}') }
+    })
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    try {
+      const store = createMonitorStore({ home: tmp(), runCommand: fakeRun(), fetchImpl: async () => { throw new Error('fetch failed') } })
+      const { panels } = await store.getMonitor({ selfBase: `https://127.0.0.1:${server.address().port}/serverXR` })
+      const by = Object.fromEntries(panels.connected.rows.map((r) => [r.id, r]))
+      expect(by.osc).toMatchObject({ state: 'ok' })
+      expect(by.osc.detail).toMatch(/1 listener · sent 2/)
+      expect(by.laser.detail).toMatch(/answered 404/)
+    } finally {
+      await new Promise((resolve) => server.close(resolve))
+      fs.rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('sends only the exact loopback https address to the unverified reader; every other address keeps fetch', async () => {
+    const seen = []
+    const loopbackFetch = async (url) => { seen.push(`loop ${url}`); return { ok: true, status: 200, json: async () => ({ listeners: [] }) } }
+    const fetchImpl = async (url) => { seen.push(`fetch ${url}`); return { ok: true, status: 200, json: async () => ({ listeners: [] }) } }
+    const store = createMonitorStore({ home: tmp(), runCommand: fakeRun(), fetchImpl, loopbackFetch })
+    await store.getMonitor({ selfBase: 'https://127.0.0.10:4000/s' })
+    await store.getMonitor({ selfBase: 'https://127.0.0.1.example.com/s' })
+    await store.getMonitor({ selfBase: 'https://127.0.0.1:4000/s' })
+    expect(seen.filter((x) => x.startsWith('loop ')).every((x) => x.startsWith('loop https://127.0.0.1:4000/s/'))).toBe(true)
+    expect(seen.some((x) => x.startsWith('loop '))).toBe(true)
+    expect(seen.filter((x) => /127\.0\.0\.10|example\.com/.test(x)).every((x) => x.startsWith('fetch '))).toBe(true)
   })
 
   it('reads connected things from this server and shows a missing one as off', async () => {
