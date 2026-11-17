@@ -6,6 +6,7 @@ import MonitorOverview, { CountTiles, heroState, tierLabel, tierState, shortComm
 import { diffSnapshots, pushEvents } from './monitorFeed.js'
 import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
+import MonitorPrs from './MonitorPrs.jsx'
 
 // One page for everything that is going on: machines, the network, agent
 // sessions (every Claude login on the machine), services, pull requests, and
@@ -449,6 +450,11 @@ export default function MonitorSection({ onStats }) {
                         <ModuleSection title="Work" subtitle="Asks, what each agent is doing, and machine reports">
                             <MonitorWorkspace asks={snap?.asks} agents={panels.agents} reports={snap?.reports}
                                 onPick={(kind, row) => setSelected({ kind, id: rowId(row) })} />
+                        </ModuleSection>
+                    ) : null}
+                    {tab === 'workspace' ? (
+                        <ModuleSection title="Waiting to merge" subtitle="Open pull requests read from GitHub by the server — works without any machine on; merging stays your Enter">
+                            <MonitorPrs />
                         </ModuleSection>
                     ) : null}
                     {tab === 'board' ? (<>

@@ -38,6 +38,7 @@ function registerMonitorRoutes(router, {
   requireAuth = () => config.requireAuth,
   deployEnv = () => null,
   ownerIds = () => config.monitorOwnerUserIds,
+  prList = null,
   now = () => Date.now()
 } = {}) {
   const overview = hub || createHub({ store })
@@ -98,6 +99,15 @@ function registerMonitorRoutes(router, {
       res.json(await overview.getSnapshot({ selfBase: selfBase() }))
     } catch (error) {
       res.status(500).json({ error: error.message || 'monitor scan failed' })
+    }
+  })
+
+  // Open pull requests (read-only). Same gate as the page; without a source it answers "not set up".
+  router.get('/api/monitor/prs', gate, async (req, res) => {
+    try {
+      res.json(prList ? await prList.list() : { ok: false, repo: null, reason: 'no-source', message: 'No pull request source on this server.' })
+    } catch (error) {
+      res.status(500).json({ error: error.message || 'pull request list failed' })
     }
   })
 
