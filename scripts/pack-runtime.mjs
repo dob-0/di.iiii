@@ -37,6 +37,7 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { stampParts } from './partStamps.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT_DIR = path.join(ROOT, 'dist-runtime')
@@ -211,6 +212,9 @@ const main = async () => {
         // network. The difference an artist actually feels, so it is written
         // down rather than inferred from the profile name.
         works: marker.works,
+        // One stamp per Monitor part (serverXR/src/parts.json): the last commit touching its dirs, so the
+        // Monitor can show a version per part on an install that has no git checkout. null = unknown.
+        parts: stampParts(JSON.parse(await fsp.readFile(path.join(ROOT, 'serverXR', 'src', 'parts.json'), 'utf8')).parts, { cwd: ROOT }),
         schemaVersion,
         packedAt: new Date().toISOString(),
         node: process.version
