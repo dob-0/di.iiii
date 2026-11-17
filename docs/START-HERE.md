@@ -1,6 +1,8 @@
 # New machine → working on di.iiii
 
 One page, three doors. Pick the one you need. Every step was run on a bare Raspberry Pi (Debian 13, Node 24) on 2026-11-18 unless it says "not walked".
+The same page with COPY buttons and walked / not-walked marks: open `docs/start-here.html` in a browser.
+
 
 ## Door 1 — use di.iiii (no code, no account, about 1 minute)
 

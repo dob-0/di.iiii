@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>di.iiii — start here</title>
+<style>
+:root{
+  --ground:#04060e; --panel:#090d18; --line:rgba(77,249,255,.15); --line2:rgba(77,249,255,.30);
+  --fill:rgba(77,249,255,.06); --accent:#4df9ff; --text:#d7dde8; --mute:#7d8799; --warn:#ffb454;
+  --mono:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",Menlo,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;border-radius:0!important}
+body{margin:0;background:var(--ground);color:var(--text);font:15px/1.5 var(--sans)}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 56px}
+.eyebrow{font:11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+h1{font:600 26px var(--mono);margin:6px 0 4px;letter-spacing:.02em}
+h1 b{color:var(--accent);font-weight:600}
+.lead{color:var(--mute);margin:0 0 20px;max-width:62ch}
+.pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:20px}
+.pick a{display:block;padding:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);text-decoration:none}
+.pick a:hover,.pick a:focus-visible{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);outline:0}
+.pick .n{font:11px var(--mono);letter-spacing:.14em;color:var(--accent)}
+.pick .t{font:600 14px var(--mono);margin:2px 0}
+.pick .d{font-size:13px;color:var(--mute)}
+.doors{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}
+section{min-width:0;border:1px solid var(--line);background:var(--panel);padding:16px;scroll-margin-top:12px}
+section:target{border-color:var(--accent);box-shadow:inset 2px 0 0 var(--accent)}
+section h2{font:600 15px var(--mono);margin:2px 0 2px}
+section .sub{color:var(--mute);font-size:13px;margin:0 0 12px}
+ol{list-style:none;margin:0;padding:0;counter-reset:s}
+li{counter-increment:s;margin:0 0 12px}
+li::before{content:counter(s);font:11px var(--mono);color:var(--accent);letter-spacing:.14em;display:block;margin-bottom:3px}
+li p{margin:0 0 4px;font-size:13px;color:var(--mute)}
+.cmd{display:flex;min-width:0;border:1px solid var(--line);background:var(--ground)}
+.cmd code{flex:1;padding:8px 10px;font:12.5px var(--mono);color:var(--text);white-space:pre-wrap;word-break:break-all}
+.cmd button{border:0;border-left:1px solid var(--line);background:var(--fill);color:var(--accent);font:11px var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:0 10px;cursor:pointer}
+.cmd button:hover,.cmd button:focus-visible{background:var(--accent);color:var(--ground);outline:0}
+.tag{display:inline-block;margin-top:5px;font:10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:1px 6px;border:1px solid var(--line2);color:var(--accent)}
+.tag.no{border-style:dashed;border-color:var(--warn);color:var(--warn)}
+.note{border:1px solid var(--warn);border-left-width:2px;padding:8px 10px;font-size:13px;margin:12px 0 0}
+.note b{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--warn);display:block;margin-bottom:2px}
+.more{margin-top:12px;font:12px var(--mono);color:var(--mute)}
+.more code{color:var(--text)}
+footer{margin-top:22px;font:12px var(--mono);color:var(--mute);border-top:1px solid var(--line);padding-top:12px}
+footer .k{display:inline-block;margin-right:14px}
+@media (max-width:860px){.doors,.pick{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">New machine · terminal</div>
+  <h1>di.iiii — <b>start here</b></h1>
+  <p class="lead">You have a computer and a terminal. Pick what you want to do. Each step is one command; press COPY, paste, Enter.</p>
+
+  <nav class="pick" aria-label="Pick a door">
+    <a href="#door1"><div class="n">DOOR 1 · ~1 MIN</div><div class="t">Use di.iiii</div><div class="d">Make and save a space. No code, no account.</div></a>
+    <a href="#door2"><div class="n">DOOR 2 · ~5 MIN</div><div class="t">Work on the code</div><div class="d">Clone, install, check, branch, push.</div></a>
+    <a href="#door3"><div class="n">DOOR 3 · ~1 MIN</div><div class="t">Let Claude use it</div><div class="d">Hand di.iiii to an assistant as tools.</div></a>
+  </nav>
+
+  <div class="doors">
+    <section id="door1">
+      <div class="eyebrow">Door 1</div>
+      <h2>Use di.iiii</h2>
+      <p class="sub">Needs only a terminal and curl.</p>
+      <ol>
+        <li><p>Install (goes into ~/.di).</p><div class="cmd"><code>curl -fsSL https://diiii.xyz/get | sh</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
+        <li><p>Open a NEW terminal so di is on your PATH, then check.</p><div class="cmd"><code>di --version</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
+        <li><p>Start it. It opens http://localhost:4000.</p><div class="cmd"><code>di up</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
+        <li><p>Make a space, then save it as one file.</p><div class="cmd"><code>di new my-space
+di save my-space</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
+      </ol>
+      <div class="note"><b>Says "already running"?</b>You did not start it: another program holds port 4000. Run <code>di up --port 4171</code> and add <code>--port 4171</code> to <code>di new</code> and <code>di save</code>. No screen? add <code>--no-open</code>.</div>
+      <p class="more">Stop <code>di down</code> · what runs <code>di status</code> · what this machine can do <code>di doctor</code> · update <code>di update</code></p>
+    </section>
+
+    <section id="door2">
+      <div class="eyebrow">Door 2</div>
+      <h2>Work on the code</h2>
+      <p class="sub">Needs git and Node 22 or 24 with npm 10+. The clone is ~490 MB.</p>
+      <ol>
+        <li><p>Get the code.</p><div class="cmd"><code>git clone https://github.com/dob-0/di.iiii
+cd di.iiii</code><button>Copy</button></div><span class="tag">walked · 87 s</span></li>
+        <li><p>Install. Also switches the git hooks on.</p><div class="cmd"><code>npm ci</code><button>Copy</button></div><span class="tag">walked · 159 s on a Pi</span></li>
+        <li><p>Check the machine, before you start and before every push.</p><div class="cmd"><code>npm run start-check</code><button>Copy</button></div><span class="tag">walked</span></li>
+        <li><p>Start your own branch. Never commit on dev or main.</p><div class="cmd"><code>git switch -c feat/&lt;what&gt;-&lt;date&gt;</code><button>Copy</button></div><span class="tag no">not walked</span></li>
+        <li><p>See it. Frontend 5173, backend 4000.</p><div class="cmd"><code>npm run dev</code><button>Copy</button></div><span class="tag no">not walked</span></li>
+        <li><p>Before you push.</p><div class="cmd"><code>npm run lint &amp;&amp; npm run test -- --run</code><button>Copy</button></div><span class="tag no">not walked</span></li>
+        <li><p>Push. A PR to dev opens by itself (needs push rights, or use a fork).</p><div class="cmd"><code>git push -u origin HEAD</code><button>Copy</button></div><span class="tag no">not walked</span></li>
+      </ol>
+      <div class="note"><b>Warning from npm ci</b>esbuild's install script is not approved. If <code>npm run build</code> fails on esbuild, run <code>npm approve-scripts</code>. Not checked.</div>
+      <p class="more">Read next: <code>CURRENT.md</code> → <code>AGENTS.md</code> → <code>CONTRIBUTING.md</code>. Commands: <code>CHEATSHEET.md</code>.</p>
+    </section>
+
+    <section id="door3">
+      <div class="eyebrow">Door 3</div>
+      <h2>Let Claude use it</h2>
+      <p class="sub">Claude Code or any assistant that speaks MCP.</p>
+      <ol>
+        <li><p>Door 1 first. Then hand di.iiii to Claude as tools.</p><div class="cmd"><code>claude mcp add di -- di mcp</code><button>Copy</button></div><span class="tag no">not walked</span></li>
+      </ol>
+      <div class="note"><b>Sign-in</b><code>di login</code> exists only in builds newer than 0.4.3. With a key you get more than the public level: see <code>docs/ai/public/setup.md</code>.</div>
+      <p class="more">Longer guides: join <code>docs/ai/public/join.md</code> · agents <code>docs/ai/public/setup.md</code></p>
+    </section>
+  </div>
+
+  <footer>
+    <span class="k">walked = run on a bare Raspberry Pi, Debian 13, Node 24, 2026-11-18</span>
+    <span class="k">not walked = from the repo's own docs, not run yet</span>
+    <span class="k">not walked at all: macOS, Windows</span>
+  </footer>
+</main>
+<script>
+document.querySelectorAll('.cmd button').forEach(function(b){
+  b.addEventListener('click',function(){
+    var t=b.previousElementSibling.textContent;
+    var done=function(){var o=b.textContent;b.textContent='Copied';setTimeout(function(){b.textContent=o},1200)};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,function(){})}
+  });
+});
+</script>
+</body>
+</html>
