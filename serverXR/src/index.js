@@ -2571,7 +2571,7 @@ registerAgentBoardRoutes(router)
 
 const monitorRoutes = registerMonitorRoutes(router, {
   deployEnv: () => releaseInfo.deployEnv,
-  localScheme: () => (servedCertificate ? 'https' : 'http'),
+  localScheme: () => (servesTls ? 'https' : 'http'),
   hub: createMonitorHub({
     store: createMonitorStore(),
     asks: createMonitorAskStore({ getDb }),
@@ -3447,6 +3447,8 @@ registerConfigRoutes(router, {
 // the certificate this server actually serves, set once https is up below.
 // null until then, and null for good on an install that serves plain http.
 let servedCertificate = null
+// true once the server was started with TLS files, whether or not the certificate's names could be read
+let servesTls = false
 registerGuestAddressRoute(router, {
   getCertificate: () => servedCertificate,
   port: config.port,
@@ -3754,6 +3756,7 @@ initStorage()
       : http.createServer(app)
     if (tlsFiles) logger.info(`Serving https — certificate ${process.env.TLS_CERT}`)
     servedCertificate = tlsFiles ? certificateNames(tlsFiles.cert) : null
+    servesTls = Boolean(tlsFiles)
 
     initializeSocket(httpServer, {
       ...config,

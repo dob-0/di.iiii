@@ -150,7 +150,8 @@ describe('monitor snapshot', () => {
 
   // Regression (11-17): the installed server speaks https with a certificate for local.thedi.studio, and
   // every connected-thing row said "off · fetch failed" because the probe used plain http on that port.
-  it('reads connected things from this server over https on 127.0.0.1 (certificate for another name)', async () => {
+  const haveOpenssl = (() => { try { execFileSync('openssl', ['version'], { stdio: 'ignore' }); return true } catch { return false } })()
+  it.skipIf(!haveOpenssl)('reads connected things from this server over https on 127.0.0.1 (certificate for another name)', async () => {
     const dir = tmp()
     execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=local.thedi.studio',
       '-keyout', path.join(dir, 'k.pem'), '-out', path.join(dir, 'c.pem')], { stdio: 'ignore' })
@@ -169,7 +170,21 @@ describe('monitor snapshot', () => {
       expect(by.laser.detail).toMatch(/answered 404/)
     } finally {
       await new Promise((resolve) => server.close(resolve))
+      fs.rmSync(dir, { recursive: true, force: true })
     }
+  })
+
+  it('sends only the exact loopback https address to the unverified reader; every other address keeps fetch', async () => {
+    const seen = []
+    const loopbackFetch = async (url) => { seen.push(`loop ${url}`); return { ok: true, status: 200, json: async () => ({ listeners: [] }) } }
+    const fetchImpl = async (url) => { seen.push(`fetch ${url}`); return { ok: true, status: 200, json: async () => ({ listeners: [] }) } }
+    const store = createMonitorStore({ home: tmp(), runCommand: fakeRun(), fetchImpl, loopbackFetch })
+    await store.getMonitor({ selfBase: 'https://127.0.0.10:4000/s' })
+    await store.getMonitor({ selfBase: 'https://127.0.0.1.example.com/s' })
+    await store.getMonitor({ selfBase: 'https://127.0.0.1:4000/s' })
+    expect(seen.filter((x) => x.startsWith('loop ')).every((x) => x.startsWith('loop https://127.0.0.1:4000/s/'))).toBe(true)
+    expect(seen.some((x) => x.startsWith('loop '))).toBe(true)
+    expect(seen.filter((x) => /127\.0\.0\.10|example\.com/.test(x)).every((x) => x.startsWith('fetch '))).toBe(true)
   })
 
   it('reads connected things from this server and shows a missing one as off', async () => {
