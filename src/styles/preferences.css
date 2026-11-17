@@ -1947,3 +1947,9 @@
 /* A value is one token (a date, a count): it never breaks mid-word; the label gives way instead. */
 .preferences-metric-value { white-space: nowrap; flex: none; }
 .preferences-metric-label { min-width: 0; }
+
+/* A long name gives way (ellipsis); the status tag beside it stays inside the row. */
+.preferences-tree-row .preferences-tree-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preferences-tree-row .preferences-tree-tag { flex: none; }
+.preferences-tree, .preferences-tree-group { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.preferences-tree-row { box-sizing: border-box; min-width: 0; }

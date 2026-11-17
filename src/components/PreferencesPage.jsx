@@ -251,7 +251,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 <div className="preferences-topbar-main">
                     <div className="preferences-eyebrow">Admin</div>
                     <div className="preferences-topbar-title-row">
-                        <h1>{activeSection === 'monitor' ? 'Everything that is going on' : activeSection === 'opencall' || activeSection === 'visitors' ? SECTIONS.find((x) => x.key === activeSection).label : isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
+                        <h1>{activeSection === 'monitor' ? 'Everything that is going on' : activeSection === 'opencall' || activeSection === 'visitors' || activeSection === 'agents' ? SECTIONS.find((x) => x.key === activeSection).label : isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
                         <span className="preferences-inline-chip">Space: {sync?.spaceId || 'main'}</span>
                         <button
                             type="button"
@@ -270,7 +270,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 </div>
 
                 <div className="preferences-topbar-metrics">
-                    {isAdminSection && (activeSection === 'opencall' || activeSection === 'visitors') ? null : isAdminSection ? (
+                    {isAdminSection && (activeSection === 'opencall' || activeSection === 'visitors' || activeSection === 'agents' || activeSection === 'monitor') ? null : isAdminSection ? (
                         // exactly three cards — the metrics grid is 3-up, and a
                         // partial row reads as a broken band of empty cells
                         <>
