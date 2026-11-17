@@ -120,6 +120,7 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
     useEffect(() => { fsRef.current = fullscreen }, [fullscreen])
     // nodes you moved, in layout units, kept per browser; a node that is gone is simply ignored
     const [moved, setMoved] = useState(readPos)
+    const movedRef = useRef(moved)
     const nodeDrag = useRef(null)
     const posOf = useCallback((id) => moved[id] || layout.pos.get(id), [moved, layout.pos])
     useEffect(() => { vbRef.current = vb }, [vb])
@@ -202,16 +203,18 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
         d.moved = true
         ev.stopPropagation()
         const { s } = scaleOf(vbRef.current)
-        setMoved((m) => ({ ...m, [d.id]: { x: d.px + (ev.clientX - d.sx) * s, y: d.py + (ev.clientY - d.sy) * s } }))
+        const next = { ...movedRef.current, [d.id]: { x: d.px + (ev.clientX - d.sx) * s, y: d.py + (ev.clientY - d.sy) * s } }
+        movedRef.current = next
+        setMoved(next)
     }
     const onNodeUp = (ev) => {
         const d = nodeDrag.current
         if (!d) return
         ev.stopPropagation()
-        if (d.moved) setMoved((m) => { writePos(m); return m })
+        if (d.moved) writePos(movedRef.current)
         setTimeout(() => { nodeDrag.current = null }, 0)
     }
-    const resetNodes = () => { setMoved({}); writePos({}) }
+    const resetNodes = () => { movedRef.current = {}; setMoved({}); writePos({}) }
     const anyMoved = Object.keys(moved).some((id) => layout.pos.has(id))
 
     const neighbours = useMemo(() => {
@@ -312,6 +315,8 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
     const [fullscreen, setFullscreen] = useState(false)
     const choose = (v) => { if (v === 'list') setFullscreen(false); setStored(v); writeView(v) }
     useFillHeight(rootRef, view)
+    // the List view has no Exit button: a view that resolves to List (narrow screen) leaves full screen too
+    useEffect(() => { if (view === 'list') setFullscreen(false) }, [view])
     // Esc leaves; the page behind does not scroll while the map covers it
     useEffect(() => {
         if (!fullscreen) return undefined

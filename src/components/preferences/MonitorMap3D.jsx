@@ -161,7 +161,6 @@ const useVisible = () => {
 // something (and while a node is hovered). The page's 1 s clock never reaches this tree (memo + stable props).
 function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false }) {
     const stageRef = useRef(null)
-    const controlsRef = useRef(null)
     const fsRef = useRef(fullscreen)
     useEffect(() => { fsRef.current = fullscreen }, [fullscreen])
     // The wheel turns the camera's zoom only in full screen or with Ctrl/Cmd (a trackpad pinch sends Ctrl);
@@ -236,7 +235,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                 <Rig preset={preset} points={points} fitDist={fitDist} />
                 <Closeness fitDist={fitDist} onClose={setClose} />
                 <Ticker on={animate} />
-                <OrbitControls ref={controlsRef} makeDefault enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
+                <OrbitControls makeDefault enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
                 {rings.map((ring) => <Line key={ring.r} color={colors.line} lineWidth={1} points={ring.pts} />)}
                 <mesh position={HUB}><boxGeometry args={[0.5, 0.2, 0.5]} /><meshBasicMaterial color={colors.cyan} /></mesh>
                 {hubLines.map((h) => <Line key={`hub-${h.id}`} color={colors.line} lineWidth={1} points={h.pts} />)}
