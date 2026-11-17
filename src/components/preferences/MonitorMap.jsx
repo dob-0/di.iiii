@@ -308,9 +308,9 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
     const layout = useMemo(() => layoutMap(map, narrow ? 1 : ASPECT), [map, narrow])
     const [stored, setStored] = useState(readView)
     const view = stored || (narrow ? 'list' : '2d')
-    const choose = (v) => { setStored(v); writeView(v) }
     const rootRef = useRef(null)
     const [fullscreen, setFullscreen] = useState(false)
+    const choose = (v) => { if (v === 'list') setFullscreen(false); setStored(v); writeView(v) }
     useFillHeight(rootRef, view)
     // Esc leaves; the page behind does not scroll while the map covers it
     useEffect(() => {

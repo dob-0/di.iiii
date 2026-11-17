@@ -55,6 +55,17 @@ describe('map: full screen', () => {
     })
 })
 
+describe('map: full screen does not strand the List view', () => {
+    it('choosing List leaves full screen', () => {
+        const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} />)
+        const root = container.querySelector('.monitor-map')
+        fireEvent.click(container.querySelector('[data-map-fullscreen]'))
+        expect(root.className).toContain('is-fullscreen')
+        fireEvent.click(container.querySelector('[data-map-view="list"]'))
+        expect(root.className).not.toContain('is-fullscreen')
+    })
+})
+
 describe('map: nodes can be moved in 2D', () => {
     it('dragging a node moves it, is not a pick, is remembered, and Reset puts it back', () => {
         const onPick = vi.fn()
