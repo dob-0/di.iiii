@@ -338,6 +338,14 @@ function createHub({
     const selfHost = String(base.host || 'this machine').split('.')[0]
     node(`machine:${selfHost}`, 'machine', selfHost, panelsState(base.panels))
     for (const r of reportRows) node(`machine:${r.host}`, 'machine', r.host, r.stale ? 'off' : panelsState(r.panels))
+    // every device on the tailnet is on the map, not only the ones that report (a laptop that never ran
+    // `di monitor report` would otherwise be missing): online = ok, offline = off. A reporting host keeps its own node.
+    for (const m of (base.panels?.machines?.ok ? base.panels.machines.rows || [] : []).slice(0, 60)) {
+      const name = String(m?.name || '').split('.')[0].trim()
+      // the same device under another letter case is the one node already there, not a second one
+      const known = [...nodes.keys()].some((k) => k.startsWith('machine:') && k.slice(8).toLowerCase() === name.toLowerCase())
+      if (name && !known) node(`machine:${name}`, 'machine', name, m.online ? 'ok' : 'off')
+    }
     node('repo:di.iiii', 'repo', 'di.iiii', 'ok')
 
     for (const row of tierBlock.rows) {

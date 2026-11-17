@@ -3,6 +3,16 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor map and phone admin menu: five owner-reported defects (2026-11-17, N4679, N4680)
+
+Symptoms (owner screenshots): (1) the admin section list on a phone was one sideways-scrolling line, so most sections were off screen; (2) the map could not go full screen; (3) 2D nodes could be looked at but not moved; (4) the mouse wheel over the map zoomed the map and the page could not scroll past it; (5) the Arch Mac and every other tailnet device were missing from the map.
+Cause: (1) a nowrap flex strip with `overflow-x: auto`; (4) the 2D handler always called `preventDefault` and the 3D `OrbitControls` always zoomed; (5) `buildMap` (`serverXR/src/monitorHub.js`) made machine nodes only for this host and hosts that run `di monitor report`, never from the tailnet `machines` panel.
+Fix: phone menu is one row with the section name and a tap opens all sections (`SectionNav`); map Full screen button (Esc leaves, page behind locked); 2D nodes drag and are remembered per browser (Reset nodes); the wheel zooms only in full screen or with Ctrl/Cmd (a trackpad pinch sends Ctrl), otherwise the page scrolls; every tailnet device is a map node (online ok, offline off).
+Regression tests: `src/components/preferences/MonitorMapUx.test.jsx` (wheel, full screen, node drag and reset, phone menu), `serverXR/src/monitorHub.test.js` ("every tailnet device is a map node").
+Review round 1: choosing List now leaves full screen (a touch user had no way out); in 3D the plain wheel is stopped before the controls (not by switching zoom off), so a two-finger pinch still zooms. The tailnet-node loop cannot overwrite a reporting host: `node()` ignores an id that exists.
+Review round 3: a tailnet name that differs only by letter case no longer makes a second node; a drag keeps saved positions only for nodes still on the map.
+Not fixed: on a touch screen one finger still turns the 3D scene (use Full screen to get out of the way); a saved position can sit on a newly placed node after the device list changes (Reset nodes puts it back); the tailnet loop stops at 60 devices; a tailnet name is cut at its first dot; tailnet-only devices have no lines.
+
 ## Nodes on the bar at space level opened the project list, not your project (2026-11-12, reach batch 2, N3851.19)
 
 Symptom: from a space's page the bar's Nodes opened the list of projects, and the person had to pick the project they had just left ("for reaching this UI i need to do many steps").

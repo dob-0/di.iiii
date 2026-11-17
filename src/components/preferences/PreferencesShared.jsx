@@ -121,6 +121,9 @@ export const getActionButtonClassName = (button = {}) => {
 export function SectionNav({ sections = [], activeKey, onSelect }) {
     let lastGroup = null
     const navRef = useRef(null)
+    // Phone: one row shows where you are; a tap opens every section at once (no sideways strip to hunt in).
+    const [open, setOpen] = useState(false)
+    const active = sections.find((section) => section.key === activeKey)
     // Bring the active entry into view only when the section changes, not on every re-render.
     useEffect(() => {
         const nav = navRef.current
@@ -129,8 +132,13 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
         if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return
         nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2
     }, [activeKey])
-    return (
-        <nav className="preferences-nav" aria-label="Admin sections" ref={navRef}>
+    return (<>
+        <button type="button" className="preferences-nav-toggle" aria-expanded={open} aria-controls="preferences-nav-list" data-nav-toggle=""
+            onClick={() => setOpen((o) => !o)}>
+            <span className="preferences-nav-toggle-label">{active?.label || 'Sections'}</span>
+            <span className="preferences-nav-toggle-hint">{open ? 'Close' : `${sections.length} sections`}</span>
+        </button>
+        <nav className="preferences-nav" id="preferences-nav-list" data-open={open ? 'true' : 'false'} aria-label="Admin sections" ref={navRef}>
             {sections.map((section) => {
                 const showGroupLabel = section.group && section.group !== lastGroup
                 lastGroup = section.group ?? lastGroup
@@ -142,7 +150,7 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
                         <button
                             type="button"
                             className={`preferences-nav-item ${activeKey === section.key ? 'is-active' : ''}`}
-                            onClick={() => onSelect?.(section.key)}
+                            onClick={() => { setOpen(false); onSelect?.(section.key) }}
                             aria-current={activeKey === section.key ? 'page' : undefined}
                         >
                             {section.glyph ? <span className="preferences-nav-glyph" aria-hidden="true">{section.glyph}</span> : null}
@@ -155,7 +163,7 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
                 )
             })}
         </nav>
-    )
+    </>)
 }
 
 export function ModuleSection({ title, subtitle, className = '', actions = null, children }) {
