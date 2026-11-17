@@ -1944,7 +1944,7 @@
     .preferences-nav-toggle {
         display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2);
         box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 var(--di-space-3);
-        background: var(--pref-surface, rgba(255, 255, 255, 0.04)); border: 1px solid var(--pref-border); color: inherit;
+        background: var(--di-surface); border: 1px solid var(--pref-border); color: inherit;
         font: inherit; text-align: left; cursor: pointer;
     }
     .preferences-nav-toggle-label { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
