@@ -1908,3 +1908,38 @@
     .monitor-live-mark.is-beat, .monitor-live-square, .monitor-event, .monitor-ask.is-sending { animation: none; }
     .monitor-tier, .monitor-count, .monitor-fresh i { transition: none; }
 }
+
+/* ─── Filter row: one line of compact chips, not a 2-column wall of buttons ─── */
+.preferences-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--di-space-1);
+    margin: var(--di-space-2) 0;
+}
+
+.preferences-filter-row .toggle-button {
+    width: auto;
+    min-height: 36px;
+    padding: 0 var(--di-space-3);
+    text-transform: capitalize;
+}
+
+@media (pointer: coarse) {
+    .preferences-filter-row .toggle-button { min-height: 44px; }
+}
+
+/* Phone: the section list is ONE scrolling line, so the work starts on the first screen. */
+@media (max-width: 880px) {
+    .preferences-nav {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        overflow-x: auto;
+        gap: var(--di-space-1);
+        padding-bottom: var(--di-space-1);
+        scrollbar-width: thin;
+    }
+    .preferences-nav-group-label { display: none; }
+    .preferences-nav-item { flex: none; white-space: nowrap; }
+}
+.preferences-topbar-metrics:empty { display: none; }

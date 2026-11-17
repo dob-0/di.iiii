@@ -132,6 +132,7 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
                         ) : null}
                         <button
                             type="button"
+                            ref={activeKey === section.key ? (el) => el?.scrollIntoView?.({ inline: 'center', block: 'nearest' }) : undefined}
                             className={`preferences-nav-item ${activeKey === section.key ? 'is-active' : ''}`}
                             onClick={() => onSelect?.(section.key)}
                             aria-current={activeKey === section.key ? 'page' : undefined}
