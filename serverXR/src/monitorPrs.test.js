@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test')
 const assert = require('node:assert/strict')
-const { createPrList, shape, CACHE_MS } = require('./monitorPrs')
+const { createPrList, shape, CACHE_MS, FAIL_CACHE_MS } = require('./monitorPrs')
 
 const pr = { number: 7, title: 'x', head: { ref: 'feat/a' }, base: { ref: 'dev' }, user: { login: 'dob-0' }, draft: false, updated_at: '2026-11-17T10:00:00Z', html_url: 'https://github.com/dob-0/di.iiii/pull/7' }
 
@@ -31,6 +31,24 @@ describe('monitorPrs', () => {
     const out = await createPrList({ getInstallation: async () => ({ token: 't' }), fetchPrs: async () => { throw e } }).list()
     assert.equal(out.reason, 'no-permission')
     assert.match(out.message, /Pull requests: read/)
+  })
+  it('keeps a failure only briefly and asks GitHub once for concurrent callers', async () => {
+    let calls = 0
+    let t = 0
+    const list = createPrList({ getInstallation: async () => ({ token: 't' }), fetchPrs: async () => { calls += 1; throw new Error('5xx') }, now: () => t })
+    await Promise.all([list.list(), list.list(), list.list()])
+    assert.equal(calls, 1)
+    t += FAIL_CACHE_MS + 1
+    await list.list()
+    assert.equal(calls, 2)
+  })
+  it('does not link anything but a github.com page', () => {
+    assert.equal(shape({ ...pr, html_url: 'javascript:alert(1)' }).url, '')
+  })
+  it('flags a list cut at the limit', async () => {
+    const many = Array.from({ length: 50 }, (_, i) => shape({ ...pr, number: i }))
+    const out = await createPrList({ getInstallation: async () => ({ token: 't' }), fetchPrs: async () => many }).list()
+    assert.equal(out.truncated, true)
   })
   it('never throws on a GitHub outage', async () => {
     const out = await createPrList({ getInstallation: async () => { throw new Error('boom') } }).list()

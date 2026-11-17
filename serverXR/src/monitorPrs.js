@@ -3,9 +3,10 @@
 // Merging stays with the owner's own Enter; nothing here writes to GitHub.
 const { httpRequest } = require('./httpClient')
 
-const REPO_OWNER = 'dob-0'
-const REPO_NAME = 'di.iiii'
+// The repository can be overridden (a fork, a rename): MONITOR_PRS_REPO=owner/name.
+const [REPO_OWNER, REPO_NAME] = (process.env.MONITOR_PRS_REPO || 'dob-0/di.iiii').split('/')
 const CACHE_MS = 60 * 1000
+const FAIL_CACHE_MS = 10 * 1000
 const MAX_PRS = 50
 
 const shape = (pr) => ({
@@ -16,7 +17,8 @@ const shape = (pr) => ({
   author: pr.user?.login || '',
   draft: Boolean(pr.draft),
   updatedAt: pr.updated_at || null,
-  url: pr.html_url || ''
+  // only a GitHub web address becomes a link
+  url: /^https:\/\/github\.com\//.test(pr.html_url || '') ? pr.html_url : ''
 })
 
 const fetchOpenPrs = async (token) => {
@@ -42,31 +44,32 @@ const fetchOpenPrs = async (token) => {
 function createPrList({ getInstallation, fetchPrs = fetchOpenPrs, now = () => Date.now() } = {}) {
   const repo = `${REPO_OWNER}/${REPO_NAME}`
   let cached = null
-  return {
-    async list() {
-      if (cached && now() - cached.at < CACHE_MS) return cached.value
-      let value
-      try {
-        const install = await getInstallation(REPO_OWNER, REPO_NAME)
-        if (!install) {
-          value = { ok: false, repo, reason: 'no-app', message: 'The GitHub App is not installed on this repository.' }
-        } else {
-          value = { ok: true, repo, prs: await fetchPrs(install.token), fetchedAt: now() }
-        }
-      } catch (error) {
-        const denied = error.status === 403 || error.status === 404
-        value = {
-          ok: false, repo,
-          reason: denied ? 'no-permission' : 'github-error',
-          message: denied
-            ? 'The GitHub App cannot read pull requests yet (it needs "Pull requests: read").'
-            : String(error.message || 'GitHub did not answer').slice(0, 200)
-        }
+  let inflight = null
+  const build = async () => {
+    try {
+      const install = await getInstallation(REPO_OWNER, REPO_NAME)
+      if (!install) {
+        return { ok: false, repo, reason: 'no-app', message: 'The GitHub App is not installed on this repository, or its repositories could not be listed.' }
       }
-      cached = { at: now(), value }
-      return value
+      const prs = await fetchPrs(install.token)
+      return { ok: true, repo, prs, truncated: prs.length >= MAX_PRS, fetchedAt: now() }
+    } catch (error) {
+      const message = error.status === 403
+        ? 'GitHub refused (403): the App may lack "Pull requests: read", or a rate limit was hit.'
+        : error.status === 404
+          ? 'GitHub says not found (404): the repository name or the App access is wrong.'
+          : String(error.message || 'GitHub did not answer').slice(0, 200)
+      return { ok: false, repo, reason: error.status === 403 || error.status === 404 ? 'no-permission' : 'github-error', message }
+    }
+  }
+  return {
+    // One call at a time; an answer is kept a minute, a failure only ten seconds.
+    async list() {
+      if (cached && now() - cached.at < (cached.value.ok ? CACHE_MS : FAIL_CACHE_MS)) return cached.value
+      if (!inflight) inflight = build().then((value) => { cached = { at: now(), value }; return value }).finally(() => { inflight = null })
+      return inflight
     }
   }
 }
 
-module.exports = { createPrList, shape, CACHE_MS }
+module.exports = { createPrList, shape, CACHE_MS, FAIL_CACHE_MS, MAX_PRS }

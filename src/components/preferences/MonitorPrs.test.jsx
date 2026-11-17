@@ -25,3 +25,13 @@ describe('MonitorPrs', () => {
         await waitFor(() => expect(screen.getByText(/Unavailable here: offline/)).toBeTruthy())
     })
 })
+
+describe('MonitorPrs after a failed refresh', () => {
+    it('keeps the list but says it may be out of date', async () => {
+        const fetcher = vi.fn().mockResolvedValueOnce({ ok: true, prs: [pr] }).mockRejectedValue(new Error('offline'))
+        render(<MonitorPrs fetcher={fetcher} refreshMs={30} />)
+        expect(await screen.findByRole('link', { name: /#12/ })).toBeTruthy()
+        expect(await screen.findByText(/may be out of date/)).toBeTruthy()
+        expect(screen.getByRole('link', { name: /#12/ })).toBeTruthy()
+    })
+})
