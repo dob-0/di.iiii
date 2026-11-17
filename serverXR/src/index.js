@@ -82,6 +82,7 @@ const { createShareService } = require('./share/shareService')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerMonitorRoutes } = require('./routes/monitorRoutes')
 const { createMonitorStore } = require('./monitorStore')
+const { createPrList: createMonitorPrList } = require('./monitorPrs')
 const { createHub: createMonitorHub, createAskStore: createMonitorAskStore } = require('./monitorHub')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
@@ -2571,6 +2572,7 @@ registerAgentBoardRoutes(router)
 
 const monitorRoutes = registerMonitorRoutes(router, {
   deployEnv: () => releaseInfo.deployEnv,
+  prList: createMonitorPrList({ getInstallation: (owner, repo) => githubApp.getInstallationForRepo(owner, repo) }),
   hub: createMonitorHub({
     store: createMonitorStore(),
     asks: createMonitorAskStore({ getDb }),
