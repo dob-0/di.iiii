@@ -38,10 +38,12 @@ function registerMonitorRoutes(router, {
   requireAuth = () => config.requireAuth,
   deployEnv = () => null,
   ownerIds = () => config.monitorOwnerUserIds,
+  localScheme = () => 'http',
   now = () => Date.now()
 } = {}) {
   const overview = hub || createHub({ store })
-  const selfBase = () => `http://127.0.0.1:${config.port}${config.basePath || ''}`
+  // the scheme this server really speaks: https when it was started with a certificate
+  const selfBase = () => `${localScheme()}://127.0.0.1:${config.port}${config.basePath || ''}`
   // A refusal says nothing of its own: the request falls through to whatever answers a path
   // that does not exist, so the page's existence is not shown (spec: "404, not 403").
   const HIDDEN = 'hidden'

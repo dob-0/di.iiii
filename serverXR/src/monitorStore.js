@@ -13,8 +13,30 @@ const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
+const https = require('node:https')
 const { execFile } = require('node:child_process')
 const { createAgentBoardStore } = require('./agentBoardStore')
+
+// A server with a TLS certificate speaks https on its port. The certificate is for a name
+// (local.thedi.studio), never for 127.0.0.1, so reading our OWN loopback address cannot verify
+// it. That one address, and only it, is read without verification; every other fetch keeps
+// the default. Same answer shape as fetch: { ok, status, json() }.
+function loopbackHttpsFetch(url, { signal } = {}) {
+  const target = new URL(url)
+  if (target.hostname !== '127.0.0.1') return Promise.reject(new Error('loopback only'))
+  return new Promise((resolve, reject) => {
+    const req = https.request(target, { method: 'GET', rejectUnauthorized: false, signal }, (res) => {
+      const chunks = []
+      res.on('data', (c) => chunks.push(c))
+      res.on('end', () => {
+        const body = Buffer.concat(chunks).toString('utf8')
+        resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, json: async () => JSON.parse(body) })
+      })
+    })
+    req.on('error', reject)
+    req.end()
+  })
+}
 
 const CACHE_TTL_MS = 5000
 const PANEL_TIMEOUT_MS = 4000
@@ -261,7 +283,9 @@ function createMonitorStore({
   async function connected(selfBase) {
     if (!fetchImpl || !selfBase) throw new Error('no local address to read from')
     const get = async (route) => {
-      const res = await fetchImpl(`${selfBase}${route}`, { signal: AbortSignal.timeout(3000) })
+      const url = `${selfBase}${route}`
+      const read = url.startsWith('https://127.0.0.1') ? loopbackHttpsFetch : fetchImpl
+      const res = await read(url, { signal: AbortSignal.timeout(3000) })
       if (!res.ok) throw new Error(`${route} answered ${res.status}`)
       return res.json()
     }

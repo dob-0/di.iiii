@@ -2571,6 +2571,7 @@ registerAgentBoardRoutes(router)
 
 const monitorRoutes = registerMonitorRoutes(router, {
   deployEnv: () => releaseInfo.deployEnv,
+  localScheme: () => (servedCertificate ? 'https' : 'http'),
   hub: createMonitorHub({
     store: createMonitorStore(),
     asks: createMonitorAskStore({ getDb }),
