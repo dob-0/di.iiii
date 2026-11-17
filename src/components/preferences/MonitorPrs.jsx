@@ -31,7 +31,7 @@ export default function MonitorPrs({ fetcher = getMonitorPrs, refreshMs = REFRES
     const prs = data?.prs || []
     if (!prs.length) return <div className="monitor-note">No open pull requests.</div>
     return (
-        <div className="monitor-grid" data-panel="prs">
+        <div className="monitor-grid" data-panel="prs-github">
             {prs.map((pr) => (
                 <a key={pr.number} className={`monitor-row${pr.draft ? ' tone-muted' : ''}`} href={pr.url} target="_blank" rel="noreferrer" data-pr={pr.number}>
                     <span className="monitor-name">#{pr.number} {pr.title}</span>

@@ -453,7 +453,7 @@ export default function MonitorSection({ onStats }) {
                         </ModuleSection>
                     ) : null}
                     {tab === 'workspace' ? (
-                        <ModuleSection title="Pull requests" subtitle="Open on GitHub — merging stays your Enter in the merge window">
+                        <ModuleSection title="Waiting to merge" subtitle="Open pull requests read from GitHub by the server — works without any machine on; merging stays your Enter">
                             <MonitorPrs />
                         </ModuleSection>
                     ) : null}

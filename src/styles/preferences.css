@@ -1961,4 +1961,4 @@
 
 /* Pull requests in Monitor › Work: each row is a link, so it must not look underlined. */
 a.monitor-row { text-decoration: none; }
-a.monitor-row .monitor-name { overflow-wrap: anywhere; }
+a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
