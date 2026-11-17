@@ -34,6 +34,14 @@ module.exports = [
     note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server."
   },
   {
+    route: "GET /api/monitor/prs",
+    summary: "the open pull requests of the project repo (up to 50: number, title, author, draft, link) for Monitor → Work → Waiting to merge, read through the GitHub App and cached 60 s",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server. Answers ok:false with a plain reason when the App is not set up or lacks Pull requests: read."
+  },
+  {
     route: "POST /api/monitor/report",
     summary: "a machine sends its own monitor panels (and, from aylmo, the open ledger asks); kept in memory, stale after 120 s",
     reach: "private",

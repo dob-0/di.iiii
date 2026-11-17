@@ -1227,7 +1227,7 @@ export const WIKI_ARTICLES = [
         summary: 'The admin console, at /admin, is admins-only; your own spaces are managed from /studio.',
         body: [
             'The admin console is di.iiii’s console for admins. It lives at /admin and is visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
-            'Admins manage everything from the admin console → Spaces and users: a directory tree of spaces, each expanding to its projects. Its list has two groups. Spaces and people: Spaces and users, Open call, Agent sessions, Apps that visit (the programs that called the API, with a block switch). Operator tools (staff): Overview, This scene, Log and settings, Machines. On/off settings are switches that say On or Off and what they touch; flip one back to undo. Refresh loads the lists again without reloading the page, and Back to the space leaves the console; the header shows counts for the work at hand instead of 3D telemetry while you administer.',
+            'Admins manage everything from the admin console → Spaces and users: a directory tree of spaces, each expanding to its projects. Its list has two groups. Spaces and people: Spaces and users, Open call, Agent sessions, Visitors (the programs that called the API, with a block switch). Operator tools (staff): Overview, This scene, Log and settings, Machines. On/off settings are switches that say On or Off and what they touch; flip one back to undo. Refresh loads the lists again without reloading the page, and Back to the space leaves the console; the header shows counts for the work at hand instead of 3D telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
                 'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
@@ -1283,6 +1283,7 @@ export const WIKI_ARTICLES = [
             'The strip at the top shows each tier: prod, dev and every local di, with its commit, how old the build is, how far behind dev it is, whether it answers, and how many spaces it holds. Amber means drift: a local di that is not on dev\u2019s commit, or a tier behind dev. Three views sit under it. Board is the blocks below. Map draws machines, tiers, spaces and shows as one graph; select a node to see it in the inspector (on a phone it is a grouped list). Work lists your open asks newest first, what each agent is doing, which machines reported lately, and one box to send a new ask: it shows at once and is then confirmed by the server.',
             'The page opens with one status line in the state colour: "All well", or how many things need you and the worst one ("prod is 1274 behind dev"). Next to it a square blinks on every update and "heard 2 s ago" ticks every second. Tier tiles show the commit big, how far behind dev, and a small line of the last 30 response times. Count tiles show each number with one square per machine, agent or pull request, so 4 of 11 is seen, not read; click one to jump to its panel. A "What changed" column lists the last 50 changes between updates, newest on top (an agent going busy to idle, a tier that stopped answering, a new ask). Selecting anything opens a drawer on the right (a sheet from the bottom on a phone). The Work view has a big ask bar: Enter sends, Shift+Enter is a new line.',
             'Full screen turns the Monitor into its own page over the admin frame and is remembered per browser; /admin#monitor-full opens it that way. Keys: 1 2 3 switch Board, Map and Work; / filters; f toggles full screen; Esc closes the drawer, then leaves full screen; ? shows the key card. Keys are ignored while you type in a field.',
+            'The Work view also lists the open pull requests of the di.iiii repository (number, title, branch, who, how long ago), read-only from GitHub through the server\u2019s GitHub App and refreshed every minute. It is only a list: merging stays your own Enter in the merge window, with its proof. If the App cannot read pull requests, the list says so instead of staying empty.',
             { list: [
                 'Each block is collected on its own: a missing tool greys that block and says why, the rest keep moving.',
                 'Your feeds live in ~/.di/monitor.json: each one has a panel ("tasks" or "shows") and a command, a file or a URL to read. Only that file decides what runs, never a request.',
@@ -1290,7 +1291,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'monitor', 'machines', 'network', 'agents', 'operator'],
-        updated: '2026-11-16'
+        updated: '2026-11-17'
     },
     {
         id: 'keyboard-shortcuts',
@@ -1398,7 +1399,7 @@ export const WIKI_ARTICLES = [
                 'People in a browser, and anyone signed in with an account or a token, are not counted against either.',
                 'Off-limits: /admin, /preferences, private spaces, anything behind sign-in, and sending forms automatically.'
             ] },
-            'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in the admin console → Apps that visit, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
+            'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in the admin console → Visitors, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
             'For a higher allowance or a block you think is a mistake: info@thedi.studio. A security problem goes to the same address; /.well-known/security.txt says so in the form security tools read.'
         ],
         tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'llms-full.txt', 'robots.txt', 'security.txt', 'developers', 'markdown', 'assistant'],

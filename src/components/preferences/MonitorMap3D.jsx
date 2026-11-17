@@ -159,7 +159,19 @@ const useVisible = () => {
 
 // Still = zero frames: the canvas draws on a change, a gesture, or a 3 s pulse after a snapshot that changed
 // something (and while a node is hovered). The page's 1 s clock never reaches this tree (memo + stable props).
-function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
+function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false }) {
+    const stageRef = useRef(null)
+    const fsRef = useRef(fullscreen)
+    useEffect(() => { fsRef.current = fullscreen }, [fullscreen])
+    // The wheel turns the camera's zoom only in full screen or with Ctrl/Cmd (a trackpad pinch sends Ctrl);
+    // otherwise the wheel never reaches the controls (stopped in the capture phase) and the page scrolls. Touch pinch is untouched.
+    useEffect(() => {
+        const el = stageRef.current
+        if (!el) return undefined
+        const onWheel = (ev) => { if (!(fsRef.current || ev.ctrlKey || ev.metaKey)) ev.stopPropagation() }
+        el.addEventListener('wheel', onWheel, { capture: true, passive: true })
+        return () => el.removeEventListener('wheel', onWheel, { capture: true })
+    }, [])
     const reduced = useReducedMotion()
     const visible = useVisible()
     const colors = useMemo(() => readColors(), [])
@@ -217,7 +229,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
     const degree = (id) => (neighbours.get(id) || new Set()).size
 
     return (
-        <div className="monitor-map-stage monitor-map-stage-3d">
+        <div className="monitor-map-stage monitor-map-stage-3d" ref={stageRef}>
             <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
                 <Rig preset={preset} points={points} fitDist={fitDist} />
@@ -274,7 +286,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
                 <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setPreset((p) => ({ name: 'fit', n: p.n + 1 }))}>Fit</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="top" onClick={() => setPreset((p) => ({ name: 'top', n: p.n + 1 }))}>Top view</button>
             </div>
-            <div className="monitor-map-hint">Drag to turn · scroll or pinch to zoom · tap a card to open it</div>
+            <div className="monitor-map-hint">Drag to turn · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · tap a card to open it</div>
         </div>
     )
 }

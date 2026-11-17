@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../services/apiClient.js', () => ({
     getMonitor: vi.fn(),
+    getMonitorPrs: vi.fn().mockResolvedValue({ ok: true, prs: [{ number: 9, title: 'a waiting change', branch: 'feat/x', base: 'dev', author: 'dob-0', draft: false, updatedAt: null, url: 'https://github.com/dob-0/di.iiii/pull/9' }] }),
     monitorStreamUrl: () => '/api/monitor/stream',
     postMonitorAsk: vi.fn()
 }))
@@ -268,6 +269,15 @@ describe('MonitorSection overview, map, workspace and live', () => {
         const lanes = [...document.querySelectorAll('[data-lane-id]')].map((n) => n.getAttribute('data-lane-id'))
         expect(lanes[0]).toBe('aaaaaaaa-1') // busy first
         expect(document.querySelector('[data-report-host="asuz"]').textContent).toMatch(/stale/)
+    })
+
+    it('the Work tab lists the open pull requests, read-only', async () => {
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        await waitFor(() => expect(document.querySelector('[data-pr="9"]')).not.toBeNull())
+        expect(document.querySelector('[data-pr="9"]').textContent).toMatch(/a waiting change/)
     })
 
     it('sending an ask shows it at once, then the stream carries it', async () => {

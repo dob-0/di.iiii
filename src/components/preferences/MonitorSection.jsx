@@ -7,6 +7,7 @@ import { diffSnapshots, pushEvents } from './monitorFeed.js'
 import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
 import MonitorParts from './MonitorParts.jsx'
+import MonitorPrs from './MonitorPrs.jsx'
 
 // One page for everything that is going on: machines, the network, agent
 // sessions (every Claude login on the machine), services, pull requests, and
@@ -455,6 +456,11 @@ export default function MonitorSection({ onStats }) {
                     {tab === 'parts' ? (
                         <ModuleSection title="Parts" subtitle="Light desk, show desk, lasers, 3D Studio — live state and the version each was packed at">
                             <MonitorParts parts={snap?.parts} />
+                        </ModuleSection>
+                    ) : null}
+                    {tab === 'workspace' ? (
+                        <ModuleSection title="Waiting to merge" subtitle="Open pull requests read from GitHub by the server — works without any machine on; merging stays your Enter">
+                            <MonitorPrs />
                         </ModuleSection>
                     ) : null}
                     {tab === 'board' ? (<>

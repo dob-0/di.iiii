@@ -405,7 +405,7 @@ export function TrafficSection() {
                     <div className="preferences-status-grid">
                         <MetricCard label="Page views" value={views} />
                         <MetricCard label="Sign-ups" value={signups} />
-                        <MetricCard label="Busiest day (UTC)" value={busiest ? `${busiest.day} · ${busiest.count}` : '—'} />
+                        <MetricCard label={busiest ? `Busiest day (UTC) · ${busiest.count} ${busiest.count === 1 ? 'view' : 'views'}` : 'Busiest day (UTC)'} value={busiest ? busiest.day : '—'} />
                     </div>
                     {views === 0 && <div className="preferences-empty">No page views counted in this window yet.</div>}
                     {stats.topPaths?.length > 0 && (
@@ -479,22 +479,11 @@ export function SweepSection() {
 function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, onCreateSpace, onPatchUser, spaceLimit }) {
     return (
         <>
-            <ModuleSection title="Overview" subtitle="Everything you can manage from here">
-                <div className="preferences-status-grid">
-                    <MetricCard label="Spaces" value={spaces.length} />
-                    <MetricCard label="Accounts" value={Array.isArray(users) ? users.length : '—'} />
-                    <MetricCard
-                        label="Guest entry"
-                        value={globalSpaceId ? 'Shared space' : 'Private sandbox'}
-                        tone={globalSpaceId ? 'success' : 'accent'}
-                    />
-                    <MetricCard label="Guest space" value={globalSpaceId || '—'} />
-                </div>
+            {/* Spaces and Users are already counted in the page header; repeating them here (and a lone
+                "Guest space" tile) read as noise. What is left is the one setting this card owns. */}
+            <ModuleSection title="Guest entry" subtitle="Where a visitor who is not signed in lands">
+                <InfoPair label="Guests land in" value={globalSpaceId ? `the shared space “${globalSpaceId}”` : 'their own private sandbox'} />
             </ModuleSection>
-
-            <TrafficSection />
-
-            <SweepSection />
 
             <ModuleSection
                 title="New space"
@@ -515,6 +504,10 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                 </form>
                 <div className="preferences-empty">Pick a space on the left to manage its projects and access.</div>
             </ModuleSection>
+
+            <TrafficSection />
+
+            <SweepSection />
 
             <CommonsModerationSection />
 
