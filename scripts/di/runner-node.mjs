@@ -284,6 +284,16 @@ const strayServers = (home) => {
     }
 }
 
+/**
+ * Is a server of THIS install running — by the supervisor, the pid file, or a
+ * process out of this install's own versions directory. A healthy answer on the
+ * port is not enough to say so: another program's serverXR (another install, a
+ * standby copy) answers the same health check, and `di up` then claimed it as
+ * its own ("already running"), after which `di new` met a server with no
+ * database of ours and said Unauthorized (seen on a Raspberry Pi, 2026-11-18).
+ */
+export const ownsServer = (home, { systemd = null } = {}) => isRunning(home, { systemd }) || strayServers(home).length > 0
+
 export const stop = async ({ home, systemd = null }) => {
     // The unit first: systemd never restarts a unit it was asked to stop, so
     // `di down` lasts. Then the detached path as before, which also ends a

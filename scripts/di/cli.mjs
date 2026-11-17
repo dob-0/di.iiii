@@ -187,6 +187,8 @@ const cmdUp = async (args) => {
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
     if (await alive(home, port)) {
+        // Something answers on this port. Ours? Only a node install can tell (supervisor, pid file, own versions dir); docker keeps its old reading.
+        if (runner === node && !(await node.ownsServer(home))) { fail(ui.portTaken(port)); process.exitCode = 1; return }
         const address = await printedAddress(home, port)
         say(ui.alreadyRunning(address.url, await probeReach(home, port), lan, address))
         return

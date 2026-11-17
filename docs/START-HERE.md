@@ -17,7 +17,7 @@ di save my-space                           # one file: my-space.diiii
 
 Stop: `di down` · what runs: `di status` · what this machine can do: `di doctor` · newest version: `di update`.
 
-**`di up` says "already running" but you did not start it?** Another program holds port 4000 (it did on the Pi). Run `di up --port 4171` and add `--port 4171` to `di new` and `di save`.
+**`di up` says "port 4000 is held by another program"?** Something else uses that port (it did on the Pi). Run `di up --port 4171` and add `--port 4171` to `di new` and `di save`. (Older di versions, 0.4.3 and before the fix, said "already running" here and then failed on `di new`.)
 A machine with no screen: add `--no-open`.
 
 ## Door 2 — work on the code (about 5 minutes; the clone is ~490 MB)

@@ -159,6 +159,12 @@ export const ui = {
         ].filter(value => value !== null).join('\n')
     },
 
+    // The port answers, but not as this install: another program's server holds it.
+    portTaken: (port) => [
+        `port ${port} is held by another program — not by this di.iiii`,
+        style.dim(`start on a free port instead: ${CMD} up --port ${port === 4171 ? 4172 : 4171}`)
+    ].join('\n'),
+
     alreadyRunning: (url, reach = null, wantedLan = false, { one = false, phones = null, why = null } = {}) => [
         `already running — ${style.cyan(url)}${reach ? style.dim(`  ${reach.lan ? 'on this network too' : 'this machine only'}`) : ''}`,
         one && phones ? phonesLine(phones, '  ') : null,
