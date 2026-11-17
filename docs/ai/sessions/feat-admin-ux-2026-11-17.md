@@ -10,4 +10,5 @@
 - Tests: `PreferencesPage*`, `preferences/*`, `copyVocabulary` suites, 112 passed; new guard in `PreferencesShared.test.jsx`.
 - Slice 2, Spaces and users: the Overview card that repeated the header's Spaces/Users (and a lone "Guest space" tile) became "Guest entry" (one sentence); New space moved above Traffic and Sweep; a metric value never wraps mid-date (`2026-11-17`, busiest-day count moved into its label). TrafficSection test updated to the new wording.
 - Slice 3, Agent sessions and Monitor: the Agent sessions page was titled "Spaces and who can see them" — now "Agent sessions"; Agents and Monitor drop the header Live/Sessions cards (their own panels say it); session directory rows stay inside their box (grid column could not shrink, so status tags spilled out), long names get an ellipsis.
-- Not done: Overview (H1 still "Operator tools", pinned by a test), This scene, Log and settings, Machines; a real phone and the owner's look.
+- Slice 4, operator pages: Machines is titled "Machines" and no longer shows the scene counters and Copy Snapshot / Copy Log / XR Debug; on a phone the header counters sit two per row, so Overview's Quick switches show on the first screen.
+- Not done: Overview / This scene / Log and settings keep the H1 "Operator tools" (pinned by a test); a real phone and the owner's look.
