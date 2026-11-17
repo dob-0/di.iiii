@@ -23,3 +23,7 @@
 - Fixed: unread part = `unknown` not `off`; parts.json `rows` ids replace prefix matching; pack never aborts on stamping (warns, stamps empty); shallow clone stamps null; `schemaVersion` integer-only; "packed date unknown" always shown; light row says "desk started (not a check that lights work)"; tests for each.
 - Disproved: the key handler already returns for typing fields (`MonitorSection.jsx:273`).
 - Open: `probe` is documentation only (the real probes live in monitorStore); the "/" filter does not cover the Parts tab.
+
+### Review round 2 on #1303 (9 findings; 2 fixed, 7 left)
+- Fixed: shallow check asked once per pack (not once per part); `normalizeParts` accepts only a hex commit and a YYYY-MM-DD date (a hand-edited release.json cannot push other text through the API). Tests added.
+- Left, with reason: part state rollup hides one of two laser rows (the detail line joins both; by design); light row green means "desk started" (caveat in detail); one more row in Connected (1/7 becomes x/8); git failure for a single part is not warned; pack closure style; stale stamp after a dirs rename; "changed" date can read as the running code (the "packed" date sits beside it).

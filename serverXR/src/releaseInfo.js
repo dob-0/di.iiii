@@ -24,8 +24,8 @@ function normalizeParts(value) {
   if (!Array.isArray(value)) return []
   return value.slice(0, 32).map((part) => ({
     id: normalizeString(part?.id),
-    commit: normalizeString(part?.commit),
-    date: normalizeString(part?.date)
+    commit: /^[0-9a-f]{7,40}$/.test(String(part?.commit || '')) ? part.commit : null,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(String(part?.date || '')) ? part.date : null
   })).filter((part) => part.id)
 }
 

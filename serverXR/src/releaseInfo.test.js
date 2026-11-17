@@ -32,6 +32,8 @@ describe('release info keeps what the packer writes', () => {
     const info = normalizeReleaseInfo({ parts: many, version: { a: 1 }, schemaVersion: 'x', packedAt: ['y'] })
     expect(info.parts).toHaveLength(32)
     expect(info.parts[0]).toEqual({ id: 'p0', commit: null, date: null })
+    const junk = normalizeReleaseInfo({ parts: [{ id: 'a', commit: 'x'.repeat(10000), date: 'yesterday' }] })
+    expect(junk.parts[0]).toEqual({ id: 'a', commit: null, date: null })
     expect(info).toMatchObject({ version: null, schemaVersion: null, packedAt: null })
   })
 })
