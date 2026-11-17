@@ -6,6 +6,7 @@ import MonitorOverview, { CountTiles, heroState, tierLabel, tierState, shortComm
 import { diffSnapshots, pushEvents } from './monitorFeed.js'
 import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
+import MonitorParts from './MonitorParts.jsx'
 
 // One page for everything that is going on: machines, the network, agent
 // sessions (every Claude login on the machine), services, pull requests, and
@@ -15,12 +16,12 @@ import MonitorWorkspace from './MonitorWorkspace.jsx'
 // triple for state, motion under 0.2 s on named properties only.
 
 const POLL_MS = 5000
-const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work']]
+const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work'], ['parts', 'Parts']]
 const FLASH_MS = 2500
 const FULL_KEY = 'di.monitor.full'
 const SPARK_SAMPLES = 30
-const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace' }
-const KEYS_HELP = [['1  2  3', 'Board, Map, Work'], ['/', 'Filter everything'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
+const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace', 4: 'parts' }
+const KEYS_HELP = [['1  2  3  4', 'Board, Map, Work, Parts'], ['/', 'Filter everything'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
 
 // remembered per browser; storage can be blocked, so every touch is guarded
 const readFull = () => {
@@ -449,6 +450,11 @@ export default function MonitorSection({ onStats }) {
                         <ModuleSection title="Work" subtitle="Asks, what each agent is doing, and machine reports">
                             <MonitorWorkspace asks={snap?.asks} agents={panels.agents} reports={snap?.reports}
                                 onPick={(kind, row) => setSelected({ kind, id: rowId(row) })} />
+                        </ModuleSection>
+                    ) : null}
+                    {tab === 'parts' ? (
+                        <ModuleSection title="Parts" subtitle="Light desk, show desk, lasers, 3D Studio — live state and the version each was packed at">
+                            <MonitorParts parts={snap?.parts} />
                         </ModuleSection>
                     ) : null}
                     {tab === 'board' ? (<>
