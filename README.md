@@ -7,6 +7,8 @@ You sign in, get an address, build a scene in the browser, mark one project live
 
 ## Start Here
 
+- **new machine?** one page, three doors: [docs/START-HERE.md](docs/START-HERE.md)
+
 - main editor: `Studio`
 - node editor: `/<space>/raw` (`src/raw/`)
 - compatibility lane: `V1`
