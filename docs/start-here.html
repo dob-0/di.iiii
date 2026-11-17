@@ -70,11 +70,11 @@ footer .k{display:inline-block;margin-right:14px}
       <ol>
         <li><p>Install (goes into ~/.di).</p><div class="cmd"><code>curl -fsSL https://diiii.xyz/get | sh</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
         <li><p>Open a NEW terminal so di is on your PATH, then check.</p><div class="cmd"><code>di --version</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
-        <li><p>Start it. It opens http://localhost:4000.</p><div class="cmd"><code>di up</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
+        <li><p>Start it. It prints its address and opens it.</p><div class="cmd"><code>di up</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
         <li><p>Make a space, then save it as one file.</p><div class="cmd"><code>di new my-space
 di save my-space</code><button>Copy</button></div><span class="tag">walked on r-di</span></li>
       </ol>
-      <div class="note"><b>Says "port 4000 is held by another program"?</b>Something else uses that port. Run <code>di up --port 4171</code> and add <code>--port 4171</code> to <code>di new</code> and <code>di save</code>. No screen? add <code>--no-open</code>.</div>
+      <div class="note"><b>Says "port 4000 is held by another program"?</b>Something else uses that port. Run <code>di up --port 4171</code> and add <code>--port 4171</code> to <code>di new</code>, <code>di save</code>, <code>di status</code> and <code>di down</code>. No screen? add <code>--no-open</code>.</div>
       <p class="more">Stop <code>di down</code> · what runs <code>di status</code> · what this machine can do <code>di doctor</code> · update <code>di update</code></p>
     </section>
 
@@ -92,7 +92,7 @@ cd di.iiii</code><button>Copy</button></div><span class="tag">walked · 87 s</sp
         <li><p>Before you push.</p><div class="cmd"><code>npm run lint &amp;&amp; npm run test -- --run</code><button>Copy</button></div><span class="tag no">not walked</span></li>
         <li><p>Push. A PR to dev opens by itself (needs push rights, or use a fork).</p><div class="cmd"><code>git push -u origin HEAD</code><button>Copy</button></div><span class="tag no">not walked</span></li>
       </ol>
-      <div class="note"><b>Warning from npm ci</b>esbuild's install script is not approved. If <code>npm run build</code> fails on esbuild, run <code>npm approve-scripts</code>. Not checked.</div>
+      <div class="note"><b>Warning from npm ci</b>esbuild's install script is not approved. If <code>npm run build</code> fails on esbuild, run <code>npm approve-scripts</code> (npm 11 and up; npm 10 has no such command). Not checked.</div>
       <p class="more">Read next: <code>CURRENT.md</code> → <code>AGENTS.md</code> → <code>CONTRIBUTING.md</code>. Commands: <code>CHEATSHEET.md</code>.</p>
     </section>
 

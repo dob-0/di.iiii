@@ -10,14 +10,14 @@ The same page with COPY buttons and walked / not-walked marks: open `docs/start-
 curl -fsSL https://diiii.xyz/get | sh     # installs into ~/.di
 # open a NEW terminal (that puts di on your PATH), then:
 di --version
-di up                                      # starts it and opens http://localhost:4000
+di up                                      # starts it and opens the address it prints
 di new my-space                            # make a space
 di save my-space                           # one file: my-space.diiii
 ```
 
 Stop: `di down` · what runs: `di status` · what this machine can do: `di doctor` · newest version: `di update`.
 
-**`di up` says "port 4000 is held by another program"?** Something else uses that port (it did on the Pi). Run `di up --port 4171` and add `--port 4171` to `di new` and `di save`. (Older di versions, 0.4.3 and before the fix, said "already running" here and then failed on `di new`.)
+**`di up` says "port 4000 is held by another program"?** Something else uses that port (it did on the Pi). Run `di up --port 4171` and add `--port 4171` to `di new`, `di save`, `di status` and `di down`. (Older di versions, 0.4.3 and before the fix, said "already running" here and then failed on `di new`.)
 A machine with no screen: add `--no-open`.
 
 ## Door 2 — work on the code (about 5 minutes; the clone is ~490 MB)
@@ -34,7 +34,7 @@ npm run lint && npm run test -- --run      # before you push (not walked on the 
 git push -u origin HEAD                    # a push opens the PR to dev by itself (needs push rights; a fork works too)
 ```
 
-`npm ci` prints a warning that `esbuild`'s install script is not approved. Whether the build needs it was not checked: if `npm run build` fails on esbuild, run `npm approve-scripts`.
+`npm ci` prints a warning that `esbuild`'s install script is not approved. Whether the build needs it was not checked: if `npm run build` fails on esbuild, run `npm approve-scripts` (npm 11 and up; npm 10 has no such command).
 Read next: `CURRENT.md`, then `AGENTS.md`, then `CONTRIBUTING.md`. Commands you will use: `CHEATSHEET.md`.
 Not walked: macOS, Windows, `gh auth login` and a real push.
 

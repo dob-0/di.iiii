@@ -8,6 +8,7 @@
 // directory is.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs'
+import { spawn } from 'node:child_process'
 import http from 'node:http'
 import os from 'node:os'
 import path from 'node:path'
@@ -73,5 +74,27 @@ describe('di up when something else answers on the port', () => {
         const text = await run(home, 'up', '--port', String(port), '--no-open')
         expect(text).toMatch(/already running/)
         expect(text).not.toMatch(/held by another program/)
+    })
+
+    it("says 'held by another program' when this install runs elsewhere but a stranger holds THIS port", async () => {
+        const port = await strangerOnAPort()
+        const home = installedHome()
+        const own = spawn('sleep', ['30'], { stdio: 'ignore' })
+        try {
+            fs.mkdirSync(path.join(home, 'run'), { recursive: true })
+            fs.writeFileSync(path.join(home, 'run', 'server.pid'), String(own.pid))
+            const text = await run(home, 'up', '--port', String(port), '--no-open')
+            expect(text).toMatch(new RegExp(`port ${port} is held by another program`))
+            expect(text).not.toMatch(/already running/)
+            expect(process.exitCode).toBe(1)
+        } finally { own.kill() }
+    })
+
+    it('suggests a port that is free, not the one that is taken', async () => {
+        const port = await strangerOnAPort()
+        const text = await run(installedHome(), 'up', '--port', String(port), '--no-open')
+        const [, suggested] = text.match(/di up --port (\d+)/) || []
+        expect(Number(suggested)).not.toBe(port)
+        expect(Number(suggested)).toBeGreaterThanOrEqual(4171)
     })
 })
