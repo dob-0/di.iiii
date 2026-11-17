@@ -14,3 +14,4 @@
 - Not done: Overview / This scene / Log and settings keep the H1 "Operator tools" (pinned by a test); a real phone and the owner's look.
 
 - Review fixes (code-review medium on #1302): nav scrolls the active entry in a useEffect on section change (not on every render); a 0 badge never renders in SectionNav itself; Busiest day says "1 view" for one. Not changed: hideHeaderCards/title lists (works, a per-section title field is a later tidy), capitalize on filter chips (labels are authored words), tree grid rule (the tree was already a grid).
+- Second review: nav scroll now only moves the phone strip itself (scrollLeft), never the page or a desktop column. Left as is (opinion, not defects): per-section title/headerCards config, phone nav has no group labels or fade, badge guard in two places, filter-chip capitalize, global metric nowrap (checked on the pages shot).

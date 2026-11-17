@@ -123,7 +123,11 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
     const navRef = useRef(null)
     // Bring the active entry into view only when the section changes, not on every re-render.
     useEffect(() => {
-        navRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView?.({ inline: 'center', block: 'nearest' })
+        const nav = navRef.current
+        const active = nav?.querySelector('[aria-current="page"]')
+        // Only the phone strip scrolls sideways; scroll that strip itself, never the page or a desktop column.
+        if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return
+        nav.scrollLeft = active.offsetLeft - (nav.clientWidth - active.offsetWidth) / 2
     }, [activeKey])
     return (
         <nav className="preferences-nav" aria-label="Admin sections" ref={navRef}>
