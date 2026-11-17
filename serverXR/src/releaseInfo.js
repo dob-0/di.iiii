@@ -38,7 +38,7 @@ function normalizeReleaseInfo(manifest = null) {
     releaseId: normalizeString(source.releaseId),
     generatedAt: normalizeString(source.generatedAt),
     version: normalizeString(source.version),
-    schemaVersion: Number.isFinite(Number(source.schemaVersion)) && source.schemaVersion !== null ? Number(source.schemaVersion) : null,
+    schemaVersion: Number.isInteger(source.schemaVersion) ? source.schemaVersion : null,
     packedAt: normalizeString(source.packedAt),
     parts: normalizeParts(source.parts)
   }

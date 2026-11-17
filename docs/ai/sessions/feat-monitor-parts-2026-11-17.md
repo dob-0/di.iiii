@@ -18,3 +18,8 @@
 - Tests: `MonitorParts.test.jsx` (4) + `MonitorSection.test.jsx`: 2 files, 47 passed; eslint 0 errors.
 - Looked at on the agent screen against a scratch server of this tree (`parts.diiii.localhost`): 8 rows at 1440 px and at 390 px, screenshots opened. Box-escape check on Monitor and Parts at 1440/700/390: PASS, 0 escapes.
 - Not done: fix and issue counts (step 4); version shows "not stamped" until an install is packed with this branch; not installed; the box-escape script lives on another branch (copied temporarily, removed).
+
+### Review round 1 on #1303 (9 findings; 8 fixed, 1 disproved)
+- Fixed: unread part = `unknown` not `off`; parts.json `rows` ids replace prefix matching; pack never aborts on stamping (warns, stamps empty); shallow clone stamps null; `schemaVersion` integer-only; "packed date unknown" always shown; light row says "desk started (not a check that lights work)"; tests for each.
+- Disproved: the key handler already returns for typing fields (`MonitorSection.jsx:273`).
+- Open: `probe` is documentation only (the real probes live in monitorStore); the "/" filter does not cover the Parts tab.

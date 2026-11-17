@@ -293,7 +293,7 @@ function createMonitorStore({
       // Art-Net bind) on a machine that has no lights (serverXR/src/routes/lightingRoutes.js).
       settle('light', 'Light desk', async () => {
         const d = await get('/light/api/clock')
-        return row('light', 'Light desk', d.up ? 'ok' : 'idle', d.up ? 'running' : 'not started on this machine')
+        return row('light', 'Light desk', d.up ? 'ok' : 'idle', d.up ? 'desk started (not a check that lights work)' : 'not started on this machine')
       }),
       settle('ndi', 'NDI video', async () => {
         const d = await get('/ndi/api/summary')

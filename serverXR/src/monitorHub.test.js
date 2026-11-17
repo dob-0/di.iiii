@@ -205,7 +205,7 @@ describe('hub snapshot', () => {
     expect(by('light')).toMatchObject({ state: 'idle', commit: H, date: '2026-11-12' })
     expect(by('laser')).toMatchObject({ state: 'off' }) // one of its two rows is off: the worst wins
     expect(by('studio')).toMatchObject({ state: 'unprobed', detail: 'no live probe', commit: null })
-    expect(by('osc')).toMatchObject({ state: 'off', detail: 'not read' })
+    expect(by('osc')).toMatchObject({ state: 'unknown', detail: 'not read' })
     expect(parts).toMatchObject({ version: '1.2.3', packedAt: '2026-11-17T00:00:00Z' })
   })
 
@@ -213,7 +213,7 @@ describe('hub snapshot', () => {
     const { hub } = build({ store: { getMonitor: async () => ({ panels: { connected: { ok: false, rows: [] } } }) } })
     const { parts } = await hub.getSnapshot()
     expect(parts.rows.filter((r) => r.state === 'healthy' || r.state === 'ok')).toEqual([])
-    expect(parts.rows.find((r) => r.id === 'light').state).toBe('off')
+    expect(parts.rows.find((r) => r.id === 'light').state).toBe('unknown')
   })
 
   it('a machine seen from a local build is served by no tier', async () => {

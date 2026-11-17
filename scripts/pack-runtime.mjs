@@ -214,7 +214,12 @@ const main = async () => {
         works: marker.works,
         // One stamp per Monitor part (serverXR/src/parts.json): the last commit touching its dirs, so the
         // Monitor can show a version per part on an install that has no git checkout. null = unknown.
-        parts: stampParts(JSON.parse(await fsp.readFile(path.join(ROOT, 'serverXR', 'src', 'parts.json'), 'utf8')).parts, { cwd: ROOT }),
+        parts: await (async () => {
+            try { return stampParts(JSON.parse(await fsp.readFile(path.join(ROOT, 'serverXR', 'src', 'parts.json'), 'utf8')).parts, { cwd: ROOT }) } catch (error) {
+                log(`warning: part version stamps skipped (${error.message}); the Monitor will say 'not stamped'`)
+                return []
+            }
+        })(),
         schemaVersion,
         packedAt: new Date().toISOString(),
         node: process.version

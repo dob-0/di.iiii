@@ -22,6 +22,11 @@ describe('release info keeps what the packer writes', () => {
     expect(EMPTY_RELEASE_INFO.parts).toEqual([])
   })
 
+  it('schemaVersion is an integer or null: empty string, false and true do not become numbers', () => {
+    for (const v of ['', false, true, 'x', 1.5]) expect(normalizeReleaseInfo({ schemaVersion: v }).schemaVersion).toBeNull()
+    expect(normalizeReleaseInfo({ schemaVersion: 7 }).schemaVersion).toBe(7)
+  })
+
   it('a hand-edited file cannot put objects or more than 32 parts into the Monitor', () => {
     const many = Array.from({ length: 40 }, (_, i) => ({ id: `p${i}`, commit: { evil: true }, date: 5 }))
     const info = normalizeReleaseInfo({ parts: many, version: { a: 1 }, schemaVersion: 'x', packedAt: ['y'] })

@@ -2,7 +2,7 @@
 // server's Connected rows; the version is the last commit that touched the part, stamped when the install was
 // PACKED, so every version says "packed <date>": it is the pack, not proof of the running code.
 // A part with no live probe says so; it is never drawn as healthy.
-const TONE = { live: 'success', ok: 'success', idle: 'muted', off: 'warning', unprobed: 'muted' }
+const TONE = { live: 'success', ok: 'success', idle: 'muted', off: 'warning', unprobed: 'muted', unknown: 'muted' }
 export const partTone = (state) => TONE[state] || 'muted'
 export const shortHash = (commit) => (typeof commit === 'string' && /^[0-9a-f]{7,40}$/.test(commit) ? commit.slice(0, 9) : null)
 
@@ -19,7 +19,7 @@ export default function MonitorParts({ parts }) {
                         <span className="monitor-name">{p.name}</span>
                         <span className="monitor-meta">{p.state} · {p.detail}</span>
                         <span className="monitor-meta">
-                            {hash ? `${hash} · changed ${p.date || 'unknown'}${packed ? ` · packed ${packed}` : ''}` : 'version unknown (not stamped)'}
+                            {hash ? `${hash} · changed ${p.date || 'unknown'} · packed ${packed || 'date unknown'}` : 'version unknown (not stamped)'}
                         </span>
                     </div>
                 )

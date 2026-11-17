@@ -392,8 +392,10 @@ function createHub({
       let state = 'unprobed'
       let detail = 'no live probe'
       if (part.probe) {
-        const mine = connectedRows ? connectedRows.filter((r) => r.id === part.id || String(r.id).startsWith(`${part.id}-`)) : []
-        if (!mine.length) { state = 'off'; detail = 'not read' } else {
+        const wanted = new Set(part.rows || [part.id])
+        const mine = connectedRows ? connectedRows.filter((r) => wanted.has(r.id)) : []
+        // a Connected panel that failed or lacks the row is UNKNOWN, not a part that is down
+        if (!mine.length) { state = 'unknown'; detail = 'not read' } else {
           state = mine.some((r) => r.state === 'off') ? 'off' : mine.some((r) => r.state === 'live') ? 'live' : mine.some((r) => r.state === 'ok') ? 'ok' : 'idle'
           detail = mine.map((r) => r.detail).filter(Boolean).join(' · ')
         }

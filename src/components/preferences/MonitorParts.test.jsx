@@ -28,6 +28,10 @@ describe('MonitorParts', () => {
         expect(studio.className).not.toContain('tone-success')
         expect(container.querySelector('[data-part="osc"]').className).toContain('tone-warning')
     })
+    it('an older install with no packedAt still says the version is a pack', () => {
+        const { container } = render(<MonitorParts parts={{ rows: [parts.rows[0]] }} />)
+        expect(container.querySelector('[data-part="light"]').textContent).toContain('packed date unknown')
+    })
     it('an older server with no parts block shows a note, not an empty grid', () => {
         const { container } = render(<MonitorParts parts={undefined} />)
         expect(container.querySelector('[data-parts-empty]')).toBeTruthy()

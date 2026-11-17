@@ -5,6 +5,9 @@ import { spawnSync } from 'node:child_process'
 
 /** `git log -1 --format=<hash><TAB><date> -- <dirs>` → { commit, date } or { commit: null, date: null }. */
 export function lastCommitFor(dirs, { cwd, run = spawnSync } = {}) {
+  // a shallow clone would stamp every part with the same tip commit: precise-looking and meaningless
+  const shallow = run('git', ['rev-parse', '--is-shallow-repository'], { cwd, encoding: 'utf8' })
+  if (shallow && String(shallow.stdout || '').trim() === 'true') return { commit: null, date: null }
   const result = run('git', ['log', '-1', '--format=%H%x09%cs', '--', ...dirs], { cwd, encoding: 'utf8' })
   if (!result || result.status !== 0) return { commit: null, date: null }
   const [commit, date] = String(result.stdout || '').trim().split('\t')

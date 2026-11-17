@@ -1,14 +1,87 @@
 {
   "schema": "di.parts/1",
-  "note": "The parts the Monitor shows, one per owning directory set. `probe` is a route the server already answers on loopback, or null when the part has no server side (it is shown as 'no live probe', never as healthy). The light desk probe is /light/api/clock on purpose: any other light route BUILDS the desk (40 Hz loop, Art-Net bind), see serverXR/src/routes/lightingRoutes.js. Versions are not written here: the packer stamps each part with the last commit that touched its dirs.",
+  "note": "The parts the Monitor shows, one per owning directory set. `probe` is the route (documentation) and `rows` the Connected-panel row ids that carry its state (serverXR/src/monitorStore.js); `probe` is a route the server already answers on loopback, or null when the part has no server side (it is shown as 'no live probe', never as healthy). The light desk probe is /light/api/clock on purpose: any other light route BUILDS the desk (40 Hz loop, Art-Net bind), see serverXR/src/routes/lightingRoutes.js. Versions are not written here: the packer stamps each part with the last commit that touched its dirs.",
   "parts": [
-    { "id": "light", "name": "Light desk", "dirs": ["serverXR/src/lighting"], "probe": "/light/api/clock" },
-    { "id": "show", "name": "Show desk", "dirs": ["serverXR/src/showDesk", "serverXR/src/show"], "probe": "/show-status" },
-    { "id": "laser", "name": "Lasers and laser desk", "dirs": ["serverXR/src/laser"], "probe": "/laser/api/state" },
-    { "id": "studio", "name": "3D Studio", "dirs": ["src/studio"], "probe": null },
-    { "id": "raw", "name": "Raw (nodes)", "dirs": ["src/raw"], "probe": null },
-    { "id": "perform", "name": "Perform", "dirs": ["src/perform"], "probe": null },
-    { "id": "ndi", "name": "NDI video", "dirs": ["serverXR/src/ndi"], "probe": "/ndi/api/summary" },
-    { "id": "osc", "name": "OSC", "dirs": ["serverXR/src/osc"], "probe": "/osc/api/state" }
+    {
+      "id": "light",
+      "name": "Light desk",
+      "dirs": [
+        "serverXR/src/lighting"
+      ],
+      "probe": "/light/api/clock",
+      "rows": [
+        "light"
+      ]
+    },
+    {
+      "id": "show",
+      "name": "Show desk",
+      "dirs": [
+        "serverXR/src/showDesk",
+        "serverXR/src/show"
+      ],
+      "probe": "/show-status",
+      "rows": [
+        "show"
+      ]
+    },
+    {
+      "id": "laser",
+      "name": "Lasers and laser desk",
+      "dirs": [
+        "serverXR/src/laser"
+      ],
+      "probe": "/laser/api/state",
+      "rows": [
+        "laser",
+        "laser-desk"
+      ]
+    },
+    {
+      "id": "studio",
+      "name": "3D Studio",
+      "dirs": [
+        "src/studio"
+      ],
+      "probe": null
+    },
+    {
+      "id": "raw",
+      "name": "Raw (nodes)",
+      "dirs": [
+        "src/raw"
+      ],
+      "probe": null
+    },
+    {
+      "id": "perform",
+      "name": "Perform",
+      "dirs": [
+        "src/perform"
+      ],
+      "probe": null
+    },
+    {
+      "id": "ndi",
+      "name": "NDI video",
+      "dirs": [
+        "serverXR/src/ndi"
+      ],
+      "probe": "/ndi/api/summary",
+      "rows": [
+        "ndi"
+      ]
+    },
+    {
+      "id": "osc",
+      "name": "OSC",
+      "dirs": [
+        "serverXR/src/osc"
+      ],
+      "probe": "/osc/api/state",
+      "rows": [
+        "osc"
+      ]
+    }
   ]
 }

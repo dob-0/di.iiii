@@ -11,7 +11,12 @@ describe('part stamps from git, at pack time', () => {
     const calls = []
     const run = (cmd, args) => { calls.push([cmd, ...args]); return { status: 0, stdout: `${HASH}\t2026-11-12\n` } }
     expect(lastCommitFor(['serverXR/src/lighting', 'x'], { cwd: '/r', run })).toEqual({ commit: HASH, date: '2026-11-12' })
-    expect(calls[0]).toEqual(['git', 'log', '-1', '--format=%H%x09%cs', '--', 'serverXR/src/lighting', 'x'])
+    expect(calls.find((c) => c[1] === 'log')).toEqual(['git', 'log', '-1', '--format=%H%x09%cs', '--', 'serverXR/src/lighting', 'x'])
+  })
+
+  it('a shallow clone gives null, not the tip commit for every part', () => {
+    const run = (cmd, args) => (args[0] === 'rev-parse' ? { status: 0, stdout: 'true\n' } : { status: 0, stdout: `${HASH}\t2026-11-01` })
+    expect(lastCommitFor(['a'], { run })).toEqual({ commit: null, date: null })
   })
 
   it('says null, never a guess, with no git or no history or odd output', () => {
