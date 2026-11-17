@@ -144,7 +144,7 @@
 
 .wiki-sidebar-link:hover { color: var(--di-cyan); }
 
-.wiki-content { display: grid; gap: var(--di-space-6); min-width: 0; }
+.wiki-content { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--di-space-6); min-width: 0; }  /* one column that may shrink: an auto column ran 37 px past the phone screen (11-17) */
 
 .wiki-article {
     scroll-margin-top: var(--di-space-5);
@@ -175,7 +175,7 @@
     line-height: 1.5;
 }
 
-.wiki-article-body { display: grid; gap: var(--di-space-3); }
+.wiki-article-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--di-space-3); }
 
 .wiki-paragraph { margin: 0; line-height: 1.6; }
 
@@ -183,6 +183,7 @@
     margin: 0;
     padding-left: var(--di-space-5);
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--di-space-2);
     line-height: 1.5;
 }

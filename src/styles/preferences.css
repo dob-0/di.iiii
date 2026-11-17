@@ -645,6 +645,8 @@
 
 /* ─── Manage: directory tree + detail ──────────────────────── */
 
+.preferences-manage-layout > * { min-width: 0; }
+
 .preferences-manage-layout {
     display: grid;
     grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
@@ -660,6 +662,9 @@
 
 .preferences-tree {
     display: grid;
+    /* One column that may shrink: with an auto column a long title (nowrap) sets the column's
+       width, the rows grow past their cell and run under the detail panel (11-17). */
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--di-space-1);
     background: var(--pref-border);
     border: 1px solid var(--pref-border);
@@ -667,6 +672,7 @@
 
 .preferences-tree-group {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--di-space-1);
 }
 
@@ -675,6 +681,8 @@
     align-items: center;
     gap: var(--di-space-2);
     width: 100%;
+    /* width 100% plus padding must stay inside the cell: a div is content-box by default (11-17) */
+    box-sizing: border-box;
     padding: var(--di-space-2) var(--di-space-3);
     border: none;
     border-radius: 0;
@@ -1156,6 +1164,8 @@
 
 .preferences-input {
     width: 100%;
+    /* width 100% plus padding and border must stay inside the label (11-17: +26 px on This scene) */
+    box-sizing: border-box;
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid var(--pref-border-active);
     border-radius: 0;
