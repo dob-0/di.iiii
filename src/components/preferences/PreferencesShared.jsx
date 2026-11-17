@@ -120,8 +120,13 @@ export const getActionButtonClassName = (button = {}) => {
 
 export function SectionNav({ sections = [], activeKey, onSelect }) {
     let lastGroup = null
+    const navRef = useRef(null)
+    // Bring the active entry into view only when the section changes, not on every re-render.
+    useEffect(() => {
+        navRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView?.({ inline: 'center', block: 'nearest' })
+    }, [activeKey])
     return (
-        <nav className="preferences-nav" aria-label="Admin sections">
+        <nav className="preferences-nav" aria-label="Admin sections" ref={navRef}>
             {sections.map((section) => {
                 const showGroupLabel = section.group && section.group !== lastGroup
                 lastGroup = section.group ?? lastGroup
@@ -132,14 +137,13 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
                         ) : null}
                         <button
                             type="button"
-                            ref={activeKey === section.key ? (el) => el?.scrollIntoView?.({ inline: 'center', block: 'nearest' }) : undefined}
                             className={`preferences-nav-item ${activeKey === section.key ? 'is-active' : ''}`}
                             onClick={() => onSelect?.(section.key)}
                             aria-current={activeKey === section.key ? 'page' : undefined}
                         >
                             {section.glyph ? <span className="preferences-nav-glyph" aria-hidden="true">{section.glyph}</span> : null}
                             <span className="preferences-nav-label">{section.label}</span>
-                            {section.badge != null && section.badge !== '' ? (
+                            {section.badge != null && section.badge !== '' && section.badge !== 0 ? (
                                 <span className="preferences-nav-badge">{section.badge}</span>
                             ) : null}
                         </button>

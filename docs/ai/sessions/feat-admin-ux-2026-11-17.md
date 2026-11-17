@@ -12,3 +12,5 @@
 - Slice 3, Agent sessions and Monitor: the Agent sessions page was titled "Spaces and who can see them" — now "Agent sessions"; Agents and Monitor drop the header Live/Sessions cards (their own panels say it); session directory rows stay inside their box (grid column could not shrink, so status tags spilled out), long names get an ellipsis.
 - Slice 4, operator pages: Machines is titled "Machines" and no longer shows the scene counters and Copy Snapshot / Copy Log / XR Debug; on a phone the header counters sit two per row, so Overview's Quick switches show on the first screen.
 - Not done: Overview / This scene / Log and settings keep the H1 "Operator tools" (pinned by a test); a real phone and the owner's look.
+
+- Review fixes (code-review medium on #1302): nav scrolls the active entry in a useEffect on section change (not on every render); a 0 badge never renders in SectionNav itself; Busiest day says "1 view" for one. Not changed: hideHeaderCards/title lists (works, a per-section title field is a later tidy), capitalize on filter chips (labels are authored words), tree grid rule (the tree was already a grid).

@@ -405,7 +405,7 @@ export function TrafficSection() {
                     <div className="preferences-status-grid">
                         <MetricCard label="Page views" value={views} />
                         <MetricCard label="Sign-ups" value={signups} />
-                        <MetricCard label={busiest ? `Busiest day (UTC) · ${busiest.count} views` : 'Busiest day (UTC)'} value={busiest ? busiest.day : '—'} />
+                        <MetricCard label={busiest ? `Busiest day (UTC) · ${busiest.count} ${busiest.count === 1 ? 'view' : 'views'}` : 'Busiest day (UTC)'} value={busiest ? busiest.day : '—'} />
                     </div>
                     {views === 0 && <div className="preferences-empty">No page views counted in this window yet.</div>}
                     {stats.topPaths?.length > 0 && (
