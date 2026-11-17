@@ -18,7 +18,7 @@ main{max-width:1100px;margin:0 auto;padding:24px 16px 56px}
 h1{font:600 26px var(--mono);margin:6px 0 4px;letter-spacing:.02em}
 h1 b{color:var(--accent);font-weight:600}
 .lead{color:var(--mute);margin:0 0 20px;max-width:62ch}
-.pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:20px}
+.pick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:20px}
 .pick a{display:block;padding:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);text-decoration:none}
 .pick a:hover,.pick a:focus-visible{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);outline:0}
 .pick .n{font:11px var(--mono);letter-spacing:.14em;color:var(--accent)}
@@ -41,6 +41,7 @@ li p{margin:0 0 4px;font-size:13px;color:var(--mute)}
 .tag.no{border-style:dashed;border-color:var(--warn);color:var(--warn)}
 .note{border:1px solid var(--warn);border-left-width:2px;padding:8px 10px;font-size:13px;margin:12px 0 0}
 .note b{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--warn);display:block;margin-bottom:2px}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
 .more{margin-top:12px;font:12px var(--mono);color:var(--mute)}
 .more code{color:var(--text)}
 footer{margin-top:22px;font:12px var(--mono);color:var(--mute);border-top:1px solid var(--line);padding-top:12px}
@@ -58,6 +59,7 @@ footer .k{display:inline-block;margin-right:14px}
     <a href="#door1"><div class="n">DOOR 1 · ~1 MIN</div><div class="t">Use di.iiii</div><div class="d">Make and save a space. No code, no account.</div></a>
     <a href="#door2"><div class="n">DOOR 2 · ~5 MIN</div><div class="t">Work on the code</div><div class="d">Clone, install, check, branch, push.</div></a>
     <a href="#door3"><div class="n">DOOR 3 · ~1 MIN</div><div class="t">Let Claude use it</div><div class="d">Hand di.iiii to an assistant as tools.</div></a>
+    <a href="#door4"><div class="n">DOOR 4 · ~2 MIN</div><div class="t">Sign in (admin)</div><div class="d">Make this terminal act as you, once.</div></a>
   </nav>
 
   <div class="doors">
@@ -94,6 +96,7 @@ cd di.iiii</code><button>Copy</button></div><span class="tag">walked · 87 s</sp
       <p class="more">Read next: <code>CURRENT.md</code> → <code>AGENTS.md</code> → <code>CONTRIBUTING.md</code>. Commands: <code>CHEATSHEET.md</code>.</p>
     </section>
 
+    <div class="col">
     <section id="door3">
       <div class="eyebrow">Door 3</div>
       <h2>Let Claude use it</h2>
@@ -104,6 +107,22 @@ cd di.iiii</code><button>Copy</button></div><span class="tag">walked · 87 s</sp
       <div class="note"><b>Sign-in</b><code>di login</code> exists only in builds newer than 0.4.3. With a key you get more than the public level: see <code>docs/ai/public/setup.md</code>.</div>
       <p class="more">Longer guides: join <code>docs/ai/public/join.md</code> · agents <code>docs/ai/public/setup.md</code></p>
     </section>
+
+    <section id="door4">
+      <div class="eyebrow">Door 4</div>
+      <h2>Sign in — admin on a new PC</h2>
+      <p class="sub">Do door 1 first. Do this once per machine; no password is typed in the terminal.</p>
+      <ol>
+        <li><p>Ask for a sign-in. The terminal shows a short code and opens the browser.</p><div class="cmd"><code>di login</code><button>Copy</button></div><span class="tag no">not walked on a new PC</span></li>
+        <li><p>In the browser, sign in as yourself (GitHub, Google or Telegram), open the page it shows, and type the code.</p><span class="tag no">needs you</span></li>
+        <li><p>Check. It names you, this machine, and when the sign-in ends.</p><div class="cmd"><code>di whoami</code><button>Copy</button></div><span class="tag">walked on aylmo</span></li>
+        <li><p>Admin work stays in the browser: Admin page on dev.diiii.xyz/admin.</p><span class="tag no">not walked</span></li>
+      </ol>
+      <div class="note"><b>What the terminal can and cannot do</b>It can read and edit your spaces and projects. It cannot publish or delete a space, or change who owns or edits one. Those stay in the browser.</div>
+      <div class="note"><b>How long it lasts</b>Until you end it (<code>di logout</code>, or the list at /device), or 90 days unused (a year at most). It signs in to dev.diiii.xyz by default; for another of ours add <code>--tier prod</code> or <code>--tier local</code>.</div>
+      <p class="more">Another di.iiii: <code>di login --to https://example.org</code> · end it: <code>di logout</code></p>
+    </section>
+    </div>
   </div>
 
   <footer>

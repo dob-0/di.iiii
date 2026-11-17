@@ -1,6 +1,6 @@
 # New machine → working on di.iiii
 
-One page, three doors. Pick the one you need. Every step was run on a bare Raspberry Pi (Debian 13, Node 24) on 2026-11-18 unless it says "not walked".
+One page, four doors. Pick the one you need. Every step was run on a bare Raspberry Pi (Debian 13, Node 24) on 2026-11-18 unless it says "not walked".
 The same page with COPY buttons and walked / not-walked marks: open `docs/start-here.html` in a browser.
 
 
@@ -46,6 +46,19 @@ claude mcp add di -- di mcp                # hands di.iiii to Claude as tools
 
 More, with a key: `docs/ai/public/setup.md`. `di login` exists only in builds newer than 0.4.3.
 
+## Door 4 — sign in as yourself (admin) on a new machine
+
+Do door 1 first. Once per machine; no password is typed in the terminal.
+
+```bash
+di login                                   # shows a short code and opens the browser — not walked on a new PC
+di whoami                                  # names you, this machine, and when the sign-in ends
+```
+
+In the browser, sign in as yourself (GitHub, Google or Telegram), open the page it shows, and type the code.
+The terminal can read and edit your spaces and projects. It cannot publish or delete a space, or change who owns or edits one: those stay in the browser.
+It lasts until you end it (`di logout`, or the list at /device), or 90 days unused (a year at most). It signs in to dev.diiii.xyz by default; add `--tier prod` or `--tier local` for another.
+
 ## Which door has what
 
 | You want | Door | Longer guide |
@@ -53,3 +66,4 @@ More, with a key: `docs/ai/public/setup.md`. `di login` exists only in builds ne
 | to make a space | 1 | `docs/ai/public/join.md` |
 | to change the code | 2 | `CONTRIBUTING.md`, `CHEATSHEET.md` |
 | an assistant to act for you | 3 | `docs/ai/public/setup.md` |
+| this terminal to act as you | 4 | `di help login` |
