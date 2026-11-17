@@ -6,6 +6,7 @@ name: Browser Checks
 # probe hook is DEV-only):
 #   - input-device contracts for the exhibition walker (npm run check:input)
 #   - responsive/console-error sweep of the public landing (check:responsive)
+#   - fit check: clipped text, past-the-edge boxes, sideways scroll (check:fit)
 
 on:
   workflow_call:
@@ -99,6 +100,11 @@ jobs:
 
       - name: Responsive sweep (public landing)
         run: node scripts/responsive-check.mjs http://localhost:5173/wcc --scroll --out /tmp/responsive
+
+      # Text cut, boxes past the right edge, sideways page scroll: admin sections + landing at 5 sizes.
+      # Mark an intentional ellipsis with data-fit-ok. Locally: npm run check:fit -- --base <url>
+      - name: Fit check (admin pages, 5 sizes)
+        run: node scripts/check-fit.mjs --base http://localhost:5173 --routes "/admin#manage,/admin#estate,/admin#overview,/wcc" --shots /tmp/fit
 
       - name: Upload responsive screenshots
         if: always()

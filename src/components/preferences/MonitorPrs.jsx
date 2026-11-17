@@ -41,7 +41,7 @@ export default function MonitorPrs({ fetcher = getMonitorPrs, refreshMs = REFRES
         <div className="monitor-grid" data-panel="prs-github">
             {prs.map((pr) => (
                 <a key={pr.number} className={`monitor-row${pr.draft ? ' tone-muted' : ''}`} href={pr.url || undefined} target="_blank" rel="noreferrer" data-pr={pr.number}>
-                    <span className="monitor-name">#{pr.number} {pr.title}</span>
+                    <span className="monitor-name" data-fit-ok>#{pr.number} {pr.title}</span>
                     <span className="monitor-meta">{pr.draft ? 'draft · ' : ''}{pr.branch} → {pr.base} · {pr.author} · {timeAgo(pr.updatedAt)}</span>
                 </a>
             ))}
