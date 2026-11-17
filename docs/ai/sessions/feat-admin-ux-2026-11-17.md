@@ -8,4 +8,5 @@
   `.preferences-filter-row` chips; under 880 px the nav is one scrolling line with the active entry scrolled into view;
   nav entry "Apps that visit" is now "Visitors" (wiki text updated to match).
 - Tests: `PreferencesPage*`, `preferences/*`, `copyVocabulary` suites, 112 passed; new guard in `PreferencesShared.test.jsx`.
-- Not done: Spaces and users (duplicate counters, empty column), Monitor, Agent sessions, Overview; a real phone and the owner's look.
+- Slice 2, Spaces and users: the Overview card that repeated the header's Spaces/Users (and a lone "Guest space" tile) became "Guest entry" (one sentence); New space moved above Traffic and Sweep; a metric value never wraps mid-date (`2026-11-17`, busiest-day count moved into its label). TrafficSection test updated to the new wording.
+- Not done: Monitor, Agent sessions, Overview; a real phone and the owner's look.

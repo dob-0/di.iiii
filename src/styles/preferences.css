@@ -1943,3 +1943,7 @@
     .preferences-nav-item { flex: none; white-space: nowrap; }
 }
 .preferences-topbar-metrics:empty { display: none; }
+
+/* A value is one token (a date, a count): it never breaks mid-word; the label gives way instead. */
+.preferences-metric-value { white-space: nowrap; flex: none; }
+.preferences-metric-label { min-width: 0; }
