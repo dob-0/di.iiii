@@ -1227,7 +1227,7 @@ export const WIKI_ARTICLES = [
         summary: 'The admin console, at /admin, is admins-only; your own spaces are managed from /studio.',
         body: [
             'The admin console is di.iiii’s console for admins. It lives at /admin and is visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
-            'Admins manage everything from the admin console → Spaces and users: a directory tree of spaces, each expanding to its projects. Its list has two groups. Spaces and people: Spaces and users, Open call, Agent sessions, Apps that visit (the programs that called the API, with a block switch). Operator tools (staff): Overview, This scene, Log and settings, Machines. On/off settings are switches that say On or Off and what they touch; flip one back to undo. Refresh loads the lists again without reloading the page, and Back to the space leaves the console; the header shows counts for the work at hand instead of 3D telemetry while you administer.',
+            'Admins manage everything from the admin console → Spaces and users: a directory tree of spaces, each expanding to its projects. Its list has two groups. Spaces and people: Spaces and users, Open call, Agent sessions, Visitors (the programs that called the API, with a block switch). Operator tools (staff): Overview, This scene, Log and settings, Machines. On/off settings are switches that say On or Off and what they touch; flip one back to undo. Refresh loads the lists again without reloading the page, and Back to the space leaves the console; the header shows counts for the work at hand instead of 3D telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
                 'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
@@ -1398,7 +1398,7 @@ export const WIKI_ARTICLES = [
                 'People in a browser, and anyone signed in with an account or a token, are not counted against either.',
                 'Off-limits: /admin, /preferences, private spaces, anything behind sign-in, and sending forms automatically.'
             ] },
-            'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in the admin console → Apps that visit, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
+            'A name is only what a program claims, so the per-address limits hold whatever the header says. di.iiii keeps a count per day per program name and the contact it published — no addresses, no pages read — for 90 days. Admins see that guest book in the admin console → Visitors, and can turn a program away by name; it then gets a 403 pointing back to /for-apps. Nothing is counted on a local install.',
             'For a higher allowance or a block you think is a mistake: info@thedi.studio. A security problem goes to the same address; /.well-known/security.txt says so in the form security tools read.'
         ],
         tags: ['api', 'apps', 'ai', 'crawlers', 'bots', 'user-agent', 'rate limit', 'llms.txt', 'llms-full.txt', 'robots.txt', 'security.txt', 'developers', 'markdown', 'assistant'],
