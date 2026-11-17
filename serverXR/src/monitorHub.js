@@ -12,6 +12,7 @@
 const os = require('node:os')
 const crypto = require('node:crypto')
 const { execFile } = require('node:child_process')
+const PARTS = require('./parts.json').parts
 
 const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
@@ -380,6 +381,29 @@ function createHub({
     return { nodes: [...nodes.values()], edges }
   }
 
+  // One row per part (serverXR/src/parts.json): live state from the rows the Connected panel already read
+  // (no extra probe per viewer) and the version stamped at pack time. A part with no probe says so; it is
+  // never shown as healthy. `packedAt` rides with every version: the stamp is the PACK, not the running code.
+  const partsBlock = (base) => {
+    const rel = releaseInfo() || {}
+    const stamps = new Map((Array.isArray(rel.parts) ? rel.parts : []).map((x) => [x.id, x]))
+    const connectedRows = base.panels?.connected?.ok ? (base.panels.connected.rows || []) : null
+    const rows = PARTS.map((part) => {
+      let state = 'unprobed'
+      let detail = 'no live probe'
+      if (part.probe) {
+        const mine = connectedRows ? connectedRows.filter((r) => r.id === part.id || String(r.id).startsWith(`${part.id}-`)) : []
+        if (!mine.length) { state = 'off'; detail = 'not read' } else {
+          state = mine.some((r) => r.state === 'off') ? 'off' : mine.some((r) => r.state === 'live') ? 'live' : mine.some((r) => r.state === 'ok') ? 'ok' : 'idle'
+          detail = mine.map((r) => r.detail).filter(Boolean).join(' · ')
+        }
+      }
+      const stamp = stamps.get(part.id)
+      return { id: part.id, name: part.name, state, detail, commit: stamp?.commit || null, date: stamp?.date || null }
+    })
+    return { rows, version: rel.version || null, packedAt: rel.packedAt || null }
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   async function getSnapshot({ selfBase = null } = {}) {
     const base = await store.getMonitor({ selfBase })
@@ -389,6 +413,7 @@ function createHub({
       ...base,
       reports: reportRows,
       tiers: tierBlock,
+      parts: partsBlock(base),
       spaces: spaceBlock,
       asks: asksBlock(),
       map: buildMap({ base, reportRows, tierBlock, spaceBlock })

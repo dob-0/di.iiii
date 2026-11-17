@@ -191,6 +191,31 @@ describe('hub snapshot', () => {
     expect(snap.map.edges.filter((e) => e.kind === 'serves').map((e) => e.from)).toEqual(['tier:dev'])
   })
 
+  it('parts: state from the Connected rows, version from the pack stamps, honest when unprobed or unread', async () => {
+    const H = 'd'.repeat(40)
+    const rows = [
+      { id: 'light', state: 'idle', detail: 'not started on this machine' },
+      { id: 'laser', state: 'ok', detail: '1/1 cubes' },
+      { id: 'laser-desk', state: 'off', detail: 'timeout' }
+    ]
+    const fakeStore = { getMonitor: async () => ({ panels: { connected: { ok: true, rows } } }) }
+    const { hub } = build({ store: fakeStore, releaseInfo: () => ({ version: '1.2.3', packedAt: '2026-11-17T00:00:00Z', parts: [{ id: 'light', commit: H, date: '2026-11-12' }] }) })
+    const { parts } = await hub.getSnapshot()
+    const by = (id) => parts.rows.find((r) => r.id === id)
+    expect(by('light')).toMatchObject({ state: 'idle', commit: H, date: '2026-11-12' })
+    expect(by('laser')).toMatchObject({ state: 'off' }) // one of its two rows is off: the worst wins
+    expect(by('studio')).toMatchObject({ state: 'unprobed', detail: 'no live probe', commit: null })
+    expect(by('osc')).toMatchObject({ state: 'off', detail: 'not read' })
+    expect(parts).toMatchObject({ version: '1.2.3', packedAt: '2026-11-17T00:00:00Z' })
+  })
+
+  it('parts: a failed Connected panel reads as off, never as healthy', async () => {
+    const { hub } = build({ store: { getMonitor: async () => ({ panels: { connected: { ok: false, rows: [] } } }) } })
+    const { parts } = await hub.getSnapshot()
+    expect(parts.rows.filter((r) => r.state === 'healthy' || r.state === 'ok')).toEqual([])
+    expect(parts.rows.find((r) => r.id === 'light').state).toBe('off')
+  })
+
   it('a machine seen from a local build is served by no tier', async () => {
     const { hub, reports } = build({ releaseInfo: () => ({}) })
     reports.put({ host: 'aylmo', panels })

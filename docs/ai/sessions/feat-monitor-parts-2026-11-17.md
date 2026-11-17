@@ -6,3 +6,9 @@
 - Measured on the repo: light 528e3b6b2 (11-12), show/laser c91431f68 (11-01), studio 64ed0876a (11-12), raw/perform c9c908e63 (11-11), ndi bab5ef5f8 (09-24), osc 4f173c44f (10-28).
 - Tests: 6 files, 56 tests pass (parts, partStamps, releaseInfo, monitorHub, monitorStore, dataRootGuard). eslint: 0 errors.
 - Not done: steps 3–5 (the hub collects health; fix and issue counts; the Parts tab). Rig left out of the list (its probe was not verified). Not packed end to end: `pack-runtime.mjs` was not run, only its stamp function on the real repo.
+
+### Step 3 (same branch)
+- `monitorStore.js`: Connected panel gains a Light desk row, read only through `/light/api/clock` (guarded by `parts.test.js`).
+- `monitorHub.js`: snapshot gains `parts` = { rows[{id,name,state,detail,commit,date}], version, packedAt }; state is joined from the Connected rows already read (no extra probe per viewer), worst state wins, no probe = `unprobed` ("no live probe"), unread = `off`; never shown healthy by default.
+- Tests: 2 new in `monitorHub.test.js`; monitorHub + monitorStore + parts = 40 passed; eslint 0 errors.
+- Not done: steps 4 (fix and issue counts) and 5 (Parts tab); no UI shows `parts` yet.

@@ -289,6 +289,12 @@ function createMonitorStore({
         ].filter(Boolean)
         return row('show', `Show machine · ${d.machine || 'this'}`, d.light?.seen || d.laser?.connected ? 'ok' : 'idle', bits.join(' · '))
       }),
+      // The light desk is asked ONLY for its clock: every other light route BUILDS the desk (40 Hz loop,
+      // Art-Net bind) on a machine that has no lights (serverXR/src/routes/lightingRoutes.js).
+      settle('light', 'Light desk', async () => {
+        const d = await get('/light/api/clock')
+        return row('light', 'Light desk', d.up ? 'ok' : 'idle', d.up ? 'running' : 'not started on this machine')
+      }),
       settle('ndi', 'NDI video', async () => {
         const d = await get('/ndi/api/summary')
         return row('ndi', 'NDI video', d.available ? 'ok' : 'off', d.available ? `ready (${d.version || 'ok'})` : (d.reason || 'not available'))
