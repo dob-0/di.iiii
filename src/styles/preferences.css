@@ -1958,3 +1958,7 @@
 @media (max-width: 760px) {
     .preferences-topbar-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Pull requests in Monitor › Work: each row is a link, so it must not look underlined. */
+a.monitor-row { text-decoration: none; }
+a.monitor-row .monitor-name { overflow-wrap: anywhere; }

@@ -321,6 +321,9 @@ export const getAgentBoard = async () => apiFetch('/api/agent-board')
 
 export const getMonitor = async () => apiFetch('/api/monitor')
 
+// Open pull requests for the Monitor's Work tab (read-only; same gate as the Monitor).
+export const getMonitorPrs = async () => apiFetch('/api/monitor/prs')
+
 export const getAgentBoardSession = async (sessionId) => (
     apiFetch(`/api/agent-board/session/${encodeURIComponent(sessionId)}`)
 )
