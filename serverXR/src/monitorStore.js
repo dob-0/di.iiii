@@ -294,10 +294,11 @@ function createMonitorStore({
   // status routes (loopback, same machine). A thing that is not there is
   // "off", not an error: a laptop without lasers is normal.
   async function connected(selfBase) {
-    if (!fetchImpl || !selfBase) throw new Error('no local address to read from')
+    if (!selfBase) throw new Error('no local address to read from')
     const get = async (route) => {
       const url = `${selfBase}${route}`
       const read = isLoopbackHttps(url) ? loopbackFetch : fetchImpl
+      if (!read) throw new Error('no fetch available')
       const res = await read(url, { signal: AbortSignal.timeout(3000) })
       if (!res.ok) throw new Error(`${route} answered ${res.status}`)
       return res.json()

@@ -150,8 +150,8 @@ describe('monitor snapshot', () => {
 
   // Regression (11-17): the installed server speaks https with a certificate for local.thedi.studio, and
   // every connected-thing row said "off · fetch failed" because the probe used plain http on that port.
-  const haveOpenssl = (() => { try { execFileSync('openssl', ['version'], { stdio: 'ignore' }); return true } catch { return false } })()
-  it.skipIf(!haveOpenssl)('reads connected things from this server over https on 127.0.0.1 (certificate for another name)', async () => {
+  // openssl is needed here on purpose: with no skip, a machine without it fails loudly instead of losing the guard
+  it('reads connected things from this server over https on 127.0.0.1 (certificate for another name)', async () => {
     const dir = tmp()
     execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', '/CN=local.thedi.studio',
       '-keyout', path.join(dir, 'k.pem'), '-out', path.join(dir, 'c.pem')], { stdio: 'ignore' })

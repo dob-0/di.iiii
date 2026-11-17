@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it } from 'vitest'
 
@@ -196,5 +197,28 @@ describe('POST /api/monitor/ask', () => {
     expect(viaCli.statusCode).toBe(404)
     const empty = await call({ socket: remote, authState: owner, body: {} }, { deployEnv: 'staging', route })
     expect(empty.statusCode).toBe(400)
+  })
+})
+
+// Regression (11-17): the self probe must speak the scheme the server speaks. The installed server is
+// TLS-only, and an http probe made every connected-thing row read "off · fetch failed".
+describe('the self-probe address follows the scheme the server speaks', () => {
+  const baseFor = async (options) => {
+    const router = makeRouter()
+    let seen = null
+    const spy = { ...hub, getSnapshot: async ({ selfBase }) => { seen = selfBase; return { panels: {} } } }
+    registerMonitorRoutes(router, { hub: spy, requireAuth: () => false, deployEnv: () => null, ...options })
+    const [, handler] = router.routes['GET /api/monitor']
+    await handler({ ...loopback }, makeRes())
+    return seen
+  }
+  it('is http by default and https when localScheme says the server serves TLS', async () => {
+    expect(await baseFor({})).toMatch(/^http:\/\/127\.0\.0\.1:/)
+    expect(await baseFor({ localScheme: () => 'https' })).toMatch(/^https:\/\/127\.0\.0\.1:/)
+  })
+  it('index.js hands the route the real TLS state', () => {
+    const source = fs.readFileSync(new URL('../index.js', import.meta.url), 'utf8')
+    expect(source).toMatch(/localScheme: \(\) => \(servesTls \? 'https' : 'http'\)/)
+    expect(source).toMatch(/servesTls = Boolean\(tlsFiles\)/)
   })
 })
