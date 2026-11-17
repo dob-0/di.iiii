@@ -98,12 +98,30 @@ function MapList({ nodes, selectedId, onPick }) {
 
 const fitBox = (layout) => ({ ...layout.bounds })
 
-function Map2D({ layout, selectedId, onPick, live }) {
+const POS_KEY = 'di.monitor.map.pos'
+const readPos = () => {
+    try {
+        const o = JSON.parse(window.localStorage.getItem(POS_KEY) || '{}')
+        return o && typeof o === 'object' ? o : {}
+    } catch { return {} }
+}
+const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.stringify(o)) } catch { /* the arrangement just is not kept */ } }
+
+/** The wheel zooms the map only when you asked for it: full screen, or Ctrl/Cmd (a trackpad pinch sends Ctrl). Otherwise the page scrolls. */
+export const wheelZooms = (ev, fullscreen) => Boolean(fullscreen || ev.ctrlKey || ev.metaKey)
+
+function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
     const svgRef = useRef(null)
     const [vb, setVb] = useState(() => fitBox(layout))
     const [hover, setHover] = useState(null)
     const drag = useRef({ pointers: new Map(), moved: false, last: null, pinch: 0 })
     const vbRef = useRef(vb)
+    const fsRef = useRef(fullscreen)
+    useEffect(() => { fsRef.current = fullscreen }, [fullscreen])
+    // nodes you moved, in layout units, kept per browser; a node that is gone is simply ignored
+    const [moved, setMoved] = useState(readPos)
+    const nodeDrag = useRef(null)
+    const posOf = useCallback((id) => moved[id] || layout.pos.get(id), [moved, layout.pos])
     useEffect(() => { vbRef.current = vb }, [vb])
 
     // a different set of nodes (not a state change) refits the view
@@ -131,7 +149,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
     useEffect(() => {
         const el = svgRef.current
         if (!el) return undefined
-        const onWheel = (ev) => { ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
+        const onWheel = (ev) => { if (!wheelZooms(ev, fsRef.current)) return; ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
         el.addEventListener('wheel', onWheel, { passive: false })
         return () => el.removeEventListener('wheel', onWheel)
     }, [zoomAt])
@@ -169,7 +187,32 @@ function Map2D({ layout, selectedId, onPick, live }) {
         d.pinch = 0
         if (!d.pointers.size) setTimeout(() => { d.moved = false }, 0)
     }
-    const pick = (n) => { if (!drag.current.moved) onPick(n) }
+    const pick = (n) => { if (!drag.current.moved && !(nodeDrag.current && nodeDrag.current.moved)) onPick(n) }
+    const onNodeDown = (ev, n) => {
+        if (ev.button !== 0 || drag.current.pointers.size) return
+        ev.stopPropagation()
+        const p = posOf(n.id)
+        nodeDrag.current = { id: n.id, sx: ev.clientX, sy: ev.clientY, px: p.x, py: p.y, moved: false }
+        try { ev.currentTarget.setPointerCapture?.(ev.pointerId) } catch { /* the move still reaches the svg */ }
+    }
+    const onNodeMove = (ev) => {
+        const d = nodeDrag.current
+        if (!d) return
+        if (!d.moved && Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < 4) return
+        d.moved = true
+        ev.stopPropagation()
+        const { s } = scaleOf(vbRef.current)
+        setMoved((m) => ({ ...m, [d.id]: { x: d.px + (ev.clientX - d.sx) * s, y: d.py + (ev.clientY - d.sy) * s } }))
+    }
+    const onNodeUp = (ev) => {
+        const d = nodeDrag.current
+        if (!d) return
+        ev.stopPropagation()
+        if (d.moved) setMoved((m) => { writePos(m); return m })
+        setTimeout(() => { nodeDrag.current = null }, 0)
+    }
+    const resetNodes = () => { setMoved({}); writePos({}) }
+    const anyMoved = Object.keys(moved).some((id) => layout.pos.has(id))
 
     const neighbours = useMemo(() => {
         const m = new Map()
@@ -203,8 +246,8 @@ function Map2D({ layout, selectedId, onPick, live }) {
                 </g>
                 <g className="monitor-map-edges">
                     {layout.edges.map((e, i) => {
-                        const a = layout.pos.get(e.from)
-                        const b = layout.pos.get(e.to)
+                        const a = posOf(e.from)
+                        const b = posOf(e.to)
                         const lit = !!focus && (e.from === focus || e.to === focus)
                         const cls = `monitor-edge kind-${e.kind}${lit ? ' is-lit' : focus ? ' is-dim' : ''}${live && LIVE_EDGES.has(e.kind) ? ' is-live' : ''}`
                         return <line key={edgeKey(e, i)} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={cls} />
@@ -215,7 +258,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
                     <text x="0" y="5" textAnchor="middle" className="monitor-hub-label">di.iiii</text>
                 </g>
                 {layout.nodes.map((n) => {
-                    const p = layout.pos.get(n.id)
+                    const p = posOf(n.id)
                     const { w, h } = sizeOf(n.kind)
                     const sel = selectedId === n.id
                     const cls = `monitor-node kind-${n.kind} tone-${toneOf(n.state)}${sel ? ' is-selected' : ''}${hover === n.id ? ' is-hover' : ''}${focus && !hot(n.id) ? ' is-dim' : ''}`
@@ -225,6 +268,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
                             onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h0) => (h0 === n.id ? null : h0))}
                             onFocus={() => setHover(n.id)} onBlur={() => setHover((h0) => (h0 === n.id ? null : h0))}
                             onClick={() => pick(n)}
+                            onPointerDown={(ev) => onNodeDown(ev, n)} onPointerMove={onNodeMove} onPointerUp={onNodeUp} onPointerCancel={onNodeUp}
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
@@ -235,7 +279,7 @@ function Map2D({ layout, selectedId, onPick, live }) {
                     )
                 })}
                 {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 9.6) ? (() => {
-                    const p = layout.pos.get(hovered.id)
+                    const p = posOf(hovered.id)
                     const { h } = sizeOf(hovered.kind)
                     const text = hovered.label
                     const w = Math.max(120, text.length * 9 + 28)
@@ -250,10 +294,11 @@ function Map2D({ layout, selectedId, onPick, live }) {
             </svg>
             <div className="monitor-map-tools" role="group" aria-label="Map zoom">
                 <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout))}>Fit</button>
+                {anyMoved ? <button type="button" className="monitor-map-tool" data-map-tool="reset" onClick={resetNodes}>Reset nodes</button> : null}
                 <button type="button" className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
-            <div className="monitor-map-hint">Drag to move · scroll or pinch to zoom · hover to light a node&apos;s links</div>
+            <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
         </div>
     )
 }
@@ -265,26 +310,40 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
     const view = stored || (narrow ? 'list' : '2d')
     const choose = (v) => { setStored(v); writeView(v) }
     const rootRef = useRef(null)
+    const [fullscreen, setFullscreen] = useState(false)
     useFillHeight(rootRef, view)
+    // Esc leaves; the page behind does not scroll while the map covers it
+    useEffect(() => {
+        if (!fullscreen) return undefined
+        const onKey = (ev) => { if (ev.key === 'Escape') setFullscreen(false) }
+        window.addEventListener('keydown', onKey)
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
+    }, [fullscreen])
 
     if (!nodes.length) return <div className="monitor-note">Nothing on the map yet. Machines, tiers and spaces appear when the server reports them.</div>
 
     return (
-        <div className="monitor-map" data-monitor-map-view={view} ref={rootRef}>
+        <div className={`monitor-map${fullscreen ? ' is-fullscreen' : ''}`} data-monitor-map-view={view} ref={rootRef}>
             <div className="monitor-map-views" role="group" aria-label="Map view">
                 {VIEWS.map(([id, label]) => (
                     <button key={id} type="button" data-map-view={id} className={`monitor-map-view${view === id ? ' is-active' : ''}`}
                         aria-pressed={view === id} onClick={() => choose(id)}>{label}</button>
                 ))}
+                {view !== 'list' ? (
+                    <button type="button" className="monitor-map-view monitor-map-fs" data-map-fullscreen={fullscreen ? 'on' : 'off'}
+                        aria-pressed={fullscreen} onClick={() => setFullscreen((f) => !f)}>{fullscreen ? 'Exit full screen' : 'Full screen'}</button>
+                ) : null}
             </div>
             {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={onPick} /> : null}
             {view === '2d' ? (
-                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} /></div>
+                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} /></div>
             ) : null}
             {view === '3d' ? (
                 <div data-monitor-map="3d">
                     <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
-                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} />
+                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} />
                     </Suspense>
                 </div>
             ) : null}

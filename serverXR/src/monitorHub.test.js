@@ -191,6 +191,14 @@ describe('hub snapshot', () => {
     expect(snap.map.edges.filter((e) => e.kind === 'serves').map((e) => e.from)).toEqual(['tier:dev'])
   })
 
+  it('every tailnet device is a map node: online ok, offline off; a reporting host is not doubled', async () => {
+    const machines = { ok: true, rows: [{ name: 'studio-mac', online: true }, { name: 'asuz.tail.ts.net', online: false }, { name: 'aylmo', online: true }, { name: '' }] }
+    const { hub } = build({ store: { getMonitor: async () => ({ host: 'aylmo', panels: { machines } }) } })
+    const snap = await hub.getSnapshot()
+    const ms = snap.map.nodes.filter((n) => n.kind === 'machine')
+    expect(ms.map((n) => [n.id, n.state]).sort()).toEqual([['machine:asuz', 'off'], ['machine:aylmo', 'ok'], ['machine:studio-mac', 'ok']])
+  })
+
   it('a machine seen from a local build is served by no tier', async () => {
     const { hub, reports } = build({ releaseInfo: () => ({}) })
     reports.put({ host: 'aylmo', panels })

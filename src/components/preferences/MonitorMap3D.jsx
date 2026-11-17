@@ -159,7 +159,20 @@ const useVisible = () => {
 
 // Still = zero frames: the canvas draws on a change, a gesture, or a 3 s pulse after a snapshot that changed
 // something (and while a node is hovered). The page's 1 s clock never reaches this tree (memo + stable props).
-function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
+function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false }) {
+    const stageRef = useRef(null)
+    const controlsRef = useRef(null)
+    const fsRef = useRef(fullscreen)
+    useEffect(() => { fsRef.current = fullscreen }, [fullscreen])
+    // The wheel turns the camera's zoom only in full screen or with Ctrl/Cmd (a trackpad pinch sends Ctrl);
+    // otherwise it is left alone and the page scrolls. Set in the capture phase, before the controls read it.
+    useEffect(() => {
+        const el = stageRef.current
+        if (!el) return undefined
+        const onWheel = (ev) => { if (controlsRef.current) controlsRef.current.enableZoom = Boolean(fsRef.current || ev.ctrlKey || ev.metaKey) }
+        el.addEventListener('wheel', onWheel, { capture: true, passive: true })
+        return () => el.removeEventListener('wheel', onWheel, { capture: true })
+    }, [])
     const reduced = useReducedMotion()
     const visible = useVisible()
     const colors = useMemo(() => readColors(), [])
@@ -217,13 +230,13 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
     const degree = (id) => (neighbours.get(id) || new Set()).size
 
     return (
-        <div className="monitor-map-stage monitor-map-stage-3d">
+        <div className="monitor-map-stage monitor-map-stage-3d" ref={stageRef}>
             <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
                 <Rig preset={preset} points={points} fitDist={fitDist} />
                 <Closeness fitDist={fitDist} onClose={setClose} />
                 <Ticker on={animate} />
-                <OrbitControls makeDefault enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
+                <OrbitControls ref={controlsRef} makeDefault enableZoom={fullscreen} enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
                 {rings.map((ring) => <Line key={ring.r} color={colors.line} lineWidth={1} points={ring.pts} />)}
                 <mesh position={HUB}><boxGeometry args={[0.5, 0.2, 0.5]} /><meshBasicMaterial color={colors.cyan} /></mesh>
                 {hubLines.map((h) => <Line key={`hub-${h.id}`} color={colors.line} lineWidth={1} points={h.pts} />)}
@@ -274,7 +287,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick }) {
                 <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setPreset((p) => ({ name: 'fit', n: p.n + 1 }))}>Fit</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="top" onClick={() => setPreset((p) => ({ name: 'top', n: p.n + 1 }))}>Top view</button>
             </div>
-            <div className="monitor-map-hint">Drag to turn · scroll or pinch to zoom · tap a card to open it</div>
+            <div className="monitor-map-hint">Drag to turn · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · tap a card to open it</div>
         </div>
     )
 }
