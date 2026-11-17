@@ -14,7 +14,10 @@ export default function MonitorPrs({ fetcher = getMonitorPrs, refreshMs = REFRES
     const load = useCallback(async () => {
         try {
             const data = await fetcher()
-            if (alive.current) setState({ loading: false, data, error: '' })
+            // a server-side "not ok" after a good list keeps the list and says so, like a failed request
+            if (alive.current) setState((prev) => (data?.ok === false && prev.data?.ok
+                ? { loading: false, data: prev.data, error: data.message || 'GitHub did not answer' }
+                : { loading: false, data, error: '' }))
         } catch (error) {
             if (alive.current) setState((prev) => ({ loading: false, data: prev.data, error: error?.message || 'Could not load pull requests' }))
         }

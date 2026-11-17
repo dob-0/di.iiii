@@ -4,7 +4,8 @@
 const { httpRequest } = require('./httpClient')
 
 // The repository can be overridden (a fork, a rename): MONITOR_PRS_REPO=owner/name.
-const [REPO_OWNER, REPO_NAME] = (process.env.MONITOR_PRS_REPO || 'dob-0/di.iiii').split('/')
+const wantRepo = /^[\w.-]+\/[\w.-]+$/.test(process.env.MONITOR_PRS_REPO || '') ? process.env.MONITOR_PRS_REPO : 'dob-0/di.iiii'
+const [REPO_OWNER, REPO_NAME] = wantRepo.split('/')
 const CACHE_MS = 60 * 1000
 const FAIL_CACHE_MS = 10 * 1000
 const MAX_PRS = 50
@@ -22,7 +23,7 @@ const shape = (pr) => ({
 })
 
 const fetchOpenPrs = async (token) => {
-  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls?state=open&per_page=${MAX_PRS}&sort=updated&direction=desc`
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/pulls?state=open&per_page=${MAX_PRS + 1}&sort=updated&direction=desc`
   const res = await httpRequest(url, {
     method: 'GET',
     headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`, 'User-Agent': 'di.iiii-monitor' }
@@ -33,7 +34,9 @@ const fetchOpenPrs = async (token) => {
     error.status = res.status
     throw error
   }
-  return res.json().map(shape)
+  const body = res.json()
+  if (!Array.isArray(body)) throw new Error('GitHub answered with something that is not a list of pull requests')
+  return body.map(shape)
 }
 
 /**
@@ -51,8 +54,8 @@ function createPrList({ getInstallation, fetchPrs = fetchOpenPrs, now = () => Da
       if (!install) {
         return { ok: false, repo, reason: 'no-app', message: 'The GitHub App is not installed on this repository, or its repositories could not be listed.' }
       }
-      const prs = await fetchPrs(install.token)
-      return { ok: true, repo, prs, truncated: prs.length >= MAX_PRS, fetchedAt: now() }
+      const all = await fetchPrs(install.token)
+      return { ok: true, repo, prs: all.slice(0, MAX_PRS), truncated: all.length > MAX_PRS, fetchedAt: now() }
     } catch (error) {
       const message = error.status === 403
         ? 'GitHub refused (403): the App may lack "Pull requests: read", or a rate limit was hit.'

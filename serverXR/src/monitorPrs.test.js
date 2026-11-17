@@ -46,9 +46,12 @@ describe('monitorPrs', () => {
     assert.equal(shape({ ...pr, html_url: 'javascript:alert(1)' }).url, '')
   })
   it('flags a list cut at the limit', async () => {
-    const many = Array.from({ length: 50 }, (_, i) => shape({ ...pr, number: i }))
+    const many = Array.from({ length: 51 }, (_, i) => shape({ ...pr, number: i }))
     const out = await createPrList({ getInstallation: async () => ({ token: 't' }), fetchPrs: async () => many }).list()
     assert.equal(out.truncated, true)
+    assert.equal(out.prs.length, 50)
+    const exact = await createPrList({ getInstallation: async () => ({ token: 't' }), fetchPrs: async () => many.slice(0, 50) }).list()
+    assert.equal(exact.truncated, false)
   })
   it('never throws on a GitHub outage', async () => {
     const out = await createPrList({ getInstallation: async () => { throw new Error('boom') } }).list()

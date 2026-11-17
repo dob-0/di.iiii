@@ -35,3 +35,13 @@ describe('MonitorPrs after a failed refresh', () => {
         expect(screen.getByRole('link', { name: /#12/ })).toBeTruthy()
     })
 })
+
+describe('MonitorPrs when the server says not ok after a good list', () => {
+    it('keeps the list and says it may be out of date', async () => {
+        const fetcher = vi.fn().mockResolvedValueOnce({ ok: true, prs: [pr] }).mockResolvedValue({ ok: false, message: 'GitHub refused (403)' })
+        render(<MonitorPrs fetcher={fetcher} refreshMs={30} />)
+        expect(await screen.findByRole('link', { name: /#12/ })).toBeTruthy()
+        expect(await screen.findByText(/may be out of date/)).toBeTruthy()
+        expect(screen.getByRole('link', { name: /#12/ })).toBeTruthy()
+    })
+})
