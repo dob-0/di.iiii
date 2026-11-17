@@ -1,4 +1,4 @@
-# feat/monitor-prs-2026-11-17
+## 2026-11-17 — Monitor lists the open pull requests, read-only (N4645)
 
 Owner ask (N4644/N4645, 2026-11-17): see the open pull requests inside the admin Monitor, so merging needs fewer windows. Version 1 is read-only; merging stays his Enter in the merge window with proof.
 
