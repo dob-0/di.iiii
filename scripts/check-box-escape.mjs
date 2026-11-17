@@ -9,7 +9,7 @@
  *   this script               does ANY box leave its PARENT's content box sideways
  *
  * A box is flagged when it is in flow (not fixed/absolute/sticky), its parent does not clip or
- * scroll on purpose (overflow other than visible), and its left or right edge is more than 2 px
+ * scroll on purpose (overflow other than visible), it is not transformed or animated, and its left or right edge is more than 2 px
  * outside the parent's content box. Only the outermost offender of a chain is reported.
  *
  * USAGE (run on the agent screen, never the owner's display):
@@ -58,6 +58,8 @@ function audit(tolerance) {
     if (!parent || parent === document.body || el.closest('svg') || ['SCRIPT', 'STYLE', 'OPTION'].includes(el.tagName)) continue
     const cs = getComputedStyle(el)
     if (['fixed', 'absolute', 'sticky'].includes(cs.position) || cs.display === 'none' || cs.display === 'contents') continue
+    // a transformed or animated box (a pulse, a flip) is drawn bigger or shifted on purpose
+    if (cs.transform !== 'none' || cs.animationName !== 'none') continue
     const ps = getComputedStyle(parent)
     if (ps.display === 'contents' || ps.display === 'inline' || ps.overflowX !== 'visible') continue
     const r = el.getBoundingClientRect()
