@@ -52,7 +52,7 @@ const SECTIONS = [
     { key: 'agents', label: 'Agent sessions', group: 'admin' },
     // The guest book: which apps, crawlers and scripts called, with a block
     // toggle — admin, because blocking changes who gets in.
-    { key: 'visitors', label: 'Apps that visit', group: 'admin' },
+    { key: 'visitors', label: 'Visitors', group: 'admin' },
     { key: 'overview', label: 'Overview', group: 'diagnostics' },
     { key: 'inspect', label: 'This scene', group: 'diagnostics' },
     { key: 'system', label: 'Log and settings', group: 'diagnostics' },
@@ -236,13 +236,18 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     }
 
     const sections = SECTIONS.filter((section) => section.key !== 'monitor' || monitorAllowed).map((section) => {
-        if (section.key === 'agents' || section.key === 'monitor') return { ...section, badge: agentStats?.live || 0 }
-        if (section.key === 'inspect') return { ...section, badge: objects?.length || 0 }
-        if (section.key === 'system') return { ...section, badge: entries.length }
+        // A badge that says 0 is noise: show it only when there is something to count.
+        if (section.key === 'agents' || section.key === 'monitor') return { ...section, badge: agentStats?.live || undefined }
+        if (section.key === 'inspect') return { ...section, badge: objects?.length || undefined }
+        if (section.key === 'system') return { ...section, badge: entries.length || undefined }
         return section
     })
 
     const isAdminSection = ADMIN_SECTION_KEYS.has(activeSection)
+    // Scene counters and the copy-snapshot / XR-debug buttons describe the open scene; the Machines page is not about it.
+    const isSceneSection = activeSection !== 'estate'
+    // Pages that carry their own counts (or none) get no header cards.
+    const hideHeaderCards = isAdminSection ? ['opencall', 'visitors', 'agents', 'monitor'].includes(activeSection) : !isSceneSection
 
     return (
         <div className="preferences-page">
@@ -250,7 +255,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 <div className="preferences-topbar-main">
                     <div className="preferences-eyebrow">Admin</div>
                     <div className="preferences-topbar-title-row">
-                        <h1>{activeSection === 'monitor' ? 'Everything that is going on' : isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
+                        <h1>{activeSection === 'monitor' ? 'Everything that is going on' : activeSection === 'opencall' || activeSection === 'visitors' || activeSection === 'agents' || activeSection === 'estate' ? SECTIONS.find((x) => x.key === activeSection).label : isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
                         <span className="preferences-inline-chip">Space: {sync?.spaceId || 'main'}</span>
                         <button
                             type="button"
@@ -269,7 +274,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 </div>
 
                 <div className="preferences-topbar-metrics">
-                    {isAdminSection ? (
+                    {hideHeaderCards ? null : isAdminSection ? (
                         // exactly three cards — the metrics grid is 3-up, and a
                         // partial row reads as a broken band of empty cells
                         <>
@@ -300,7 +305,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
 
                 <div className="preferences-topbar-actions">
                     <button type="button" className="toggle-button" onClick={() => onNavigateToEditor?.(sync?.spaceId)}>Back to the space</button>
-                    {!isAdminSection && (
+                    {!isAdminSection && isSceneSection && (
                         <>
                             <button type="button" className="toggle-button" onClick={copySnapshot}>Copy Snapshot</button>
                             <button type="button" className="toggle-button" onClick={copyRuntimeLog}>Copy Log</button>

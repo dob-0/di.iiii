@@ -1908,3 +1908,53 @@
     .monitor-live-mark.is-beat, .monitor-live-square, .monitor-event, .monitor-ask.is-sending { animation: none; }
     .monitor-tier, .monitor-count, .monitor-fresh i { transition: none; }
 }
+
+/* ─── Filter row: one line of compact chips, not a 2-column wall of buttons ─── */
+.preferences-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--di-space-1);
+    margin: var(--di-space-2) 0;
+}
+
+.preferences-filter-row .toggle-button {
+    width: auto;
+    min-height: 36px;
+    padding: 0 var(--di-space-3);
+    text-transform: capitalize;
+}
+
+@media (pointer: coarse) {
+    .preferences-filter-row .toggle-button { min-height: 44px; }
+}
+
+/* Phone: the section list is ONE scrolling line, so the work starts on the first screen. */
+@media (max-width: 880px) {
+    .preferences-nav {
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        overflow-x: auto;
+        gap: var(--di-space-1);
+        padding-bottom: var(--di-space-1);
+        scrollbar-width: thin;
+    }
+    .preferences-nav-group-label { display: none; }
+    .preferences-nav-item { flex: none; white-space: nowrap; }
+}
+.preferences-topbar-metrics:empty { display: none; }
+
+/* A value is one token (a date, a count): it never breaks mid-word; the label gives way instead. */
+.preferences-metric-value { white-space: nowrap; flex: none; }
+.preferences-metric-label { min-width: 0; }
+
+/* A long name gives way (ellipsis); the status tag beside it stays inside the row. */
+.preferences-tree-row .preferences-tree-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preferences-tree-row .preferences-tree-tag { flex: none; }
+.preferences-tree, .preferences-tree-group { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.preferences-tree-row { box-sizing: border-box; min-width: 0; }
+
+/* Phone: header counters sit two per row, so the work starts higher on the first screen. */
+@media (max-width: 760px) {
+    .preferences-topbar-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

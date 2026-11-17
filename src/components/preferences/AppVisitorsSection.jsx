@@ -149,7 +149,7 @@ export default function AppVisitorsSection() {
                         A name is what the program says it is and can be faked; the per-address
                         limits are what actually hold. Programs are asked to identify at /for-apps.
                     </div>
-                    <div className="preferences-command-grid">
+                    <div className="preferences-filter-row" role="group" aria-label="Filter the list">
                         <button type="button" className={`toggle-button${filter === '' ? ' active' : ''}`} onClick={() => setFilter('')}>
                             All
                         </button>
