@@ -10,7 +10,8 @@ Cause: (1) a nowrap flex strip with `overflow-x: auto`; (4) the 2D handler alway
 Fix: phone menu is one row with the section name and a tap opens all sections (`SectionNav`); map Full screen button (Esc leaves, page behind locked); 2D nodes drag and are remembered per browser (Reset nodes); the wheel zooms only in full screen or with Ctrl/Cmd (a trackpad pinch sends Ctrl), otherwise the page scrolls; every tailnet device is a map node (online ok, offline off).
 Regression tests: `src/components/preferences/MonitorMapUx.test.jsx` (wheel, full screen, node drag and reset, phone menu), `serverXR/src/monitorHub.test.js` ("every tailnet device is a map node").
 Review round 1: choosing List now leaves full screen (a touch user had no way out); in 3D the plain wheel is stopped before the controls (not by switching zoom off), so a two-finger pinch still zooms. The tailnet-node loop cannot overwrite a reporting host: `node()` ignores an id that exists.
-Not fixed: on a touch screen one finger still turns the 3D scene (use Full screen to get out of the way); saved node positions are not invalidated when the node set changes (Reset nodes puts them back); a tailnet name is cut at its first dot.
+Review round 3: a tailnet name that differs only by letter case no longer makes a second node; a drag keeps saved positions only for nodes still on the map.
+Not fixed: on a touch screen one finger still turns the 3D scene (use Full screen to get out of the way); a saved position can sit on a newly placed node after the device list changes (Reset nodes puts it back); the tailnet loop stops at 60 devices; a tailnet name is cut at its first dot; tailnet-only devices have no lines.
 
 ## Nodes on the bar at space level opened the project list, not your project (2026-11-12, reach batch 2, N3851.19)
 

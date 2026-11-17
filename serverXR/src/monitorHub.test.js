@@ -199,6 +199,13 @@ describe('hub snapshot', () => {
     expect(ms.map((n) => [n.id, n.state]).sort()).toEqual([['machine:asuz', 'off'], ['machine:aylmo', 'ok'], ['machine:studio-mac', 'ok']])
   })
 
+  it('a tailnet name that differs only by letter case is the same device', async () => {
+    const machines = { ok: true, rows: [{ name: 'AYLMO.tail.ts.net', online: true }, { name: 'Pixel', online: true }] }
+    const { hub } = build({ store: { getMonitor: async () => ({ host: 'aylmo', panels: { machines } }) } })
+    const snap = await hub.getSnapshot()
+    expect(snap.map.nodes.filter((n) => n.kind === 'machine').map((n) => n.id).sort()).toEqual(['machine:Pixel', 'machine:aylmo'])
+  })
+
   it('a machine seen from a local build is served by no tier', async () => {
     const { hub, reports } = build({ releaseInfo: () => ({}) })
     reports.put({ host: 'aylmo', panels })

@@ -68,6 +68,7 @@ describe('map: full screen does not strand the List view', () => {
 
 describe('map: nodes can be moved in 2D', () => {
     it('dragging a node moves it, is not a pick, is remembered, and Reset puts it back', () => {
+        window.localStorage.setItem('di.monitor.map.pos', JSON.stringify({ 'machine:gone': { x: 1, y: 1 } }))
         const onPick = vi.fn()
         const { container } = render(<MonitorMap map={map} selectedId={null} onPick={onPick} narrow={false} />)
         const node = () => container.querySelector('[data-map-node="machine:studio-mac"]')
@@ -75,6 +76,7 @@ describe('map: nodes can be moved in 2D', () => {
         fireEvent.pointerDown(node(), { pointerId: 1, button: 0, clientX: 100, clientY: 100 })
         fireEvent.pointerMove(node(), { pointerId: 1, clientX: 160, clientY: 140 })
         fireEvent.pointerUp(node(), { pointerId: 1, clientX: 160, clientY: 140 })
+        expect(JSON.parse(window.localStorage.getItem('di.monitor.map.pos'))['machine:gone']).toBeUndefined()
         fireEvent.click(node())
         expect(node().getAttribute('transform')).not.toBe(before)
         expect(onPick).not.toHaveBeenCalled()

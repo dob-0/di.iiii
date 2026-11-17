@@ -211,7 +211,13 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
         const d = nodeDrag.current
         if (!d) return
         ev.stopPropagation()
-        if (d.moved) writePos(movedRef.current)
+        if (d.moved) {
+            // keep only nodes that are still on the map, so a device that left does not leave its position behind
+            const kept = Object.fromEntries(Object.entries(movedRef.current).filter(([id]) => layout.pos.has(id)))
+            movedRef.current = kept
+            setMoved(kept)
+            writePos(kept)
+        }
         setTimeout(() => { nodeDrag.current = null }, 0)
     }
     const resetNodes = () => { movedRef.current = {}; setMoved({}); writePos({}) }
