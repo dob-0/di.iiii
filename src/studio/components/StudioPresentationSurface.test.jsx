@@ -83,6 +83,24 @@ describe('StudioPresentationSurface', () => {
         expect(viewportPropsSpy).not.toHaveBeenCalled()
     })
 
+    it('delegates Web MIDI to the page only when the owner opts into deviceAccess', () => {
+        const props = {
+            selectedEntityId: null, onSelectEntity: vi.fn(), cursors: {}, onCursorMove: vi.fn(), onCursorLeave: vi.fn(),
+            cameraView: { position: [0, 2, 5], target: [0, 0, 0] }, controlsRef: { current: null }, xrStore: {}, onCameraChange: vi.fn()
+        }
+        const off = render(<StudioPresentationSurface {...props} document={buildDocument({ mode: 'code', codeHtml: '<main>a</main>' })} />)
+        const offFrame = off.container.querySelector('iframe')
+        expect(offFrame?.getAttribute('allow')).toContain('camera')
+        expect(offFrame?.getAttribute('allow')).not.toContain('midi')
+        expect(offFrame?.getAttribute('sandbox')).not.toContain('allow-same-origin')
+        off.unmount()
+        const on = render(<StudioPresentationSurface {...props} document={buildDocument({ mode: 'code', codeHtml: '<main>a</main>', deviceAccess: true })} />)
+        const onFrame = on.container.querySelector('iframe')
+        expect(onFrame?.getAttribute('allow')).toContain('midi')
+        expect(onFrame?.getAttribute('sandbox')).toContain('allow-same-origin')
+        on.unmount()
+    })
+
     // Owner 2026-10-28: a project that is a page opened the empty 3D grid because the stored mode defaults to 'scene'.
     it('shows the page, not the empty 3D grid, for a project that holds code files and no scene (stored mode still the default)', () => {
         const props = {

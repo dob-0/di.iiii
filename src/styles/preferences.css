@@ -1612,6 +1612,15 @@
     .monitor-map-view { flex: 1; }
     .monitor-map-hint { display: none; }
 }
+/* Map full screen: covers the page, the stage takes everything below the view bar */
+.monitor-map-fs { margin-left: var(--di-space-2); }
+.monitor-map.is-fullscreen {
+    position: fixed; inset: 0; z-index: 1200; background: var(--di-black);
+    padding: var(--di-space-3); box-sizing: border-box; --monitor-map-h: calc(100vh - 7.5rem);
+}
+.monitor-map.is-fullscreen .monitor-map-views { align-self: flex-start; }
+.monitor-map.is-fullscreen .monitor-map-stage { height: var(--monitor-map-h); flex: 1; }
+.monitor-map.is-fullscreen .monitor-map-hint { display: block; }
 /* Workspace */
 .monitor-ask-form { display: flex; flex-direction: column; gap: var(--di-space-2); }
 .monitor-ask-text { width: 100%; box-sizing: border-box; resize: vertical; }
@@ -1928,19 +1937,19 @@
     .preferences-filter-row .toggle-button { min-height: 44px; }
 }
 
-/* Phone: the section list is ONE scrolling line, so the work starts on the first screen. */
+/* Phone: one row names the section you are in; a tap opens all of them as a two-column list, a pick closes it.
+   Nothing scrolls sideways and the work starts on the first screen. */
+.preferences-nav-toggle { display: none; }
 @media (max-width: 880px) {
-    .preferences-nav {
-        display: flex;
-        flex-direction: row;
-        align-items: stretch;
-        overflow-x: auto;
-        gap: var(--di-space-1);
-        padding-bottom: var(--di-space-1);
-        scrollbar-width: thin;
+    .preferences-nav-toggle {
+        display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2);
+        box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 var(--di-space-3);
+        background: var(--di-surface); border: 1px solid var(--pref-border); color: inherit;
+        font: inherit; text-align: left; cursor: pointer;
     }
-    .preferences-nav-group-label { display: none; }
-    .preferences-nav-item { flex: none; white-space: nowrap; }
+    .preferences-nav-toggle-label { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .preferences-nav-toggle-hint { color: var(--ui-text-muted); font-size: var(--di-text-3); flex: none; }
+    .preferences-nav[data-open='false'] { display: none; }
 }
 .preferences-topbar-metrics:empty { display: none; }
 

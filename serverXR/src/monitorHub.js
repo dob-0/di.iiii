@@ -12,6 +12,7 @@
 const os = require('node:os')
 const crypto = require('node:crypto')
 const { execFile } = require('node:child_process')
+const PARTS = require('./parts.json').parts
 
 const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
@@ -338,6 +339,14 @@ function createHub({
     const selfHost = String(base.host || 'this machine').split('.')[0]
     node(`machine:${selfHost}`, 'machine', selfHost, panelsState(base.panels))
     for (const r of reportRows) node(`machine:${r.host}`, 'machine', r.host, r.stale ? 'off' : panelsState(r.panels))
+    // every device on the tailnet is on the map, not only the ones that report (a laptop that never ran
+    // `di monitor report` would otherwise be missing): online = ok, offline = off. A reporting host keeps its own node.
+    for (const m of (base.panels?.machines?.ok ? base.panels.machines.rows || [] : []).slice(0, 60)) {
+      const name = String(m?.name || '').split('.')[0].trim()
+      // the same device under another letter case is the one node already there, not a second one
+      const known = [...nodes.keys()].some((k) => k.startsWith('machine:') && k.slice(8).toLowerCase() === name.toLowerCase())
+      if (name && !known) node(`machine:${name}`, 'machine', name, m.online ? 'ok' : 'off')
+    }
     node('repo:di.iiii', 'repo', 'di.iiii', 'ok')
 
     for (const row of tierBlock.rows) {
@@ -380,6 +389,31 @@ function createHub({
     return { nodes: [...nodes.values()], edges }
   }
 
+  // One row per part (serverXR/src/parts.json): live state from the rows the Connected panel already read
+  // (no extra probe per viewer) and the version stamped at pack time. A part with no probe says so; it is
+  // never shown as healthy. `packedAt` rides with every version: the stamp is the PACK, not the running code.
+  const partsBlock = (base) => {
+    const rel = releaseInfo() || {}
+    const stamps = new Map((Array.isArray(rel.parts) ? rel.parts : []).map((x) => [x.id, x]))
+    const connectedRows = base.panels?.connected?.ok ? (base.panels.connected.rows || []) : null
+    const rows = PARTS.map((part) => {
+      let state = 'unprobed'
+      let detail = 'no live probe'
+      if (part.probe) {
+        const wanted = new Set(part.rows || [part.id])
+        const mine = connectedRows ? connectedRows.filter((r) => wanted.has(r.id)) : []
+        // a Connected panel that failed or lacks the row is UNKNOWN, not a part that is down
+        if (!mine.length) { state = 'unknown'; detail = 'not read' } else {
+          state = mine.some((r) => r.state === 'off') ? 'off' : mine.some((r) => r.state === 'live') ? 'live' : mine.some((r) => r.state === 'ok') ? 'ok' : 'idle'
+          detail = mine.map((r) => r.detail).filter(Boolean).join(' · ')
+        }
+      }
+      const stamp = stamps.get(part.id)
+      return { id: part.id, name: part.name, state, detail, commit: stamp?.commit || null, date: stamp?.date || null }
+    })
+    return { rows, version: rel.version || null, packedAt: rel.packedAt || null }
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   async function getSnapshot({ selfBase = null } = {}) {
     const base = await store.getMonitor({ selfBase })
@@ -389,6 +423,7 @@ function createHub({
       ...base,
       reports: reportRows,
       tiers: tierBlock,
+      parts: partsBlock(base),
       spaces: spaceBlock,
       asks: asksBlock(),
       map: buildMap({ base, reportRows, tierBlock, spaceBlock })

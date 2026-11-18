@@ -19,7 +19,9 @@
  * and every link those pages carry into the same set, once each (breadth first). The rows
  * are READ FROM THE PAGES, never written down here: a link the app draws is a link this checks.
  *
- * THE BROWSER is the owner's own: the Flatpak Chromium (org.chromium.Chromium) with its
+ * THE BROWSER is the owner's own: the Flatpak browser of the one di browser setting
+ * (scripts/lib/browserApp.mjs: org.chromium.Chromium unless DI_BROWSER_APP or
+ * ~/.config/di/browser.conf names another) with its
  * default flags, a throwaway profile (--user-data-dir inside the Flatpak's own cache, removed
  * after), driven over CDP (Playwright connectOverCDP). It is killed at the end. 3D pages are
  * given until a canvas appears plus a few seconds — never "network idle", which a live room
@@ -30,11 +32,11 @@
  */
 import { spawn, execSync } from 'node:child_process'
 import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, die, say } from '../place/common.mjs'
 import { isMainModule } from '../lib/isMainModule.mjs'
+import { rigLinksBrowserCommand } from '../lib/browserApp.mjs'
 
 const args = parseArgs()
 
@@ -83,20 +85,20 @@ const waitCool = async (max) => {
 }
 
 const launchFlatpak = async (port) => {
-    const profile = path.join(os.homedir(), '.var/app/org.chromium.Chromium/cache', `rig-links-${process.pid}`)
-    fs.rmSync(profile, { recursive: true, force: true })
-    fs.mkdirSync(profile, { recursive: true })
-    const child = spawn('flatpak', ['run', 'org.chromium.Chromium', `--user-data-dir=${profile}`, `--remote-debugging-port=${port}`,
-        '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore', detached: true })
+    const plan = rigLinksBrowserCommand(port, process.pid)
+    fs.rmSync(plan.profile, { recursive: true, force: true })
+    fs.mkdirSync(plan.profile, { recursive: true })
+    const { profile } = plan
+    const child = spawn(plan.command, plan.args, { stdio: 'ignore', detached: true })
     for (let i = 0; i < 60; i += 1) {
         try {
             const r = await fetch(`http://127.0.0.1:${port}/json/version`)
-            if (r.ok) return { child, profile, version: (await r.json()).Browser }
+            if (r.ok) return { child, profile, version: (await r.json()).Browser, app: plan.app }
         } catch { /* not up yet */ }
         await new Promise((r) => setTimeout(r, 500))
     }
     try { process.kill(-child.pid) } catch { /* gone */ }
-    die(`the Flatpak Chromium did not open its debugging port ${port}`)
+    die(`the Flatpak browser ${plan.app} did not open its debugging port ${port}`)
 }
 
 const main = async () => {
@@ -149,8 +151,8 @@ const main = async () => {
 
     const { chromium } = await import('playwright')
     await waitCool(maxC)
-    const { child, profile, version } = await launchFlatpak(port)
-    say(`browser: ${version} (Flatpak org.chromium.Chromium, default flags, throwaway profile)`)
+    const { child, profile, version, app } = await launchFlatpak(port)
+    say(`browser: ${version} (Flatpak ${app}, default flags, throwaway profile)`)
     let browser
     const records = []
     try {
