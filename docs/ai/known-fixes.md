@@ -3,6 +3,12 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor shows every chat (2026-11-19, N5508)
+
+Symptom: chats that wait for the owner were only text boxes low on the Board tab (one scrolled inside a 710 px window), not in the "things need you" strip.
+Fix: a `chats` panel through the report door (`serverXR/src/monitorChats.js`, `chatsBlock`), a `chats` block in GET /api/monitor, rows for asking chats in the strip (`MonitorOverview.heroState`) and a Chats lane of cards on the Work tab (`MonitorChats.jsx`). No list, or one older than 120 s, is "no chat data" / "old", never "all well". The owner's own message text is dropped on the server before it is stored.
+Regression tests: `serverXR/src/monitorChats.test.js`, `serverXR/src/monitorHub.test.js` (chats), `src/components/preferences/MonitorChats.test.jsx`.
+
 ## Monitor map and phone admin menu: five owner-reported defects (2026-11-17, N4679, N4680)
 
 Symptoms (owner screenshots): (1) the admin section list on a phone was one sideways-scrolling line, so most sections were off screen; (2) the map could not go full screen; (3) 2D nodes could be looked at but not moved; (4) the mouse wheel over the map zoomed the map and the page could not scroll past it; (5) the Arch Mac and every other tailnet device were missing from the map.

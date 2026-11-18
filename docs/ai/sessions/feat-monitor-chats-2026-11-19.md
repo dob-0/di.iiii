@@ -1,0 +1,8 @@
+## 2026-11-19 — Monitor shows every chat (owner N5508: "show it in di admin monitoring that i can track everything from here")
+
+- Spec: (1) a chat that asks the owner is a row in the "things need you" strip (with a count); (2) the Work tab gets a Chats lane, one card per chat, sorted asks you > working > idle, with filter chips; (3) the list arrives through the existing feed door (the machine report, like Parts in #1303), no program name in the page; plain words: chat, asks you, working, idle.
+- Door: `panels.chats` of a report (`{ ok, source }`). A machine's own `~/.di/monitor.json` feed `{ panel: "chats", kind: "command" }` prints the chat list as JSON; `monitorStore` reads it, `di monitor report` sends it. Nothing new runs from a request.
+- Server: `serverXR/src/monitorChats.js`. `sanitizeChats` keeps title, group, status, last line, asks, idle minutes and drops the owner's message text and paths before anything is stored. `chatsBlock(inputs, { now })` returns `{ state live|stale|failed|none, counts, rows (max 60), truncated, heardSecondsAgo }`. Stale = not heard for 120 s; none/failed/stale are never drawn as "all well".
+- Hub: snapshot gains `chats`; the reports list leaves `chats` out of each host's panels (one copy only); `heardSecondsAgo` is ignored by the stream fingerprint so it does not push every tick.
+- UI: `MonitorChats.jsx` (cards, chips, notes, `chatIssues` for the strip), Chats lane first on the Work tab, `heroState` counts rows that stand for several things. The Board tab's three text boxes are untouched.
+- Not done: a card does not open a detail drawer; the "/" filter does not cover chats; nobody has installed the feed in `~/.di/monitor.json` on a machine yet (the owner's file was not edited).

@@ -417,7 +417,7 @@ export default function MonitorSection({ onStats }) {
                     </div>
                     {snap && !paused && !error && hero.issues.length > 1 ? (
                         <ul className="monitor-hero-issues">
-                            {hero.issues.slice(1).map((i) => <li key={i.text} className={`tone-${i.tone}`}>{i.text}</li>)}
+                            {hero.issues.slice(1).map((i) => <li key={i.key || i.text} className={`tone-${i.tone}`}>{i.text}</li>)}
                         </ul>
                     ) : null}
                 </section>
@@ -448,8 +448,8 @@ export default function MonitorSection({ onStats }) {
                         </ModuleSection>
                     ) : null}
                     {tab === 'workspace' ? (
-                        <ModuleSection title="Work" subtitle="Asks, what each agent is doing, and machine reports">
-                            <MonitorWorkspace asks={snap?.asks} agents={panels.agents} reports={snap?.reports}
+                        <ModuleSection title="Work" subtitle="Every chat, your asks, what each agent is doing, and machine reports">
+                            <MonitorWorkspace chats={snap?.chats} asks={snap?.asks} agents={panels.agents} reports={snap?.reports}
                                 onPick={(kind, row) => setSelected({ kind, id: rowId(row) })} />
                         </ModuleSection>
                     ) : null}

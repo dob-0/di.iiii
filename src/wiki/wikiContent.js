@@ -1284,6 +1284,7 @@ export const WIKI_ARTICLES = [
             'The page opens with one status line in the state colour: "All well", or how many things need you and the worst one ("prod is 1274 behind dev"). Next to it a square blinks on every update and "heard 2 s ago" ticks every second. Tier tiles show the commit big, how far behind dev, and a small line of the last 30 response times. Count tiles show each number with one square per machine, agent or pull request, so 4 of 11 is seen, not read; click one to jump to its panel. A "What changed" column lists the last 50 changes between updates, newest on top (an agent going busy to idle, a tier that stopped answering, a new ask). Selecting anything opens a drawer on the right (a sheet from the bottom on a phone). The Work view has a big ask bar: Enter sends, Shift+Enter is a new line.',
             'Full screen turns the Monitor into its own page over the admin frame and is remembered per browser; /admin#monitor-full opens it that way. Keys: 1 2 3 switch Board, Map and Work; / filters; f toggles full screen; Esc closes the drawer, then leaves full screen; ? shows the key card. Keys are ignored while you type in a field.',
             'The Work view also lists the open pull requests of the di.iiii repository (number, title, branch, who, how long ago), read-only from GitHub through the server\u2019s GitHub App and refreshed every minute. It is only a list: merging stays your own Enter in the merge window, with its proof. If the App cannot read pull requests, the list says so instead of staying empty.',
+            'The Work view starts with Chats: one card per chat, the ones that ask you first, then the ones working, then the idle ones, each with its last line and how long it has been idle. Chips filter by group. A chat that asks you is also a row in the status line on top. If no machine sends its chats, or the last list is old, the page says so; it never shows "nothing asks you" without data. The chat list comes from a machine\u2019s report (a feed with panel "chats" in ~/.di/monitor.json, sent by `di monitor report`); your own messages are never copied into it.',
             { list: [
                 'Each block is collected on its own: a missing tool greys that block and says why, the rest keep moving.',
                 'Your feeds live in ~/.di/monitor.json: each one has a panel ("tasks" or "shows") and a command, a file or a URL to read. Only that file decides what runs, never a request.',
@@ -1291,7 +1292,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'monitor', 'machines', 'network', 'agents', 'operator'],
-        updated: '2026-11-17'
+        updated: '2026-11-19'
     },
     {
         id: 'keyboard-shortcuts',
