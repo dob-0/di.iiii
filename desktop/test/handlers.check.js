@@ -298,3 +298,22 @@ test('offline page: served through the app scheme (not file://), only its two fi
     assert.equal(serveOffline('not a url', read).status, 400)
     for (const name of ['offline.html', 'offline.js']) assert.ok(fs.existsSync(path.join(__dirname, '../src', name)), name)
 })
+
+test('media dialog: the detail names the real menu place on each system', () => {
+    const { mediaDialogDetail, buildMenuTemplate } = require('../src/menu')
+    for (const isMac of [true, false]) {
+        assert.equal(mediaDialogDetail(isMac), 'Your answer is remembered for this address. To be asked again: File > Forget camera and microphone answers.', `isMac ${isMac}`)
+        const file = buildMenuTemplate({ isMac }).find((top) => top.label === 'File')
+        assert.ok(file.submenu.some((item) => item.label === 'Forget camera and microphone answers'), `the item is in File, isMac ${isMac}`)
+    }
+    const src = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8')
+    assert.ok(src.includes('detail: mediaDialogDetail('), 'main.js uses it')
+})
+
+test('offline page: brand tokens, display weight 700, no raw colours, no font fetch', () => {
+    const html = fs.readFileSync(path.join(__dirname, '../src/offline.html'), 'utf8')
+    const rules = html.slice(html.indexOf('* { border-radius'), html.indexOf('</style>'))
+    assert.match(rules, /h1 \{[^}]*font-weight: 700/)
+    assert.equal(/#[0-9a-fA-F]{3,6}\b|rgba?\(/.test(rules), false, 'no raw colour outside the :root tokens')
+    assert.equal(/@font-face|@import|url\(|https?:\/\//.test(html), false, 'no font or network fetch')
+})

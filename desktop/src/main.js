@@ -5,7 +5,7 @@ const fs = require('node:fs')
 const { app, BrowserWindow, Menu, session, shell, desktopCapturer, dialog, protocol } = require('electron')
 const { resolveTarget, resolveCdpPort, refuseCdp } = require('./policy')
 const { createPermissionHandlers, createDisplayMediaHandler, attachNavigationGuards } = require('./handlers')
-const { buildMenuTemplate } = require('./menu')
+const { buildMenuTemplate, mediaDialogDetail } = require('./menu')
 const { createMediaStore } = require('./mediaStore')
 const { SCHEME: OFFLINE_SCHEME, offlineUrl, serveOffline } = require('./offlineProtocol')
 
@@ -95,7 +95,7 @@ if (cdpRefusal) {
                 type: 'question',
                 title: 'di.iiii',
                 message: `${origin} wants to use your ${kinds.join(' and ')}.`,
-                detail: 'Your answer is remembered for this address. File, Forget camera and microphone answers asks again.',
+                detail: mediaDialogDetail(process.platform === 'darwin'),
                 buttons: ['Allow', 'Do not allow'],
                 cancelId: 1,
                 defaultId: 1
