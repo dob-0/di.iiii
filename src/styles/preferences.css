@@ -2005,6 +2005,28 @@ a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow
     .preferences-manage-world-body.has-detail { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Mixed view: 3D room large on the left, 2D map top right, live list under it; the detail is a full-width strip below.
+   Under 1100 px the panes stack (3D, 2D, list) and the detail follows the tapped node. */
+.preferences-manage-world-body.is-mixed, .preferences-manage-world-body.is-mixed.has-detail { grid-template-columns: minmax(0, 1fr); }
+.spaces-mixed {
+    --mixed-h: clamp(34rem, calc(100vh - 13rem), 54rem);
+    display: grid; gap: var(--di-space-2); height: var(--mixed-h); min-width: 0;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1.15fr) minmax(0, 0.85fr);
+}
+.spaces-mixed-pane { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--di-black); border: 1px solid var(--pref-border); overflow: hidden; }
+.spaces-mixed-pane.is-3d { grid-row: 1 / span 2; }
+.spaces-mixed-pane > div { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.spaces-mixed .monitor-map-stage { height: auto; flex: 1; min-height: 0; border: 0; }
+.spaces-mixed-pane.is-list { overflow: auto; padding: var(--di-space-2); }
+.spaces-mixed-pane.is-list .monitor-map-list { gap: var(--di-space-2); }
+.spaces-mixed-pane .monitor-map-hint { display: none; }
+@media (max-width: 1099px) {
+    .spaces-mixed { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+    .spaces-mixed-pane.is-3d { grid-row: auto; height: clamp(22rem, 60vh, 32rem); }
+    .spaces-mixed-pane.is-2d { height: clamp(20rem, 50vh, 28rem); }
+    .spaces-mixed-pane.is-list { max-height: 24rem; }
+}
+
 /* Scene header: six counters in ONE row on a wide screen (they made two half-empty rows) */
 @media (min-width: 1280px) {
     .preferences-topbar-metrics:has(> :nth-child(6)) { grid-template-columns: repeat(6, minmax(0, 1fr)); }

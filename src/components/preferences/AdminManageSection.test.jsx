@@ -60,6 +60,8 @@ import { navigateToStudioPath } from '../../studio/utils/studioRouting.js'
 describe('AdminManageSection', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        // the tree tests run in the List tab; the default tab (Mixed) is covered by SpacesMixed.test.jsx
+        window.localStorage.setItem('di.admin.spaces.view', 'list')
         listServerSpaces.mockResolvedValue([
             { id: 'main', label: 'Main Space', isPublic: true, isPermanent: true },
             { id: 'demo', label: 'Demo', isPublic: false, isPermanent: false }
@@ -67,6 +69,16 @@ describe('AdminManageSection', () => {
         getServerConfig.mockResolvedValue({ defaultSpaceId: 'main', globalSpaceId: 'main' })
         listUsers.mockResolvedValue([])
         listProjects.mockResolvedValue([{ id: 'p1', title: 'First Project', spaceId: 'demo' }])
+    })
+
+    it('tabs read Mixed | List | 2D | 3D and Mixed is the default when nothing is stored', async () => {
+        window.localStorage.removeItem('di.admin.spaces.view')
+        const { container } = render(<AdminManageSection />)
+        await screen.findByText('Spaces world')
+        const tabs = [...container.querySelectorAll('[data-world-view]')].map((b) => b.getAttribute('data-world-view'))
+        expect(tabs).toEqual(['mixed', 'list', '2d', '3d'])
+        expect(container.querySelector('[data-world-view="mixed"]').getAttribute('aria-pressed')).toBe('true')
+        expect(container.querySelector('[data-spaces-mixed]')).toBeTruthy()
     })
 
     it('renders the spaces tree and root overview', async () => {

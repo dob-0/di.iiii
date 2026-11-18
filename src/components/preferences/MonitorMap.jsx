@@ -70,7 +70,7 @@ const clip = (text, n) => (text.length > n ? `${text.slice(0, n - 1)}…` : text
 const toneOf = (state) => STATE_TONE[state] || 'muted'
 const edgeKey = (e, i) => `${e.from}>${e.to}>${e.kind}>${i}`
 
-function MapList({ nodes, selectedId, onPick }) {
+export function MapList({ nodes, selectedId, onPick }) {
     return (
         <div className="monitor-map-list" data-monitor-map="list">
             {KIND_ORDER.map((kind) => {
@@ -110,7 +110,7 @@ const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.string
 /** The wheel zooms the map only when you asked for it: full screen, or Ctrl/Cmd (a trackpad pinch sends Ctrl). Otherwise the page scrolls. */
 export const wheelZooms = (ev, fullscreen) => Boolean(fullscreen || ev.ctrlKey || ev.metaKey)
 
-function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
+export function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
     const svgRef = useRef(null)
     const [vb, setVb] = useState(() => fitBox(layout))
     const [hover, setHover] = useState(null)

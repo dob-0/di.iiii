@@ -28,16 +28,17 @@ import {
 import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 import LoadingScreen from '../LoadingScreen.jsx'
 import MonitorMap, { useNarrow } from './MonitorMap.jsx'
+import SpacesMixed from './SpacesMixed.jsx'
 import { buildSpacesWorld, personNodeId, spaceNodeId } from './spacesWorld.js'
 import { useSpaceDelete } from '../../studio/components/SpaceTrash.jsx'
 import { useAsk } from '../ui/useAsk.js'
 
 // List | 2D | 3D: the same spaces and people three ways; the choice is kept per browser.
 const WORLD_KEY = 'di.admin.spaces.view'
-const WORLD_VIEWS = [['list', 'List'], ['2d', '2D'], ['3d', '3D']]
+const WORLD_VIEWS = [['mixed', 'Mixed'], ['list', 'List'], ['2d', '2D'], ['3d', '3D']]
 const LIVE_MS = 10000
 const readWorldView = () => {
-    try { const v = window.localStorage.getItem(WORLD_KEY); return WORLD_VIEWS.some(([id]) => id === v) ? v : 'list' } catch { return 'list' }
+    try { const v = window.localStorage.getItem(WORLD_KEY); return WORLD_VIEWS.some(([id]) => id === v) ? v : 'mixed' } catch { return 'mixed' }
 }
 const clockOf = (ms) => new Date(ms).toTimeString().slice(0, 8)
 
@@ -285,9 +286,15 @@ export default function AdminManageSection({ onStats }) {
         else if (node.id.startsWith('person:')) setSelection({ type: 'person', userId: node.id.slice('person:'.length) })
     }
     const selectedNodeId = selection.type === 'space' ? spaceNodeId(selection.spaceId) : selection.type === 'person' ? personNodeId(selection.userId) : null
-    const stage = worldView === 'list' ? null : (
+    const worldSubtitle = `${spaces.length} ${spaces.length === 1 ? 'space' : 'spaces'}, ${Array.isArray(users) ? users.length : 0} people · a line is a granted space · select a node for its details`
+    const stage = worldView === 'list' ? null : worldView === 'mixed' ? (
+        <ModuleSection className="monitor-map-section" title="Spaces world" subtitle={worldSubtitle}>
+            {world.nodes.length ? <SpacesMixed world={world} selectedId={selectedNodeId} onPick={pickNode} live />
+                : <div className="monitor-note">No spaces yet. Create one in the List view and it appears here.</div>}
+        </ModuleSection>
+    ) : (
         <ModuleSection className="monitor-map-section" title="Spaces world"
-            subtitle={`${spaces.length} ${spaces.length === 1 ? 'space' : 'spaces'}, ${Array.isArray(users) ? users.length : 0} people · a line is a granted space · select a node for its details`}>
+            subtitle={worldSubtitle}>
             <MonitorMap map={world} selectedId={selectedNodeId} narrow={narrow} view={worldView} live onPick={pickNode}
                 onOpen={pickNode} empty="No spaces yet. Create one in the List view and it appears here." />
         </ModuleSection>
@@ -381,7 +388,7 @@ export default function AdminManageSection({ onStats }) {
             <div className="preferences-manage-world">
                 {toolbar}
                 {error && <div className="preferences-empty" role="status">{error}</div>}
-                <div className={`preferences-manage-world-body${selection.type === 'root' ? '' : ' has-detail'}`}>
+                <div className={`preferences-manage-world-body${worldView === 'mixed' ? ' is-mixed' : ''}${selection.type === 'root' ? '' : ' has-detail'}`}>
                     {stage}
                     <div className="preferences-manage-world-detail" ref={detailRef}>
                         {selection.type === 'root' ? <div className="preferences-empty">Select a space or a person on the map to see and change it here.</div> : detailPane}
