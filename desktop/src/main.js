@@ -3,7 +3,7 @@
 const path = require('node:path')
 const fs = require('node:fs')
 const { app, BrowserWindow, Menu, session, shell, desktopCapturer, dialog, protocol } = require('electron')
-const { resolveTarget, resolveCdpPort } = require('./policy')
+const { resolveTarget, resolveCdpPort, refuseCdp } = require('./policy')
 const { createPermissionHandlers, createDisplayMediaHandler, attachNavigationGuards } = require('./handlers')
 const { buildMenuTemplate } = require('./menu')
 const { createMediaStore } = require('./mediaStore')
@@ -29,7 +29,11 @@ const openExternal = (url) => {
     shell.openExternal(url)
 }
 
-if (target.error) {
+const cdpRefusal = refuseCdp({ argv: process.argv, env: process.env, isPackaged: app.isPackaged })
+
+if (cdpRefusal) {
+    fail(cdpRefusal)
+} else if (target.error) {
     fail(target.error)
 } else if (cdp && cdp.error) {
     fail(cdp.error)

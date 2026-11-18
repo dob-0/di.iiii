@@ -74,3 +74,17 @@ test('DevTools port: off by default, valid ports only', () => {
     assert.deepEqual(p.resolveCdpPort({ DI_DESKTOP_CDP: '9333' }), { port: 9333 })
     for (const bad of ['80', '70000', 'abc', '9333.5']) assert.ok(p.resolveCdpPort({ DI_DESKTOP_CDP: bad }).error, bad)
 })
+
+test('DevTools port guard: packaged macOS and Windows refuse it, Linux keeps it, the force switch tightens', () => {
+    const asks = [{ env: { DI_DESKTOP_CDP: '9333' } }, { argv: ['--remote-debugging-port=9333'] }, { argv: ['--remote-debugging-pipe'] }]
+    for (const ask of asks) {
+        for (const platform of ['darwin', 'win32']) {
+            assert.match(p.refuseCdp({ ...ask, isPackaged: true, platform }), /does not open a debugging port/, `${platform} ${JSON.stringify(ask)}`)
+            assert.equal(p.refuseCdp({ ...ask, isPackaged: false, platform }), null, 'unpackaged dev run keeps it')
+        }
+        assert.equal(p.refuseCdp({ ...ask, isPackaged: true, platform: 'linux' }), null, 'Linux (CI) keeps its port')
+        assert.match(p.refuseCdp({ ...ask, isPackaged: true, platform: 'linux', env: { ...ask.env, DI_DESKTOP_REFUSE_CDP: '1' } }), /debugging port/, 'forced on')
+    }
+    assert.equal(p.refuseCdp({ isPackaged: true, platform: 'darwin' }), null, 'no port asked, nothing to refuse')
+    assert.equal(p.refuseCdp({ isPackaged: true, platform: 'darwin', env: { DI_DESKTOP_CDP: '' } }), null)
+})

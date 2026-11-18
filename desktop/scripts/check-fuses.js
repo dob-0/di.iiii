@@ -19,10 +19,24 @@ const NAMES = Object.freeze({
     grantFileProtocolExtraPrivileges: 'GrantFileProtocolExtraPrivileges'
 })
 
+// Fuses this script's @electron/fuses release cannot name print as "undefined".
+// Each must be listed here with its index in the fuse wire and the state we
+// want; an unlisted one, or a listed one that differs, is a mismatch. Index 8
+// is the first fuse after GrantFileProtocolExtraPrivileges in Electron 45
+// (read from the built app: "undefined is Enabled"; its name is unverified).
+const UNNAMED_WANTED = Object.freeze({ 8: 'Enabled' })
+
 // `out` is the text of `fuses read`, `config` is build.electronFuses.
 // Returns one message per problem; an empty list is a pass.
-const compare = (out, config, app = 'app') => {
+const compare = (out, config, app = 'app', unnamedWanted = UNNAMED_WANTED) => {
     const problems = []
+    const lines = String(out).split('\n').map((l) => l.trim()).filter((l) => / is (Enabled|Disabled)$/.test(l))
+    lines.forEach((line, index) => {
+        if (!line.startsWith('undefined is ')) return
+        const got = line.split(' is ')[1]
+        if (!(index in unnamedWanted)) problems.push(`FUSE MISMATCH in ${app}: fuse ${index} has no name and is not listed (it is ${got})`)
+        else if (unnamedWanted[index] !== got) problems.push(`FUSE MISMATCH in ${app}: fuse ${index} is ${got}, expected ${unnamedWanted[index]}`)
+    })
     for (const [key, name] of Object.entries(NAMES)) {
         const set = config ? config[key] : undefined
         if (typeof set !== 'boolean') {
@@ -59,4 +73,4 @@ const main = () => {
 
 if (require.main === module) main()
 
-module.exports = { NAMES, compare }
+module.exports = { NAMES, UNNAMED_WANTED, compare }
