@@ -112,7 +112,10 @@ const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.string
 /** The wheel zooms the map only when you asked for it: full screen, or Ctrl/Cmd (a trackpad pinch sends Ctrl). Otherwise the page scrolls. */
 export const wheelZooms = (ev, fullscreen) => Boolean(fullscreen || ev.ctrlKey || ev.metaKey)
 
-export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false, kinds = false }) {
+export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false, kinds = false, pointerOnly = false }) {
+    // pointerOnly: a mouse/touch surface only (the Mixed view): out of the tab order, one data-map-node per node (the list owns it)
+    const nodeAttr = pointerOnly ? 'data-pointer-node' : 'data-map-node'
+    const tab = pointerOnly ? -1 : undefined
     const showKinds = world || kinds
     const svgRef = useRef(null)
     const [vb, setVb] = useState(() => fitBox(layout, world))
@@ -290,7 +293,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                     const sel = selectedId === n.id
                     const cls = `monitor-node kind-${n.kind} tone-${toneOf(n.state)}${sel ? ' is-selected' : ''}${hover === n.id ? ' is-hover' : ''}${focus && !hot(n.id) ? ' is-dim' : ''}`
                     return (
-                        <g key={n.id} transform={`translate(${p.x - w / 2},${p.y - h / 2})`} data-map-node={n.id} role="button" tabIndex={0}
+                        <g key={n.id} transform={`translate(${p.x - w / 2},${p.y - h / 2})`} {...{ [nodeAttr]: n.id }} role="button" tabIndex={pointerOnly ? -1 : 0}
                             aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.stateLabel || n.state}`} className={cls}
                             onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h0) => (h0 === n.id ? null : h0))}
                             onFocus={() => setHover(n.id)} onBlur={() => setHover((h0) => (h0 === n.id ? null : h0))}
@@ -322,10 +325,10 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                 })() : null}
             </svg>
             <div className="monitor-map-tools" role="group" aria-label="Map zoom">
-                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout, world))}>Fit</button>
-                {anyMoved ? <button type="button" className="monitor-map-tool" data-map-tool="reset" onClick={resetNodes}>Reset nodes</button> : null}
-                <button type="button" className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
-                <button type="button" className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
+                <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout, world))}>Fit</button>
+                {anyMoved ? <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="reset" onClick={resetNodes}>Reset nodes</button> : null}
+                <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
+                <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
             {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>

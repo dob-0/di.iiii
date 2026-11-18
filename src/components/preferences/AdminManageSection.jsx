@@ -66,6 +66,8 @@ export default function AdminManageSection({ onStats }) {
     const [draftProject, setDraftProject] = useState('')
     const [worldView, setWorldView] = useState(readWorldView)
     const [updatedAt, setUpdatedAt] = useState(null)
+    const [usersStale, setUsersStale] = useState(false)
+    const [goneNote, setGoneNote] = useState('')
     const narrow = useNarrow()
     const detailRef = useRef(null)
     const chooseWorld = (v) => { setWorldView(v); try { window.localStorage.setItem(WORLD_KEY, v) } catch { /* the choice is just not kept */ } }
@@ -73,22 +75,33 @@ export default function AdminManageSection({ onStats }) {
     const globalSpaceId = config.globalSpaceId || null
     const defaultSpaceId = config.defaultSpaceId || null
 
+    // One poll at a time answers: a counter drops a slow, older response, and an unmounted section drops all of them.
+    const pollRef = useRef(0)
+    const aliveRef = useRef(true)
+    useEffect(() => { aliveRef.current = true; return () => { aliveRef.current = false } }, [])
     const loadSpaces = useCallback(async () => {
+        const mine = ++pollRef.current
+        const fresh = () => aliveRef.current && mine === pollRef.current
         try {
             const [list, cfg] = await Promise.all([listServerSpaces(), getServerConfig()])
+            if (!fresh()) return
             // a poll that found nothing new keeps the same arrays, so the map does not redraw
             setSpaces((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list))
             setConfig(cfg)
             setError('')
             setUpdatedAt(Date.now())
         } catch (e) {
-            setError(e.message || 'Failed to load spaces.')
+            if (fresh()) setError(e.message || 'Failed to load spaces.')
         }
         try {
             const people = await listUsers()
+            if (!fresh()) return
+            setUsersStale(false)
             setUsers((prev) => (JSON.stringify(prev) === JSON.stringify(people) ? prev : people))
-        } catch {
-            setUsers([]) // not an admin (or auth disabled) — no people panel
+        } catch (e) {
+            if (!fresh()) return
+            // only "not an admin" clears the people panel; a network blip keeps the last list, marked old
+            if (e?.status === 403) { setUsers([]); setUsersStale(false) } else setUsersStale(true)
         }
     }, [])
 
@@ -117,6 +130,8 @@ export default function AdminManageSection({ onStats }) {
         }
     }, [])
 
+    const projectsRef = useRef(projectsBySpace)
+    projectsRef.current = projectsBySpace
     const toggleExpand = useCallback((spaceId) => {
         setExpanded((prev) => {
             const next = new Set(prev)
@@ -124,11 +139,11 @@ export default function AdminManageSection({ onStats }) {
                 next.delete(spaceId)
             } else {
                 next.add(spaceId)
-                if (!projectsBySpace[spaceId]) loadProjects(spaceId)
+                if (!projectsRef.current[spaceId]) loadProjects(spaceId)
             }
             return next
         })
-    }, [projectsBySpace, loadProjects])
+    }, [loadProjects])
 
     const runMutation = useCallback(async (fn, fallbackMessage) => {
         try {
@@ -256,6 +271,15 @@ export default function AdminManageSection({ onStats }) {
         return projectsBySpace[selection.spaceId]?.items?.find((p) => p.id === selection.projectId) || null
     }, [selection, projectsBySpace])
 
+    // The selected space was deleted (here or elsewhere) while it was open: back to the overview, said once.
+    useEffect(() => {
+        if (!updatedAt || (selection.type !== 'space' && selection.type !== 'project')) return
+        if (spaces.some((sp) => sp.id === selection.spaceId)) return
+        setSelection({ type: 'root' })
+        setEditing(null)
+        setGoneNote('That space is gone, so the overview is shown.')
+    }, [spaces, selection, updatedAt])
+
     const startEdit = (type, id, value) => setEditing({ type, id, value })
     const submitEdit = () => {
         if (!editing) return
@@ -274,17 +298,21 @@ export default function AdminManageSection({ onStats }) {
     }
 
     // One way in to a space, from the list, the 2D map or the 3D room: select it and open its projects.
-    const openSpace = (spaceId) => {
+    // Stable identities (state read through refs) so the memoised 3D map is not redrawn by every poll.
+    const expandedRef = useRef(expanded)
+    expandedRef.current = expanded
+    const openSpace = useCallback((spaceId) => {
         setSelection({ type: 'space', spaceId })
-        if (!expanded.has(spaceId)) toggleExpand(spaceId)
-    }
+        setGoneNote('')
+        if (!expandedRef.current.has(spaceId)) toggleExpand(spaceId)
+    }, [toggleExpand])
     const world = useMemo(() => buildSpacesWorld(spaces, users, { globalSpaceId }), [spaces, users, globalSpaceId])
-    const pickNode = (node) => {
+    const pickNode = useCallback((node) => {
         // stacked (narrow screen): bring the detail into view; side by side it is already there
         setTimeout(() => { try { if (window.innerWidth < 1100) detailRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) } catch { /* no scroll */ } }, 50)
         if (node.id.startsWith('space:')) openSpace(node.id.slice('space:'.length))
-        else if (node.id.startsWith('person:')) setSelection({ type: 'person', userId: node.id.slice('person:'.length) })
-    }
+        else if (node.id.startsWith('person:')) { setSelection({ type: 'person', userId: node.id.slice('person:'.length) }); setGoneNote('') }
+    }, [openSpace])
     const selectedNodeId = selection.type === 'space' ? spaceNodeId(selection.spaceId) : selection.type === 'person' ? personNodeId(selection.userId) : null
     const worldSubtitle = `${spaces.length} ${spaces.length === 1 ? 'space' : 'spaces'}, ${Array.isArray(users) ? users.length : 0} people · a line is a granted space · select a node for its details`
     const stage = worldView === 'list' ? null : worldView === 'mixed' ? (
@@ -302,6 +330,7 @@ export default function AdminManageSection({ onStats }) {
 
     const detailPane = (
             <div className="preferences-manage-detail">
+                {goneNote ? <div className="monitor-note" role="status" data-gone-note>{goneNote}</div> : null}
                 {selection.type === 'root' && (
                     <RootDetail
                         spaces={spaces}
@@ -377,7 +406,7 @@ export default function AdminManageSection({ onStats }) {
                 ))}
             </div>
             <span className="preferences-live-chip" role="status" data-live={updatedAt ? 'on' : 'off'}>
-                {updatedAt ? `Live · updated ${clockOf(updatedAt)}` : 'Loading…'}
+                {updatedAt ? `Live · updated ${clockOf(updatedAt)}${usersStale ? ' · people list old' : ''}` : 'Loading…'}
             </span>
             <button type="button" className="toggle-button" onClick={loadSpaces}>Refresh now</button>
         </div>

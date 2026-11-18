@@ -2065,3 +2065,4 @@ a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow
         position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
     }
 }
+.spaces-mixed-hint { margin: var(--di-space-1) 0 0; color: var(--ui-text-muted); font-size: var(--di-text-3); }
