@@ -3,6 +3,13 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor Tasks lane: the owner's open asks, changed from the page (2026-11-19, N5632)
+
+Symptom: the owner's open asks could only be read and changed in a terminal.
+Cause: no page and no server door for the ledger.
+Fix: Monitor tab Tasks (asks by state, search, history in the shared drawer, Done / Blocked / Reopen / Note) over ONE owner-only door `POST /api/monitor/tasks` (same gate as the Monitor, else 404) that runs `ledger-add --ref` with a fixed argv (`execFile`, no shell); id `^N[0-9]+$`, fixed states, text capped and stripped of control characters, Done needs proof, one audit line per change (`~/.di/monitor-ledger-audit.log`); no ledger on the machine says so. Paths: MONITOR_LEDGER_ADD / MONITOR_LEDGER_OPEN / LEDGER_FILE.
+Regression tests: `serverXR/src/monitorLedger.test.js` (argv inert, audit, denial for another admin / actor / visitor / prod), `src/components/preferences/MonitorTasks.test.jsx`.
+
 ## Monitor shows full data; the dev/prod line flipped to "stopped answering" on one slow answer (2026-11-19, N5631)
 
 Symptom: (1) the tier line said "prod stopped answering" while both pages answered 200, on one slow answer or one refusal; (2) cards and the old inspector showed a hand-picked part of each item, chats and asks had no details, the filter missed chats and most fields.

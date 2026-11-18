@@ -8,7 +8,7 @@ const MAX_DEPTH = 4
 
 export const KIND_LABEL = {
     machine: 'Machine', tier: 'Tier', probe: 'Address probe', agent: 'Agent session', chat: 'Chat', thing: 'Connected thing',
-    place: 'People in a place', service: 'Service', pr: 'Pull request', node: 'Map item', ask: 'Ask', report: 'Machine report', part: 'Part'
+    place: 'People in a place', service: 'Service', pr: 'Pull request', node: 'Map item', ask: 'Ask', report: 'Machine report', part: 'Part', task: 'Task'
 }
 
 // "lastSeen" -> "Last seen", "tx" stays short

@@ -16,6 +16,7 @@
 
 const { createMonitorStore } = require('../monitorStore')
 const { createHub, createAskStore, fingerprint, tierOfDeployEnv, REPORT_MAX_BYTES } = require('../monitorHub')
+const { createLedger } = require('../monitorLedger')
 const { config } = require('../config')
 const { isLocalOperatorRequest, isAdminCaller } = require('./agentBoardRoutes')
 
@@ -39,9 +40,11 @@ function registerMonitorRoutes(router, {
   deployEnv = () => null,
   ownerIds = () => config.monitorOwnerUserIds,
   prList = null,
+  ledger = null,
   now = () => Date.now()
 } = {}) {
   const overview = hub || createHub({ store })
+  const tasks = ledger || createLedger()
   const selfBase = () => `http://127.0.0.1:${config.port}${config.basePath || ''}`
   // A refusal says nothing of its own: the request falls through to whatever answers a path
   // that does not exist, so the page's existence is not shown (spec: "404, not 403").
@@ -108,6 +111,27 @@ function registerMonitorRoutes(router, {
       res.json(prList ? await prList.list() : { ok: false, repo: null, reason: 'no-source', message: 'No pull request source on this server.' })
     } catch (error) {
       res.status(500).json({ error: error.message || 'pull request list failed' })
+    }
+  })
+
+  // Tasks lane: the owner's open asks (read) and ONE owner-only write that goes through ledger-add.
+  router.get('/api/monitor/tasks', gate, async (req, res) => {
+    try {
+      const id = req.query?.id
+      res.json(id ? await tasks.detail(String(id)) : await tasks.list({ days: req.query?.days }))
+    } catch (error) {
+      res.status(500).json({ error: error.message || 'tasks failed' })
+    }
+  })
+
+  router.post('/api/monitor/tasks', gate, async (req, res) => {
+    try {
+      const b = req.body || {}
+      const out = await tasks.change({ id: b.id, action: b.action, text: b.text, evidence: b.evidence, next: b.next, by: req.authState?.subject || 'local' })
+      if (out.error) { res.status(out.status || 400).json({ error: out.error, ...(out.message ? { message: out.message } : {}) }); return }
+      res.json(out)
+    } catch (error) {
+      res.status(500).json({ error: error.message || 'task change failed' })
     }
   })
 

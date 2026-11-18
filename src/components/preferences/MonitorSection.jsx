@@ -8,6 +8,7 @@ import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
 import MonitorParts from './MonitorParts.jsx'
 import MonitorPrs from './MonitorPrs.jsx'
+import MonitorTasks, { TaskActions } from './MonitorTasks.jsx'
 import MonitorDetail from './MonitorDetail.jsx'
 import PanelLive from './MonitorLive.jsx'
 import { rowMatches, searchCounts } from './monitorDetail.js'
@@ -20,12 +21,12 @@ import { rowMatches, searchCounts } from './monitorDetail.js'
 // triple for state, motion under 0.2 s on named properties only.
 
 const POLL_MS = 5000
-const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work'], ['parts', 'Parts']]
+const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work'], ['parts', 'Parts'], ['tasks', 'Tasks']]
 const FLASH_MS = 2500
 const FULL_KEY = 'di.monitor.full'
 const SPARK_SAMPLES = 30
-const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace', 4: 'parts' }
-const KEYS_HELP = [['1  2  3  4', 'Board, Map, Work, Parts'], ['/', 'Filter everything'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
+const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace', 4: 'parts', 5: 'tasks' }
+const KEYS_HELP = [['1  2  3  4  5', 'Board, Map, Work, Parts, Tasks'], ['/', 'Filter everything'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
 
 // remembered per browser; storage can be blocked, so every touch is guarded
 const readFull = () => {
@@ -370,6 +371,7 @@ export default function MonitorSection({ onStats }) {
         [panels.pullRequests, query]
     )
 
+    const [taskVersion, setTaskVersion] = useState(0)
     const pick = (kind, row) => setSelected({ kind, id: rowId(row), row })
 
     const selectedRow = useMemo(() => {
@@ -517,6 +519,11 @@ export default function MonitorSection({ onStats }) {
                         <ModuleSection title="Work" subtitle="Every chat, your asks, what each agent is doing, and machine reports">
                             <MonitorWorkspace chats={snap?.chats} asks={snap?.asks} agents={panels.agents} reports={snap?.reports} query={query} selected={selected} ages={ages} paused={paused}
                                 onPick={pick} />
+                        </ModuleSection>
+                    ) : null}
+                    {tab === 'tasks' ? (
+                        <ModuleSection title="Tasks" subtitle="Your open asks by state — open one for its history, then mark it done, blocked, reopened or add a note">
+                            <MonitorTasks query={query} selectedId={selected?.kind === 'task' ? selected.id : null} version={taskVersion} onPick={(row) => pick('task', row)} />
                         </ModuleSection>
                     ) : null}
                     {tab === 'parts' ? (
@@ -669,7 +676,8 @@ export default function MonitorSection({ onStats }) {
 
             {selected ? (
                 <MonitorDetail key={`${selected.kind}:${selected.id}`} kind={selected.kind} row={selectedRow} title={drawerTitle} snap={snap} idOf={rowId}
-                    onOpen={(kind, id) => setSelected({ kind, id })} onClose={() => setSelected(null)} />
+                    onOpen={(kind, id) => setSelected({ kind, id })} onClose={() => setSelected(null)}
+                    footer={selected.kind === 'task' && selectedRow ? <TaskActions task={selectedRow} onChanged={() => setTaskVersion((v) => v + 1)} /> : null} />
             ) : null}
 
             {keysOpen ? (

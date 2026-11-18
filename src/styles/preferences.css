@@ -2071,3 +2071,14 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
     .monitor-field, .monitor-related-item { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-1); }
 }
 
+
+/* Monitor → Tasks: the owner's open asks, and the change form in the drawer */
+.monitor-tasks-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-2); margin-bottom: var(--di-space-2); }
+.monitor-tasks-bar .monitor-meta { margin-right: auto; }
+.monitor-task-actions { display: flex; flex-direction: column; gap: var(--di-space-2); margin-top: var(--di-space-3); }
+.monitor-task-buttons { display: flex; flex-wrap: wrap; gap: var(--di-space-2); }
+.monitor-task-form { display: flex; flex-direction: column; gap: var(--di-space-2); }
+.monitor-task-form label { display: flex; flex-direction: column; gap: var(--di-space-1); color: var(--ui-text-muted); font-size: var(--di-text-2); }
+.monitor-task-form textarea { background: var(--di-surface); color: var(--di-text); border: 1px solid var(--pref-border); border-radius: 0; font: inherit; padding: var(--di-space-2); resize: vertical; }
+.monitor-task-history { padding: var(--di-space-2); background: var(--di-surface); font-size: var(--di-text-2); overflow-wrap: anywhere; }
+.monitor-row.tone-warning { --pref-tone: var(--di-warning); }

@@ -19,7 +19,7 @@ function CopyValue({ text }) {
     return <button type="button" className="monitor-copy" aria-label="Copy value" onClick={copy}>{done ? 'copied' : 'copy'}</button>
 }
 
-export default function MonitorDetail({ kind, row, title, snap, idOf, onOpen, onClose }) {
+export default function MonitorDetail({ kind, row, title, snap, idOf, onOpen, onClose, footer = null }) {
     const detail = row ? buildDetail(kind, row, snap, idOf) : null
     const [all, setAll] = useState(false)
     const related = detail ? (all ? detail.related : detail.related.slice(0, RELATED_SHOWN)) : []
@@ -61,6 +61,7 @@ export default function MonitorDetail({ kind, row, title, snap, idOf, onOpen, on
                         </div>
                     ) : null}
                     {row.url && /^https:\/\//.test(row.url) && kind === 'pr' ? <a className="preferences-inline-action" href={row.url} target="_blank" rel="noreferrer">Open on GitHub</a> : null}
+                    {footer}
                     <details className="monitor-raw">
                         <summary>Raw record</summary>
                         <div className="monitor-raw-bar"><CopyValue text={detail.raw} /></div>
