@@ -5,7 +5,8 @@
 #       --base http://diiii.localhost [--preset show:no-laser] [--dry-run]
 #
 # What it does, in order (this is what was done by hand before):
-#   1. ONE Chromium (flatpak org.chromium.Chromium) on its own profile, remote debugging on 9224, --app=<stage URL>
+#   1. ONE browser (the one di browser setting, scripts/lib/browser-app.sh; Chromium unless DI_BROWSER_APP or
+#      ~/.config/di/browser.conf says otherwise) on its own profile, remote debugging on 9224, --app=<stage URL>
 #      stage URL = <base>/<space>/map/<project>/out   (the Projection "out" page: the wall)
 #   2. a SECOND WINDOW of the SAME browser (same profile = same process: the phone camera allows one reader per
 #      process) with --new-window --app=<perform URL>     perform URL = <base>/<space>/perform/<project>
@@ -20,6 +21,8 @@
 # Nothing is closed or killed. Undo: close the two windows. --dry-run prints every command and runs none of them.
 # Agents must NOT run this for real: it opens windows on the owner's desktop (use --dry-run).
 set -euo pipefail
+
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/browser-app.sh"
 
 space=platina; project=platina-screen; stage_ws=2; tool_ws=1; base=http://diiii.localhost; preset=
 tool_x=80; tool_y=60; tool_w=1036; tool_h=837
@@ -40,7 +43,7 @@ usage: stage-open.sh [--space S] [--project P] [--stage-ws N] [--tool-ws N] [--b
   --dry-run        print every command, run none
 Run it through di-here (a browser started from an agent shell is treated as agent work by di-window-watch,
 and its popups and output window are moved to another workspace).
-Opens: <base>/<space>/map/<project>/out (stage) and <base>/<space>/perform/<project> (tool), one Chromium, port 9224.
+Opens: <base>/<space>/map/<project>/out (stage) and <base>/<space>/perform/<project> (tool), one browser (the di browser setting), port 9224.
 USAGE
 }
 
@@ -63,7 +66,10 @@ case "$stage_ws$tool_ws" in *[!0-9]*) echo "stage-open: workspaces must be numbe
 stage_url="$base/$space/map/$project/out"
 tool_url="$base/$space/perform/$project"
 [ -n "$preset" ] && tool_url="$tool_url?preset=${preset//:/%3A}"
-chromium=(flatpak run org.chromium.Chromium "--user-data-dir=$profile" "--remote-debugging-port=$port" --no-first-run --hide-crash-restore-bubble)
+app=$(di_browser_app) || exit 2
+# Chromium keeps today's profile; any other browser gets its own (a newer build must never open an older one's profile).
+[ "$app" = org.chromium.Chromium ] || profile="${profile}-${app##*.}"
+chromium=(flatpak run "$app" "--user-data-dir=$profile" "--remote-debugging-port=$port" --no-first-run --hide-crash-restore-bubble)
 
 run() { if [ "$dry" = 1 ]; then printf '+ %s\n' "$*"; else "$@"; fi; }
 eval_hl() { run hyprctl eval "$1"; }
