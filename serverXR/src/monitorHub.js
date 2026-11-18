@@ -299,7 +299,7 @@ function createHub({
     }
     const devCommit = rows.find((r) => r.id === 'dev')?.commit || null
     for (const row of rows) row.behindDev = row.id === 'dev' ? 0 : await behind(row.commit, devCommit)
-    const value = { ok: rows.some((r) => r.id === 'dev' && isUp(r.status)) && rows.some((r) => r.id === 'prod' && isUp(r.status)), rows }
+    const value = { at: t, ok: rows.some((r) => r.id === 'dev' && isUp(r.status)) && rows.some((r) => r.id === 'prod' && isUp(r.status)), rows }
     tierCache = { at: t, value, self }
     return value
   }
@@ -476,7 +476,7 @@ function createHub({
 }
 
 /** The stream compares snapshots without the fields that change on every scan. */
-const IGNORED_KEYS = new Set(['generatedAt', 'ms', 'heardSecondsAgo', 'at'])
+const IGNORED_KEYS = new Set(['generatedAt', 'ms', 'heardSecondsAgo', 'at', 'ages'])
 function fingerprint(snapshot) {
   return crypto.createHash('sha1').update(JSON.stringify(snapshot, (key, value) => (IGNORED_KEYS.has(key) ? undefined : value))).digest('hex')
 }

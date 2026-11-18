@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { InfoPair, ModuleSection, formatTimestamp } from './PreferencesShared.jsx'
+import { ModuleSection } from './PreferencesShared.jsx'
 import { getMonitor, monitorStreamUrl } from '../../services/apiClient.js'
 import { timeAgo, formatBytes, ago } from './monitorFormat.js'
-import MonitorOverview, { CountTiles, heroState, tierLabel, tierState, shortCommit } from './MonitorOverview.jsx'
+import MonitorOverview, { CountTiles, heroState, tierLabel } from './MonitorOverview.jsx'
 import { diffSnapshots, pushEvents } from './monitorFeed.js'
 import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
 import MonitorParts from './MonitorParts.jsx'
 import MonitorPrs from './MonitorPrs.jsx'
+import MonitorDetail from './MonitorDetail.jsx'
+import PanelLive from './MonitorLive.jsx'
+import { rowMatches, searchCounts } from './monitorDetail.js'
 
 // One page for everything that is going on: machines, the network, agent
 // sessions (every Claude login on the machine), services, pull requests, and
@@ -27,7 +30,7 @@ const KEYS_HELP = [['1  2  3  4', 'Board, Map, Work, Parts'], ['/', 'Filter ever
 // remembered per browser; storage can be blocked, so every touch is guarded
 const readFull = () => {
     try {
-        if (String(window.location.hash || '') === '#monitor-full') return true
+        if (String(window.location.hash || '').startsWith('#monitor-full')) return true
         return window.localStorage.getItem(FULL_KEY) === '1'
     } catch { return false }
 }
@@ -38,12 +41,21 @@ const heardLabel = (heardAt, nowMs) => {
     if (s < 60) return `heard ${s} s ago`
     return `heard ${Math.floor(s / 60)} min ago`
 }
+// #monitor[-full][/kind/id]: the open item lives in the link, so a reload or a shared link shows the same drawer
+const HASH_RE = /^#monitor(-full)?(?:\/([a-z]+)\/(.+))?$/
+export const parseHash = (hash) => {
+    const m = HASH_RE.exec(String(hash || ''))
+    if (!m || !m[2]) return null
+    try { return { kind: m[2], id: decodeURIComponent(m[3]) } } catch { return null }
+}
+export const buildHash = (full, selected) => `#monitor${full ? '-full' : ''}${selected ? `/${selected.kind}/${encodeURIComponent(String(selected.id))}` : ''}`
+const readSelected = () => { try { const got = parseHash(window.location.hash); return got ? { ...got, id: /^\d+$/.test(got.id) && got.kind === 'pr' ? Number(got.id) : got.id } : null } catch { return null } }
 const typing = (el) => !!el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable)
 
 export { timeAgo, formatBytes }
 
 // every row has one id the server made unique (tailnet address, URL, session id, unit, PR number)
-const rowId = (row) => row.id ?? row.sessionId ?? row.unit ?? row.number ?? row.name
+const rowId = (row) => row.id ?? row.sessionId ?? row.unit ?? row.number ?? row.host ?? row.name
 
 const THING_TONE = { live: 'success', ok: 'success', idle: 'muted', off: 'muted' }
 
@@ -77,6 +89,13 @@ const matches = (query, ...parts) => {
     return !q || parts.some((part) => String(part ?? '').toLowerCase().includes(q))
 }
 
+function IssueItem({ issue, onOpen }) {
+    const opens = Boolean(issue.chat || issue.tier || issue.key === 'chats-more' || issue.key === 'chats-stale')
+    return opens
+        ? <li className={`tone-${issue.tone}`}><button type="button" className="monitor-issue-open" data-issue={issue.key || issue.tier} onClick={() => onOpen(issue)}>{issue.text}</button></li>
+        : <li className={`tone-${issue.tone}`}>{issue.text}</li>
+}
+
 function PanelNote({ panel, empty }) {
     if (!panel) return null
     if (!panel.ok) return <div className="monitor-note is-down">Unavailable here: {panel.error}</div>
@@ -107,7 +126,9 @@ export default function MonitorSection({ onStats }) {
     const [error, setError] = useState('')
     const [paused, setPaused] = useState(false)
     const [query, setQuery] = useState('')
-    const [selected, setSelected] = useState(null)
+    const [selected, setSelected] = useState(readSelected)
+    // how old each panel's last read is (server ages + when the page heard them), for 'live · heard N s ago'
+    const [ages, setAges] = useState({})
     const [tab, setTab] = useState('board')
     const [streaming, setStreaming] = useState(false)
     // when the page last heard from the server (a snapshot or a heartbeat), not when the data was built
@@ -159,7 +180,16 @@ export default function MonitorSection({ onStats }) {
             }
             return out
         })
-        setHeardAt(Date.now())
+        const arrived = Date.now()
+        setAges((old) => {
+            const out = { ...old }
+            for (const k of Object.keys(next.panels || {})) out[k] = { age: 0, heard: arrived }
+            out.tiers = { age: 0, heard: arrived }
+            out.parts = { age: 0, heard: arrived }
+            out.chats = { age: typeof next.chats?.heardSecondsAgo === 'number' ? next.chats.heardSecondsAgo * 1000 : 0, heard: arrived }
+            return out
+        })
+        setHeardAt(arrived)
         setSnap(next)
         setUnavailable(false)
         setError('')
@@ -198,7 +228,15 @@ export default function MonitorSection({ onStats }) {
                 setStreaming(true)
             } catch { /* a broken frame is skipped; the next one or the poll recovers */ }
         }
-        const onHeartbeat = () => { if (alive.current) setHeardAt(Date.now()) }
+        const onHeartbeat = (ev) => {
+            if (!alive.current) return
+            const arrived = Date.now()
+            setHeardAt(arrived)
+            try {
+                const got = JSON.parse(ev.data)?.ages
+                if (got && typeof got === 'object') setAges((old) => ({ ...old, ...Object.fromEntries(Object.entries(got).filter(([, v]) => typeof v === 'number').map(([k, v]) => [k, { age: v, heard: arrived }])) }))
+            } catch { /* a heartbeat without ages still proves the line is open */ }
+        }
         const drop = () => {
             if (!source) return
             source.removeEventListener('snapshot', onSnapshot)
@@ -254,10 +292,25 @@ export default function MonitorSection({ onStats }) {
     // stable: the 3D map is memoized and must not wake up for the 1 s clock above it
     const pickNode = useCallback((n) => setSelected({ kind: 'node', id: n.id }), [])
 
+    const selectedRef = useRef(selected)
+    useEffect(() => {
+        selectedRef.current = selected
+        try {
+            const want = buildHash(String(window.location.hash || '').startsWith('#monitor-full'), selected)
+            if (window.location.hash !== want) window.history.replaceState(null, '', want)
+        } catch { /* no history here */ }
+    }, [selected])
+    // back / a pasted link changes the hash: the drawer follows it
+    useEffect(() => {
+        const onHash = () => { if (String(window.location.hash || '').startsWith('#monitor')) setSelected(readSelected()) }
+        window.addEventListener('hashchange', onHash)
+        return () => window.removeEventListener('hashchange', onHash)
+    }, [])
+
     const setFullScreen = useCallback((on) => {
         setFull(on)
         try { window.localStorage.setItem(FULL_KEY, on ? '1' : '0') } catch { /* storage blocked: the choice lasts this visit */ }
-        try { window.history.replaceState(null, '', on ? '#monitor-full' : '#monitor') } catch { /* no history here */ }
+        try { window.history.replaceState(null, '', buildHash(on, selectedRef.current)) } catch { /* no history here */ }
     }, [])
 
     // keys: ignored while typing in a field (Esc still works: it closes things)
@@ -283,17 +336,17 @@ export default function MonitorSection({ onStats }) {
 
     const panels = useMemo(() => snap?.panels || {}, [snap])
     const machines = useMemo(
-        () => (panels.machines?.rows || []).filter((m) => matches(query, m.name, m.os, m.ip)),
+        () => (panels.machines?.rows || []).filter((m) => rowMatches(query, m)),
         [panels.machines, query]
     )
     const probes = useMemo(
-        () => (panels.network?.rows || []).filter((n) => matches(query, n.name, n.url)),
+        () => (panels.network?.rows || []).filter((n) => rowMatches(query, n)),
         [panels.network, query]
     )
     const agentGroups = useMemo(() => {
         const groups = new Map()
         for (const a of panels.agents?.rows || []) {
-            if (!matches(query, a.title, a.account, a.machine, a.branch, a.cwd, a.status)) continue
+            if (!rowMatches(query, a)) continue
             const key = a.machine ? `${a.machine} / ${a.account}` : a.account
             if (!groups.has(key)) groups.set(key, [])
             groups.get(key).push(a)
@@ -301,23 +354,23 @@ export default function MonitorSection({ onStats }) {
         return [...groups.entries()]
     }, [panels.agents, query])
     const things = useMemo(
-        () => (panels.connected?.rows || []).filter((c) => matches(query, c.title, c.detail, c.state)),
+        () => (panels.connected?.rows || []).filter((c) => rowMatches(query, c)),
         [panels.connected, query]
     )
     const places = useMemo(
-        () => (panels.presence?.rows || []).filter((u) => matches(query, u.target, u.kind, ...u.people.map((p) => p.name))),
+        () => (panels.presence?.rows || []).filter((u) => rowMatches(query, u)),
         [panels.presence, query]
     )
     const services = useMemo(() => {
-        const rows = (panels.services?.rows || []).filter((s) => matches(query, s.unit, s.description))
+        const rows = (panels.services?.rows || []).filter((s) => rowMatches(query, s))
         return [...rows].sort((a, b) => (b.active === 'failed') - (a.active === 'failed'))
     }, [panels.services, query])
     const prs = useMemo(
-        () => (panels.pullRequests?.rows || []).filter((p) => matches(query, p.title, p.branch, `#${p.number}`)),
+        () => (panels.pullRequests?.rows || []).filter((p) => rowMatches(query, p) || `#${p.number}` === query.trim()),
         [panels.pullRequests, query]
     )
 
-    const pick = (kind, row) => setSelected({ kind, id: rowId(row) })
+    const pick = (kind, row) => setSelected({ kind, id: rowId(row), row })
 
     const selectedRow = useMemo(() => {
         if (!selected) return null
@@ -325,10 +378,12 @@ export default function MonitorSection({ onStats }) {
             machine: panels.machines?.rows, probe: panels.network?.rows, agent: panels.agents?.rows,
             service: panels.services?.rows, pr: panels.pullRequests?.rows,
             thing: panels.connected?.rows, place: panels.presence?.rows,
-            node: snap?.map?.nodes, tier: snap?.tiers?.rows
+            node: snap?.map?.nodes, tier: snap?.tiers?.rows,
+            chat: snap?.chats?.rows, ask: snap?.asks?.rows, report: snap?.reports, part: snap?.parts?.rows
         }[selected.kind] || []
-        return pool.find((r) => rowId(r) === selected.id) || null
+        return pool.find((r) => String(rowId(r)) === String(selected.id)) || selected.row || null
     }, [selected, panels, snap])
+    const counts = useMemo(() => (query.trim() ? searchCounts(snap, query) : null), [snap, query])
 
     const failed = panels.services?.failed || 0
     const hero = useMemo(() => heroState(snap), [snap])
@@ -362,6 +417,14 @@ export default function MonitorSection({ onStats }) {
         ]
     }, [panels, failed])
 
+    // a strip item opens what it is about: a chat, a tier
+    const openIssue = (issue) => {
+        if (issue.chat) { const row = (snap?.chats?.rows || []).find((c) => c.id === issue.chat); setSelected({ kind: 'chat', id: issue.chat, row }) } else if (issue.tier) {
+            const row = (snap?.tiers?.rows || []).find((t) => t.id === issue.tier)
+            setSelected({ kind: 'tier', id: issue.tier, row })
+        } else if (issue.key === 'chats-more' || issue.key === 'chats-stale') { setTab('workspace') }
+    }
+
     const jumpTo = (tile) => {
         setTab('board')
         setTimeout(() => document.querySelector(`[data-panel="${tile.panel}"]`)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }), 0)
@@ -385,9 +448,8 @@ export default function MonitorSection({ onStats }) {
     const heroText = !snap ? 'Reading the monitor…' : paused ? 'Paused' : error ? 'Cannot reach the server' : hero.headline
     const markTone = paused ? 'muted' : streaming ? 'live' : 'warning'
     const drawerTitle = selectedRow
-        ? (selected.kind === 'tier' ? tierLabel(selectedRow.id) : selectedRow.name || selectedRow.label || selectedRow.title || selectedRow.unit || selectedRow.target || `#${selectedRow.number}`)
-        : ''
-    const devCommit = snap?.tiers?.rows?.find((r) => r.id === 'dev')?.commit
+        ? (selected.kind === 'tier' ? tierLabel(selectedRow.id) : selectedRow.name || selectedRow.label || selectedRow.title || selectedRow.unit || selectedRow.target || selectedRow.host || (selectedRow.text ? String(selectedRow.text).slice(0, 60) : '') || (selectedRow.number ? `#${selectedRow.number}` : String(selected.id)))
+        : String(selected?.id ?? '')
 
     return (
         <div className={`monitor-page${full ? ' is-full' : ''}${tab === 'map' ? ' is-map' : ''}`} data-monitor-full={full ? 'on' : 'off'}>
@@ -399,6 +461,7 @@ export default function MonitorSection({ onStats }) {
                 <div className="monitor-bar-actions">
                     <input ref={filterRef} className="monitor-filter" type="search" placeholder="Filter everything  ( / )"
                         aria-label="Filter every panel" value={query} onChange={(e) => setQuery(e.target.value)} />
+                    {counts ? <span className="monitor-filter-count" data-filter-count={counts.matched} role="status">{counts.matched} of {counts.total} match</span> : null}
                     <button type="button" className="preferences-inline-action" onClick={() => setPaused((p) => !p)}>{paused ? 'Resume' : 'Pause'}</button>
                     <button type="button" className="preferences-inline-action" onClick={load}>Refresh</button>
                     <button type="button" className="preferences-inline-action" aria-pressed={full} onClick={() => setFullScreen(!full)}>{full ? 'Leave full screen' : 'Full screen'}</button>
@@ -410,22 +473,25 @@ export default function MonitorSection({ onStats }) {
 
             <div className="monitor-frame">
                 <section className={`monitor-hero tone-${heroTone}`} aria-live="polite" data-hero-tone={heroTone}>
-                    <div className="monitor-hero-text">{heroText}</div>
+                    {snap && !paused && !error && hero.issues[0] && (hero.issues[0].chat || hero.issues[0].tier)
+                        ? <button type="button" className="monitor-hero-text monitor-hero-open" data-issue={hero.issues[0].key || hero.issues[0].tier} onClick={() => openIssue(hero.issues[0])}>{heroText}</button>
+                        : <div className="monitor-hero-text">{heroText}</div>}
                     <div className="monitor-hero-live">
                         <i key={heardAt || 'none'} className={`monitor-live-mark tone-${markTone}${heardAt ? ' is-beat' : ''}`} aria-hidden="true" />
                         <span className="monitor-hero-heard">{paused ? 'paused' : heardLabel(heardAt, nowMs)}</span>
                     </div>
                     {snap && !paused && !error && hero.issues.length > 1 ? (
                         <ul className="monitor-hero-issues">
-                            {hero.issues.slice(1).map((i) => <li key={i.key || i.text} className={`tone-${i.tone}`}>{i.text}</li>)}
+                            {hero.issues.slice(1).map((i) => <IssueItem key={i.key || i.text} issue={i} onOpen={openIssue} />)}
                         </ul>
                     ) : null}
                 </section>
 
                 <div className="monitor-area-strip">
                     <div className="monitor-area-tiers">
+                        <PanelLive name="tiers" ages={ages} nowMs={nowMs} paused={paused} />
                         <MonitorOverview tiers={snap?.tiers} spaces={snap?.spaces} history={history} flashing={flashing}
-                            selectedId={selected?.kind === 'tier' ? selected.id : null} onPick={(row) => setSelected({ kind: 'tier', id: row.id })} />
+                            selectedId={selected?.kind === 'tier' ? selected.id : null} onPick={(row) => setSelected({ kind: 'tier', id: row.id, row })} />
                     </div>
 
                     <div className="monitor-area-counts">
@@ -449,22 +515,24 @@ export default function MonitorSection({ onStats }) {
                     ) : null}
                     {tab === 'workspace' ? (
                         <ModuleSection title="Work" subtitle="Every chat, your asks, what each agent is doing, and machine reports">
-                            <MonitorWorkspace chats={snap?.chats} asks={snap?.asks} agents={panels.agents} reports={snap?.reports}
-                                onPick={(kind, row) => setSelected({ kind, id: rowId(row) })} />
+                            <MonitorWorkspace chats={snap?.chats} asks={snap?.asks} agents={panels.agents} reports={snap?.reports} query={query} selected={selected} ages={ages} paused={paused}
+                                onPick={pick} />
                         </ModuleSection>
                     ) : null}
                     {tab === 'parts' ? (
                         <ModuleSection title="Parts" subtitle="Light desk, show desk, lasers, 3D Studio — live state and the version each was packed at">
-                            <MonitorParts parts={snap?.parts} />
+                            <PanelLive name="parts" ages={ages} nowMs={nowMs} paused={paused} />
+                            <MonitorParts parts={snap?.parts} query={query} selectedId={selected?.kind === 'part' ? selected.id : null} onPick={(row) => pick('part', row)} />
                         </ModuleSection>
                     ) : null}
                     {tab === 'workspace' ? (
                         <ModuleSection title="Waiting to merge" subtitle="Open pull requests read from GitHub by the server — works without any machine on; merging stays your Enter">
-                            <MonitorPrs />
+                            <MonitorPrs query={query} selectedId={selected?.kind === 'pr' ? selected.id : null} onPick={(row) => pick('pr', row)} />
                         </ModuleSection>
                     ) : null}
                     {tab === 'board' ? (<>
                     <div data-panel="machines"><ModuleSection title="Machines" subtitle="Tailnet — who is on, who was last seen">
+                        <PanelLive name="machines" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.machines} empty="No machines reported." />
                         <div className="monitor-grid">
                             {machines.map((m) => (
@@ -478,6 +546,7 @@ export default function MonitorSection({ onStats }) {
                     </ModuleSection></div>
 
                     <div data-panel="network"><ModuleSection title="Network" subtitle="Tiers and addresses we probe">
+                        <PanelLive name="network" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.network} empty="No probes configured." />
                         <div className="monitor-grid">
                             {probes.map((n) => (
@@ -491,6 +560,7 @@ export default function MonitorSection({ onStats }) {
                     </ModuleSection></div>
 
                     <div data-panel="connected"><ModuleSection title="Connected things" subtitle="Lasers, lights, show machine, video, OSC, visiting apps">
+                        <PanelLive name="connected" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.connected} empty="Nothing reported." />
                         <div className="monitor-grid">
                             {things.map((c) => (
@@ -504,6 +574,7 @@ export default function MonitorSection({ onStats }) {
                     </ModuleSection></div>
 
                     <div data-panel="presence"><ModuleSection title="People now" subtitle={`${panels.presence?.people ?? 0} connected in ${panels.presence?.places ?? 0} space${panels.presence?.places === 1 ? '' : 's'} or project${panels.presence?.places === 1 ? '' : 's'}`}>
+                        <PanelLive name="presence" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.presence} empty="Nobody is connected right now." />
                         <div className="monitor-grid">
                             {places.map((u) => (
@@ -517,6 +588,7 @@ export default function MonitorSection({ onStats }) {
                     </ModuleSection></div>
 
                     <div data-panel="agents"><ModuleSection title="Agents" subtitle={`${panels.agents?.live ?? 0} live of ${panels.agents?.total ?? 0} sessions · accounts: ${(panels.agents?.accounts || []).join(', ') || 'none found'}`}>
+                        <PanelLive name="agents" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.agents} empty="No live agent sessions." />
                         {(panels.agents?.remotes || []).filter((r) => !r.ok).map((r) => (
                             <div key={r.name} className="monitor-note">{r.name}: not reachable ({r.error})</div>
@@ -552,6 +624,7 @@ export default function MonitorSection({ onStats }) {
                     </ModuleSection>
 
                     <div data-panel="services"><ModuleSection title="Services" subtitle={`${panels.services?.running ?? 0} running · ${failed} failed (failed first)`}>
+                        <PanelLive name="services" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.services} empty="No services reported." />
                         <div className="monitor-grid">
                             {services.map((sv) => (
@@ -565,6 +638,7 @@ export default function MonitorSection({ onStats }) {
                     </ModuleSection></div>
 
                     <div data-panel="prs"><ModuleSection title="Pull requests" subtitle="Open work on this repo">
+                        <PanelLive name="pullRequests" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.pullRequests} empty="No open pull requests." />
                         <div className="monitor-grid">
                             {prs.map((p) => (
@@ -594,95 +668,8 @@ export default function MonitorSection({ onStats }) {
             </div>
 
             {selected ? (
-                <aside className="monitor-inspector monitor-drawer" aria-label="Inspector">
-                    <div className="monitor-drawer-head">
-                        <div className="preferences-stage-sidebar-title">{`Inspector${selectedRow ? ` — ${drawerTitle}` : ''}`}</div>
-                        <button type="button" className="preferences-inline-action monitor-drawer-close" aria-label="Close inspector" onClick={() => setSelected(null)}>×</button>
-                    </div>
-                    {!selectedRow ? <div className="preferences-empty">That one is not in the latest snapshot.</div> : null}
-                    {selected?.kind === 'tier' && selectedRow ? (
-                        <>
-                            <InfoPair label="State" value={tierState(selectedRow, devCommit).note} />
-                            <InfoPair label="Commit" value={shortCommit(selectedRow.commit)} mono />
-                            <InfoPair label="Address" value={selectedRow.url || 'n/a'} mono />
-                            <InfoPair label="Answer" value={`${selectedRow.status ?? '—'}${typeof selectedRow.ms === 'number' ? ` · ${selectedRow.ms} ms` : ''}`} mono />
-                            <InfoPair label="Built" value={selectedRow.builtAt ? formatTimestamp(selectedRow.builtAt) : 'n/a'} />
-                            <InfoPair label="Behind dev" value={typeof selectedRow.behindDev === 'number' ? String(selectedRow.behindDev) : 'unknown'} mono />
-                        </>
-                    ) : null}
-                    {selected?.kind === 'machine' && selectedRow ? (
-                        <>
-                            <InfoPair label="State" value={selectedRow.online ? 'online' : 'offline'} mono />
-                            <InfoPair label="System" value={selectedRow.os || 'n/a'} mono />
-                            <InfoPair label="Address" value={selectedRow.ip || 'n/a'} mono />
-                            <InfoPair label="Last seen" value={selectedRow.online ? 'now' : formatTimestamp(selectedRow.lastSeen)} />
-                            <InfoPair label="Sent / received" value={`${formatBytes(selectedRow.tx)} / ${formatBytes(selectedRow.rx)}`} mono />
-                        </>
-                    ) : null}
-                    {selected?.kind === 'probe' && selectedRow ? (
-                        <>
-                            <InfoPair label="Address" value={selectedRow.url} mono />
-                            <InfoPair label="Answer" value={selectedRow.status ? String(selectedRow.status) : 'no answer'} mono />
-                            <InfoPair label="Time" value={`${selectedRow.ms} ms`} mono />
-                            {selectedRow.error ? <InfoPair label="Error" value={selectedRow.error} mono /> : null}
-                        </>
-                    ) : null}
-                    {selected?.kind === 'agent' && selectedRow ? (
-                        <>
-                            <InfoPair label="Account" value={selectedRow.account} mono />
-                            <InfoPair label="Status" value={`${selectedRow.status} (${selectedRow.kind})`} mono />
-                            <InfoPair label="Branch" value={selectedRow.branch || 'n/a'} mono />
-                            <InfoPair label="Checkout" value={selectedRow.cwd || 'n/a'} mono />
-                            <InfoPair label="Model" value={selectedRow.model || 'n/a'} mono />
-                            <InfoPair label="Last activity" value={formatTimestamp(selectedRow.lastActivity)} />
-                            <InfoPair label="Session" value={selectedRow.sessionId} mono />
-                        </>
-                    ) : null}
-                    {selected?.kind === 'thing' && selectedRow ? (
-                        <>
-                            <InfoPair label="Thing" value={selectedRow.title} />
-                            <InfoPair label="State" value={selectedRow.state} mono />
-                            <InfoPair label="Detail" value={selectedRow.detail} />
-                        </>
-                    ) : null}
-                    {selected?.kind === 'place' && selectedRow ? (
-                        <>
-                            <InfoPair label={selectedRow.kind} value={selectedRow.target} mono />
-                            <InfoPair label="Connected" value={String(selectedRow.people.length)} />
-                            {selectedRow.people.map((p, i) => (
-                                <InfoPair key={`${p.name}-${i}`} label={p.name} value={`since ${timeAgo(p.since)}`} />
-                            ))}
-                        </>
-                    ) : null}
-                    {selected?.kind === 'service' && selectedRow ? (
-                        <>
-                            <InfoPair label="Unit" value={selectedRow.unit} mono />
-                            <InfoPair label="State" value={`${selectedRow.active} · ${selectedRow.sub}`} mono />
-                            <InfoPair label="What" value={selectedRow.description || 'n/a'} />
-                        </>
-                    ) : null}
-                    {selected?.kind === 'node' && selectedRow ? (
-                        <>
-                            <InfoPair label={selectedRow.kind} value={selectedRow.label} />
-                            <InfoPair label="State" value={selectedRow.state} mono />
-                            <InfoPair label="Id" value={selectedRow.id} mono />
-                            {(snap?.map?.edges || []).filter((e) => e.from === selectedRow.id || e.to === selectedRow.id).map((e, i) => {
-                                const otherId = e.from === selectedRow.id ? e.to : e.from
-                                const other = (snap.map.nodes || []).find((n) => n.id === otherId)
-                                return <InfoPair key={`${e.kind}-${otherId}-${i}`} label={e.kind} value={other?.label || otherId} />
-                            })}
-                        </>
-                    ) : null}
-                    {selected?.kind === 'pr' && selectedRow ? (
-                        <>
-                            <InfoPair label="Number" value={`#${selectedRow.number}`} mono />
-                            <InfoPair label="Branch" value={selectedRow.branch} mono />
-                            <InfoPair label="State" value={selectedRow.draft ? 'draft' : 'open'} mono />
-                            <InfoPair label="Updated" value={formatTimestamp(selectedRow.updatedAt)} />
-                            <a className="preferences-inline-action" href={selectedRow.url} target="_blank" rel="noreferrer">Open on GitHub</a>
-                        </>
-                    ) : null}
-                </aside>
+                <MonitorDetail kind={selected.kind} row={selectedRow} title={drawerTitle} snap={snap} idOf={rowId}
+                    onOpen={(kind, id) => setSelected({ kind, id })} onClose={() => setSelected(null)} />
             ) : null}
 
             {keysOpen ? (

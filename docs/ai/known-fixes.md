@@ -3,6 +3,14 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor shows full data; the dev/prod line flipped to "stopped answering" on one slow answer (2026-11-19, N5631)
+
+Symptom: (1) the tier line said "prod stopped answering" while both pages answered 200, on one slow answer or one refusal; (2) cards and the old inspector showed a hand-picked part of each item, chats and asks had no details, the filter missed chats and most fields.
+Cause: (1) `probeTier` / `network()` judged one fetch with a 3 s limit; a miss was an outage and the feed said so. (2) each kind had its own hard-coded inspector block.
+Fix: `serverXR/src/monitorProbe.js` (a miss is retried once; down only after 2 checks in a row; slow is "slow (N ms)" and up; the last good time and answer are kept); one `MonitorDetail` drawer (every field, copy, related items, raw record, `#monitor/kind/id` link) used by Board, Map, Work, Parts, strip; the filter reads every field of every kind and counts matches; each panel shows "live · heard N s ago" from ages the stream heartbeat now carries.
+Regression tests: `serverXR/src/monitorHub.test.js` ("tier flap"), `serverXR/src/routes/monitorStream.test.js` (ages), `src/components/preferences/monitorDetail.test.js`, `MonitorSection.test.jsx` (chat drawer, filter, live words).
+Not done: rules, hooks, skills, to-do and helpers wait for #1294 / #1299; live push is the existing whole-snapshot stream (no per-row push).
+
 ## Monitor shows every chat (2026-11-19, N5508)
 
 Symptom: chats that wait for the owner were only text boxes low on the Board tab (one scrolled inside a 710 px window), not in the "things need you" strip.

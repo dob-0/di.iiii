@@ -185,4 +185,20 @@ describe('stream lifecycle', () => {
       s.api.closeAll()
     } finally { vi.useRealTimers() }
   })
+
+  it('every heartbeat carries each panel\'s age in ms (server clock), so the page can say "heard N s ago" per panel', async () => {
+    vi.useFakeTimers()
+    try {
+      const s = fakeStream()
+      s.getSnapshot.mockResolvedValue({ generatedAt: 'x', panels: { machines: { ok: true, at: Date.now() - 4000 } }, tiers: { at: Date.now() - 1000 }, chats: { heardSecondsAgo: 7 } })
+      s.open()
+      await vi.advanceTimersByTimeAsync(2100)
+      const beat = s.written.find((t) => t.startsWith('event: heartbeat\n'))
+      const data = JSON.parse(beat.match(/data: (.*)\n/)[1])
+      expect(data.ages.machines).toBeGreaterThanOrEqual(4000)
+      expect(data.ages.tiers).toBeGreaterThanOrEqual(1000)
+      expect(data.ages.chats).toBeGreaterThanOrEqual(7000)
+      s.api.closeAll()
+    } finally { vi.useRealTimers() }
+  })
 })
