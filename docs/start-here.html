@@ -85,14 +85,16 @@ di save my-space</code><button>Copy</button></div><span class="tag">walked on r-
       <ol>
         <li><p>Get the code.</p><div class="cmd"><code>git clone https://github.com/dob-0/di.iiii
 cd di.iiii</code><button>Copy</button></div><span class="tag">walked · 87 s</span></li>
-        <li><p>Install. Also switches the git hooks on.</p><div class="cmd"><code>npm ci</code><button>Copy</button></div><span class="tag">walked · 159 s on a Pi</span></li>
+        <li><p>Install the app and the server. Also switches the git hooks on.</p><div class="cmd"><code>npm ci
+npm --prefix serverXR ci</code><button>Copy</button></div><span class="tag">walked · 19 s + 2 s on di-work (3 min on a Pi)</span></li>
         <li><p>Check the machine, before you start and before every push.</p><div class="cmd"><code>npm run start-check</code><button>Copy</button></div><span class="tag">walked</span></li>
         <li><p>Start your own branch. Never commit on dev or main.</p><div class="cmd"><code>git switch -c feat/&lt;what&gt;-&lt;date&gt;</code><button>Copy</button></div><span class="tag no">not walked</span></li>
         <li><p>See it. Frontend 5173, backend 4000.</p><div class="cmd"><code>npm run dev</code><button>Copy</button></div><span class="tag no">not walked</span></li>
         <li><p>Before you push.</p><div class="cmd"><code>npm run lint &amp;&amp; npm run test -- --run</code><button>Copy</button></div><span class="tag no">not walked</span></li>
         <li><p>Push. A PR to dev opens by itself (needs push rights, or use a fork).</p><div class="cmd"><code>git push -u origin HEAD</code><button>Copy</button></div><span class="tag no">not walked</span></li>
       </ol>
-      <div class="note"><b>Warning from npm ci</b>esbuild's install script is not approved. If <code>npm run build</code> fails on esbuild, run <code>npm approve-scripts</code> (npm 11 and up; npm 10 has no such command). Not checked.</div>
+      <div class="note"><b>Skip the second install and ~220 tests fail</b>The tests need serverXR's own packages (<code>Cannot find module 'dotenv'</code>).</div>
+      <div class="note"><b>Warning from npm ci</b>esbuild's install script is not approved. If <code>npm run build</code> fails on esbuild, run <code>npm install-scripts approve esbuild</code> (npm 11 and up; npm 10 has no such command). Not checked.</div>
       <p class="more">Read next: <code>CURRENT.md</code> → <code>AGENTS.md</code> → <code>CONTRIBUTING.md</code>. Commands: <code>CHEATSHEET.md</code>.</p>
     </section>
 

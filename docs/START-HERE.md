@@ -26,7 +26,8 @@ You need `git` and Node 22 or 24 with npm 10+ (`package.json` engines).
 
 ```bash
 git clone https://github.com/dob-0/di.iiii && cd di.iiii
-npm ci                                     # about 3 minutes on a Pi; also switches the git hooks on
+npm ci                                     # the app; also switches the git hooks on (3 minutes on a Pi)
+npm --prefix serverXR ci                   # the server's own packages; skip it and ~220 tests fail (Cannot find module 'dotenv')
 npm run start-check                        # run before you start and before every push
 git switch -c feat/<what>-<date>           # never commit on dev or main (hooks refuse it)
 npm run dev                                # frontend 5173 + backend 4000 — not walked on the Pi
@@ -34,7 +35,7 @@ npm run lint && npm run test -- --run      # before you push (not walked on the 
 git push -u origin HEAD                    # a push opens the PR to dev by itself (needs push rights; a fork works too)
 ```
 
-`npm ci` prints a warning that `esbuild`'s install script is not approved. Whether the build needs it was not checked: if `npm run build` fails on esbuild, run `npm approve-scripts` (npm 11 and up; npm 10 has no such command).
+`npm ci` prints a warning that `esbuild`'s install script is not approved. Whether the build needs it was not checked: if `npm run build` fails on esbuild, run `npm install-scripts approve esbuild` (npm 11 and up; npm 10 has no such command).
 Read next: `CURRENT.md`, then `AGENTS.md`, then `CONTRIBUTING.md`. Commands you will use: `CHEATSHEET.md`.
 Not walked: macOS, Windows, `gh auth login` and a real push.
 
