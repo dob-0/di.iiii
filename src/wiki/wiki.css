@@ -144,9 +144,11 @@
 
 .wiki-sidebar-link:hover { color: var(--di-cyan); }
 
-.wiki-content { display: grid; gap: var(--di-space-6); min-width: 0; }
+.wiki-content { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--di-space-6); min-width: 0; }
 
 .wiki-article {
+    min-width: 0;
+    overflow-wrap: anywhere;
     scroll-margin-top: var(--di-space-5);
     padding: var(--di-space-5);
     border: 1px solid var(--di-cyan-border);
@@ -222,6 +224,6 @@
 .wiki-root .sbar-home { position: relative; z-index: 1; background: var(--di-bg); }
 
 @media (max-width: 800px) {
-    .wiki-layout { grid-template-columns: 1fr; }
+    .wiki-layout { grid-template-columns: minmax(0, 1fr); }
     .wiki-sidebar { position: static; }
 }
