@@ -50,11 +50,14 @@ describe('admin console in plain words', () => {
         expect(screen.getByRole('button', { name: 'Back to the space' })).toBeInTheDocument()
     })
 
-    it('the nav is plain labels in two named groups, no glyph icons', () => {
+    it('the nav is plain labels in four named groups, no glyph icons', () => {
         const { container } = renderAdmin()
         const nav = screen.getByRole('navigation', { name: 'Admin sections' })
-        expect(within(nav).getByText('Spaces and people')).toBeInTheDocument()
-        expect(within(nav).getByText('Operator tools (staff)')).toBeInTheDocument()
+        for (const g of ['Watch', 'People and spaces', 'Outreach', 'Operate (staff)']) expect(within(nav).getByText(g)).toBeInTheDocument()
+        // Open call is Outreach, never under People and spaces
+        const labels = [...nav.querySelectorAll('.preferences-nav-group-label, .preferences-nav-label')].map((n) => n.textContent)
+        expect(labels.indexOf('Open call')).toBe(labels.indexOf('Outreach') + 1)
+        expect(labels.indexOf('Spaces and users')).toBe(labels.indexOf('People and spaces') + 1)
         expect(within(nav).getByRole('button', { name: 'Machines' })).toBeInTheDocument()
         expect(container.querySelectorAll('.preferences-nav-glyph')).toHaveLength(0)
     })

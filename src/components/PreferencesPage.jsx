@@ -37,29 +37,32 @@ import AppVisitorsSection from './preferences/AppVisitorsSection.jsx'
 //
 // Plain words (UX audit 2026-10-28, F045/F109): the keys stay, the names a
 // person reads say what each screen is for; no Unicode glyphs as icons (they
-// meant nothing and fell back to the device font). Group labels are the two
-// jobs: the people side and the staff-only operator side.
+// meant nothing and fell back to the device font). Group labels are the four
+// jobs: watch, people, outreach, staff operator.
 const GROUP_LABELS = {
-    admin: 'Spaces and people',
-    diagnostics: 'Operator tools (staff)'
+    watch: 'Watch',
+    people: 'People and spaces',
+    outreach: 'Outreach',
+    operate: 'Operate (staff)'
 }
+// Grouped by what the owner does (2026-11-18): watch what is happening, look
+// after people and spaces, reach out, then the staff-only operator tools.
+// The keys (and so every /admin#<key> link) are unchanged; only the order and
+// group moved. Open call no longer sits under Spaces and users.
 const SECTIONS = [
-    { key: 'manage', label: 'Spaces and users', group: 'admin' },
-    { key: 'opencall', label: 'Open call', group: 'admin' },
-    // Everything that is going on, in one place: machines, network, agents,
-    // services, pull requests and the operator's task and show feeds.
-    { key: 'monitor', label: 'Monitor', group: 'admin' },
-    { key: 'agents', label: 'Agent sessions', group: 'admin' },
+    { key: 'monitor', label: 'Monitor', group: 'watch' },
+    { key: 'agents', label: 'Agent sessions', group: 'watch' },
     // The guest book: which apps, crawlers and scripts called, with a block
-    // toggle — admin, because blocking changes who gets in.
-    { key: 'visitors', label: 'Visitors', group: 'admin' },
-    { key: 'overview', label: 'Overview', group: 'diagnostics' },
-    { key: 'inspect', label: 'This scene', group: 'diagnostics' },
-    { key: 'system', label: 'Log and settings', group: 'diagnostics' },
-    // Diagnostics, not admin: the estate map only observes. It is the machines
-    // themselves rather than this app — read from the private atlas, admin-gated
-    // at the server because it is infrastructure topology.
-    { key: 'estate', label: 'Machines', group: 'diagnostics' }
+    // toggle (blocking changes who gets in).
+    { key: 'visitors', label: 'Visitors', group: 'watch' },
+    { key: 'manage', label: 'Spaces and users', group: 'people' },
+    { key: 'opencall', label: 'Open call', group: 'outreach' },
+    { key: 'overview', label: 'Overview', group: 'operate' },
+    { key: 'inspect', label: 'This scene', group: 'operate' },
+    { key: 'system', label: 'Log and settings', group: 'operate' },
+    // The estate map only observes: the machines themselves, read from the
+    // private atlas, admin-gated at the server (infrastructure topology).
+    { key: 'estate', label: 'Machines', group: 'operate' }
 ].map((section) => ({ ...section, groupLabel: GROUP_LABELS[section.group] }))
 
 // Sections where the person is administering, not debugging the scene — the
