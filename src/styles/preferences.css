@@ -1762,7 +1762,7 @@
 .monitor-spark.is-empty { color: var(--ui-text-muted); font-size: var(--di-text-2); line-height: 1.75rem; }
 
 /* count tiles */
-.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: var(--di-space-2); }
+.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: var(--di-space-2); }
 .monitor-count {
     display: flex;
     flex-direction: column;
@@ -2049,16 +2049,18 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-fields { display: flex; flex-direction: column; margin: 0; }
 .monitor-field { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: var(--di-space-3); padding: var(--di-space-2) 0; border-bottom: 1px solid var(--pref-border); }
 .monitor-field dt { font-family: var(--di-mono); font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.04em; color: var(--di-text-muted); overflow-wrap: anywhere; }
-.monitor-field dd { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--di-space-2); min-width: 0; }
+.monitor-field dd { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--di-space-1) var(--di-space-2); min-width: 0; }
+.monitor-field-age { grid-column: 1; }
 .monitor-field dd.is-empty { color: var(--di-text-muted); }
-.monitor-field-value { font-family: var(--di-mono); font-size: var(--di-text-3); overflow-wrap: anywhere; white-space: pre-wrap; min-width: 0; flex: 1 1 auto; }
+.monitor-field-value { font-family: var(--di-mono); font-size: var(--di-text-3); overflow-wrap: anywhere; white-space: pre-wrap; min-width: 0; }
+.monitor-field .monitor-copy { grid-column: 2; grid-row: 1; }
 .monitor-field-age { font-size: var(--di-text-2); color: var(--di-cyan); white-space: nowrap; }
 .monitor-copy { padding: 0 var(--di-space-2); min-height: 24px; background: transparent; color: var(--di-text-muted); border: 1px solid var(--pref-border); border-radius: 0; font-family: var(--di-mono); font-size: var(--di-text-2); cursor: pointer; }
 .monitor-copy:hover { color: var(--di-text); border-color: var(--pref-border-active); }
 .monitor-copy:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
 .monitor-related { display: flex; flex-direction: column; gap: var(--di-space-1); }
 /* a 2px leading edge, inset so it takes no layout; not a shadow */
-.monitor-related-item { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: var(--di-space-3); padding: var(--di-space-2) var(--di-space-3); background: var(--di-surface); color: var(--di-text); border: none; border-radius: 0; box-shadow: inset 2px 0 0 var(--di-cyan); font: inherit; text-align: left; cursor: pointer; }
+.monitor-related-item { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: var(--di-space-3); padding: var(--di-space-1) var(--di-space-3); font-size: var(--di-text-3); background: var(--di-surface); color: var(--di-text); border: none; border-radius: 0; box-shadow: inset 2px 0 0 var(--di-cyan); font: inherit; text-align: left; cursor: pointer; }
 .monitor-related-item:hover { background: rgba(255, 255, 255, 0.08); }
 .monitor-related-item:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
 .monitor-related-label { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-text-muted); }
@@ -2068,3 +2070,4 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 @media (max-width: 700px) {
     .monitor-field, .monitor-related-item { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-1); }
 }
+

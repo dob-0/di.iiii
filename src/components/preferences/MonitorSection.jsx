@@ -668,7 +668,7 @@ export default function MonitorSection({ onStats }) {
             </div>
 
             {selected ? (
-                <MonitorDetail kind={selected.kind} row={selectedRow} title={drawerTitle} snap={snap} idOf={rowId}
+                <MonitorDetail key={`${selected.kind}:${selected.id}`} kind={selected.kind} row={selectedRow} title={drawerTitle} snap={snap} idOf={rowId}
                     onOpen={(kind, id) => setSelected({ kind, id })} onClose={() => setSelected(null)} />
             ) : null}
 
