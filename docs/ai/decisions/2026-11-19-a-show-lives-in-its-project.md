@@ -37,7 +37,7 @@ Four things are kept twice, and what is changed on the desk has no road back to 
 |---|---|---|---|
 | Looks | designed looks | copies named `rig-…`, one value per lamp | a button sends them; nothing comes back |
 | Cue list | the project's cues | the desk's cue runner | pushed by the page; nothing comes back |
-| Patch | unit number, universe and address on each lamp | lamps in the show file, each with a key to the project's lamp | the desk gives addresses, the room writes them back |
+| Patch | unit number, universe and address on each lamp | lamps in the show file; a lamp made from a project carries a key to the project's lamp | the desk gives addresses, the page writes them back into the document |
 | Laser pictures | frames on a laser object | the looks of the laser desk's bank | none: two homes |
 
 - `src/rigbuild/CardsSurface.jsx:355` "await fetch(lightingApiUrl('api/looks/add')" · `src/rigbuild/looks.js:31` "export const DESK_LOOK_PREFIX = 'rig-'"
@@ -48,7 +48,8 @@ Four things are kept twice, and what is changed on the desk has no road back to 
 Counted by script on one machine (aylmo) on 2026-11-18; keys, counts and sizes only, no value was read:
 
 - 40 of its 342 project documents hold a show: 2,799 lamps, 1,062 designed looks, 1,017 cues.
-- Its three desk files hold 218 looks. 217 are named as copies made from a project, and 0 light scenes are kept.
+- Its three light desk files (the machine's own and those of two spaces) hold 218 looks. 217 are named as copies made from a
+  project, and 0 light scenes are kept.
 - The desk file of one space (moxir) is fed by nine projects.
 - 1,703 of the 2,799 lamps carry a universe and an address in the document.
 - It has no laser desk file. The machines that played a show were not read.
@@ -110,10 +111,10 @@ Why this one:
 | `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:8` "one show per space, carried in the space's" and `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:14` "A space owns its own light show." | Replaced as the aim. Both stay true of what is built until the steps of the plan land. |
 | The first reason of the plan of 2026-09-03: `495604454:docs/architecture/LIGHTING_SHOW_PORTABILITY.md:80` "The unit is the space, not the project." It feared two projects of one room owning two unrelated light libraries. | Already so. On aylmo 40 documents hold a show of their own (2,799 lamps, 1,062 designed looks and 1,017 cues in all); in moxir 39 projects carry 15 different lamp counts; and the one desk file of that space mixes the looks of nine projects. |
 | Its second reason: `495604454:docs/architecture/LIGHTING_SHOW_PORTABILITY.md:83` "Weight, and who pays it." | The weight is already in the documents. In the largest one the designed looks take 1,293,897 characters and the laser objects 7,940,786; the desk file of that space is 1,507,376 bytes, and 175 of its 176 looks are named as copies. What a visitor's page is sent is not checked; step 1 of the plan measures it. |
-| `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:61` "A visitor never downloads it." | Changes. What is made on the desks would be in a project a visitor can open. No output and no cube address is among it. The owner is asked at the step that moves it. |
+| `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:61` "A visitor never downloads it." | Changes. What is made on the desks would be in a project a visitor can open. No output and no cube address is among it. The owner is asked before the first step that writes it there (step 3 of the plan). |
 | `di-atlas/decisions/2026-09-23-connect-everything.md:136` "Recommendation: the space." | Replaced by this pick. |
 | `di-atlas/decisions/2026-09-23-layers-what-inside-what.md:248` "lives in one file … per machine, not in a project" | Replaced by this pick. |
-| `di-atlas/decisions/2026-09-20-one-project-one-stage.md:22` "Never universe/address in the document." | **Not decided here.** As built, the documents carry both (1,703 of 2,799 lamps). Advised: the line is struck. The owner is asked at the step that touches the patch. |
+| `di-atlas/decisions/2026-09-20-one-project-one-stage.md:22` "Never universe/address in the document." | **Not decided here.** As built, the documents carry both (1,703 of 2,799 lamps). Advised: the line is struck. The owner is asked before the first step that reads the patch from the project (step 2 of the plan). |
 
 The two notes in `di-atlas` are not edited by this record; a pointer there is owed.
 
@@ -134,27 +135,28 @@ The two notes in `di-atlas` are not edited by this record; a pointer there is ow
   one migration, the old file kept beside the new one.
 - What the operator makes on a show night lands in the project on the show machine and must come home by the project's road.
   Which side wins when both changed is not settled here.
-- Not solved by this pick: each project of a room carries its own copy of the rig. The cure is owed:
+- Not solved by this pick: each project of a place carries its own copy of the rig. The cure is owed:
   `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:89` "Rebinding a travelling show to a venue's rig"
 - The custom fixture types in the desk files (5, 5 and 17 on aylmo) need a home. Not read for this record.
 
 ## Not decided here
 
-Each is the owner's, and each is asked at its step of the plan:
+Each is the owner's, and each is asked before the first step of the plan whose build depends on the answer:
 
-1. The line of 2026-09-20: struck, or the patch moves out of the project. Advised: struck. Step 3.
-2. What a visitor may open once the desks' content is in the project. Measured first. Step 4.
-3. The new default: the desks read the project unless told otherwise. Step 6.
+1. The line of 2026-09-20: struck, or the patch moves out of the project. Advised: struck. Asked before step 2.
+2. What a visitor may open once the desks' content is in the project. Measured first, in step 1. Asked before step 3.
+3. The new default: the desks read the project unless told otherwise. Asked before step 6.
 
 ## Undo
 
-This record and the plan change no code and no data: revert the pull request that added them. Every later step adds behind a
-switch that starts off, and the desks' own files stay, so each step is undone by its switch.
+This record and the plan change no code and no data: revert the pull request that added them. Every later step adds and
+leaves the desks' own files in place, and each names its own undo of one command in the plan: a switch that starts off, or a
+command that removes what it wrote.
 
 ## How this was checked
 
-- Read by four readers on 2026-11-18 (lights, laser, project, records): 362 quotes stood at the line named. Their report is
-  kept with the job, outside the repo.
+- Read by four readers on 2026-11-18 (lights, laser, project, records): 362 of their 362 quotes were found by script within
+  three lines of the line named. Their report is kept with the job, outside the repo.
 - Every `path:line` "quote" in this record was checked by script against the branch that adds it; the count is in the pull request.
 - The real files were counted by script on aylmo on 2026-11-18: keys, counts and sizes only.
 - Not checked: the show files on the show machines; whether a hosted tier holds a light show file of any space; what a

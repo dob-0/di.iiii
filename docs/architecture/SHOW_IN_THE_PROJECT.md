@@ -23,11 +23,11 @@ The desks stay. They play and edit the project's show, one show loaded at a time
 
 | Part | Kept today | After the move | Step |
 |---|---|---|---|
-| Lamps with their patch | the project document; a copy on the light desk, each lamp with a key to the project's lamp | the project; the desk's copy is built from it | 2 |
+| Lamps with their patch | the project document; a copy on the light desk, where a lamp made from a project carries a key to the project's lamp | the project; the desk's copy is built from it | 2 |
 | Designed looks | the project document; copies on the light desk, sent by a button | the project; the desk's copy is built from it | 2 |
 | The cue list | the project document; pushed to the desk's cue runner by the page | the project; the desk reads it | 2 |
 | Laser objects with their frames | the project document; the server already plays them from there | no change | none |
-| What is made on the light desk: looks, light scenes, layers, sets, effects, LFOs, audio settings, the MIDI map | the space's light show file, `<spacesDir>/<id>/lighting/show.json` | the project | 3 for what is new, 4 for what exists |
+| What is made on the light desk: looks, light scenes, layers, sets, effects, LFOs, audio settings, the MIDI map | the space's light show file, `<spacesDir>/<id>/lighting/show.json`, or the machine's own show file | the project | 3 for what is new, 4 for what exists |
 | What is made on the laser desk: the bank of looks, the palette, the link | the machine's laser desk file, `<dataDir>/laser/desk.json` | the project | 3 and 4 |
 | The output | the machine's own show file, key `output` | no change | never |
 | The laser rig: cubes by serial, zones, safety | the machine's laser file | no change | never |
@@ -40,7 +40,7 @@ Proof, in the order of the rows:
 - Designed looks: `shared/projectSchema.cjs:1199` "if (sourceComponents.rigLooks) {" · `src/rigbuild/CardsSurface.jsx:355` "await fetch(lightingApiUrl('api/looks/add')" · `src/rigbuild/looks.js:31` "export const DESK_LOOK_PREFIX = 'rig-'"
 - The cue list: `src/rigbuild/cueRun.js:47` "post('api/cues/load', { project: projectId, list: deskCueList(cues)" · `src/rigbuild/showClock.js:1` "a rig's cue list played with no desk"
 - Laser objects: `serverXR/src/laser/laserShow.js:1` "a project's laser lines, played on the real LaserCubes." · `serverXR/src/index.js:537` "readProjectDocument(SPACES_DIR, project.spaceId, project.projectId)"
-- The light desk: `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:22` "The show holds the patch (fixtures, groups, the fixture types it made or imported)," · `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:23` "scenes, looks, layers, sets, effects, LFOs, audio settings and the MIDI map."
+- The light desk: `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:22` "The show holds the patch (fixtures, groups, the fixture types it made or imported)," · `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:23` "scenes, looks, layers, sets, effects, LFOs, audio settings and the MIDI map." · `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:19` "this machine's own show (unchanged)"
 - The laser desk: `serverXR/src/laser/laserDesk.js:19` "the bank, the clock and the setup are kept in … the live look is not." · `serverXR/src/laser/laserDesk.js:261` "followLight: false, palette: []" · `serverXR/src/laser/sceneLink.js:7` "THE DATA is the laser desk's own saved show (desk.json)"
 - The output: `serverXR/src/lighting/desk.js:57` "const MACHINE_SHOW = path.join(DATA, 'show.json');" · `serverXR/src/lighting/desk.js:631` "disk.output = state.output;" · `scripts/space-bundle.mjs:233` "delete show.output"
 - The laser rig: `serverXR/src/laser/laserConfig.js:1` "WRITE laser.json FROM THE PANEL" · `serverXR/src/laser/laserConfig.js:5` "EVERYTHING IS KEYED BY SERIAL."
@@ -50,8 +50,9 @@ Proof, in the order of the rows:
 Counted by script on one machine (aylmo) on 2026-11-18; keys, counts and sizes only, no value was read:
 
 - 40 of its 342 project documents hold a show: 2,799 lamps, 1,062 designed looks, 1,017 cues. 39 of the 40 are in one space.
-- Its three light desk files hold 218 looks. 211 are copies of a designed look that exists today; 6 are copies whose designed
-  look matches none today; 1 is not named as a copy. They hold 0 light scenes.
+- Its three light desk files (the machine's own and those of two spaces) hold 218 looks. 217 are named as copies of a
+  designed look: for 211 of them that designed look exists today, for 6 it does not. 1 is not named as a copy. They hold 0
+  light scenes.
 - 140 of the 152 desk lamps carry a key to a project's lamp; 12 do not.
 - No laser desk file is on that machine.
 
@@ -97,13 +98,17 @@ project document.
   document, the way the laser show is already read, and builds its copy from them. A switch on the machine chooses between the
   copy as today and the copy built from the project. The switch starts off.
 - **Known cost:** a designed look becomes desk values in the page's code today: `src/rigbuild/deskLookValues.js:1` "THE DESK'S LOOKS WITH THEIR DMX".
-  The server has to get the same result from the same code; the test below is the proof that it does.
+  The server has to get the same result. How (the same module in a shared place, or a port of it) is written in the step's
+  spec; the test below is the proof that it does.
 - **Laser:** nothing to build in this step. The server already plays laser objects from the project. The laser desk's bank
   moves in steps 3 and 4.
 - **Touches:** `serverXR/src/lighting/` and a test. No schema, no data file.
-- **Test:** for every desk copy that names a designed look (aylmo: 211 of 218 looks), the DMX frame computed from the project
-  is compared with the frame of the stored copy, lamp by lamp. The command prints same, differ and missing; each difference is
-  listed with its cause; unexplained: 0. With the switch off, the desks' own tests pass unchanged.
+- **Test:** for every desk look that is named as a copy of a designed look (aylmo: 217 of 218), the DMX frame computed from
+  the project is compared with the frame of the stored copy, lamp by lamp. The command prints same, differ and missing (aylmo:
+  the designed look of 6 copies is missing today); each difference is listed with its cause; unexplained: 0. With the switch
+  off, the desks' own tests pass unchanged.
+- **The owner's question before this step:** question 1 of section 7. This step is the first that reads the patch from the
+  project.
 - **Undo:** the switch off.
 
 ### Step 3. What is made on a desk is written into the project
@@ -114,13 +119,15 @@ project document.
   The light desk already knows three scopes of a look (`serverXR/src/lighting/looks.js:44` "const SCOPES = ['each', 'type', 'global'];");
   how many looks are of each scope is counted by step 1. Where it is written, inside the document or in a file of the
   project, is section 5.
-- **Touches:** both schema copies in the same change (`shared/projectSchema.cjs:2108` "const normalizeProjectDocument = (document = {}) => {"
-  and `src/shared/projectSchema.js:2196` "export const normalizeProjectDocument = (document = {}) => {"), the schema-sync test,
-  and the desks' save paths. Why both copies: `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:108` "and a key the schema does not name does not survive there:"
+- **Touches:** the desks' save paths. If section 5 puts the show inside the document, also both schema copies in the same
+  change (`shared/projectSchema.cjs:2108` "const normalizeProjectDocument = (document = {}) => {"
+  and `src/shared/projectSchema.js:2196` "export const normalizeProjectDocument = (document = {}) => {") and the schema-sync
+  test. Why both copies: `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:108` "and a key the schema does not name does not survive there:"
 - **Test:** a round trip per kind (write, normalise, read, normalise again; equal for N of N kinds); the schema-sync test
-  green; on a second machine that follows the project, the new look is there with no file carried by hand. The rehearsal
-  machine first.
-- **The owner's question before this step:** question 1 of section 7.
+  green. If the show is inside the document: on a second machine that follows the project, the new look is there with no file
+  carried by hand. If it is a file of the project, that carry is built and tested in step 5. The rehearsal machine first.
+- **The owner's question before this step:** question 2 of section 7. This step is the first that writes what is made on a
+  desk into a project.
 - **Undo:** the switch off. The new fields stay in the documents, unread.
 
 ### Step 4. One migration of what only the desks keep
@@ -128,13 +135,15 @@ project document.
 - **Builds:** one command with a dry run. The dry run prints counts per kind and writes nothing. The real run writes what the
   desks' files hold and no project has (light scenes, effects, layers, the controller map; the laser bank, the palette, the
   link) into the project each belongs to, in the form of step 3.
-- **Which project:** by the key each desk lamp carries to its project's lamp (aylmo: 140 of 152 lamps carry it). What
-  matches no designed look or carries no key (aylmo: 7 of 218 looks, 12 of 152 lamps) is listed for the owner and is not
-  guessed.
+- **What moves on aylmo:** 211 of the 218 desk looks are copies of a designed look that exists, so the project already has
+  them. 7 looks are to be placed: 6 copies whose designed look is missing today, and 1 look that is not named as a copy.
+- **Which project:** for the light desk, by the key a desk lamp carries to its project's lamp (aylmo: 140 of 152 lamps carry
+  it, 12 do not). For the laser bank, by the cues that name its looks: `shared/projectSchema.cjs:248` "id of a laser-desk look made live when the cue fires, after the light."
+  What cannot be placed this way is listed for the owner and is not guessed. The laser desk's palette and link are kept once
+  per machine today; the dry run lists them too.
 - **The desk file is never edited.** It stays beside the project as the rollback.
 - **Test:** counts per kind equal before and after (N of N); the same DMX frame for every moved look (N of N); every cue's
   laser look is found. Today a cue can name a laser look that the desk of this machine does not have: `src/map/MapCueList.jsx:278` "(not on the desk)".
-- **The owner's question before this step:** question 2 of section 7.
 - **Undo:** the command removes what it wrote. The desk file was never changed.
 
 ### Step 5. A shared project brings its lights and its laser
@@ -144,6 +153,7 @@ project document.
   carriers learn that file: follow, the space file and tier sync. Today the space file carries the light show and nothing of
   the laser (`scripts/space-bundle.mjs:7` "the space's light show (lighting/show.json, the lighting desk's"; 0 lines of that
   tool name a laser), and tier sync carries neither: `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:95` "Tier sync does not carry the show."
+  0 lines of its two tools name a light show or a laser (section 9).
 - **Also settles:** how what the operator changes on a show night comes home, and which side wins when both changed
   (section 8).
 - **Test,** on a second machine whose desks are empty: follow the project, open the desks, the show loads. Looks, cues and
@@ -172,9 +182,9 @@ project document.
 - **Known:** inside the document means schema work in both copies (rule 6). The desk writes its file whole:
   `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:24` "written the way the machine's show always was: whole, to a temp file, renamed, with"
 - **Not checked:** what a visitor's page is sent.
-- **Settled before step 3** by three numbers from step 1: the size of the show part of each document, written compact; the
-  bytes a visitor's page is sent with and without it; the save time of the largest document. The limits are written into
-  step 3's spec, and the owner is told the numbers.
+- **Settled before step 3** by three numbers from step 1 (the size of the show part of each document, written compact; the
+  bytes a visitor's page is sent with and without it; the save time of the largest document) and by the owner's answer to
+  question 2 of section 7. The limits are written into step 3's spec, and the owner is told the numbers.
 
 ## 6. The work in flight
 
@@ -199,9 +209,11 @@ requests again before it starts.
 
 | # | Asked before | Question | Advised | Yes means | No means |
 |---|---|---|---|---|---|
-| 1 | step 3 | Strike the line of 2026-09-20? | yes | The patch stays in the project, as built. A desk plays a shared project with no patching by hand. | The patch moves out of the project into a machine file. A shared project arrives without addresses and each machine patches it again. |
-| 2 | step 4 | May everyone who can open a project get its whole show, the part made on the desks too? | yes, unless the numbers of step 1 say the weight is too much | One rule for the whole project. Nothing of the wire is in it. | The part made on the desks is held back from a visitor's page: one more filter to build and to test. |
+| 1 | step 2 | Strike the line of 2026-09-20? | yes | The patch stays in the project, as built. A desk plays a shared project with no patching by hand. | The patch moves out of the project into a machine file. A shared project arrives without addresses, each machine patches it again, and step 2 reads the addresses from that file. |
+| 2 | step 3 | May everyone who can open a project get its whole show, the part made on the desks too? | yes, unless the numbers of step 1 say the weight is too much | One rule for the whole project. Nothing of the wire is in it. | The part made on the desks is held back from a visitor's page: it is kept as a file of the project that a visitor is not sent, or one more filter is built and tested. |
 | 3 | step 6 | Is the project the default source of the desks? | yes, after step 5 passed on a show machine | The switch starts on. | Reading from the project stays a mode, chosen per machine. |
+
+Each question is asked before the first step whose build depends on the answer.
 
 The line of question 1: `di-atlas/decisions/2026-09-20-one-project-one-stage.md:22` "Never universe/address in the document."
 As built, the documents carry both: on aylmo 1,703 of 2,799 lamps have a universe and an address. `di-atlas` is the studio's
@@ -209,7 +221,7 @@ notes repo and is not public.
 
 ## 8. Open, not solved by this plan
 
-1. **Each project of a room carries its own copy of the rig.** In one space on aylmo 39 projects carry 15 different lamp
+1. **Each project of a place carries its own copy of the rig.** In one space on aylmo 39 projects carry 15 different lamp
    counts. The cure is owed: `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:86` "The fixture index as the identity" and
    `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:89` "Rebinding a travelling show to a venue's rig"
 2. **The custom fixture types in the desk files** (aylmo: 5, 5 and 17) need a home: the library of the house on the machine,
@@ -228,7 +240,7 @@ notes repo and is not public.
 
 ## 9. How this page was checked
 
-The counts of section 2, run in the root of the branch that adds this page:
+The counts of sections 2 and 4, run in the root of the branch that adds this page:
 
 ```text
 grep -c -P "^\s*'POST /[^']+'\s*:" serverXR/src/lighting/desk.js                     59
@@ -240,6 +252,8 @@ grep -r -P 'light/api|laser/api' src | grep -v -P '^[^:]*\.test\.' | wc -l      
 grep -rl -P 'light/api|laser/api' src | grep -v -P '\.test\.' | wc -l                19
 grep -rl -P 'lightingApiUrl\(' src | grep -v -P '\.test\.' | wc -l                   9
 grep -c -i laser scripts/space-bundle.mjs                                            0
+grep -c -i -P 'laser|lighting' scripts/space-sync.mjs                                0
+grep -c -i -P 'laser|lighting' scripts/tier-sync.mjs                                 0
 ```
 
 - Every `path:line` "quote" on this page was checked by script against the branch that adds it: the quote starts on the line
