@@ -101,6 +101,10 @@ const BANNED = [
 //   *.test.js(x) — a test asserting old copy is a broken test, not copy.
 const COPY_FILES = [
     'public-README.md',
+    'desktop/README.md',
+    'desktop/src/main.js',
+    'desktop/src/menu.js',
+    'desktop/src/offline.html',
     'serverXR/src/routes/ogRoutes.js',
     'src/index.html',
     'src/Menu.jsx',
