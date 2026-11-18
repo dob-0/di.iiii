@@ -42,6 +42,22 @@ module.exports = [
     note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server. Answers ok:false with a plain reason when the App is not set up or lacks Pull requests: read."
   },
   {
+    route: "GET /api/monitor/tasks",
+    summary: "the owner's open asks from the ledger (state, age, who has it) and one ask's history, for Monitor → Tasks",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server. Reads only the configured ledger file."
+  },
+  {
+    route: "POST /api/monitor/tasks",
+    summary: "the owner marks one ask done, blocked, reopened or adds a note; written to the ledger through its own tool and logged",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "the owner only (others 404), a browser session on the same origin; fixed argument list, no shell, state and id allow-lists, text capped, Done needs evidence; 30 per minute (429); 404 on prod."
+  },
+  {
     route: "POST /api/monitor/report",
     summary: "a machine sends its own monitor panels (and, from aylmo, the open ledger asks); kept in memory, stale after 120 s",
     reach: "private",
