@@ -1971,3 +1971,23 @@
 /* Pull requests in Monitor › Work: each row is a link, so it must not look underlined. */
 a.monitor-row { text-decoration: none; }
 a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+/* Selected node's card inside a full-screen map: the detail page is hidden, so the card carries the way to it */
+.monitor-map-card {
+    position: absolute; right: var(--di-space-3); bottom: var(--di-space-3); z-index: 2; max-width: 20rem;
+    display: grid; gap: var(--di-space-1); padding: var(--di-space-3);
+    background: var(--di-surface); border: 1px solid var(--pref-border);
+}
+.monitor-map-card-name { color: var(--di-text); font-size: var(--di-text-5); overflow-wrap: anywhere; }
+.monitor-map-card-meta { color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-3); }
+/* Spaces and users: view switch + live chip above the list or the world */
+.preferences-manage-world { display: grid; gap: var(--di-space-3); min-width: 0; }
+.preferences-manage-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-3); }
+.preferences-live-chip {
+    font-family: var(--di-mono); font-size: var(--di-text-3); color: var(--ui-text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+}
+.preferences-live-chip[data-live="on"]::before {
+    content: ''; display: inline-block; width: 8px; height: 8px; margin-right: var(--di-space-2);
+    background: rgb(var(--di-live-rgb));
+}
+.preferences-person-spaces { display: flex; flex-wrap: wrap; gap: var(--di-space-2); margin-top: var(--di-space-3); }

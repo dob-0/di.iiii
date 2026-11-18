@@ -85,7 +85,7 @@ function MapList({ nodes, selectedId, onPick }) {
                                     className={`monitor-row tone-${toneOf(n.state)}${selectedId === n.id ? ' is-selected' : ''}`}
                                     aria-pressed={selectedId === n.id} onClick={() => onPick(n)}>
                                     <span className="monitor-name">{n.label}</span>
-                                    <span className="monitor-meta">{n.state}</span>
+                                    <span className="monitor-meta">{n.stateLabel || n.state}</span>
                                 </button>
                             ))}
                         </div>
@@ -273,7 +273,7 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
                     const cls = `monitor-node kind-${n.kind} tone-${toneOf(n.state)}${sel ? ' is-selected' : ''}${hover === n.id ? ' is-hover' : ''}${focus && !hot(n.id) ? ' is-dim' : ''}`
                     return (
                         <g key={n.id} transform={`translate(${p.x - w / 2},${p.y - h / 2})`} data-map-node={n.id} role="button" tabIndex={0}
-                            aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`} className={cls}
+                            aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.stateLabel || n.state}`} className={cls}
                             onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h0) => (h0 === n.id ? null : h0))}
                             onFocus={() => setHover(n.id)} onBlur={() => setHover((h0) => (h0 === n.id ? null : h0))}
                             onClick={() => pick(n)}
@@ -282,8 +282,8 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
                             <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 9.6))}</text>
-                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{`${n.state} · ${n.kind}`}</text>
-                            <title>{`${n.kind}: ${n.label} (${n.state})`}</title>
+                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{`${n.stateLabel || n.state} · ${n.kind}`}</text>
+                            <title>{`${n.kind}: ${n.label} (${n.stateLabel || n.state})`}</title>
                         </g>
                     )
                 })}
@@ -296,7 +296,7 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
                         <g className={`monitor-tip tone-${toneOf(hovered.state)}`} transform={`translate(${p.x - w / 2},${p.y - h / 2 - 58})`} pointerEvents="none">
                             <rect width={w} height="46" className="monitor-tip-box" />
                             <text x="12" y="20" className="monitor-tip-label">{text}</text>
-                            <text x="12" y="38" className="monitor-tip-meta">{`${hovered.kind} · ${hovered.state}`}</text>
+                            <text x="12" y="38" className="monitor-tip-meta">{`${hovered.kind} · ${hovered.stateLabel || hovered.state}`}</text>
                         </g>
                     )
                 })() : null}
@@ -312,13 +312,16 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
     )
 }
 
-export default function MonitorMap({ map, selectedId, onPick, narrow, live = false }) {
+// `view` pins the view ('2d' | '3d') when the page owns the List | 2D | 3D switch (the Spaces world);
+// `onOpen(node)` adds an "Open" button on the selected node's card in full screen, where the detail is hidden.
+export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, view: pinned = null, onOpen = null, empty = null }) {
     const nodes = useMemo(() => map?.nodes || [], [map])
     const layout = useMemo(() => layoutMap(map, narrow ? 1 : ASPECT), [map, narrow])
     const [stored, setStored] = useState(readView)
-    const view = stored || (narrow ? 'list' : '2d')
+    const view = pinned || stored || (narrow ? 'list' : '2d')
     const rootRef = useRef(null)
     const [fullscreen, setFullscreen] = useState(false)
+    const selectedNode = selectedId ? nodes.find((n) => n.id === selectedId) || null : null
     const choose = (v) => { if (v === 'list') setFullscreen(false); setStored(v); writeView(v) }
     useFillHeight(rootRef, view)
     // the List view has no Exit button: a view that resolves to List (narrow screen) leaves full screen too
@@ -333,12 +336,12 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
         return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
     }, [fullscreen])
 
-    if (!nodes.length) return <div className="monitor-note">Nothing on the map yet. Machines, tiers and spaces appear when the server reports them.</div>
+    if (!nodes.length) return <div className="monitor-note">{empty || 'Nothing on the map yet. Machines, tiers and spaces appear when the server reports them.'}</div>
 
     return (
         <div className={`monitor-map${fullscreen ? ' is-fullscreen' : ''}`} data-monitor-map-view={view} ref={rootRef}>
             <div className="monitor-map-views" role="group" aria-label="Map view">
-                {VIEWS.map(([id, label]) => (
+                {pinned ? null : VIEWS.map(([id, label]) => (
                     <button key={id} type="button" data-map-view={id} className={`monitor-map-view${view === id ? ' is-active' : ''}`}
                         aria-pressed={view === id} onClick={() => choose(id)}>{label}</button>
                 ))}
@@ -356,6 +359,13 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
                     <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
                         <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} />
                     </Suspense>
+                </div>
+            ) : null}
+            {fullscreen && onOpen && selectedNode ? (
+                <div className="monitor-map-card" data-map-card={selectedNode.id}>
+                    <div className="monitor-map-card-name">{selectedNode.label}</div>
+                    <div className="monitor-map-card-meta">{`${selectedNode.kind} · ${selectedNode.stateLabel || selectedNode.state}`}</div>
+                    <button type="button" className="monitor-map-tool" onClick={() => { setFullscreen(false); onOpen(selectedNode) }}>Open details</button>
                 </div>
             ) : null}
             <div className="monitor-map-key">

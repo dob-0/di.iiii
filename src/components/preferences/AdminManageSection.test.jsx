@@ -220,6 +220,22 @@ describe('AdminManageSection', () => {
         expect(row.getAttribute('aria-expanded')).toBe('false')
         expect((await axe.run(container, { runOnly: ['nested-interactive'] })).violations).toEqual([])
     })
+
+    // Regression guard (admin MdiD, 2026-11-18): Spaces and users has List | 2D | 3D; the map and the list share one selection.
+    it('shows the spaces world in 2D, and a node click selects the same space the list shows', async () => {
+        listUsers.mockResolvedValue([{ id: 'u1', displayName: 'Ana', role: 'editor', spaces: ['demo'] }])
+        const { container } = render(<AdminManageSection />)
+        await screen.findByText('Demo')
+        expect(screen.getByRole('group', { name: 'Spaces view' })).toBeTruthy(); fireEvent.click(container.querySelector('[data-world-view="2d"]'))
+        expect(container.querySelector('[data-map-node="space:demo"]')).toBeTruthy()
+        expect(container.querySelector('[data-map-node="person:u1"]')).toBeTruthy()
+        expect(screen.getByText(/Live · updated/)).toBeTruthy()
+        fireEvent.click(container.querySelector('[data-map-node="space:demo"]'))
+        await waitFor(() => expect(container.querySelector('[data-map-node="space:demo"]').getAttribute('aria-pressed')).toBe('true'))
+        fireEvent.click(container.querySelector('[data-world-view="list"]'))
+        await waitFor(() => expect(container.querySelector('.preferences-tree-row.is-child.is-selected')).toBeTruthy())
+        expect(container.querySelector('.preferences-tree-row.is-selected').textContent).toContain('Demo')
+    })
 })
 
 describe('SweepSection', () => {

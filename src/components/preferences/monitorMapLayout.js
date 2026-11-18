@@ -4,16 +4,17 @@
 // nothing jumps between snapshots. 2D uses (x, y); 3D uses the same (x, y) as
 // floor (x, z) and adds a height by kind, so "Top view" in 3D IS the 2D map.
 
-export const KIND_ORDER = ['tier', 'machine', 'agent', 'space', 'show', 'repo']
-export const KIND_TITLE = { repo: 'Repos', agent: 'Agents', machine: 'Machines', tier: 'Tiers', space: 'Spaces', show: 'Shows' }
+export const KIND_ORDER = ['tier', 'machine', 'agent', 'space', 'person', 'show', 'repo']
+export const KIND_TITLE = { repo: 'Repos', agent: 'Agents', machine: 'Machines', tier: 'Tiers', space: 'Spaces', person: 'People', show: 'Shows' }
 // Height of a body above the floor, in the same units as x and y (3D only).
-export const KIND_HEIGHT = { tier: 240, machine: 140, agent: 100, space: 60, show: 60, repo: 30 }
+export const KIND_HEIGHT = { tier: 240, machine: 140, agent: 100, space: 60, person: 30, show: 60, repo: 30 }
 // Card size per kind (2D), also the room each node needs on its ring.
 export const KIND_SIZE = {
     tier: { w: 190, h: 60 },
     machine: { w: 170, h: 56 },
     agent: { w: 160, h: 52 },
     space: { w: 160, h: 52 },
+    person: { w: 160, h: 52 },
     show: { w: 160, h: 52 },
     repo: { w: 160, h: 52 }
 }
@@ -26,7 +27,8 @@ const MAX_PER_LANE = 14
 const TAU = Math.PI * 2
 
 const norm = (a) => ((a % TAU) + TAU) % TAU
-const ringOf = (kind) => (kind === 'tier' ? 1 : kind === 'machine' ? 2 : 3)
+// a node may name its own ring (the Spaces world puts spaces on ring 1 and people on ring 3)
+const ringOf = (node) => (node.ring === 1 || node.ring === 2 || node.ring === 3 ? node.ring : node.kind === 'tier' ? 1 : node.kind === 'machine' ? 2 : 3)
 
 // Mean direction of angles (circular mean), or null when there are none.
 const meanAngle = (angles) => {
@@ -50,7 +52,7 @@ export const layoutMap = (map, aspect = ASPECT) => {
     const angleOf = new Map()
     const neighbours = (id) => edges.map((e) => (e.from === id ? e.to : e.to === id ? e.from : null)).filter(Boolean)
     const byId = (a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
-    const rings = { 1: nodes.filter((n) => ringOf(n.kind) === 1), 2: nodes.filter((n) => ringOf(n.kind) === 2), 3: nodes.filter((n) => ringOf(n.kind) === 3) }
+    const rings = { 1: nodes.filter((n) => ringOf(n) === 1), 2: nodes.filter((n) => ringOf(n) === 2), 3: nodes.filter((n) => ringOf(n) === 3) }
 
     // radii from how many nodes a ring has to carry, never smaller than a floor
     const lanes3 = Math.max(1, Math.min(3, Math.ceil(rings[3].length / MAX_PER_LANE)))

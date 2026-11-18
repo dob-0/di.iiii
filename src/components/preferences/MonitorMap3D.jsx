@@ -256,7 +256,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     const dim = !!focus && !hot(n.id)
                     const full = sel || hover === n.id
                     // at fit zoom only tiers and machines carry a name; the rest show it on hover, when selected, or up close
-                    const named = close || n.kind === 'tier' || n.kind === 'machine'
+                    const named = close || n.named || n.kind === 'tier' || n.kind === 'machine'
                     return (
                         <group key={n.id}>
                             <Line points={stemOf.get(n.id)} color={colors.line} lineWidth={1} />
@@ -265,12 +265,12 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                                 <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
                                     <button type="button" data-map-node={n.id}
                                         className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}${full ? ' is-full' : ''}`}
-                                        aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
+                                        aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.stateLabel || n.state}`}
                                         onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h) => (h === n.id ? null : h))}
                                         onFocus={() => setHover(n.id)} onBlur={() => setHover((h) => (h === n.id ? null : h))}
                                         onClick={() => onPick(n)}>
                                         <span className="monitor-card3d-name">{n.label}</span>
-                                        <span className="monitor-card3d-state">{n.state}</span>
+                                        <span className="monitor-card3d-state">{n.stateLabel || n.state}</span>
                                         <span className="monitor-card3d-fact">{`${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
                                     </button>
                                 </Html>
