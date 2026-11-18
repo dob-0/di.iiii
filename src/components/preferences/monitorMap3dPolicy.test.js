@@ -48,4 +48,12 @@ describe('3D map policy', () => {
         expect(pulseEdgeIndexes({ edges, pulsing: false, hoverId: 'machine:a' })).toEqual([0])
         expect(pulseEdgeIndexes({ edges, pulsing: true, hoverId: null })).toEqual([0, 1])
     })
+
+    it('the slow auto-rotate asks for frames until a touch stops it, never under reduced motion or a hidden tab', () => {
+        const { edges } = map()
+        expect(shouldAnimate({ edges: [], pulsing: false, hoverId: null, rotating: true })).toBe(true)
+        expect(shouldAnimate({ edges: [], pulsing: false, hoverId: null, rotating: false })).toBe(false)
+        expect(shouldAnimate({ edges, pulsing: false, hoverId: null, rotating: true, reduced: true })).toBe(false)
+        expect(shouldAnimate({ edges, pulsing: false, hoverId: null, rotating: true, visible: false })).toBe(false)
+    })
 })

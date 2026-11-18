@@ -33,7 +33,8 @@ export const pulseEdgeIndexes = ({ edges, pulsing, hoverId }) => {
 }
 
 // the timer that asks for frames runs only when something travels, the tab is visible and motion is allowed
-export const shouldAnimate = ({ edges, pulsing, hoverId, visible = true, reduced = false }) => {
+export const shouldAnimate = ({ edges, pulsing, hoverId, visible = true, reduced = false, rotating = false }) => {
     if (reduced || !visible) return false
+    if (rotating) return true // the slow turn needs a frame every tick until a touch stops it
     return pulseEdgeIndexes({ edges, pulsing, hoverId }).length > 0
 }
