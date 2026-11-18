@@ -63,19 +63,78 @@ const fakeContents = () => {
 test('navigation: off-di links are blocked and sent to the system browser, web and mail only', () => {
     const external = []
     const contents = fakeContents()
-    h.attachNavigationGuards(contents, { allowed, openExternal: (u) => external.push(u) })
+    let clock = 0
+    h.attachNavigationGuards(contents, { allowed, openExternal: (u) => external.push(u), now: () => clock })
+    const click = () => { clock += 1500; contents.listeners['input-event']({}, { type: 'mouseDown' }) }
     const nav = (url, isMainFrame = true) => { const e = { url, isMainFrame, prevented: false, preventDefault() { this.prevented = true } }; contents.listeners['will-navigate'](e); return e.prevented }
     assert.equal(nav('https://diiii.xyz/wiki'), false)
+    click()
     assert.equal(nav('https://evil.com/'), true)
     assert.equal(nav('file:///etc/passwd'), true)
     assert.deepEqual(external, ['https://evil.com/'])
     assert.equal(contents.listeners.open({ url: 'https://dev.diiii.xyz/x' }).action, 'allow')
+    click()
     assert.equal(contents.listeners.open({ url: 'https://example.org/' }).action, 'deny')
     assert.equal(contents.listeners.open({ url: 'javascript:alert(1)' }).action, 'deny')
     assert.deepEqual(external, ['https://evil.com/', 'https://example.org/'])
+    click()
     const redirect = { url: 'https://evil.com/r', isMainFrame: true, prevented: false, preventDefault() { this.prevented = true } }
     contents.listeners['will-redirect'](redirect)
     assert.equal(redirect.prevented, true)
+    assert.deepEqual(external, ['https://evil.com/', 'https://example.org/', 'https://evil.com/r'])
+})
+
+const gated = () => {
+    const external = []
+    const logs = []
+    const contents = fakeContents()
+    const clock = { t: 10000 }
+    h.attachNavigationGuards(contents, { allowed, openExternal: (u) => external.push(u), now: () => clock.t, log: (l) => logs.push(l) })
+    const click = () => contents.listeners['input-event']({}, { type: 'mouseDown' })
+    const open = (url = 'https://example.org/x') => contents.listeners.open({ url }).action
+    return { external, logs, clock, click, open }
+}
+
+test('external open: 3 scripted window.open calls with no input open 0 and log the host once', () => {
+    const g = gated()
+    for (let i = 0; i < 3; i++) assert.equal(g.open(), 'deny')
+    assert.deepEqual(g.external, [])
+    assert.equal(g.logs.length, 1)
+    assert.match(g.logs[0], /example\.org/)
+    assert.doesNotMatch(g.logs[0], /\/x/)
+})
+
+test('external open: a click then one window.open opens 1 (the input is used up); input too old opens 0', () => {
+    const g = gated()
+    g.click()
+    g.clock.t += 500
+    g.open()
+    g.open()
+    assert.deepEqual(g.external, ['https://example.org/x'])
+    g.clock.t += 5000
+    g.open('https://example.org/y')
+    assert.deepEqual(g.external, ['https://example.org/x'])
+    g.click()
+    g.clock.t += 2500
+    g.open('https://example.org/z')
+    assert.equal(g.external.length, 1, 'a click 2.5 s ago is too old')
+    g.click()
+    g.clock.t += 100
+    g.open('https://example.org/w')
+    assert.equal(g.external.length, 2)
+})
+
+test('external open: at most 1 per second and 5 per minute', () => {
+    const g = gated()
+    g.click(); g.open('https://a.test/1')
+    g.clock.t += 500; g.click(); g.open('https://a.test/2')
+    assert.equal(g.external.length, 1, 'second one inside a second is refused')
+    for (let i = 0; i < 4; i++) { g.clock.t += 1100; g.click(); g.open(`https://a.test/n${i}`) }
+    assert.equal(g.external.length, 5)
+    g.clock.t += 1100; g.click(); g.open('https://a.test/6')
+    assert.equal(g.external.length, 5, 'a sixth inside a minute is refused')
+    g.clock.t += 60000; g.click(); g.open('https://a.test/7')
+    assert.equal(g.external.length, 6, 'a minute later it opens again')
 })
 
 test('navigation: a subframe is left alone (navigate and redirect), only the main frame is guarded', () => {

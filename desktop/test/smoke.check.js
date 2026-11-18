@@ -76,6 +76,8 @@ test('app on a fixture page and on an unreachable address', async (t) => {
 <h1>fixture page</h1><p>An allowed address. Links to other addresses leave the window.</p>
 <p><a id="ext" target="_blank" href="http://localhost:${port}/ext">a link that opens a new window</a></p>
 <iframe id="f" src="http://localhost:${port}/frame" allow="midi; camera"></iframe>
+<p><button id="popup" onclick="window.open('http://localhost:${port}/popup')">window.open on click</button>
+<button id="go" onclick="location.href='http://localhost:${port}/nav'">navigate on click</button></p>
 <iframe id="g" src="${`http://127.0.0.1:${port}/redir`}"></iframe>`)
     })
     port = await listen(server)
@@ -121,10 +123,18 @@ test('app on a fixture page and on an unreachable address', async (t) => {
             assert.ok(landed, 'the redirected subframe loaded its target')
             assert.deepEqual(readLog(externalLog), [], 'a subframe redirect sent nothing to the system browser')
 
+            // The system browser opens for a person, not for a script.
             await page.click('#ext')
             assert.ok(await waitFor(() => readLog(externalLog).includes(`http://localhost:${port}/ext`)), 'new-window link reached the system browser stub')
-            await page.evaluate((p) => { location.href = `http://localhost:${p}/nav` }, port)
-            assert.ok(await waitFor(() => readLog(externalLog).includes(`http://localhost:${port}/nav`)), 'navigation away reached the stub')
+            await page.evaluate((p) => { for (let i = 0; i < 3; i++) window.open(`http://localhost:${p}/script${i}`) }, port)
+            await page.waitForTimeout(1500)
+            assert.deepEqual(readLog(externalLog), [`http://localhost:${port}/ext`], 'three scripted window.open calls with no input opened 0')
+            await page.click('#popup')
+            assert.ok(await waitFor(() => readLog(externalLog).includes(`http://localhost:${port}/popup`)), 'a click then one window.open opened 1')
+            await page.waitForTimeout(1200)
+            await page.click('#go', { noWaitAfter: true })
+            assert.ok(await waitFor(() => readLog(externalLog).includes(`http://localhost:${port}/nav`)), 'navigation away after a click reached the stub')
+            assert.equal(readLog(externalLog).length, 3, 'exactly the three opens a person made')
             assert.equal(page.url(), allowedUrl, 'the window stayed on the allowed address')
             assert.equal(app.windows().length, 1, 'no extra window opened')
             await shoot(main, 'fixture')
