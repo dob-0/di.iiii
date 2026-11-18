@@ -68,12 +68,15 @@ test('app on a fixture page and on an unreachable address', async (t) => {
     let port
     const server = http.createServer((req, res) => {
         res.setHeader('content-type', 'text/html')
+        if (req.url.startsWith('/redir')) { res.statusCode = 302; res.setHeader('location', `http://localhost:${port}/landed`); return res.end() }
+        if (req.url.startsWith('/landed')) return res.end('<!doctype html><title>landed</title><p>frame after a redirect')
         if (req.url.startsWith('/frame')) return res.end('<!doctype html><title>frame</title><p>foreign frame')
         res.end(`<!doctype html><meta charset="utf-8"><title>fixture page</title>
 <style>body{background:#000;color:#fff;font:18px system-ui;padding:32px}a{color:#4df9ff}iframe{width:60%;height:120px;border:1px solid #4df9ff}</style>
 <h1>fixture page</h1><p>An allowed address. Links to other addresses leave the window.</p>
 <p><a id="ext" target="_blank" href="http://localhost:${port}/ext">a link that opens a new window</a></p>
-<iframe id="f" src="http://localhost:${port}/frame" allow="midi; camera"></iframe>`)
+<iframe id="f" src="http://localhost:${port}/frame" allow="midi; camera"></iframe>
+<iframe id="g" src="${`http://127.0.0.1:${port}/redir`}"></iframe>`)
     })
     port = await listen(server)
     const allowedUrl = `http://127.0.0.1:${port}/`
@@ -111,6 +114,12 @@ test('app on a fixture page and on an unreachable address', async (t) => {
             })
             tt.diagnostic(`navigator.gpu: ${JSON.stringify(gpu)} (adapter null is expected on a software display)`)
             assert.equal(gpu.present, true)
+
+            // A subframe that is redirected to another address loads as in a browser
+            // tab: it is not cancelled and does not reach the system browser.
+            const landed = await waitFor(() => page.frames().find((f) => f.url() === `http://localhost:${port}/landed`))
+            assert.ok(landed, 'the redirected subframe loaded its target')
+            assert.deepEqual(readLog(externalLog), [], 'a subframe redirect sent nothing to the system browser')
 
             await page.click('#ext')
             assert.ok(await waitFor(() => readLog(externalLog).includes(`http://localhost:${port}/ext`)), 'new-window link reached the system browser stub')

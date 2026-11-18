@@ -64,7 +64,7 @@ test('navigation: off-di links are blocked and sent to the system browser, web a
     const external = []
     const contents = fakeContents()
     h.attachNavigationGuards(contents, { allowed, openExternal: (u) => external.push(u) })
-    const nav = (url) => { const e = { prevented: false, preventDefault() { this.prevented = true } }; contents.listeners['will-navigate'](e, url); return e.prevented }
+    const nav = (url, isMainFrame = true) => { const e = { url, isMainFrame, prevented: false, preventDefault() { this.prevented = true } }; contents.listeners['will-navigate'](e); return e.prevented }
     assert.equal(nav('https://diiii.xyz/wiki'), false)
     assert.equal(nav('https://evil.com/'), true)
     assert.equal(nav('file:///etc/passwd'), true)
@@ -73,9 +73,21 @@ test('navigation: off-di links are blocked and sent to the system browser, web a
     assert.equal(contents.listeners.open({ url: 'https://example.org/' }).action, 'deny')
     assert.equal(contents.listeners.open({ url: 'javascript:alert(1)' }).action, 'deny')
     assert.deepEqual(external, ['https://evil.com/', 'https://example.org/'])
-    const redirect = { prevented: false, preventDefault() { this.prevented = true } }
-    contents.listeners['will-redirect'](redirect, 'https://evil.com/r')
+    const redirect = { url: 'https://evil.com/r', isMainFrame: true, prevented: false, preventDefault() { this.prevented = true } }
+    contents.listeners['will-redirect'](redirect)
     assert.equal(redirect.prevented, true)
+})
+
+test('navigation: a subframe is left alone (navigate and redirect), only the main frame is guarded', () => {
+    const external = []
+    const contents = fakeContents()
+    h.attachNavigationGuards(contents, { allowed, openExternal: (u) => external.push(u) })
+    for (const name of ['will-navigate', 'will-redirect']) {
+        const e = { url: 'https://evil.com/frame', isMainFrame: false, prevented: false, preventDefault() { this.prevented = true } }
+        contents.listeners[name](e)
+        assert.equal(e.prevented, false, name)
+    }
+    assert.deepEqual(external, [])
 })
 
 test('window settings keep the sandbox: main.js sets the three flags and never touches webSecurity', () => {

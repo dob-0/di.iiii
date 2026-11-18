@@ -28,16 +28,21 @@ const createDisplayMediaHandler = ({ allowed, getSources, choose }) => async (re
     }
 }
 
-// Main frame and every window opened from it stay on di origins; the rest goes
-// to the system browser (or is dropped when its scheme is not web or mail).
+// The main frame and every window opened from it stay on di origins; the rest
+// goes to the system browser (or is dropped when its scheme is not web or
+// mail). A subframe is not touched: it loads as in a browser tab, and the
+// page's own CSP governs what it may embed.
+// Electron 45 passes one details event: details.url, details.isMainFrame
+// (WebContentsWillNavigateEventParams / WebContentsWillRedirectEventParams).
 const attachNavigationGuards = (webContents, { allowed, openExternal }) => {
-    const guard = (event, url) => {
-        if (isAllowedUrl(url, allowed)) return
-        event.preventDefault()
-        if (canOpenExternal(url)) openExternal(url)
+    const guard = (details) => {
+        if (!details.isMainFrame) return
+        if (isAllowedUrl(details.url, allowed)) return
+        details.preventDefault()
+        if (canOpenExternal(details.url)) openExternal(details.url)
     }
-    webContents.on('will-navigate', (event, url) => guard(event, url))
-    webContents.on('will-redirect', (event, url) => guard(event, url))
+    webContents.on('will-navigate', guard)
+    webContents.on('will-redirect', guard)
     webContents.setWindowOpenHandler(({ url }) => {
         if (isAllowedUrl(url, allowed)) return { action: 'allow' }
         if (canOpenExternal(url)) openExternal(url)
