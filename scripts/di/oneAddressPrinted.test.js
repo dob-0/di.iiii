@@ -286,6 +286,9 @@ describe('the real `di status` and `di up` on an install', () => {
 
     it('di up on a running install prints the one address too', async () => {
         const { home, port } = await install()
+        // a running install of THIS di: its pid file names a live process (a server that only answers the port is a stranger's, see portTaken.test.js)
+        fs.mkdirSync(path.join(home, 'run'), { recursive: true })
+        fs.writeFileSync(path.join(home, 'run', 'server.pid'), String(process.pid))
         answers.door = { status: 200, config: config('aaa') }
         const lines = await run(home, 'up', '--no-open')
         expect(lines[0]).toMatch(/^already running — http:\/\/diiii\.localhost\//)

@@ -21,7 +21,7 @@ import { createSpace, reasonFromFlags, EXIT_CONTINUE } from './continueGuard.mjs
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import { isIP } from 'node:net'
+import { createServer, isIP } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -165,6 +165,20 @@ const probeReach = async (home, port) => {
     return (cert && await probeListen(port, cert.name, '/serverXR', 'https')) || probeListen(port)
 }
 
+// First free port from 4171 up, asked by binding it: the one `di up` then suggests.
+const freePortNear = async (taken) => {
+    for (let candidate = 4171; candidate < 4191; candidate++) {
+        if (candidate === taken) continue
+        const free = await new Promise((resolve) => {
+            const probe = createServer()
+            probe.once('error', () => resolve(false))
+            probe.listen(candidate, '127.0.0.1', () => probe.close(() => resolve(true)))
+        })
+        if (free) return candidate
+    }
+    return 4171
+}
+
 const cmdUp = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -187,6 +201,8 @@ const cmdUp = async (args) => {
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
     if (await alive(home, port)) {
+        // Something answers on this port. Ours? Only a node install can tell (supervisor, pid file, own versions dir); docker keeps its old reading.
+        if (runner === node && !node.ownsPort(home, port)) { fail(ui.portTaken(port, await freePortNear(port))); process.exitCode = 1; return }
         const address = await printedAddress(home, port)
         say(ui.alreadyRunning(address.url, await probeReach(home, port), lan, address))
         return
