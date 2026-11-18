@@ -29,7 +29,7 @@ import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } fro
 import LoadingScreen from '../LoadingScreen.jsx'
 import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import SpacesMixed from './SpacesMixed.jsx'
-import { buildSpacesWorld, personNodeId, spaceNodeId } from './spacesWorld.js'
+import { buildSpacesWorld, layoutSpacesWorld, personNodeId, spaceNodeId } from './spacesWorld.js'
 import { useSpaceDelete } from '../../studio/components/SpaceTrash.jsx'
 import { useAsk } from '../ui/useAsk.js'
 
@@ -295,7 +295,7 @@ export default function AdminManageSection({ onStats }) {
     ) : (
         <ModuleSection className="monitor-map-section" title="Spaces world"
             subtitle={worldSubtitle}>
-            <MonitorMap map={world} selectedId={selectedNodeId} narrow={narrow} view={worldView} live onPick={pickNode}
+            <MonitorMap map={world} selectedId={selectedNodeId} narrow={narrow} view={worldView} live world layoutFn={layoutSpacesWorld} onPick={pickNode}
                 onOpen={pickNode} empty="No spaces yet. Create one in the List view and it appears here." />
         </ModuleSection>
     )

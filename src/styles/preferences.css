@@ -2005,13 +2005,34 @@ a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow
     .preferences-manage-world-body.has-detail { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* Spaces world: one shape and colour per kind in 2D and 3D (space = cyan square, person = amber diamond, link = granted), the selection is a white ring */
+.monitor-map-stage.is-world .monitor-node.kind-space { --pref-tone: var(--di-cyan); }
+.monitor-map-stage.is-world .monitor-node.kind-person { --pref-tone: var(--di-warning); }
+.monitor-map-stage.is-world .monitor-node.tone-muted .monitor-node-state { fill: var(--ui-text-muted); }
+.monitor-map-stage.is-world .monitor-node-glyph { fill: var(--pref-tone); }
+.monitor-map-stage.is-world .monitor-node-ring { fill: none; stroke: var(--di-text); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.monitor-map-stage.is-world .monitor-node.is-selected .monitor-node-box, .monitor-map-stage.is-world .monitor-node:focus-visible .monitor-node-box { stroke: var(--di-text); }
+.monitor-map-stage.is-world .monitor-edge.is-lit { stroke: var(--di-text); stroke-width: 3; }
+.monitor-legend {
+    position: absolute; bottom: var(--di-space-2); left: var(--di-space-2); z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-3);
+    max-width: calc(100% - 2 * var(--di-space-2)); padding: var(--di-space-1) var(--di-space-2); background: var(--di-black); border: 1px solid var(--pref-border);
+    color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-3); pointer-events: none;
+}
+.monitor-map-stage.is-world .monitor-map-hint { bottom: 2.75rem; }
+.monitor-legend-item { display: inline-flex; align-items: center; gap: var(--di-space-1); white-space: nowrap; }
+.monitor-legend-mark { display: inline-block; flex: none; }
+.monitor-legend-mark.is-space { width: 10px; height: 10px; background: var(--di-cyan); }
+.monitor-legend-mark.is-person { width: 8px; height: 8px; background: var(--di-warning); transform: rotate(45deg); }
+.monitor-legend-mark.is-link { width: 18px; height: 2px; background: var(--ui-text-muted); }
+/* a command row with an odd count ends full: the last button takes both columns (the detail strip is full width in Mixed) */
+.preferences-command-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 /* Mixed view: 3D room large on the left, 2D map top right, live list under it; the detail is a full-width strip below.
    Under 1100 px the panes stack (3D, 2D, list) and the detail follows the tapped node. */
 .preferences-manage-world-body.is-mixed, .preferences-manage-world-body.is-mixed.has-detail { grid-template-columns: minmax(0, 1fr); }
 .spaces-mixed {
-    --mixed-h: clamp(34rem, calc(100vh - 13rem), 54rem);
+    --mixed-h: clamp(32rem, calc(100vh - 21rem), 54rem);
     display: grid; gap: var(--di-space-2); height: var(--mixed-h); min-width: 0;
-    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1.25fr) minmax(0, 0.75fr);
 }
 .spaces-mixed-pane { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--di-black); border: 1px solid var(--pref-border); overflow: hidden; }
 .spaces-mixed-pane.is-3d { grid-row: 1 / span 2; }

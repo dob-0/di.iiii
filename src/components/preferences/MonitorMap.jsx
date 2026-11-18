@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import WorldLegend from './WorldLegend.jsx'
 import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
@@ -96,7 +97,8 @@ export function MapList({ nodes, selectedId, onPick }) {
     )
 }
 
-const fitBox = (layout) => ({ ...layout.bounds })
+// the Spaces world keeps a strip under the map for its legend
+const fitBox = (layout, world = false) => (world ? { ...layout.bounds, h: layout.bounds.h + 64 } : { ...layout.bounds })
 
 const POS_KEY = 'di.monitor.map.pos'
 const readPos = () => {
@@ -110,9 +112,9 @@ const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.string
 /** The wheel zooms the map only when you asked for it: full screen, or Ctrl/Cmd (a trackpad pinch sends Ctrl). Otherwise the page scrolls. */
 export const wheelZooms = (ev, fullscreen) => Boolean(fullscreen || ev.ctrlKey || ev.metaKey)
 
-export function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
+export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false }) {
     const svgRef = useRef(null)
-    const [vb, setVb] = useState(() => fitBox(layout))
+    const [vb, setVb] = useState(() => fitBox(layout, world))
     const [hover, setHover] = useState(null)
     const drag = useRef({ pointers: new Map(), moved: false, last: null, pinch: 0 })
     const vbRef = useRef(vb)
@@ -127,7 +129,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) 
 
     // a different set of nodes (not a state change) refits the view
     const shape = layout.nodes.map((n) => n.id).join('|')
-    useEffect(() => { setVb(fitBox(layout)) }, [shape]) // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { setVb(fitBox(layout, world)) }, [shape]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const scaleOf = useCallback((box) => {
         const r = svgRef.current?.getBoundingClientRect?.()
@@ -240,7 +242,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) 
     const hovered = hover ? layout.nodes.find((n) => n.id === hover) : null
 
     return (
-        <div className="monitor-map-stage">
+        <div className={`monitor-map-stage${world ? ' is-world' : ''}`}>
             <svg ref={svgRef} className="monitor-map-svg" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet"
                 role="group" aria-label="Map of machines, tiers, spaces and shows"
                 onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
@@ -279,10 +281,13 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) 
                             onClick={() => pick(n)}
                             onPointerDown={(ev) => onNodeDown(ev, n)} onPointerMove={onNodeMove} onPointerUp={onNodeUp} onPointerCancel={onNodeUp}
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
+                            {world && sel ? <rect x="-6" y="-6" width={w + 12} height={h + 12} className="monitor-node-ring" /> : null}
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
+                            {world && n.kind === 'space' ? <rect x={w - 22} y={h - 22} width="12" height="12" className="monitor-node-glyph" /> : null}
+                            {world && n.kind === 'person' ? <polygon points={`${w - 16},8 ${w - 8},16 ${w - 16},24 ${w - 24},16`} className="monitor-node-glyph" /> : null}
                             <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 9.6))}</text>
-                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{`${n.stateLabel || n.state} · ${n.kind}`}</text>
+                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{world ? (n.stateLabel || n.state) : `${n.stateLabel || n.state} · ${n.kind}`}</text>
                             <title>{`${n.kind}: ${n.label} (${n.stateLabel || n.state})`}</title>
                         </g>
                     )
@@ -302,11 +307,12 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) 
                 })() : null}
             </svg>
             <div className="monitor-map-tools" role="group" aria-label="Map zoom">
-                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout))}>Fit</button>
+                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout, world))}>Fit</button>
                 {anyMoved ? <button type="button" className="monitor-map-tool" data-map-tool="reset" onClick={resetNodes}>Reset nodes</button> : null}
                 <button type="button" className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
+            {world ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
         </div>
     )
@@ -314,9 +320,9 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) 
 
 // `view` pins the view ('2d' | '3d') when the page owns the List | 2D | 3D switch (the Spaces world);
 // `onOpen(node)` adds an "Open" button on the selected node's card in full screen, where the detail is hidden.
-export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, view: pinned = null, onOpen = null, empty = null }) {
+export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, view: pinned = null, onOpen = null, empty = null, world = false, layoutFn = layoutMap }) {
     const nodes = useMemo(() => map?.nodes || [], [map])
-    const layout = useMemo(() => layoutMap(map, narrow ? 1 : ASPECT), [map, narrow])
+    const layout = useMemo(() => layoutFn(map, narrow ? 1 : ASPECT), [map, narrow, layoutFn])
     const [stored, setStored] = useState(readView)
     const view = pinned || stored || (narrow ? 'list' : '2d')
     const rootRef = useRef(null)
@@ -352,12 +358,12 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
             </div>
             {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={onPick} /> : null}
             {view === '2d' ? (
-                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} /></div>
+                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} world={world} /></div>
             ) : null}
             {view === '3d' ? (
                 <div data-monitor-map="3d">
                     <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
-                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} />
+                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} world={world} />
                     </Suspense>
                 </div>
             ) : null}

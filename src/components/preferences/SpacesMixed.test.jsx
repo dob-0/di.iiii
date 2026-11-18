@@ -7,8 +7,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 // jsdom cannot draw WebGL: the 3D chunk is a stub that lists the nodes it was given and reports picks.
 vi.mock('./MonitorMap3D.jsx', () => ({
-    default: ({ layout, selectedId, onPick, legend }) => (
-        <div data-stub-3d data-legend={legend ? 'on' : 'off'}>
+    default: ({ layout, selectedId, onPick, world }) => (
+        <div data-stub-3d data-world={world ? 'on' : 'off'}>
             {layout.nodes.map((n) => (
                 <button key={n.id} type="button" data-stub3d-node={n.id} aria-pressed={selectedId === n.id} onClick={() => onPick(n)}>{n.label}</button>
             ))}
@@ -58,14 +58,15 @@ describe('Mixed view', () => {
         await screen.findByText('Alpha', { selector: '[data-stub3d-node]' })
         const next = buildSpacesWorld([{ id: 'a', label: 'Alpha renamed', isPublic: true }, spaces[1]], users.slice(0, 1))
         rerender(<Host world={next} />)
-        expect((await screen.findAllByText('Alpha renamed')).length).toBeGreaterThanOrEqual(3)
+        await screen.findByText('Alpha renamed', { selector: '[data-stub3d-node]' })
+        for (const pane of ['2d', 'list']) expect(container.querySelector(`[data-mixed-pane="${pane}"]`).textContent).toContain('Alpha renamed')
         expect(container.querySelector(`[data-map-node="${personNodeId('u2')}"]`)).toBeNull()
         expect(within(container.querySelector('[data-mixed-pane="list"]')).queryByText('Bo')).toBeNull()
     })
 
     it('stacks 3D, 2D, list in one column under 1100 px (390 px included) and sits side by side above', () => {
         const css = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../styles/preferences.css'), 'utf8')
-        expect(css).toMatch(/\.spaces-mixed\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.35fr\) minmax\(0, 1fr\)/)
+        expect(css).toMatch(/\.spaces-mixed\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, 1fr\)/)
         const stacked = css.match(/@media \(max-width: 1099px\) \{[^@]*?\.spaces-mixed \{[^}]*\}/)
         expect(stacked && stacked[0]).toMatch(/grid-template-columns:\s*minmax\(0, 1fr\)/)
         // DOM order is the stacking order
