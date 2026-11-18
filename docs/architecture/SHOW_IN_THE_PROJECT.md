@@ -80,9 +80,10 @@ project document.
 ### Step 1. Count every machine (read-only)
 
 - **Builds:** one read-only command in `scripts/` (planned). For the machine it runs on it prints: per project document, the
-  lamps, designed looks, cues and laser objects; per desk file, the lamps, looks, light scenes, effects, custom fixture types
-  and what names a project. It also lists the per-browser stores by name, from the code. It reads keys, counts and sizes,
-  never a value, and writes nothing.
+  lamps, designed looks, cues and laser objects; per desk file, a count of every kind it holds (lamps, looks, light scenes,
+  layers, sets, effects, LFOs, the MIDI map, custom fixture types; the laser bank's looks, the palette, the link) and what
+  names a project. It also lists the per-browser stores by name, from the code. It reads keys, counts and sizes, never a
+  value, and writes nothing.
 - **Also measures** the three numbers of section 5.
 - **Touches:** `scripts/` only.
 - **Test:** on aylmo it prints the numbers of 2026-11-18 above, or names the cause of each difference. Then it runs on the
@@ -118,25 +119,28 @@ project document.
   section 2) and no longer by the desk's own id: `serverXR/src/lighting/looks.js:73` "for (const [fixtureId, attrs] of Object.entries(values)) {".
   The light desk already knows three scopes of a look (`serverXR/src/lighting/looks.js:44` "const SCOPES = ['each', 'type', 'global'];");
   how many looks are of each scope is counted by step 1. Where it is written, inside the document or in a file of the
-  project, is section 5.
+  project, is section 5. This holds while the switch of step 2 is on; with it off a desk saves into its own file, as today.
 - **Touches:** the desks' save paths. If section 5 puts the show inside the document, also both schema copies in the same
   change (`shared/projectSchema.cjs:2108` "const normalizeProjectDocument = (document = {}) => {"
   and `src/shared/projectSchema.js:2196` "export const normalizeProjectDocument = (document = {}) => {") and the schema-sync
   test. Why both copies: `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:108` "and a key the schema does not name does not survive there:"
-- **Test:** a round trip per kind (write, normalise, read, normalise again; equal for N of N kinds); the schema-sync test
-  green. If the show is inside the document: on a second machine that follows the project, the new look is there with no file
-  carried by hand. If it is a file of the project, that carry is built and tested in step 5. The rehearsal machine first.
+- **Test:** a round trip per kind (write, read; equal for N of N kinds). If the show is inside the document: the round trip
+  normalises after the write and again after the read, the schema-sync test is green, and on a second machine that follows
+  the project the new look is there with no file carried by hand. If it is a file of the project, that carry is built and
+  tested in step 5. The rehearsal machine first.
 - **The owner's question before this step:** question 2 of section 7. This step is the first that writes what is made on a
   desk into a project.
-- **Undo:** the switch off. The new fields stay in the documents, unread.
+- **Undo:** the switch off. What was written stays in the project, unread.
 
 ### Step 4. One migration of what only the desks keep
 
 - **Builds:** one command with a dry run. The dry run prints counts per kind and writes nothing. The real run writes what the
-  desks' files hold and no project has (light scenes, effects, layers, the controller map; the laser bank, the palette, the
+  desks' files hold and no project has (looks, light scenes, effects, layers, the controller map; the laser bank, the palette, the
   link) into the project each belongs to, in the form of step 3.
-- **What moves on aylmo:** 211 of the 218 desk looks are copies of a designed look that exists, so the project already has
-  them. 7 looks are to be placed: 6 copies whose designed look is missing today, and 1 look that is not named as a copy.
+- **What moves on aylmo:** 211 of the 218 desk looks are named as copies of a designed look that exists today, so a project
+  holds the look each was copied from. A copy that step 2's test finds different from its designed look is listed for the
+  owner, and neither side is overwritten. 7 looks are to be placed: 6 copies whose designed look is missing today, and 1 look
+  that is not named as a copy. The desk files hold 0 light scenes; the other kinds are counted by step 1.
 - **Which project:** for the light desk, by the key a desk lamp carries to its project's lamp (aylmo: 140 of 152 lamps carry
   it, 12 do not). For the laser bank, by the cues that name its looks: `shared/projectSchema.cjs:248` "id of a laser-desk look made live when the cue fires, after the light."
   What cannot be placed this way is listed for the owner and is not guessed. The laser desk's palette and link are kept once
@@ -153,7 +157,7 @@ project document.
   carriers learn that file: follow, the space file and tier sync. Today the space file carries the light show and nothing of
   the laser (`scripts/space-bundle.mjs:7` "the space's light show (lighting/show.json, the lighting desk's"; 0 lines of that
   tool name a laser), and tier sync carries neither: `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:95` "Tier sync does not carry the show."
-  0 lines of its two tools name a light show or a laser (section 9).
+  0 lines of `scripts/space-sync.mjs` and 0 of `scripts/tier-sync.mjs` name a light, a fixture or a laser (section 9).
 - **Also settles:** how what the operator changes on a show night comes home, and which side wins when both changed
   (section 8).
 - **Test,** on a second machine whose desks are empty: follow the project, open the desks, the show loads. Looks, cues and
@@ -252,8 +256,8 @@ grep -r -P 'light/api|laser/api' src | grep -v -P '^[^:]*\.test\.' | wc -l      
 grep -rl -P 'light/api|laser/api' src | grep -v -P '\.test\.' | wc -l                19
 grep -rl -P 'lightingApiUrl\(' src | grep -v -P '\.test\.' | wc -l                   9
 grep -c -i laser scripts/space-bundle.mjs                                            0
-grep -c -i -P 'laser|lighting' scripts/space-sync.mjs                                0
-grep -c -i -P 'laser|lighting' scripts/tier-sync.mjs                                 0
+grep -c -i -P 'laser|light|dmx|fixture' scripts/space-sync.mjs                       0
+grep -c -i -P 'laser|light|dmx|fixture' scripts/tier-sync.mjs                        0
 ```
 
 - Every `path:line` "quote" on this page was checked by script against the branch that adds it: the quote starts on the line

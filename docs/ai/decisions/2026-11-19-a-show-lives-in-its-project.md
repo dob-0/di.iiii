@@ -150,8 +150,7 @@ Each is the owner's, and each is asked before the first step of the plan whose b
 ## Undo
 
 This record and the plan change no code and no data: revert the pull request that added them. Every later step adds and
-leaves the desks' own files in place, and each names its own undo of one command in the plan: a switch that starts off, or a
-command that removes what it wrote.
+leaves the desks' own files in place, and each names its own undo of one command in the plan.
 
 ## How this was checked
 
