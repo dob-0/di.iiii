@@ -109,6 +109,14 @@ test('app on a fixture page and on an unreachable address', async (t) => {
             assert.equal(refused.ok, false)
             assert.ok(['NotAllowedError', 'SecurityError'].includes(refused.name), `refused by policy, got ${refused.name}`)
 
+            // Camera and microphone are never granted to a foreign frame (and on a di
+            // address they are asked first: the dialog itself is covered by the unit tests).
+            const cam = await frame.evaluate(async () => {
+                try { await navigator.mediaDevices.getUserMedia({ video: true }); return 'stream' } catch (error) { return error.name }
+            })
+            tt.diagnostic(`camera in a foreign frame: ${cam}`)
+            assert.ok(['NotAllowedError', 'SecurityError'].includes(cam), `camera refused by policy, got ${cam}`)
+
             const gpu = await page.evaluate(async () => {
                 if (!('gpu' in navigator)) return { present: false }
                 const adapter = await navigator.gpu.requestAdapter().catch((e) => `error: ${e.name}`)

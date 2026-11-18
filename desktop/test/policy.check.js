@@ -38,12 +38,12 @@ test('allowed origins: the three di origins plus the chosen one, exact match', (
 
 test('permissions: only the named ones, only on allowed origins', () => {
     const { allowed } = p.resolveTarget([], {})
-    for (const perm of ['midi', 'midiSysex', 'media']) {
+    for (const perm of ['midi', 'midiSysex']) {
         assert.equal(p.isPermissionGranted(perm, 'https://diiii.xyz', allowed), true, perm)
         assert.equal(p.isPermissionGranted(perm, 'https://evil.com', allowed), false, perm)
         assert.equal(p.isPermissionGranted(perm, 'file:///x.html', allowed), false, perm)
     }
-    for (const perm of ['geolocation', 'notifications', 'openExternal', 'hid', 'usb', 'serial', 'clipboard-read', 'unknown']) {
+    for (const perm of ['geolocation', 'notifications', 'openExternal', 'hid', 'usb', 'serial', 'clipboard-read', 'media', 'unknown']) {
         assert.equal(p.isPermissionGranted(perm, 'https://diiii.xyz', allowed), false, perm)
     }
 })

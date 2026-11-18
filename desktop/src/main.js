@@ -6,6 +6,7 @@ const { app, BrowserWindow, Menu, session, shell, desktopCapturer, dialog } = re
 const { resolveTarget, resolveCdpPort } = require('./policy')
 const { createPermissionHandlers, createDisplayMediaHandler, attachNavigationGuards } = require('./handlers')
 const { buildMenuTemplate } = require('./menu')
+const { createMediaStore } = require('./mediaStore')
 
 const argv = process.argv.slice(app.isPackaged ? 1 : 2)
 const target = resolveTarget(argv, process.env)
@@ -81,8 +82,24 @@ if (target.error) {
             return response < shown.length ? shown[response] : null
         }
 
+        // Camera and microphone: asked once per address and kind, answers kept
+        // in one small file in this channel's profile; the File menu forgets them.
+        const mediaStore = createMediaStore({ file: path.join(app.getPath('userData'), 'media-permissions.json') })
+        const askMedia = async (origin, kind) => {
+            const { response } = await dialog.showMessageBox(mainWindow, {
+                type: 'question',
+                title: 'di.iiii',
+                message: `${origin} wants to use your ${kind}.`,
+                detail: 'Your answer is remembered for this address. File, Forget camera and microphone answers asks again.',
+                buttons: ['Allow', 'Do not allow'],
+                cancelId: 1,
+                defaultId: 1
+            })
+            return response === 0
+        }
+
         app.whenReady().then(() => {
-            const permissions = createPermissionHandlers(target.allowed)
+            const permissions = createPermissionHandlers(target.allowed, { mediaStore, askMedia })
             const ses = session.defaultSession
             ses.setPermissionRequestHandler(permissions.request)
             ses.setPermissionCheckHandler(permissions.check)
@@ -95,7 +112,7 @@ if (target.error) {
                 { useSystemPicker: true }
             )
 
-            Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate({ isMac: process.platform === 'darwin' })))
+            Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate({ isMac: process.platform === 'darwin', onForgetMedia: () => mediaStore.clear() })))
 
             mainWindow = new BrowserWindow({
                 width: 1440,

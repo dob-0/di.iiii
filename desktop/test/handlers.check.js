@@ -2,9 +2,11 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
+const os = require('node:os')
 const path = require('node:path')
 const { resolveTarget } = require('../src/policy')
 const h = require('../src/handlers')
+const { createMediaStore } = require('../src/mediaStore')
 
 const { allowed } = resolveTarget([], {})
 
@@ -153,4 +155,97 @@ test('window settings keep the sandbox: main.js sets the three flags and never t
     const src = fs.readFileSync(path.join(__dirname, '../src/main.js'), 'utf8')
     for (const needle of ['contextIsolation: true', 'sandbox: true', 'nodeIntegration: false']) assert.ok(src.includes(needle), needle)
     assert.equal(/webSecurity|allowRunningInsecureContent|no-sandbox/.test(src), false)
+})
+
+const mediaSetup = (answers = {}) => {
+    const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'di-media-test-'))
+    const file = path.join(dir, 'media-permissions.json')
+    const store = createMediaStore({ file })
+    const asked = []
+    const handlers = h.createPermissionHandlers(allowed, {
+        mediaStore: store,
+        askMedia: async (origin, kind) => { asked.push(`${origin} ${kind}`); return answers[kind] ?? true }
+    })
+    const request = (details, pageUrl = 'https://diiii.xyz/') => new Promise((resolve) => handlers.request({ getURL: () => pageUrl }, 'media', resolve, details))
+    return { dir, file, store, asked, handlers, request }
+}
+
+test('media: asked once per origin and kind (names the origin), the answer is kept, camera and microphone are separate', async () => {
+    const m = mediaSetup({ microphone: false })
+    assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/p', mediaTypes: ['video'] }), true)
+    assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/q', mediaTypes: ['video'] }), true)
+    assert.deepEqual(m.asked, ['https://diiii.xyz camera'])
+    assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['audio'] }), false)
+    assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['audio'] }), false)
+    assert.deepEqual(m.asked, ['https://diiii.xyz camera', 'https://diiii.xyz microphone'])
+    assert.equal(await m.request({ requestingUrl: 'https://dev.diiii.xyz/', mediaTypes: ['video', 'audio'] }), false, 'camera yes + microphone no is a no')
+    assert.deepEqual(m.asked.slice(2), ['https://dev.diiii.xyz camera', 'https://dev.diiii.xyz microphone'])
+    fs.rmSync(m.dir, { recursive: true, force: true })
+})
+
+test('media: a foreign origin, an unknown type and a missing dialog are refused without asking', async () => {
+    const m = mediaSetup()
+    assert.equal(await m.request({ requestingUrl: 'https://evil.com/', mediaTypes: ['video'] }), false)
+    assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: [] }), false)
+    assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/' }), false)
+    assert.deepEqual(m.asked, [])
+    const bare = h.createPermissionHandlers(allowed)
+    assert.equal(await new Promise((r) => bare.request({ getURL: () => 'https://diiii.xyz/' }, 'media', r, { requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video'] })), false)
+    fs.rmSync(m.dir, { recursive: true, force: true })
+})
+
+test('media: two calls at once show one dialog; a throwing dialog is a no and is not remembered', async () => {
+    const m = mediaSetup()
+    const [a, b] = await Promise.all([1, 2].map(() => m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video'] })))
+    assert.deepEqual([a, b, m.asked.length], [true, true, 1])
+    const failing = h.createPermissionHandlers(allowed, { mediaStore: m.store, askMedia: async () => { throw new Error('boom') } })
+    const r = await new Promise((res) => failing.request({ getURL: () => 'https://diiii.xyz/' }, 'media', res, { requestingUrl: 'https://diiii.xyz/', mediaTypes: ['audio'] }))
+    assert.equal(r, false)
+    fs.rmSync(m.dir, { recursive: true, force: true })
+})
+
+test('media: the check handler answers only from a stored yes; forgetting the answers makes it a no again', async () => {
+    const m = mediaSetup({ microphone: false })
+    const check = (type, origin = 'https://diiii.xyz') => m.handlers.check(null, 'media', origin, { securityOrigin: origin, mediaType: type, isMainFrame: true })
+    assert.equal(check('video'), false, 'never asked is a no')
+    await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video'] })
+    await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['audio'] })
+    assert.equal(check('video'), true)
+    assert.equal(check('audio'), false, 'a stored no is a no')
+    assert.equal(check('unknown'), false, 'unknown type needs both')
+    assert.equal(check('video', 'https://evil.com'), false)
+    m.store.clear()
+    assert.equal(check('video'), false)
+    assert.equal(m.asked.length, 2)
+    await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video'] })
+    assert.equal(m.asked.length, 3, 'asked again after forgetting')
+    fs.rmSync(m.dir, { recursive: true, force: true })
+})
+
+test('media store: one JSON file, atomic write (no temp left), survives a restart, a corrupt file reads as empty', () => {
+    const dir = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'di-media-store-'))
+    const file = path.join(dir, 'sub', 'media-permissions.json')
+    const a = createMediaStore({ file })
+    assert.equal(a.get('https://diiii.xyz', 'camera'), undefined)
+    a.set('https://diiii.xyz', 'camera', true)
+    a.set('https://diiii.xyz', 'microphone', false)
+    assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { 'https://diiii.xyz': { camera: true, microphone: false } })
+    assert.deepEqual(fs.readdirSync(path.dirname(file)), ['media-permissions.json'])
+    const b = createMediaStore({ file })
+    assert.equal(b.get('https://diiii.xyz', 'camera'), true)
+    assert.equal(b.get('https://diiii.xyz', 'microphone'), false)
+    assert.throws(() => b.set('https://diiii.xyz', 'screen', true))
+    fs.writeFileSync(file, '{not json')
+    assert.equal(createMediaStore({ file }).get('https://diiii.xyz', 'camera'), undefined)
+    assert.equal(createMediaStore({ file }).get('constructor', 'camera'), undefined)
+    fs.rmSync(dir, { recursive: true, force: true })
+})
+
+test('menu: File has an item that forgets the camera and microphone answers', () => {
+    const { buildMenuTemplate } = require('../src/menu')
+    let forgot = 0
+    const item = buildMenuTemplate({ isMac: false, onForgetMedia: () => { forgot++ } })[0].submenu.find((i) => /Forget camera and microphone/.test(i.label || ''))
+    assert.ok(item)
+    item.click()
+    assert.equal(forgot, 1)
 })

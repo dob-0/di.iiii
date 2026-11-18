@@ -1,10 +1,14 @@
 'use strict'
 
-const buildMenuTemplate = ({ isMac }) => [
+const buildMenuTemplate = ({ isMac, onForgetMedia }) => [
     ...(isMac ? [{ role: 'appMenu' }] : []),
     {
         label: 'File',
-        submenu: [isMac ? { role: 'close' } : { role: 'quit' }]
+        submenu: [
+            { label: 'Forget camera and microphone answers', click: () => onForgetMedia && onForgetMedia() },
+            { type: 'separator' },
+            isMac ? { role: 'close' } : { role: 'quit' }
+        ]
     },
     { role: 'editMenu' },
     {

@@ -13,13 +13,15 @@ const DI_ORIGINS = Object.freeze({
     local: 'http://diiii.localhost'
 })
 
-// midi, midiSysex and media (screen share) are the three the app exists for.
+// midi and midiSysex are what the app exists for; they are granted on di
+// origins without a question. 'media' (camera and microphone) is NOT here:
+// di uses both, so the app asks once per origin and kind (handlers.js, answers
+// kept by mediaStore.js). Screen share has its own display-media handler.
 // The other three keep what a browser tab already does for di: full screen
 // for the output, pointer lock for the 3D view, copying text out.
 const GRANTED_PERMISSIONS = Object.freeze([
     'midi',
     'midiSysex',
-    'media',
     'fullscreen',
     'pointerLock',
     'clipboard-sanitized-write'

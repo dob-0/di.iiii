@@ -2,16 +2,53 @@
 // Handlers that wire the policy into Electron. Electron objects come in as
 // arguments, so the tests can pass fakes.
 
-const { isAllowedUrl, isPermissionGranted, canOpenExternal } = require('./policy')
+const { isAllowedUrl, isPermissionGranted, canOpenExternal, originOf } = require('./policy')
 
-const createPermissionHandlers = (allowed) => ({
-    request: (webContents, permission, callback, details) => {
-        const requesting = (details && details.requestingUrl) || webContents.getURL()
-        callback(isPermissionGranted(permission, requesting, allowed))
-    },
-    check: (webContents, permission, requestingOrigin) =>
-        isPermissionGranted(permission, requestingOrigin, allowed)
-})
+// 'media' is camera and microphone (screen share has its own handler below).
+// It is asked once per origin and per kind with a native dialog that names the
+// origin; the answer is kept in `mediaStore`. The check handler answers only
+// from a stored yes. Without a store or a dialog, media is refused.
+const MEDIA_KIND = Object.freeze({ video: 'camera', audio: 'microphone' })
+const mediaKinds = (types) => {
+    const kinds = (types || []).map((type) => MEDIA_KIND[type])
+    return kinds.length && kinds.every(Boolean) ? [...new Set(kinds)] : null
+}
+
+const createPermissionHandlers = (allowed, { mediaStore = null, askMedia = null } = {}) => {
+    const pending = new Map()
+    // One dialog per origin and kind, however many calls arrive meanwhile.
+    const answer = (origin, kind) => {
+        const stored = mediaStore.get(origin, kind)
+        if (stored !== undefined) return Promise.resolve(stored)
+        const key = `${origin}\n${kind}`
+        if (!pending.has(key)) {
+            pending.set(key, Promise.resolve()
+                .then(() => askMedia(origin, kind))
+                .then((yes) => { mediaStore.set(origin, kind, Boolean(yes)); return Boolean(yes) })
+                .catch(() => false)
+                .finally(() => pending.delete(key)))
+        }
+        return pending.get(key)
+    }
+    return {
+        request: (webContents, permission, callback, details) => {
+            const requesting = (details && details.requestingUrl) || webContents.getURL()
+            if (permission !== 'media') return callback(isPermissionGranted(permission, requesting, allowed))
+            const origin = originOf(requesting)
+            const kinds = mediaKinds(details && details.mediaTypes)
+            if (!mediaStore || !askMedia || !kinds || !isAllowedUrl(requesting, allowed)) return callback(false)
+            return Promise.all(kinds.map((kind) => answer(origin, kind))).then((all) => callback(all.every(Boolean)))
+        },
+        check: (webContents, permission, requestingOrigin, details) => {
+            if (permission !== 'media') return isPermissionGranted(permission, requestingOrigin, allowed)
+            const origin = originOf((details && details.securityOrigin) || requestingOrigin)
+            if (!mediaStore || !origin || !allowed.has(origin)) return false
+            const type = details && details.mediaType
+            const kinds = type === 'video' || type === 'audio' ? [MEDIA_KIND[type]] : ['camera', 'microphone']
+            return kinds.every((kind) => mediaStore.get(origin, kind) === true)
+        }
+    }
+}
 
 // Screen share. `getSources` is desktopCapturer.getSources; `choose` asks the
 // person when there is more than one source (null = cancelled).
