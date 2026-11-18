@@ -2073,6 +2073,7 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 
 
 /* Monitor → Tasks: the owner's open asks, and the change form in the drawer */
+.monitor-task-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .monitor-tasks-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-2); margin-bottom: var(--di-space-2); }
 .monitor-tasks-bar .monitor-meta { margin-right: auto; }
 .monitor-task-actions { display: flex; flex-direction: column; gap: var(--di-space-2); margin-top: var(--di-space-3); }

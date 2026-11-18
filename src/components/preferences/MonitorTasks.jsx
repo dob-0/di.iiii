@@ -6,6 +6,10 @@ const REFRESH_MS = 15 * 1000
 const GROUPS = [['waits', 'Waits on you'], ['NEW', 'New'], ['IN PROGRESS', 'In progress'], ['PARTIAL', 'Partly done'], ['other', 'Other']]
 
 export const groupOf = (t) => (t.who === 'owner' ? 'waits' : GROUPS.some(([k]) => k === t.state) ? t.state : 'other')
+// an ask line starts with the intake's own words, which every row repeats: the list shows what comes after them
+export const askText = (text) => String(text || '').replace(/^(relayed,\s*)?verbatim,\s*not restated:\s*/i, '').trim() || String(text || '')
+// a server that has no door sends a whole web page as its message: say it in words
+export const plainError = (message) => (!message || /<[a-z!]/i.test(message) || message.length > 160 ? 'The server has no answer for the asks yet (the page may be newer than the server)' : message)
 const ageText = (min) => (min < 60 ? `${min} min` : min < 2880 ? `${Math.round(min / 60)} h` : `${Math.round(min / 1440)} d`)
 
 /** The owner's open asks, grouped by state. Rows open in the shared drawer (MonitorDetail). */
@@ -18,7 +22,7 @@ export default function MonitorTasks({ fetcher = getMonitorTasks, refreshMs = RE
             const data = await fetcher({ days })
             if (alive.current) setState({ loading: false, data, error: '' })
         } catch (error) {
-            if (alive.current) setState((prev) => ({ loading: false, data: prev.data, error: error?.message || 'Could not load the asks' }))
+            if (alive.current) setState((prev) => ({ loading: false, data: prev.data, error: plainError(error?.message) }))
         }
     }, [fetcher, days])
     useEffect(() => {
@@ -37,7 +41,7 @@ export default function MonitorTasks({ fetcher = getMonitorTasks, refreshMs = RE
     rows.forEach((t) => by[groupOf(t)].push(t))
     return (<>
         <div className="monitor-tasks-bar">
-            <span className="monitor-meta" data-tasks-count>{rows.length} shown of {data?.total ?? rows.length} open in the last {days} days</span>
+            <span className="monitor-meta" data-tasks-count>{data?.total ?? rows.length} open in the last {days} {days === 1 ? 'day' : 'days'}{rows.length < (data?.total ?? rows.length) ? `, newest ${rows.length} shown` : ''}</span>
             {[1, 3, 14].map((d) => <button key={d} type="button" className={`preferences-inline-action${days === d ? ' is-active' : ''}`} aria-pressed={days === d} onClick={() => setDays(d)}>{d} {d === 1 ? 'day' : 'days'}</button>)}
         </div>
         {error ? <div className="monitor-note is-down">The last refresh failed ({error}); this list may be out of date.</div> : null}
@@ -48,7 +52,7 @@ export default function MonitorTasks({ fetcher = getMonitorTasks, refreshMs = RE
                 <div className="monitor-grid">
                     {by[k].map((t) => (
                         <button key={t.id} type="button" className={`monitor-row${selectedId === t.id ? ' is-selected' : ''}${k === 'waits' ? ' tone-warning' : ''}`} data-task={t.id} aria-pressed={selectedId === t.id} onClick={() => onPick(t)}>
-                            <span className="monitor-name">{t.id} · {t.text}</span>
+                            <span className="monitor-name monitor-task-text"><strong>{t.id}</strong> {askText(t.text)}</span>
                             <span className="monitor-meta">{t.state} · {ageText(t.ageMin)} ago · {t.who}</span>
                         </button>
                     ))}
@@ -66,6 +70,9 @@ export function TaskActions({ task, onChanged, fetcher = getMonitorTasks, poster
     const [evidence, setEvidence] = useState('')
     const [busy, setBusy] = useState(false)
     const [msg, setMsg] = useState('')
+    const formRef = useRef(null)
+    // choosing an action brings its form into view: on a phone the drawer is short and the form sits below the fold
+    useEffect(() => { if (mode) formRef.current?.scrollIntoView?.({ block: 'nearest' }) }, [mode])
     useEffect(() => {
         let live = true
         fetcher({ id: task.id }).then((d) => { if (live) setHistory(d?.history || []) }).catch(() => { if (live) setHistory([]) })
@@ -79,7 +86,7 @@ export function TaskActions({ task, onChanged, fetcher = getMonitorTasks, poster
             setMode(''); setText(''); setEvidence('')
             onChanged?.(out.row)
         } catch (error) {
-            setMsg(error?.message || 'The change was not saved')
+            setMsg(plainError(error?.message) === error?.message ? error.message : 'The change was not saved')
         } finally { setBusy(false) }
     }
     const needEvidence = mode === 'done'
@@ -93,7 +100,7 @@ export function TaskActions({ task, onChanged, fetcher = getMonitorTasks, poster
                 ))}
             </div>
             {mode ? (
-                <div className="monitor-task-form">
+                <div className="monitor-task-form" ref={formRef}>
                     <label>{mode === 'note' ? 'Note' : 'What changed (optional)'}<textarea value={text} maxLength={600} rows={2} onChange={(e) => setText(e.target.value)} /></label>
                     {needEvidence ? <label>Proof it is done (needed)<textarea value={evidence} maxLength={600} rows={2} data-task-evidence onChange={(e) => setEvidence(e.target.value)} /></label> : null}
                     <button type="button" className="preferences-inline-action" disabled={!ready || busy} data-task-send onClick={send}>{busy ? 'Saving…' : 'Save'}</button>

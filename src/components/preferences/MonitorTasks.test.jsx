@@ -1,23 +1,32 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import MonitorTasks, { TaskActions, groupOf } from './MonitorTasks.jsx'
+import MonitorTasks, { askText, plainError, TaskActions, groupOf } from './MonitorTasks.jsx'
 
 const tasks = [
     { id: 'N1', who: 'owner', state: 'WAITING', text: 'cable', ageMin: 5, day: '11-19', time: '02:00' },
     { id: 'N2', who: 'agent', state: 'NEW', text: 'second thing', ageMin: 3000, day: '11-17', time: '02:00' }
 ]
 
+describe('Tasks lane words', () => {
+    it('drops the intake boilerplate from a row and never shows a web page as an error', () => {
+        expect(askText('verbatim, not restated: so what else')).toBe('so what else')
+        expect(askText('relayed, verbatim, not restated: cable')).toBe('cable')
+        expect(plainError('<!DOCTYPE html><html><pre>Cannot GET /x</pre>')).toMatch(/no answer for the asks/)
+        expect(plainError('HTTP 500')).toBe('HTTP 500')
+    })
+})
+
 describe('Tasks lane', () => {
     it('groups by state, puts what waits on the owner first, counts, filters, opens a row', async () => {
         const onPick = vi.fn()
         const { rerender } = render(<MonitorTasks fetcher={async () => ({ ok: true, tasks, total: 2 })} onPick={onPick} refreshMs={1e9} />)
-        await screen.findByText(/N1 · cable/)
+        await waitFor(() => expect(document.querySelector('[data-task="N1"]')).toBeTruthy())
         expect(document.querySelector('[data-task-group]').getAttribute('data-task-group')).toBe('waits')
-        expect(document.querySelector('[data-tasks-count]').textContent).toMatch(/2 shown of 2/)
-        fireEvent.click(screen.getByText(/N2 · second thing/))
+        expect(document.querySelector('[data-tasks-count]').textContent).toMatch(/2 open in the last 3 days/)
+        fireEvent.click(document.querySelector('[data-task="N2"]'))
         expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ id: 'N2' }))
         rerender(<MonitorTasks fetcher={async () => ({ ok: true, tasks, total: 2 })} onPick={onPick} refreshMs={1e9} query="second" />)
-        await waitFor(() => expect(screen.queryByText(/N1 · cable/)).toBeNull())
+        await waitFor(() => expect(document.querySelector('[data-task="N1"]')).toBeNull())
         expect(groupOf(tasks[0])).toBe('waits')
     })
     it('says there is no ledger instead of an empty list', async () => {
