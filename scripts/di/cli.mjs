@@ -90,6 +90,14 @@ const HOME = () => {
 /** Which runner this install uses. Recorded once, at install time. */
 const runnerFor = (home) => (readState(home).mode === 'docker' ? docker : node)
 
+// Something answers on the port AND it is this install's own server. Another
+// program's healthy server (another install, a standby copy) answers the same
+// health check; acting on it said "Unauthorized" (Raspberry Pi, 2026-11-18).
+// Docker installs keep the old reading: only a node install can tell.
+const heldByStranger = async (home, port) => (await alive(home, port)) && runnerFor(home) === node && !node.ownsPort(home, port)
+const ownAlive = async (home, port) => (await alive(home, port)) && !(await heldByStranger(home, port))
+const sayNotRunning = async (home, port) => say(await heldByStranger(home, port) ? ui.portTaken(port, await freePortNear(port)) : ui.notRunning())
+
 const requireInstalled = (home) => {
     if (isInstalled(home)) return true
     say(ui.notInstalled())
@@ -367,7 +375,8 @@ const cmdStatus = async () => {
     const port = resolvePort(home)
     const runner = runnerFor(home)
     const info = runner.describe(home)
-    const healthy = await alive(home, port)
+    const healthy = await ownAlive(home, port)
+    if (!healthy && await heldByStranger(home, port)) { say(ui.portTaken(port, await freePortNear(port))); process.exitCode = 1; return }
 
     // Asked of systemd when it keeps this install up: "not running" alone
     // hides the one case that will not fix itself — a unit systemd gave up on.
@@ -623,7 +632,7 @@ const cmdOpenFile = async (args, file) => {
     if (!fs.existsSync(resolved)) { fail(`no such file: ${resolved}`); process.exitCode = 1; return }
 
     const port = resolvePort(home)
-    const wasRunning = await alive(home, port)
+    const wasRunning = await ownAlive(home, port)
     const named = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
 
     // A running server takes the file through its own API, the way the
@@ -689,7 +698,7 @@ const cmdNew = async (args) => {
     // what a legal space id is, which words are reserved, and what a new space
     // starts out containing. A second implementation here would drift from it.
     const port = resolvePort(home)
-    if (!(await alive(home, port))) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (!(await ownAlive(home, port))) await cmdUp({ _: [], flags: { 'no-open': true } })
     try {
         // Continue, never recreate (N1880): the server answers space_exists_similar
         // when a space with the same stem is already here; only --new-anyway "<why>" goes on.
@@ -744,7 +753,7 @@ const cmdMove = async (args) => {
         const home = HOME()
         if (!requireInstalled(home)) return
         const port = resolvePort(home)
-        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        if (!(await ownAlive(home, port))) { await sayNotRunning(home, port); return }
         base = apiBase(home, port)
     }
     const dryRun = Boolean(args.flags['dry-run'])
@@ -780,7 +789,7 @@ const cmdPost = async (args) => {
         const home = HOME()
         if (!requireInstalled(home)) return
         const port = resolvePort(home)
-        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        if (!(await ownAlive(home, port))) { await sayNotRunning(home, port); return }
         base = apiBase(home, port)
     }
     process.exitCode = await runPost(args, { base, headers: withUserAgent(headers), say, fail })
@@ -790,7 +799,7 @@ const cmdSpaces = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const port = resolvePort(home)
-    if (!(await alive(home, port))) { say(ui.notRunning()); return }
+    if (!(await ownAlive(home, port))) { await sayNotRunning(home, port); return }
     try {
         const response = await fetch(`${apiBase(home, port)}/api/spaces`)
         const body = await response.json()
@@ -932,7 +941,7 @@ const cmdRestore = async (args) => {
     // Out of the way first, like the snapshot path above. A running lighting
     // desk holds its show in memory and writes it back on the next change, so
     // a show restored underneath it would last until the first fader move.
-    const wasRunning = await alive(home, resolvePort(home))
+    const wasRunning = await ownAlive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
@@ -1080,7 +1089,7 @@ const cmdUpdate = async (args) => {
     }
 
     const runner = runnerFor(home)
-    const wasRunning = await alive(home, resolvePort(home))
+    const wasRunning = await ownAlive(home, resolvePort(home))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
 
