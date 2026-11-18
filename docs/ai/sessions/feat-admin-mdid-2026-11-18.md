@@ -1,4 +1,4 @@
-# feat/admin-mdid-2026-11-18
+## 2026-11-18 — admin regrouped, Spaces world (List | 2D | 3D), click-walk fixes
 
 Owner ask: make /admin easy to read, interactive and realtime (MdiD: 2D + 3D UI to control and monitor).
 
