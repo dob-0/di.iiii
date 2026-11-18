@@ -1156,6 +1156,7 @@
 
 .preferences-input {
     width: 100%;
+    box-sizing: border-box; /* 100% + padding ran 26 px past its cell (This scene, Display name) */
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid var(--pref-border-active);
     border-radius: 0;
@@ -1274,7 +1275,10 @@
 .preferences-switch {
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
     gap: var(--di-space-1);
+    height: 100%; /* the switch and its sentence are one cell of the grid, so a row stays one height */
+    background: var(--di-surface);
 }
 
 .preferences-switch-control {
@@ -1311,6 +1315,7 @@
 .preferences-switch-control.is-warning .preferences-switch-state { color: var(--di-warning); }
 
 .preferences-switch-detail {
+    padding: 0 var(--di-space-3) var(--di-space-2);
     color: var(--ui-text-muted);
     font-size: var(--di-text-3);
 }
@@ -1762,7 +1767,7 @@
 .monitor-spark.is-empty { color: var(--ui-text-muted); font-size: var(--di-text-2); line-height: 1.75rem; }
 
 /* count tiles */
-.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: var(--di-space-2); }
+.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.25rem, 1fr)); /* 7 tiles fit one row beside "What changed" (the 7th sat alone) */ gap: var(--di-space-2); }
 .monitor-count {
     display: flex;
     flex-direction: column;
@@ -1991,3 +1996,23 @@ a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow
     background: rgb(var(--di-live-rgb));
 }
 .preferences-person-spaces { display: flex; flex-wrap: wrap; gap: var(--di-space-2); margin-top: var(--di-space-3); }
+/* Spaces world: the map takes the width, the picked space's detail sits beside it (stacked under 1100 px) */
+.preferences-manage-world-body { display: grid; gap: var(--di-space-4); grid-template-columns: minmax(0, 1fr); align-items: start; }
+.preferences-manage-world-body.has-detail { grid-template-columns: minmax(0, 1fr) minmax(340px, 460px); }
+.preferences-manage-world-body > * { min-width: 0; }
+.monitor-map-views.is-solo .monitor-map-fs { margin-left: 0; }
+@media (max-width: 1100px) {
+    .preferences-manage-world-body.has-detail { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Scene header: six counters in ONE row on a wide screen (they made two half-empty rows) */
+@media (min-width: 1280px) {
+    .preferences-topbar-metrics:has(> :nth-child(6)) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+/* Phone (<= 880 px): the menu row already says which section is open, so the title above it is read out, not drawn twice */
+@media (max-width: 880px) {
+    .preferences-topbar-title-row h1 {
+        position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+}

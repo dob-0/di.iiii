@@ -3,6 +3,13 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Admin MdiD: regroup, Spaces world, click walk (2026-11-18)
+
+Symptoms (owner): Spaces and users was hard to read, Open call sat under it, nothing was live or clickable as a picture.
+Cause: nav groups were two (admin / diagnostics) in historical order; Spaces and users stacked Traffic, Sweep and Commons above People; `.preferences-input` was 100% wide content-box (26 px past its cell on This scene); the 7th Monitor count tile wrapped alone; the phone showed the section name twice (title and menu row); switch sentences sat outside their cell.
+Fix: four groups (Watch, People and spaces, Outreach, Operate (staff)), same keys and hashes; Spaces world (List | 2D | 3D) on the Monitor map engine (`spacesWorld.js`, `ring` and `person` kind in `monitorMapLayout.js`), polled every 10 s; box-sizing, tile min width, switch cell, h1 hidden on phone.
+Regression tests: `PreferencesPageWords.test.jsx` (groups, Open call under Outreach), `spacesWorld.test.js`, `AdminManageSection.test.jsx` (2D click selects the list row).
+
 ## Monitor map and phone admin menu: five owner-reported defects (2026-11-17, N4679, N4680)
 
 Symptoms (owner screenshots): (1) the admin section list on a phone was one sideways-scrolling line, so most sections were off screen; (2) the map could not go full screen; (3) 2D nodes could be looked at but not moved; (4) the mouse wheel over the map zoomed the map and the page could not scroll past it; (5) the Arch Mac and every other tailnet device were missing from the map.

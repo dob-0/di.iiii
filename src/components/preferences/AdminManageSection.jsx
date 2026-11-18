@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ModuleSection, MetricCard, InfoPair } from './PreferencesShared.jsx'
 import GithubSyncSection from './GithubSyncSection.jsx'
 import {
@@ -66,6 +66,7 @@ export default function AdminManageSection({ onStats }) {
     const [worldView, setWorldView] = useState(readWorldView)
     const [updatedAt, setUpdatedAt] = useState(null)
     const narrow = useNarrow()
+    const detailRef = useRef(null)
     const chooseWorld = (v) => { setWorldView(v); try { window.localStorage.setItem(WORLD_KEY, v) } catch { /* the choice is just not kept */ } }
 
     const globalSpaceId = config.globalSpaceId || null
@@ -278,6 +279,8 @@ export default function AdminManageSection({ onStats }) {
     }
     const world = useMemo(() => buildSpacesWorld(spaces, users, { globalSpaceId }), [spaces, users, globalSpaceId])
     const pickNode = (node) => {
+        // stacked (narrow screen): bring the detail into view; side by side it is already there
+        setTimeout(() => { try { if (window.innerWidth < 1100) detailRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) } catch { /* no scroll */ } }, 50)
         if (node.id.startsWith('space:')) openSpace(node.id.slice('space:'.length))
         else if (node.id.startsWith('person:')) setSelection({ type: 'person', userId: node.id.slice('person:'.length) })
     }
@@ -378,8 +381,12 @@ export default function AdminManageSection({ onStats }) {
             <div className="preferences-manage-world">
                 {toolbar}
                 {error && <div className="preferences-empty" role="status">{error}</div>}
-                {stage}
-                {selection.type === 'root' ? <div className="preferences-empty">Select a space or a person on the map to see and change it here.</div> : detailPane}
+                <div className={`preferences-manage-world-body${selection.type === 'root' ? '' : ' has-detail'}`}>
+                    {stage}
+                    <div className="preferences-manage-world-detail" ref={detailRef}>
+                        {selection.type === 'root' ? <div className="preferences-empty">Select a space or a person on the map to see and change it here.</div> : detailPane}
+                    </div>
+                </div>
                 {deleteUi}
                 {askDialog}
             </div>
@@ -593,12 +600,6 @@ export function SweepSection() {
 function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, onCreateSpace, onPatchUser, spaceLimit }) {
     return (
         <>
-            {/* Spaces and Users are already counted in the page header; repeating them here (and a lone
-                "Guest space" tile) read as noise. What is left is the one setting this card owns. */}
-            <ModuleSection title="Guest entry" subtitle="Where a visitor who is not signed in lands">
-                <InfoPair label="Guests land in" value={globalSpaceId ? `the shared space “${globalSpaceId}”` : 'their own private sandbox'} />
-            </ModuleSection>
-
             <ModuleSection
                 title="New space"
                 subtitle={Number.isFinite(spaceLimit) ? `Free accounts can create up to ${spaceLimit} spaces each` : 'A space holds projects, assets, and its own access'}
@@ -616,14 +617,8 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     />
                     <button type="submit" className="toggle-button" disabled={!draftSpace.trim()}>Create space</button>
                 </form>
-                <div className="preferences-empty">Pick a space on the left to manage its projects and access.</div>
+                <div className="preferences-empty">Or pick a space in the directory, or switch to 2D or 3D, to manage its projects and access.</div>
             </ModuleSection>
-
-            <TrafficSection />
-
-            <SweepSection />
-
-            <CommonsModerationSection />
 
             <ModuleSection title="People" subtitle="Account roles and overall reach">
                 {users === null && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading accounts" text="loading accounts" /></div>}
@@ -664,6 +659,19 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     ))}
                 </div>
             </ModuleSection>
+
+            {/* Spaces and Users are already counted in the page header; repeating them here (and a lone
+                "Guest space" tile) read as noise. What is left is the one setting this card owns. */}
+            <ModuleSection title="Guest entry" subtitle="Where a visitor who is not signed in lands">
+                <InfoPair label="Guests land in" value={globalSpaceId ? `the shared space “${globalSpaceId}”` : 'their own private sandbox'} />
+            </ModuleSection>
+
+            <TrafficSection />
+
+            <SweepSection />
+
+            <CommonsModerationSection />
+
         </>
     )
 }

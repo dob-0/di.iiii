@@ -250,15 +250,15 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     // Scene counters and the copy-snapshot / XR-debug buttons describe the open scene; the Machines page is not about it.
     const isSceneSection = activeSection !== 'estate'
     // Pages that carry their own counts (or none) get no header cards.
-    const hideHeaderCards = isAdminSection ? ['opencall', 'visitors', 'agents', 'monitor'].includes(activeSection) : !isSceneSection
+    const hideHeaderCards = isAdminSection ? ['manage', 'opencall', 'visitors', 'agents', 'monitor'].includes(activeSection) : !isSceneSection
 
     return (
         <div className="preferences-page">
             <header className={`preferences-topbar${headerCollapsed ? ' is-collapsed' : ''}`}>
                 <div className="preferences-topbar-main">
-                    <div className="preferences-eyebrow">Admin</div>
+                    <div className="preferences-eyebrow">{`Admin · ${SECTIONS.find((x) => x.key === activeSection)?.groupLabel || ""}`}</div>
                     <div className="preferences-topbar-title-row">
-                        <h1>{activeSection === 'monitor' ? 'Everything that is going on' : activeSection === 'opencall' || activeSection === 'visitors' || activeSection === 'agents' || activeSection === 'estate' ? SECTIONS.find((x) => x.key === activeSection).label : isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
+                        <h1>{SECTIONS.find((x) => x.key === activeSection)?.label}</h1>
                         <span className="preferences-inline-chip">Space: {sync?.spaceId || 'main'}</span>
                         <button
                             type="button"

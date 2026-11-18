@@ -340,7 +340,7 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
 
     return (
         <div className={`monitor-map${fullscreen ? ' is-fullscreen' : ''}`} data-monitor-map-view={view} ref={rootRef}>
-            <div className="monitor-map-views" role="group" aria-label="Map view">
+            <div className={`monitor-map-views${pinned ? ' is-solo' : ''}`} role="group" aria-label="Map view">
                 {pinned ? null : VIEWS.map(([id, label]) => (
                     <button key={id} type="button" data-map-view={id} className={`monitor-map-view${view === id ? ' is-active' : ''}`}
                         aria-pressed={view === id} onClick={() => choose(id)}>{label}</button>

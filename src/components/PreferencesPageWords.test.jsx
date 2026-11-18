@@ -42,7 +42,7 @@ const renderAdmin = () => render(<PreferencesPage onNavigateToEditor={vi.fn()} /
 describe('admin console in plain words', () => {
     it('names the page by its job, not "Ops Graph", "Socket", "Estate" or "Inspect"', () => {
         renderAdmin()
-        expect(screen.getByRole('heading', { level: 1, name: 'Spaces and who can see them' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { level: 1, name: 'Spaces and users' })).toBeInTheDocument()
         const text = document.body.textContent
         for (const word of ['Ops Graph', 'Admin Management', 'Socket', 'Estate', 'Inspect', 'Back to Editor']) {
             expect(text).not.toContain(word)
@@ -65,7 +65,7 @@ describe('admin console in plain words', () => {
     it('a quick action that is on or off is a switch with its state, who it touches, and the same click to undo', () => {
         renderAdmin()
         fireEvent.click(screen.getByRole('button', { name: 'Overview' }))
-        expect(screen.getByRole('heading', { level: 1, name: 'Operator tools' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument()
         const lock = screen.getByRole('switch', { name: 'Lock editing' })
         expect(lock).toHaveAttribute('aria-checked', 'false')
         expect(lock).toHaveTextContent('Off')
