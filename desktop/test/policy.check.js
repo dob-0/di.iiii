@@ -30,9 +30,24 @@ test('bad or conflicting input is an error, never a silent pick', () => {
     }
 })
 
-test('allowed origins: the three di origins plus the chosen one, exact match', () => {
-    const t = p.resolveTarget(['--url', 'http://127.0.0.1:5173'], {})
-    for (const ok of ['https://diiii.xyz/a', 'https://dev.diiii.xyz', 'http://diiii.localhost/s', 'http://127.0.0.1:5173/z']) assert.ok(p.isAllowedUrl(ok, t.allowed), ok)
+test('allowed origins: a window trusts its own target only, exact match', () => {
+    const PROD = 'https://diiii.xyz/a'
+    const DEV = 'https://dev.diiii.xyz'
+    const LOCAL = 'http://diiii.localhost/s'
+    const CUSTOM = 'http://127.0.0.1:5173/z'
+    const cases = [
+        [[], { yes: [PROD], no: [DEV, LOCAL, CUSTOM] }],
+        [['--dev'], { yes: [DEV], no: [PROD, LOCAL, CUSTOM] }],
+        [['--local'], { yes: [LOCAL], no: [PROD, DEV, CUSTOM] }],
+        [['--url', 'http://127.0.0.1:5173'], { yes: [CUSTOM], no: [PROD, DEV, LOCAL] }]
+    ]
+    for (const [argv, { yes, no }] of cases) {
+        const t = p.resolveTarget(argv, {})
+        for (const ok of yes) assert.ok(p.isAllowedUrl(ok, t.allowed), `${argv} trusts ${ok}`)
+        for (const bad of no) assert.equal(p.isAllowedUrl(bad, t.allowed), false, `${argv} must not trust ${bad}`)
+        assert.equal(t.allowed.size, 1, `${argv}: one trusted origin`)
+    }
+    const t = p.resolveTarget([], {})
     for (const no of ['https://diiii.xyz.evil.com', 'http://diiii.xyz', 'https://evil.com', 'http://127.0.0.1:5174', 'file:///etc/passwd', 'about:blank', 'not a url', '', undefined]) assert.equal(p.isAllowedUrl(no, t.allowed), false, String(no))
 })
 

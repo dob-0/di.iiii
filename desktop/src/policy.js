@@ -71,7 +71,9 @@ const resolveTarget = (argv = [], env = {}) => {
     const channel = known
         ? known[0]
         : `custom-${crypto.createHash('sha1').update(origin).digest('hex').slice(0, 8)}`
-    const allowed = new Set([...Object.values(DI_ORIGINS), origin])
+    // A window trusts its own target and nothing else: prod does not trust dev
+    // or local, dev and local are trusted only when that is the target.
+    const allowed = new Set([origin])
     return { url: parsed.href, origin, channel, allowed }
 }
 

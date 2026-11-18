@@ -86,11 +86,11 @@ if (target.error) {
         // Camera and microphone: asked once per address and kind, answers kept
         // in one small file in this channel's profile; the File menu forgets them.
         const mediaStore = createMediaStore({ file: path.join(app.getPath('userData'), 'media-permissions.json') })
-        const askMedia = async (origin, kind) => {
+        const askMedia = async (origin, kinds) => {
             const { response } = await dialog.showMessageBox(mainWindow, {
                 type: 'question',
                 title: 'di.iiii',
-                message: `${origin} wants to use your ${kind}.`,
+                message: `${origin} wants to use your ${kinds.join(' and ')}.`,
                 detail: 'Your answer is remembered for this address. File, Forget camera and microphone answers asks again.',
                 buttons: ['Allow', 'Do not allow'],
                 cancelId: 1,

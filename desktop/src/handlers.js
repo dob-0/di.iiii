@@ -15,20 +15,23 @@ const mediaKinds = (types) => {
 }
 
 const createPermissionHandlers = (allowed, { mediaStore = null, askMedia = null } = {}) => {
-    const pending = new Map()
-    // One dialog per origin and kind, however many calls arrive meanwhile.
-    const answer = (origin, kind) => {
-        const stored = mediaStore.get(origin, kind)
-        if (stored !== undefined) return Promise.resolve(stored)
-        const key = `${origin}\n${kind}`
-        if (!pending.has(key)) {
-            pending.set(key, Promise.resolve()
-                .then(() => askMedia(origin, kind))
-                .then((yes) => { mediaStore.set(origin, kind, Boolean(yes)); return Boolean(yes) })
-                .catch(() => false)
-                .finally(() => pending.delete(key)))
-        }
-        return pending.get(key)
+    // One line per origin: a request waits for the one before it, then asks only
+    // for the kinds still unanswered, in ONE dialog that names all of them. So
+    // camera + microphone is one dialog, and two calls at once are one dialog.
+    const queues = new Map()
+    const answer = (origin, kinds) => {
+        const run = (queues.get(origin) || Promise.resolve()).then(async () => {
+            const todo = kinds.filter((kind) => mediaStore.get(origin, kind) === undefined)
+            if (todo.length) {
+                // A dialog that throws is a no and is not remembered.
+                const yes = await Promise.resolve().then(() => askMedia(origin, todo)).then(Boolean, () => null)
+                if (yes !== null) for (const kind of todo) mediaStore.set(origin, kind, yes)
+            }
+            return kinds.every((kind) => mediaStore.get(origin, kind) === true)
+        }).catch(() => false)
+        queues.set(origin, run)
+        run.then(() => { if (queues.get(origin) === run) queues.delete(origin) })
+        return run
     }
     return {
         request: (webContents, permission, callback, details) => {
@@ -37,7 +40,8 @@ const createPermissionHandlers = (allowed, { mediaStore = null, askMedia = null 
             const origin = originOf(requesting)
             const kinds = mediaKinds(details && details.mediaTypes)
             if (!mediaStore || !askMedia || !kinds || !isAllowedUrl(requesting, allowed)) return callback(false)
-            return Promise.all(kinds.map((kind) => answer(origin, kind))).then((all) => callback(all.every(Boolean)))
+            // Whatever goes wrong, the request gets an answer.
+            return answer(origin, kinds).then(callback, () => callback(false))
         },
         check: (webContents, permission, requestingOrigin, details) => {
             if (permission !== 'media') return isPermissionGranted(permission, requestingOrigin, allowed)
@@ -72,6 +76,9 @@ const createDisplayMediaHandler = ({ allowed, getSources, choose }) => async (re
 const INPUT_WINDOW_MS = 2000
 const GESTURE_INPUTS = new Set(['mouseDown', 'mouseUp', 'rawKeyDown', 'keyDown', 'char', 'touchStart', 'touchEnd'])
 
+// The input counts from any frame of the window: Electron's `input-event` hands
+// over only a type and modifiers (InputEvent structure: no frame), and the
+// window-open details name no frame either, so frames cannot be told apart.
 const createExternalGate = ({ openExternal, now = Date.now, log = (line) => process.stderr.write(`${line}\n`) }) => {
     let lastInput = -Infinity
     const opened = []

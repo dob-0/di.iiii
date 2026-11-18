@@ -101,6 +101,14 @@ jobs:
             npx @electron/fuses read --app "$app"
           done
           node scripts/check-fuses.js "${apps[@]}"
+      - name: Packaged app starts and loads a page (linux, under a virtual display)
+        # The fuses act only in the packaged app, which the smoke test never
+        # starts. Loads a fixture page on 127.0.0.1, reads it over the app's
+        # loopback DevTools port (DI_DESKTOP_CDP), then stops the app.
+        if: matrix.name == 'linux'
+        run: xvfb-run -a -s "-screen 0 1280x800x24" node scripts/check-packaged.js dist/linux-unpacked/di-desktop
+        env:
+          DI_TEST_NO_SANDBOX: '1'
       - name: macOS signature (ad-hoc) of each app
         if: matrix.name == 'macos'
         shell: bash

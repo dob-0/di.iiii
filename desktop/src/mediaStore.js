@@ -29,13 +29,17 @@ const createMediaStore = ({ file, fs = nodeFs }) => {
     return {
         // true / false when answered, undefined when never asked.
         get: (origin, kind) => {
-            const answer = Object.prototype.hasOwnProperty.call(load(), origin) ? load()[origin][kind] : undefined
+            const entry = Object.prototype.hasOwnProperty.call(load(), origin) ? load()[origin] : undefined
+            // A null, a string or an array in the file is "never asked", not a crash.
+            const answer = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry[kind] : undefined
             return typeof answer === 'boolean' ? answer : undefined
         },
         set: (origin, kind, value) => {
             if (!KINDS.includes(kind)) throw new Error(`unknown kind: ${kind}`)
             const all = load()
-            all[origin] = { ...(Object.prototype.hasOwnProperty.call(all, origin) ? all[origin] : {}), [kind]: Boolean(value) }
+            const entry = Object.prototype.hasOwnProperty.call(all, origin) ? all[origin] : null
+            const kept = entry && typeof entry === 'object' && !Array.isArray(entry) ? entry : {}
+            all[origin] = { ...kept, [kind]: Boolean(value) }
             save()
         },
         clear: () => {

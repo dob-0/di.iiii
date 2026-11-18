@@ -27,7 +27,10 @@ const launch = async (url, extraEnv = {}) => {
     delete env.WAYLAND_DISPLAY
     env.XDG_SESSION_TYPE = 'x11'
     assert.ok(env.DISPLAY, 'no DISPLAY: run under xvfb-run or di-agent-screen exec')
-    const args = [appDir, '--ozone-platform=x11']
+    // A fake camera and microphone exist on every machine, so a refusal can only
+    // come from the app's policy, never from "no device" (NOT the fake-UI switch:
+    // that would answer the permission question itself).
+    const args = [appDir, '--ozone-platform=x11', '--use-fake-device-for-media-stream']
     if (process.env.DI_TEST_NO_SANDBOX) args.push('--no-sandbox')
     const app = await electron.launch({ args, env, timeout: 60000 })
     const page = await app.firstWindow()
@@ -109,15 +112,15 @@ test('app on a fixture page and on an unreachable address', async (t) => {
             assert.equal(refused.ok, false)
             assert.ok(['NotAllowedError', 'SecurityError'].includes(refused.name), `refused by policy, got ${refused.name}`)
 
-            // A foreign frame never gets a camera stream. A machine with a camera
-            // answers NotAllowedError (policy); a runner with none answers
-            // NotFoundError before the policy is asked, so that is accepted too.
-            // The refusal itself and the dialog on a di address are unit-tested.
+            // A foreign frame never gets a camera stream. The app starts with a fake
+            // camera, so the only refusal possible is the policy's: NotAllowedError.
+            // A NotFoundError (no device) would mean the policy was never asked, and
+            // fails here. The dialog on a di address is unit-tested.
             const cam = await frame.evaluate(async () => {
                 try { await navigator.mediaDevices.getUserMedia({ video: true }); return 'stream' } catch (error) { return error.name }
             })
             tt.diagnostic(`camera in a foreign frame: ${cam}`)
-            assert.ok(['NotAllowedError', 'SecurityError', 'NotFoundError'].includes(cam), `no camera stream in a foreign frame, got ${cam}`)
+            assert.equal(cam, 'NotAllowedError', `the policy must refuse the foreign frame, got ${cam}`)
 
             const gpu = await page.evaluate(async () => {
                 if (!('gpu' in navigator)) return { present: false }

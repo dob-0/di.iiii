@@ -24,7 +24,8 @@ test('permission request: granted on di, refused elsewhere (frame url wins over 
 
 test('permission check handler follows the same policy', () => {
     const { check } = h.createPermissionHandlers(allowed)
-    assert.equal(check(null, 'midiSysex', 'https://dev.diiii.xyz'), true)
+    assert.equal(check(null, 'midiSysex', 'https://diiii.xyz'), true)
+    assert.equal(check(null, 'midiSysex', 'https://dev.diiii.xyz'), false, 'a prod window does not trust dev')
     assert.equal(check(null, 'midiSysex', 'https://evil.com'), false)
 })
 
@@ -74,7 +75,7 @@ test('navigation: off-di links are blocked and sent to the system browser, web a
     assert.equal(nav('https://evil.com/'), true)
     assert.equal(nav('file:///etc/passwd'), true)
     assert.deepEqual(external, ['https://evil.com/'])
-    assert.equal(contents.listeners.open({ url: 'https://dev.diiii.xyz/x' }).action, 'allow')
+    assert.equal(contents.listeners.open({ url: 'https://diiii.xyz/x' }).action, 'allow')
     click()
     assert.equal(contents.listeners.open({ url: 'https://example.org/' }).action, 'deny')
     assert.equal(contents.listeners.open({ url: 'javascript:alert(1)' }).action, 'deny')
@@ -164,7 +165,7 @@ const mediaSetup = (answers = {}) => {
     const asked = []
     const handlers = h.createPermissionHandlers(allowed, {
         mediaStore: store,
-        askMedia: async (origin, kind) => { asked.push(`${origin} ${kind}`); return answers[kind] ?? true }
+        askMedia: async (origin, kinds) => { asked.push(`${origin} ${kinds.join('+')}`); return kinds.every((kind) => answers[kind] ?? true) }
     })
     const request = (details, pageUrl = 'https://diiii.xyz/') => new Promise((resolve) => handlers.request({ getURL: () => pageUrl }, 'media', resolve, details))
     return { dir, file, store, asked, handlers, request }
@@ -178,8 +179,41 @@ test('media: asked once per origin and kind (names the origin), the answer is ke
     assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['audio'] }), false)
     assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['audio'] }), false)
     assert.deepEqual(m.asked, ['https://diiii.xyz camera', 'https://diiii.xyz microphone'])
-    assert.equal(await m.request({ requestingUrl: 'https://dev.diiii.xyz/', mediaTypes: ['video', 'audio'] }), false, 'camera yes + microphone no is a no')
-    assert.deepEqual(m.asked.slice(2), ['https://dev.diiii.xyz camera', 'https://dev.diiii.xyz microphone'])
+    assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video', 'audio'] }), false, 'camera yes + microphone no is a no, and nothing more is asked')
+    assert.equal(m.asked.length, 2)
+    fs.rmSync(m.dir, { recursive: true, force: true })
+})
+
+test('media: camera + microphone is ONE dialog naming both, answered for both kinds', async () => {
+    const m = mediaSetup()
+    assert.equal(await m.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video', 'audio'] }), true)
+    assert.deepEqual(m.asked, ['https://diiii.xyz camera+microphone'])
+    assert.equal(m.store.get('https://diiii.xyz', 'camera'), true)
+    assert.equal(m.store.get('https://diiii.xyz', 'microphone'), true)
+    const n = mediaSetup({ camera: false })
+    const [x, y] = await Promise.all([n.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video'] }), n.request({ requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video', 'audio'] })])
+    assert.deepEqual([x, y], [false, false])
+    assert.deepEqual(n.asked, ['https://diiii.xyz camera', 'https://diiii.xyz microphone'], 'a kind already answered is not asked again')
+    fs.rmSync(m.dir, { recursive: true, force: true })
+    fs.rmSync(n.dir, { recursive: true, force: true })
+})
+
+test('media: a null (or other non-object) entry in the store is "never asked": the request is answered and asked again', async () => {
+    const m = mediaSetup()
+    for (const bad of [null, 'yes', 5, [true]]) {
+        fs.writeFileSync(m.file, JSON.stringify({ 'https://diiii.xyz': bad }))
+        const fresh = createMediaStore({ file: m.file })
+        assert.equal(fresh.get('https://diiii.xyz', 'camera'), undefined, JSON.stringify(bad))
+        const asked = []
+        const handlers = h.createPermissionHandlers(allowed, { mediaStore: fresh, askMedia: async (o, kinds) => { asked.push(kinds.join('+')); return true } })
+        const answer = await Promise.race([
+            new Promise((r) => handlers.request({ getURL: () => 'https://diiii.xyz/' }, 'media', r, { requestingUrl: 'https://diiii.xyz/', mediaTypes: ['video'] })),
+            new Promise((r) => setTimeout(() => r('no answer'), 1000))
+        ])
+        assert.equal(answer, true, `callback called for ${JSON.stringify(bad)}`)
+        assert.deepEqual(asked, ['camera'])
+        assert.equal(handlers.check(null, 'media', 'https://diiii.xyz', { mediaType: 'video' }), true)
+    }
     fs.rmSync(m.dir, { recursive: true, force: true })
 })
 

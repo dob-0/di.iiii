@@ -12,7 +12,7 @@
     "main": "src/main.js",
     "scripts": {
         "start": "electron .",
-        "test:unit": "node --test test/policy.check.js test/handlers.check.js",
+        "test:unit": "node --test test/policy.check.js test/handlers.check.js test/fuses.check.js",
         "test:smoke": "node --test test/smoke.check.js",
         "test": "npm run test:unit && npm run test:smoke",
         "dist": "electron-builder --publish never",
@@ -21,6 +21,7 @@
         "dist:win": "electron-builder --win --publish never"
     },
     "devDependencies": {
+        "@electron/fuses": "1.8.0",
         "electron": "45.3.4",
         "electron-builder": "26.18.0",
         "playwright-core": "1.65.1"
