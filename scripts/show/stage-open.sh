@@ -22,7 +22,7 @@
 # Agents must NOT run this for real: it opens windows on the owner's desktop (use --dry-run).
 set -euo pipefail
 
-source "$(dirname "${BASH_SOURCE[0]}")/../lib/browser-app.sh"
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../lib/browser-app.sh"
 
 space=platina; project=platina-screen; stage_ws=2; tool_ws=1; base=http://diiii.localhost; preset=
 tool_x=80; tool_y=60; tool_w=1036; tool_h=837

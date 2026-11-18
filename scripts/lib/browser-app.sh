@@ -9,7 +9,7 @@ di_browser_conf_path() { printf '%s/di/browser.conf' "${XDG_CONFIG_HOME:-$HOME/.
 
 di_browser_app() {
   local value="${DI_BROWSER_APP:-}" where=DI_BROWSER_APP conf line key
-  value=${value#"${value%%[![:space:]]*}"}; value=${value%"${value##*[![:space:]]}"}
+  # the env value is NOT trimmed: a value with spaces is set but wrong (same as di-atlas)
   if [ -z "$value" ]; then
     where=$(di_browser_conf_path)
     if [ -r "$where" ]; then

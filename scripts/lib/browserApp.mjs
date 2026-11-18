@@ -37,7 +37,7 @@ export const readBrowserConf = (env = process.env, home = os.homedir(), readFile
 
 /** The app id of THE browser. Throws a one-line Error for a set but unknown value. */
 export const browserApp = ({ env = process.env, home = os.homedir(), readFile = fs.readFileSync } = {}) => {
-    const fromEnv = (env.DI_BROWSER_APP || '').trim()
+    const fromEnv = env.DI_BROWSER_APP || ''   // not trimmed: a value with spaces is set but wrong (same as di-atlas)
     const value = fromEnv || readBrowserConf(env, home, readFile)
     if (!value) return CHROMIUM
     if (Object.hasOwn(SHORT_NAMES, value)) return SHORT_NAMES[value]

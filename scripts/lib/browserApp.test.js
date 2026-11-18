@@ -41,9 +41,10 @@ describe('browserApp (mjs)', () => {
         expect(browserApp({ env: { DI_BROWSER_APP: 'chromium' }, home })).toBe(CHROMIUM)
         expect(browserApp({ env: { DI_BROWSER_APP: UNGOOGLED }, home: homeWith().home })).toBe(UNGOOGLED)
     })
-    it('an empty env or an empty app= falls through to the next source', () => {
+    it('an empty env or an empty app= falls through to the next source (a whitespace env is set, so refused)', () => {
         const { home } = homeWith('app=ungoogled\n')
-        expect(browserApp({ env: { DI_BROWSER_APP: '  ' }, home })).toBe(UNGOOGLED)
+        expect(browserApp({ env: { DI_BROWSER_APP: '' }, home })).toBe(UNGOOGLED)
+        expect(() => browserApp({ env: { DI_BROWSER_APP: '  ' }, home })).toThrow(/unknown app/)
         expect(browserApp({ env: {}, home: homeWith('app=\n').home })).toBe(CHROMIUM)
     })
     it('short names resolve to the app ids', () => {
@@ -160,3 +161,52 @@ function stageDry(env) {
     })
     return { out: r.stdout.trim(), err: r.stderr.trim(), status: r.status }
 }
+
+// One shared table (same bytes as di-atlas), run through BOTH readers: the two repos cannot drift on any input.
+describe('browser setting vectors: browserApp.mjs and browser-app.sh agree with the shared table', () => {
+    const vectors = fs.readFileSync(path.join(here, 'browser-setting-vectors.jsonl'), 'utf8')
+        .split('\n').filter(Boolean).map((l) => JSON.parse(l))
+    const asRoot = typeof process.getuid === 'function' && process.getuid() === 0
+    const setup = (v) => {
+        const home = tmp()
+        const conf = path.join(home, '.config/di/browser.conf')
+        if (v.file !== null) {
+            fs.mkdirSync(path.dirname(conf), { recursive: true })
+            fs.writeFileSync(conf, typeof v.file === 'string' ? v.file : v.file.unreadable)
+            if (typeof v.file !== 'string') fs.chmodSync(conf, 0)
+        }
+        const env = { PATH: process.env.PATH, HOME: home }
+        if (v.env !== null) env.DI_BROWSER_APP = v.env
+        return { home, env }
+    }
+    it('has the 30 cases', () => { expect(vectors).toHaveLength(30) })
+    it.each(vectors.map((v) => [v.id, v]))('%s', (id, v) => {
+        if (typeof v.file === 'object' && v.file !== null && asRoot) {
+            console.log(`SKIP ${id}: running as root, chmod 0 does not make a file unreadable`)
+            return
+        }
+        const { home, env } = setup(v)
+        let js
+        try { js = { app: browserApp({ env: { ...env }, home }) } } catch (e) { js = { refused: String(e.message) } }
+        const r = spawnSync('bash', ['-c', `source "${scripts}/lib/browser-app.sh"; di_browser_app`], { env, encoding: 'utf8' })
+        if (v.want === 'REFUSE') {
+            expect(js.refused, `${id} mjs`).toMatch(/^browser: unknown app [^\n]+$/)
+            expect(r.status, `${id} sh rc`).toBe(2)
+            expect(r.stderr.trim().split('\n'), `${id} sh one line`).toHaveLength(1)
+        } else {
+            expect(js, `${id} mjs`).toEqual({ app: v.want })
+            expect({ rc: r.status, out: r.stdout.trim() }, `${id} sh`).toEqual({ rc: 0, out: v.want })
+        }
+    })
+})
+
+describe('stage-open.sh started through a symlink', () => {
+    it('finds ../lib/browser-app.sh (dry run, no browser)', () => {
+        const dir = tmp()
+        const link = path.join(dir, 'stage-open')
+        fs.symlinkSync(path.join(scripts, 'show/stage-open.sh'), link)
+        const r = spawnSync('bash', [link, '--dry-run'], { env: { PATH: process.env.PATH, HOME: '/home/x' }, encoding: 'utf8' })
+        expect(r.stderr).not.toMatch(/No such file/)
+        expect(r.status).toBe(0)
+    })
+})
