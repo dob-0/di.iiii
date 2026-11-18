@@ -274,9 +274,20 @@ function createHub({
     }
   }
 
+  // one probe round at a time: the GET and the SSE poller share the round in flight, so one
+  // outage is never counted as two misses (same rule as monitorStore.getMonitor).
+  let tiersInflight = null
   async function tiers() {
     const t = now()
     if (tierCache && t - tierCache.at < TIER_CACHE_MS && tierCache.self === selfId()) return tierCache.value
+    if (tiersInflight && tiersInflight.self === selfId()) return tiersInflight.promise
+    const promise = tiersScan().finally(() => { tiersInflight = null })
+    tiersInflight = { self: selfId(), promise }
+    return promise
+  }
+
+  async function tiersScan() {
+    const t = now()
     const self = selfId()
     const rel = releaseInfo() || {}
     const rows = []
@@ -476,9 +487,25 @@ function createHub({
 }
 
 /** The stream compares snapshots without the fields that change on every scan. */
-const IGNORED_KEYS = new Set(['generatedAt', 'ms', 'heardSecondsAgo', 'at', 'ages'])
+const IGNORED_KEYS = new Set(['generatedAt', 'ms', 'heardSecondsAgo', 'ages'])
+// `at` is a scan clock only where the scanners stamp it: the snapshot's own sections (tiers.at, spaces.at,
+// ...) and each panel (panels.<name>.at). Anywhere deeper (a report, an ask, a row) it is data and counts.
+const isScanStamp = (path) => path.length === 2 || (path.length === 3 && path[0] === 'panels')
+function stripNoise(value, path = []) {
+  if (Array.isArray(value)) return value.map((item, i) => stripNoise(item, [...path, String(i)]))
+  if (value && typeof value === 'object') {
+    const out = {}
+    for (const [key, v] of Object.entries(value)) {
+      if (IGNORED_KEYS.has(key)) continue
+      if (key === 'at' && isScanStamp([...path, key])) continue
+      out[key] = stripNoise(v, [...path, key])
+    }
+    return out
+  }
+  return value
+}
 function fingerprint(snapshot) {
-  return crypto.createHash('sha1').update(JSON.stringify(snapshot, (key, value) => (IGNORED_KEYS.has(key) ? undefined : value))).digest('hex')
+  return crypto.createHash('sha1').update(JSON.stringify(stripNoise(snapshot))).digest('hex')
 }
 
 module.exports = {

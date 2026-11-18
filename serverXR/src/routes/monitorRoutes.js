@@ -20,6 +20,7 @@ const { createLedger } = require('../monitorLedger')
 const { config } = require('../config')
 const { isLocalOperatorRequest, isAdminCaller } = require('./agentBoardRoutes')
 
+const TASK_WRITES_PER_MIN = 30
 const STREAM_MIN_MS = 2000
 const HEARTBEAT_MS = 15000
 const STREAM_MAX_MS = 15 * 60 * 1000
@@ -124,7 +125,28 @@ function registerMonitorRoutes(router, {
     }
   })
 
-  router.post('/api/monitor/tasks', gate, async (req, res) => {
+  // The one write here changes the owner's ledger: a browser may only send it from this same origin
+  // (Sec-Fetch-Site / Origin), and no more than TASK_WRITES_PER_MIN per minute per caller (429).
+  const taskWrites = new Map()
+  const sameOrigin = (req) => {
+    const h = req.headers || {}
+    const site = h['sec-fetch-site']
+    if (site) return site === 'same-origin'
+    if (h.origin) { try { return new URL(h.origin).host === h.host } catch { return false } }
+    return true // no browser headers: a terminal tool, still behind the owner gate
+  }
+  const taskGuard = (req, res, next) => {
+    if (!sameOrigin(req)) { res.status(403).json({ error: 'cross_origin' }); return }
+    const key = String(req.authState?.subject || 'local')
+    const t = now()
+    const recent = (taskWrites.get(key) || []).filter((x) => t - x < 60000)
+    if (recent.length >= TASK_WRITES_PER_MIN) { taskWrites.set(key, recent); res.status(429).json({ error: 'too_many' }); return }
+    recent.push(t)
+    taskWrites.set(key, recent)
+    next()
+  }
+
+  router.post('/api/monitor/tasks', gate, taskGuard, async (req, res) => {
     try {
       const b = req.body || {}
       const out = await tasks.change({ id: b.id, action: b.action, text: b.text, evidence: b.evidence, next: b.next, by: req.authState?.subject || 'local' })

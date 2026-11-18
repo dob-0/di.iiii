@@ -3,6 +3,8 @@
 // re-try), a slow answer is "slow (N ms)" and still up, and the time of the last good answer is
 // kept so the page can say "last answered 40 s ago" instead of flipping.
 //
+// A first-ever failure (nothing answered yet) is also 'doubt' for one miss: DOWN needs two checks in a row.
+//
 // state: 'up' | 'slow' | 'doubt' (one miss, last good answer still held) | 'down'
 
 const SLOW_MS = 1500
@@ -36,16 +38,18 @@ function createProbeTracker({ slowMs = SLOW_MS, missesToDown = MISSES_TO_DOWN, n
       next = { ...before, misses: before.misses + 1 }
     }
     seen.set(id, next)
-    const holding = !result.ok && next.misses < missesToDown && next.lastGoodAt !== null
+    // cold start (never answered): the flap rule still holds, so ONE miss is 'doubt', never an instant DOWN.
+    // There is no good answer to keep then, so the status stays the raw one (not up) and the note says so.
+    const holding = !result.ok && next.misses < missesToDown
     const state = result.ok ? (result.ms > slowMs ? 'slow' : 'up') : (holding ? 'doubt' : 'down')
     return {
       state,
-      ok: state !== 'down',
-      status: holding ? next.lastGoodStatus : result.status,
+      ok: state !== 'down' && !(state === 'doubt' && next.lastGoodAt === null),
+      status: holding && next.lastGoodAt !== null ? next.lastGoodStatus : result.status,
       rawStatus: result.status,
       misses: next.misses,
       lastGoodAt: next.lastGoodAt ? new Date(next.lastGoodAt).toISOString() : null,
-      note: state === 'slow' ? `slow (${result.ms} ms)` : state === 'doubt' ? 'one check missed, last good answer kept' : null
+      note: state === 'slow' ? `slow (${result.ms} ms)` : state === 'doubt' ? (next.lastGoodAt !== null ? 'one check missed, last good answer kept' : 'one check missed, not answered yet') : null
     }
   }
 

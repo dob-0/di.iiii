@@ -41,6 +41,8 @@ describe('parsing', () => {
   it('measures age and strips control characters', () => {
     expect(ageMinutes('11-19', '02:00', new Date(new Date().getFullYear(), 10, 19, 3, 0).getTime())).toBe(60)
     expect(clean('a\u0000b\nc|d')).toBe('a b c d')
+    expect(clean('--said')).toBe('said')
+    expect(clean(' - -x -y')).toBe('x -y')
   })
 })
 
@@ -123,5 +125,18 @@ describe('routes', () => {
   it('prod answers 404 even for the owner', async () => {
     const { base } = await start({ authenticated: true, role: 'admin', type: 'session', subject: 'owner-1' }, 'production')
     expect((await post(base, { id: 'N7', action: 'note', text: 'x' })).status).toBe(404)
+  })
+})
+
+describe('a leading dash never reaches ledger-add as an option', () => {
+  it('a note like "--said" is sent without its dashes, as one value', async () => {
+    const { argvFile, cfg } = fixture()
+    const ledger = createLedger(cfg)
+    const out = await ledger.change({ id: 'N7', action: 'note', text: '--said', by: 'owner' })
+    expect(out.ok).toBe(true)
+    const argv = JSON.parse(fs.readFileSync(argvFile, 'utf8'))
+    expect(argv.slice(0, 2)).toEqual(['--ref', 'N7'])
+    expect(argv[2]).toBe('said')
+    expect(argv.slice(2).some((a) => a.startsWith('-'))).toBe(false)
   })
 })

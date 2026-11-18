@@ -19,7 +19,8 @@ const TOOL_TIMEOUT_MS = 15000
 // Control characters (and the pipe that splits ledger cells) go; length is capped.
 const clean = (value, max = TEXT_MAX) =>
   // eslint-disable-next-line no-control-regex
-  String(value ?? '').replace(/[\u0000-\u001f\u007f|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max)
+  String(value ?? '').replace(/[\u0000-\u001f\u007f|]+/g, ' ').replace(/\s+/g, ' ').replace(/^[-\s]+/, '').trim().slice(0, max)
+// (a leading dash is stripped too: a text such as "--said" must never be read as an option by ledger-add)
 
 const defaults = () => ({
   addPath: process.env.MONITOR_LEDGER_ADD || path.join(HOME, '.local/bin/ledger-add'),

@@ -308,6 +308,15 @@ describe('fingerprint', () => {
   })
 })
 
+describe('fingerprint: which at counts', () => {
+  it('a section or panel scan stamp is noise; an at inside a report or an ask row is a real change', () => {
+    expect(fingerprint({ tiers: { at: 1, rows: [] } })).toBe(fingerprint({ tiers: { at: 2, rows: [] } }))
+    expect(fingerprint({ panels: { agents: { at: 1, rows: [] } } })).toBe(fingerprint({ panels: { agents: { at: 9, rows: [] } } }))
+    expect(fingerprint({ reports: [{ host: 'a', at: 1 }] })).not.toBe(fingerprint({ reports: [{ host: 'a', at: 2 }] }))
+    expect(fingerprint({ asks: [{ id: 'x', at: 1 }] })).not.toBe(fingerprint({ asks: [{ id: 'x', at: 2 }] }))
+  })
+})
+
 describe('tier flap: one slow answer or one refusal is not an outage', () => {
   const store = { getMonitor: async () => ({ generatedAt: 'now', host: 'studio', configured: true, panels: {} }) }
   const ok = (commit = 'bbbbbbb2') => ({ ok: true, status: 200, json: async () => ({ release: { gitCommit: commit } }) })
@@ -371,8 +380,46 @@ describe('tier flap: one slow answer or one refusal is not an outage', () => {
     expect((await hub.getSnapshot()).tiers.ok).toBe(true)
   })
 
-  it('a tier never heard from has nothing to hold: its first miss is down', async () => {
-    const { hub, clock } = run(['throw', 'throw'])
-    expect(await prod(hub, clock)).toMatchObject({ probe: 'down', status: 0 })
+  it('a tier never heard from has nothing to hold, yet its first miss is only doubt (status stays not-up); two are down', async () => {
+    const { hub, clock } = run(['throw', 'throw', 'throw', 'throw'])
+    expect(await prod(hub, clock)).toMatchObject({ probe: 'doubt', status: 0, misses: 1 })
+    expect(await prod(hub, clock)).toMatchObject({ probe: 'down', status: 0, misses: 2 })
+  })
+})
+
+describe('tier probe: cold start and shared rounds', () => {
+  const store = { getMonitor: async () => ({ generatedAt: 'now', host: 'studio', configured: true, panels: {} }) }
+  const make = (clock, onProd) => createHub({
+    store,
+    asks: { list: () => [] },
+    releaseInfo: () => ({ deployEnv: 'staging', gitCommit: 'aaaaaaa1' }),
+    listSpaces: async () => [],
+    fetchImpl: async (url) => {
+      if (url.startsWith('https://diiii.xyz')) { onProd(); throw new Error('timeout') }
+      return { ok: true, status: 200, json: async () => ({ release: { gitCommit: 'aaaaaaa1' } }) }
+    },
+    git: async () => '0\n',
+    hostname: () => 'studio',
+    now: () => { clock.t += 5; return clock.t },
+    tierSites: { dev: 'https://dev.diiii.xyz', prod: 'https://diiii.xyz' }
+  })
+  const prodRow = (snap) => snap.tiers.rows.find((r) => r.id === 'prod')
+
+  it('a first-ever failure (nothing answered yet) is doubt after one miss, down only after two', async () => {
+    const clock = { t: 0 }
+    const hub = make(clock, () => {})
+    const one = prodRow(await hub.getSnapshot())
+    expect(one).toMatchObject({ probe: 'doubt', misses: 1, lastGoodAt: null })
+    expect(one.status).toBe(0)
+    clock.t += 60000
+    expect(prodRow(await hub.getSnapshot())).toMatchObject({ probe: 'down', misses: 2 })
+  })
+
+  it('two callers at once share one probe round: one outage is one miss', async () => {
+    const clock = { t: 0 }
+    const hub = make(clock, () => {})
+    const [a, b] = await Promise.all([hub.getSnapshot(), hub.getSnapshot()])
+    expect(prodRow(a).misses).toBe(1)
+    expect(prodRow(b).misses).toBe(1)
   })
 })
