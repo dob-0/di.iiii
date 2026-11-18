@@ -88,3 +88,12 @@ test('DevTools port guard: packaged macOS and Windows refuse it, Linux keeps it,
     assert.equal(p.refuseCdp({ isPackaged: true, platform: 'darwin' }), null, 'no port asked, nothing to refuse')
     assert.equal(p.refuseCdp({ isPackaged: true, platform: 'darwin', env: { DI_DESKTOP_CDP: '' } }), null)
 })
+
+test('DevTools port guard: any switch spelling Chromium accepts is refused', () => {
+    for (const arg of ['-remote-debugging-port=9333', '--REMOTE-Debugging-Port=9333', '-remote-debugging-pipe', '--Remote-Debugging-Pipe']) {
+        assert.match(p.refuseCdp({ argv: [arg], isPackaged: true, platform: 'win32' }), /debugging port/, arg)
+    }
+    assert.match(p.refuseCdp({ argv: ['/remote-debugging-port=9333'], isPackaged: true, platform: 'win32' }), /debugging port/, '/x on win32')
+    assert.match(p.refuseCdp({ argv: ['-x'], hasSwitch: (n) => n === 'remote-debugging-port', isPackaged: true, platform: 'darwin' }), /debugging port/, "Chromium's own parser")
+    assert.equal(p.refuseCdp({ argv: ['--remote-debugging-portal'], isPackaged: true, platform: 'win32' }), null, 'a longer name is another switch')
+})

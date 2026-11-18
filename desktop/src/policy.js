@@ -113,12 +113,17 @@ const resolveCdpPort = (env = {}) => {
 // (on macOS the grant belongs to the app, not to the process). Linux keeps it,
 // CI uses it. DI_DESKTOP_REFUSE_CDP=1 forces the guard on, for the test on
 // Linux. Returns the message to print before exiting, or null.
-const CDP_SWITCHES = ['--remote-debugging-port', '--remote-debugging-pipe']
-const refuseCdp = ({ argv = [], env = {}, isPackaged = false, platform = process.platform } = {}) => {
+// Chromium takes '-' and '--' (and '/' on Windows) as a switch prefix and, on
+// Windows, ignores the case of the name, so the argument is normalised first.
+const CDP_SWITCHES = ['remote-debugging-port', 'remote-debugging-pipe']
+const switchName = (arg) => String(arg).replace(/^(--|-|\/)/, '').split('=')[0].toLowerCase()
+const refuseCdp = ({ argv = [], env = {}, isPackaged = false, platform = process.platform, hasSwitch = () => false } = {}) => {
     const guarded = env.DI_DESKTOP_REFUSE_CDP === '1' || (isPackaged && (platform === 'darwin' || platform === 'win32'))
     if (!guarded) return null
-    const asked = (env.DI_DESKTOP_CDP !== undefined && env.DI_DESKTOP_CDP !== '')
-        || argv.some((arg) => CDP_SWITCHES.some((name) => arg === name || arg.startsWith(`${name}=`)))
+    // hasSwitch is Chromium's own parser (app.commandLine.hasSwitch).
+    const asked = CDP_SWITCHES.some((name) => hasSwitch(name))
+        || (env.DI_DESKTOP_CDP !== undefined && env.DI_DESKTOP_CDP !== '')
+        || argv.some((arg) => CDP_SWITCHES.includes(switchName(arg)))
     if (!asked) return null
     return 'this build does not open a debugging port (DI_DESKTOP_CDP, --remote-debugging-port): another process of the same user could read the camera and microphone grant and the cookie key through it.'
 }

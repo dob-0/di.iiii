@@ -29,7 +29,7 @@ const openExternal = (url) => {
     shell.openExternal(url)
 }
 
-const cdpRefusal = refuseCdp({ argv: process.argv, env: process.env, isPackaged: app.isPackaged })
+const cdpRefusal = refuseCdp({ argv: process.argv, env: process.env, isPackaged: app.isPackaged, hasSwitch: (name) => app.commandLine.hasSwitch(name) })
 
 if (cdpRefusal) {
     fail(cdpRefusal)
