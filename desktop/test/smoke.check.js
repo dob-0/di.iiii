@@ -91,13 +91,18 @@ test('app on a fixture page and on an unreachable address', async (t) => {
 
             const allowed = await page.evaluate(midi)
             tt.diagnostic(`midi on the allowed origin: ${JSON.stringify(allowed)}`)
-            assert.deepEqual(allowed, { ok: true, sysex: true })
+            // A runner with no sound-card MIDI backend answers InvalidStateError: the
+            // permission was granted, there is just nothing to open. A refusal by the
+            // app's policy is NotAllowedError (or SecurityError).
+            assert.ok(allowed.ok || allowed.name === 'InvalidStateError', `allowed origin must not be refused: ${JSON.stringify(allowed)}`)
+            if (allowed.ok) assert.equal(allowed.sysex, true)
 
             const frame = await waitFor(() => page.frames().find((f) => f.url().startsWith(`http://localhost:${port}/frame`)))
             assert.ok(frame, 'foreign frame loaded')
             const refused = await frame.evaluate(midi)
             tt.diagnostic(`midi on a disallowed origin: ${JSON.stringify(refused)}`)
             assert.equal(refused.ok, false)
+            assert.ok(['NotAllowedError', 'SecurityError'].includes(refused.name), `refused by policy, got ${refused.name}`)
 
             const gpu = await page.evaluate(async () => {
                 if (!('gpu' in navigator)) return { present: false }

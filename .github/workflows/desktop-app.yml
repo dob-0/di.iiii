@@ -84,6 +84,9 @@ jobs:
           # No certificate is ever read here: macOS is ad-hoc signed (see
           # desktop/README.md), Windows is left unsigned.
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # electron-builder skips signing on pull requests unless told; the
+          # identity is the ad-hoc "-", no secret is involved.
+          CSC_FOR_PULL_REQUEST: 'true'
       - name: macOS signature (ad-hoc) of each app
         if: matrix.name == 'macos'
         shell: bash
