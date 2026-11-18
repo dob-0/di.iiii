@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src file:">
+<title>di.iiii</title>
+<style>
+    * { border-radius: 0; box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+        background: #000;
+        color: #fff;
+        font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+    }
+    main { width: min(560px, 100%); border: 1px solid rgba(77, 249, 255, .3); padding: 32px; }
+    h1 { margin: 0 0 8px; font-size: 24px; font-weight: 600; }
+    p { margin: 0 0 16px; color: rgba(255, 255, 255, .78); }
+    code { display: block; margin: 0 0 24px; padding: 8px 12px; background: rgba(77, 249, 255, .06); color: #4df9ff; font: 14px ui-monospace, "SF Mono", Consolas, monospace; overflow-wrap: anywhere; }
+    a.retry { display: inline-block; padding: 10px 20px; border: 1px solid #4df9ff; color: #4df9ff; text-decoration: none; }
+    a.retry:hover, a.retry:focus-visible { background: rgba(77, 249, 255, .1); outline: none; }
+</style>
+</head>
+<body>
+<main>
+    <h1>di.iiii cannot be reached</h1>
+    <p>Your connection may be down, or this address is not answering.</p>
+    <code id="address">-</code>
+    <a class="retry" id="retry" href="#">Try again</a>
+</main>
+<script src="offline.js"></script>
+</body>
+</html>

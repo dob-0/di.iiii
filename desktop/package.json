@@ -1,0 +1,82 @@
+{
+    "name": "di-desktop",
+    "version": "0.1.0",
+    "private": true,
+    "description": "di.iiii in its own window, with Web MIDI, WebGPU and screen share.",
+    "homepage": "https://diiii.xyz",
+    "license": "AGPL-3.0-only",
+    "author": {
+        "name": "di.iiii",
+        "email": "dob-0@users.noreply.github.com"
+    },
+    "main": "src/main.js",
+    "scripts": {
+        "start": "electron .",
+        "test:unit": "node --test test/policy.check.js test/handlers.check.js",
+        "test:smoke": "node --test test/smoke.check.js",
+        "test": "npm run test:unit && npm run test:smoke",
+        "dist": "electron-builder --publish never",
+        "dist:linux": "electron-builder --linux --publish never",
+        "dist:mac": "electron-builder --mac --publish never",
+        "dist:win": "electron-builder --win --publish never"
+    },
+    "devDependencies": {
+        "electron": "45.3.4",
+        "electron-builder": "26.18.0",
+        "playwright-core": "1.65.1"
+    },
+    "build": {
+        "appId": "xyz.diiii.desktop",
+        "productName": "di.iiii",
+        "copyright": "AGPL-3.0-only",
+        "directories": {
+            "output": "dist"
+        },
+        "files": [
+            "src/**/*",
+            "package.json"
+        ],
+        "artifactName": "di-iiii-desktop-${version}-${os}-${arch}.${ext}",
+        "linux": {
+            "target": [
+                "AppImage",
+                "deb"
+            ],
+            "category": "Graphics",
+            "maintainer": "dob-0 <dob-0@users.noreply.github.com>",
+            "synopsis": "di.iiii in its own window"
+        },
+        "mac": {
+            "target": [
+                {
+                    "target": "dmg",
+                    "arch": [
+                        "arm64",
+                        "x64"
+                    ]
+                }
+            ],
+            "category": "public.app-category.graphics-design",
+            "identity": "-",
+            "hardenedRuntime": false,
+            "extendInfo": {
+                "NSCameraUsageDescription": "di.iiii uses the camera when a page asks for it.",
+                "NSMicrophoneUsageDescription": "di.iiii uses the microphone when a page asks for it."
+            }
+        },
+        "win": {
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ]
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true
+        }
+    }
+}
