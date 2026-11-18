@@ -87,6 +87,20 @@ jobs:
           # electron-builder skips signing on pull requests unless told; the
           # identity is the ad-hoc "-", no secret is involved.
           CSC_FOR_PULL_REQUEST: 'true'
+      - name: Electron fuses of each built app (a regression fails the build)
+        shell: bash
+        run: |
+          set -e
+          case "${{ matrix.name }}" in
+            linux)   apps=(dist/linux-unpacked/di-desktop) ;;
+            macos)   apps=(dist/mac*/di.iiii.app) ;;
+            windows) apps=(dist/win-unpacked/di.iiii.exe) ;;
+          esac
+          for app in "${apps[@]}"; do
+            echo "== $app"
+            npx @electron/fuses read --app "$app"
+          done
+          node scripts/check-fuses.js "${apps[@]}"
       - name: macOS signature (ad-hoc) of each app
         if: matrix.name == 'macos'
         shell: bash

@@ -19,12 +19,22 @@ Each address keeps its own profile (`di-desktop-prod`, `-dev`, `-local`, `-custo
 
 ## What the window allows
 
-- The window stays on di origins: `https://diiii.xyz`, `https://dev.diiii.xyz`, `http://diiii.localhost`, plus the address you chose. A link to anything else opens in the system browser (web and mail links only; other schemes are dropped).
-- Web MIDI (with sysex), screen share and camera/microphone are granted only to those origins and refused everywhere else, for page and frame alike. Full screen, pointer lock and copy-out keep working as in a browser tab.
+- The window stays on di origins: `https://diiii.xyz`, `https://dev.diiii.xyz`, `http://diiii.localhost`, plus the address you chose. A link to anything else opens in the system browser (web and mail links only; other schemes are dropped), only after a click or key press in that window (within 2 s), at most 1 per second and 5 per minute; a refused open is logged once per host. The rule is for the main frame and windows opened from it; an iframe loads as in a browser tab.
+- Web MIDI (with sysex) is granted to those origins and refused everywhere else, for page and frame alike. Screen share goes through the app's own picker. Camera and microphone are asked once per address and kind with a native dialog that names the address; the answer is kept in `media-permissions.json` in the profile, and File, Forget camera and microphone answers clears it. Full screen, pointer lock and copy-out keep working as in a browser tab.
 - The page gets no Node: `contextIsolation` and `sandbox` on, `nodeIntegration` off, `webSecurity` untouched.
 - Screen share: the system picker on macOS 15 and later, a short list otherwise (on Linux the system's own picker lists the sources).
 - DevTools port: only with `DI_DESKTOP_CDP=<port>` (1024 to 65535, loopback only). Never on by default.
 - WebGPU: Windows and macOS need no switch. On Linux the app adds `enable-unsafe-webgpu` and `enable-features=Vulkan`; `DI_DESKTOP_GPU=default` drops them. The pinned Electron's docs name no WebGPU switch, so on Linux this is measured on a machine, not documented.
+
+## Sign-in
+
+- Works today: password sign-in inside the app.
+- Does not work yet: GitHub and Google sign-in. The sign-in hop to the provider goes to the system browser, the session lands there, and the app stays signed out.
+- Open choice (the owner decides, nothing built yet): (a) a server hand-off, sign-in in the system browser and a one-time code back to the app (RFC 8252); (b) an in-app sign-in window.
+
+## Hardening of the shipped app
+
+Electron fuses are set at build time from `build.electronFuses` in `package.json` (RunAsNode off, cookie encryption on, NODE_OPTIONS and `--inspect` off, ASAR integrity on, load only from the ASAR, file-protocol extra privileges off). The offline page is therefore served by the app's own `di-offline` scheme, not `file://`. `node scripts/check-fuses.js <built app>` reads them back with `@electron/fuses read` and fails on a difference; CI runs it after every build. A fused app cannot be driven by Playwright's `_electron` (no Node inspector), so the smoke test runs the unpacked Electron.
 
 ## Test
 

@@ -249,3 +249,18 @@ test('menu: File has an item that forgets the camera and microphone answers', ()
     item.click()
     assert.equal(forgot, 1)
 })
+
+test('offline page: served through the app scheme (not file://), only its two files, query carries the address', () => {
+    const { offlineUrl, serveOffline } = require('../src/offlineProtocol')
+    const url = offlineUrl('https://diiii.xyz/', -105)
+    assert.match(url, /^di-offline:\/\/app\/offline\.html\?target=https%3A%2F%2Fdiiii\.xyz%2F&code=-105$/)
+    const read = (name) => Buffer.from(`bytes of ${name}`)
+    assert.equal(serveOffline(url, read).status, 200)
+    assert.equal(serveOffline(url, read).type, 'text/html; charset=utf-8')
+    assert.equal(serveOffline('di-offline://app/offline.js', read).type, 'text/javascript; charset=utf-8')
+    for (const bad of ['di-offline://app/main.js', 'di-offline://app/../src/policy.js', 'di-offline://app/', 'file:///etc/passwd', 'di-offline://app/constructor']) {
+        assert.equal(serveOffline(bad, read).status, 404, bad)
+    }
+    assert.equal(serveOffline('not a url', read).status, 400)
+    for (const name of ['offline.html', 'offline.js']) assert.ok(fs.existsSync(path.join(__dirname, '../src', name)), name)
+})

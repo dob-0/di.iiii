@@ -2,11 +2,12 @@
 
 const path = require('node:path')
 const fs = require('node:fs')
-const { app, BrowserWindow, Menu, session, shell, desktopCapturer, dialog } = require('electron')
+const { app, BrowserWindow, Menu, session, shell, desktopCapturer, dialog, protocol } = require('electron')
 const { resolveTarget, resolveCdpPort } = require('./policy')
 const { createPermissionHandlers, createDisplayMediaHandler, attachNavigationGuards } = require('./handlers')
 const { buildMenuTemplate } = require('./menu')
 const { createMediaStore } = require('./mediaStore')
+const { SCHEME: OFFLINE_SCHEME, offlineUrl, serveOffline } = require('./offlineProtocol')
 
 const argv = process.argv.slice(app.isPackaged ? 1 : 2)
 const target = resolveTarget(argv, process.env)
@@ -66,7 +67,7 @@ if (target.error) {
         })
 
         const showOffline = (win, code) => {
-            win.loadFile(path.join(__dirname, 'offline.html'), { query: { target: target.url, code: String(code) } })
+            win.loadURL(offlineUrl(target.url, code))
         }
 
         const chooseSource = async (sources) => {
@@ -98,7 +99,13 @@ if (target.error) {
             return response === 0
         }
 
+        protocol.registerSchemesAsPrivileged([{ scheme: OFFLINE_SCHEME, privileges: { standard: true, secure: true } }])
+
         app.whenReady().then(() => {
+            protocol.handle(OFFLINE_SCHEME, (request) => {
+                const { status, type, body } = serveOffline(request.url, (name) => fs.readFileSync(path.join(__dirname, name)))
+                return new Response(body, { status, headers: { 'content-type': type } })
+            })
             const permissions = createPermissionHandlers(target.allowed, { mediaStore, askMedia })
             const ses = session.defaultSession
             ses.setPermissionRequestHandler(permissions.request)

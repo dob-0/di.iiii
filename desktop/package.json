@@ -37,6 +37,15 @@
             "package.json"
         ],
         "artifactName": "di-iiii-desktop-${version}-${os}-${arch}.${ext}",
+        "electronFuses": {
+            "runAsNode": false,
+            "enableCookieEncryption": true,
+            "enableNodeOptionsEnvironmentVariable": false,
+            "enableNodeCliInspectArguments": false,
+            "enableEmbeddedAsarIntegrityValidation": true,
+            "onlyLoadAppFromAsar": true,
+            "grantFileProtocolExtraPrivileges": false
+        },
         "linux": {
             "target": [
                 "AppImage",
