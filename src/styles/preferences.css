@@ -1601,6 +1601,7 @@
 .monitor-card3d.tone-warning { --pref-tone: var(--di-warning); }
 .monitor-card3d.is-dim { opacity: 0.3; }
 .monitor-card3d:hover, .monitor-card3d.is-selected, .monitor-card3d:focus-visible { border-color: var(--di-cyan); outline: none; }
+.monitor-card3d.is-full:not(.is-hub) { transform: translateY(calc(-50% - 12px)); } /* the open card sits ABOVE its body, never over it */
 .monitor-card3d.is-hub { border-color: var(--di-cyan); cursor: default; min-width: 0; white-space: nowrap; }
 .monitor-card3d:not(.is-full):not(.is-hub) { min-width: 0; max-width: none; white-space: nowrap; padding: var(--di-space-1) var(--di-space-2) var(--di-space-1) var(--di-space-3); }
 .monitor-card3d-name { font-size: var(--di-text-4); overflow-wrap: anywhere; }
@@ -2021,11 +2022,16 @@ a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow
 .monitor-map-stage.is-world .monitor-map-hint { bottom: 2.75rem; }
 .monitor-legend-item { display: inline-flex; align-items: center; gap: var(--di-space-1); white-space: nowrap; }
 .monitor-legend-mark { display: inline-block; flex: none; }
-.monitor-legend-mark.is-space { width: 10px; height: 10px; background: var(--di-cyan); }
-.monitor-legend-mark.is-person { width: 8px; height: 8px; background: var(--di-warning); transform: rotate(45deg); }
 .monitor-legend-mark.is-link { width: 18px; height: 2px; background: var(--ui-text-muted); }
 /* a command row with an odd count ends full: the last button takes both columns (the detail strip is full width in Mixed) */
 .preferences-command-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+/* kinds look (Spaces world and Monitor map): a glyph per kind, a quiet hairball until a node is picked, packets only on the picked node's lines */
+.monitor-map-stage.is-kinds .monitor-node-glyph { stroke: none; }
+.monitor-map-stage.is-kinds .monitor-node-ring { fill: none; stroke: var(--di-text); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.monitor-map-stage.is-kinds .monitor-node.is-selected .monitor-node-box, .monitor-map-stage.is-kinds .monitor-node:focus-visible .monitor-node-box { stroke: var(--di-text); }
+.monitor-map-stage.is-kinds .monitor-edge.is-lit { stroke: var(--di-text); stroke-width: 3; }
+.monitor-edge.is-faint { opacity: 0.28; stroke-width: 1; }
+.monitor-map-stage.is-kinds .monitor-map-hint { bottom: 2.75rem; }
 /* Mixed view: 3D room large on the left, 2D map top right, live list under it; the detail is a full-width strip below.
    Under 1100 px the panes stack (3D, 2D, list) and the detail follows the tapped node. */
 .preferences-manage-world-body.is-mixed, .preferences-manage-world-body.is-mixed.has-detail { grid-template-columns: minmax(0, 1fr); }

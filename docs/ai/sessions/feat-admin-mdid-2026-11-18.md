@@ -14,3 +14,6 @@ Seen at 1440, 700 and 390 on the dev copy (admin-mdid.diiii.localhost, scratch D
 
 Not done: 3D labels hide far names until you select or come closer (a rule, not a setting); 2D text in the small Mixed pane is about 10 px at 1440, use Full screen in the 2D tab for more; no touch test on a real phone; the Mixed pane sizes are fixed ratios, not draggable.
 
+
+## Monitor map pass (owner N5537, 2026-11-19)
+Same engine, `kinds` flag on MonitorMap/MonitorMap3D, layout `layoutMonitorMap`, legend and glyphs from `KIND_STYLE`. Before/after pictures: /tmp/mdid/mon-before-1440.png, /tmp/mdid/mon-after-1440.png, /tmp/mdid/mon-after-390.png (scratch data on parts.diiii.localhost; engine files copied there for the look only and reverted, tree clean).

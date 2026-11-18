@@ -4,6 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Line, OrbitControls } from '@react-three/drei'
 import Canvas from '../GuardedCanvas.jsx'
 import WorldLegend from './WorldLegend.jsx'
+import { KIND_STYLE } from './monitorMapLayout.js'
 import { fitKey, layoutSignature, PULSE_MS, pulseEdgeIndexes, shouldAnimate } from './monitorMap3dPolicy.js'
 
 // The 3D view of the Monitor map: the same layout as the 2D graph, as bodies in
@@ -17,8 +18,8 @@ const FALLBACK = { success: '#4df9c0', warning: '#ffb84d', muted: '#5a5e66', cya
 const TONE_VAR = { success: '--di-success', warning: '--di-warning', muted: '--pref-border', cyan: '--di-cyan', line: '--pref-border', live: '--di-live', text: '--di-text' }
 const LIVE_EDGES = new Set(['runs', 'serves'])
 const STATE_TONE = { ok: 'success', warn: 'warning', off: 'muted' }
-// the Spaces world: one colour and one shape per kind (the 2D map uses the same tokens)
-const WORLD_COLOR = { space: 'cyan', person: 'warning' }
+// one colour (token) and one shape per kind, shared with the 2D glyphs and the legend (KIND_STYLE)
+const TOKEN_KEY = { '--di-cyan': 'cyan', '--di-text': 'text', '--di-success': 'success', '--di-warning': 'warning' }
 
 const readColors = () => {
     const out = { ...FALLBACK }
@@ -53,22 +54,31 @@ const floor = (p) => [p.x * S, 0, p.y * S]
 const HUB = [0, 0.1, 0]
 const pulseIndexes = (edges, pulsing, hoverId) => pulseEdgeIndexes({ edges, pulsing, hoverId })
 
-function Body({ node, p, color, dim, sel, near, world, onHover, onPick }) {
+function KindGeometry({ shape, size }) {
+    switch (shape) {
+    case 'bar': return <cylinderGeometry args={[size / 2, size / 2, size * 0.7, 4]} />
+    case 'triangle': return <coneGeometry args={[size * 0.6, size * 0.9, 3]} />
+    case 'circle': return <sphereGeometry args={[size * 0.5, 12, 9]} />
+    case 'hex': return <cylinderGeometry args={[size * 0.55, size * 0.55, size * 0.6, 6]} />
+    case 'diamond': return <octahedronGeometry args={[size * 0.62]} />
+    default: return <boxGeometry args={[size, size * 0.7, size]} />
+    }
+}
+
+function Body({ node, p, color, pip, dim, sel, near, kinds, onHover, onPick }) {
     const k = node.kind
     const size = k === 'tier' ? 0.55 : k === 'machine' ? 0.46 : 0.36
-    const person = world && k === 'person'
-    const off = world && node.state === 'off'
-    const wire = sel ? '#ffffff' : null
+    const shape = kinds && KIND_STYLE[k] ? KIND_STYLE[k].shape : k === 'tier' ? 'bar' : 'square'
+    const off = node.state === 'off'
     return (
         <group position={at(p)}>
             <mesh onPointerOver={(e) => { e.stopPropagation(); onHover(node.id) }} onPointerOut={() => onHover(null)}
                 onClick={(e) => { e.stopPropagation(); onPick(node) }}>
-                {k === 'tier' ? <cylinderGeometry args={[size / 2, size / 2, size * 0.7, 4]} />
-                    : person ? <octahedronGeometry args={[size * 0.62]} />
-                        : <boxGeometry args={[size, size * 0.7, size]} />}
-                <meshBasicMaterial color={color} transparent opacity={dim ? 0.18 : off ? 0.6 : 1} />
+                <KindGeometry shape={shape} size={size} />
+                <meshBasicMaterial color={color} transparent opacity={dim ? 0.18 : off && kinds ? 0.6 : 1} />
             </mesh>
-            {sel ? <mesh><boxGeometry args={[size * 1.6, size * 1.2, size * 1.6]} /><meshBasicMaterial color={wire} wireframe /></mesh> : null}
+            {pip ? <mesh position={[0, size * 0.62, 0]}><boxGeometry args={[0.09, 0.09, 0.09]} /><meshBasicMaterial color={pip} transparent opacity={dim ? 0.18 : 1} /></mesh> : null}
+            {sel ? <mesh><boxGeometry args={[size * 1.6, size * 1.2, size * 1.6]} /><meshBasicMaterial color="#ffffff" wireframe /></mesh> : null}
             {near && !sel ? <mesh><boxGeometry args={[size * 1.3, size * 1, size * 1.3]} /><meshBasicMaterial color={color} wireframe /></mesh> : null}
         </group>
     )
@@ -252,7 +262,8 @@ const useVisible = () => {
 
 // Still = zero frames: the canvas draws on a change, a gesture, or a 3 s pulse after a snapshot that changed
 // something (and while a node is hovered). The page's 1 s clock never reaches this tree (memo + stable props).
-function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false, world = false }) {
+function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false, world = false, kinds = false }) {
+    const showKinds = world || kinds
     const stageRef = useRef(null)
     const fsRef = useRef(fullscreen)
     useEffect(() => { fsRef.current = fullscreen }, [fullscreen])
@@ -303,8 +314,11 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     const edgeLines = useMemo(() => layout.edges.map((e, i) => ({ e, i, a: at(layout.pos.get(e.from)), b: at(layout.pos.get(e.to)), pts: [at(layout.pos.get(e.from)), at(layout.pos.get(e.to))] })), [layout])
     const stems = useMemo(() => layout.nodes.map((n) => ({ id: n.id, pts: [floor(layout.pos.get(n.id)), at(layout.pos.get(n.id))] })), [layout])
     const stemOf = useMemo(() => new Map(stems.map((x) => [x.id, x.pts])), [stems])
-    const animate = shouldAnimate({ edges: layout.edges, pulsing, hoverId: hover, visible, reduced })
-    const pulseSet = useMemo(() => new Set(pulseIndexes(layout.edges, pulsing, hover)), [layout, pulsing, hover])
+    // in the kinds look a light travels only on the picked (or hovered) node's lines, never on every line at once
+    const packetFocus = showKinds ? (hover || selectedId || null) : hover
+    const packetPulse = showKinds ? false : pulsing
+    const animate = shouldAnimate({ edges: layout.edges, pulsing: packetPulse, hoverId: packetFocus, visible, reduced })
+    const pulseSet = useMemo(() => new Set(pulseIndexes(layout.edges, packetPulse, packetFocus)), [layout, packetPulse, packetFocus])
 
     const neighbours = useMemo(() => {
         const m = new Map()
@@ -320,7 +334,8 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     const near = useMemo(() => (focus ? neighbours.get(focus) || new Set() : null), [focus, neighbours])
     const hot = (id) => !focus || id === focus || near.has(id)
     const toneColor = (state) => colors[STATE_TONE[state] || 'muted']
-    const bodyColor = (n) => (world && WORLD_COLOR[n.kind] ? colors[WORLD_COLOR[n.kind]] : toneColor(n.state))
+    const bodyColor = (n) => (showKinds && KIND_STYLE[n.kind] ? colors[TOKEN_KEY[KIND_STYLE[n.kind].token]] : toneColor(n.state))
+    const faint = showKinds && layout.edges.length > 12 // a hairball stays quiet until a node is picked
     const degree = (id) => (neighbours.get(id) || new Set()).size
 
     const labelItems = useMemo(() => {
@@ -329,19 +344,19 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
             const p = layout.pos.get(n.id)
             const sel = selectedId === n.id
             const full = sel || hover === n.id
-            const named = close || n.named || n.kind === 'tier' || n.kind === 'machine'
+            const named = showKinds || close || n.named || n.kind === 'tier' || n.kind === 'machine'
             if (!named && !full) continue
             const isNear = !!focus && near && near.has(n.id)
-            const rank = sel ? 0 : hover === n.id ? 1 : isNear ? 2 : n.kind === 'space' || n.kind === 'tier' ? 3 : 4
+            const rank = sel ? 0 : hover === n.id ? 1 : isNear ? 2 : ['space', 'tier', 'machine', 'repo'].includes(n.kind) ? 3 : 4
             out.push({ id: n.id, at: [p.x * S, p.h * S + 0.45, p.y * S], w: labelWidth(n, full), h: full ? LABEL_FULL_H : LABEL_H, rank, force: full })
         }
         return out
-    }, [layout, selectedId, hover, close, focus, near])
+    }, [layout, selectedId, hover, close, focus, near, showKinds])
     const pointOf = useMemo(() => (id) => { const p = layout.pos.get(id); return p ? [p.x * S, p.h * S, p.y * S] : null }, [layout])
 
 
     return (
-        <div className={`monitor-map-stage monitor-map-stage-3d${world ? ' is-world' : ''}`} ref={stageRef}>
+        <div className={`monitor-map-stage monitor-map-stage-3d${showKinds ? ' is-world' : ''}`} ref={stageRef}>
             <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
                 <Rig preset={preset} points={points} fitDist={fitDist} />
@@ -358,8 +373,8 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     const isLive = LIVE_EDGES.has(e.kind)
                     return (
                         <group key={`${e.from}>${e.to}>${e.kind}>${i}`}>
-                            <Line points={pts} color={lit ? colors.text : focus ? colors.line : isLive ? colors.live : colors.muted}
-                                lineWidth={lit ? 3 : 1} transparent opacity={focus && !lit ? 0.2 : 1} />
+                            <Line points={pts} color={lit ? colors.text : focus ? colors.line : isLive && !faint ? colors.live : colors.muted}
+                                lineWidth={lit ? 3 : 1} transparent opacity={focus && !lit ? 0.2 : faint ? 0.3 : 1} />
                             {animate && isLive && pulseSet.has(i) ? <Pulse a={a} b={b} offset={(i * 0.37) % 1} color={colors.live} /> : null}
                         </group>
                     )
@@ -370,11 +385,11 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     const dim = !!focus && !hot(n.id)
                     const full = sel || hover === n.id
                     // at fit zoom only tiers and machines carry a name; the rest show it on hover, when selected, or up close
-                    const named = close || n.named || n.kind === 'tier' || n.kind === 'machine'
+                    const named = showKinds || close || n.named || n.kind === 'tier' || n.kind === 'machine'
                     return (
                         <group key={n.id}>
                             <Line points={stemOf.get(n.id)} color={colors.line} lineWidth={1} />
-                            <Body node={n} p={p} color={bodyColor(n)} dim={dim} sel={sel} near={!!focus && !sel && hot(n.id)} world={world} onHover={setHover} onPick={onPick} />
+                            <Body node={n} p={p} color={bodyColor(n)} pip={showKinds ? toneColor(n.state) : null} dim={dim} sel={sel} near={!!focus && !sel && hot(n.id)} kinds={showKinds} onHover={setHover} onPick={onPick} />
 {(named || full) && (shown === null || shown.has(n.id)) ? (
                                 <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
                                     <button type="button" data-map-node={n.id}
@@ -396,7 +411,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     <div className="monitor-card3d is-hub"><span className="monitor-card3d-name">di.iiii</span></div>
                 </Html>
             </Canvas>
-            {world ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
+            {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             <div className="monitor-map-tools" role="group" aria-label="Camera">
                 <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setPreset((p) => ({ name: 'fit', n: p.n + 1 }))}>Fit</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="top" onClick={() => setPreset((p) => ({ name: 'top', n: p.n + 1 }))}>Top view</button>

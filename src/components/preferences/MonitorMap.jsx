@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import WorldLegend from './WorldLegend.jsx'
-import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
+import WorldLegend, { shapePoints } from './WorldLegend.jsx'
+import { ASPECT, KIND_ORDER, KIND_STYLE, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
 //   2D   an SVG graph: hover lights a node's neighbours and dims the rest,
@@ -112,7 +112,8 @@ const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.string
 /** The wheel zooms the map only when you asked for it: full screen, or Ctrl/Cmd (a trackpad pinch sends Ctrl). Otherwise the page scrolls. */
 export const wheelZooms = (ev, fullscreen) => Boolean(fullscreen || ev.ctrlKey || ev.metaKey)
 
-export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false }) {
+export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false, kinds = false }) {
+    const showKinds = world || kinds
     const svgRef = useRef(null)
     const [vb, setVb] = useState(() => fitBox(layout, world))
     const [hover, setHover] = useState(null)
@@ -126,6 +127,20 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
     const nodeDrag = useRef(null)
     const posOf = useCallback((id) => moved[id] || layout.pos.get(id), [moved, layout.pos])
     useEffect(() => { vbRef.current = vb }, [vb])
+    // pixels per layout unit: in the kinds look a name never draws under 11 px, however small the pane
+    const [ppu, setPpu] = useState(1)
+    useLayoutEffect(() => {
+        const el = svgRef.current
+        if (!el || !showKinds) return undefined
+        const measure = () => { const r = el.getBoundingClientRect(); if (r.width && r.height) setPpu(Math.min(r.width / vb.w, r.height / vb.h)) }
+        measure()
+        const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null
+        ro?.observe(el)
+        return () => ro?.disconnect()
+    }, [vb, showKinds])
+    const labelFs = showKinds ? Math.min(30, Math.max(20, 11 / ppu)) : 20
+    const stateFs = showKinds ? Math.max(14.4, 11 / ppu) : 14.4
+    const showState = !showKinds || stateFs <= 18
 
     // a different set of nodes (not a state change) refits the view
     const shape = layout.nodes.map((n) => n.id).join('|')
@@ -237,12 +252,13 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
     }, [layout.edges])
 
     const focus = hover || selectedId || null
+    const faint = showKinds && layout.edges.length > 12 // a hairball: the lines are quiet until a node is picked
     const near = focus ? neighbours.get(focus) || new Set() : null
     const hot = (id) => !focus || id === focus || near.has(id)
     const hovered = hover ? layout.nodes.find((n) => n.id === hover) : null
 
     return (
-        <div className={`monitor-map-stage${world ? ' is-world' : ''}`}>
+        <div className={`monitor-map-stage${world ? ' is-world' : ''}${showKinds ? ' is-kinds' : ''}`}>
             <svg ref={svgRef} className="monitor-map-svg" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet"
                 role="group" aria-label="Map of machines, tiers, spaces and shows"
                 onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
@@ -260,7 +276,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                         const a = posOf(e.from)
                         const b = posOf(e.to)
                         const lit = !!focus && (e.from === focus || e.to === focus)
-                        const cls = `monitor-edge kind-${e.kind}${lit ? ' is-lit' : focus ? ' is-dim' : ''}${live && LIVE_EDGES.has(e.kind) ? ' is-live' : ''}`
+                        const cls = `monitor-edge kind-${e.kind}${lit ? ' is-lit' : focus ? ' is-dim' : faint ? ' is-faint' : ''}${live && LIVE_EDGES.has(e.kind) && (!showKinds || lit) ? ' is-live' : ''}`
                         return <line key={edgeKey(e, i)} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={cls} />
                     })}
                 </g>
@@ -281,18 +297,17 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                             onClick={() => pick(n)}
                             onPointerDown={(ev) => onNodeDown(ev, n)} onPointerMove={onNodeMove} onPointerUp={onNodeUp} onPointerCancel={onNodeUp}
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
-                            {world && sel ? <rect x="-6" y="-6" width={w + 12} height={h + 12} className="monitor-node-ring" /> : null}
+                            {showKinds && sel ? <rect x="-6" y="-6" width={w + 12} height={h + 12} className="monitor-node-ring" /> : null}
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
-                            {world && n.kind === 'space' ? <rect x={w - 22} y={h - 22} width="12" height="12" className="monitor-node-glyph" /> : null}
-                            {world && n.kind === 'person' ? <polygon points={`${w - 16},8 ${w - 8},16 ${w - 16},24 ${w - 24},16`} className="monitor-node-glyph" /> : null}
-                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 9.6))}</text>
-                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{world ? (n.stateLabel || n.state) : `${n.stateLabel || n.state} · ${n.kind}`}</text>
+                            {showKinds && KIND_STYLE[n.kind] ? <polygon points={shapePoints(KIND_STYLE[n.kind].shape, w - 16, h - 16, 12)} className="monitor-node-glyph" style={{ fill: `var(${KIND_STYLE[n.kind].token})` }} /> : null}
+                            <text x="16" y={showState ? h / 2 - 3 : h / 2 + labelFs * 0.35} className="monitor-node-label" style={showKinds ? { fontSize: labelFs } : undefined}>{clip(n.label, Math.floor((w - 28) / (labelFs * 0.48)))}</text>
+                            {showState ? <text x="16" y={h / 2 + 15 + (showKinds ? (stateFs - 14.4) * 0.8 : 0)} className="monitor-node-state" style={showKinds ? { fontSize: stateFs } : undefined}>{world ? (n.stateLabel || n.state) : `${n.stateLabel || n.state} · ${n.kind}`}</text> : null}
                             <title>{`${n.kind}: ${n.label} (${n.stateLabel || n.state})`}</title>
                         </g>
                     )
                 })}
-                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 9.6) ? (() => {
+                {hovered && ((showKinds && !showState) || hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / (labelFs * 0.48))) ? (() => {
                     const p = posOf(hovered.id)
                     const { h } = sizeOf(hovered.kind)
                     const text = hovered.label
@@ -312,7 +327,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                 <button type="button" className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
                 <button type="button" className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
-            {world ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
+            {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
         </div>
     )
@@ -320,7 +335,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
 
 // `view` pins the view ('2d' | '3d') when the page owns the List | 2D | 3D switch (the Spaces world);
 // `onOpen(node)` adds an "Open" button on the selected node's card in full screen, where the detail is hidden.
-export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, view: pinned = null, onOpen = null, empty = null, world = false, layoutFn = layoutMap }) {
+export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, view: pinned = null, onOpen = null, empty = null, world = false, kinds = false, layoutFn = layoutMap }) {
     const nodes = useMemo(() => map?.nodes || [], [map])
     const layout = useMemo(() => layoutFn(map, narrow ? 1 : ASPECT), [map, narrow, layoutFn])
     const [stored, setStored] = useState(readView)
@@ -358,12 +373,12 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
             </div>
             {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={onPick} /> : null}
             {view === '2d' ? (
-                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} world={world} /></div>
+                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} world={world} kinds={kinds} /></div>
             ) : null}
             {view === '3d' ? (
                 <div data-monitor-map="3d">
                     <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
-                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} world={world} />
+                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} world={world} kinds={kinds} />
                     </Suspense>
                 </div>
             ) : null}
