@@ -307,3 +307,72 @@ describe('fingerprint', () => {
     expect(fingerprint({ a: { x: 1 } })).not.toBe(fingerprint({ a: { x: 2 } }))
   })
 })
+
+describe('tier flap: one slow answer or one refusal is not an outage', () => {
+  const store = { getMonitor: async () => ({ generatedAt: 'now', host: 'studio', configured: true, panels: {} }) }
+  const ok = (commit = 'bbbbbbb2') => ({ ok: true, status: 200, json: async () => ({ release: { gitCommit: commit } }) })
+  // a scripted sequence of answers for the prod tier: 'ok' | 'refuse' | 'throw' | 'slow'
+  const run = (script, clock = { t: 0 }) => {
+    const queue = [...script]
+    const hub = createHub({
+      store,
+      asks: { list: () => [] },
+      releaseInfo: () => ({ deployEnv: 'staging', gitCommit: 'aaaaaaa1' }),
+      listSpaces: async () => [],
+      fetchImpl: async (url) => {
+        if (!url.endsWith('/api/health') || !url.startsWith('https://diiii.xyz')) return ok('aaaaaaa1')
+        const step = queue.shift() || 'ok'
+        if (step === 'throw') throw new Error('timeout')
+        if (step === 'refuse') return { ok: false, status: 502 }
+        if (step === 'slow') { clock.t += 2500; return ok() }
+        return ok()
+      },
+      git: async () => '0\n',
+      hostname: () => 'studio',
+      now: () => { clock.t += 5; return clock.t },
+      tierSites: { dev: 'https://dev.diiii.xyz', prod: 'https://diiii.xyz' }
+    })
+    return { hub, clock }
+  }
+  const prod = async (hub, clock) => { clock.t += 60000; return (await hub.getSnapshot()).tiers.rows.find((r) => r.id === 'prod') }
+
+  it('a refusal that the quick re-try answers is still up', async () => {
+    const { hub, clock } = run(['ok', 'refuse', 'ok'])
+    await prod(hub, clock)
+    expect(await prod(hub, clock)).toMatchObject({ probe: 'up', status: 200, misses: 0 })
+  })
+
+  it('one missed check (re-try missed too) keeps the last good answer; two in a row are down', async () => {
+    const { hub, clock } = run(['ok', 'refuse', 'refuse', 'throw', 'throw'])
+    const first = await prod(hub, clock)
+    expect(first.probe).toBe('up')
+    const one = await prod(hub, clock)
+    expect(one).toMatchObject({ probe: 'doubt', status: 200, rawStatus: 502, misses: 1, commit: 'bbbbbbb2' })
+    expect(one.lastGoodAt).toBe(first.lastGoodAt)
+    const two = await prod(hub, clock)
+    expect(two).toMatchObject({ probe: 'down', status: 0, misses: 2 })
+    expect(two.lastGoodAt).toBe(first.lastGoodAt)
+  })
+
+  it('a good answer after a miss resets the count', async () => {
+    const { hub, clock } = run(['ok', 'throw', 'throw', 'ok', 'throw', 'throw', 'ok'])
+    await prod(hub, clock)
+    await prod(hub, clock)
+    expect((await prod(hub, clock)).misses).toBe(0)
+    expect((await prod(hub, clock)).probe).toBe('doubt')
+  })
+
+  it('a slow answer is "slow (N ms)" and counts as up', async () => {
+    const { hub, clock } = run(['slow'])
+    const row = await prod(hub, clock)
+    expect(row.probe).toBe('slow')
+    expect(row.note).toMatch(/^slow \(\d+ ms\)$/)
+    expect(row.status).toBe(200)
+    expect((await hub.getSnapshot()).tiers.ok).toBe(true)
+  })
+
+  it('a tier never heard from has nothing to hold: its first miss is down', async () => {
+    const { hub, clock } = run(['throw', 'throw'])
+    expect(await prod(hub, clock)).toMatchObject({ probe: 'down', status: 0 })
+  })
+})

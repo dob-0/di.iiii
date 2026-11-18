@@ -142,6 +142,13 @@ function registerMonitorRoutes(router, {
   let busy = false
   let lastPrint = null
   let lastPayload = null
+  // when each panel was last read, sent with every heartbeat so a quiet panel still shows how fresh it is
+  let lastPanelTimes = null
+  const panelTimes = (snap) => ({
+    ...Object.fromEntries(Object.entries(snap?.panels || {}).filter(([, p]) => p && typeof p.at === 'number').map(([k, p]) => [k, p.at])),
+    tiers: Date.now(),
+    chats: snap?.chats?.heardSecondsAgo != null ? Date.now() - snap.chats.heardSecondsAgo * 1000 : null
+  })
 
   const send = (client, text) => {
     if (client.closed) return
@@ -153,11 +160,16 @@ function registerMonitorRoutes(router, {
     busy = true
     try {
       const snapshot = await overview.getSnapshot({ selfBase: selfBase() })
+      lastPanelTimes = panelTimes(snapshot)
       const print = fingerprint(snapshot)
       if (print !== lastPrint && clients.size) {
         lastPrint = print
         lastPayload = `event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`
         for (const client of [...clients]) send(client, lastPayload)
+      } else if (clients.size) {
+        // nothing changed: say so with each panel's read time, so a quiet panel still proves it is current
+        const text = `event: heartbeat\ndata: ${JSON.stringify({ at: new Date(now()).toISOString(), panels: lastPanelTimes })}\n\n`
+        for (const client of [...clients]) send(client, text)
       }
     } catch {
       // a failed scan is skipped; the next tick tries again
@@ -169,7 +181,7 @@ function registerMonitorRoutes(router, {
     lastPrint = null
     lastPayload = null
     poll = setInterval(tick, STREAM_MIN_MS)
-    beat = setInterval(() => { for (const client of [...clients]) send(client, `event: heartbeat\ndata: ${JSON.stringify({ at: new Date(now()).toISOString() })}\n\n`) }, HEARTBEAT_MS)
+    beat = setInterval(() => { for (const client of [...clients]) send(client, `event: heartbeat\ndata: ${JSON.stringify({ at: new Date(now()).toISOString(), panels: lastPanelTimes })}\n\n`) }, HEARTBEAT_MS)
     poll.unref?.()
     beat.unref?.()
   }
