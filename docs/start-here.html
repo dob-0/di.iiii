@@ -90,7 +90,7 @@ npm --prefix serverXR ci</code><button>Copy</button></div><span class="tag">walk
         <li><p>Check the machine, before you start and before every push.</p><div class="cmd"><code>npm run start-check</code><button>Copy</button></div><span class="tag">walked</span></li>
         <li><p>Start your own branch. Never commit on dev or main.</p><div class="cmd"><code>git switch -c feat/&lt;what&gt;-&lt;date&gt;</code><button>Copy</button></div><span class="tag no">not walked</span></li>
         <li><p>See it. Frontend 5173, backend 4000.</p><div class="cmd"><code>npm run dev</code><button>Copy</button></div><span class="tag no">not walked</span></li>
-        <li><p>Before you push.</p><div class="cmd"><code>npm run lint &amp;&amp; npm run test -- --run</code><button>Copy</button></div><span class="tag no">not walked</span></li>
+        <li><p>Before you push. Lint ~2 min, tests ~19 min on a 4-core laptop.</p><div class="cmd"><code>npm run lint &amp;&amp; npm run test -- --run</code><button>Copy</button></div><span class="tag">walked on di-work · all pass</span></li>
         <li><p>Push. A PR to dev opens by itself (needs push rights, or use a fork).</p><div class="cmd"><code>git push -u origin HEAD</code><button>Copy</button></div><span class="tag no">not walked</span></li>
       </ol>
       <div class="note"><b>Skip the second install and ~220 tests fail</b>The tests need serverXR's own packages (<code>Cannot find module 'dotenv'</code>).</div>
