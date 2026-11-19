@@ -105,10 +105,11 @@ function PanelNote({ panel, empty }) {
     if (!panel.ok) return <div className="monitor-note is-down">Unavailable here: {panel.error}</div>
     // Credits only: the command that reads them is slow once an hour, so the server shows the last list and renews it in the background.
     if (panel.checking) return <div className="monitor-note" data-credits="checking">Checking now: the list appears in a moment.</div>
+    // the age is read on the server's clock (panel.at is when the server built the panel), so a page on a wrong clock still tells it right
     if (panel.stale) {
         return (
             <div className="monitor-note is-down" data-credits="stale">
-                This list was read {ago(panel.checkedAt)}; {panel.refreshError ? `the latest check failed: ${panel.refreshError}` : 'the latest check is slow'}.
+                This list was read {ago(panel.checkedAt, panel.at)}; {panel.refreshError ? `the latest check failed: ${panel.refreshError}` : 'a new check is running'}.
             </div>
         )
     }

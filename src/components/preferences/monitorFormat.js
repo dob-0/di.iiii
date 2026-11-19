@@ -21,4 +21,5 @@ export const formatBytes = (bytes) => {
     return `${(n / 1024 ** 3).toFixed(1)} GB`
 }
 
-export const ago = (iso) => { const v = timeAgo(iso); return v === 'now' || v === 'never' || v === 'n/a' ? v : `${v} ago` }
+// nowMs is optional: a time taken on another clock (the server's) is measured against that clock, not this page's
+export const ago = (iso, nowMs) => { const v = timeAgo(iso, nowMs); return v === 'now' || v === 'never' || v === 'n/a' ? v : `${v} ago` }

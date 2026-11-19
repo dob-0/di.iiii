@@ -32,7 +32,12 @@ const CREDITS_FRESH_MS = 60 * 1000 // a good answer is reused this long; then on
 const CREDITS_STALE_MS = 5 * 60 * 1000 // a list older than this is marked stale: the renewal is slow or failing
 const CREDITS_DROP_MS = 30 * 60 * 1000 // a list older than this is not shown any more: the panel says why instead
 const CREDITS_WAIT_MS = 3000 // with no list yet, a snapshot waits this long for the command, then says "checking"
-const CREDITS_COMMAND_MS = 40 * 1000 // the command's own limit (the one-shot report waits for all of it)
+// The command's own limit. A cold probe (12.1 s measured) must end INSIDE it: di-credits writes its verdict cache only when it ends,
+// so a command killed first (the old 8 s limit) never caches and every snapshot starts another real model call.
+// It must also stay short enough for the one-shot report (scripts/di/monitorReport.mjs), which waits for all of it, to end before its
+// timer unit's TimeoutStartSec=60: the credits read ends 0.5 s after the limit at the latest (30.5 s), then git 5 s + ledger 5 s
+// + send 15 s = 55.5 s < 60 s. A longer limit makes the timer unit kill the report; scripts/di/monitorCollect.test.js checks the sum.
+const CREDITS_COMMAND_MS = 30 * 1000
 
 const DEFAULT_PROBES = [
   { name: 'dev tier', url: 'https://dev.diiii.xyz' },
@@ -149,7 +154,7 @@ function createMonitorStore({
   connections = null,
   now = () => Date.now(),
   // how long a snapshot waits for the credits command when no list is known yet; the one-shot `di monitor report`
-  // has no memory between runs and passes the command's whole limit, so a report always carries the real list
+  // has no memory between runs and passes the command's whole limit, so a report always carries the real list or the command's error
   creditsWaitMs = CREDITS_WAIT_MS
 } = {}) {
   const boardStores = new Map()
@@ -447,9 +452,11 @@ function createMonitorStore({
     const usable = () => memo.value && now() - memo.at <= CREDITS_DROP_MS
     if (!usable() && memo.renewing) await settleWithin(memo.renewing, creditsWaitMs)
     if (usable()) {
-      const data = { ...memo.value, checkedAt: new Date(memo.at).toISOString() }
+      const data = { ...memo.value }
+      // only an old list says when it was read (the page tells how old); a fresh list, a first check and a dropped list carry no date
       if (now() - memo.at > CREDITS_STALE_MS) {
         data.stale = true
+        data.checkedAt = new Date(memo.at).toISOString()
         if (memo.error) data.refreshError = clip(memo.error.split('\n')[0])
       }
       return data
