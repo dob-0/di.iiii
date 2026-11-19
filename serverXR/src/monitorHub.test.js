@@ -191,6 +191,26 @@ describe('hub snapshot', () => {
     expect(snap.map.edges.filter((e) => e.kind === 'serves').map((e) => e.from)).toEqual(['tier:dev'])
   })
 
+  it('chats: the machine report is the door; owner text is dropped, the list leaves the reports rows, stale is not well', async () => {
+    let t = 1_800_000_000_000
+    const { hub, reports } = build({ now: () => t })
+    const src = { v: 2, generatedAt: t / 1000, chats: [{ sessionId: 's1', title: 'Light desk', group: 'ask', status: 'idle', idleMinutes: 3, you: { text: 'PRIVATE' }, says: { first: 'waiting' }, asks: ['!! Say done.'] }] }
+    reports.put({ host: 'aylmo', panels: { ...panels, chats: { ok: true, source: src } } })
+    const snap = await hub.getSnapshot()
+    expect(snap.chats).toMatchObject({ state: 'live', counts: { ask: 1, total: 1 } })
+    expect(snap.chats.rows[0]).toMatchObject({ title: 'Light desk', host: 'aylmo', asks: ['!! Say done.'] })
+    expect(JSON.stringify(snap)).not.toContain('PRIVATE')
+    expect(snap.reports[0].panels.chats).toBeUndefined()
+    t += 200 * 1000
+    reports.put({ host: 'aylmo', panels: { ...panels, chats: { ok: true, source: src } } })
+    expect((await hub.getSnapshot()).chats.state).toBe('stale')
+  })
+
+  it('chats: nobody reporting them is "none"', async () => {
+    const { hub } = build()
+    expect((await hub.getSnapshot()).chats).toMatchObject({ state: 'none', ok: false, rows: [] })
+  })
+
   it('parts: state from the Connected rows, version from the pack stamps, honest when unprobed or unread', async () => {
     const H = 'd'.repeat(40)
     const rows = [

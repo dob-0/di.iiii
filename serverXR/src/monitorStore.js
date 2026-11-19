@@ -15,6 +15,7 @@ const os = require('node:os')
 const path = require('node:path')
 const { execFile } = require('node:child_process')
 const { createAgentBoardStore } = require('./agentBoardStore')
+const { sanitizeChats } = require('./monitorChats')
 
 const CACHE_TTL_MS = 5000
 const PANEL_TIMEOUT_MS = 4000
@@ -370,6 +371,17 @@ function createMonitorStore({
     return { rows, configured: list.length }
   }
 
+  // The chat list of this machine: a feed { panel: 'chats', kind: 'command' } in the config whose output is
+  // the chat list as JSON. No such feed is "not configured", not an empty list. Only the shown fields are kept.
+  async function chats(config) {
+    const list = (Array.isArray(config.feeds) ? config.feeds : []).filter((f) => f.panel === 'chats' && f.kind === 'command' && f.command).slice(0, 1)
+    if (!list.length) return { configured: 0, source: null }
+    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command]), 6000)
+    const source = sanitizeChats(JSON.parse(out), os.hostname().split('.')[0])
+    if (!source) throw new Error('the chat list was not in the expected shape')
+    return { configured: 1, source }
+  }
+
   async function panel(name, fn) {
     const started = now()
     try {
@@ -402,7 +414,8 @@ function createMonitorStore({
       panel('services', services),
       panel('pullRequests', pullRequests),
       panel('tasks', () => feeds(config, 'tasks')),
-      panel('shows', () => feeds(config, 'shows'))
+      panel('shows', () => feeds(config, 'shows')),
+      panel('chats', () => chats(config))
     ])
     const value = {
       generatedAt: new Date(now()).toISOString(),

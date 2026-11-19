@@ -1,4 +1,5 @@
 import { ago } from './monitorFormat.js'
+import { chatIssues } from './MonitorChats.jsx'
 
 // The strip on top of the Monitor: one tile per tier (prod, dev, each local di)
 // with commit, age, how far behind dev, health and the spaces it holds.
@@ -47,14 +48,17 @@ export const heroState = (snap) => {
     }
     const failed = snap?.panels?.services?.failed || 0
     if (failed) issues.push({ tone: 'danger', text: `${failed} service${failed === 1 ? '' : 's'} failed`, tier: null })
+    issues.push(...chatIssues(snap?.chats))
     issues.sort((a, b) => (a.tone === 'danger' ? 0 : 1) - (b.tone === 'danger' ? 0 : 1))
     if (!issues.length) return { tone: 'success', headline: 'All well', issues }
     const tone = issues.some((i) => i.tone === 'danger') ? 'danger' : 'warning'
     const lead = issues[0].text
     // a lone problem is its own sentence; several are counted, the worst one named
+    // a row can stand for several things ("3 more chats ask you")
+    const total = issues.reduce((n, i) => n + (i.count || 1), 0)
     const headline = issues.length === 1 && issues[0].tone === 'danger' && !/^\d/.test(lead)
         ? lead
-        : `${issues.length} thing${issues.length === 1 ? '' : 's'} need${issues.length === 1 ? 's' : ''} you: ${lead}`
+        : `${total} thing${total === 1 ? '' : 's'} need${total === 1 ? 's' : ''} you: ${lead}`
     return { tone, headline, issues }
 }
 

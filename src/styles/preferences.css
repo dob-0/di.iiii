@@ -1701,7 +1701,7 @@
 .monitor-area-feed { grid-area: feed; }
 
 /* the status line; a tone class sets --tone-rgb, a component without one reads grey */
-.monitor-page, .monitor-tier, .monitor-count, .monitor-event, .monitor-agent, .monitor-hero { --tone-rgb: 130, 130, 140; }
+.monitor-page, .monitor-tier, .monitor-count, .monitor-event, .monitor-agent, .monitor-chat, .monitor-chip, .monitor-hero { --tone-rgb: 130, 130, 140; }
 .tone-success { --tone-rgb: var(--di-success-rgb); }
 .tone-warning { --tone-rgb: var(--di-warning-rgb); }
 .tone-danger { --tone-rgb: var(--di-danger-rgb); }
@@ -1864,6 +1864,49 @@
 .monitor-live-square { flex: none; display: inline-block; width: 0.75rem; height: 0.75rem; background: rgb(var(--di-live-rgb)); animation: monitor-live 1.4s steps(2, jump-none) infinite; }
 .monitor-live-square.is-off { background: rgba(255, 255, 255, 0.2); animation: none; }
 @keyframes monitor-live { 50% { opacity: 0.25; } }
+/* Chats on the Work tab: filter chips, then one card per chat (asks first, the cards fill the row) */
+.monitor-chips { display: flex; flex-wrap: wrap; gap: var(--di-space-1); margin-bottom: var(--di-space-2); }
+.monitor-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-height: 44px;
+    padding: var(--di-space-1) var(--di-space-3);
+    color: var(--ui-text-muted);
+    background: var(--di-surface);
+    border: none;
+    border-radius: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.monitor-chip:hover { background: rgba(255, 255, 255, 0.06); }
+.monitor-chip:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 0; }
+/* The pressed chip's 2px underline, inset so it takes no layout; not a shadow. */
+.monitor-chip[aria-pressed="true"] { color: var(--di-text); box-shadow: inset 0 -2px 0 var(--di-cyan); }
+.monitor-chip.tone-warning .monitor-chip-count { color: var(--di-warning); }
+.monitor-chip-count { color: var(--di-text); font-variant-numeric: tabular-nums; }
+.monitor-chat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--di-space-2); }
+.monitor-chat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    min-width: 0;
+    padding: var(--di-space-3) var(--di-space-4);
+    color: var(--di-text);
+    background: rgba(var(--tone-rgb), 0.1);
+    border-radius: 0;
+    /* state is a 4px leading edge, drawn inset, not a shadow */
+    box-shadow: inset 4px 0 0 rgb(var(--tone-rgb));
+}
+.monitor-chat[data-chat-group="ask"] { background: rgba(var(--tone-rgb), 0.18); }
+.monitor-chat-head { display: flex; align-items: center; gap: var(--di-space-2); min-width: 0; }
+.monitor-chat-title { flex: 1 1 auto; min-width: 0; font-size: var(--di-text-5); font-weight: 600; overflow-wrap: anywhere; }
+.monitor-chat-tag { flex: none; color: rgb(var(--tone-rgb)); font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.1em; text-transform: uppercase; }
+.monitor-chat-ask { margin: 0; font-size: var(--di-text-4); font-weight: 600; overflow-wrap: anywhere; }
+.monitor-chat-says { margin: 0; color: var(--ui-text-muted); font-size: var(--di-text-3); overflow-wrap: anywhere; }
 .monitor-report { gap: var(--di-space-1); }
 .monitor-fresh { display: block; height: 4px; background: var(--pref-border); }
 .monitor-fresh i { display: block; height: 100%; background: var(--pref-tone); transition: width var(--di-motion-base) ease-out; }
@@ -1918,6 +1961,8 @@
     .monitor-ask-send { grid-column: 1; }
     .monitor-bar-actions .monitor-filter { flex: 1 1 100%; }
     .monitor-row { min-height: 44px; }
+    /* four chips fill the phone row, none wraps alone */
+    .monitor-chip { flex: 1 1 auto; justify-content: center; padding: var(--di-space-1) var(--di-space-2); letter-spacing: 0.04em; }
 }
 @media (prefers-reduced-motion: reduce) {
     .monitor-live-mark.is-beat, .monitor-live-square, .monitor-event, .monitor-ask.is-sending { animation: none; }
