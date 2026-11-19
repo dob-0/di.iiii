@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ASPECT, KIND_ORDER, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
+import WorldLegend, { shapePoints } from './WorldLegend.jsx'
+import { ASPECT, KIND_ORDER, KIND_STYLE, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
 //   2D   an SVG graph: hover lights a node's neighbours and dims the rest,
@@ -70,7 +71,7 @@ const clip = (text, n) => (text.length > n ? `${text.slice(0, n - 1)}…` : text
 const toneOf = (state) => STATE_TONE[state] || 'muted'
 const edgeKey = (e, i) => `${e.from}>${e.to}>${e.kind}>${i}`
 
-function MapList({ nodes, selectedId, onPick }) {
+export function MapList({ nodes, selectedId, onPick }) {
     return (
         <div className="monitor-map-list" data-monitor-map="list">
             {KIND_ORDER.map((kind) => {
@@ -85,7 +86,7 @@ function MapList({ nodes, selectedId, onPick }) {
                                     className={`monitor-row tone-${toneOf(n.state)}${selectedId === n.id ? ' is-selected' : ''}`}
                                     aria-pressed={selectedId === n.id} onClick={() => onPick(n)}>
                                     <span className="monitor-name">{n.label}</span>
-                                    <span className="monitor-meta">{n.state}</span>
+                                    <span className="monitor-meta">{n.stateLabel || n.state}</span>
                                 </button>
                             ))}
                         </div>
@@ -96,7 +97,8 @@ function MapList({ nodes, selectedId, onPick }) {
     )
 }
 
-const fitBox = (layout) => ({ ...layout.bounds })
+// the Spaces world keeps a strip under the map for its legend
+const fitBox = (layout, world = false) => (world ? { ...layout.bounds, h: layout.bounds.h + 64 } : { ...layout.bounds })
 
 const POS_KEY = 'di.monitor.map.pos'
 const readPos = () => {
@@ -110,9 +112,13 @@ const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.string
 /** The wheel zooms the map only when you asked for it: full screen, or Ctrl/Cmd (a trackpad pinch sends Ctrl). Otherwise the page scrolls. */
 export const wheelZooms = (ev, fullscreen) => Boolean(fullscreen || ev.ctrlKey || ev.metaKey)
 
-function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
+export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false, kinds = false, pointerOnly = false }) {
+    // pointerOnly: a mouse/touch surface only (the Mixed view): out of the tab order, one data-map-node per node (the list owns it)
+    const nodeAttr = pointerOnly ? 'data-pointer-node' : 'data-map-node'
+    const tab = pointerOnly ? -1 : undefined
+    const showKinds = world || kinds
     const svgRef = useRef(null)
-    const [vb, setVb] = useState(() => fitBox(layout))
+    const [vb, setVb] = useState(() => fitBox(layout, world))
     const [hover, setHover] = useState(null)
     const drag = useRef({ pointers: new Map(), moved: false, last: null, pinch: 0 })
     const vbRef = useRef(vb)
@@ -124,10 +130,24 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
     const nodeDrag = useRef(null)
     const posOf = useCallback((id) => moved[id] || layout.pos.get(id), [moved, layout.pos])
     useEffect(() => { vbRef.current = vb }, [vb])
+    // pixels per layout unit: in the kinds look a name never draws under 11 px, however small the pane
+    const [ppu, setPpu] = useState(1)
+    useLayoutEffect(() => {
+        const el = svgRef.current
+        if (!el || !showKinds) return undefined
+        const measure = () => { const r = el.getBoundingClientRect(); if (r.width && r.height) setPpu(Math.min(r.width / vb.w, r.height / vb.h)) }
+        measure()
+        const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null
+        ro?.observe(el)
+        return () => ro?.disconnect()
+    }, [vb, showKinds])
+    const labelFs = showKinds ? Math.min(30, Math.max(20, 11 / ppu)) : 20
+    const stateFs = showKinds ? Math.max(14.4, 11 / ppu) : 14.4
+    const showState = !showKinds || stateFs <= 18
 
     // a different set of nodes (not a state change) refits the view
     const shape = layout.nodes.map((n) => n.id).join('|')
-    useEffect(() => { setVb(fitBox(layout)) }, [shape]) // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { setVb(fitBox(layout, world)) }, [shape]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const scaleOf = useCallback((box) => {
         const r = svgRef.current?.getBoundingClientRect?.()
@@ -235,12 +255,13 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
     }, [layout.edges])
 
     const focus = hover || selectedId || null
+    const faint = showKinds && layout.edges.length > 12 // a hairball: the lines are quiet until a node is picked
     const near = focus ? neighbours.get(focus) || new Set() : null
     const hot = (id) => !focus || id === focus || near.has(id)
     const hovered = hover ? layout.nodes.find((n) => n.id === hover) : null
 
     return (
-        <div className="monitor-map-stage">
+        <div className={`monitor-map-stage${world ? ' is-world' : ''}${showKinds ? ' is-kinds' : ''}`}>
             <svg ref={svgRef} className="monitor-map-svg" viewBox={`${vb.x} ${vb.y} ${vb.w} ${vb.h}`} preserveAspectRatio="xMidYMid meet"
                 role="group" aria-label="Map of machines, tiers, spaces and shows"
                 onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
@@ -258,7 +279,7 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
                         const a = posOf(e.from)
                         const b = posOf(e.to)
                         const lit = !!focus && (e.from === focus || e.to === focus)
-                        const cls = `monitor-edge kind-${e.kind}${lit ? ' is-lit' : focus ? ' is-dim' : ''}${live && LIVE_EDGES.has(e.kind) ? ' is-live' : ''}`
+                        const cls = `monitor-edge kind-${e.kind}${lit ? ' is-lit' : focus ? ' is-dim' : faint ? ' is-faint' : ''}${live && LIVE_EDGES.has(e.kind) && (!showKinds || lit) ? ' is-live' : ''}`
                         return <line key={edgeKey(e, i)} x1={a.x} y1={a.y} x2={b.x} y2={b.y} className={cls} />
                     })}
                 </g>
@@ -272,22 +293,24 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
                     const sel = selectedId === n.id
                     const cls = `monitor-node kind-${n.kind} tone-${toneOf(n.state)}${sel ? ' is-selected' : ''}${hover === n.id ? ' is-hover' : ''}${focus && !hot(n.id) ? ' is-dim' : ''}`
                     return (
-                        <g key={n.id} transform={`translate(${p.x - w / 2},${p.y - h / 2})`} data-map-node={n.id} role="button" tabIndex={0}
-                            aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`} className={cls}
+                        <g key={n.id} transform={`translate(${p.x - w / 2},${p.y - h / 2})`} {...{ [nodeAttr]: n.id }} role="button" tabIndex={pointerOnly ? -1 : 0}
+                            aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.stateLabel || n.state}`} className={cls}
                             onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h0) => (h0 === n.id ? null : h0))}
                             onFocus={() => setHover(n.id)} onBlur={() => setHover((h0) => (h0 === n.id ? null : h0))}
                             onClick={() => pick(n)}
                             onPointerDown={(ev) => onNodeDown(ev, n)} onPointerMove={onNodeMove} onPointerUp={onNodeUp} onPointerCancel={onNodeUp}
                             onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onPick(n) } }}>
+                            {showKinds && sel ? <rect x="-6" y="-6" width={w + 12} height={h + 12} className="monitor-node-ring" /> : null}
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
-                            <text x="16" y={h / 2 - 3} className="monitor-node-label">{clip(n.label, Math.floor((w - 28) / 9.6))}</text>
-                            <text x="16" y={h / 2 + 15} className="monitor-node-state">{`${n.state} · ${n.kind}`}</text>
-                            <title>{`${n.kind}: ${n.label} (${n.state})`}</title>
+                            {showKinds && KIND_STYLE[n.kind] ? <polygon points={shapePoints(KIND_STYLE[n.kind].shape, w - 16, h - 16, 12)} className="monitor-node-glyph" style={{ fill: `var(${KIND_STYLE[n.kind].token})` }} /> : null}
+                            <text x="16" y={showState ? h / 2 - 3 : h / 2 + labelFs * 0.35} className="monitor-node-label" style={showKinds ? { fontSize: labelFs } : undefined}>{clip(n.label, Math.floor((w - 28) / (labelFs * 0.48)))}</text>
+                            {showState ? <text x="16" y={h / 2 + 15 + (showKinds ? (stateFs - 14.4) * 0.8 : 0)} className="monitor-node-state" style={showKinds ? { fontSize: stateFs } : undefined}>{world ? (n.stateLabel || n.state) : `${n.stateLabel || n.state} · ${n.kind}`}</text> : null}
+                            <title>{`${n.kind}: ${n.label} (${n.stateLabel || n.state})`}</title>
                         </g>
                     )
                 })}
-                {hovered && hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / 9.6) ? (() => {
+                {hovered && ((showKinds && !showState) || hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / (labelFs * 0.48))) ? (() => {
                     const p = posOf(hovered.id)
                     const { h } = sizeOf(hovered.kind)
                     const text = hovered.label
@@ -296,29 +319,33 @@ function Map2D({ layout, selectedId, onPick, live, fullscreen = false }) {
                         <g className={`monitor-tip tone-${toneOf(hovered.state)}`} transform={`translate(${p.x - w / 2},${p.y - h / 2 - 58})`} pointerEvents="none">
                             <rect width={w} height="46" className="monitor-tip-box" />
                             <text x="12" y="20" className="monitor-tip-label">{text}</text>
-                            <text x="12" y="38" className="monitor-tip-meta">{`${hovered.kind} · ${hovered.state}`}</text>
+                            <text x="12" y="38" className="monitor-tip-meta">{`${hovered.kind} · ${hovered.stateLabel || hovered.state}`}</text>
                         </g>
                     )
                 })() : null}
             </svg>
             <div className="monitor-map-tools" role="group" aria-label="Map zoom">
-                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout))}>Fit</button>
-                {anyMoved ? <button type="button" className="monitor-map-tool" data-map-tool="reset" onClick={resetNodes}>Reset nodes</button> : null}
-                <button type="button" className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
-                <button type="button" className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
+                <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="fit" onClick={() => setVb(fitBox(layout, world))}>Fit</button>
+                {anyMoved ? <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="reset" onClick={resetNodes}>Reset nodes</button> : null}
+                <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
+                <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
+            {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
         </div>
     )
 }
 
-export default function MonitorMap({ map, selectedId, onPick, narrow, live = false }) {
+// `view` pins the view ('2d' | '3d') when the page owns the List | 2D | 3D switch (the Spaces world);
+// `onOpen(node)` adds an "Open" button on the selected node's card in full screen, where the detail is hidden.
+export default function MonitorMap({ map, selectedId, onPick, narrow, live = false, view: pinned = null, onOpen = null, empty = null, world = false, kinds = false, layoutFn = layoutMap }) {
     const nodes = useMemo(() => map?.nodes || [], [map])
-    const layout = useMemo(() => layoutMap(map, narrow ? 1 : ASPECT), [map, narrow])
+    const layout = useMemo(() => layoutFn(map, narrow ? 1 : ASPECT), [map, narrow, layoutFn])
     const [stored, setStored] = useState(readView)
-    const view = stored || (narrow ? 'list' : '2d')
+    const view = pinned || stored || (narrow ? 'list' : '2d')
     const rootRef = useRef(null)
     const [fullscreen, setFullscreen] = useState(false)
+    const selectedNode = selectedId ? nodes.find((n) => n.id === selectedId) || null : null
     const choose = (v) => { if (v === 'list') setFullscreen(false); setStored(v); writeView(v) }
     useFillHeight(rootRef, view)
     // the List view has no Exit button: a view that resolves to List (narrow screen) leaves full screen too
@@ -333,12 +360,12 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
         return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev }
     }, [fullscreen])
 
-    if (!nodes.length) return <div className="monitor-note">Nothing on the map yet. Machines, tiers and spaces appear when the server reports them.</div>
+    if (!nodes.length) return <div className="monitor-note">{empty || 'Nothing on the map yet. Machines, tiers and spaces appear when the server reports them.'}</div>
 
     return (
         <div className={`monitor-map${fullscreen ? ' is-fullscreen' : ''}`} data-monitor-map-view={view} ref={rootRef}>
-            <div className="monitor-map-views" role="group" aria-label="Map view">
-                {VIEWS.map(([id, label]) => (
+            <div className={`monitor-map-views${pinned ? ' is-solo' : ''}`} role="group" aria-label="Map view">
+                {pinned ? null : VIEWS.map(([id, label]) => (
                     <button key={id} type="button" data-map-view={id} className={`monitor-map-view${view === id ? ' is-active' : ''}`}
                         aria-pressed={view === id} onClick={() => choose(id)}>{label}</button>
                 ))}
@@ -349,13 +376,20 @@ export default function MonitorMap({ map, selectedId, onPick, narrow, live = fal
             </div>
             {view === 'list' ? <MapList nodes={nodes} selectedId={selectedId} onPick={onPick} /> : null}
             {view === '2d' ? (
-                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} /></div>
+                <div data-monitor-map="graph"><Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} world={world} kinds={kinds} /></div>
             ) : null}
             {view === '3d' ? (
                 <div data-monitor-map="3d">
                     <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
-                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} />
+                        <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} fullscreen={fullscreen} world={world} kinds={kinds} />
                     </Suspense>
+                </div>
+            ) : null}
+            {fullscreen && onOpen && selectedNode ? (
+                <div className="monitor-map-card" data-map-card={selectedNode.id}>
+                    <div className="monitor-map-card-name">{selectedNode.label}</div>
+                    <div className="monitor-map-card-meta">{`${selectedNode.kind} · ${selectedNode.stateLabel || selectedNode.state}`}</div>
+                    <button type="button" className="monitor-map-tool" onClick={() => { setFullscreen(false); onOpen(selectedNode) }}>Open details</button>
                 </div>
             ) : null}
             <div className="monitor-map-key">

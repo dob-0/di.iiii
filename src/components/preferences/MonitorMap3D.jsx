@@ -3,6 +3,8 @@ import { AdditiveBlending, Fog } from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Line, OrbitControls } from '@react-three/drei'
 import Canvas from '../GuardedCanvas.jsx'
+import WorldLegend from './WorldLegend.jsx'
+import { KIND_STYLE } from './monitorMapLayout.js'
 import { fitKey, layoutSignature, PULSE_MS, pulseEdgeIndexes, shouldAnimate } from './monitorMap3dPolicy.js'
 import { keyStep, mapPoints, poseForNode, presetPose, PRESET_LABEL, PRESET_NAMES, S } from './monitorMapCamera.js'
 import { buildEdgeLayers, bundleWidth } from './monitorMapEdges.js'
@@ -14,10 +16,12 @@ import { planLabels, screenItems, stageBlockers } from './monitorMapOverlap.js'
 // windows. frameloop="demand": nothing is drawn while still. A light travels
 // along live edges only while `live` and not under reduced motion.
 
-const FALLBACK = { success: '#4df9c0', warning: '#ffb84d', muted: '#5a5e66', cyan: '#4df9ff', line: '#2c2f36', live: '#50fa7b', ground: '#000000' }
-const TONE_VAR = { success: '--di-success', warning: '--di-warning', muted: '--pref-border', cyan: '--di-cyan', line: '--pref-border', live: '--di-live' }
+const FALLBACK = { success: '#4df9c0', warning: '#ffb84d', muted: '#5a5e66', cyan: '#4df9ff', line: '#2c2f36', live: '#50fa7b', ground: '#000000', text: '#e6e8ec' }
+const TONE_VAR = { success: '--di-success', warning: '--di-warning', muted: '--pref-border', cyan: '--di-cyan', line: '--pref-border', live: '--di-live', text: '--di-text' }
 const LIVE_EDGES = new Set(['runs', 'serves'])
 const STATE_TONE = { ok: 'success', warn: 'warning', off: 'muted' }
+// one colour (token) and one shape per kind, shared with the 2D glyphs and the legend (KIND_STYLE)
+const TOKEN_KEY = { '--di-cyan': 'cyan', '--di-text': 'text', '--di-success': 'success', '--di-warning': 'warning' }
 
 const readColors = () => {
     const out = { ...FALLBACK }
@@ -52,22 +56,37 @@ const floor = (p) => [p.x * S, 0, p.y * S]
 const HUB = [0, 0.1, 0]
 const pulseIndexes = (edges, pulsing, hoverId) => pulseEdgeIndexes({ edges, pulsing, hoverId })
 
-function Body({ node, p, color, glow, dim, sel, onHover, onPick, onFly }) {
+function KindGeometry({ shape, size }) {
+    switch (shape) {
+    case 'bar': return <cylinderGeometry args={[size / 2, size / 2, size * 0.7, 4]} />
+    case 'triangle': return <coneGeometry args={[size * 0.6, size * 0.9, 3]} />
+    case 'circle': return <sphereGeometry args={[size * 0.5, 12, 9]} />
+    case 'hex': return <cylinderGeometry args={[size * 0.55, size * 0.55, size * 0.6, 6]} />
+    case 'diamond': return <octahedronGeometry args={[size * 0.62]} />
+    default: return <boxGeometry args={[size, size * 0.7, size]} />
+    }
+}
+
+function Body({ node, p, color, glow, pip, dim, sel, near, kinds, onHover, onPick, onFly }) {
     const k = node.kind
     const size = k === 'tier' ? 0.55 : k === 'machine' ? 0.46 : 0.36
+    const shape = kinds && KIND_STYLE[k] ? KIND_STYLE[k].shape : k === 'tier' ? 'bar' : 'square'
+    const off = node.state === 'off'
     return (
         <group position={at(p)}>
             <mesh onPointerOver={(e) => { e.stopPropagation(); onHover(node.id) }} onPointerOut={() => onHover(null)}
                 onClick={(e) => { e.stopPropagation(); onPick(node) }} onDoubleClick={(e) => { e.stopPropagation(); onFly(node) }}>
-                {k === 'tier' ? <cylinderGeometry args={[size / 2, size / 2, size * 0.7, 4]} /> : <boxGeometry args={[size, size * 0.7, size]} />}
-                <meshBasicMaterial color={color} transparent opacity={dim ? 0.25 : 1} />
+                <KindGeometry shape={shape} size={size} />
+                <meshBasicMaterial color={color} transparent opacity={dim ? (kinds ? 0.18 : 0.25) : off && kinds ? 0.6 : 1} />
             </mesh>
+            {pip ? <mesh position={[0, size * 0.62, 0]}><boxGeometry args={[0.09, 0.09, 0.09]} /><meshBasicMaterial color={pip} transparent opacity={dim ? 0.18 : 1} /></mesh> : null}
             {sel ? (<>
                 <mesh><boxGeometry args={[size * 1.5, size * 1.1, size * 1.5]} /><meshBasicMaterial color={glow} wireframe /></mesh>
                 {/* soft glow: two additive shells, no shadows */}
                 <mesh><boxGeometry args={[size * 2.1, size * 1.6, size * 2.1]} /><meshBasicMaterial color={glow} transparent opacity={0.1} blending={AdditiveBlending} depthWrite={false} /></mesh>
                 <mesh><boxGeometry args={[size * 3, size * 2.3, size * 3]} /><meshBasicMaterial color={glow} transparent opacity={0.05} blending={AdditiveBlending} depthWrite={false} /></mesh>
             </>) : null}
+            {near && !sel ? <mesh><boxGeometry args={[size * 1.3, size * 1, size * 1.3]} /><meshBasicMaterial color={color} wireframe /></mesh> : null}
         </group>
     )
 }
@@ -210,7 +229,8 @@ const useVisible = () => {
 
 // Still = zero frames: the canvas draws on a change, a gesture, or a 3 s pulse after a snapshot that changed
 // something (and while a node is hovered). The page's 1 s clock never reaches this tree (memo + stable props).
-function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false, autoRotate = true }) {
+function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false, autoRotate = true, world = false, kinds = false, pointerOnly = false }) {
+    const showKinds = world || kinds
     const stageRef = useRef(null)
     const api = useRef(null)
     const fsRef = useRef(fullscreen)
@@ -273,8 +293,11 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     const edgeLines = layers.edges
     const stems = useMemo(() => layout.nodes.map((n) => ({ id: n.id, pts: [floor(layout.pos.get(n.id)), at(layout.pos.get(n.id))] })), [layout])
     const stemOf = useMemo(() => new Map(stems.map((x) => [x.id, x.pts])), [stems])
-    const animate = shouldAnimate({ edges: layout.edges, pulsing, hoverId: hover, visible, reduced, rotating })
-    const pulseSet = useMemo(() => new Set(pulseIndexes(layout.edges, pulsing, hover)), [layout, pulsing, hover])
+    // in the kinds look a light travels only on the picked (or hovered) node's lines, never on every line at once
+    const packetFocus = showKinds ? (hover || selectedId || null) : hover
+    const packetPulse = showKinds ? false : pulsing
+    const animate = shouldAnimate({ edges: layout.edges, pulsing: packetPulse, hoverId: packetFocus, visible, reduced, rotating })
+    const pulseSet = useMemo(() => new Set(pulseIndexes(layout.edges, packetPulse, packetFocus)), [layout, packetPulse, packetFocus])
 
     const neighbours = useMemo(() => {
         const m = new Map()
@@ -288,13 +311,14 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     }, [layout.edges])
     const flyToNode = useCallback((n) => { setRotating(false); api.current?.flyToNode(n.id) }, [])
     const focus = hover || selectedId || null
-    const near = focus ? neighbours.get(focus) || new Set() : null
+    const near = useMemo(() => (focus ? neighbours.get(focus) || new Set() : null), [focus, neighbours])
     const hot = (id) => !focus || id === focus || near.has(id)
     const toneColor = (state) => colors[STATE_TONE[state] || 'muted']
+    const bodyColor = (n) => (showKinds && KIND_STYLE[n.kind] ? colors[TOKEN_KEY[KIND_STYLE[n.kind].token]] : toneColor(n.state))
     const degree = (id) => (neighbours.get(id) || new Set()).size
 
     return (
-        <div className="monitor-map-stage monitor-map-stage-3d" ref={stageRef}>
+        <div className={`monitor-map-stage monitor-map-stage-3d${showKinds ? ' is-world' : ''}`} ref={stageRef}>
             <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
                 <Rig ground={colors.ground} layout={layout} preset={preset} points={points} fitDist={fitDist} api={api} autoRotate={rotating} reduced={reduced} onTouch={onTouch} />
@@ -319,7 +343,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     if (!lit) return null
                     return (
                         <group key={`${e.from}>${e.to}>${e.kind}>${i}`}>
-                            <Line points={pts} color={colors.cyan} lineWidth={2} />
+                            <Line points={pts} color={showKinds ? colors.text : colors.cyan} lineWidth={showKinds ? 3 : 2} />
                             {animate && isLive && pulseSet.has(i) ? <Pulse a={a} b={b} offset={(i * 0.37) % 1} color={colors.live} /> : null}
                         </group>
                     )
@@ -336,19 +360,19 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     return (
                         <group key={n.id}>
                             <Line points={stemOf.get(n.id)} color={colors.line} lineWidth={1} />
-                            <Body node={n} p={p} color={toneColor(n.state)} glow={colors.cyan} dim={dim} sel={sel} onHover={setHover} onPick={onPick} onFly={flyToNode} />
+                            <Body node={n} p={p} color={bodyColor(n)} glow={showKinds ? colors.text : colors.cyan} pip={showKinds ? toneColor(n.state) : null} dim={dim} sel={sel} near={!!focus && !sel && hot(n.id)} kinds={showKinds} onHover={setHover} onPick={onPick} onFly={flyToNode} />
                             {named || full ? (
                                 <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
-                                    <button type="button" data-map-node={n.id}
+                                    <button type="button" {...{ [pointerOnly ? 'data-pointer-node' : 'data-map-node']: n.id }} tabIndex={pointerOnly ? -1 : undefined}
                                         className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}${full ? ' is-full' : ''}`}
                                         style={!dim && !full && shownOpacity != null && shownOpacity < 1 ? { opacity: shownOpacity } : undefined}
-                                        aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
+                                        aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.stateLabel || n.state}`}
                                         onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h) => (h === n.id ? null : h))}
                                         onFocus={() => setHover(n.id)} onBlur={() => setHover((h) => (h === n.id ? null : h))}
                                         onDoubleClick={() => flyToNode(n)}
                                         onClick={() => onPick(n)}>
                                         <span className="monitor-card3d-name">{n.label}</span>
-                                        <span className="monitor-card3d-state">{n.state}</span>
+                                        <span className="monitor-card3d-state">{n.stateLabel || n.state}</span>
                                         <span className="monitor-card3d-fact">{`${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
                                     </button>
                                 </Html>
@@ -360,11 +384,12 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     <div className="monitor-card3d is-hub"><span className="monitor-card3d-name">di.iiii</span></div>
                 </Html>
             </Canvas>
+            {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             <div className="monitor-map-tools" role="group" aria-label="Camera">
                 {PRESET_NAMES.map((name) => (
-                    <button key={name} type="button" className="monitor-map-tool" data-map-tool={name} onClick={() => { setRotating(false); api.current?.fly(name) }}>{PRESET_LABEL[name]}</button>
+                    <button key={name} type="button" tabIndex={pointerOnly ? -1 : undefined} className="monitor-map-tool" data-map-tool={name} onClick={() => { setRotating(false); api.current?.fly(name) }}>{PRESET_LABEL[name]}</button>
                 ))}
-                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => { setRotating(false); api.current?.reset() }}>Reset view</button>
+                <button type="button" tabIndex={pointerOnly ? -1 : undefined} className="monitor-map-tool" data-map-tool="fit" onClick={() => { setRotating(false); api.current?.reset() }}>Reset view</button>
             </div>
             <div className="monitor-map-hint">Drag to turn · right-drag or two fingers to move · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · arrows or WASD · double-click a card to fly to it</div>
         </div>
