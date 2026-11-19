@@ -193,7 +193,7 @@ function registerMonitorRoutes(router, {
   router.get('/api/monitor/mine', (req, res, next) => {
     if (tierOfDeployEnv(deployEnv()) !== 'dev' || !isAccount(req)) { next('route'); return }
     // the terminal login only (the local Monitor's feed): a browser session never reads other machines' chats
-    if (req.authState.type !== 'cli-token') { next('route'); return }
+    if (req.authState.actor !== 'di.cli') { next('route'); return }
     // a page on another site cannot read it with the visitor's cookie
     if (String(req.headers?.['sec-fetch-site'] || '') === 'cross-site') { next('route'); return }
     res.json({ ok: true, reports: overview.reports.list({ subjects: [String(req.authState.subject)], chats: true }) })
