@@ -122,3 +122,49 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
 
 - Nothing on a real cube; nothing armed (sim included). The desk on the wall is owed, with the officer.
 - Phone over the LAN (needs DI_ALLOW_LAN_DEVICES=1, as for Laser Out).
+
+## 2026-11-01 (pushed 2026-11-05) — more patterns, brightness, preview, Displace/Wobble/Strobe
+
+- Shapes appended after unfold: lissajous, helix, tunnel, echo, sides, count, rain, cube, dust, heartbeat, point,
+  weave, venn (46 in all), each with a seed tile, plus the Patterns and Build cycles. Dust's dots are the smallest the
+  still-beam guard lets through (0.046 of the field); a lone Point needs about twice that, because the whole frame's
+  time sits in one dot. Don't route around that guard.
+- Per-cube Brightness in Setup (0…1, under master and the look's level, the Test picture too).
+- Control is "bank bank editor" over "preview stage editor": the look in Edit shows in its own preview pane.
+- Look fields displace, wobble (+ wobbleBeats) and strobe. Bent busy pictures blew the cube's 2333-point pass, so
+  `bendWithin` eases the bends until the cost fits; a test holds every seed look at full bends inside it.
+- The page reloads itself when the desk's files or the server change, and comes back to the same page, look in Edit
+  and Audio. Playing a picture also selects it.
+- Tested: the laser suites green except the two Windows-only SIGTERM/SIGINT shutdown tests (baseline). Ran live on
+  her one-cube desk on 2026-11-01. Still owed: the branch is behind dev and needs a rebase before it lands.
+
+## 2026-11-06 … 11-10 (pushed 2026-11-19) — the REA festival desk: line scenes, layers, an LFO on every slider, Send to per laser, the stream cushion
+
+What ran on the REA festival desk (4 LaserCubes, 2026-11-07) and then on the bar stage's one cube (11-13). Pushed on
+the owner's word so the team can see it; the branch is not rebased on dev yet (dev has the stage line's own desk).
+
+- **Shapes** (`shared/laserShapes.cjs` + twin; 64 now): the lava set (lava, magma, eruption, bubble, crack, drip),
+  volcano (one line + whole dots on a 16-beat story), strands, line scenes for solid-light work (contour, draw, blade,
+  coil, down), vortex (two colours in one shape: a stroke with `.second` is drawn in `colour2`), cross grid,
+  phyllotaxis / phyllolines (from the owner's TouchDesigner patch: seed i at √i, angle swept 0–180°), phyllochaos
+  (one point falls, blooms into phyllotaxis, breaks up; 30 beats). Every new shape has a guard block (no still frames,
+  < 40 % in one window, at the sizes it is used).
+- **Look fields**: `speed` (the shape's own beat only), `split` + `colour2` + `splitFar` (Beam: a second beam straight
+  below, 0.04 → 0.6 of the field; drawn only while the pass fits 1900 points), `flicker`, `layers` (≤ 3 copies of the
+  look with all its settings; on a laser the LAST layer whose cubes pick it is drawn, so a laser never gets two pictures;
+  Preview shows them together), `lfo` (`{ [slider]: { on, wave, beats, depth } }`, Resolume's BPM sync on every amount and
+  place slider, never on rates; top of the wave on beat one; never takes size under `MARK_MIN_SIZE`).
+- **Desk**: Reset (the look back to its seed, one undo step), Send to `All 1 2 3 4` (a tile's picture plays only on the
+  picked lasers, `liveBy`), a look's Cubes = where it plays, a dropped laser gets a blank (not its last frame). Setup →
+  Window: a panel that edits the bar engine's window grid (`?barEngine=`, default `http://127.0.0.1:4780`, an engine not
+  in this repo; the panel says so when it is not there).
+- **Engine** (`laserEngine.js`): the stream keeps `CUSHION_MS` 100 queued in each cube (the old pacing never caught up
+  after a late tick, and the cubes ran dry 580–620 times in 20 s: the flicker seen at REA); Blackout and lit→dark clear
+  the cube's ring buffer at once; a per-cube `stream` record (low, max gap, dry, late) in `/laser/api/state`. Dev has a
+  smaller catch-up fix (no cushion): reconcile when this lands. `laser.json` `dots: true` lets a frame of ≥ 2 separate
+  dots each ≤ 12 % of the pass through the still-beam guard (a lone dot, or one dwell ≥ 50 %, still stops the cube); off
+  without the flag. Guard stops still never latch.
+- **Tested** (Windows, 2026-11-19): `vitest serverXR/src/laser src/project/nodes/laser.shape serverXR/src/routes shared`
+  = 1053 pass, 6 fail, all known Windows-only ones (SIGINT/SIGTERM shutdown, three byte-for-byte twin checks under CRLF).
+  On real cubes: the REA desk ran from this code 11-07 (4 cubes, Wi-Fi then cable; queue low ≥ 72 ms, 0 dry).
+- **Left out**: a live shape reload (`laserLive.js`, a draft in another tree, never run) is not in this push.

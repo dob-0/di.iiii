@@ -98,6 +98,13 @@ const CATCH_UP_MAX_MS = 100
 // second set), 80 ms 3 of 3; without it no value 40-120 passed (the misses were ticks of 26-46 ms
 // against a 20 ms queue, not stalls longer than the lead). So 60 is the smallest that passes.
 const LEAD_MS = 60
+// Emilya's REA festival cushion (2026-11-07) is the same idea as LEAD_MS above (dev's catch-up); merged 2026-11-20 the
+// pacing is dev's and her name stays as an alias, so her stream record below reads against the one number.
+const CUSHION_MS = LEAD_MS
+// The stream's own record, per cube, over STREAM_WINDOW_MS windows: the least queued just before a top-up, the
+// longest gap between top-ups, how often the cube ran dry (by the estimate) and how often a tick came late.
+const STREAM_WINDOW_MS = 10000
+const LATE_TICK_MS = 30
 const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
 // A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
@@ -159,6 +166,13 @@ const GUARD = Object.freeze({
     VALIDATED: false
 })
 const STILL_WINDOW_FIELD = GUARD.STILL_WINDOW_DEG / GUARD.SCAN_HALF_ANGLE_DEG
+// POINT DOTS (2026-11-07, REA, the owner, who runs these cubes: "i dont need tiny rings, jsut points smallest one …
+// lasers are relly safe and not danagerouse setup"; her TouchDesigner draws a seed as a point held still). With laser.json
+// `"dots": true`, a frame of separate dots is not a still beam while there are at least two and no one dot holds more
+// than DOTS_MAX_SHARE of the frame's time. One dot alone (all the power in one spot) and any spot holding half the
+// frame (the dwell rule) still stop the cube. Off unless laser.json says so.
+const DOTS_MAX_SHARE = 0.12
+const dotsAllowed = (list) => list.length >= 2 && list.every((s) => s.kind === 'dot' && s.share <= DOTS_MAX_SHARE)
 const STOP = Object.freeze({ NO_INFO: 'no-info', NO_FRAME: 'no-frame', STILL_BEAM: 'still-beam', LINK_LOST: 'link-lost', FRAME_TOO_LONG: 'frame-too-long', OVER_TEMPERATURE: 'over-temperature' })
 const STOP_TEXT = Object.freeze({
     [STOP.NO_INFO]: 'not armed: the cube never answered the info question',
@@ -319,9 +333,9 @@ const readConfig = (dir) => {
         const base = guardsLib.normaliseGuards(raw.guards)
         const list = Array.isArray(raw.cubes) && raw.cubes.length ? raw.cubes : DEFAULT_CUBES
         const cubes = list.map((c, i) => cubeFrom(c, i, base))
-        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null, guards: base, stopResume: raw.stopResume === 'legacy' ? 'legacy' : 'person' }
+        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null, guards: base, stopResume: raw.stopResume === 'legacy' ? 'legacy' : 'person', dots: raw.dots === true }
     } catch {
-        return { cubes: DEFAULT_CUBES.map((c, i) => cubeFrom(c, i)), zone: normaliseZone(), dacRate: null, guards: guardsLib.DEFAULT_GUARDS, stopResume: 'person' }
+        return { cubes: DEFAULT_CUBES.map((c, i) => cubeFrom(c, i)), zone: normaliseZone(), dacRate: null, guards: guardsLib.DEFAULT_GUARDS, stopResume: 'person', dots: false }
     }
 }
 
@@ -363,6 +377,7 @@ const createLaserEngine = ({
         offBy: null,
         info: null, infoAt: null, heardAt: null,
         bufferFree: null, bufferAt: null, sentSince: 0, streamAt: null, streamCarry: 0,
+        streamNow: null, streamLast: null, streamTotal: { dry: 0, late: 0 },
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
         armed: false, stop: null, stillSince: null,
         pointLoss: { blanked: 0, dropped: 0, blankedTotal: 0, droppedTotal: 0, frames: 0 },
@@ -472,105 +487,27 @@ const createLaserEngine = ({
     const stillOf = (c, frame) => {
         if (!frame) return []
         const prep = prepare(c, frame)
-        return [...frame.rawStill, ...(prep?.still || [])].filter((s) => !allowed(c, s))
-    }
-    // Brightness: the averaged-temperature limiter, and the cube's own temperature warning (byte 5)
-    // takes it straight to the limiter's minimum.
-    const powerOf = (c) => {
-        const scale = guardsLib.powerScale(c.temp.average(), c.guards)
-        return c.info?.temperatureWarning ? Math.min(scale, c.guards.tempMinScale) : scale
-    }
-
-    // The ring buffer cleared (CLEAR_RINGBUFFER 0x8d, twice): what was queued before a stop must not
-    // play when the output comes back. The free count is full again.
-    // Round 3 (re-review R2-1): the clear goes to the command port and the stream to the data port,
-    // and UDP keeps no order between the two — a data message the cube takes BEFORE the clear would
-    // lose its blank bridge to the clear, and the next one would jump lit from the park. So after a
-    // clear nothing streams until the cube has answered a buffer-free question asked after it (0x8a,
-    // on the same command port, so behind the clear) or, failing an answer, a whole tick later; and
-    // the first data after a clear always starts a fresh pass with the blank bridge from where the
-    // beam was parked.
-    const clearBuffer = (c, t) => {
-        send(c, proto.clearRingBuffer(), proto.PORT.CMD)
-        send(c, proto.clearRingBuffer(), proto.PORT.CMD)
-        send(c, proto.getBufferFree(), proto.PORT.CMD)
-        if (c.info?.rxBufferSize) { c.bufferFree = c.info.rxBufferSize; c.bufferAt = t; c.sentSince = 0 }
-        c.clearAt = t
-        c.clearConfirmed = false
-        c.streamAt = null
-        c.streamCarry = 0
-        c.playing = null
-        c.index = 0
-        c.playingPrep = null
-    }
-    const holdingForClear = (c, t) => c.clearAt !== null && !c.clearConfirmed && t - c.clearAt < TICK_MS
-    // The stop's points (laserGuards.parkPath): blank where the beam is, a blank walk to the centre,
-    // parked there — as ≤140-point messages. Data only; the caller sends output-off after.
-    const parkMessages = (c) => {
-        const pts = guardsLib.parkPath(c.lastPoint, planOf(c))
-        const out = []
-        for (let i = 0; i < pts.length; i += proto.MAX_POINTS_PER_MESSAGE) {
-            out.push(proto.encodeSampleData(pts.slice(i, i + proto.MAX_POINTS_PER_MESSAGE), c.message, c.frameNum))
-            c.message = (c.message + 1) & 0xff
+        // A dark frame after a lit one: the cube's queue is emptied too, so no queued lit point plays on.
+        if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) {
+            clearBuffer(c, t)
+            return
         }
-        c.sentSince += pts.length
-        c.lastPoint = [0, 0]
-        c.playingPrep = null
-        return out
-    }
-
-    // A stop, in this order: the ring buffer cleared (twice), the beam parked blank at the centre,
-    // output off (twice; the spec: critical commands twice, they are idempotent). The clear and the
-    // park go to different ports, so the cube may take them in either order — UNVALIDATED on a real
-    // cube; the output-off is what makes it dark.
-    const stopCube = (c, reason, t, detail = null) => {
-        c.stop = { reason, at: t, detail, holder: framesFor(c.id)?.out ?? null, frame: framesFor(c.id) ?? null, personAt: null }
-        c.stops[reason] = (c.stops[reason] || 0) + 1
-        c.stillSince = null
-        c.playing = null
-        c.index = 0
-        clearBuffer(c, t)
-        for (const buf of parkMessages(c)) send(c, buf, proto.PORT.DATA)
-        send(c, proto.setOutput(false), proto.PORT.CMD)
-        send(c, proto.setOutput(false), proto.PORT.CMD)
-        log?.warn?.(`[laser] ${c.id} ${STOP_TEXT[reason]}${detail ? ` (${detail})` : ''}`)
-    }
-    // Back on: the buffer cleared first, so nothing queued before the stop can light.
-    const resumeCube = (c, t) => {
-        c.stop = null
-        c.stillSince = null
-        clearBuffer(c, t)
-        send(c, proto.setOutput(true), proto.PORT.CMD)
-        log?.warn?.(`[laser] ${c.id} resumed on a new frame`)
-    }
-
-    // The next stretch of the cube's frame, as much as its ring buffer has room for, in ≤140-point
-    // messages. Room is estimated as the spec advises: the last free count the cube reported, plus
-    // what it has played since at its DAC rate, minus what was sent since. A new lit frame starts at
-    // the end of the one playing (no torn figures; one pass is at most the frame budget, ≤ 67 ms); a
-    // DARK frame, blackout and stops cut at once (round 2, review §1: no lit point of a replaced
-    // figure after the editor went dark).
-    const stream = (c, frame, t) => {
-        if (!c.ip) return
-        const rate = rateOf(c)
-        if (!rate) return
-        if (holdingForClear(c, t)) return
-        const prep = prepare(c, frame)
-        if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) { c.playing = null; c.index = 0 }
-        // Catch-up pacing (ledger N1501.18): the points due are the cube's rate × the time since the
+        // Catch-up pacing (ledger N1501.18): the points due are the cube's rate x the time since the
         // last stream (the fraction carried), so a late tick sends the points it missed and the mean
         // rate is the DAC rate, not 600 / mean tick. A stall longer than CATCH_UP_MAX_MS is not
         // banked (the buffer would be past full), and the cube's free count still caps the send.
-        const dt = c.streamAt === null ? LEAD_MS : Math.min(Math.max(0, t - c.streamAt), CATCH_UP_MAX_MS)
+        const prevAt = c.streamAt
+        const dt = prevAt === null ? LEAD_MS : Math.min(Math.max(0, t - prevAt), CATCH_UP_MAX_MS)
         c.streamAt = t
         const due = c.streamCarry + (rate * dt) / 1000
         let room = Math.floor(due)
         if (c.bufferFree !== null) {
             let free = c.bufferFree + (rate * (t - (c.bufferAt ?? t))) / 1000 - c.sentSince
-            if (c.info?.rxBufferSize) free = Math.min(free, c.info.rxBufferSize)
-            room = Math.min(room, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
             const size = c.info?.rxBufferSize
+            if (size) free = Math.min(free, size)
+            room = Math.min(room, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
             if (size) room = Math.min(room, Math.max(0, Math.floor(free - (size - (rate * LEAD_MS) / 1000))))
+            noteStream(c, t, size ? ((size - free) * 1000) / rate : null, prevAt)
         }
         c.streamCarry = Math.min(due - Math.floor(due), 1)
         // The next pass of the frame, as optimised; a new frame is reached by a blank bridge.
@@ -690,6 +627,10 @@ const createLaserEngine = ({
     }
 
     const infoView = (c, t) => (c.info ? { ...c.info, ageMs: t - c.infoAt } : null)
+    // The stream's record (noteStream): this window so far, the last whole one, and the counts since the desk started.
+    const ms1 = (v) => (v === null ? null : Math.round(v * 10) / 10)
+    const windowView = (w, t) => (w ? { ms: w.ms ?? t - w.since, tops: w.tops, lowMs: ms1(w.lowMs), maxGapMs: ms1(w.maxGapMs), dry: w.dry, late: w.late } : null)
+    const streamView = (c, t) => ({ cushionMs: CUSHION_MS, now: windowView(c.streamNow, t), last: windowView(c.streamLast, t), total: { ...c.streamTotal } })
     // What the guards did to the frame this cube is drawing: points in and out, the longest steps,
     // and how many times a second the figure is drawn at the cube's rate.
     const pathView = (c) => {
@@ -754,6 +695,8 @@ const createLaserEngine = ({
                 stillDwellShare: GUARD.STILL_DWELL_SHARE,
                 stillHoldMs: GUARD.STILL_HOLD_MS,
                 darkIdleMs: DARK_IDLE_MS,
+                dots: config.dots,
+                dotsMaxShare: DOTS_MAX_SHARE,
                 validated: GUARD.VALIDATED,
                 path: { ...config.guards, referenceRate: guardsLib.REFERENCE_RATE }
             },
@@ -780,7 +723,8 @@ const createLaserEngine = ({
                 nothingToDraw: nothingToDraw(c, t),
                 guards: c.guards,
                 path: pathView(c),
-                temperature: temperatureView(c)
+                temperature: temperatureView(c),
+                stream: streamView(c, t)
             }))
         }
     }
@@ -1081,4 +1025,4 @@ const createLaserEngine = ({
     return { state, setFrame, alive, blackout, dark, arm, frames: framesView, close: shutdown, shutdown, tick, canTake, upsertCube, heardAt }
 }
 
-module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP, OFF, CLAIM_TTL_MS }
+module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, dotsAllowed, DOTS_MAX_SHARE, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, CUSHION_MS, GUARD, STOP, OFF, CLAIM_TTL_MS }

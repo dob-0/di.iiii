@@ -98,6 +98,14 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .master input { width: 110px; }
 .master b { font: 500 11px var(--mono); color: var(--text); width: 30px; text-align: right; }
 .topbo.is-on { background: #fff; color: #000; border-color: #fff; }
+/* The music: a level bar and a dot that lights on each kick, flat like the rest (no glow). */
+.tempo { display: flex; align-items: center; gap: 6px; padding: 6px 10px; flex-wrap: wrap; }
+.meter { display: inline-block; width: 46px; height: 6px; background: var(--field); border: 1px solid var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: var(--accent); }
+.beatdot { width: 8px; height: 8px; border: 1px solid var(--line); background: var(--field); }
+.beatdot.hit { background: #fff; border-color: #fff; }
+.heard { font-size: 11px; color: var(--muted); min-width: 0; white-space: nowrap; }
+.heard.is-locked { color: var(--accent); }
 
 .notice { margin: 0; padding: 8px 12px; background: #2a2210; border-bottom: 1px solid #5a4a24; color: #ffe7b8; }
 
@@ -136,8 +144,8 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .setlist .swatch { display: inline-block; width: 10px; height: 10px; margin: 0 4px 0 2px; border: 1px solid var(--line); vertical-align: -1px; }
 
 #page-control {
-  display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-areas: "bank editor" "stage editor"; height: calc(100vh - var(--bar-h, 47px));
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-areas: "bank bank editor" "preview stage editor"; height: calc(100vh - var(--bar-h, 47px));
 }
 .bank { grid-area: bank; }
 .stage { grid-area: stage; }
@@ -197,6 +205,18 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { padding: 4px 8px; min-height: 28px; font-size: 12px; background: var(--cell); }
 .chip.is-on { border-color: var(--accent); color: var(--accent); }
+/* Send to: which lasers a tile's picture goes to; a tile's lasers as small numbers on its picture. */
+/* A layer the laser's pass has no room for (layersDrawn): struck through. */
+.chip.is-off { text-decoration: line-through; opacity: 0.5; }
+.layercubes { margin-top: 8px; }
+.layercubes .muted { font-size: 12px; margin-top: 4px; }
+.layercubes .muted:empty { display: none; }
+.sendto { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 10px 8px; }
+.sendto .label { font-size: 12px; color: var(--muted, #888); margin-right: 4px; }
+.tile { position: relative; }
+.tile .onlasers { position: absolute; top: 4px; right: 4px; padding: 0 5px; border-radius: 3px; font-size: 11px; line-height: 16px;
+  background: var(--accent); color: #000; pointer-events: none; }
+.tile .onlasers:empty { display: none; }
 .swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
 .swatch { height: 28px; padding: 0; border: 1px solid var(--line); }
 .swatch.is-on { outline: 2px solid #fff; outline-offset: 1px; }
@@ -223,15 +243,26 @@ button.small { min-height: 24px; padding: 2px 8px; }
 .field { display: grid; grid-template-columns: 84px minmax(0, 1fr) 46px; align-items: center; gap: 8px; padding: 3px 0; }
 .field label { color: var(--muted); font-size: 12px; }
 .field input[type=range] { width: 100%; }
+.field input[type=color] { width: 100%; height: 24px; padding: 0; border: 1px solid var(--line); background: none; }
 .field output { font: 500 11px var(--mono); text-align: right; cursor: text; }
 .field input.num { width: 46px; background: var(--field); border: 1px solid var(--accent); font: 500 11px var(--mono); padding: 2px 3px; text-align: right; }
+/* LFO (2026-11-07): the ~ beside an editor slider, its Wave/Every/Depth under it, and the mark of where it has the slider now. */
+.editor .field { grid-template-columns: 84px minmax(0, 1fr) 46px 28px; position: relative; }
+.lfo-btn { padding: 0; min-width: 0; font: 600 15px var(--mono); line-height: 1; }
+.lfo-btn.is-on { color: var(--accent); border-color: var(--accent); }
+.lfo-mark { position: absolute; top: 6px; bottom: 6px; width: 2px; background: var(--accent); border-radius: 1px; pointer-events: none; }
+.lfo { margin: 0 0 6px 12px; padding: 4px 0 2px 10px; border-left: 2px solid var(--accent); }
+.lfo .field { grid-template-columns: 60px minmax(0, 1fr) 46px 28px; }
+.lfo-waves { padding: 2px 0 4px; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
 .empty { padding: 12px 10px; margin: 0; }
-.editor.is-empty .editbody, .editor.is-empty .preview { display: none; }
-/* The Preview: the look open in Edit, drawn here on the desk's beat. */
-.preview { padding: 8px 10px 0; }
-.preview canvas { width: 100%; aspect-ratio: 3 / 2; display: block; background: var(--stagebg); border: 1px solid var(--line); }
-.previewnote { display: block; padding-top: 6px; font-size: 12px; }
+.editor.is-empty .editbody { display: none; }
+/* The Preview: the look open in Edit, drawn on the desk's beat, in its own pane left of the Stage. */
+.previewpane { grid-area: preview; }
+.previewbox { flex: 1; min-height: 0; display: flex; padding: 8px 10px 10px; }
+.previewbox canvas { flex: 1; width: 100%; min-height: 0; display: block; background: var(--stagebg); border: 1px solid var(--line); }
+.previewpane.is-empty .previewbox canvas { visibility: hidden; }
+.previewnote { font-size: 12px; }
 .previewnote.is-live { color: var(--accent); }
 button.icon { min-width: 30px; padding: 6px 8px; font-size: 15px; line-height: 1; }
 /* The keys list: over the page, Esc or Close shuts it. */
@@ -253,6 +284,9 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 .cubetable td { padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; vertical-align: middle; }
 .cubetable td.mono { font-family: var(--mono); font-size: 11px; }
 .cubetable input[type=range] { width: 80px; vertical-align: middle; }
+.cubetable .bright { display: inline-flex; align-items: center; gap: 6px; }
+.cubetable .bright input[type=range] { width: 110px; }
+.cubetable .brightval { font: 500 11px var(--mono); width: 34px; text-align: right; }
 .cubetable .order button { min-height: 24px; padding: 0 6px; }
 .cubetable .ok { color: var(--accent); }
 .cubetable .bad { color: #ff9b93; }
@@ -263,6 +297,25 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
 .cube .cut { flex-basis: 100%; font: 500 11px var(--mono); color: var(--warn); }
 #page-setup .pane > .actions, #found { padding: 0 10px 10px; }
 .foundlist { margin: 0; padding: 0 0 0 18px; font-family: var(--mono); font-size: 11px; }
+/* Mapping and Audio sit under the cubes; Safety keeps the right column beside them. */
+.mappane, .audiopane { grid-column: 1; }
+/* Four stacked panes beside the spanning Safety pane: each keeps its content height (a pane's min-height is 0, which let the grid squeeze them). */
+#page-setup > .pane { min-height: auto; }
+#page-setup > .notes { grid-column: 2; grid-row: 1 / span 4; }
+.audiogrid { padding: 8px 10px 10px; max-width: 560px; }
+.audiogrid .field span { color: var(--muted); font-size: 12px; }
+.audiogrid .field b { font: 500 11px var(--mono); text-align: right; }
+.audiogrid select { grid-column: 2 / span 2; background: var(--field); border: 1px solid var(--line); padding: 5px 6px; min-width: 0; }
+.bands { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 6px 8px; margin: 8px 0; color: var(--muted); font-size: 12px; }
+.bands .meter { width: 100%; height: 8px; }
+.mapwrap { padding: 10px; }
+.mapwrap canvas { display: block; width: min(100%, 520px); aspect-ratio: 1; margin: 0 auto; background: var(--stagebg); border: 1px solid var(--line); touch-action: none; cursor: crosshair; }
+.mapwrap canvas:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+.mapcheck { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+#mapReadout { font-size: 11px; }
+.winnote { margin: 0; padding: 10px; }
+#winReadout { font-size: 11px; }
+#winEditor > .actions { padding: 0 10px 10px; }
 .notes ul { margin: 0; padding: 10px 10px 10px 28px; color: var(--muted); }
 .notes li { margin-bottom: 6px; }
 .notes h2 { padding: 8px 10px 0; }
@@ -287,6 +340,7 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
   .page-tab { min-height: 44px; padding: 0 14px; }
   #page-control { display: flex; flex-direction: column; height: auto; }
   #page-control > .pane { flex: none; }
+  .previewbox canvas { flex: none; aspect-ratio: 3 / 2; }
   .cubes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
   .cube { max-width: none; min-width: 0; }
   .cube canvas { flex: none; aspect-ratio: 1; }
@@ -294,12 +348,17 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
   .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
   .editor { overflow: visible; }
   .field { grid-template-columns: 76px minmax(0, 1fr) 46px; padding: 6px 0; }
+  .editor .field { grid-template-columns: 76px minmax(0, 1fr) 46px 40px; }
+  .lfo .field { grid-template-columns: 52px minmax(0, 1fr) 46px 40px; }
+  .lfo-mark { top: 12px; bottom: 12px; }
   .chip, .swatch, button { min-height: 40px; }
   .swatches { grid-template-columns: repeat(6, 1fr); }
   .swatch, .swatches input[type=color], .addcolour { height: 40px; }
   .mine .del { width: 22px; height: 22px; line-height: 20px; }
   .chooser-grid .swatch { height: 30px; min-height: 0; }
   #page-setup { display: flex; flex-direction: column; }
+  /* Each pane as tall as it needs: the map's square canvas must not be squeezed under Safety. */
+  #page-setup > .pane { flex: none; }
 }
 
 /* ---- Follow light scenes (2026-10-31, the scene link): what the switch followed last, and the Edit select */
@@ -426,18 +485,18 @@ html[data-layout="grid"] .editor > .empty { grid-area: 1 / 2 / 3 / 3; padding: 0
 html[data-layout="grid"] .editbody .group { padding: 0; border: 0; min-width: 0; }
 html[data-layout="grid"] .editbody .grouphead { margin-bottom: 2px; font-size: 11px; line-height: 1.2; }
 html[data-layout="grid"] .editbody > #followGroup { grid-area: 1 / 4; align-self: start; }
-html[data-layout="grid"] .editbody > .group:nth-child(3) { grid-area: 1 / 1; }
+html[data-layout="grid"] .editbody > #colourGroup { grid-area: 1 / 1; }
 html[data-layout="grid"] .editbody > #pictureFields { grid-area: 1 / 2; }
 html[data-layout="grid"] .editbody > #moveFields { grid-area: 1 / 3; }
 html[data-layout="grid"] .editbody > .actions { grid-area: 1 / 4; align-self: end; padding-top: 0; flex-wrap: nowrap; }
 html[data-layout="grid"] .editbody > .actions button { flex: 1 1 0; min-height: 28px; padding: 3px 4px; }
-html[data-layout="grid"] .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 5; display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 3px; max-height: 54px; overflow-y: auto; scrollbar-width: thin; }
-html[data-layout="grid"] body:not(.one-cube) .editbody > .group:nth-child(2) { grid-area: 2 / 1 / 3 / 4; }
+html[data-layout="grid"] .editbody > #shapeGroup { grid-area: 2 / 1 / 3 / 5; display: flex; flex-wrap: wrap; align-items: center; align-content: flex-start; gap: 3px; max-height: 54px; overflow-y: auto; scrollbar-width: thin; }
+html[data-layout="grid"] body:not(.one-cube) .editbody > #shapeGroup { grid-area: 2 / 1 / 3 / 4; }
 html[data-layout="grid"] body:not(.one-cube) .editbody > .group.multi { grid-area: 1 / 4; align-self: end; }
 html[data-layout="grid"] body:not(.one-cube) .editbody > .actions { grid-area: 2 / 4; }
-html[data-layout="grid"] .editbody > .group:nth-child(2) > .grouphead { flex: none; margin: 0 8px 0 0; gap: 10px; }
-html[data-layout="grid"] .editbody > .group:nth-child(2) > .chips { display: contents; }
-html[data-layout="grid"] .editbody > .group:nth-child(2) > #cycleField { flex: 0 0 200px; order: -1; }
+html[data-layout="grid"] .editbody > #shapeGroup > .grouphead { flex: none; margin: 0 8px 0 0; gap: 10px; }
+html[data-layout="grid"] .editbody > #shapeGroup > .chips { display: contents; }
+html[data-layout="grid"] .editbody > #shapeGroup > #cycleField { flex: 0 0 200px; order: -1; }
 html[data-layout="grid"] .editbody .chip { min-height: 24px; padding: 1px 7px; font-size: 11.5px; }
 html[data-layout="grid"] .editbody .check { min-height: 22px; }
 html[data-layout="grid"] .editbody .swatches { grid-template-columns: repeat(9, 24px); gap: 2px; }

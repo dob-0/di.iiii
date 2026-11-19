@@ -83,8 +83,8 @@ describe('nothing is lost', () => {
   it('the .editbody children keep their order: the Grid rules place Shape as child 2 and Colour as child 3', () => {
     const label = (c) => (c.id ? `#${c.id}` : c.querySelector('#shapes') ? 'group:Shape' : c.querySelector('#swatches') ? 'group:Colour' : c.querySelector('#lookCubes') ? 'group.multi:Cubes' : `.${[...c.classList].join('.')}`)
     expect([...doc.getElementById('editor').children].map(label)).toEqual(['#followGroup', 'group:Shape', 'group:Colour', '#pictureFields', '#moveFields', 'group.multi:Cubes', '.actions'])
-    expect(grid('.editbody > .group:nth-child(2)')).toMatch(/grid-area: 2 \/ 1 \/ 3 \/ 5/)
-    expect(grid('.editbody > .group:nth-child(3)')).toMatch(/grid-area: 1 \/ 1/)
+    expect(grid('.editbody > #shapeGroup')).toMatch(/grid-area: 2 \/ 1 \/ 3 \/ 5/)
+    expect(grid('.editbody > #colourGroup')).toMatch(/grid-area: 1 \/ 1/)
   })
   it('the base rules of the top bar and the stops are the ones Classic had (the Grid block overrides them only under its own scope)', () => {
     expect(classic('.stops')).toBe('flex: none; margin-left: auto; display: flex; align-items: center; gap: 6px; min-height: 30px;')

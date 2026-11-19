@@ -83,7 +83,7 @@ const FIND_GAP_MS = 5000
 //   GET  /laser/desk/api/state the bank, the live look, master, BPM, blackout, each cube's desk setup and hold
 //   GET  /laser/desk/api/view  what the engine keeps for each cube now (after the zone), rounded: the stage view
 //   GET  /laser/desk/api/thumbs a small picture of every look, for the bank's tiles
-//   POST /laser/desk/api/go    { look } — that look on the cubes        POST …/live { …fields } — edit the live look
+//   POST /laser/desk/api/go    { look, to? } — that look on the cubes (to: only those cube ids; the rest keep theirs)        POST …/live { …fields } — edit the live look
 //   POST /laser/desk/api/store { id?, name?, look? } — the live look (or the page's Preview) into its tile, or a new one
 //   POST /laser/desk/api/looks/rename { id, name } · …/looks/delete { id } · …/looks/order { ids }
 //   POST /laser/desk/api/looks/edit { id, …fields } — change a look of the bank (the cubes follow when it is on them)
@@ -113,6 +113,29 @@ const PROBE_WAIT_MS = 800
 // function as a CommonJS module; require('./x.cjs') between them resolves inside the script. Installs ship shared/
 // (scripts/pack-runtime.mjs), so this works on an installed di as in a checkout.
 const DESK_LIB_FILES = ['laserFrame.cjs', 'laserShapes.cjs', 'laserLook.cjs']
+
+// The desk page's version (2026-11-01, the owner: "how can we do not after any changes refresh window i want work also in
+// thime of show"): when this server started, and when the page's own files last changed. A desk page that sees it change
+// reloads itself where it was (ui/desk.js), so an update reaches the desk with no hand on the browser. Read at most once
+// a second.
+const DESK_UI_DIR = path.join(__dirname, '../laser/ui')
+const DESK_STARTED_AT = Date.now()
+const deskVersion = (() => {
+  let at = 0
+  let text = ''
+  return () => {
+    const t = Date.now()
+    if (t - at < 1000 && text) return text
+    at = t
+    let newest = 0
+    try {
+      for (const name of fs.readdirSync(DESK_UI_DIR)) newest = Math.max(newest, fs.statSync(path.join(DESK_UI_DIR, name)).mtimeMs)
+    } catch { /* read again on the next ask */ }
+    text = `${DESK_STARTED_AT}-${Math.round(newest)}`
+    return text
+  }
+})()
+
 const buildDeskLib = () => {
   const dir = path.join(__dirname, '../../../shared')
   const defs = DESK_LIB_FILES.map((name) => `defs[${JSON.stringify(name)}] = function (module, exports, require) {\n${fs.readFileSync(path.join(dir, name), 'utf8')}\n}`)
@@ -352,10 +375,10 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
 
   // ---- the desk
   const answer = (res, out) => res.status(out.ok ? 200 : out.status || 400).json(out)
-  router.get('/desk/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().state()) })
+  router.get('/desk/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getDesk().state(), version: deskVersion() }) })
   router.get('/desk/api/view', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().view()) })
   router.get('/desk/api/thumbs', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().thumbs()) })
-  router.post('/desk/api/go', requireSameMachine, (req, res) => answer(res, getDesk().go(req.body?.look)))
+  router.post('/desk/api/go', requireSameMachine, (req, res) => answer(res, getDesk().go(req.body?.look, req.body?.to)))
   router.post('/desk/api/live', requireSameMachine, (req, res) => answer(res, getDesk().editLive(req.body || {})))
   router.post('/desk/api/store', requireSameMachine, (req, res) => answer(res, getDesk().store({ id: req.body?.id, name: req.body?.name, look: req.body?.look })))
   router.post('/desk/api/looks/rename', requireSameMachine, (req, res) => answer(res, getDesk().rename(req.body?.id, req.body?.name)))
@@ -376,6 +399,9 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.post('/desk/api/follow', requireSameMachine, (req, res) => answer(res, getDesk().setFollowLight(req.body?.on)))
   router.post('/desk/api/looks/follows', requireSameMachine, (req, res) => answer(res, getDesk().setFollows(req.body?.id, req.body?.scene)))
   router.get('/desk/api/follows', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(followingDesk()?.followMap() ?? { ok: true, on: false, links: {}, table: {} }) })
+  router.post('/desk/api/maptest', requireSameMachine, (req, res) => answer(res, getDesk().setMapTest(req.body?.id, req.body?.on === true)))
+  router.post('/desk/api/audio', requireSameMachine, (req, res) => answer(res, getDesk().hearAudio(req.body || {})))
+  router.post('/desk/api/sync', requireSameMachine, (req, res) => answer(res, req.body?.resync === true ? getDesk().resync() : getDesk().followBeat(req.body || {})))
   router.post('/desk/api/release', stopGate, (req, res) => answer(res, getDesk().release()))
   // Putting the cubes dark is a stop (stopGate); lifting the blackout lights them, so it is as strict as Arm. `on` is a
   // boolean or the route answers 400 — never a toggle (review 1218 M1).
