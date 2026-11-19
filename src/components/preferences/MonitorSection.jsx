@@ -5,6 +5,7 @@ import { timeAgo, formatBytes, ago } from './monitorFormat.js'
 import MonitorOverview, { CountTiles, heroState, tierLabel, tierState, shortCommit } from './MonitorOverview.jsx'
 import { diffSnapshots, pushEvents } from './monitorFeed.js'
 import MonitorMap, { useNarrow } from './MonitorMap.jsx'
+import { layoutMonitorMap } from './monitorMapLayout.js'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
 import MonitorParts from './MonitorParts.jsx'
 import MonitorPrs from './MonitorPrs.jsx'
@@ -444,7 +445,7 @@ export default function MonitorSection({ onStats }) {
                     {tab === 'map' ? (
                         <ModuleSection className="monitor-map-section" title="Map" subtitle="Machines, tiers, spaces and shows — select a node for its details">
                             <MonitorMap map={snap?.map} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}
-                                live={streaming && !paused} onPick={pickNode} />
+                                live={streaming && !paused} kinds layoutFn={layoutMonitorMap} onPick={pickNode} />
                         </ModuleSection>
                     ) : null}
                     {tab === 'workspace' ? (

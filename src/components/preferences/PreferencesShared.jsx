@@ -136,7 +136,7 @@ export function SectionNav({ sections = [], activeKey, onSelect }) {
         <button type="button" className="preferences-nav-toggle" aria-expanded={open} aria-controls="preferences-nav-list" data-nav-toggle=""
             onClick={() => setOpen((o) => !o)}>
             <span className="preferences-nav-toggle-label">{active?.label || 'Sections'}</span>
-            <span className="preferences-nav-toggle-hint">{open ? 'Close' : `${sections.length} sections`}</span>
+            <span className="preferences-nav-toggle-hint">{open ? 'Close' : 'Menu'}</span>
         </button>
         <nav className="preferences-nav" id="preferences-nav-list" data-open={open ? 'true' : 'false'} aria-label="Admin sections" ref={navRef}>
             {sections.map((section) => {
