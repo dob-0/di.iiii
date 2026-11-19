@@ -6,9 +6,8 @@
 // cubes (lasercubeProtocol.js) on a wired network.
 //
 // The rules that keep a class-4 laser from doing harm, in the order they apply:
-//   1. DISARMED at every start. Nothing is sent to a cube — not a blank point — until a person arms.
-//      In 'click' mode (the default) that person's On is the yes; in 'phrase' mode (DI_LASER_SIGN_OFF=phrase)
-//      arming takes the exact sign-off phrase (ARM_PHRASE): the laser safety officer's
+//   1. DISARMED at every start. Nothing is sent to a cube — not a blank point — until someone arms,
+//      and arming takes the exact sign-off phrase (ARM_PHRASE): the laser safety officer's
 //      assessment comes first (IEC 60825-1; MOXIR's policy: owner sign-off owed). It is never
 //      remembered across a restart.
 //   2. The KEEP-IN ZONE, per cube, in the cube's own field (x, y -1…1): a point outside it is
@@ -84,6 +83,10 @@ const guardsLib = require('./laserGuards')
 
 const ARM_PHRASE = 'the laser safety officer has signed off'
 const DEFAULT_ZONE = Object.freeze({ xMin: -1, xMax: 1, yMin: 0, yMax: 1 })
+// The stream's own record, per cube, over STREAM_WINDOW_MS windows: the least queued just before a top-up, the
+// longest gap between top-ups, how often the cube ran dry (by the estimate) and how often a tick came late.
+const STREAM_WINDOW_MS = 10000
+const LATE_TICK_MS = 30
 const DEFAULT_CUBES = Object.freeze(Array.from({ length: 6 }, (_, i) => ({ id: `cube-${i + 1}`, name: `Cube ${i + 1}`, ip: null })))
 const TICK_MS = 20
 const BUFFER_MARGIN = 200
@@ -99,13 +102,8 @@ const CATCH_UP_MAX_MS = 100
 // second set), 80 ms 3 of 3; without it no value 40-120 passed (the misses were ticks of 26-46 ms
 // against a 20 ms queue, not stalls longer than the lead). So 60 is the smallest that passes.
 const LEAD_MS = 60
-// Emilya's REA festival cushion (2026-11-07) is the same idea as LEAD_MS above (dev's catch-up); merged 2026-11-20 the
-// pacing is dev's and her name stays as an alias, so her stream record below reads against the one number.
+// Emilya's name for the same thing (PR #1218 topped the cube up to CUSHION_MS = 100): one pacing, dev's LEAD_MS; the alias keeps her name.
 const CUSHION_MS = LEAD_MS
-// The stream's own record, per cube, over STREAM_WINDOW_MS windows: the least queued just before a top-up, the
-// longest gap between top-ups, how often the cube ran dry (by the estimate) and how often a tick came late.
-const STREAM_WINDOW_MS = 10000
-const LATE_TICK_MS = 30
 const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
 // A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
@@ -378,7 +376,7 @@ const createLaserEngine = ({
         offBy: null,
         info: null, infoAt: null, heardAt: null,
         bufferFree: null, bufferAt: null, sentSince: 0, streamAt: null, streamCarry: 0,
-        streamNow: null, streamLast: null, streamTotal: { dry: 0, late: 0 },
+        topAt: null, streamNow: null, streamLast: null, streamTotal: { dry: 0, late: 0 },
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
         armed: false, stop: null, stillSince: null,
         pointLoss: { blanked: 0, dropped: 0, blankedTotal: 0, droppedTotal: 0, frames: 0 },
@@ -488,27 +486,134 @@ const createLaserEngine = ({
     const stillOf = (c, frame) => {
         if (!frame) return []
         const prep = prepare(c, frame)
+        // laser.json `dots`: a frame of many small dots, none holding more than DOTS_MAX_SHARE, is not still.
+        const posted = config.dots && dotsAllowed(frame.rawStill) ? [] : frame.rawStill
+        const sent = config.dots && dotsAllowed(prep?.still || []) ? [] : prep?.still || []
+        return [...posted, ...sent].filter((s) => !allowed(c, s))
+    }
+    // Brightness: the averaged-temperature limiter, and the cube's own temperature warning (byte 5)
+    // takes it straight to the limiter's minimum.
+    const powerOf = (c) => {
+        const scale = guardsLib.powerScale(c.temp.average(), c.guards)
+        return c.info?.temperatureWarning ? Math.min(scale, c.guards.tempMinScale) : scale
+    }
+
+    // The ring buffer cleared (CLEAR_RINGBUFFER 0x8d, twice): what was queued before a stop must not
+    // play when the output comes back. The free count is full again.
+    // Round 3 (re-review R2-1): the clear goes to the command port and the stream to the data port,
+    // and UDP keeps no order between the two — a data message the cube takes BEFORE the clear would
+    // lose its blank bridge to the clear, and the next one would jump lit from the park. So after a
+    // clear nothing streams until the cube has answered a buffer-free question asked after it (0x8a,
+    // on the same command port, so behind the clear) or, failing an answer, a whole tick later; and
+    // the first data after a clear always starts a fresh pass with the blank bridge from where the
+    // beam was parked.
+    const clearBuffer = (c, t) => {
+        send(c, proto.clearRingBuffer(), proto.PORT.CMD)
+        send(c, proto.clearRingBuffer(), proto.PORT.CMD)
+        send(c, proto.getBufferFree(), proto.PORT.CMD)
+        if (c.info?.rxBufferSize) { c.bufferFree = c.info.rxBufferSize; c.bufferAt = t; c.sentSince = 0 }
+        c.clearAt = t
+        c.clearConfirmed = false
+        c.streamAt = null
+        c.topAt = null
+        c.streamCarry = 0
+        c.playing = null
+        c.index = 0
+        c.playingPrep = null
+    }
+    const holdingForClear = (c, t) => c.clearAt !== null && !c.clearConfirmed && t - c.clearAt < TICK_MS
+    // The stop's points (laserGuards.parkPath): blank where the beam is, a blank walk to the centre,
+    // parked there — as ≤140-point messages. Data only; the caller sends output-off after.
+    const parkMessages = (c) => {
+        const pts = guardsLib.parkPath(c.lastPoint, planOf(c))
+        const out = []
+        for (let i = 0; i < pts.length; i += proto.MAX_POINTS_PER_MESSAGE) {
+            out.push(proto.encodeSampleData(pts.slice(i, i + proto.MAX_POINTS_PER_MESSAGE), c.message, c.frameNum))
+            c.message = (c.message + 1) & 0xff
+        }
+        c.sentSince += pts.length
+        c.lastPoint = [0, 0]
+        c.playingPrep = null
+        return out
+    }
+
+    // A stop, in this order: the ring buffer cleared (twice), the beam parked blank at the centre,
+    // output off (twice; the spec: critical commands twice, they are idempotent). The clear and the
+    // park go to different ports, so the cube may take them in either order — UNVALIDATED on a real
+    // cube; the output-off is what makes it dark.
+    const stopCube = (c, reason, t, detail = null) => {
+        c.stop = { reason, at: t, detail, holder: framesFor(c.id)?.out ?? null, frame: framesFor(c.id) ?? null, personAt: null }
+        c.stops[reason] = (c.stops[reason] || 0) + 1
+        c.stillSince = null
+        c.playing = null
+        c.index = 0
+        clearBuffer(c, t)
+        for (const buf of parkMessages(c)) send(c, buf, proto.PORT.DATA)
+        send(c, proto.setOutput(false), proto.PORT.CMD)
+        send(c, proto.setOutput(false), proto.PORT.CMD)
+        log?.warn?.(`[laser] ${c.id} ${STOP_TEXT[reason]}${detail ? ` (${detail})` : ''}`)
+    }
+    // Back on: the buffer cleared first, so nothing queued before the stop can light.
+    const resumeCube = (c, t) => {
+        c.stop = null
+        c.stillSince = null
+        clearBuffer(c, t)
+        send(c, proto.setOutput(true), proto.PORT.CMD)
+        log?.warn?.(`[laser] ${c.id} resumed on a new frame`)
+    }
+
+    // The next stretch of the cube's frame, as much as its ring buffer has room for, in ≤140-point
+    // messages. Room is estimated as the spec advises: the last free count the cube reported, plus
+    // what it has played since at its DAC rate, minus what was sent since. A new lit frame starts at
+    // the end of the one playing (no torn figures; one pass is at most the frame budget, ≤ 67 ms); a
+    // DARK frame, blackout and stops cut at once (round 2, review §1: no lit point of a replaced
+    // figure after the editor went dark).
+    // One top-up of a cube, on its record: `queuedMs` is what it held just before, by the estimate (<= 0: it ran dry and
+    // the beam waited). The first top-up after a clear counts no gap and no dry spell: the clear emptied it on purpose.
+    const noteStream = (c, t, queuedMs) => {
+        const gap = c.topAt === null ? null : t - c.topAt
+        c.topAt = t
+        if (!c.streamNow || t - c.streamNow.since >= STREAM_WINDOW_MS) {
+            if (c.streamNow) c.streamLast = { ...c.streamNow, ms: t - c.streamNow.since }
+            c.streamNow = { since: t, tops: 0, lowMs: null, maxGapMs: 0, dry: 0, late: 0 }
+        }
+        const w = c.streamNow
+        w.tops += 1
+        if (gap === null) return
+        if (queuedMs !== null) {
+            w.lowMs = w.lowMs === null ? queuedMs : Math.min(w.lowMs, queuedMs)
+            if (queuedMs <= 0) { w.dry += 1; c.streamTotal.dry += 1 }
+        }
+        w.maxGapMs = Math.max(w.maxGapMs, gap)
+        if (gap > LATE_TICK_MS) { w.late += 1; c.streamTotal.late += 1 }
+    }
+
+    const stream = (c, frame, t) => {
+        if (!c.ip) return
+        const rate = rateOf(c)
+        if (!rate) return
+        if (holdingForClear(c, t)) return
+        const prep = prepare(c, frame)
         // A dark frame after a lit one: the cube's queue is emptied too, so no queued lit point plays on.
         if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) {
             clearBuffer(c, t)
             return
         }
-        // Catch-up pacing (ledger N1501.18): the points due are the cube's rate x the time since the
+        // Catch-up pacing (ledger N1501.18): the points due are the cube's rate × the time since the
         // last stream (the fraction carried), so a late tick sends the points it missed and the mean
         // rate is the DAC rate, not 600 / mean tick. A stall longer than CATCH_UP_MAX_MS is not
         // banked (the buffer would be past full), and the cube's free count still caps the send.
-        const prevAt = c.streamAt
-        const dt = prevAt === null ? LEAD_MS : Math.min(Math.max(0, t - prevAt), CATCH_UP_MAX_MS)
+        const dt = c.streamAt === null ? LEAD_MS : Math.min(Math.max(0, t - c.streamAt), CATCH_UP_MAX_MS)
         c.streamAt = t
         const due = c.streamCarry + (rate * dt) / 1000
         let room = Math.floor(due)
         if (c.bufferFree !== null) {
             let free = c.bufferFree + (rate * (t - (c.bufferAt ?? t))) / 1000 - c.sentSince
-            const size = c.info?.rxBufferSize
-            if (size) free = Math.min(free, size)
+            if (c.info?.rxBufferSize) free = Math.min(free, c.info.rxBufferSize)
             room = Math.min(room, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
+            const size = c.info?.rxBufferSize
             if (size) room = Math.min(room, Math.max(0, Math.floor(free - (size - (rate * LEAD_MS) / 1000))))
-            noteStream(c, t, size ? ((size - free) * 1000) / rate : null, prevAt)
+            noteStream(c, t, size ? ((size - free) * 1000) / rate : null)
         }
         c.streamCarry = Math.min(due - Math.floor(due), 1)
         // The next pass of the frame, as optimised; a new frame is reached by a blank bridge.
@@ -695,9 +800,9 @@ const createLaserEngine = ({
                 stillWindowDeg: GUARD.STILL_WINDOW_DEG,
                 stillDwellShare: GUARD.STILL_DWELL_SHARE,
                 stillHoldMs: GUARD.STILL_HOLD_MS,
-                darkIdleMs: DARK_IDLE_MS,
                 dots: config.dots,
                 dotsMaxShare: DOTS_MAX_SHARE,
+                darkIdleMs: DARK_IDLE_MS,
                 validated: GUARD.VALIDATED,
                 path: { ...config.guards, referenceRate: guardsLib.REFERENCE_RATE }
             },
