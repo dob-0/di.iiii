@@ -48,14 +48,14 @@ describe('report store', () => {
     expect(store.list()[0].panels.agents.rows).toHaveLength(1)
   })
 
-  it('refuses a bad host, bad panels, a body over the cap, and a 41st host', () => {
+  it('refuses a bad host, bad panels, a body over the cap, and a 121st host', () => {
     const store = createReportStore()
     expect(store.put({ host: '../x', panels }).error).toBe('bad_host')
     expect(store.put({ host: 'ok', panels: [] }).error).toBe('bad_panels')
     expect(store.put(null).error).toBe('bad_report')
     const big = { host: 'big', panels: { tasks: { ok: true, rows: [{ lines: ['x'.repeat(300 * 1024)] }] } } }
     expect(store.put(big)).toMatchObject({ error: 'too_large', status: 413 })
-    for (let i = 0; i < 40; i += 1) store.put({ host: `h${i}`, panels }, { subject: `s${i}` })
+    for (let i = 0; i < 120; i += 1) store.put({ host: `h${i}`, panels }, { subject: `s${i}` })
     expect(store.put({ host: 'one-more', panels }, { subject: 'late' }).status).toBe(429)
   })
 
