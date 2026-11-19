@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
+import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -134,5 +134,23 @@ describe('sending', () => {
         await runMonitor(parseArgs(['monitor', 'report', '--every', '45']), { ...deps(home, async () => { sends += 1; return { ok: true, status: 200, json: async () => ({}) } }, { loops: 3, sleep: async (ms) => { waits.push(ms) } }), ...io })
         expect(sends).toBe(3)
         expect(waits).toEqual([45000, 45000])
+    })
+})
+
+describe('repoRoot', () => {
+    const make = (layout) => {
+        const base = fs.mkdtempSync(path.join(os.tmpdir(), 'di-root-'))
+        fs.mkdirSync(path.join(base, 'serverXR', 'src'), { recursive: true })
+        fs.writeFileSync(path.join(base, 'serverXR', 'src', 'monitorStore.js'), '')
+        fs.mkdirSync(path.join(base, ...layout), { recursive: true })
+        return base
+    }
+    it('finds serverXR from the repo layout (scripts/di)', () => {
+        const base = make(['scripts', 'di'])
+        expect(repoRoot(path.join(base, 'scripts', 'di'))).toBe(base)
+    })
+    it('finds serverXR from the installed layout (cli)', () => {
+        const base = make(['cli'])
+        expect(repoRoot(path.join(base, 'cli'))).toBe(base)
     })
 })
