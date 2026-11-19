@@ -68,7 +68,7 @@ const signatures = (snap) => {
     const panels = snap?.panels
     const sig = {}
     for (const m of panels?.machines?.rows || []) sig[`m:${m.id}`] = String(m.online)
-    for (const c of panels?.credits?.rows || []) sig[`cr:${c.id}`] = `${c.available}:${c.meter}`
+    for (const c of panels?.credits?.rows || []) sig[`cr:${c.id}`] = String(c.available)
     for (const n of panels?.network?.rows || []) sig[`n:${n.id}`] = `${n.ok}:${n.status}`
     for (const a of panels?.agents?.rows || []) sig[`a:${a.machine || ''}${a.sessionId}`] = a.status
     for (const s of panels?.services?.rows || []) sig[`s:${s.unit}`] = s.active
@@ -571,7 +571,7 @@ export default function MonitorSection({ onStats }) {
                                 <Row key={c.id} id={`cr:${c.id}`} tone={c.available ? 'success' : 'warning'} flash={flash(`cr:${c.id}`)}
                                     selected={selected?.kind === 'credit' && selected.id === c.id} onSelect={() => pick('credit', c)}>
                                     <span className="monitor-name">{c.name}</span>
-                                    <span className="monitor-meta">{c.available ? 'ready' : 'not ready'} · {c.meter}{c.why ? ` · ${c.why}` : ''}</span>
+                                    <span className="monitor-meta">{[c.available ? 'ready' : 'not ready', c.meter, c.why].filter(Boolean).join(' · ')}</span>
                                 </Row>
                             ))}
                         </div>

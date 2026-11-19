@@ -32,7 +32,7 @@ const DEFAULT_PROBES = [
 function run(command, args, { timeout = PANEL_TIMEOUT_MS, cwd } = {}) {
   return new Promise((resolve, reject) => {
     execFile(command, args, { timeout, cwd, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
-      if (error) reject(error)
+      if (error) { error.stdout = String(stdout || ''); reject(error) }
       else resolve(String(stdout))
     })
   })
@@ -393,11 +393,15 @@ function createMonitorStore({
     const list = (Array.isArray(config.feeds) ? config.feeds : []).filter((f) => f.panel === 'credits' && f.kind === 'command' && f.command).slice(0, 1)
     if (!list.length) return { configured: 0, rows: [], ready: 0, total: 0 }
     // the command is killed by runCommand's own timeout, so a hung probe never leaves a process behind
-    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command], { timeout: 8000 }), 8500)
+    // di-credits exits 1 when no route is ready, and still prints the full list: that list is what this panel is for
+    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command], { timeout: 8000 }).catch((error) => {
+      if (error && typeof error.stdout === 'string' && error.stdout.trim().startsWith('[') && !error.killed) return error.stdout
+      throw error
+    }), 8500)
     let parsed
     try { parsed = JSON.parse(out) } catch { throw new Error('the credits command did not print JSON') }
     const rows = sanitizeCredits(parsed)
-    if (!rows || rows.length !== parsed.length) throw new Error('the credits list was not in the expected shape')
+    if (!rows || rows.dropped) throw new Error('the credits list was not in the expected shape')
     return { configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length }
   }
 

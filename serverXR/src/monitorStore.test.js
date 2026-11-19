@@ -322,4 +322,25 @@ describe('monitor devices and credits', () => {
     const store = createMonitorStore({ home, runCommand: async (c) => (c === 'tailscale' ? tailscale : '{"a":1}'), fetchImpl: null })
     expect((await store.getMonitor()).panels.credits).toMatchObject({ ok: false })
   })
+
+  it('credits: a command that exits 1 (no route ready) still shows its list', async () => {
+    const home = tmp()
+    fs.mkdirSync(path.join(home, '.di'))
+    fs.writeFileSync(path.join(home, '.di', 'monitor.json'), JSON.stringify({ feeds: [{ panel: 'credits', kind: 'command', command: 'c' }] }))
+    const list = JSON.stringify([{ route: 'plan:dob', available: false, meter: '', have: 'login', why: 'limit' }])
+    const store = createMonitorStore({ home, fetchImpl: null, runCommand: async (c) => {
+      if (c === 'tailscale') return tailscale
+      throw Object.assign(new Error('Command failed'), { stdout: list, code: 1 })
+    } })
+    expect((await store.getMonitor()).panels.credits).toMatchObject({ ok: true, ready: 0, total: 1 })
+  })
+
+  it('credits: more than 24 routes are cut quietly; a model id in the text is kept', async () => {
+    const { sanitizeCredits } = require('./monitorCredits.js')
+    const rows = sanitizeCredits(Array.from({ length: 30 }, (_, i) => ({ route: `r${i}`, why: 'claude-sonnet-4-5-20250929-something' })))
+    expect(rows).toHaveLength(24)
+    expect(rows.dropped).toBe(0)
+    expect(rows[0].why).toBe('claude-sonnet-4-5-20250929-something')
+    expect(sanitizeCredits([{ route: 'a' }, null]).dropped).toBe(1)
+  })
 })

@@ -451,6 +451,10 @@ describe('a reported credits panel', () => {
     expect(store.list()[0].panels.credits).toMatchObject({ ok: true, ready: 1, total: 2, rows })
     store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows: [{ label: 'x' }] } } })
     expect(store.list()[0].panels.credits).toMatchObject({ ok: false, total: 0 })
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows: { a: 1 } } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: false })
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1 } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: false })
   })
 
   it('keeps a long word and a rule line, masks a key shape', () => {
@@ -458,6 +462,7 @@ describe('a reported credits panel', () => {
     const [row] = sanitizeCredits([{ route: 'x', meter: '-'.repeat(40), have: 'hf_abcdefghijklmnop', why: 'internationalizationinternationalization' }])
     expect(row.meter).toBe('-'.repeat(40))
     expect(row.have).toBe('(masked)')
+    expect(row.id).toMatch(/^r[0-9a-f]{8}$/)
     expect(row.why).toBe('internationalizationinternationalization')
   })
 })
