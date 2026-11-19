@@ -11,4 +11,8 @@
   does not know is refused (exit 2), so a mistyped `--data-dir` never falls back to the default folder.
 - On another machine di's own Node is used when it is there, then the one on PATH; the per-browser stores and the save
   time come from this code tree, so they are left out there and the text says so.
+- Sizes, per document that holds a show: the bytes as saved, the compact characters (whole, each show part, and whole
+  without the show part) and gzip at level 6 with and without the show part. A door may compress at another level or not
+  at all, so the text names the level. Of the other data folders it saw, one is called "the same folder as the one
+  read" only when it is that folder.
 - Undo: remove the command. Plan: `docs/architecture/SHOW_IN_THE_PROJECT.md`, step 1.

@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -74,6 +75,12 @@ describe('exact counts on the made-up home', () => {
         expect(first).toMatchObject({ n: 1, space: 1, lamps: 2, looks: 2, cues: 3, lasers: 1 })
         expect(first.gzipWith).toBeGreaterThan(first.gzipWithout)
         expect(first.partChars.lamps).toBeGreaterThan(0)
+        // the sizes of section 4, worked out here from the saved file and from the same document without its show part
+        const saved = JSON.stringify(JSON.parse(fs.readFileSync(path.join(DATA, 'spaces/ZZID-spaceA/projects/ZZID-p1/document.json'), 'utf8')))
+        const bare = JSON.stringify({ entities: [{ id: 'ZZID-l1', components: {} }, { id: 'ZZID-l2', components: {} }, { id: 'ZZID-e3', components: { beam: {} } }], mappingState: {} })
+        expect(d.gzipLevel).toBe(6)
+        expect([first.compactChars, first.compactWithout]).toEqual([saved.length, bare.length])
+        expect([first.gzipWith, first.gzipWithout]).toEqual([zlib.gzipSync(saved, { level: 6 }).length, zlib.gzipSync(bare, { level: 6 }).length])
     })
     it('desk files, every kind, and a kind the list does not name', () => {
         const files = withIds().deskFiles
@@ -102,6 +109,19 @@ describe('exact counts on the made-up home', () => {
         const r = withIds()
         expect(r.data.rule).toMatch(/~\/\.di/)
         expect(r.data.others).toEqual([expect.objectContaining({ state: 'there, not read' })])
+    })
+    it('calls a candidate the same folder only when it is the folder that was read', () => {
+        const home = path.join(ROOT, 'linked')
+        const older = path.join(home, '.local', 'share', 'di.iiii', 'data')
+        const named = path.join(home, 'named')
+        for (const dir of [older, named]) fs.mkdirSync(path.join(dir, 'spaces'), { recursive: true })
+        fs.mkdirSync(path.join(home, '.di'), { recursive: true })
+        fs.symlinkSync(older, path.join(home, '.di', 'data'))
+        const states = (extra) => count({ ids: true, home, env: {}, ...extra }).data.others.map((o) => o.state)
+        // ~/.di/data is a link to the older path: read by the first rule, the older path is that same folder
+        expect(states({})).toEqual(['there, the same folder as the one read'])
+        // another folder is named: the two candidates are one folder, and neither of them was read
+        expect(states({ dataDir: named })).toEqual(['there, not read', 'there, not read'])
     })
     it('an unknown venue is refused with exit 2', async () => {
         expect((await run(['count', '--venue', 'no-such-venue-zz'])).code).toBe(2)
@@ -269,6 +289,24 @@ describe('round 2: counts', () => {
         expect(r.deskFiles[0].names.copiesFoundInOwnSpace).toBe(1)
         expect(r.names).toMatchObject({ copiesFoundInOwnSpace: 1, copiesFound: 2 })
         expect((await runIn(h, ['count'])).text).toContain("found in the file's own space: 1")
+    })
+    it('A2b section 4 gives the whole document without its show part and names the gzip level it used', async () => {
+        const big = {
+            entities: Array.from({ length: 60 }, (_, i) => lampT(`ZZID-l${i}`, { universe: i % 4, address: i * 7, mode: `ZZV mode ${i % 5}` })),
+            title: 'ZZV plain',
+            mappingState: { cues: Array.from({ length: 40 }, (_, i) => ({ id: `ZZID-c${i}`, lightLook: `ZZID-k${i % 9}` })) }
+        }
+        const h = mk({ [P('ZZID-s', 'ZZID-p')]: big })
+        const x = cnt(h).documents.list[0]
+        const whole = JSON.stringify(big)
+        const bare = JSON.stringify({ entities: big.entities.map((ent) => ({ id: ent.id, components: {} })), title: 'ZZV plain', mappingState: {} })
+        const gz = (s, level) => zlib.gzipSync(s, { level }).length
+        expect(gz(whole, 1)).not.toBe(gz(whole, 6)) // this made-up document tells the levels apart
+        expect([x.compactChars, x.compactWithout, x.gzipWith, x.gzipWithout]).toEqual([whole.length, bare.length, gz(whole, 6), gz(bare, 6)])
+        const f = (v) => v.toLocaleString('en-US')
+        const text = (await runIn(h, ['count'])).text
+        expect(text).toContain('whole without the show part | gzip level 6, with / without the show part)')
+        expect(text).toContain(` / ${f(bare.length)} | ${f(gz(whole, 6))} / ${f(gz(bare, 6))}`)
     })
     it('A2 blankBytes is the count of 0x20 0x09 0x0A 0x0D as saved, printed after the bytes', async () => {
         const h = mk({ [P('s1', 'p1')]: doc({ entities: [lampT('e1')], title: 'a b' }) })

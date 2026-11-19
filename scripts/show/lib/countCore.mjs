@@ -28,6 +28,7 @@ const LIGHT_KINDS = [['fixtures', 'lamps'], ['looks', 'looks'], ['scenes', 'ligh
     ['fx', 'effect settings (keys of fx)'], ['lfos', 'LFOs'], ['customProfiles', 'custom fixture types'], ['groups', 'groups'], ['strips', 'strips']]
 const LASER_KINDS = [['looks', 'looks'], ['palette', 'palette entries']]
 const SCOPES = ['each', 'type', 'global'] // serverXR/src/lighting/looks.js:44
+const GZIP_LEVEL = 6 // printed with the sizes: a door may compress at another level, or not at all
 
 const notThere = (e) => e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')
 const expand = (p, home) => (p === '~' ? home : /^~[\\/]/.test(p) ? path.join(home, p.slice(2)) : p)
@@ -53,14 +54,12 @@ function findData(o) {
     const entries = cands.map((c) => ({ ...c, real: realOrNull(c.dir) }))
     const first = entries.find((e) => e.named)
     const chosen = first ? (first.real === null ? null : first) : entries.find((e) => e.real !== null) || null
-    const seen = []
     const others = []
     for (const e of entries) {
-        if (e === chosen) { seen.push(e); continue }
+        if (e === chosen) continue
         if (e.real === null) { if (e.named) others.push({ rule: e.rule, dir: e.dir, state: 'named, not there' }); continue }
-        if (chosen === null) { others.push({ rule: e.rule, dir: e.dir, state: 'there, not read' }); continue }
-        others.push({ rule: e.rule, dir: e.dir, state: seen.some((s) => s.real === e.real) ? 'there, the same folder as the one read' : 'there, not read' })
-        seen.push(e)
+        // "the same folder" only for the folder that was read: two candidates that are one folder, neither of them read, are both "not read"
+        others.push({ rule: e.rule, dir: e.dir, state: chosen && e.real === chosen.real ? 'there, the same folder as the one read' : 'there, not read' })
     }
     const reason = first && first.real === null ? `the folder named by ${first.name} is not there` : chosen ? null : 'no data folder found'
     return { chosen, others, reason, spacesEnv: env.SPACES_DIR ? at(env.SPACES_DIR) : null }
@@ -174,7 +173,7 @@ export function count(o = {}) {
                 const whole = JSON.stringify(d)
                 row.compactChars = whole.length
                 row.partChars = cl
-                row.gzipWith = zlib.gzipSync(whole).length
+                row.gzipWith = zlib.gzipSync(whole, { level: GZIP_LEVEL }).length
                 // the document without its show part: the lamps, designed looks, laser objects and the cue list
                 for (const e of ents) {
                     if (!isObj(e) || !isObj(e.components)) continue
@@ -182,7 +181,9 @@ export function count(o = {}) {
                     if (isObj(e.components.beam)) delete e.components.beam.laser
                 }
                 if (isObj(d.mappingState)) delete d.mappingState.cues
-                row.gzipWithout = zlib.gzipSync(JSON.stringify(d)).length
+                const bare = JSON.stringify(d)
+                row.compactWithout = bare.length
+                row.gzipWithout = zlib.gzipSync(bare, { level: GZIP_LEVEL }).length
             }
             docs.push(row)
         }
@@ -200,7 +201,7 @@ export function count(o = {}) {
         projectFolders, withoutDocument,
         largestShare: { inOneSpace: top, of: holding.length },
         totals: { lamps: sum('lamps'), lampsNotDmx: sum('lampsNotDmx'), fixtureNoType, designedLooks: sum('looks'), cues: sum('cues'), laserObjects: sum('lasers') },
-        cuesNaming: cue.naming, cuesTotal: cue.total,
+        cuesNaming: cue.naming, cuesTotal: cue.total, gzipLevel: GZIP_LEVEL,
         list: holding, withoutShow: docTotal - holding.length - unread.filter((u) => u.label.startsWith('document')).length
     }
 

@@ -144,8 +144,8 @@ export function format(r) {
     L.push(`  desk looks named as copies of a designed look: ${m.copies}; the designed look exists for ${m.copiesFound}, missing for ${m.copiesMissing}; not named as copies: ${m.notCopies}; found in the file's own space: ${m.copiesFoundInOwnSpace}`)
     L.push(`  desk cue lists that name a project: ${m.cueListsNamingAProject}; that project is on this machine for ${m.cueListProjectHere}; cues marked missing: ${m.cueListMissing}`)
     L.push(`  laser desk file: ${m.laser.deskFile}; bank looks named by a cue: ${m.laser.looksNamedByACue}; laser looks that cues name: ${m.laser.looksNamedByCues}, of them not in the desk file: ${m.laser.missingLookIds}, named by ${m.laser.cuesNamingAMissingLook} cues; laser rig file: ${m.laser.rigFile}`)
-    L.push('=== 4. sizes (document holding a show: saved bytes (spaces and line breaks) | compact characters, whole / lamps / looks / cues / laser | gzip with / without the show part)')
-    for (const x of d.list) L.push(`  document ${x.n} in space ${x.space}: ${n(x.bytes)} (${n(x.blankBytes)} spaces and line breaks) | ${n(x.compactChars)} / ${n(x.partChars.lamps)} / ${n(x.partChars.looks)} / ${n(x.partChars.cues)} / ${n(x.partChars.lasers)} | ${n(x.gzipWith)} / ${n(x.gzipWithout)}`)
+    L.push(`=== 4. sizes (document holding a show: saved bytes (spaces and line breaks) | compact characters, whole / lamps / looks / cues / laser / whole without the show part | gzip level ${d.gzipLevel}, with / without the show part)`)
+    for (const x of d.list) L.push(`  document ${x.n} in space ${x.space}: ${n(x.bytes)} (${n(x.blankBytes)} spaces and line breaks) | ${n(x.compactChars)} / ${n(x.partChars.lamps)} / ${n(x.partChars.looks)} / ${n(x.partChars.cues)} / ${n(x.partChars.lasers)} / ${n(x.compactWithout)} | ${n(x.gzipWith)} / ${n(x.gzipWithout)}`)
     if (r.remote) {
         L.push('=== 5. per-browser stores: not listed for another machine (they come from this code tree)')
         L.push('=== 6. save time: not measured on another machine (it needs the code tree there)')
