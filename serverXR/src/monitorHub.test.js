@@ -59,14 +59,14 @@ describe('report store', () => {
     expect(store.put({ host: 'one-more', panels }, { subject: 'late' }).status).toBe(429)
   })
 
-  it('a host belongs to its sender until it goes stale (409), and one subject holds at most 12 hosts', () => {
-    let t = 1000
-    const store = createReportStore({ now: () => t })
+  it('a machine is keyed by sender and name: two people may both have aylmo; one subject holds at most 12', () => {
+    const store = createReportStore({ now: () => 1000 })
     expect(store.put({ host: 'aylmo', panels }, { subject: 'u1' }).ok).toBe(true)
-    expect(store.put({ host: 'aylmo', panels }, { subject: 'u2' })).toMatchObject({ error: 'host_taken', status: 409 })
-    expect(store.put({ host: 'aylmo', panels }, { subject: 'u1' }).ok).toBe(true)
-    t += STALE_MS + 1
     expect(store.put({ host: 'aylmo', panels }, { subject: 'u2' }).ok).toBe(true)
+    expect(store.list({ subjects: ['u1'] })).toHaveLength(1)
+    expect(store.list({ subjects: [7] }).length).toBe(0)
+    store.put({ host: 'num', panels }, { subject: 7 })
+    expect(store.list({ subjects: ['7'] }).map((r) => r.host)).toEqual(['num'])
     for (let i = 0; i < MAX_HOSTS_PER_SUBJECT - 1; i += 1) expect(store.put({ host: `m${i}`, panels }, { subject: 'u2' }).ok).toBe(true)
     expect(store.put({ host: 'one-too-many', panels }, { subject: 'u2' })).toMatchObject({ error: 'too_many_hosts', status: 429 })
     expect(store.put({ host: 'other', panels }, { subject: 'u3' }).ok).toBe(true)

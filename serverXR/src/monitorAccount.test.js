@@ -61,6 +61,24 @@ describe('the local Monitor\'s account feed', () => {
   })
 })
 
+describe('the account feed: login changes and bad rows', () => {
+  it('a new sign-in is seen at once, not after the cache; bad rows from dev are dropped; 403 is not "expired"', async () => {
+    const home = homeWith(login)
+    let status = 200
+    const feed = createAccountFeed({ home, fetchImpl: async () => ({ ok: status < 400, status, json: async () => ({ reports: [
+      { host: 'good-pc', panels: {} }, { host: '../bad', panels: {} }, { host: 'no-panels' }, { host: 'arr', panels: [] }
+    ] }) }) })
+    expect((await feed.mine()).reports.map((r) => r.host)).toEqual(['good-pc'])
+    fs.writeFileSync(path.join(home, '.config', 'di', 'credentials.json'), JSON.stringify({ dev: { ...login, token: 'other-token', user: { name: 'Bo' } } }))
+    expect((await feed.mine()).name).toBe('Bo')
+    fs.rmSync(path.join(home, '.config', 'di', 'credentials.json'))
+    expect((await feed.mine()).state).toBe('signed-out')
+    fs.writeFileSync(path.join(home, '.config', 'di', 'credentials.json'), JSON.stringify({ dev: { ...login, token: 'third-token' } }))
+    status = 403
+    expect((await feed.mine()).state).toBe('offline')
+  })
+})
+
 describe('the hub snapshot with an account', () => {
   const hub = () => createHub({ store: { getMonitor: async () => ({ panels: {} }) }, reports: createReportStore() })
   it('adds the account\'s machines marked via dev, and never replaces a held machine', async () => {

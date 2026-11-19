@@ -17,8 +17,16 @@ const expiryMs = (value) => {
   return n < 1e11 ? n * 1000 : n
 }
 
+// a row from dev is shown only when it has the shape this page reads: a plain host name and a panels object of sane size
+const HOST_RE = /^[A-Za-z0-9._-]{1,64}$/
+const sound = (r) => {
+  if (!r || typeof r !== 'object' || typeof r.host !== 'string' || !HOST_RE.test(r.host)) return false
+  if (!r.panels || typeof r.panels !== 'object' || Array.isArray(r.panels)) return false
+  try { return JSON.stringify(r).length <= 256 * 1024 } catch { return false }
+}
+
 function createAccountFeed({ home = os.homedir(), fetchImpl = globalThis.fetch, now = () => Date.now(), base = DEV_BASE } = {}) {
-  let cache = null
+  let cache = null // { at, token, promise }
 
   const readLogin = () => {
     try {
@@ -30,14 +38,16 @@ function createAccountFeed({ home = os.homedir(), fetchImpl = globalThis.fetch, 
 
   /** { state: 'signed-out'|'expired'|'offline'|'ok', name?, reports: [] } — never throws. */
   async function mine() {
-    if (cache && now() - cache.at < CACHE_MS) return cache.value
-    const value = await load()
-    cache = { at: now(), value }
-    return value
+    const login = readLogin()
+    const token = login?.token || ''
+    // one answer per login: a new sign-in, another person or a sign-out is seen at once; calls in flight share one request
+    if (cache && cache.token === token && now() - cache.at < CACHE_MS) return cache.promise
+    const promise = load(login)
+    cache = { at: now(), token, promise }
+    return promise
   }
 
-  async function load() {
-    const login = readLogin()
+  async function load(login) {
     if (!login) return { state: 'signed-out', reports: [] }
     const expires = expiryMs(login.expiresAt)
     if (expires && expires < now()) return { state: 'expired', reports: [] }
@@ -47,10 +57,10 @@ function createAccountFeed({ home = os.homedir(), fetchImpl = globalThis.fetch, 
         headers: { Authorization: `Bearer ${login.token}` },
         signal: AbortSignal.timeout(TIMEOUT_MS)
       })
-      if (res.status === 401 || res.status === 403) return { state: 'expired', reports: [] }
+      if (res.status === 401) return { state: 'expired', reports: [] }
       if (!res.ok) return { state: 'offline', reports: [] }
       const body = await res.json()
-      const reports = Array.isArray(body?.reports) ? body.reports.slice(0, 40) : []
+      const reports = (Array.isArray(body?.reports) ? body.reports : []).filter(sound).slice(0, 40)
       return { state: 'ok', name: typeof login.user?.name === 'string' ? login.user.name.slice(0, 60) : null, reports }
     } catch { return { state: 'offline', reports: [] } }
   }

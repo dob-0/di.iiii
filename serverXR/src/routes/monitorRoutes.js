@@ -77,7 +77,8 @@ function registerMonitorRoutes(router, {
   }
 
   // dev tier, any signed-in person (not only an owner): may send and read ONLY their own machines.
-  // A terminal login (`di login`) or a browser session; never an API token, di.bo's act token or a sync key.
+  // A terminal login (`di login`) or a browser session reads /mine; the report route takes the terminal login
+  // only (reportGate). Never an API token, di.bo's act token or a sync key.
   const isAccount = (req) => {
     const state = req.authState || {}
     if (!requireAuth() || !state.authenticated || !state.subject) return false

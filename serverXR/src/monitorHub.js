@@ -20,7 +20,7 @@ const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
 const REPORT_MAX_BYTES = 256 * 1024
-const MAX_HOSTS = 40
+const MAX_HOSTS = 120
 const MAX_HOSTS_PER_SUBJECT = 12
 const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
@@ -88,12 +88,12 @@ function createReportStore({ now = () => Date.now() } = {}) {
 
   const prune = () => {
     const t = now()
-    for (const [host, rec] of byHost) if (t - rec.reportedAt > KEEP_MS) byHost.delete(host)
+    for (const [key, rec] of byHost) if (t - rec.reportedAt > KEEP_MS) byHost.delete(key)
   }
 
   /**
-   * Returns { ok: true } or { error, status }. `subject` is who sent it: a host belongs to the
-   * subject that reported it until it goes stale (409 for anyone else), and one subject holds at
+   * Returns { ok: true } or { error, status }. `subject` is who sent it: a machine is keyed by its
+   * sender and name, so two people may each have an `aylmo`, and one subject holds at
    * most MAX_HOSTS_PER_SUBJECT hosts. `ledger` says the sender may bring ledger asks.
    */
   function put(body, { subject = null, ledger = false } = {}) {
@@ -105,8 +105,9 @@ function createReportStore({ now = () => Date.now() } = {}) {
     try { size = Buffer.byteLength(JSON.stringify(body)) } catch { return { error: 'bad_report', status: 400 } }
     if (size > REPORT_MAX_BYTES) return { error: 'too_large', status: 413, max: REPORT_MAX_BYTES }
     prune()
-    const held = byHost.get(host)
-    if (held && held.subject !== subject && now() - held.reportedAt <= STALE_MS) return { error: 'host_taken', status: 409 }
+    // a machine is keyed by who reported it AND its name: nobody can take another person's machine name
+    const key = `${subject}\n${host}`
+    const held = byHost.get(key)
     if (!held && byHost.size >= MAX_HOSTS) return { error: 'too_many_hosts', status: 429 }
     if (!held && [...byHost.values()].filter((r) => r.subject === subject).length >= MAX_HOSTS_PER_SUBJECT) return { error: 'too_many_hosts', status: 429 }
 
@@ -139,7 +140,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
       .filter((a) => a.id && a.text)
     const commit = typeof body.commit === 'string' && COMMIT_RE.test(body.commit.trim()) ? body.commit.trim() : null
     const builtAt = typeof body.builtAt === 'string' && !Number.isNaN(Date.parse(body.builtAt)) ? new Date(body.builtAt).toISOString() : null
-    byHost.set(host, { host, subject, reportedAt: now(), panels, asks, commit, builtAt })
+    byHost.set(key, { host, subject, reportedAt: now(), panels, asks, commit, builtAt })
     return { ok: true, host }
   }
 
@@ -149,7 +150,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
     prune()
     const t = now()
     return [...byHost.values()]
-      .filter((r) => !subjects || subjects.includes(r.subject))
+      .filter((r) => !subjects || subjects.map(String).includes(String(r.subject)))
       .sort((a, b) => b.reportedAt - a.reportedAt)
       .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: withoutChats(r.panels) }))
   }

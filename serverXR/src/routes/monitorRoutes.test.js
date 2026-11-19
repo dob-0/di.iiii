@@ -168,7 +168,7 @@ describe('POST /api/monitor/report', () => {
     expect((await send(cli('editor'), 'staging')).statusCode).toBe(200)
     const other = await call({ socket: remote, authState: cli('admin', { subject: 'admin-2' }), body: { host: 'second-person-pc', panels: {} }, headers: {} }, { deployEnv: 'staging', route: 'POST /api/monitor/report' })
     expect(other.statusCode).toBe(200)
-    expect((await send(cli('admin', { subject: 'admin-3' }), 'staging')).statusCode).toBe(409) // aylmo is held by the owner
+    expect((await send(cli('admin', { subject: 'admin-3' }), 'staging')).statusCode).toBe(200) // their own aylmo, not the owner's
     expect((await send(cli('admin'), 'production')).statusCode).toBe(404)
     expect((await send(cli('admin'), null)).statusCode).toBe(404) // local: off-machine
   })
@@ -194,13 +194,6 @@ describe('POST /api/monitor/report', () => {
     await run(owner)
     await run({ ...owner, subject: 'someone-else', actor: 'di.cli', cliDbRole: 'editor' })
     expect(seen.map((o) => [o.subject, o.ledger])).toEqual([['owner-1', true], ['someone-else', false]])
-  })
-
-  it('a host held by another sender answers 409', async () => {
-    const taken = await call({ socket: remote, authState: { ...owner, subject: 'owner-1' }, body: { host: 'taken-host', panels: {} }, headers: {} }, { deployEnv: 'staging', route: 'POST /api/monitor/report', owners: ['owner-1', 'owner-2'] })
-    expect(taken.statusCode).toBe(200)
-    const second = await call({ socket: remote, authState: { ...owner, subject: 'owner-2' }, body: { host: 'taken-host', panels: {} }, headers: {} }, { deployEnv: 'staging', route: 'POST /api/monitor/report', owners: ['owner-1', 'owner-2'] })
-    expect(second.statusCode).toBe(409)
   })
 
   it('a bad body is 400 and an oversized declared length is 413', async () => {
