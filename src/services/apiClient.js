@@ -324,6 +324,10 @@ export const getMonitor = async () => apiFetch('/api/monitor')
 // Open pull requests for the Monitor's Work tab (read-only; same gate as the Monitor).
 export const getMonitorPrs = async () => apiFetch('/api/monitor/prs')
 
+// Tasks lane: the owner's open asks, one row's history, and the ONE change door (Done / Blocked / Reopen / Note).
+export const getMonitorTasks = async ({ days = 3, id = '' } = {}) => apiFetch(id ? `/api/monitor/tasks?id=${encodeURIComponent(id)}` : `/api/monitor/tasks?days=${encodeURIComponent(days)}`)
+export const postMonitorTask = async (body) => apiFetch('/api/monitor/tasks', { method: 'POST', body })
+
 export const getAgentBoardSession = async (sessionId) => (
     apiFetch(`/api/agent-board/session/${encodeURIComponent(sessionId)}`)
 )

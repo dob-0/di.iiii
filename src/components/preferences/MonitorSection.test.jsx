@@ -125,6 +125,61 @@ describe('MonitorSection', () => {
         expect(ids[0]).toBe('s:broken.service')
     })
 
+    it('a chat opens the one drawer with every field, a link to its machine, the raw record, and the link keeps it', async () => {
+        const data = contract({ chats: { ok: true, state: 'live', counts: { ask: 1, working: 0, idle: 0, total: 1 }, heardSecondsAgo: 3, rows: [
+            { id: 'chat-1', title: 'Cinema job', group: 'ask', status: 'idle', says: 'waiting', asks: ['plug it in', 'and this'], idleMinutes: 4, failed: false, host: 'aylmo' }
+        ] } })
+        getMonitor.mockResolvedValue(data)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        fireEvent.click(document.querySelector('[data-chat-id="chat-1"]'))
+        const drawer = document.querySelector('.monitor-drawer')
+        expect(drawer.getAttribute('data-drawer-kind')).toBe('chat')
+        const labels = [...drawer.querySelectorAll('.monitor-field dt')].map((n) => n.textContent)
+        expect(labels).toEqual(['Id', 'Title', 'Group', 'Status', 'Says', 'Asks', 'Idle minutes', 'Failed', 'Host'])
+        expect(within(drawer).getByText('plug it in, and this')).toBeTruthy()
+        expect(drawer.querySelector('[data-detail-raw]').textContent).toContain('"idleMinutes": 4')
+        expect(window.location.hash).toBe('#monitor/chat/chat-1')
+        // the link to its machine opens that machine in the same drawer
+        fireEvent.click(drawer.querySelector('[data-related^="machine:"]'))
+        expect(document.querySelector('.monitor-drawer').getAttribute('data-drawer-kind')).toBe('machine')
+        expect(window.location.hash).toBe('#monitor/machine/100.1.1.1')
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(document.querySelector('.monitor-drawer')).toBeNull()
+        expect(window.location.hash).toBe('#monitor')
+    })
+
+    it('the filter reaches chats and counts what matches', async () => {
+        getMonitor.mockResolvedValue(contract({ chats: { ok: true, state: 'live', counts: { ask: 0, working: 0, idle: 2, total: 2 }, heardSecondsAgo: 3, rows: [
+            { id: 'a', title: 'Alpha', group: 'idle', status: 'idle', says: '', asks: [], idleMinutes: 4, failed: false, host: 'aylmo' },
+            { id: 'b', title: 'Beta', group: 'idle', status: 'idle', says: '', asks: [], idleMinutes: 9, failed: false, host: 'studio' }
+        ] } }))
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        expect(document.querySelectorAll('[data-chat-id]').length).toBe(2)
+        fireEvent.change(screen.getByLabelText('Filter every panel'), { target: { value: 'studio' } })
+        expect([...document.querySelectorAll('[data-chat-id]')].map((n) => n.getAttribute('data-chat-id'))).toEqual(['b'])
+        expect(document.querySelector('[data-filter-count]').textContent).toMatch(/^\d+ of \d+ match$/)
+    })
+
+    it('every panel says live, turns late at twice its interval and old far past it', async () => {
+        vi.useFakeTimers()
+        try {
+            // the server goes quiet after the first answer: nothing refreshes the panels
+            getMonitor.mockResolvedValueOnce(contract()).mockRejectedValue(new Error('quiet'))
+            render(<MonitorSection />)
+            await act(async () => { await Promise.resolve() })
+            const state = (name) => document.querySelector(`[data-live-panel="${name}"]`)?.getAttribute('data-live-state')
+            expect(state('machines')).toBe('live')
+            await act(async () => { vi.advanceTimersByTime(11000) })
+            expect(state('machines')).toBe('late')
+            await act(async () => { vi.advanceTimersByTime(25000) })
+            expect(state('machines')).toBe('old')
+        } finally { vi.useRealTimers() }
+    })
+
     it('filters every panel and opens the inspector', async () => {
         getMonitor.mockResolvedValue(snapshot())
         render(<MonitorSection />)
@@ -148,7 +203,7 @@ describe('MonitorSection', () => {
         fireEvent.click(twins[1])
         expect(twins[1].getAttribute('aria-pressed')).toBe('true')
         expect(twins[0].getAttribute('aria-pressed')).toBe('false')
-        expect(screen.getByText('100.1.1.9')).toBeTruthy()
+        expect(within(document.querySelector('.monitor-drawer')).getAllByText('100.1.1.9').length).toBeGreaterThan(0)
         expect(spy.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
         spy.mockRestore()
     })
@@ -242,8 +297,8 @@ describe('MonitorSection overview, map, workspace and live', () => {
         expect(document.querySelectorAll('[data-map-node]').length).toBe(6)
         expect(document.querySelectorAll('.monitor-edge').length).toBe(4)
         fireEvent.click(document.querySelector('[data-map-node="space:platina"]'))
-        expect(screen.getByText('Inspector — platina')).toBeTruthy()
-        expect(screen.getByText('warn')).toBeTruthy()
+        expect(document.querySelector('.monitor-drawer-title').textContent).toBe('platina')
+        expect(within(document.querySelector('.monitor-drawer')).getAllByText('warn').length).toBeGreaterThan(0)
         expect(within(document.querySelector('.monitor-inspector')).getByText('MUTH')).toBeTruthy() // its neighbour, from the edges
     })
 
@@ -256,7 +311,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         expect(document.querySelector('[data-monitor-map="list"]')).toBeTruthy()
         expect(document.querySelector('svg')).toBeNull()
         fireEvent.click(document.querySelector('[data-map-node="machine:asuz"]'))
-        expect(screen.getByText('Inspector — asuz')).toBeTruthy()
+        expect(document.querySelector('.monitor-drawer-title').textContent).toBe('asuz')
     })
 
     it('workspace lists asks newest first, lanes and reports', async () => {
@@ -599,12 +654,12 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
         fireEvent.click(document.querySelector('[data-tier-id="prod"]'))
         const drawer = document.querySelector('.monitor-drawer')
         expect(drawer).toBeTruthy()
-        expect(within(drawer).getByText('Inspector — prod')).toBeTruthy()
-        expect(within(drawer).getByText('12 behind dev')).toBeTruthy()
+        expect(within(drawer).getByText('prod', { selector: '.monitor-drawer-title' })).toBeTruthy()
+        expect(within(drawer).getByText('12', { selector: '.monitor-field-value' })).toBeTruthy()
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(document.querySelector('.monitor-drawer')).toBeNull()
         fireEvent.click(document.querySelector('[data-tier-id="dev"]'))
-        fireEvent.click(screen.getByLabelText('Close inspector'))
+        fireEvent.click(screen.getByLabelText('Close details'))
         expect(document.querySelector('.monitor-drawer')).toBeNull()
     })
 
