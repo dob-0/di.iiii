@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { rowMatches } from './monitorDetail.js'
 
 // Chats: one card per chat, so the owner tracks every chat from the Monitor.
 // Fed by the server's `chats` block (serverXR/src/monitorChats.js): asks you first, then working, then idle.
@@ -45,9 +46,10 @@ export const chatIssues = (chats) => {
     return issues
 }
 
-function Card({ chat }) {
+function Card({ chat, selected, onPick }) {
     return (
-        <div className={`monitor-chat tone-${GROUP_TONE[chat.group] || 'muted'}`} data-chat-id={chat.id} data-chat-group={chat.group}>
+        <button type="button" className={`monitor-chat tone-${GROUP_TONE[chat.group] || 'muted'}${selected ? ' is-selected' : ''}`} data-chat-id={chat.id} data-chat-group={chat.group}
+            aria-pressed={selected} onClick={() => onPick?.(chat)}>
             <span className="monitor-chat-head">
                 {chat.group === 'working' ? <i className="monitor-live-square" aria-hidden="true" /> : <i className="monitor-live-square is-off" aria-hidden="true" />}
                 <span className="monitor-chat-title">{chat.title}</span>
@@ -56,15 +58,16 @@ function Card({ chat }) {
             {chat.asks?.map((a) => <p key={a} className="monitor-chat-ask">{plain(a)}</p>)}
             {chat.says ? <p className="monitor-chat-says">{plain(chat.says).replace(/^(?:\+\+|\.\.|->|==|--)\s*/, '')}</p> : null}
             <span className="monitor-meta">{chat.group === 'working' ? 'working now' : idleLabel(chat.idleMinutes)}{chat.host ? ` · ${chat.host}` : ''}{chat.failed ? ' · last turn failed' : ''}</span>
-        </div>
+        </button>
     )
 }
 
-export default function MonitorChats({ chats }) {
+export default function MonitorChats({ chats, onPick, selectedId = null, query = '' }) {
     const [filter, setFilter] = useState('all')
     const counts = chats?.counts || { ask: 0, working: 0, idle: 0, total: 0 }
     const rows = chats?.rows || []
-    const shown = filter === 'all' ? rows : rows.filter((r) => r.group === filter)
+    const byQuery = query ? rows.filter((r) => rowMatches(query, r)) : rows
+    const shown = filter === 'all' ? byQuery : byQuery.filter((r) => r.group === filter)
     const state = chats?.state || 'none'
     return (
         <div className="monitor-chats" data-monitor-chats="" data-chats-state={state}>
@@ -82,8 +85,8 @@ export default function MonitorChats({ chats }) {
                         ))}
                     </div>
                     {shown.length ? (
-                        <div className="monitor-chat-grid">{shown.map((c) => <Card key={c.id} chat={c} />)}</div>
-                    ) : <p className="monitor-note">No chat in this group.</p>}
+                        <div className="monitor-chat-grid">{shown.map((c) => <Card key={c.id} chat={c} selected={selectedId === c.id} onPick={onPick} />)}</div>
+                    ) : <p className="monitor-note">{query ? `No chat matches “${query}”.` : 'No chat in this group.'}</p>}
                     {chats.truncated ? <p className="monitor-note">{chats.truncated} more chat{chats.truncated === 1 ? '' : 's'} not shown (the 60 that ask or work first are listed).</p> : null}
                 </>
             ) : null}

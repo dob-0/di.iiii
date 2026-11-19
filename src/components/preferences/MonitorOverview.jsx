@@ -21,6 +21,8 @@ export const tierLabel = (id) => (id.startsWith('local:') ? `local · ${id.slice
 // 'down' | 'drift' | 'ok' and the reason in words
 export const tierState = (row, devCommit) => {
     if (!isHealthy(row)) return { tone: 'danger', note: `not answering${row.status ? ` (${row.status})` : ''}` }
+    // a slow answer is slow, not down; one missed check keeps the last good answer and says so
+    if (row.probe === 'slow' && row.note) return { tone: 'warning', note: row.note }
     if (typeof row.behindDev === 'number' && row.behindDev > 0) {
         return { tone: 'warning', note: `${row.behindDev} behind dev` }
     }
@@ -98,7 +100,7 @@ export default function MonitorOverview({ tiers, spaces, history, flashing, sele
                         <span className="monitor-tier-note">{state.note}</span>
                         <Sparkline values={history?.[row.id]} />
                         <span className="monitor-meta">built {row.builtAt ? ago(row.builtAt) : 'n/a'}</span>
-                        <span className="monitor-meta">{row.status ?? '—'}{typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}</span>
+                        <span className="monitor-meta">{row.probe === 'doubt' ? `one check missed · last answered ${ago(row.lastGoodAt)}` : `${row.status ?? '—'}${typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}${row.probe === 'down' && row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}`}</span>
                         <span className="monitor-meta">{spaces?.ok === false ? 'spaces n/a' : `${counts[row.id] || 0} ${row.source === 'self' ? '' : 'public '}space${counts[row.id] === 1 ? '' : 's'}`}</span>
                     </button>
                 )
