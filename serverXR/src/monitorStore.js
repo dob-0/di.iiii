@@ -392,9 +392,12 @@ function createMonitorStore({
   async function credits(config) {
     const list = (Array.isArray(config.feeds) ? config.feeds : []).filter((f) => f.panel === 'credits' && f.kind === 'command' && f.command).slice(0, 1)
     if (!list.length) return { configured: 0, rows: [], ready: 0, total: 0 }
-    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command]), 8000)
-    const rows = sanitizeCredits(JSON.parse(out))
-    if (!rows) throw new Error('the credits list was not in the expected shape')
+    // the command is killed by runCommand's own timeout, so a hung probe never leaves a process behind
+    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command], { timeout: 8000 }), 8500)
+    let parsed
+    try { parsed = JSON.parse(out) } catch { throw new Error('the credits command did not print JSON') }
+    const rows = sanitizeCredits(parsed)
+    if (!rows || (parsed.length && !rows.length)) throw new Error('the credits list was not in the expected shape')
     return { configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length }
   }
 

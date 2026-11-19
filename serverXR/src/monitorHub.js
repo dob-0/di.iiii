@@ -118,8 +118,9 @@ function createReportStore({ now = () => Date.now() } = {}) {
       else if (name === 'credits') {
         // credits: only route, ready, meter, have, why are kept, an address becomes "login"; see monitorCredits.js
         const c = body.panels.credits
-        const rows = sanitizeCredits(c.rows) || []
-        panels.credits = { ok: c.ok !== false, configured: c.configured ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(c.ok === false ? { error: cleanText(c.error, 200) } : {}) }
+        const ok = c.ok !== false
+        const rows = (ok && sanitizeCredits(c.rows)) || []
+        panels.credits = { ok, configured: ok && Array.isArray(c.rows) && c.configured ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(!ok ? { error: cleanText(c.error, 200) } : {}) }
       } else panels[name] = cleanPanelValue(body.panels[name])
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])

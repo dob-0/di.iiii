@@ -286,8 +286,32 @@ describe('monitor devices and credits', () => {
     const store = createMonitorStore({ home, runCommand: async (c, a) => (c === 'tailscale' ? tailscale : a[1] === 'credits-json' ? list : Promise.reject(new Error('no'))), fetchImpl: null })
     const credits = (await store.getMonitor()).panels.credits
     expect(credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2 })
-    expect(credits.rows[0]).toEqual({ id: 'plan:dob', name: 'plan:dob', available: true, meter: '5h ?% 7d 62%', have: 'login login', why: '' })
+    expect(credits.rows[0]).toEqual({ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '5h ?% 7d 62%', have: 'login login', why: '' })
     expect(JSON.stringify(credits)).not.toMatch(/example\.com|secret/)
+  })
+
+  it('credits: two routes that look alike after masking keep their own id; a key fragment is masked', async () => {
+    const home = tmp()
+    fs.mkdirSync(path.join(home, '.di'))
+    fs.writeFileSync(path.join(home, '.di', 'monitor.json'), JSON.stringify({ feeds: [{ panel: 'credits', kind: 'command', command: 'c' }] }))
+    const list = JSON.stringify([
+      { route: 'plan:a@x.com', available: true, meter: '', have: '', why: '' },
+      { route: 'plan:b@y.com', available: false, meter: '', have: '', why: 'INVALID: sk-ant-api03-abcdefghijklmnop' }
+    ])
+    const store = createMonitorStore({ home, runCommand: async (c) => (c === 'tailscale' ? tailscale : list), fetchImpl: null })
+    const rows = (await store.getMonitor()).panels.credits.rows
+    expect(new Set(rows.map((r) => r.id)).size).toBe(2)
+    expect(JSON.stringify(rows)).not.toMatch(/x\.com|y\.com|abcdefgh/)
+  })
+
+  it('credits: rows of a changed shape or text that is not JSON grey the panel, not a green 0/0', async () => {
+    for (const out of ['[{"name":"x"}]', 'oops']) {
+      const home = tmp()
+      fs.mkdirSync(path.join(home, '.di'))
+      fs.writeFileSync(path.join(home, '.di', 'monitor.json'), JSON.stringify({ feeds: [{ panel: 'credits', kind: 'command', command: 'c' }] }))
+      const store = createMonitorStore({ home, runCommand: async (c) => (c === 'tailscale' ? tailscale : out), fetchImpl: null })
+      expect((await store.getMonitor()).panels.credits.ok).toBe(false)
+    }
   })
 
   it('credits: output that is not a list greys the panel', async () => {

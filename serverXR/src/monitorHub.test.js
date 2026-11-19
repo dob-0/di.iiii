@@ -434,6 +434,12 @@ describe('a reported credits panel', () => {
     const credits = store.list()[0].panels.credits
     expect(credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2 })
     expect(JSON.stringify(credits)).not.toMatch(/corp\.example|dob@studio|secret|"extra"/)
-    expect(credits.rows[0]).toEqual({ id: 'plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login login', why: '' })
+    expect(credits.rows[0]).toEqual({ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login login', why: '' })
+  })
+
+  it('a broken report keeps no rows and is not counted as configured', () => {
+    const store = createReportStore()
+    store.put({ host: 'x', panels: { credits: { ok: false, configured: 'yes', rows: 'bad', error: 'no feed' } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: false, configured: 0, rows: [], ready: 0, total: 0, error: 'no feed' })
   })
 })
