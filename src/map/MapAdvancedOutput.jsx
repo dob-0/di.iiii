@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapSliceCanvas, { cornerIndexOfPoint } from './MapSliceCanvas.jsx'
-import { ParamRow } from './MapDeskDock.jsx'
+import { MapAutopilot, ParamRow } from './MapDeskDock.jsx'
 import { resolveMapSourceRef } from './MapSourceView.jsx'
 import { generateId } from '../shared/projectSchema.js'
 import { showFromValue, showOptions, showValue } from './mapMachines.js'
@@ -47,13 +47,21 @@ const sliceData = (surface) => Object.fromEntries(SLICE_KEYS.filter((key) => sur
 // --- small parts ---------------------------------------------------------------
 
 // A typed number. Drag its name sideways to scrub; ↑↓ step (shift ×10).
-function Field({ label, value, step = 1, min = -Infinity, max = Infinity, digits = 0, unit = '', onChange, title }) {
+// `lazy`: the typed number is used on Enter or when the field is left, not on
+// every key. For the wall size, where typing 1280 passed through a 1, 12 and
+// 128 px wall on the way (audit 11-12). Esc puts the old number back.
+function Field({ label, value, step = 1, min = -Infinity, max = Infinity, digits = 0, unit = '', onChange, title, lazy = false }) {
     const [draft, setDraft] = useState(null)
     const scrub = useRef(null)
+    const cancelled = useRef(false)
     const shown = draft ?? (Number.isFinite(value) ? String(Number(value.toFixed(digits))) : '')
     const commit = (next) => {
         const clamped = Math.max(min, Math.min(max, next))
         if (Number.isFinite(clamped)) onChange(clamped)
+    }
+    const typed = (text) => {
+        const next = Number(String(text).replace(',', '.'))
+        return String(text).trim() !== '' && Number.isFinite(next) ? next : null
     }
     return (
         <div className="map-mo-field" title={title}>
@@ -76,10 +84,17 @@ function Field({ label, value, step = 1, min = -Infinity, max = Infinity, digits
                 value={shown}
                 onChange={(event) => {
                     setDraft(event.target.value)
-                    const next = Number(event.target.value.replace(',', '.'))
-                    if (event.target.value.trim() !== '' && Number.isFinite(next)) commit(next)
+                    const next = typed(event.target.value)
+                    if (!lazy && next !== null) commit(next)
                 }}
-                onBlur={() => setDraft(null)}
+                onBlur={() => {
+                    if (lazy && !cancelled.current && draft !== null) {
+                        const next = typed(draft)
+                        if (next !== null) commit(next)
+                    }
+                    cancelled.current = false
+                    setDraft(null)
+                }}
                 onKeyDown={(event) => {
                     if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
                         event.preventDefault()
@@ -87,6 +102,7 @@ function Field({ label, value, step = 1, min = -Infinity, max = Infinity, digits
                         commit(value + ((event.key === 'ArrowUp' ? 1 : -1) * step * (event.shiftKey ? 10 : 1)))
                     }
                     if (event.key === 'Enter') event.currentTarget.blur()
+                    if (event.key === 'Escape' && lazy) { cancelled.current = true; event.currentTarget.blur() }
                 }}
             />
             {unit ? <span className="map-mo-field-unit">{unit}</span> : null}
@@ -327,9 +343,18 @@ export default function MapAdvancedOutput({
         applyOps(selected.map((surface) => ({ type: 'deleteMappingSurface', payload: { surfaceId: surface.id } })))
         setSelectedIds([])
     }
+    // Each paste lands a step further on, so pasting twice gives two pieces you
+    // can see, not two on one spot (audit 11-12); a new copy starts again.
+    const pastes = useRef(0)
+    const copySelection = () => {
+        setClipboard(selected.map(sliceData))
+        pastes.current = 0
+    }
     const paste = () => {
         if (!clipboard?.length) return
-        addSlices(clipboard.map((data) => ({ ...data, corners: data.corners.map(([x, y]) => [x + 0.02, y + 0.02]) })))
+        pastes.current += 1
+        const offset = 0.02 * pastes.current
+        addSlices(clipboard.map((data) => ({ ...data, corners: data.corners.map(([x, y]) => [x + offset, y + offset]) })))
     }
 
     // --- bending ---------------------------------------------------------------
@@ -451,7 +476,12 @@ export default function MapAdvancedOutput({
 
     useEffect(() => {
         const onKey = (event) => {
-            if (/^(INPUT|TEXTAREA|SELECT)$/.test(event.target?.tagName)) return
+            const target = event.target
+            if (/^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName) || target?.isContentEditable) return
+            // A focused slider, switch or tab owns its plain keys: an arrow on the
+            // Brightness line moved the piece too, and Delete deleted the piece
+            // (audit 11-12). Ctrl/⌘ shortcuts still reach the window.
+            if (!event.ctrlKey && !event.metaKey && target?.closest?.('[role="slider"],[role="switch"],[role="radio"]')) return
             const key = event.key.toLowerCase()
             if (event.ctrlKey || event.metaKey) {
                 if (key === 'z' && !event.shiftKey) { undo(); event.preventDefault() }
@@ -463,7 +493,10 @@ export default function MapAdvancedOutput({
                     } else setSelectedIds(surfaces.map((surface) => surface.id))
                     event.preventDefault()
                 } else if (key === 'd') { duplicate(); event.preventDefault() }
-                else if (key === 'c') { setClipboard(selected.map(sliceData)); event.preventDefault() }
+                // Copy and cut need a selection: Ctrl+C on nothing used to empty
+                // the clipboard (audit 11-12).
+                else if (key === 'c') { if (selected.length) { copySelection(); event.preventDefault() } }
+                else if (key === 'x') { if (selected.length) { copySelection(); remove(); event.preventDefault() } }
                 else if (key === 'v') { paste(); event.preventDefault() }
                 return
             }
@@ -571,10 +604,10 @@ export default function MapAdvancedOutput({
                 <h2>Mapping</h2>
                 <div className="map-mo-wall">
                     <span className="map-mo-wall-label">Wall</span>
-                    <Field label="Width" value={W} min={1} max={16384} title="The wall picture's width in pixels"
+                    <Field label="Width" value={W} min={16} max={16384} lazy title="The wall picture's width in pixels (Enter to set)"
                         onChange={(value) => setOutput({ output: { ...output, width: Math.round(value) } })} />
                     <span className="map-mo-times">×</span>
-                    <Field label="Height" value={H} min={1} max={16384} title="The wall picture's height in pixels"
+                    <Field label="Height" value={H} min={16} max={16384} lazy title="The wall picture's height in pixels (Enter to set)"
                         onChange={(value) => setOutput({ output: { ...output, height: Math.round(value) } })} />
                     <label className="map-mo-device" title="Which machine and display the wall plays on">
                         <span>plays on</span>
@@ -590,6 +623,9 @@ export default function MapAdvancedOutput({
                 <span className="map-mo-spacer" />
                 <button type="button" className="map-mo-icon" onClick={undo} disabled={!canUndo()} aria-label="Undo" title="Undo (Ctrl+Z)">↶</button>
                 <button type="button" className="map-mo-icon" onClick={redo} disabled={!canRedo()} aria-label="Redo" title="Redo (Shift+Ctrl+Z)">↷</button>
+                {/* The bar show's autopilot here too (Emily, 11-12): this window covers
+                    the desk's top bar, and the show goes on while she lines up. */}
+                <MapAutopilot className="map-mo-btn" />
                 <button type="button" className="map-mo-btn" onClick={revert} title="Put every piece back the way it was when you opened this (Ctrl+Z undoes it)">Revert</button>
                 <button type="button" className="map-mo-btn is-primary" onClick={onClose} title="Close. Everything is already saved and on the wall.">Done</button>
             </header>
@@ -656,8 +692,11 @@ export default function MapAdvancedOutput({
                                             aria-label="Name"
                                             // eslint-disable-next-line jsx-a11y/no-autofocus
                                             autoFocus
+                                            // the whole name is picked, so typing replaces it (audit 11-12)
+                                            onFocus={(event) => event.target.select()}
                                             onClick={(event) => event.stopPropagation()}
-                                            onBlur={(event) => { update(surface.id, { name: event.target.value }); setRenaming(null) }}
+                                            // an emptied name keeps the old one: the list showed the raw id
+                                            onBlur={(event) => { const name = event.target.value.trim(); if (name && name !== surface.name) update(surface.id, { name }); setRenaming(null) }}
                                             onKeyDown={(event) => {
                                                 if (event.key === 'Enter') event.currentTarget.blur()
                                                 if (event.key === 'Escape') setRenaming(null)
@@ -802,10 +841,10 @@ export default function MapAdvancedOutput({
 
                             <Section title="Place">
                                 <div className="map-mo-fields map-mo-place">
-                                    <Field label="X" value={outFrame.left} onChange={(v) => setOutField('left', v)} title="Left edge on the wall, in pixels" />
-                                    <Field label="Y" value={outFrame.top} onChange={(v) => setOutField('top', v)} title="Top edge on the wall, in pixels" />
-                                    <Field label="Width" value={outFrame.width} min={1} onChange={(v) => setOutField('width', v)} />
-                                    <Field label="Height" value={outFrame.height} min={1} onChange={(v) => setOutField('height', v)} />
+                                    <Field label="X" value={outFrame.left} min={-2 * W} max={3 * W} onChange={(v) => setOutField('left', v)} title="Left edge on the wall, in pixels" />
+                                    <Field label="Y" value={outFrame.top} min={-2 * H} max={3 * H} onChange={(v) => setOutField('top', v)} title="Top edge on the wall, in pixels" />
+                                    <Field label="Width" value={outFrame.width} min={1} max={4 * W} onChange={(v) => setOutField('width', v)} />
+                                    <Field label="Height" value={outFrame.height} min={1} max={4 * H} onChange={(v) => setOutField('height', v)} />
                                     <Field label="Turn" value={outFrame.rotation} min={-180} max={180} digits={1} unit="°" onChange={(v) => setOutField('rotation', v)} />
                                 </div>
                                 <div className="map-mo-actions">

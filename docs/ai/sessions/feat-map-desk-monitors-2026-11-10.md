@@ -35,3 +35,16 @@ branch sits on the dev of 2026-10-25 and is not rebased yet.
   not in this repo.
 - **Known open**: the effect-card grip reorder is unverified in a real browser (Playwright's HTML5 drag never fired);
   the engine address is fixed; Firefox untested; no Resolume XML / NDI out / OSC.
+
+## 2026-11-19 — the desk audit's fixes (made 11-12, never on the bar's wall)
+
+A desk-tester pass on a copy of the bar project (11-12), fixed in a separate tree so nothing reloaded under the
+projector; they arrive here as their own commit, so they can be read or dropped apart from what ran.
+
+- Mapping window: slider keys, the wall size read lazily, bounds, Ctrl+X, cascading paste, rename.
+- Desk: FillBar no longer passes its clicks through; deleting the live clip asks twice; notices time out; Autopilot
+  (the engine's, `POST /api/set {patch:{auto}}`, on click only) in the top bar and in the Mapping window head.
+- `mediaRack`: at most 2 idle pages kept; `MapScreenParts`: the file check and short file names.
+- Both schema twins: the inverse of `deleteMappingVisual` keeps `playing`.
+- serverXR `assetScrub` reads a buffer, so GIF/WebP uploads work on Windows (a server restart takes it in).
+- Guards: deckDelete, deskAutopilot, visualUploadCheck tests; known-fixes entries; wiki.

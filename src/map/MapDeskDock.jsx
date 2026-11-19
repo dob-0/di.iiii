@@ -9,7 +9,7 @@ import { paramValue } from './visualParams.js'
 import {
     LFO_BEATS, LFO_DEFAULT, LFO_WAVES, OPACITY_SPEC, anyLfoMoving, lfoMoving, lfoRange, lfoValueAt, readLfo, takesLfo, withLfo
 } from './paramLfo.js'
-import { deskBeat, deskTempo, subscribeDeskTempo, tapTempo, tempoKeepingBeat } from './deskBeat.js'
+import { deskBeat, deskTempo, engineAutopilot, setEngineAutopilot, subscribeDeskTempo, subscribeEngineAutopilot, tapTempo, tempoKeepingBeat } from './deskBeat.js'
 
 // THE DESK, LAID OUT LIKE RESOLUME'S COMPOSITION WINDOW (2026-11-10).
 //
@@ -103,9 +103,29 @@ export function MapDeck({
         made.forEach((visual) => onAdd(visual))
     }
     const remove = (visual) => {
+        armed.current = { id: null, at: -Infinity }
         onDelete(visual.id)
         setNotice(`Removed “${clipName(visual)}”. Ctrl+Z brings it back.`)
     }
+    // Delete on a focused tile: the clip ON THE WALL needs a second Delete
+    // within 3 s. A clicked tile keeps focus, so one stray key blacked the
+    // wall mid-set (audit 11-12). Any other clip, and the × button, go at once.
+    const armed = useRef({ id: null, at: -Infinity })
+    const removeByKey = (visual, at) => {
+        if (visual.id === playing && (armed.current.id !== visual.id || at - armed.current.at > 3000)) {
+            armed.current = { id: visual.id, at }
+            setNotice(`“${clipName(visual)}” is on the wall. Press Delete again to remove it.`)
+            return
+        }
+        remove(visual)
+    }
+    // A notice says what just happened, then goes; it used to stay after the
+    // clip it named was brought back.
+    useEffect(() => {
+        if (!notice) return undefined
+        const timer = setTimeout(() => setNotice(''), 6000)
+        return () => clearTimeout(timer)
+    }, [notice])
     const sideOf = (event) => {
         const rect = event.currentTarget.getBoundingClientRect()
         return event.clientX < rect.left + (rect.width / 2) ? 'before' : 'after'
@@ -206,7 +226,7 @@ export function MapDeck({
                             }}
                         >
                             <button type="button" className="map-clip-play" onClick={() => onPlay(visual.id)}
-                                onKeyDown={(event) => { if (event.key === 'Delete') { event.preventDefault(); remove(visual) } }}
+                                onKeyDown={(event) => { if (event.key === 'Delete') { event.preventDefault(); removeByKey(visual, event.timeStamp) } }}
                                 title={`Play “${clipName(visual)}” on the wall${index < 9 ? ` (key ${index + 1})` : ''}`}>
                                 <span className="map-clip-thumb">
                                     <ClipThumb visual={visual} />
@@ -218,7 +238,7 @@ export function MapDeck({
                             <button type="button" className="map-clip-delete" onClick={() => remove(visual)}
                                 aria-label={`Remove “${clipName(visual)}”`} title="Remove this clip (Ctrl+Z brings it back)">×</button>
                             <button type="button" className="map-clip-name" onClick={() => onSelect(visual.id)}
-                                onKeyDown={(event) => { if (event.key === 'Delete') { event.preventDefault(); remove(visual) } }}
+                                onKeyDown={(event) => { if (event.key === 'Delete') { event.preventDefault(); removeByKey(visual, event.timeStamp) } }}
                                 title={`${clipName(visual)} — open it in Preview and its effects; the wall stays as it is`}>
                                 {index < 9 ? <kbd>{index + 1}</kbd> : null}
                                 <span className="map-clip-label">{clipName(visual)}</span>
@@ -356,12 +376,14 @@ function FillBar({ spec, value, onChange, compact = false, lfo = null }) {
                 }}
                 onKeyDown={(event) => {
                     const delta = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[event.key]
+                    // The keys this line uses stop here, so a window's own shortcuts
+                    // (the Mapping window nudges and deletes pieces) never act too.
                     if (delta) {
-                        event.preventDefault()
+                        event.preventDefault(); event.stopPropagation()
                         onChange(fit(value + (delta * step * (event.shiftKey ? 10 : 1))))
-                    } else if (event.key === 'Home') { event.preventDefault(); onChange(min) }
-                    else if (event.key === 'End') { event.preventDefault(); onChange(max) }
-                    else if (event.key === 'Enter') { event.preventDefault(); inputRef.current?.focus() }
+                    } else if (event.key === 'Home') { event.preventDefault(); event.stopPropagation(); onChange(min) }
+                    else if (event.key === 'End') { event.preventDefault(); event.stopPropagation(); onChange(max) }
+                    else if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); inputRef.current?.focus() }
                 }}
             >
                 {swing ? (
@@ -635,6 +657,23 @@ export function MapTempo({ onTempo }) {
                         onClick={() => { const next = tapTempo(); if (next) onTempo(next) }}>Tap</button>
                 )}
         </div>
+    )
+}
+
+// The bar show's autopilot, from the desk (Emily, 11-12: "a loop button like
+// autopilot: on, the patterns change; off, no loop"). The same switch as the
+// pad's "Autopilot on/off" (the engine's state.auto), so either one shows what
+// the other did. Only there while the engine runs, as its tempo is.
+export function MapAutopilot({ className = 'map-toggle' }) {
+    const on = useSyncExternalStore(subscribeEngineAutopilot, engineAutopilot, engineAutopilot)
+    if (on === null) return null
+    return (
+        <button type="button" role="switch" aria-checked={on}
+            className={`${className} map-autopilot${on ? ' is-on' : ''}`}
+            title={on
+                ? 'Autopilot on: the patterns change with the music. Click to keep the one playing.'
+                : 'Autopilot off: the pattern playing stays until you pick another. Click to let the music change them.'}
+            onClick={() => setEngineAutopilot(!on)}>Autopilot</button>
     )
 }
 
