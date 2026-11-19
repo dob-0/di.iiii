@@ -439,8 +439,7 @@ html[data-layout="grid"] .tools .bpm { flex: 1 1 100px; }
 html[data-layout="grid"] .tools .meter { flex: 1 1 40px; width: auto; min-width: 40px; }
 html[data-layout="grid"] .tools .beatdot { flex: none; }
 html[data-layout="grid"] #autoBtn, html[data-layout="grid"] #resyncBtn { flex: 0 0 auto; padding-left: 8px; padding-right: 8px; }
-html[data-layout="grid"] .tools .heard { flex: 1 1 100%; overflow: hidden; text-overflow: ellipsis; }
-html[data-layout="grid"] .tools .heard:empty { display: none; }
+html[data-layout="grid"] .tools .heard { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html[data-layout="grid"] .tools .master { flex: 1 1 100%; }
 html[data-layout="grid"] .tools .master input { flex: 1 1 auto; width: 0; min-width: 40px; height: 24px; }
 html[data-layout="grid"] #undoBtn, html[data-layout="grid"] #redoBtn, html[data-layout="grid"] #keysBtn { flex: 0 0 34px; }
@@ -555,14 +554,14 @@ html[data-layout="grid"] #page-setup { grid-area: 2 / 1 / 7 / 6; }
 
 }
 
-/* Short windows (1280 x 700 and the like): the rail gives the Preview what it can: a thinner Stage and Options, and no note line (it stays as the pane's tooltip text in the head). */
-@media (min-width: 1000px) and (min-height: 600px) and (max-height: 779px) {
-  html[data-layout="grid"] { --g-stage: 72px; --g-opts: 52px; }
-  html[data-layout="grid"] .previewpane .previewnote { display: none; }
-  html[data-layout="grid"] .previewbox { padding: 4px 8px 6px; }
-}
-
 /* the layout switch (Classic and Grid both show it): two plain square buttons */
 .layoutswitch { display: flex; gap: 3px; align-self: center; margin: 0 8px; }
 .layoutswitch button { min-height: 28px; padding: 3px 10px; font-size: 12px; }
 @media (max-width: 1239px), (max-height: 639px) { .layoutswitch { display: none; } }
+
+/* Short windows (1280 x 700 and the like): the rail gives the Preview what it can: a thinner Stage and Options, and the note on one line (ellipsis). */
+@media (min-width: 1000px) and (min-height: 600px) and (max-height: 779px) {
+  html[data-layout="grid"] { --g-stage: 72px; --g-opts: 52px; }
+  html[data-layout="grid"] .previewpane .previewnote { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  html[data-layout="grid"] .previewbox { padding: 4px 8px 6px; }
+}

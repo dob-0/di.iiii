@@ -31,7 +31,8 @@ const rulesOf = (text) => [...stripComments(text).matchAll(/([^{}]+)\{([^{}]*)\}
 const queryAt = css.indexOf(GRID_QUERY)
 const gridBlock = queryAt >= 0 ? blockAt(css, css.indexOf('{', queryAt)) : null
 const gridRules = gridBlock ? rulesOf(gridBlock.body) : []
-const afterRules = gridBlock ? rulesOf(css.slice(gridBlock.end + 1)) : []
+// The short-window block (Preview/Stage heights, 2026-11-20) follows the layout switch; its rules are all Grid-scoped, so it is not a 'switch' rule.
+const afterRules = gridBlock ? rulesOf(css.slice(gridBlock.end + 1)).filter((r) => !r.selector.startsWith(SCOPE)) : []
 const beforeCss = queryAt >= 0 ? css.slice(0, queryAt) : css
 const grid = (selector) => gridRules.find((r) => r.selector === `${SCOPE} ${selector}`)?.declarations ?? null
 // A top-level Classic rule (a selector at the start of a line), whitespace folded.
@@ -43,7 +44,7 @@ const classic = (selector) => {
 
 describe('Classic is untouched: the Grid rules are one block, at the end, scoped', () => {
   it('there is exactly one Grid size query (1000 x 600 and up), and below it the page is Classic', () => {
-    expect(css.split(GRID_QUERY).length - 1).toBe(1)
+    expect(css.split(GRID_QUERY + ' {').length - 1).toBe(1) // the short-window block below is a second, narrower query (and max-height: 779px), scoped the same way
     expect(gridBlock, 'the Grid block is not in desk.css').not.toBeNull()
     expect(gridRules.length).toBeGreaterThan(80)
     // the layout switch is hidden in the same small sizes where Grid does not apply
