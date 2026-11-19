@@ -201,7 +201,7 @@ describe('MonitorSection', () => {
         render(<MonitorSection />)
         await waitFor(() => screen.getByText('Build the monitor'))
         expect(screen.getByText('Credits ready')).toBeTruthy()
-        expect(screen.getByText('1/2')).toBeTruthy()
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/2/)
         const row = document.querySelector('[data-monitor-id="cr:1:api:studio"]')
         expect(row.textContent).toMatch(/not ready/)
         fireEvent.click(row)
