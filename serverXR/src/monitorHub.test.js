@@ -423,3 +423,17 @@ describe('tier probe: cold start and shared rounds', () => {
     expect(prodRow(b).misses).toBe(1)
   })
 })
+
+describe('a reported credits panel', () => {
+  it('keeps only the shown fields and shows an e-mail address as "login"', () => {
+    const store = createReportStore()
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows: [
+      { route: 'plan:dob', available: true, meter: '7d 62%', have: 'login me@corp.example', why: '', token: 'secret' },
+      { route: 'api:lab', available: false, meter: 'n/a', have: 'key', why: 'denied for dob@studio' }
+    ], extra: 'x' } } })
+    const credits = store.list()[0].panels.credits
+    expect(credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2 })
+    expect(JSON.stringify(credits)).not.toMatch(/corp\.example|dob@studio|secret|"extra"/)
+    expect(credits.rows[0]).toEqual({ id: 'plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login login', why: '' })
+  })
+})

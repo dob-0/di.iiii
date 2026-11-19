@@ -13,6 +13,7 @@ const os = require('node:os')
 const crypto = require('node:crypto')
 const { execFile } = require('node:child_process')
 const PARTS = require('./parts.json').parts
+const { sanitizeCredits } = require('./monitorCredits')
 const { sanitizeChats, chatsBlock } = require('./monitorChats')
 const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
@@ -114,7 +115,12 @@ function createReportStore({ now = () => Date.now() } = {}) {
       if (!isPlainObject(body.panels[name])) continue
       // chats: only what the page shows is kept (no owner text, no paths); see monitorChats.js
       if (name === 'chats') panels.chats = { source: sanitizeChats(body.panels.chats.source ?? body.panels.chats, host), ...(body.panels.chats.ok === false ? { error: cleanText(body.panels.chats.error, 200) || 'chat list not read' } : {}) }
-      else panels[name] = cleanPanelValue(body.panels[name])
+      else if (name === 'credits') {
+        // credits: only route, ready, meter, have, why are kept, an address becomes "login"; see monitorCredits.js
+        const c = body.panels.credits
+        const rows = sanitizeCredits(c.rows) || []
+        panels.credits = { ok: c.ok !== false, configured: c.configured ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(c.ok === false ? { error: cleanText(c.error, 200) } : {}) }
+      } else panels[name] = cleanPanelValue(body.panels[name])
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])
       .filter(isPlainObject)

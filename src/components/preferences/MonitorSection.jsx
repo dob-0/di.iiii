@@ -68,7 +68,7 @@ const signatures = (snap) => {
     const panels = snap?.panels
     const sig = {}
     for (const m of panels?.machines?.rows || []) sig[`m:${m.id}`] = String(m.online)
-    for (const c of panels?.credits?.rows || []) sig[`k:${c.id}`] = `${c.available}:${c.meter}`
+    for (const c of panels?.credits?.rows || []) sig[`cr:${c.id}`] = `${c.available}:${c.meter}`
     for (const n of panels?.network?.rows || []) sig[`n:${n.id}`] = `${n.ok}:${n.status}`
     for (const a of panels?.agents?.rows || []) sig[`a:${a.machine || ''}${a.sessionId}`] = a.status
     for (const s of panels?.services?.rows || []) sig[`s:${s.unit}`] = s.active
@@ -406,7 +406,7 @@ export default function MonitorSection({ onStats }) {
                 tone: p.machines?.ok && p.machines.online ? 'success' : 'warning',
                 dots: (p.machines?.rows || []).map((m) => dot(m.online ? 'success' : 'muted', `${m.name}: ${m.online ? 'online' : 'offline'}`)) },
             { id: 'credits', panel: 'credits', label: 'Credits ready', value: p.credits?.ok && p.credits.configured ? `${p.credits.ready}/${p.credits.total}` : '—',
-                tone: p.credits?.ok && p.credits.configured && p.credits.ready ? 'success' : 'warning',
+                tone: !p.credits?.ok || !p.credits.configured ? 'muted' : p.credits.ready ? 'success' : 'warning',
                 dots: (p.credits?.rows || []).map((c) => dot(c.available ? 'success' : 'warning', `${c.name}: ${c.available ? 'ready' : 'not ready'}`)) },
             { id: 'network', panel: 'network', label: 'Network up', value: p.network?.ok ? `${p.network.up}/${p.network.total}` : '—',
                 tone: p.network?.up === p.network?.total ? 'success' : 'warning',
@@ -568,7 +568,7 @@ export default function MonitorSection({ onStats }) {
                         {panels.credits?.ok && !panels.credits.configured ? <div className="monitor-note">This machine does not report credits (no credits feed in its monitor config).</div> : null}
                         <div className="monitor-grid">
                             {credits.map((c) => (
-                                <Row key={c.id} id={`k:${c.id}`} tone={c.available ? 'success' : 'warning'} flash={flash(`k:${c.id}`)}
+                                <Row key={c.id} id={`cr:${c.id}`} tone={c.available ? 'success' : 'warning'} flash={flash(`cr:${c.id}`)}
                                     selected={selected?.kind === 'credit' && selected.id === c.id} onSelect={() => pick('credit', c)}>
                                     <span className="monitor-name">{c.name}</span>
                                     <span className="monitor-meta">{c.available ? 'ready' : 'not ready'} · {c.meter}{c.why ? ` · ${c.why}` : ''}</span>

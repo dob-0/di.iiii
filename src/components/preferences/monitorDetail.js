@@ -7,7 +7,7 @@ const ISO = /^\d{4}-\d\d-\d\d[T ]\d\d:\d\d/
 const MAX_DEPTH = 4
 
 export const KIND_LABEL = {
-    machine: 'Machine', tier: 'Tier', probe: 'Address probe', agent: 'Agent session', chat: 'Chat', thing: 'Connected thing',
+    machine: 'Machine', credit: 'Credit route', tier: 'Tier', probe: 'Address probe', agent: 'Agent session', chat: 'Chat', thing: 'Connected thing',
     place: 'People in a place', service: 'Service', pr: 'Pull request', node: 'Map item', ask: 'Ask', report: 'Machine report', part: 'Part', task: 'Task'
 }
 

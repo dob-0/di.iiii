@@ -16,6 +16,7 @@ const path = require('node:path')
 const { execFile } = require('node:child_process')
 const { createAgentBoardStore } = require('./agentBoardStore')
 const { sanitizeChats } = require('./monitorChats')
+const { sanitizeCredits } = require('./monitorCredits')
 const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
 const CACHE_TTL_MS = 5000
@@ -115,17 +116,6 @@ function parseRemoteSessions(machine, out) {
     })
   }
   return rows
-}
-
-const text = (value, max) => String(value ?? '').replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, 'login').slice(0, max)
-
-/** The credits list as the page shows it, or null when it is not a list. */
-function sanitizeCredits(raw) {
-  if (!Array.isArray(raw)) return null
-  return raw.slice(0, 24).filter((r) => r && typeof r.route === 'string').map((r) => ({
-    id: text(r.route, 40), name: text(r.route, 40), available: r.available === true,
-    meter: text(r.meter, 120), have: text(r.have, 80), why: text(r.why, 160)
-  }))
 }
 
 function createMonitorStore({
@@ -468,4 +458,4 @@ function createMonitorStore({
   return { getMonitor }
 }
 
-module.exports = { createMonitorStore, sanitizeCredits, REMOTE_SESSIONS_COMMAND, findClaudeHomes, DEFAULT_PROBES }
+module.exports = { createMonitorStore, REMOTE_SESSIONS_COMMAND, findClaudeHomes, DEFAULT_PROBES }
