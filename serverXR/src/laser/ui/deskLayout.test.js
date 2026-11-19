@@ -80,9 +80,9 @@ describe('nothing is lost', () => {
     expect(new Set(CLASSIC_IDS).size).toBe(86)
     for (const id of CLASSIC_IDS) expect(doc.querySelectorAll(`[id="${id}"]`).length, `#${id}`).toBe(1)
   })
-  it('the .editbody children keep their order: the Grid rules place Shape as child 2 and Colour as child 3', () => {
-    const label = (c) => (c.id ? `#${c.id}` : c.querySelector('#shapes') ? 'group:Shape' : c.querySelector('#swatches') ? 'group:Colour' : c.querySelector('#lookCubes') ? 'group.multi:Cubes' : `.${[...c.classList].join('.')}`)
-    expect([...doc.getElementById('editor').children].map(label)).toEqual(['#followGroup', 'group:Shape', 'group:Colour', '#pictureFields', '#moveFields', 'group.multi:Cubes', '.actions'])
+  it('the .editbody children keep their order, and the Grid rules place Shape and Colour by id (Emilya\'s Layers and Beam groups sit between, so :nth-child no longer names them)', () => {
+    const label = (c) => (c.id ? `#${c.id}` : c.querySelector('#lookCubes') ? 'group.multi:Cubes' : `.${[...c.classList].join('.')}`)
+    expect([...doc.getElementById('editor').children].map(label)).toEqual(['#followGroup', '#layersGroup', '#shapeGroup', '#colourGroup', '#pictureFields', '#moveFields', '#beamFields', 'group.multi:Cubes', '.actions'])
     expect(grid('.editbody > #shapeGroup')).toMatch(/grid-area: 2 \/ 1 \/ 3 \/ 5/)
     expect(grid('.editbody > #colourGroup')).toMatch(/grid-area: 1 \/ 1/)
   })
@@ -91,7 +91,8 @@ describe('nothing is lost', () => {
     expect(classic('.topright')).toBe('flex: 1 0 100%; display: flex; align-items: flex-start; gap: 6px 14px; padding: 6px 10px; flex-wrap: nowrap;')
     expect(classic('.tools')).toBe('flex: 1 1 0; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;')
     expect(classic('.options')).toBe('flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 10px;')
-    expect(classic('#page-control')).toBe('display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "bank editor" "stage editor"; height: calc(100vh - var(--bar-h, 47px));')
+    // Classic is now Emilya's desk: the Preview is its own pane left of the Stage (PR #1218), so the base page has three columns.
+    expect(classic('#page-control')).toBe('display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "bank bank editor" "preview stage editor"; height: calc(100vh - var(--bar-h, 47px));')
   })
   it('the keys 1-9 are printed on the first nine looks, and the grid has nine columns', () => {
     expect(grid('.tile:nth-child(-n+9) .pic::after')).toMatch(/content: counter\(tile\)/)

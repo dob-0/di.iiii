@@ -348,7 +348,11 @@ describe('the sets shipped with the page', () => {
             expect(new Set(lookIds).size, f).toBe(lookIds.length)
             for (const l of set.looks) {
                 expect(l.id, f).toMatch(/^[A-Za-z0-9_-]{1,40}$/)
-                expect(normaliseLook(l), `${f} ${l.id}`).toEqual(l)
+                // Every stored field survives unchanged. The engine has since added fields with defaults (colour2, layers, lfo, ... from
+                // PR #1218), which an older stored set does not list: those are filled in, never changed, and a second pass changes nothing.
+                const kept = normaliseLook(l)
+                expect(kept, `${f} ${l.id}`).toMatchObject(l)
+                expect(normaliseLook(kept), `${f} ${l.id} again`).toEqual(kept)
             }
         }
     })
