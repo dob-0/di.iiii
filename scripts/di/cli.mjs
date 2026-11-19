@@ -375,8 +375,8 @@ const cmdStatus = async () => {
     const port = resolvePort(home)
     const runner = runnerFor(home)
     const info = runner.describe(home)
-    const healthy = await ownAlive(home, port)
-    if (!healthy && await heldByStranger(home, port)) { say(ui.portTaken(port, await freePortNear(port))); process.exitCode = 1; return }
+    const held = await heldByStranger(home, port)
+    const healthy = !held && await alive(home, port)
 
     // Asked of systemd when it keeps this install up: "not running" alone
     // hides the one case that will not fix itself — a unit systemd gave up on.
@@ -385,7 +385,8 @@ const cmdStatus = async () => {
     const autoLines = () => { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(style.dim(l)) }
 
     if (!healthy) {
-        say(`${ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
+        if (held) { say(ui.portTaken(port, await freePortNear(port))); process.exitCode = 1 }
+        say(`${held ? style.dim('this install is not the one answering') : ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
         if (svc) say(ui.supervisorLine(svc, unit))
         say(style.dim(nameStatusLine(home)))
         autoLines()
@@ -438,7 +439,7 @@ const cmdOpen = async (args) => {
     // either there or it is not.
     if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
-    if (!(await alive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
+    if (!(await ownAlive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
     // The one local address when it is this di.iiii (asked, see oneAddress);
     // else the address this install has always opened. printedAddress is the one
     // function that decides, here as in `di status` and `di up`.
@@ -698,7 +699,12 @@ const cmdNew = async (args) => {
     // what a legal space id is, which words are reserved, and what a new space
     // starts out containing. A second implementation here would drift from it.
     const port = resolvePort(home)
-    if (!(await ownAlive(home, port))) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (!(await ownAlive(home, port))) {
+        await cmdUp({ _: [], flags: { 'no-open': true } })
+        // cmdUp said why and set the exit code (port held by another program): stop here
+        // instead of sending this install's request to a stranger's server.
+        if (process.exitCode || !(await ownAlive(home, port))) return
+    }
     try {
         // Continue, never recreate (N1880): the server answers space_exists_similar
         // when a space with the same stem is already here; only --new-anyway "<why>" goes on.
@@ -830,7 +836,7 @@ const cmdWhere = async () => {
     const port = resolvePort(home)
     // Asked of the running server, not read from a file — there is no file:
     // `--lan` is per start.
-    const running = await alive(home, port)
+    const running = await ownAlive(home, port)
     const reach = running ? await probeReach(home, port) : null
     say([
         `app    ${currentVersionDir(home) || style.dim('not installed')}`,
@@ -942,6 +948,7 @@ const cmdRestore = async (args) => {
     // desk holds its show in memory and writes it back on the next change, so
     // a show restored underneath it would last until the first fader move.
     const wasRunning = await ownAlive(home, resolvePort(home))
+    if (!wasRunning && await heldByStranger(home, resolvePort(home))) say(ui.portTaken(resolvePort(home), await freePortNear(resolvePort(home))))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
@@ -1090,6 +1097,7 @@ const cmdUpdate = async (args) => {
 
     const runner = runnerFor(home)
     const wasRunning = await ownAlive(home, resolvePort(home))
+    if (!wasRunning && await heldByStranger(home, resolvePort(home))) say(ui.portTaken(resolvePort(home), await freePortNear(resolvePort(home))))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
 
@@ -1174,7 +1182,7 @@ const cmdSync = async (args) => {
     if (!link) { say(ui.notLinked(spaceId)); process.exitCode = 1; return }
 
     const port = resolvePort(home, args.flags.port)
-    const local = (await alive(home, port))
+    const local = (await ownAlive(home, port))
         ? await gatherLocalSide({ port, spaceId, token: link.key })
         : { reachable: false }
     const remote = await gatherSide({ base: link.remote, spaceId, token: link.key })
@@ -1717,7 +1725,7 @@ const cmdService = async (args) => {
         // of the running server, like update and restore do). Seconds down,
         // once, and from then on systemd holds it.
         const port = resolvePort(home)
-        const wasRunning = await alive(home, port)
+        const wasRunning = await ownAlive(home, port)
         const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
         if (wasRunning) { try { await node.stop({ home }) } catch { /* already down */ } }
 
@@ -1745,7 +1753,7 @@ const cmdService = async (args) => {
         // Asked before the unit goes: removing the supervisor is not a request
         // to stop di.iiii, so a running server comes back, unsupervised.
         const port = resolvePort(home)
-        const wasRunning = isInstalled(home) && await alive(home, port)
+        const wasRunning = isInstalled(home) && await ownAlive(home, port)
         const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
         const svc = await removeService({ home })
         say(svc ? ui.serviceRemoved(svc) : ui.serviceNone())

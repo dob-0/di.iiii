@@ -39,8 +39,9 @@ const installedHome = (port = null) => {
 }
 
 // somebody else's server: answers the health check on a free port
+const asked = []
 const strangerOnAPort = async () => {
-    const server = http.createServer((req, res) => res.end(req.url === '/serverXR/api/health' ? '{"ok":true}' : '{}'))
+    const server = http.createServer((req, res) => (asked.push(req.url), res.end(req.url === '/serverXR/api/health' ? '{"ok":true}' : '{}')))
     servers.push(server)
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
     return server.address().port
@@ -64,6 +65,8 @@ describe('other di commands when something else answers on the port', () => {
             const text = await run(installedHome(port), ...argv)
             expect(text).toMatch(new RegExp(`port ${port} is held by another program`))
             expect(text).not.toMatch(/Unauthorized|already running|not running/)
+            // only health probes reach the stranger, never an API call of this install
+            expect(asked.filter(u => !u.includes('/api/health'))).toEqual([])
         })
     }
 
@@ -74,5 +77,6 @@ describe('other di commands when something else answers on the port', () => {
         fs.writeFileSync(path.join(home, 'run', 'server.pid'), String(process.pid))
         const text = await run(home, 'status')
         expect(text).not.toMatch(/held by another program/)
+        expect(text).toMatch(/running/)
     })
 })
