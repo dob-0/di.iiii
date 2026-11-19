@@ -12,6 +12,7 @@ machine and devices. "venue" is the plan's word and is not yet in `docs/ai/vocab
 | `di show go --venue <id>` | one look → refuses a machine marked for another venue → checkpoint → soak (default 60 s) → GO / NO-GO | 0 GO · 1 NO-GO · 2 refused |
 | `di show go --venue <id> --look` | one quick read, the same lines; never says GO | 3 |
 | `di show checkpoint --venue <id> "<why>"` | snapshot before any show change (folder + RESTORE.md + manifest.json) | 0 whole · 3 partial · 1 failed · 2 refused |
+| `di show count [--venue <id> \| --host <h>]` | read-only count of what the project documents and the desk files hold (lamps, looks, cues, laser; what names a project; sizes); no value, no id unless `--ids`; `--json` | 0 counted · 1 not all read · 2 refused |
 | `di show profile --venue <id>` / `--list` | the resolved profile, with where each value came from | 0 |
 | `di show mark <id>` | marks THIS machine as the venue's (`~/.config/di/venue`); undo: `rm` that file | 0 |
 
