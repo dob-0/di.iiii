@@ -9,3 +9,9 @@
 - Emily's six missing features, on dev: show file yes (show.json, /api/show, showBackup); PIN, network/OSC panel, undo,
   two-screen guard: no; Stage page: no page of that name (stage pane exists). PR #1252 states these as out of scope.
 - Full report: ~/work/agent-reports-2026-11-20/light-one.md
+- Triage of the older light branches (report: ~/work/agent-reports-2026-11-20/light-triage.md): by `git cherry`, almost all
+  Sept-Oct light-desk commits are already in dev (layers, fan, sACN, library, outputStatus, pixel strip, touch colours,
+  identify, panic keys, broadcast box, work light). Carried here: feat/lighting-speed-sets-midi (speed fader, set Play,
+  per-channel MIDI targets, XONE:K2 preset; its fx.js/looks.js rewrite and tests NOT carried, dev's fx.js supersedes) and the
+  small show-desk MIDI any-channel fix. Not taken: show-desk presence + midi-omni feature (show.js rewritten in dev; PRs #1290/#1291),
+  head-light (walk), sync-light-and-join (space bar), platina-* (show-specific).
