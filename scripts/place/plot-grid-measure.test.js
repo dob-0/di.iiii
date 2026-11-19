@@ -179,6 +179,21 @@ describe.skipIf(!hasPython)('plot_grid_measure.py', () => {
         expect(b.stderr).not.toContain('Traceback')
     })
 
+    it('a size that is not a number (nan, inf) fails with one line, never a nan result', () => {
+        const cases = [['--grid-m', 'nan'], ['--grid-m', 'inf'], ['--cabinet-m', 'nan', '--cabinet-px', '128'], ['--tolerance', 'nan']]
+        for (const extra of cases) {
+            const r = run([png, '--near', NEAR, ...extra])
+            expect(r.status).toBe(1)
+            expect(r.stderr).toMatch(/^FAIL: argument --[a-z-]+: /)
+            expect(r.stderr).not.toContain('Traceback')
+            expect(r.stdout).toBe('')
+        }
+        const far = run([png, '--near', 'inf,1,2,3'])
+        expect(far.status).toBe(1)
+        expect(far.stderr).toMatch(/^FAIL: argument --near: /)
+        expect(far.stderr).not.toContain('Traceback')
+    })
+
     it('--picture writes a PNG of the size the tool promises', () => {
         const out = path.join(dir, 'pic.png')
         const j = JSON.parse(run([png, '--near', NEAR, '--cabinet-m', '0.5', '--cabinet-px', '128', '--picture', out, '--json']).stdout)

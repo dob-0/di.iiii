@@ -49,10 +49,18 @@ class Parser(argparse.ArgumentParser):
         sys.exit(1)
 
 
+def number(text):
+    """A size the user typed: nan and inf are refused here, so no result is ever built on them."""
+    v = float(text)
+    if not math.isfinite(v):
+        raise argparse.ArgumentTypeError(f"'{text}' is not a number")
+    return v
+
+
 def ints(text, n):
     try:
         v = [int(float(p)) for p in text.split(",")]
-    except ValueError:
+    except (ValueError, OverflowError):
         raise argparse.ArgumentTypeError(f"'{text}' is not {n} numbers separated by commas")
     if len(v) != n:
         raise argparse.ArgumentTypeError(f"'{text}' needs {n} numbers separated by commas")
@@ -81,13 +89,13 @@ def build_parser():
     p = Parser(description=__doc__.split("\n\n")[0], epilog=EXAMPLE, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("drawing", help="a raster (PNG/JPG) or a PDF")
     p.add_argument("--near", type=box, required=True, metavar="L,T,R,B", help="rough outline in raster pixels")
-    p.add_argument("--tolerance", type=float, default=40, metavar="PX", help="how far an edge may sit from --near (40)")
-    p.add_argument("--grid-m", type=float, default=1.0, metavar="M", help="metres per grid square (1.0); your claim")
+    p.add_argument("--tolerance", type=number, default=40, metavar="PX", help="how far an edge may sit from --near (40)")
+    p.add_argument("--grid-m", type=number, default=1.0, metavar="M", help="metres per grid square (1.0); your claim")
     p.add_argument("--grid-grey", type=lambda t: ints(t, 2), default=[215, 250], metavar="LO,HI", help="grey range of a grid line (215,250)")
-    p.add_argument("--grid-cover", type=float, default=0.35, metavar="F", help="share of the page a grid line crosses (0.35)")
+    p.add_argument("--grid-cover", type=number, default=0.35, metavar="F", help="share of the page a grid line crosses (0.35)")
     p.add_argument("--dark", type=int, default=70, metavar="N", help="r, g and b below N is dark (70)")
-    p.add_argument("--line-cover", type=float, default=0.8, metavar="F", help="share of the box side an outline edge covers (0.8)")
-    p.add_argument("--cabinet-m", type=float, metavar="M", help="LED cabinet size in metres (square cabinet)")
+    p.add_argument("--line-cover", type=number, default=0.8, metavar="F", help="share of the box side an outline edge covers (0.8)")
+    p.add_argument("--cabinet-m", type=number, metavar="M", help="LED cabinet size in metres (square cabinet)")
     p.add_argument("--cabinet-px", type=int, metavar="N", help="LED cabinet size in pixels")
     p.add_argument("--cue", type=cue, action="append", default=[], metavar="NAME=L,T,R,B[,COLOUR]", help="extent of a colour in a window; COLOUR dark|magenta|orange|#rrggbb")
     p.add_argument("--cue-min", type=int, default=3, metavar="N", help="pixels a row or column needs to count (3)")
