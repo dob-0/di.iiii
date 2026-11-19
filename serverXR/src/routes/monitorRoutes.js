@@ -17,6 +17,7 @@
 const { createMonitorStore } = require('../monitorStore')
 const { createHub, createAskStore, fingerprint, tierOfDeployEnv, REPORT_MAX_BYTES } = require('../monitorHub')
 const { createLedger } = require('../monitorLedger')
+const { createAccountFeed } = require('../monitorAccount')
 const { config } = require('../config')
 const { isLocalOperatorRequest, isAdminCaller } = require('./agentBoardRoutes')
 
@@ -42,10 +43,12 @@ function registerMonitorRoutes(router, {
   ownerIds = () => config.monitorOwnerUserIds,
   prList = null,
   ledger = null,
+  accountFeed = null,
   now = () => Date.now()
 } = {}) {
   const overview = hub || createHub({ store })
   const tasks = ledger || createLedger()
+  const account = accountFeed || createAccountFeed()
   const selfBase = () => `http://127.0.0.1:${config.port}${config.basePath || ''}`
   // A refusal says nothing of its own: the request falls through to whatever answers a path
   // that does not exist, so the page's existence is not shown (spec: "404, not 403").
@@ -63,6 +66,24 @@ function registerMonitorRoutes(router, {
     if (state.actor === 'di.cli' ? !(terminal && state.cliDbRole === 'admin') : Boolean(state.actor)) return false
     const list = (ownerIds() || []).map((id) => String(id).trim()).filter(Boolean)
     return list.includes(String(state.subject))
+  }
+
+  // dev lists only the owners' machines; the local tier adds the signed-in account's machines from dev
+  const snapshot = async () => {
+    const tier = tierOfDeployEnv(deployEnv())
+    if (tier === 'dev') return overview.getSnapshot({ selfBase: selfBase(), subjects: (ownerIds() || []).map((id) => String(id).trim()).filter(Boolean) })
+    if (tier === 'local') return overview.getSnapshot({ selfBase: selfBase(), account: await account.mine() })
+    return overview.getSnapshot({ selfBase: selfBase() })
+  }
+
+  // dev tier, any signed-in person (not only an owner): may send and read ONLY their own machines.
+  // A terminal login (`di login`) reads /mine and sends reports; a browser session may read neither. Never an API token, di.bo's act token or a sync key.
+  const isAccount = (req) => {
+    const state = req.authState || {}
+    if (!requireAuth() || !state.authenticated || !state.subject) return false
+    if (state.type !== 'session' && state.type !== 'cli-token') return false
+    if (state.session?.via === 'token') return false
+    return !state.actor || state.actor === 'di.cli'
   }
 
   const refuse = (req, res, opts) => {
@@ -89,7 +110,7 @@ function registerMonitorRoutes(router, {
     if (state.actor === 'di.cli' && state.authenticated) {
       const tier = tierOfDeployEnv(deployEnv())
       if (tier === 'prod') { next('route'); return }
-      if (tier === 'dev') { if (isOwner(req, { terminal: true })) next(); else next('route'); return }
+      if (tier === 'dev') { if (isOwner(req, { terminal: true }) || isAccount(req)) next(); else next('route'); return }
       if (!isLocalOperatorRequest(req)) { next('route'); return }
       if (state.cliDbRole === 'admin') { next(); return }
       res.status(403).json({ error: 'admins only' })
@@ -100,7 +121,7 @@ function registerMonitorRoutes(router, {
 
   router.get('/api/monitor', gate, async (req, res) => {
     try {
-      res.json(await overview.getSnapshot({ selfBase: selfBase() }))
+      res.json(await snapshot())
     } catch (error) {
       res.status(500).json({ error: error.message || 'monitor scan failed' })
     }
@@ -160,10 +181,22 @@ function registerMonitorRoutes(router, {
   router.post('/api/monitor/report', reportGate, (req, res) => {
     const length = Number(req.headers?.['content-length'] || 0)
     if (length > REPORT_MAX_BYTES * 2) { res.status(413).json({ error: 'too_large', max: REPORT_MAX_BYTES }); return }
-    // past the gate the sender is the owner (dev) or this machine's admin (local): ledger asks are theirs
-    const result = overview.reports.put(req.body, { subject: req.authState?.subject || 'local', ledger: true })
+    // ledger asks only from the owner (dev) or this machine's admin (local); any other signed-in person sends telemetry only
+    const tier = tierOfDeployEnv(deployEnv())
+    const ledgerOk = tier !== 'dev' || isOwner(req, { terminal: true })
+    const result = overview.reports.put(req.body, { subject: req.authState?.subject || 'local', ledger: ledgerOk })
     if (result.error) { res.status(result.status).json({ error: result.error, ...(result.max ? { max: result.max } : {}) }); return }
     res.json({ ok: true, host: result.host })
+  })
+
+  // The signed-in person's own machines, nothing else: this is what their local Monitor pulls.
+  router.get('/api/monitor/mine', (req, res, next) => {
+    if (tierOfDeployEnv(deployEnv()) !== 'dev' || !isAccount(req)) { next('route'); return }
+    // the terminal login only (the local Monitor's feed): a browser session never reads other machines' chats
+    if (req.authState.type !== 'cli-token') { next('route'); return }
+    // a page on another site cannot read it with the visitor's cookie
+    if (String(req.headers?.['sec-fetch-site'] || '') === 'cross-site') { next('route'); return }
+    res.json({ ok: true, reports: overview.reports.list({ subjects: [String(req.authState.subject)], chats: true }) })
   })
 
   router.post('/api/monitor/ask', gate, (req, res) => {
@@ -208,12 +241,12 @@ function registerMonitorRoutes(router, {
     if (busy || !clients.size) return
     busy = true
     try {
-      const snapshot = await overview.getSnapshot({ selfBase: selfBase() })
-      lastPanelAt = panelAt(snapshot)
-      const print = fingerprint(snapshot)
+      const snap = await snapshot()
+      lastPanelAt = panelAt(snap)
+      const print = fingerprint(snap)
       if (print !== lastPrint && clients.size) {
         lastPrint = print
-        lastPayload = `event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`
+        lastPayload = `event: snapshot\ndata: ${JSON.stringify(snap)}\n\n`
         for (const client of [...clients]) send(client, lastPayload)
       }
       // every tick says how old each panel is; a tick with changes carries the snapshot first
