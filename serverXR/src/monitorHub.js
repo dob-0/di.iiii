@@ -143,11 +143,13 @@ function createReportStore({ now = () => Date.now() } = {}) {
     return { ok: true, host }
   }
 
-  /** The `reports` contract rows, newest first. Stale ones stay (flagged) until an hour passes. */
-  function list() {
+  /** The `reports` contract rows, newest first. Stale ones stay (flagged) until an hour passes.
+   *  `subjects` keeps only the machines reported by those accounts (the dev tier lists nobody else's). */
+  function list({ subjects = null } = {}) {
     prune()
     const t = now()
     return [...byHost.values()]
+      .filter((r) => !subjects || subjects.includes(r.subject))
       .sort((a, b) => b.reportedAt - a.reportedAt)
       .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: withoutChats(r.panels) }))
   }
@@ -477,12 +479,21 @@ function createHub({
   }
 
   /** The whole contract object for GET /api/monitor and the stream. */
-  async function getSnapshot({ selfBase = null } = {}) {
+  // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
+  // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
+  // never replacing a machine this server already holds.
+  async function getSnapshot({ selfBase = null, subjects = null, account = null } = {}) {
     const base = await store.getMonitor({ selfBase })
     const [tierBlock, spaceBlock] = await Promise.all([tiers(), spaces()])
-    const reportRows = reports.list()
+    const own = reports.list({ subjects })
+    const held = new Set(own.map((r) => r.host))
+    const extra = (account?.reports || [])
+      .filter((r) => r && typeof r.host === 'string' && !held.has(r.host))
+      .map((r) => ({ ...r, via: 'dev' }))
+    const reportRows = [...own, ...extra]
     return {
       ...base,
+      account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
       tiers: tierBlock,
       parts: partsBlock(base),

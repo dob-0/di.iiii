@@ -163,13 +163,35 @@ describe('POST /api/monitor/report', () => {
     expect(hub.reports.list()[0].host).toBe('aylmo')
   })
 
-  it('the owner\'s terminal login is accepted; another account\'s, a member\'s and prod are 404', async () => {
+  it('a terminal login is accepted on dev for any signed-in account; prod and an off-machine local are 404', async () => {
     expect((await send(cli('admin'), 'staging')).statusCode).toBe(200)
-    expect((await send(cli('editor'), 'staging')).statusCode).toBe(404)
-    expect((await send(cli('admin', { subject: 'admin-2' }), 'staging')).statusCode).toBe(404)
-    expect((await send(cli('admin'), 'staging', [])).statusCode).toBe(404)
+    expect((await send(cli('editor'), 'staging')).statusCode).toBe(200)
+    expect((await send(cli('admin', { subject: 'admin-2' }), 'staging')).statusCode).toBe(200)
     expect((await send(cli('admin'), 'production')).statusCode).toBe(404)
     expect((await send(cli('admin'), null)).statusCode).toBe(404) // local: off-machine
+  })
+
+  it('an API token, di.bo\'s act token and a token-minted session are still 404', async () => {
+    expect((await send({ ...owner, type: 'api-token' }, 'staging')).statusCode).toBe(404)
+    expect((await send({ ...owner, actor: 'di.bo' }, 'staging')).statusCode).toBe(404)
+    expect((await send({ ...owner, session: { via: 'token' } }, 'staging')).statusCode).toBe(404)
+  })
+
+  it('a non-owner report is stored without the ledger flag; the owner\'s keeps it', async () => {
+    const seen = []
+    const spy = { ...hub, reports: { ...hub.reports, put: (b, o) => { seen.push(o); return { ok: true, host: b.host } } } }
+    const run = async (state) => {
+      const router = makeRouter()
+      registerMonitorRoutes(router, { hub: spy, requireAuth: () => true, deployEnv: () => 'staging', ownerIds: () => ['owner-1'] })
+      const [gate, handler] = router.routes['POST /api/monitor/report']
+      const res = makeRes()
+      let passed = false
+      gate({ socket: remote, authState: state, body, headers: {} }, res, (arg) => { if (arg !== 'route') passed = true })
+      if (passed) await handler({ socket: remote, authState: state, body, headers: {} }, res)
+    }
+    await run(owner)
+    await run({ ...owner, subject: 'someone-else' })
+    expect(seen.map((o) => [o.subject, o.ledger])).toEqual([['owner-1', true], ['someone-else', false]])
   })
 
   it('a host held by another sender answers 409', async () => {
@@ -241,5 +263,33 @@ describe('POST /api/monitor/tasks: same-origin and a small rate limit', () => {
     expect(ledger.n).toBe(30)
     clock.t += 61000
     expect((await run(mk(), { ledger, clock, router })).statusCode).toBe(200)
+  })
+})
+
+describe('GET /api/monitor/mine', () => {
+  const run = async (state, deployEnv, store) => {
+    const router = makeRouter()
+    const mine = { ...hub, reports: store }
+    registerMonitorRoutes(router, { hub: mine, requireAuth: () => true, deployEnv: () => deployEnv, ownerIds: () => ['owner-1'] })
+    const [handler] = router.routes['GET /api/monitor/mine']
+    const res = makeRes()
+    let hidden = false
+    await handler({ socket: remote, authState: state }, res, (arg) => { if (arg === 'route') hidden = true })
+    return hidden ? { hidden: true } : res
+  }
+  const store = createReportStore()
+  store.put({ host: 'a-mine', panels: {} }, { subject: 'person-1' })
+  store.put({ host: 'b-theirs', panels: {} }, { subject: 'person-2' })
+
+  it('a signed-in person gets only their own machines', async () => {
+    const res = await run({ authenticated: true, type: 'session', subject: 'person-1' }, 'staging', store)
+    expect(res.body.reports.map((r) => r.host)).toEqual(['a-mine'])
+  })
+
+  it('anonymous, an API token, prod and the local tier are hidden', async () => {
+    expect((await run({ authenticated: false }, 'staging', store)).hidden).toBe(true)
+    expect((await run({ authenticated: true, type: 'api-token', subject: 'person-1' }, 'staging', store)).hidden).toBe(true)
+    expect((await run({ authenticated: true, type: 'session', subject: 'person-1' }, 'production', store)).hidden).toBe(true)
+    expect((await run({ authenticated: true, type: 'session', subject: 'person-1' }, null, store)).hidden).toBe(true)
   })
 })
