@@ -67,11 +67,12 @@ function KindGeometry({ shape, size }) {
     }
 }
 
-function Body({ node, p, color, glow, pip, dim, sel, near, kinds, onHover, onPick, onFly }) {
+function Body({ node, p, color, glow, ring, pip, dim, sel, near, kinds, onHover, onPick, onFly }) {
     const k = node.kind
     const size = k === 'tier' ? 0.55 : k === 'machine' ? 0.46 : 0.36
     const shape = kinds && KIND_STYLE[k] ? KIND_STYLE[k].shape : k === 'tier' ? 'bar' : 'square'
     const off = node.state === 'off'
+    const hl = kinds ? ring : glow // the kinds look rings the pick in the text token, never a literal white
     return (
         <group position={at(p)}>
             <mesh onPointerOver={(e) => { e.stopPropagation(); onHover(node.id) }} onPointerOut={() => onHover(null)}
@@ -81,10 +82,10 @@ function Body({ node, p, color, glow, pip, dim, sel, near, kinds, onHover, onPic
             </mesh>
             {pip ? <mesh position={[0, size * 0.62, 0]}><boxGeometry args={[0.09, 0.09, 0.09]} /><meshBasicMaterial color={pip} transparent opacity={dim ? 0.18 : 1} /></mesh> : null}
             {sel ? (<>
-                <mesh><boxGeometry args={[size * 1.5, size * 1.1, size * 1.5]} /><meshBasicMaterial color={glow} wireframe /></mesh>
+                <mesh><boxGeometry args={[size * 1.5, size * 1.1, size * 1.5]} /><meshBasicMaterial color={hl} wireframe /></mesh>
                 {/* soft glow: two additive shells, no shadows */}
-                <mesh><boxGeometry args={[size * 2.1, size * 1.6, size * 2.1]} /><meshBasicMaterial color={glow} transparent opacity={0.1} blending={AdditiveBlending} depthWrite={false} /></mesh>
-                <mesh><boxGeometry args={[size * 3, size * 2.3, size * 3]} /><meshBasicMaterial color={glow} transparent opacity={0.05} blending={AdditiveBlending} depthWrite={false} /></mesh>
+                <mesh><boxGeometry args={[size * 2.1, size * 1.6, size * 2.1]} /><meshBasicMaterial color={hl} transparent opacity={0.1} blending={AdditiveBlending} depthWrite={false} /></mesh>
+                <mesh><boxGeometry args={[size * 3, size * 2.3, size * 3]} /><meshBasicMaterial color={hl} transparent opacity={0.05} blending={AdditiveBlending} depthWrite={false} /></mesh>
             </>) : null}
             {near && !sel ? <mesh><boxGeometry args={[size * 1.3, size * 1, size * 1.3]} /><meshBasicMaterial color={color} wireframe /></mesh> : null}
         </group>
@@ -360,7 +361,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     return (
                         <group key={n.id}>
                             <Line points={stemOf.get(n.id)} color={colors.line} lineWidth={1} />
-                            <Body node={n} p={p} color={bodyColor(n)} glow={showKinds ? colors.text : colors.cyan} pip={showKinds ? toneColor(n.state) : null} dim={dim} sel={sel} near={!!focus && !sel && hot(n.id)} kinds={showKinds} onHover={setHover} onPick={onPick} onFly={flyToNode} />
+                            <Body node={n} p={p} color={bodyColor(n)} glow={colors.cyan} ring={colors.text} pip={showKinds ? toneColor(n.state) : null} dim={dim} sel={sel} near={!!focus && !sel && hot(n.id)} kinds={showKinds} onHover={setHover} onPick={onPick} onFly={flyToNode} />
                             {named || full ? (
                                 <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
                                     <button type="button" {...{ [pointerOnly ? 'data-pointer-node' : 'data-map-node']: n.id }} tabIndex={pointerOnly ? -1 : undefined}

@@ -193,14 +193,14 @@ describe('PreferencesPage', () => {
         for (const hash of ['#monitor/chat/abc', '#monitor-full/chat/abc']) {
             window.location.hash = hash
             const view = renderPreferencesPage()
-            expect(await screen.findByText('Everything that is going on')).toBeTruthy()
+            expect(await screen.findByRole('heading', { level: 1, name: 'Monitor' })).toBeTruthy()
             view.unmount?.()
         }
         window.location.hash = ''
         renderPreferencesPage()
         await screen.findByRole('button', { name: /^Monitor/ })
         act(() => { window.location.hash = '#monitor/chat/xyz'; window.dispatchEvent(new HashChangeEvent('hashchange')) })
-        expect(await screen.findByText('Everything that is going on')).toBeTruthy()
+        expect(await screen.findByRole('heading', { level: 1, name: 'Monitor' })).toBeTruthy()
     })
 
     it('#monitor shows no Monitor text while the server has not answered, or on a 404; only a 200 mounts it', async () => {
