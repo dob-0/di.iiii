@@ -3,6 +3,13 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## The local Monitor got 404 from dev's /api/monitor/mine for a real terminal login (2026-11-20, N5850)
+
+Symptom: signed in with `di login`, the local Monitor said "could not be reached" and listed no other machine; a real call to dev answered 404 "Cannot GET /serverXR/api/monitor/mine".
+Cause: the route required `authState.type === 'cli-token'`. The server builds a terminal login as `type: 'session'` with `actor: 'di.cli'` (`resolveCliTokenState`, `serverXR/src/index.js`); `cli-token` is only the failed-login fallback. The unit test used an invented state, so it stayed green.
+Fix: `serverXR/src/routes/monitorRoutes.js` requires `actor === 'di.cli'`.
+Regression test: `serverXR/src/routes/monitorRoutes.test.js` "GET /api/monitor/mine": the real shape answers, a browser session, an API token and a failed login `{authenticated:false, type:'cli-token'}` stay hidden. Rule: a route test for a login type uses the state the server really builds.
+
 ## Monitor 3D map: hairball of lines, fixed camera, labels on top of each other (2026-11-19, N5646, N5648)
 
 Symptom: (1) every edge was a straight line from node to node, one tangle; (2) the camera only turned, no pan, no side/front views, no way to fly to a node; (3) with 65 nodes the cards covered each other (the old rule named tiers and machines, and every node once zoomed in); (4) "make 3d cooler".
