@@ -63,7 +63,15 @@ module.exports = [
     reach: "private",
     role: "guest",
     agent: false,
-    note: "the owner's browser session, or a terminal login (di login) whose account is in MONITOR_OWNER_USER_IDS on the dev tier (an admin on a local server); others 404; 256 KB cap; 404 on prod. Telemetry only: it changes nothing else."
+    note: "a terminal login (di login) of any signed-in account on the dev tier (ledger asks only from the owners in MONITOR_OWNER_USER_IDS), an admin on a local server; others 404; 256 KB cap; 404 on prod. Telemetry only: it changes nothing else."
+  },
+  {
+    route: "GET /api/monitor/mine",
+    summary: "the signed-in account's own machines (their reports, chats included); this is what the local Monitor pulls after di login",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "a terminal login or browser session on the dev tier returns only that account's machines, never another person's; 404 elsewhere and on prod."
   },
   {
     route: "POST /api/monitor/ask",
