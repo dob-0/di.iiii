@@ -277,8 +277,9 @@ describe('GET /api/monitor/mine', () => {
   store.put({ host: 'b-theirs', panels: {} }, { subject: 'person-2' })
 
   it('a signed-in person gets only their own machines', async () => {
-    const res = await run({ authenticated: true, type: 'session', subject: 'person-1' }, 'staging', store)
+    const res = await run({ authenticated: true, type: 'cli-token', actor: 'di.cli', subject: 'person-1' }, 'staging', store)
     expect(res.body.reports.map((r) => r.host)).toEqual(['a-mine'])
+    expect((await run({ authenticated: true, type: 'session', subject: 'person-1' }, 'staging', store)).hidden).toBe(true) // a browser session never reads it
   })
 
   it('anonymous, an API token, prod and the local tier are hidden', async () => {

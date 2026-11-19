@@ -16,7 +16,7 @@ const devBase = (value) => {
   } catch { return null }
 }
 const CACHE_MS = 15000
-const CACHE_BAD_MS = 2000 // a refusal or outage is asked again soon
+const CACHE_BAD_MS = 10000 // a refusal or outage is asked again after 10 s, so a slow dev never slows every tick
 const STALE_MS = 120000
 const TIMEOUT_MS = 4000
 
@@ -67,8 +67,7 @@ function createAccountFeed({ home = os.homedir(), fetchImpl = globalThis.fetch, 
 
   async function load(login) {
     if (!login) return { state: 'signed-out', reports: [] }
-    const expires = expiryMs(login.expiresAt)
-    if (expires && expires < now()) return { state: 'expired', reports: [] }
+    // the stored expiry is only a hint (the server rolls a session forward on use): dev decides, a 401 is "ended"
     if (!fetchImpl) return { state: 'offline', reports: [] }
     try {
       const res = await fetchImpl(`${devBase(login.base) || base}/api/monitor/mine`, {

@@ -77,8 +77,7 @@ function registerMonitorRoutes(router, {
   }
 
   // dev tier, any signed-in person (not only an owner): may send and read ONLY their own machines.
-  // A terminal login (`di login`) or a browser session reads /mine; the report route takes the terminal login
-  // only (reportGate). Never an API token, di.bo's act token or a sync key.
+  // A terminal login (`di login`) reads /mine and sends reports; a browser session may read neither. Never an API token, di.bo's act token or a sync key.
   const isAccount = (req) => {
     const state = req.authState || {}
     if (!requireAuth() || !state.authenticated || !state.subject) return false
@@ -193,6 +192,8 @@ function registerMonitorRoutes(router, {
   // The signed-in person's own machines, nothing else: this is what their local Monitor pulls.
   router.get('/api/monitor/mine', (req, res, next) => {
     if (tierOfDeployEnv(deployEnv()) !== 'dev' || !isAccount(req)) { next('route'); return }
+    // the terminal login only (the local Monitor's feed): a browser session never reads other machines' chats
+    if (req.authState.type !== 'cli-token') { next('route'); return }
     // a page on another site cannot read it with the visitor's cookie
     if (String(req.headers?.['sec-fetch-site'] || '') === 'cross-site') { next('route'); return }
     res.json({ ok: true, reports: overview.reports.list({ subjects: [String(req.authState.subject)], chats: true }) })

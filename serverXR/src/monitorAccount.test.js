@@ -28,11 +28,11 @@ describe('the local Monitor\'s account feed', () => {
     expect(calls).toBe(0)
   })
 
-  it('expired login: no request, state expired', async () => {
+  it('a stored expiry in the past is only a hint: dev decides (the server rolls a session forward)', async () => {
     let calls = 0
-    const feed = createAccountFeed({ home: homeWith({ ...login, expiresAt: Date.now() - 1000 }), fetchImpl: async () => { calls++ } })
-    expect((await feed.mine()).state).toBe('expired')
-    expect(calls).toBe(0)
+    const feed = createAccountFeed({ home: homeWith({ ...login, expiresAt: Date.now() - 1000 }), fetchImpl: async () => { calls++; return { ok: true, status: 200, json: async () => ({ reports: [] }) } } })
+    expect((await feed.mine()).state).toBe('ok')
+    expect(calls).toBe(1)
   })
 
   it('signed in: sends the token to the dev tier only, returns the machines, never the token', async () => {
