@@ -166,7 +166,9 @@ describe('POST /api/monitor/report', () => {
   it('a terminal login is accepted on dev for any signed-in account; prod and an off-machine local are 404', async () => {
     expect((await send(cli('admin'), 'staging')).statusCode).toBe(200)
     expect((await send(cli('editor'), 'staging')).statusCode).toBe(200)
-    expect((await send(cli('admin', { subject: 'admin-2' }), 'staging')).statusCode).toBe(200)
+    const other = await call({ socket: remote, authState: cli('admin', { subject: 'admin-2' }), body: { host: 'second-person-pc', panels: {} }, headers: {} }, { deployEnv: 'staging', route: 'POST /api/monitor/report' })
+    expect(other.statusCode).toBe(200)
+    expect((await send(cli('admin', { subject: 'admin-3' }), 'staging')).statusCode).toBe(409) // aylmo is held by the owner
     expect((await send(cli('admin'), 'production')).statusCode).toBe(404)
     expect((await send(cli('admin'), null)).statusCode).toBe(404) // local: off-machine
   })
@@ -190,7 +192,7 @@ describe('POST /api/monitor/report', () => {
       if (passed) await handler({ socket: remote, authState: state, body, headers: {} }, res)
     }
     await run(owner)
-    await run({ ...owner, subject: 'someone-else' })
+    await run({ ...owner, subject: 'someone-else', actor: 'di.cli', cliDbRole: 'editor' })
     expect(seen.map((o) => [o.subject, o.ledger])).toEqual([['owner-1', true], ['someone-else', false]])
   })
 
