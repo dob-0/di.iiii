@@ -670,14 +670,14 @@ export default function MapSurface({ projectId, spaceId }) {
                         title="Undo the last change to the mapping (Ctrl/Cmd+Z)">Undo</button>
                     <button type="button" className="map-action" onClick={redo} disabled={!canRedo()}
                         title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
-                    <label className="map-field map-field-inline" title="The composition: the size of the wall picture">
+                    <div role="group" aria-label="Output size" className="map-field map-field-inline" title="The composition: the size of the wall picture">
                         <span>Output</span>
                         <WallSizeBox label="Output width" value={output.width}
                             onCommit={(width) => setOutput({ output: { ...output, width } })} />
                         <span aria-hidden="true">x</span>
                         <WallSizeBox label="Output height" value={output.height}
                             onCommit={(height) => setOutput({ output: { ...output, height } })} />
-                    </label>
+                    </div>
                     <button type="button" className="map-action map-action-mapping" onClick={() => setMappingOpen(true)}
                         title="The mapping window: slices, input selection, transform, warp points, soft edge, the device the wall plays on">Mapping</button>
                     {/* The bar show's autopilot (only while its engine runs): a show-wide

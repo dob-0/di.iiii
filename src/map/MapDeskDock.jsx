@@ -1134,6 +1134,7 @@ function MonitorScreen({ mapping, aspect, stageProps, onDragOver, onDragLeave, o
             {stage.width > 0 ? (
                 <div
                     ref={holderRef}
+                    role="presentation"
                     className="map-monitor-holder"
                     style={{ width: stage.width, height: stage.height }}
                     onDragOver={onDragOver}
