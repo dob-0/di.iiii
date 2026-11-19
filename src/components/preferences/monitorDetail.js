@@ -131,7 +131,7 @@ export const rowMatches = (query, row) => {
 export function searchCounts(snap, query) {
     const p = snap?.panels || {}
     const pools = [
-        p.machines?.rows, p.network?.rows, p.agents?.rows, p.connected?.rows, p.presence?.rows, p.services?.rows, p.pullRequests?.rows,
+        p.machines?.rows, p.credits?.rows, p.network?.rows, p.agents?.rows, p.connected?.rows, p.presence?.rows, p.services?.rows, p.pullRequests?.rows,
         snap?.chats?.rows, snap?.asks?.rows, snap?.reports, snap?.parts?.rows, snap?.tiers?.rows
     ]
     let matched = 0

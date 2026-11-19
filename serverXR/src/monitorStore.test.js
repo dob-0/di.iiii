@@ -255,3 +255,46 @@ describe('monitor store review fixes', () => {
     expect(tailscaleCalls).toBe(1)
   })
 })
+
+describe('monitor devices and credits', () => {
+  it('leaves Funnel ingress placeholders out of the machine list and counts', async () => {
+    const withFunnel = JSON.stringify({
+      Self: { HostName: 'aylmo', OS: 'linux', TailscaleIPs: ['100.1.1.1'], Online: true },
+      Peer: {
+        a: { HostName: 'r-di', OS: 'linux', TailscaleIPs: ['100.1.1.2'], Online: true },
+        f1: { HostName: 'funnel-ingress-node', OS: '', TailscaleIPs: ['fd7a::1'], Online: false, Tags: ['tag:ingress'] },
+        f2: { HostName: 'funnel-ingress-node', OS: '', TailscaleIPs: ['fd7a::2'], Online: false, Tags: ['tag:ingress'] }
+      }
+    })
+    const store = createMonitorStore({ home: tmp(), runCommand: fakeRun({ tailscale: () => withFunnel }), fetchImpl: null })
+    const { panels } = await store.getMonitor()
+    expect(panels.machines.total).toBe(2)
+    expect(panels.machines.rows.map((r) => r.name)).toEqual(['aylmo', 'r-di'])
+  })
+
+  it('credits: no feed is "not configured"; a feed is cleaned and counted; an address becomes "login"', async () => {
+    const none = createMonitorStore({ home: tmp(), runCommand: fakeRun({ tailscale: () => tailscale }), fetchImpl: null })
+    expect((await none.getMonitor()).panels.credits).toMatchObject({ ok: true, configured: 0, total: 0 })
+
+    const home = tmp()
+    fs.mkdirSync(path.join(home, '.di'))
+    fs.writeFileSync(path.join(home, '.di', 'monitor.json'), JSON.stringify({ feeds: [{ panel: 'credits', kind: 'command', command: 'credits-json' }] }))
+    const list = JSON.stringify([
+      { route: 'plan:dob', available: true, meter: '5h ?% 7d 62%', have: 'login someone@example.com', why: '', secret: 'x' },
+      { route: 'api:studio', available: false, meter: 'n/a', have: 'key SPENT', why: 'SPENT: credit balance is too low' }
+    ])
+    const store = createMonitorStore({ home, runCommand: async (c, a) => (c === 'tailscale' ? tailscale : a[1] === 'credits-json' ? list : Promise.reject(new Error('no'))), fetchImpl: null })
+    const credits = (await store.getMonitor()).panels.credits
+    expect(credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2 })
+    expect(credits.rows[0]).toEqual({ id: 'plan:dob', name: 'plan:dob', available: true, meter: '5h ?% 7d 62%', have: 'login login', why: '' })
+    expect(JSON.stringify(credits)).not.toMatch(/example\.com|secret/)
+  })
+
+  it('credits: output that is not a list greys the panel', async () => {
+    const home = tmp()
+    fs.mkdirSync(path.join(home, '.di'))
+    fs.writeFileSync(path.join(home, '.di', 'monitor.json'), JSON.stringify({ feeds: [{ panel: 'credits', kind: 'command', command: 'x' }] }))
+    const store = createMonitorStore({ home, runCommand: async (c) => (c === 'tailscale' ? tailscale : '{"a":1}'), fetchImpl: null })
+    expect((await store.getMonitor()).panels.credits).toMatchObject({ ok: false })
+  })
+})

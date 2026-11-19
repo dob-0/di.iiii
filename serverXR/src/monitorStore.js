@@ -117,6 +117,17 @@ function parseRemoteSessions(machine, out) {
   return rows
 }
 
+const text = (value, max) => String(value ?? '').replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, 'login').slice(0, max)
+
+/** The credits list as the page shows it, or null when it is not a list. */
+function sanitizeCredits(raw) {
+  if (!Array.isArray(raw)) return null
+  return raw.slice(0, 24).filter((r) => r && typeof r.route === 'string').map((r) => ({
+    id: text(r.route, 40), name: text(r.route, 40), available: r.available === true,
+    meter: text(r.meter, 120), have: text(r.have, 80), why: text(r.why, 160)
+  }))
+}
+
 function createMonitorStore({
   home = os.homedir(),
   configPath = process.env.DI_MONITOR_CONFIG || path.join(home, '.di', 'monitor.json'),
@@ -151,7 +162,10 @@ function createMonitorStore({
       rx: p.RxBytes || 0,
       self
     })
-    const rows = [toRow(raw.Self || {}, true), ...Object.values(raw.Peer || {}).map((p) => toRow(p, false))]
+    // Tailscale Funnel adds one placeholder peer per public hostname, tagged tag:ingress (no OS, no name of
+    // its own, never a device); they are not machines, so they are left out of the list and the counts.
+    const isIngress = (p) => (p.Tags || []).includes('tag:ingress')
+    const rows = [toRow(raw.Self || {}, true), ...Object.values(raw.Peer || {}).filter((p) => !isIngress(p)).map((p) => toRow(p, false))]
     return { rows, online: rows.filter((r) => r.online).length, total: rows.length }
   }
 
@@ -382,6 +396,18 @@ function createMonitorStore({
     return { rows, configured: list.length }
   }
 
+  // The credits of this machine: a feed { panel: 'credits', kind: 'command' } in the config whose output is the
+  // JSON list `di-credits status --json` prints (route, available, meter, have, why). Only those fields are kept,
+  // text is clipped, and an e-mail address is shown as "login" so no address leaves the machine in a report.
+  async function credits(config) {
+    const list = (Array.isArray(config.feeds) ? config.feeds : []).filter((f) => f.panel === 'credits' && f.kind === 'command' && f.command).slice(0, 1)
+    if (!list.length) return { configured: 0, rows: [], ready: 0, total: 0 }
+    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command]), 8000)
+    const rows = sanitizeCredits(JSON.parse(out))
+    if (!rows) throw new Error('the credits list was not in the expected shape')
+    return { configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length }
+  }
+
   // The chat list of this machine: a feed { panel: 'chats', kind: 'command' } in the config whose output is
   // the chat list as JSON. No such feed is "not configured", not an empty list. Only the shown fields are kept.
   async function chats(config) {
@@ -426,7 +452,8 @@ function createMonitorStore({
       panel('pullRequests', pullRequests),
       panel('tasks', () => feeds(config, 'tasks')),
       panel('shows', () => feeds(config, 'shows')),
-      panel('chats', () => chats(config))
+      panel('chats', () => chats(config)),
+      panel('credits', () => credits(config))
     ])
     const value = {
       generatedAt: new Date(now()).toISOString(),
@@ -441,4 +468,4 @@ function createMonitorStore({
   return { getMonitor }
 }
 
-module.exports = { createMonitorStore, REMOTE_SESSIONS_COMMAND, findClaudeHomes, DEFAULT_PROBES }
+module.exports = { createMonitorStore, sanitizeCredits, REMOTE_SESSIONS_COMMAND, findClaudeHomes, DEFAULT_PROBES }
