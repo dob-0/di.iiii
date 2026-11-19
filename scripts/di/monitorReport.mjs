@@ -162,7 +162,7 @@ const AGENT_LABEL = 'xyz.diiii.monitor-report'
 const xmlEscape = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 /** The macOS launch agent: the same job as the systemd pair, run every `every` seconds and at login. */
-export const launchdPlist = ({ node, cli, every = EVERY_SECONDS, logDir }) => [
+export const launchdPlist = ({ node, cli, every = EVERY_SECONDS, logDir, envPath = '' }) => [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
     '<plist version="1.0">',
@@ -170,6 +170,7 @@ export const launchdPlist = ({ node, cli, every = EVERY_SECONDS, logDir }) => [
     `  <key>Label</key><string>${AGENT_LABEL}</string>`,
     '  <key>ProgramArguments</key>',
     `  <array><string>${xmlEscape(node)}</string><string>${xmlEscape(cli)}</string><string>monitor</string><string>report</string><string>--once</string></array>`,
+    ...(envPath ? ['  <key>EnvironmentVariables</key>', `  <dict><key>PATH</key><string>${xmlEscape(envPath)}</string></dict>`] : []),
     `  <key>StartInterval</key><integer>${every}</integer>`,
     '  <key>RunAtLoad</key><true/>',
     `  <key>StandardOutPath</key><string>${xmlEscape(path.join(logDir, 'monitor-report.log'))}</string>`,
@@ -193,7 +194,7 @@ export const installLaunchAgent = async ({ home = os.homedir(), node = process.e
     const logDir = path.join(home, '.di')
     fs.mkdirSync(dir, { recursive: true })
     fs.mkdirSync(logDir, { recursive: true })
-    fs.writeFileSync(file, launchdPlist({ node, cli, logDir }), { mode: 0o644 })
+    fs.writeFileSync(file, launchdPlist({ node, cli, logDir, envPath: process.env.PATH || '' }), { mode: 0o644 })
     await exec('launchctl', ['bootout', `${domain}/${AGENT_LABEL}`])
     await exec('launchctl', ['bootstrap', domain, file])
     const listed = await exec('launchctl', ['print', `${domain}/${AGENT_LABEL}`])

@@ -96,6 +96,7 @@ describe('macOS launch agent', () => {
         expect(text).toContain('<string>monitor</string><string>report</string><string>--once</string>')
         expect(text).toContain('<key>StartInterval</key><integer>30</integer>')
         expect(text).toContain('<key>RunAtLoad</key><true/>')
+        expect(launchdPlist({ node: '/n', cli: '/c', logDir: '/l', envPath: '/h/.local/bin:/usr/bin' })).toContain('<key>PATH</key><string>/h/.local/bin:/usr/bin</string>')
     })
     it('install writes the file and loads it; --remove undoes it', async () => {
         const home = tmpHome()
