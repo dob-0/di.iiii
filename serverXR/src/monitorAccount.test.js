@@ -104,6 +104,24 @@ describe('the hub snapshot with an account', () => {
     expect(store.list({ subjects: ['u1'], chats: true })[0].panels.chats.source.chats).toHaveLength(1)
   })
 
+  it('this machine is never listed twice, and a stranger\'s machine stays out of the dev tiers, asks and chats', async () => {
+    const h = createHub({ store: { getMonitor: async () => ({ panels: {}, host: 'aylmo.local' }) }, reports: createReportStore() })
+    const snap = await h.getSnapshot({ account: { state: 'ok', reports: [{ host: 'aylmo', panels: {} }, { host: 'r-di', panels: {} }] } })
+    expect(snap.reports.map((r) => r.host)).toEqual(['r-di'])
+    const chat = { v: 2, generatedAt: Date.now() / 1000, chats: [{ sessionId: 's', title: 'Secret', group: 'ask', status: 'idle', idleMinutes: 1 }] }
+    h.reports.put({ host: 'stranger-pc', panels: { chats: { ok: true, source: chat } } }, { subject: 'u9' })
+    const dev = await h.getSnapshot({ subjects: ['owner-1'] })
+    expect(dev.chats.rows).toEqual([])
+    expect(JSON.stringify(dev.tiers)).not.toContain('stranger-pc')
+  })
+
+  it('senders without ledger rights cannot fill the table: the owner keeps room', () => {
+    const store = createReportStore()
+    for (let i = 0; i < 10; i += 1) for (let j = 0; j < 12; j += 1) store.put({ host: `h${j}`, panels: {} }, { subject: `x${i}` })
+    expect(store.raw().length).toBe(80)
+    expect(store.put({ host: 'mine', panels: {} }, { subject: 'owner-1', ledger: true }).ok).toBe(true)
+  })
+
   it('signed out still shows this machine and says so', async () => {
     const snap = await hub().getSnapshot({ account: { state: 'signed-out', reports: [] } })
     expect(snap.account).toMatchObject({ state: 'signed-out', machines: 0 })

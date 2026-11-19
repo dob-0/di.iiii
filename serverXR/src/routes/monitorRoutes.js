@@ -182,7 +182,6 @@ function registerMonitorRoutes(router, {
   router.post('/api/monitor/report', reportGate, (req, res) => {
     const length = Number(req.headers?.['content-length'] || 0)
     if (length > REPORT_MAX_BYTES * 2) { res.status(413).json({ error: 'too_large', max: REPORT_MAX_BYTES }); return }
-    // past the gate the sender is the owner (dev) or this machine's admin (local): ledger asks are theirs
     // ledger asks only from the owner (dev) or this machine's admin (local); any other signed-in person sends telemetry only
     const tier = tierOfDeployEnv(deployEnv())
     const ledgerOk = tier !== 'dev' || isOwner(req, { terminal: true })

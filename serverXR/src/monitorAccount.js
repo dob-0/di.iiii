@@ -12,7 +12,8 @@ const CACHE_MS = 15000
 const TIMEOUT_MS = 4000
 
 const expiryMs = (value) => {
-  const n = Number(value)
+  let n = Number(value)
+  if (typeof value === 'string' && !Number.isFinite(n)) n = Date.parse(value) / 1000
   if (!Number.isFinite(n) || n <= 0) return null
   return n < 1e11 ? n * 1000 : n
 }

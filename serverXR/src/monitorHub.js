@@ -22,6 +22,7 @@ const KEEP_MS = 60 * 60 * 1000
 const REPORT_MAX_BYTES = 256 * 1024
 const MAX_HOSTS = 120
 const MAX_HOSTS_PER_SUBJECT = 12
+const MAX_OTHER_HOSTS = 80 // machines of senders without ledger rights (not the owner): the rest of MAX_HOSTS is kept for the owner
 const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
@@ -109,6 +110,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
     const key = `${subject}\n${host}`
     const held = byHost.get(key)
     if (!held && byHost.size >= MAX_HOSTS) return { error: 'too_many_hosts', status: 429 }
+    if (!held && !ledger && [...byHost.values()].filter((r) => !r.ledger).length >= MAX_OTHER_HOSTS) return { error: 'too_many_hosts', status: 429 }
     if (!held && [...byHost.values()].filter((r) => r.subject === subject).length >= MAX_HOSTS_PER_SUBJECT) return { error: 'too_many_hosts', status: 429 }
 
     const panels = {}
@@ -140,7 +142,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
       .filter((a) => a.id && a.text)
     const commit = typeof body.commit === 'string' && COMMIT_RE.test(body.commit.trim()) ? body.commit.trim() : null
     const builtAt = typeof body.builtAt === 'string' && !Number.isNaN(Date.parse(body.builtAt)) ? new Date(body.builtAt).toISOString() : null
-    byHost.set(key, { host, subject, reportedAt: now(), panels, asks, commit, builtAt })
+    byHost.set(key, { host, subject, ledger: !!ledger, reportedAt: now(), panels, asks, commit, builtAt })
     return { ok: true, host }
   }
 
@@ -156,7 +158,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
       .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: chats ? r.panels : withoutChats(r.panels) }))
   }
 
-  const raw = () => { prune(); return [...byHost.values()] }
+  const raw = ({ subjects = null } = {}) => { prune(); return [...byHost.values()].filter((r) => !subjects || subjects.map(String).includes(String(r.subject))) }
   const clear = () => byHost.clear()
   return { put, list, raw, clear }
 }
@@ -291,16 +293,16 @@ function createHub({
   // one probe round at a time: the GET and the SSE poller share the round in flight, so one
   // outage is never counted as two misses (same rule as monitorStore.getMonitor).
   let tiersInflight = null
-  async function tiers() {
+  async function tiers(subjects = null) {
     const t = now()
     if (tierCache && t - tierCache.at < TIER_CACHE_MS && tierCache.self === selfId()) return tierCache.value
     if (tiersInflight && tiersInflight.self === selfId()) return tiersInflight.promise
-    const promise = tiersScan().finally(() => { tiersInflight = null })
+    const promise = tiersScan(subjects).finally(() => { tiersInflight = null })
     tiersInflight = { self: selfId(), promise }
     return promise
   }
 
-  async function tiersScan() {
+  async function tiersScan(subjects = null) {
     const t = now()
     const self = selfId()
     const rel = releaseInfo() || {}
@@ -316,7 +318,7 @@ function createHub({
     if (self.startsWith('local:')) {
       rows.push({ id: self, url: '', source: 'self', status: 200, ms: 0, commit: rel.gitCommit || null, builtAt: rel.generatedAt || null, behindDev: null })
     }
-    for (const r of reports.raw()) {
+    for (const r of reports.raw({ subjects })) {
       const id = `local:${r.host}`
       if (rows.some((x) => x.id === id)) continue
       // a machine that only REPORTS was never probed: no status, a state from how fresh its report is
@@ -368,11 +370,11 @@ function createHub({
     return { ok, rows }
   }
 
-  function asksBlock() {
+  function asksBlock(subjects = null) {
     let page = []
     let ok = true
     try { page = asks ? asks.list() : [] } catch { ok = false }
-    const ledger = reports.raw().flatMap((r) => r.asks).slice(0, ASKS_MAX)
+    const ledger = reports.raw({ subjects }).flatMap((r) => r.asks).slice(0, ASKS_MAX)
     return { ok, rows: [...page, ...ledger] }
   }
 
@@ -469,11 +471,11 @@ function createHub({
 
   // Chats come through the same door as everything else: this machine's own chat panel (a feed in its
   // config) and the chat panel of every machine that reported. Nobody carrying chats is "no chat data".
-  const chatsFor = (base, extra = []) => {
+  const chatsFor = (base, extra = [], subjects = null) => {
     const self = base.panels?.chats
     const inputs = []
     if (self && (self.source || self.ok === false)) inputs.push({ host: String(base.host || 'this machine').split('.')[0], source: self.source || null, error: self.ok === false ? (self.error || 'chat list not read') : null })
-    for (const r of reports.raw()) {
+    for (const r of reports.raw({ subjects })) {
       const c = r.panels?.chats
       if (c) inputs.push({ host: r.host, source: c.source || null, error: c.error || null })
     }
@@ -490,9 +492,11 @@ function createHub({
   // never replacing a machine this server already holds.
   async function getSnapshot({ selfBase = null, subjects = null, account = null } = {}) {
     const base = await store.getMonitor({ selfBase })
-    const [tierBlock, spaceBlock] = await Promise.all([tiers(), spaces()])
+    const [tierBlock, spaceBlock] = await Promise.all([tiers(subjects), spaces()])
     const own = reports.list({ subjects })
-    const held = new Set(own.map((r) => r.host))
+    const shortHost = (v) => String(v || '').split('.')[0]
+    // never a second row for this machine itself (it may also report to dev), nor for a host the server already holds
+    const held = new Set([...own.map((r) => r.host), shortHost(base.host), shortHost(os.hostname())])
     const extra = (account?.reports || [])
       .filter((r) => r && typeof r.host === 'string' && !held.has(r.host))
       .map((r) => ({ ...r, via: 'dev' }))
@@ -503,9 +507,9 @@ function createHub({
       reports: reportRows,
       tiers: tierBlock,
       parts: partsBlock(base),
-      chats: chatsFor(base, extra),
+      chats: chatsFor(base, extra, subjects),
       spaces: spaceBlock,
-      asks: asksBlock(),
+      asks: asksBlock(subjects),
       map: buildMap({ base, reportRows, tierBlock, spaceBlock })
     }
   }
