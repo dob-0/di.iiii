@@ -59,6 +59,11 @@ describe('body and timer units', () => {
         expect(units['di-monitor-report.service']).toContain('ExecStart="/usr/bin/node" "/x/cli.mjs" monitor report --once')
         expect(units['di-monitor-report.timer']).toContain('OnUnitActiveSec=30')
     })
+    it('the service carries the caller\'s PATH so `ledger-open` is found by the timer', () => {
+        const svc = timerUnits({ node: '/n', cli: '/c', envPath: '/h/.local/bin:/usr/bin' })['di-monitor-report.service']
+        expect(svc).toContain('Environment="PATH=/h/.local/bin:/usr/bin"')
+        expect(timerUnits({ node: '/n', cli: '/c' })['di-monitor-report.service']).not.toContain('Environment=')
+    })
     it('quotes the ExecStart paths for systemd: spaces kept, quote and backslash escaped, % and $ doubled', () => {
         expect(systemdQuote('/Users/a b/node')).toBe('"/Users/a b/node"')
         expect(systemdQuote('/x/"y"\\z')).toBe('"/x/\\"y\\"\\\\z"')

@@ -129,13 +129,15 @@ const TIMER = 'di-monitor-report.timer'
 export const systemdQuote = (value) => `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/%/g, '%%').replace(/\$/g, '$$$$')}"`
 
 /** The two unit files. `node` and `cli` are absolute paths so the timer does not depend on a login shell. */
-export const timerUnits = ({ node, cli, every = EVERY_SECONDS }) => ({
+export const timerUnits = ({ node, cli, every = EVERY_SECONDS, envPath = '' }) => ({
     [SERVICE]: [
         '[Unit]',
         'Description=Send this machine to the di.iiii overview (di monitor report --once)',
         '',
         '[Service]',
         'Type=oneshot',
+        // a user unit gets systemd's short PATH: without the login's PATH `ledger-open` is not found and the asks go out empty
+        ...(envPath ? [`Environment=${systemdQuote(`PATH=${envPath}`)}`] : []),
         `ExecStart=${systemdQuote(node)} ${systemdQuote(cli)} monitor report --once`,
         'TimeoutStartSec=60',
         ''
@@ -202,7 +204,7 @@ export const installLaunchAgent = async ({ home = os.homedir(), node = process.e
 
 export const installTimer = async ({ home = os.homedir(), node = process.execPath, cli = path.join(here(), 'cli.mjs'), remove = false, exec = execText, say = console.log, fail = console.error } = {}) => {
     const dir = path.join(home, '.config', 'systemd', 'user')
-    const units = timerUnits({ node, cli })
+    const units = timerUnits({ node, cli, envPath: process.env.PATH || '' })
     if (remove) {
         await exec('systemctl', ['--user', 'disable', '--now', TIMER])
         for (const name of Object.keys(units)) fs.rmSync(path.join(dir, name), { force: true })
