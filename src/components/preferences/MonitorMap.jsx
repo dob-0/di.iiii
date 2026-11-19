@@ -109,8 +109,9 @@ const readPos = () => {
 }
 const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.stringify(o)) } catch { /* the arrangement just is not kept */ } }
 
-// the wheel always zooms the map (owner 2026-11-19: the camera felt locked); the page does not scroll under it
-export const wheelZooms = () => true
+// The wheel zooms the map in full screen, on a map that fills its screen (the Monitor map tab, `fills`), or with Ctrl/Cmd
+// (a trackpad pinch sends Ctrl). An embedded map keeps the page scrolling under the wheel.
+export const wheelZooms = (ev, fullscreen, fills = false) => Boolean(fullscreen || fills || ev.ctrlKey || ev.metaKey)
 
 export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false, kinds = false, pointerOnly = false }) {
     // pointerOnly: a mouse/touch surface only (the Mixed view): out of the tab order, one data-map-node per node (the list owns it)
@@ -170,7 +171,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
     useEffect(() => {
         const el = svgRef.current
         if (!el) return undefined
-        const onWheel = (ev) => { if (!wheelZooms(ev, fsRef.current)) return; ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
+        const onWheel = (ev) => { if (!wheelZooms(ev, fsRef.current, kinds)) return; ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
         el.addEventListener('wheel', onWheel, { passive: false })
         return () => el.removeEventListener('wheel', onWheel)
     }, [zoomAt])
@@ -331,7 +332,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                 <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
             {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
-            <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · scroll or pinch to zoom</div>
+            <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen || kinds ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
         </div>
     )
 }

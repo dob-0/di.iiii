@@ -96,8 +96,8 @@ const matches = (query, ...parts) => {
 function IssueItem({ issue, onOpen }) {
     const opens = Boolean(issue.chat || issue.tier || issue.key === 'chats-more' || issue.key === 'chats-stale')
     return opens
-        ? <li className={`tone-${issue.tone}`}><button type="button" className="monitor-issue-open" data-issue={issue.key || issue.tier} onClick={() => onOpen(issue)}>{issue.text}</button></li>
-        : <li className={`tone-${issue.tone}`}>{issue.text}</li>
+        ? <li className={`tone-${issue.tone}`} title={issue.text}><button type="button" className="monitor-issue-open" title={issue.text} data-issue={issue.key || issue.tier} onClick={() => onOpen(issue)}>{issue.text}</button></li>
+        : <li className={`tone-${issue.tone}`} title={issue.text}>{issue.text}</li>
 }
 
 function PanelNote({ panel, empty }) {

@@ -19,17 +19,29 @@ const map = {
 beforeEach(() => { window.localStorage.clear(); window.localStorage.setItem('di.monitor.map.view', '2d') })
 afterEach(() => { cleanup(); window.localStorage.clear(); document.body.style.overflow = '' })
 
-describe('map: the wheel always zooms the camera', () => {
-    it('a plain wheel zooms; nothing needs Ctrl or full screen', () => {
-        expect(wheelZooms({ ctrlKey: false, metaKey: false }, false)).toBe(true)
+describe('map: when the wheel zooms', () => {
+    it('plain wheel scrolls an embedded map; Ctrl, Cmd (a pinch), full screen or a map that fills its screen zoom', () => {
+        expect(wheelZooms({ ctrlKey: false, metaKey: false }, false)).toBe(false)
         expect(wheelZooms({ ctrlKey: true }, false)).toBe(true)
+        expect(wheelZooms({ metaKey: true }, false)).toBe(true)
+        expect(wheelZooms({}, true)).toBe(true)
+        expect(wheelZooms({}, false, true)).toBe(true)
     })
-    it('a plain wheel over the 2D map is taken by the map, the page does not scroll under it', () => {
+    it('a plain wheel over an embedded 2D map is not cancelled, so the page scrolls', () => {
         const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} />)
         const svg = container.querySelector('svg.monitor-map-svg')
         const plain = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true })
         svg.dispatchEvent(plain)
+        expect(plain.defaultPrevented).toBe(false)
+    })
+    it('a plain wheel over the Monitor map (kinds) zooms it and the page does not scroll under it', () => {
+        const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} kinds />)
+        const svg = container.querySelector('svg.monitor-map-svg')
+        const before = svg.getAttribute('viewBox')
+        const plain = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true })
+        svg.dispatchEvent(plain)
         expect(plain.defaultPrevented).toBe(true)
+        return Promise.resolve().then(() => expect(svg.getAttribute('viewBox')).not.toBe(before))
     })
 })
 

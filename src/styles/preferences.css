@@ -1696,7 +1696,6 @@
 .monitor-area-strip { display: contents; }
 .monitor-area-tiers { grid-area: tiers; min-width: 0; }
 .monitor-area-counts { grid-area: counts; min-width: 0; }
-.monitor-area-tabs { grid-area: tabs; margin-top: 0; }
 .monitor-area-main { grid-area: main; }
 .monitor-area-feed { grid-area: feed; }
 
@@ -1926,17 +1925,10 @@
 .monitor-page .monitor-overview, .monitor-page .monitor-counts { display: contents; }
 .monitor-page .monitor-tier, .monitor-page .monitor-count {
     flex-direction: row; align-items: center; gap: var(--di-space-2);
-    min-height: 44px; padding: 0 var(--di-space-3);
-    border-top-width: 3px;
+    padding: 0 var(--di-space-3);
 }
 .monitor-page .monitor-tier > .monitor-meta, .monitor-page .monitor-spark, .monitor-page .monitor-dots { display: none; }
-.monitor-page .monitor-tier-name { font-size: var(--di-text-4); }
-.monitor-page .monitor-tier-commit { font-size: var(--di-text-3); }
-.monitor-page .monitor-tier-note { font-size: var(--di-text-3); }
-.monitor-page .monitor-count-value { font-size: var(--di-text-5); }
-.monitor-page .monitor-count-label { font-size: var(--di-text-3); }
 .monitor-page .monitor-hero { padding: var(--di-space-2) var(--di-space-4); }
-.monitor-page .monitor-hero-text { font-size: var(--di-text-6); }
 .monitor-page .monitor-map-section { padding: 0; background: none; border: 0; }
 .monitor-page .monitor-map-section > .preferences-module-header { display: none; }
 @media (max-width: 600px) {
@@ -1949,7 +1941,7 @@
 @media (max-width: 900px) {
     .monitor-frame {
         grid-template-columns: minmax(0, 1fr);
-        grid-template-areas: "hero" "feed" "tiers" "counts" "tabs" "main";
+        grid-template-areas: "hero" "feed" "tiers" "counts" "main";
     }
     .monitor-changes { position: static; max-height: 14rem; }
     .monitor-hero-text { font-size: var(--di-text-6); }
@@ -2207,7 +2199,7 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 }
 .monitor-page .monitor-tier:hover, .monitor-page .monitor-count:hover { background: rgba(var(--tone-rgb), 0.1); }
 .monitor-page .monitor-tier-name, .monitor-page .monitor-count-label {
-    font-family: var(--di-mono); font-size: var(--di-text-2); font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ui-text-muted);
+    font-family: var(--di-mono); font-size: var(--di-text-2); font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ui-text-muted);
 }
 .monitor-page .monitor-count-value, .monitor-page .monitor-tier-commit { font-family: var(--di-mono); font-size: var(--di-text-4); }
 .monitor-page .monitor-tier-note { font-size: var(--di-text-2); font-weight: 400; }
@@ -2220,7 +2212,6 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-map-views { min-height: 0; }
 .monitor-map-view { min-height: 32px; padding-block: 0; font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.14em; text-transform: uppercase; }
 .monitor-map-tool { font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.1em; text-transform: uppercase; }
-.monitor-page .monitor-count-label, .monitor-page .monitor-tier-name { letter-spacing: 0.06em; }
 .monitor-bar { flex-wrap: nowrap; }
 .monitor-bar-tabs { margin: 0; flex: 1 1 auto; min-width: 0; }
 .monitor-bar-actions { flex-wrap: nowrap; flex: none; }
@@ -2228,7 +2219,9 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-page .monitor-map-views { position: absolute; top: var(--di-space-2); left: var(--di-space-2); z-index: 3; }
 .monitor-page .monitor-map[data-monitor-map-view="list"] .monitor-map-views { position: static; }
 .monitor-page .monitor-map-key { display: none; }
-@media (max-width: 1100px) { .monitor-bar { flex-wrap: wrap; } .monitor-bar-actions { flex-wrap: wrap; } }
+@media (max-width: 1300px) { .monitor-bar { flex-wrap: wrap; } .monitor-bar-actions { flex-wrap: wrap; } }
+@media (max-width: 600px) { .monitor-page .monitor-map-views { position: static; } }
+.monitor-bar-tabs { overflow-x: auto; scrollbar-width: none; }
 /* Board: the panels flow in two columns on a wide screen instead of one long stack */
 .monitor-page.tab-board .monitor-main { columns: 2 24rem; column-gap: var(--di-space-3); }
 .monitor-page.tab-board .monitor-main > * { break-inside: avoid; margin-bottom: var(--di-space-3); }
