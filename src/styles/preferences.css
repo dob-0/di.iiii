@@ -1156,6 +1156,7 @@
 
 .preferences-input {
     width: 100%;
+    box-sizing: border-box; /* 100% + padding ran 26 px past its cell (This scene, Display name) */
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid var(--pref-border-active);
     border-radius: 0;
@@ -1274,7 +1275,10 @@
 .preferences-switch {
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
     gap: var(--di-space-1);
+    height: 100%; /* the switch and its sentence are one cell of the grid, so a row stays one height */
+    background: var(--di-surface);
 }
 
 .preferences-switch-control {
@@ -1311,6 +1315,7 @@
 .preferences-switch-control.is-warning .preferences-switch-state { color: var(--di-warning); }
 
 .preferences-switch-detail {
+    padding: 0 var(--di-space-3) var(--di-space-2);
     color: var(--ui-text-muted);
     font-size: var(--di-text-3);
 }
@@ -1596,6 +1601,7 @@
 .monitor-card3d.tone-warning { --pref-tone: var(--di-warning); }
 .monitor-card3d.is-dim { opacity: 0.3; }
 .monitor-card3d:hover, .monitor-card3d.is-selected, .monitor-card3d:focus-visible { border-color: var(--di-cyan); outline: none; }
+.monitor-card3d.is-full:not(.is-hub) { transform: translateY(calc(-50% - 12px)); } /* the open card sits ABOVE its body, never over it */
 .monitor-card3d.is-hub { border-color: var(--di-cyan); cursor: default; min-width: 0; white-space: nowrap; }
 .monitor-card3d:not(.is-full):not(.is-hub) { min-width: 0; max-width: none; white-space: nowrap; padding: var(--di-space-1) var(--di-space-2) var(--di-space-1) var(--di-space-3); }
 .monitor-card3d-name { font-size: var(--di-text-4); overflow-wrap: anywhere; }
@@ -1762,7 +1768,7 @@
 .monitor-spark.is-empty { color: var(--ui-text-muted); font-size: var(--di-text-2); line-height: 1.75rem; }
 
 /* count tiles */
-.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: var(--di-space-2); }
+.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.25rem, 1fr)); /* 7 tiles fit one row beside "What changed" (the 7th sat alone) */ gap: var(--di-space-2); }
 .monitor-count {
     display: flex;
     flex-direction: column;
@@ -1971,3 +1977,92 @@
 /* Pull requests in Monitor › Work: each row is a link, so it must not look underlined. */
 a.monitor-row { text-decoration: none; }
 a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+/* Selected node's card inside a full-screen map: the detail page is hidden, so the card carries the way to it */
+.monitor-map-card {
+    position: absolute; right: var(--di-space-3); bottom: var(--di-space-3); z-index: 2; max-width: 20rem;
+    display: grid; gap: var(--di-space-1); padding: var(--di-space-3);
+    background: var(--di-surface); border: 1px solid var(--pref-border);
+}
+.monitor-map-card-name { color: var(--di-text); font-size: var(--di-text-5); overflow-wrap: anywhere; }
+.monitor-map-card-meta { color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-3); }
+/* Spaces and users: view switch + live chip above the list or the world */
+.preferences-manage-world { display: grid; gap: var(--di-space-3); min-width: 0; }
+.preferences-manage-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-3); }
+.preferences-live-chip {
+    font-family: var(--di-mono); font-size: var(--di-text-3); color: var(--ui-text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+}
+.preferences-live-chip[data-live="on"]::before {
+    content: ''; display: inline-block; width: 8px; height: 8px; margin-right: var(--di-space-2);
+    background: rgb(var(--di-live-rgb));
+}
+.preferences-person-spaces { display: flex; flex-wrap: wrap; gap: var(--di-space-2); margin-top: var(--di-space-3); }
+/* Spaces world: the map takes the width, the picked space's detail sits beside it (stacked under 1100 px) */
+.preferences-manage-world-body { display: grid; gap: var(--di-space-4); grid-template-columns: minmax(0, 1fr); align-items: start; }
+.preferences-manage-world-body.has-detail { grid-template-columns: minmax(0, 1fr) minmax(340px, 460px); }
+.preferences-manage-world-body > * { min-width: 0; }
+.monitor-map-views.is-solo .monitor-map-fs { margin-left: 0; }
+@media (max-width: 1100px) {
+    .preferences-manage-world-body.has-detail { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Spaces world: one shape and colour per kind in 2D and 3D (space = cyan square, person = amber diamond, link = granted), the selection is a white ring */
+.monitor-map-stage.is-world .monitor-node.kind-space { --pref-tone: var(--di-cyan); }
+.monitor-map-stage.is-world .monitor-node.kind-person { --pref-tone: var(--di-warning); }
+.monitor-map-stage.is-world .monitor-node.tone-muted .monitor-node-state { fill: var(--ui-text-muted); }
+.monitor-map-stage.is-world .monitor-node-glyph { fill: var(--pref-tone); }
+.monitor-map-stage.is-world .monitor-node-ring { fill: none; stroke: var(--di-text); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.monitor-map-stage.is-world .monitor-node.is-selected .monitor-node-box, .monitor-map-stage.is-world .monitor-node:focus-visible .monitor-node-box { stroke: var(--di-text); }
+.monitor-map-stage.is-world .monitor-edge.is-lit { stroke: var(--di-text); stroke-width: 3; }
+.monitor-legend {
+    position: absolute; bottom: var(--di-space-2); left: var(--di-space-2); z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-3);
+    max-width: calc(100% - 2 * var(--di-space-2)); padding: var(--di-space-1) var(--di-space-2); background: var(--di-black); border: 1px solid var(--pref-border);
+    color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-3); pointer-events: none;
+}
+.monitor-map-stage.is-world .monitor-map-hint { bottom: 2.75rem; }
+.monitor-legend-item { display: inline-flex; align-items: center; gap: var(--di-space-1); white-space: nowrap; }
+.monitor-legend-mark { display: inline-block; flex: none; }
+.monitor-legend-mark.is-link { width: 18px; height: 2px; background: var(--ui-text-muted); }
+/* a command row with an odd count ends full: the last button takes both columns (the detail strip is full width in Mixed) */
+.preferences-command-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+/* kinds look (Spaces world and Monitor map): a glyph per kind, a quiet hairball until a node is picked, packets only on the picked node's lines */
+.monitor-map-stage.is-kinds .monitor-node-glyph { stroke: none; }
+.monitor-map-stage.is-kinds .monitor-node-ring { fill: none; stroke: var(--di-text); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.monitor-map-stage.is-kinds .monitor-node.is-selected .monitor-node-box, .monitor-map-stage.is-kinds .monitor-node:focus-visible .monitor-node-box { stroke: var(--di-text); }
+.monitor-map-stage.is-kinds .monitor-edge.is-lit { stroke: var(--di-text); stroke-width: 3; }
+.monitor-edge.is-faint { opacity: 0.28; stroke-width: 1; }
+.monitor-map-stage.is-kinds .monitor-map-hint { bottom: 2.75rem; }
+/* Mixed view: 3D room large on the left, 2D map top right, live list under it; the detail is a full-width strip below.
+   Under 1100 px the panes stack (3D, 2D, list) and the detail follows the tapped node. */
+.preferences-manage-world-body.is-mixed, .preferences-manage-world-body.is-mixed.has-detail { grid-template-columns: minmax(0, 1fr); }
+.spaces-mixed {
+    --mixed-h: clamp(32rem, calc(100vh - 21rem), 54rem);
+    display: grid; gap: var(--di-space-2); height: var(--mixed-h); min-width: 0;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1.25fr) minmax(0, 0.75fr);
+}
+.spaces-mixed-pane { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--di-black); border: 1px solid var(--pref-border); overflow: hidden; }
+.spaces-mixed-pane.is-3d { grid-row: 1 / span 2; }
+.spaces-mixed-pane > div { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.spaces-mixed .monitor-map-stage { height: auto; flex: 1; min-height: 0; border: 0; }
+.spaces-mixed-pane.is-list { overflow: auto; padding: var(--di-space-2); }
+.spaces-mixed-pane.is-list .monitor-map-list { gap: var(--di-space-2); }
+.spaces-mixed-pane .monitor-map-hint { display: none; }
+@media (max-width: 1099px) {
+    .spaces-mixed { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+    .spaces-mixed-pane.is-3d { grid-row: auto; height: clamp(22rem, 60vh, 32rem); }
+    .spaces-mixed-pane.is-2d { height: clamp(20rem, 50vh, 28rem); }
+    .spaces-mixed-pane.is-list { max-height: 24rem; }
+}
+
+/* Scene header: six counters in ONE row on a wide screen (they made two half-empty rows) */
+@media (min-width: 1280px) {
+    .preferences-topbar-metrics:has(> :nth-child(6)) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+/* Phone (<= 880 px): the menu row already says which section is open, so the title above it is read out, not drawn twice */
+@media (max-width: 880px) {
+    .preferences-topbar-title-row h1 {
+        position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+}
+.spaces-mixed-hint { margin: var(--di-space-1) 0 0; color: var(--ui-text-muted); font-size: var(--di-text-3); }

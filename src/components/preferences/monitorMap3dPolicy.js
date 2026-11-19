@@ -13,7 +13,7 @@ const r = (v) => Math.round((Number(v) || 0) * 10) / 10
 export const layoutSignature = (layout) => {
     const nodes = (layout?.nodes || []).map((n) => {
         const p = layout.pos?.get(n.id) || {}
-        return `${n.id}:${n.kind}:${n.state}:${n.label}:${r(p.x)},${r(p.y)},${r(p.h)}`
+        return `${n.id}:${n.kind}:${n.state}:${n.stateLabel || ''}:${n.label}:${r(p.x)},${r(p.y)},${r(p.h)}`
     }).join('|')
     const edges = (layout?.edges || []).map((e) => `${e.from}>${e.to}>${e.kind}`).join('|')
     return `${nodes}#${edges}`
