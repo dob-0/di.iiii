@@ -1193,3 +1193,17 @@ Symptom (owner: "'into the yard' not goes into the work … movement in the yard
 Cause: a combined page (`scripts/space/pages-lib.mjs` buildCombinedPage) had no way to name a tab in a link; the viewer handed a code page its query but not its #fragment (`src/utils/presentationPreviewDocument.js`); `apply-structure.mjs`'s relink repointed code pages only, not a scene's doors, and a door (`portalHref`) could not name a part of a page.
 Fix: `?tab=<key|n>` picks the tab (spec `key`, default the project id or file name); the viewer hands `window.diiPageHash` and scrolls to the element it names; a portal reference takes `anchor` (schema JS + CJS, Studio field "Part of the page", `portalHref(space, project, anchor)`); `relinkPortals` in pages-lib, used by apply-structure. The yard moves by an orbit about the building's centre (spaces/dilijan/aren/yard.html, why in its comment).
 Guard: `scripts/space/combine-pages.test.mjs` (?tab=, relinkPortals), `src/utils/presentationPreviewDocument.test.js` (hash scroll + escape), `src/project/viewport/PortalObject.portalHref.test.js` (anchor), `spaces/dilijan/aren/yard.test.mjs` (moving in the yard).
+
+## A page visual reached the projection wall at half its frame rate (2026-11-12)
+
+Symptom (owner, at the bar show's mapping desk: "lag and not smooth"): a visual page drawing at 61 fps reached the desk's monitors and the /out wall at about 28 fps (measured by a MessagePort hook on the desk side, on the redesign copy of this desk).
+Cause: the frame relay (`serverXR/src/frameRelay.js`) sends a frame only after the desk says `next`, one frame in flight, and `src/map/mediaRack.js` said `next` only when a frame arrived. That reply often landed just after the page's following animation frame, so the page skipped every other frame. Not the copy: `createImageBitmap` of a 1920×1080 WebGL canvas takes ~0.2 ms.
+Fix: `src/map/mediaRack.js` html branch: once connected, the desk also says `next` on each of its own animation frames and half a frame (8 ms) later, since the two frame loops run in different processes. Still one frame in flight; it stops on dispose, so a dropped visual stops asking. Desk side only: no server restart, no served-HTML change.
+Guard: `src/map/mediaRack.test.js` (fails on the old code: no frame arrives, so it said `next` 0 times in 5 desk frames instead of 10; and nothing is asked after the visual is let go).
+
+## Typing a slice's Height moved its Y in the Mapping window (2026-11-12)
+
+Symptom (owner, Mapping window → Place: "when I'm changing [height], Y is changing automatically, I don't want it"): Height 404 → 410 moved Y from 223 to 220.
+Cause: `src/map/sliceGeometry.js` `setFrameField` and `setBoxField` scaled a typed width or height about the slice's centre, but the panel shows X/Y (and Takes' Left/Top) as the left and top edges, so the typed-for edge slid by half the change.
+Fix: width and height scale about the frame's own top-left (turned with it; the straight box's left/top for a bent or keystoned slice). Moving and turning still use the centre.
+Guard: `src/map/sliceGeometry.test.js` ("width and height keep the left and top edges", and the straight-box case); both fail on the old code.

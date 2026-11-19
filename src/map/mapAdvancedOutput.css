@@ -1,0 +1,228 @@
+/* The mapping window (MapAdvancedOutput.jsx), 2026-11-11: di.iiii's own, on
+   the desk's tokens so it reads as the same tool — dark panels, one cyan for
+   what is picked, amber for bend points, 12px type. The setting rows are the
+   desk's ParamRow (mapDesk.css), with a narrower name column. */
+
+.map-mo {
+    --mo-bg: var(--ui-surface, #0d0d0d);
+    --mo-panel: var(--ui-surface-raised, #151515);
+    --mo-bed: #111111;
+    --mo-line: var(--ui-divider, #2a2a2a);
+    --mo-line-strong: var(--ui-border-strong, #3a3a3a);
+    --mo-text: var(--ui-text-primary, #e8e8e8);
+    --mo-muted: var(--ui-text-muted, #8a8a8a);
+    --mo-accent: var(--ui-accent, #4df9ff);
+    --mo-accent-rgb: var(--di-cyan-rgb, 77, 249, 255);
+    --mo-bend: #ffb347;
+    --map-param-label: 96px;
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: grid;
+    grid-template-rows: 44px minmax(0, 1fr) 28px;
+    background: var(--mo-bg);
+    color: var(--mo-text);
+    font-family: var(--di-sans);
+    font-size: 12px;
+}
+.map-mo button, .map-mo select, .map-mo input { font: inherit; color: inherit; }
+.map-mo select,
+.map-mo input[type='text'] {
+    box-sizing: border-box;
+    height: 24px;
+    padding: 0 6px;
+    border: 1px solid var(--mo-line);
+    border-radius: 0;
+    background: var(--di-black, #000);
+}
+.map-mo select:focus,
+.map-mo input[type='text']:focus { border-color: var(--mo-accent); outline: none; }
+
+/* --- buttons ---------------------------------------------------------------------- */
+.map-mo-btn { height: 26px; padding: 0 12px; border: 1px solid var(--mo-line); background: transparent; cursor: pointer; white-space: nowrap; }
+.map-mo-btn:hover:not(:disabled) { border-color: var(--mo-line-strong); background: rgba(255, 255, 255, 0.04); }
+.map-mo-btn:disabled { opacity: 0.4; cursor: default; }
+.map-mo-btn.is-primary { background: var(--mo-accent); border-color: var(--mo-accent); color: #031314; font-weight: 600; }
+.map-mo-btn.is-on { border-color: rgba(var(--mo-accent-rgb), 0.6); background: rgba(var(--mo-accent-rgb), 0.16); color: var(--mo-accent); }
+.map-mo-icon { width: 26px; height: 26px; padding: 0; border: 1px solid transparent; background: transparent; color: var(--mo-muted); font-size: 15px; line-height: 1; cursor: pointer; }
+.map-mo-icon:hover:not(:disabled) { color: var(--mo-text); border-color: var(--mo-line); }
+.map-mo-icon:disabled { opacity: 0.3; cursor: default; }
+.map-mo-icon.is-small { width: 20px; height: 20px; font-size: 13px; }
+.map-mo-link { padding: 0; border: 0; background: none; color: var(--mo-muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.map-mo-link:hover { color: var(--mo-accent); }
+.map-mo-fold { align-self: flex-start; padding: 2px 0; border: 0; background: none; color: var(--mo-muted); cursor: pointer; }
+.map-mo-fold:hover { color: var(--mo-text); }
+
+/* --- top: the wall, undo, Revert, Done ------------------------------------------------ */
+.map-mo-top { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 10px 0 14px; border-bottom: 1px solid var(--mo-line); }
+.map-mo-top h2 { margin: 0 10px 0 0; color: var(--mo-accent); font-family: var(--di-mono); font-size: 12px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; }
+.map-mo-wall { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--mo-muted); }
+.map-mo-wall-label { margin-right: 2px; }
+.map-mo-wall .map-mo-field { grid-template-columns: 0 64px; gap: 0; }
+.map-mo-wall .map-mo-field-name { visibility: hidden; width: 0; padding: 0; }
+.map-mo-times { color: var(--mo-muted); }
+.map-mo-device { display: flex; align-items: center; gap: 6px; margin-left: 10px; }
+.map-mo-device select { max-width: 220px; }
+.map-mo-spacer { flex: 1 1 auto; }
+
+/* --- body ---------------------------------------------------------------------------- */
+.map-mo-body { display: grid; grid-template-columns: 232px minmax(0, 1fr) 300px; min-height: 0; }
+
+/* left: pieces, layouts, saved */
+.map-mo-left { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; border-right: 1px solid var(--mo-line); background: var(--mo-panel); }
+.map-mo-panel-head { position: relative; display: flex; align-items: center; gap: 6px; padding: 12px 10px 6px 12px; }
+.map-mo-panel-head h3,
+.map-mo-section-head h3 { margin: 0; color: var(--mo-muted); font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; }
+.map-mo-count { color: var(--mo-muted); font-family: var(--di-mono); font-size: 11px; }
+.map-mo-addwrap { position: relative; margin-left: auto; }
+.map-mo-add { width: 24px; height: 24px; padding: 0; border: 1px solid var(--mo-line); background: transparent; color: var(--mo-text); font-size: 14px; line-height: 1; cursor: pointer; }
+.map-mo-add:hover { border-color: var(--mo-accent); color: var(--mo-accent); }
+
+.map-mo-pieces { list-style: none; margin: 0; padding: 0 0 4px; }
+.map-mo-piece-row {
+    display: grid;
+    grid-template-columns: 14px 22px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px 0 12px;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    user-select: none;
+}
+.map-mo-piece-row:hover { background: rgba(255, 255, 255, 0.04); }
+.map-mo-piece-row.is-selected { border-left-color: var(--mo-accent); background: rgba(var(--mo-accent-rgb), 0.12); }
+.map-mo-piece-row.is-dragging { opacity: 0.4; }
+.map-mo-piece-row.is-off .map-mo-piece-name { color: var(--mo-muted); text-decoration: line-through; }
+.map-mo-dot { width: 10px; height: 10px; padding: 0; border: 1px solid var(--mo-muted); border-radius: 50%; background: transparent; cursor: pointer; }
+.map-mo-dot.is-on { border-color: var(--mo-accent); background: var(--mo-accent); }
+.map-mo-num { color: var(--mo-muted); font-family: var(--di-mono); font-size: 11px; text-align: right; }
+.map-mo-piece-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-mo-piece-row.is-selected .map-mo-piece-name { color: #ffffff; }
+.map-mo-tag { color: var(--mo-muted); font-family: var(--di-mono); font-size: 10px; }
+.map-mo-tag.is-bent { color: var(--mo-bend); font-size: 13px; }
+.map-mo-rename { width: 100%; height: 22px !important; }
+.map-mo-empty { margin: 0; padding: 8px 12px; color: var(--mo-muted); line-height: 1.5; }
+
+.map-mo-layouts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 12px; }
+.map-mo-layout { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 4px 3px; border: 1px solid var(--mo-line); background: var(--di-black, #000); cursor: pointer; }
+.map-mo-layout svg { display: block; width: 100%; height: 26px; }
+.map-mo-layout rect { fill: rgba(255, 255, 255, 0.12); stroke: rgba(255, 255, 255, 0.45); stroke-width: 0.6; }
+.map-mo-layout span { color: var(--mo-muted); font-family: var(--di-mono); font-size: 10px; }
+.map-mo-layout:hover { border-color: var(--mo-accent); }
+.map-mo-layout:hover rect { fill: rgba(var(--mo-accent-rgb), 0.25); stroke: var(--mo-accent); }
+
+.map-mo-saved { list-style: none; margin: 0; padding: 0 12px; }
+.map-mo-saved li { display: flex; align-items: center; gap: 4px; }
+.map-mo-saved-load { flex: 1 1 auto; min-width: 0; height: 24px; padding: 0 6px; border: 0; background: none; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.map-mo-saved-load:hover { background: rgba(255, 255, 255, 0.05); color: var(--mo-accent); }
+.map-mo-saveas { display: flex; gap: 6px; padding: 6px 12px 16px; }
+.map-mo-saveas input { flex: 1 1 auto; min-width: 0; }
+
+/* middle: the wall */
+.map-mo-main { position: relative; display: flex; min-width: 0; min-height: 0; }
+.map-mo-viewport { position: relative; flex: 1 1 auto; overflow: hidden; background: var(--mo-bed); touch-action: none; }
+/* Pages inside the stage must never swallow a drag. */
+.map-mo-stage { position: absolute; pointer-events: none; box-shadow: 0 0 0 1px #000, 0 12px 40px rgba(0, 0, 0, 0.6); }
+.map-mo-overlay { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.map-mo-frame { fill: none; stroke: rgba(255, 255, 255, 0.18); stroke-width: 1; }
+.map-mo-grid { stroke: rgba(255, 255, 255, 0.1); stroke-width: 1; }
+.map-mo-guide { stroke: var(--mo-bend); stroke-width: 1; stroke-dasharray: 4 3; }
+.map-mo-piece polygon { fill: transparent; stroke: rgba(255, 255, 255, 0.32); stroke-width: 1; stroke-dasharray: 4 3; }
+.map-mo-piece text { fill: rgba(255, 255, 255, 0.7); font-family: var(--di-mono); font-size: 11px; paint-order: stroke; stroke: rgba(0, 0, 0, 0.7); stroke-width: 3px; }
+.map-mo-piece-num { font-weight: 700; }
+.map-mo-piece.is-hover polygon { stroke: rgba(255, 255, 255, 0.75); stroke-dasharray: none; }
+.map-mo-piece.is-selected polygon { stroke: var(--mo-accent); stroke-dasharray: none; stroke-width: 1.5; }
+.map-mo-piece.is-selected text { fill: var(--mo-accent); }
+.map-mo-mesh { fill: none; stroke: rgba(255, 179, 71, 0.45); stroke-width: 1; }
+.map-mo-groupbox polygon { fill: none; stroke: var(--mo-accent); stroke-width: 1; stroke-dasharray: 5 4; }
+.map-mo-handle { fill: #000000; stroke: var(--mo-accent); stroke-width: 1.5; }
+.map-mo-edge { fill: rgba(255, 255, 255, 0.9); stroke: var(--mo-accent); stroke-width: 1; }
+.map-mo-pin { fill: #ffffff; stroke: var(--mo-accent); stroke-width: 2; }
+.map-mo-pin.is-selected { fill: var(--mo-accent); stroke: #ffffff; }
+.map-mo-bend { fill: var(--mo-bend); stroke: #000000; stroke-width: 1; }
+.map-mo-bend.is-selected { fill: #ffffff; stroke: var(--mo-bend); stroke-width: 2; }
+.map-mo-knob line { stroke: var(--mo-accent); stroke-width: 1; }
+.map-mo-knob circle { fill: #000000; stroke: var(--mo-accent); stroke-width: 1.5; }
+.map-mo-knob.is-hot circle { fill: var(--mo-accent); }
+.map-mo-marquee { fill: rgba(var(--mo-accent-rgb), 0.08); stroke: var(--mo-accent); stroke-dasharray: 3 3; }
+
+/* the view controls, floating bottom-left over the wall */
+.map-mo-view { position: absolute; left: 12px; bottom: 12px; z-index: 2; display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--mo-line); background: rgba(0, 0, 0, 0.78); }
+.map-mo-view button { min-width: 26px; height: 24px; padding: 0 8px; border: 1px solid transparent; background: transparent; color: var(--mo-muted); cursor: pointer; }
+.map-mo-view button:hover { color: var(--mo-text); border-color: var(--mo-line); }
+.map-mo-view button.is-on { color: var(--mo-accent); border-color: rgba(var(--mo-accent-rgb), 0.5); background: rgba(var(--mo-accent-rgb), 0.12); }
+.map-mo-view select { height: 24px; border-color: transparent; background: transparent; color: var(--mo-muted); }
+.map-mo-view select.is-on { color: var(--mo-accent); }
+.map-mo-view-sep { width: 1px; height: 16px; margin: 0 4px; background: var(--mo-line); }
+
+/* right: the picked piece */
+.map-mo-right { min-height: 0; overflow-y: auto; border-left: 1px solid var(--mo-line); background: var(--mo-panel); }
+.map-mo-insp { display: flex; flex-direction: column; padding-bottom: 16px; }
+.map-mo-title { display: flex; flex-direction: column; gap: 2px; padding: 12px 12px 8px; color: #ffffff; font-size: 14px; font-weight: 500; }
+.map-mo-title small { color: var(--mo-muted); font-size: 11px; font-weight: 400; }
+.map-mo-section { border-top: 1px solid var(--mo-line); }
+.map-mo-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px 6px; }
+.map-mo-section-body { display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px; }
+.map-mo-select { width: 100%; }
+.map-mo-rows { display: flex; flex-direction: column; gap: 4px; }
+.map-mo-note { margin: 0; padding: 6px 8px; border-left: 2px solid var(--mo-bend); background: rgba(255, 179, 71, 0.06); color: var(--mo-muted); line-height: 1.45; }
+.map-mo-note.is-quiet { padding: 0; border: 0; background: none; font-size: 11px; }
+
+.map-mo-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 10px; }
+.map-mo-field { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 6px; min-width: 0; }
+.map-mo-field-name { color: rgba(255, 255, 255, 0.74); cursor: ew-resize; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-mo-field input { width: 100%; min-width: 0; font-family: var(--di-mono); font-size: 11.5px; text-align: right; }
+.map-mo-field-unit { color: var(--mo-muted); font-family: var(--di-mono); font-size: 11px; }
+.map-mo-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.map-mo-mirror { min-width: 32px; padding: 0 8px; font-size: 15px; }
+
+/* what the piece takes from the picture */
+.map-mo-takes { display: block; width: 100%; height: auto; border: 1px solid var(--mo-line); background: #000; touch-action: none; }
+.map-mo-takes-bg { fill: #050505; }
+.map-mo-takes-other { fill: rgba(255, 255, 255, 0.05); stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; vector-effect: non-scaling-stroke; cursor: pointer; }
+.map-mo-takes-other:hover { fill: rgba(255, 255, 255, 0.14); }
+.map-mo-takes-mine { fill: rgba(var(--mo-accent-rgb), 0.24); stroke: var(--mo-accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; cursor: move; }
+.map-mo-takes-handle { fill: #ffffff; stroke: var(--mo-accent); stroke-width: 1; vector-effect: non-scaling-stroke; cursor: nwse-resize; }
+
+/* --- the hint line ------------------------------------------------------------------- */
+.map-mo-hint { display: flex; align-items: center; min-width: 0; padding: 0 14px; overflow: hidden; border-top: 1px solid var(--mo-line); background: var(--mo-panel); color: var(--mo-muted); white-space: nowrap; text-overflow: ellipsis; }
+
+/* --- menus --------------------------------------------------------------------------- */
+.map-mo-menu {
+    position: absolute;
+    z-index: 5;
+    min-width: 210px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0;
+    border: 1px solid var(--mo-line-strong);
+    background: #181818;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+.map-mo-addmenu { top: 30px; right: 0; }
+.map-mo-context { position: fixed; }
+.map-mo-menu button { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 6px 12px; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.map-mo-menu button small { color: var(--mo-muted); font-size: 11px; }
+.map-mo-menu button:hover { background: rgba(var(--mo-accent-rgb), 0.16); color: #ffffff; }
+.map-mo-menu kbd { color: var(--mo-muted); font-family: var(--di-mono); font-size: 11px; }
+.map-mo-menu-sep { height: 1px; margin: 4px 0; background: var(--mo-line); }
+
+/* --- narrow screens: the wall first, the piece under it, the list last ------------ */
+@media (max-width: 900px) {
+    .map-mo { grid-template-rows: auto auto auto; overflow-y: auto; overflow-x: hidden; }
+    .map-mo-top { flex-wrap: wrap; row-gap: 6px; padding: 8px 12px; }
+    .map-mo-top h2 { flex: 1 1 auto; }
+    .map-mo-wall { order: 5; flex: 1 1 100%; flex-wrap: wrap; row-gap: 6px; }
+    .map-mo-wall > * { flex: 0 0 auto; }
+    .map-mo-device { flex: 1 1 100%; margin-left: 0; }
+    .map-mo-device select { flex: 1 1 auto; max-width: none; }
+    /* Every part at its own height; the window scrolls, nothing overlaps. */
+    .map-mo-body { display: flex; flex-direction: column; min-height: auto; }
+    .map-mo-body > * { min-width: 0; min-height: auto; flex: 0 0 auto; }
+    .map-mo-main { order: 1; height: 55vh; }
+    .map-mo-right { order: 2; overflow: visible; border-left: 0; border-top: 1px solid var(--mo-line); }
+    .map-mo-left { order: 3; overflow: visible; border-right: 0; border-top: 1px solid var(--mo-line); }
+    .map-mo-hint { white-space: normal; padding: 8px 12px calc(var(--di-space-7, 32px) + 8px); }
+    .map-mo-layouts { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
