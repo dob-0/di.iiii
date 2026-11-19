@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useWideScreen } from './useWideScreen.js'
 import WorldLegend, { shapePoints } from './WorldLegend.jsx'
 import { ASPECT, KIND_ORDER, KIND_STYLE, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
@@ -118,6 +119,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
     const nodeAttr = pointerOnly ? 'data-pointer-node' : 'data-map-node'
     const tab = pointerOnly ? -1 : undefined
     const showKinds = world || kinds
+    const wide = useWideScreen()
     const svgRef = useRef(null)
     const [vb, setVb] = useState(() => fitBox(layout, world))
     const [hover, setHover] = useState(null)
@@ -332,7 +334,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                 <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
             {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
-            <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen || kinds ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
+            <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen || (kinds && wide) ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
         </div>
     )
 }

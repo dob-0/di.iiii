@@ -4,6 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Line, OrbitControls } from '@react-three/drei'
 import Canvas from '../GuardedCanvas.jsx'
 import WorldLegend from './WorldLegend.jsx'
+import { useWideScreen } from './useWideScreen.js'
 import { KIND_STYLE } from './monitorMapLayout.js'
 import { fitKey, layoutSignature, PULSE_MS, pulseEdgeIndexes, shouldAnimate } from './monitorMap3dPolicy.js'
 import { keyStep, mapPoints, poseForNode, presetPose, PRESET_LABEL, PRESET_NAMES, S } from './monitorMapCamera.js'
@@ -236,13 +237,14 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     const api = useRef(null)
     // The wheel turns the camera's zoom in full screen, on a map that fills its screen (the Monitor map) or with Ctrl/Cmd (a pinch);
     // otherwise it never reaches the controls (stopped in the capture phase) and the page scrolls.
-    const wheelFree = fullscreen || kinds
+    const wide = useWideScreen()
+    const wheelFree = fullscreen || (kinds && wide)
     const freeRef = useRef(wheelFree)
     useEffect(() => { freeRef.current = wheelFree }, [wheelFree])
     useEffect(() => {
         const el = stageRef.current
         if (!el) return undefined
-        const onWheel = (ev) => { if (!((freeRef.current && window.innerWidth > 900) || ev.ctrlKey || ev.metaKey)) ev.stopPropagation() }
+        const onWheel = (ev) => { if (!(freeRef.current || ev.ctrlKey || ev.metaKey)) ev.stopPropagation() }
         el.addEventListener('wheel', onWheel, { capture: true, passive: true })
         return () => el.removeEventListener('wheel', onWheel, { capture: true })
     }, [])
@@ -328,7 +330,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                 <Rig ground={colors.ground} layout={layout} preset={preset} points={points} fitDist={fitDist} api={api} autoRotate={rotating} reduced={reduced} onTouch={onTouch} />
                 <Planner layout={layout} fitDist={fitDist} focusIds={[selectedId, hover].filter(Boolean)} onPlan={setPlan} />
                 <Ticker on={animate} />
-                <OrbitControls makeDefault enableDamping={false} enablePan screenSpacePanning maxPolarAngle={Math.PI / 2 - 0.01} minDistance={1} maxDistance={120} rotateSpeed={0.9} />
+                <OrbitControls makeDefault enableDamping={false} enablePan screenSpacePanning maxPolarAngle={Math.PI / 2 - 0.04} minDistance={1.5} maxDistance={120} rotateSpeed={0.9} />
                 {rings.map((ring) => (
                     <group key={ring.r}>
                         <Line color={colors.cyan} lineWidth={5} transparent opacity={0.12} points={ring.pts} />
@@ -395,7 +397,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                 ))}
                 <button type="button" tabIndex={pointerOnly ? -1 : undefined} className="monitor-map-tool" data-map-tool="fit" onClick={() => { setRotating(false); api.current?.reset() }}>Reset view</button>
             </div>
-            <div className="monitor-map-hint">Drag to turn · right-drag or two fingers to move · {fullscreen || kinds ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · arrows or WASD · double-click a card to fly to it</div>
+            <div className="monitor-map-hint">Drag to turn · right-drag or two fingers to move · {wheelFree ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · arrows or WASD · double-click a card to fly to it</div>
         </div>
     )
 }
