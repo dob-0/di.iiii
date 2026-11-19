@@ -498,7 +498,7 @@ function createHub({
     // never a second row for this machine itself (it may also report to dev), nor for a host the server already holds
     const held = new Set([...own.map((r) => r.host), shortHost(base.host), shortHost(os.hostname())])
     const extra = (account?.reports || [])
-      .filter((r) => r && typeof r.host === 'string' && !held.has(r.host))
+      .filter((r) => r && typeof r.host === 'string' && !held.has(r.host) && !held.has(shortHost(r.host)))
       .map((r) => ({ ...r, via: 'dev' }))
     const reportRows = [...own, ...extra.map(({ panels, ...r }) => ({ ...r, panels: withoutChats(panels) }))]
     return {

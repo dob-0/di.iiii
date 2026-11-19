@@ -55,7 +55,7 @@ describe('report store', () => {
     expect(store.put(null).error).toBe('bad_report')
     const big = { host: 'big', panels: { tasks: { ok: true, rows: [{ lines: ['x'.repeat(300 * 1024)] }] } } }
     expect(store.put(big)).toMatchObject({ error: 'too_large', status: 413 })
-    for (let i = 0; i < 120; i += 1) store.put({ host: `h${i}`, panels }, { subject: `s${i}` })
+    for (let i = 0; i < 120; i += 1) store.put({ host: `h${i}`, panels }, { subject: `s${i}`, ledger: true })
     expect(store.put({ host: 'one-more', panels }, { subject: 'late' }).status).toBe(429)
   })
 
