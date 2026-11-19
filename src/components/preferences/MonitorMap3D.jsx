@@ -3,6 +3,8 @@ import { Box3, Vector3 } from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Html, Line, OrbitControls } from '@react-three/drei'
 import Canvas from '../GuardedCanvas.jsx'
+import WorldLegend from './WorldLegend.jsx'
+import { KIND_STYLE } from './monitorMapLayout.js'
 import { fitKey, layoutSignature, PULSE_MS, pulseEdgeIndexes, shouldAnimate } from './monitorMap3dPolicy.js'
 
 // The 3D view of the Monitor map: the same layout as the 2D graph, as bodies in
@@ -12,10 +14,12 @@ import { fitKey, layoutSignature, PULSE_MS, pulseEdgeIndexes, shouldAnimate } fr
 // along live edges only while `live` and not under reduced motion.
 
 const S = 0.01 // layout units -> room units
-const FALLBACK = { success: '#4df9c0', warning: '#ffb84d', muted: '#5a5e66', cyan: '#4df9ff', line: '#2c2f36', live: '#50fa7b', ground: '#000000' }
-const TONE_VAR = { success: '--di-success', warning: '--di-warning', muted: '--pref-border', cyan: '--di-cyan', line: '--pref-border', live: '--di-live' }
+const FALLBACK = { success: '#4df9c0', warning: '#ffb84d', muted: '#5a5e66', cyan: '#4df9ff', line: '#2c2f36', live: '#50fa7b', ground: '#000000', text: '#e6e8ec' }
+const TONE_VAR = { success: '--di-success', warning: '--di-warning', muted: '--pref-border', cyan: '--di-cyan', line: '--pref-border', live: '--di-live', text: '--di-text' }
 const LIVE_EDGES = new Set(['runs', 'serves'])
 const STATE_TONE = { ok: 'success', warn: 'warning', off: 'muted' }
+// one colour (token) and one shape per kind, shared with the 2D glyphs and the legend (KIND_STYLE)
+const TOKEN_KEY = { '--di-cyan': 'cyan', '--di-text': 'text', '--di-success': 'success', '--di-warning': 'warning' }
 
 const readColors = () => {
     const out = { ...FALLBACK }
@@ -50,17 +54,32 @@ const floor = (p) => [p.x * S, 0, p.y * S]
 const HUB = [0, 0.1, 0]
 const pulseIndexes = (edges, pulsing, hoverId) => pulseEdgeIndexes({ edges, pulsing, hoverId })
 
-function Body({ node, p, color, dim, sel, onHover, onPick }) {
+function KindGeometry({ shape, size }) {
+    switch (shape) {
+    case 'bar': return <cylinderGeometry args={[size / 2, size / 2, size * 0.7, 4]} />
+    case 'triangle': return <coneGeometry args={[size * 0.6, size * 0.9, 3]} />
+    case 'circle': return <sphereGeometry args={[size * 0.5, 12, 9]} />
+    case 'hex': return <cylinderGeometry args={[size * 0.55, size * 0.55, size * 0.6, 6]} />
+    case 'diamond': return <octahedronGeometry args={[size * 0.62]} />
+    default: return <boxGeometry args={[size, size * 0.7, size]} />
+    }
+}
+
+function Body({ node, p, color, ring, pip, dim, sel, near, kinds, onHover, onPick }) {
     const k = node.kind
     const size = k === 'tier' ? 0.55 : k === 'machine' ? 0.46 : 0.36
+    const shape = kinds && KIND_STYLE[k] ? KIND_STYLE[k].shape : k === 'tier' ? 'bar' : 'square'
+    const off = node.state === 'off'
     return (
         <group position={at(p)}>
             <mesh onPointerOver={(e) => { e.stopPropagation(); onHover(node.id) }} onPointerOut={() => onHover(null)}
                 onClick={(e) => { e.stopPropagation(); onPick(node) }}>
-                {k === 'tier' ? <cylinderGeometry args={[size / 2, size / 2, size * 0.7, 4]} /> : <boxGeometry args={[size, size * 0.7, size]} />}
-                <meshBasicMaterial color={color} transparent opacity={dim ? 0.25 : 1} />
+                <KindGeometry shape={shape} size={size} />
+                <meshBasicMaterial color={color} transparent opacity={dim ? 0.18 : off && kinds ? 0.6 : 1} />
             </mesh>
-            {sel ? <mesh><boxGeometry args={[size * 1.5, size * 1.1, size * 1.5]} /><meshBasicMaterial color="#4df9ff" wireframe /></mesh> : null}
+            {pip ? <mesh position={[0, size * 0.62, 0]}><boxGeometry args={[0.09, 0.09, 0.09]} /><meshBasicMaterial color={pip} transparent opacity={dim ? 0.18 : 1} /></mesh> : null}
+            {sel ? <mesh><boxGeometry args={[size * 1.6, size * 1.2, size * 1.6]} /><meshBasicMaterial color={ring} wireframe /></mesh> : null}
+            {near && !sel ? <mesh><boxGeometry args={[size * 1.3, size * 1, size * 1.3]} /><meshBasicMaterial color={color} wireframe /></mesh> : null}
         </group>
     )
 }
@@ -147,6 +166,90 @@ function Closeness({ fitDist, onClose }) {
     return null
 }
 
+// Labels never overlap: every candidate is projected to the screen and placed greedily by rank
+// (selected, hovered and the selected node's neighbours first, then the rest, near before far);
+// one that would cover an already placed label is left out until the camera moves. `onChange`
+// gets the set of ids that may carry a name.
+const LABEL_H = 24
+const LABEL_FULL_H = 58
+const labelWidth = (n, full) => (full ? 168 : Math.min(190, 14 + String(n.label || '').length * 7.2))
+function LabelCuller({ items, onChange }) {
+    const camera = useThree((s) => s.camera)
+    const controls = useThree((s) => s.controls)
+    const size = useThree((s) => s.size)
+    const last = useRef('')
+    useEffect(() => {
+        let raf = 0
+        const run = () => {
+            raf = 0
+            camera.updateMatrixWorld()
+            const v = new Vector3()
+            const projected = items.map((it) => {
+                v.set(...it.at).project(camera)
+                return { it, x: (v.x * 0.5 + 0.5) * size.width, y: (-v.y * 0.5 + 0.5) * size.height, z: v.z }
+            }).filter((q) => q.z < 1)
+            projected.sort((a, b) => a.it.rank - b.it.rank || a.z - b.z)
+            const placed = []
+            const ok = new Set()
+            for (const q of projected) {
+                const w = q.it.w
+                const h = q.it.h
+                const box = { x0: q.x - w / 2 - 3, x1: q.x + w / 2 + 3, y0: q.y - h - 3, y1: q.y + 3 }
+                const clash = placed.some((b) => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0)
+                const outside = box.x0 < 0 || box.x1 > size.width || box.y0 < 0 || box.y1 > size.height
+                if ((clash || outside) && !q.it.force) continue
+                placed.push(box)
+                ok.add(q.it.id)
+            }
+            const key = [...ok].sort().join('|')
+            if (key !== last.current) { last.current = key; onChange(ok) }
+        }
+        const schedule = () => { if (!raf) raf = requestAnimationFrame(run) }
+        schedule()
+        const late = setTimeout(schedule, 120)
+        controls?.addEventListener('change', schedule)
+        return () => { controls?.removeEventListener('change', schedule); clearTimeout(late); if (raf) cancelAnimationFrame(raf) }
+    }, [items, camera, controls, size, onChange])
+    return null
+}
+
+// Selecting a node flies the camera to it: the target slides to the body and the camera follows, a little closer.
+function FlyTo({ selectedId, pointOf, fitDist, reduced }) {
+    const camera = useThree((s) => s.camera)
+    const controls = useThree((s) => s.controls)
+    const invalidate = useThree((s) => s.invalidate)
+    const first = useRef(true)
+    useEffect(() => {
+        if (first.current) { first.current = false; return undefined }
+        const to = selectedId ? pointOf(selectedId) : null
+        if (!to || !controls) return undefined
+        const t0 = controls.target.clone()
+        const c0 = camera.position.clone()
+        const dest = new Vector3(...to)
+        const off0 = c0.clone().sub(t0)
+        const len0 = off0.length()
+        const len1 = Math.max(2.5, Math.min(len0, fitDist.current * 0.85))
+        const dir = off0.clone().normalize()
+        const apply = (e) => {
+            controls.target.lerpVectors(t0, dest, e)
+            camera.position.copy(controls.target).addScaledVector(dir, len0 + (len1 - len0) * e)
+            controls.update()
+            invalidate()
+        }
+        if (reduced) { apply(1); return undefined }
+        const start = performance.now()
+        let raf = 0
+        const step = (now) => {
+            const k = Math.min(1, (now - start) / 380)
+            apply(1 - (1 - k) ** 3)
+            if (k < 1) raf = requestAnimationFrame(step)
+        }
+        raf = requestAnimationFrame(step)
+        return () => cancelAnimationFrame(raf)
+    }, [selectedId]) // eslint-disable-line react-hooks/exhaustive-deps
+    return null
+}
+
 const useVisible = () => {
     const [visible, setVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden))
     useEffect(() => {
@@ -159,7 +262,8 @@ const useVisible = () => {
 
 // Still = zero frames: the canvas draws on a change, a gesture, or a 3 s pulse after a snapshot that changed
 // something (and while a node is hovered). The page's 1 s clock never reaches this tree (memo + stable props).
-function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false }) {
+function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false, world = false, kinds = false, pointerOnly = false }) {
+    const showKinds = world || kinds
     const stageRef = useRef(null)
     const fsRef = useRef(fullscreen)
     useEffect(() => { fsRef.current = fullscreen }, [fullscreen])
@@ -178,6 +282,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     const [hover, setHover] = useState(null)
     const [preset, setPreset] = useState({ name: 'fit', n: 0 })
     const [close, setClose] = useState(false)
+    const [shown, setShown] = useState(null) // ids allowed to carry a name (null until the first cull)
     const [pulsing, setPulsing] = useState(false)
     const fitDist = useRef(10)
     // a snapshot that changed nothing visible keeps the same layout object: no rebuild, no frame
@@ -209,8 +314,11 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     const edgeLines = useMemo(() => layout.edges.map((e, i) => ({ e, i, a: at(layout.pos.get(e.from)), b: at(layout.pos.get(e.to)), pts: [at(layout.pos.get(e.from)), at(layout.pos.get(e.to))] })), [layout])
     const stems = useMemo(() => layout.nodes.map((n) => ({ id: n.id, pts: [floor(layout.pos.get(n.id)), at(layout.pos.get(n.id))] })), [layout])
     const stemOf = useMemo(() => new Map(stems.map((x) => [x.id, x.pts])), [stems])
-    const animate = shouldAnimate({ edges: layout.edges, pulsing, hoverId: hover, visible, reduced })
-    const pulseSet = useMemo(() => new Set(pulseIndexes(layout.edges, pulsing, hover)), [layout, pulsing, hover])
+    // in the kinds look a light travels only on the picked (or hovered) node's lines, never on every line at once
+    const packetFocus = showKinds ? (hover || selectedId || null) : hover
+    const packetPulse = showKinds ? false : pulsing
+    const animate = shouldAnimate({ edges: layout.edges, pulsing: packetPulse, hoverId: packetFocus, visible, reduced })
+    const pulseSet = useMemo(() => new Set(pulseIndexes(layout.edges, packetPulse, packetFocus)), [layout, packetPulse, packetFocus])
 
     const neighbours = useMemo(() => {
         const m = new Map()
@@ -223,17 +331,38 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
         return m
     }, [layout.edges])
     const focus = hover || selectedId || null
-    const near = focus ? neighbours.get(focus) || new Set() : null
+    const near = useMemo(() => (focus ? neighbours.get(focus) || new Set() : null), [focus, neighbours])
     const hot = (id) => !focus || id === focus || near.has(id)
     const toneColor = (state) => colors[STATE_TONE[state] || 'muted']
+    const bodyColor = (n) => (showKinds && KIND_STYLE[n.kind] ? colors[TOKEN_KEY[KIND_STYLE[n.kind].token]] : toneColor(n.state))
+    const faint = showKinds && layout.edges.length > 12 // a hairball stays quiet until a node is picked
     const degree = (id) => (neighbours.get(id) || new Set()).size
 
+    const labelItems = useMemo(() => {
+        const out = [{ id: '__hub', at: [0, 0.5, 0], w: 64, h: LABEL_H, rank: -1, force: true }]
+        for (const n of layout.nodes) {
+            const p = layout.pos.get(n.id)
+            const sel = selectedId === n.id
+            const full = sel || hover === n.id
+            const named = showKinds || close || n.named || n.kind === 'tier' || n.kind === 'machine'
+            if (!named && !full) continue
+            const isNear = !!focus && near && near.has(n.id)
+            const rank = sel ? 0 : hover === n.id ? 1 : isNear ? 2 : ['space', 'tier', 'machine', 'repo'].includes(n.kind) ? 3 : 4
+            out.push({ id: n.id, at: [p.x * S, p.h * S + 0.45, p.y * S], w: labelWidth(n, full), h: full ? LABEL_FULL_H : LABEL_H, rank, force: full })
+        }
+        return out
+    }, [layout, selectedId, hover, close, focus, near, showKinds])
+    const pointOf = useMemo(() => (id) => { const p = layout.pos.get(id); return p ? [p.x * S, p.h * S, p.y * S] : null }, [layout])
+
+
     return (
-        <div className="monitor-map-stage monitor-map-stage-3d" ref={stageRef}>
+        <div className={`monitor-map-stage monitor-map-stage-3d${showKinds ? ' is-world' : ''}`} ref={stageRef}>
             <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
                 <Rig preset={preset} points={points} fitDist={fitDist} />
                 <Closeness fitDist={fitDist} onClose={setClose} />
+                <FlyTo selectedId={selectedId} pointOf={pointOf} fitDist={fitDist} reduced={reduced} />
+                <LabelCuller items={labelItems} onChange={setShown} />
                 <Ticker on={animate} />
                 <OrbitControls makeDefault enableDamping={false} maxPolarAngle={Math.PI / 2 - 0.04} minDistance={2} maxDistance={60} />
                 {rings.map((ring) => <Line key={ring.r} color={colors.line} lineWidth={1} points={ring.pts} />)}
@@ -244,8 +373,8 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     const isLive = LIVE_EDGES.has(e.kind)
                     return (
                         <group key={`${e.from}>${e.to}>${e.kind}>${i}`}>
-                            <Line points={pts} color={lit ? colors.cyan : focus ? colors.line : isLive ? colors.live : colors.muted}
-                                lineWidth={lit ? 2 : 1} transparent opacity={focus && !lit ? 0.35 : 1} />
+                            <Line points={pts} color={lit ? colors.text : focus ? colors.line : isLive && !faint ? colors.live : colors.muted}
+                                lineWidth={lit ? 3 : 1} transparent opacity={focus && !lit ? 0.2 : faint ? 0.3 : 1} />
                             {animate && isLive && pulseSet.has(i) ? <Pulse a={a} b={b} offset={(i * 0.37) % 1} color={colors.live} /> : null}
                         </group>
                     )
@@ -256,21 +385,21 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     const dim = !!focus && !hot(n.id)
                     const full = sel || hover === n.id
                     // at fit zoom only tiers and machines carry a name; the rest show it on hover, when selected, or up close
-                    const named = close || n.kind === 'tier' || n.kind === 'machine'
+                    const named = showKinds || close || n.named || n.kind === 'tier' || n.kind === 'machine'
                     return (
                         <group key={n.id}>
                             <Line points={stemOf.get(n.id)} color={colors.line} lineWidth={1} />
-                            <Body node={n} p={p} color={toneColor(n.state)} dim={dim} sel={sel} onHover={setHover} onPick={onPick} />
-{named || full ? (
+                            <Body node={n} p={p} color={bodyColor(n)} ring={colors.text} pip={showKinds ? toneColor(n.state) : null} dim={dim} sel={sel} near={!!focus && !sel && hot(n.id)} kinds={showKinds} onHover={setHover} onPick={onPick} />
+{(named || full) && (shown === null || shown.has(n.id)) ? (
                                 <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
-                                    <button type="button" data-map-node={n.id}
+                                    <button type="button" {...{ [pointerOnly ? 'data-pointer-node' : 'data-map-node']: n.id }} tabIndex={pointerOnly ? -1 : undefined}
                                         className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}${full ? ' is-full' : ''}`}
-                                        aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.state}`}
+                                        aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.stateLabel || n.state}`}
                                         onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h) => (h === n.id ? null : h))}
                                         onFocus={() => setHover(n.id)} onBlur={() => setHover((h) => (h === n.id ? null : h))}
                                         onClick={() => onPick(n)}>
                                         <span className="monitor-card3d-name">{n.label}</span>
-                                        <span className="monitor-card3d-state">{n.state}</span>
+                                        <span className="monitor-card3d-state">{n.stateLabel || n.state}</span>
                                         <span className="monitor-card3d-fact">{`${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
                                     </button>
                                 </Html>
@@ -282,9 +411,10 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     <div className="monitor-card3d is-hub"><span className="monitor-card3d-name">di.iiii</span></div>
                 </Html>
             </Canvas>
+            {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             <div className="monitor-map-tools" role="group" aria-label="Camera">
-                <button type="button" className="monitor-map-tool" data-map-tool="fit" onClick={() => setPreset((p) => ({ name: 'fit', n: p.n + 1 }))}>Fit</button>
-                <button type="button" className="monitor-map-tool" data-map-tool="top" onClick={() => setPreset((p) => ({ name: 'top', n: p.n + 1 }))}>Top view</button>
+                <button type="button" tabIndex={pointerOnly ? -1 : undefined} className="monitor-map-tool" data-map-tool="fit" onClick={() => setPreset((p) => ({ name: 'fit', n: p.n + 1 }))}>Fit</button>
+                <button type="button" tabIndex={pointerOnly ? -1 : undefined} className="monitor-map-tool" data-map-tool="top" onClick={() => setPreset((p) => ({ name: 'top', n: p.n + 1 }))}>Top view</button>
             </div>
             <div className="monitor-map-hint">Drag to turn · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · tap a card to open it</div>
         </div>

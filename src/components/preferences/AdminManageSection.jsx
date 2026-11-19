@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ModuleSection, MetricCard, InfoPair } from './PreferencesShared.jsx'
 import GithubSyncSection from './GithubSyncSection.jsx'
 import {
@@ -27,8 +27,20 @@ import {
 } from '../../studio/utils/studioRouting.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 import LoadingScreen from '../LoadingScreen.jsx'
+import MonitorMap, { useNarrow } from './MonitorMap.jsx'
+import SpacesMixed from './SpacesMixed.jsx'
+import { buildSpacesWorld, layoutSpacesWorld, personNodeId, spaceNodeId } from './spacesWorld.js'
 import { useSpaceDelete } from '../../studio/components/SpaceTrash.jsx'
 import { useAsk } from '../ui/useAsk.js'
+
+// List | 2D | 3D: the same spaces and people three ways; the choice is kept per browser.
+const WORLD_KEY = 'di.admin.spaces.view'
+const WORLD_VIEWS = [['mixed', 'Mixed'], ['list', 'List'], ['2d', '2D'], ['3d', '3D']]
+const LIVE_MS = 10000
+const readWorldView = () => {
+    try { const v = window.localStorage.getItem(WORLD_KEY); return WORLD_VIEWS.some(([id]) => id === v) ? v : 'mixed' } catch { return 'mixed' }
+}
+const clockOf = (ms) => new Date(ms).toTimeString().slice(0, 8)
 
 const ROLES = [
     { key: 'viewer', hint: 'Read-only access' },
@@ -52,27 +64,55 @@ export default function AdminManageSection({ onStats }) {
     const [editing, setEditing] = useState(null) // { type, id, value }
     const [draftSpace, setDraftSpace] = useState('')
     const [draftProject, setDraftProject] = useState('')
+    const [worldView, setWorldView] = useState(readWorldView)
+    const [updatedAt, setUpdatedAt] = useState(null)
+    const [usersStale, setUsersStale] = useState(false)
+    const [goneNote, setGoneNote] = useState('')
+    const narrow = useNarrow()
+    const detailRef = useRef(null)
+    const chooseWorld = (v) => { setWorldView(v); try { window.localStorage.setItem(WORLD_KEY, v) } catch { /* the choice is just not kept */ } }
 
     const globalSpaceId = config.globalSpaceId || null
     const defaultSpaceId = config.defaultSpaceId || null
 
+    // One poll at a time answers: a counter drops a slow, older response, and an unmounted section drops all of them.
+    const pollRef = useRef(0)
+    const aliveRef = useRef(true)
+    useEffect(() => { aliveRef.current = true; return () => { aliveRef.current = false } }, [])
     const loadSpaces = useCallback(async () => {
+        const mine = ++pollRef.current
+        const fresh = () => aliveRef.current && mine === pollRef.current
         try {
             const [list, cfg] = await Promise.all([listServerSpaces(), getServerConfig()])
-            setSpaces(list)
+            if (!fresh()) return
+            // a poll that found nothing new keeps the same arrays, so the map does not redraw
+            setSpaces((prev) => (JSON.stringify(prev) === JSON.stringify(list) ? prev : list))
             setConfig(cfg)
             setError('')
+            setUpdatedAt(Date.now())
         } catch (e) {
-            setError(e.message || 'Failed to load spaces.')
+            if (fresh()) setError(e.message || 'Failed to load spaces.')
         }
         try {
-            setUsers(await listUsers())
-        } catch {
-            setUsers([]) // not an admin (or auth disabled) — no people panel
+            const people = await listUsers()
+            if (!fresh()) return
+            setUsersStale(false)
+            setUsers((prev) => (JSON.stringify(prev) === JSON.stringify(people) ? prev : people))
+        } catch (e) {
+            if (!fresh()) return
+            // only "not an admin" clears the people panel; a network blip keeps the last list, marked old
+            if (e?.status === 403) { setUsers([]); setUsersStale(false) } else setUsersStale(true)
         }
     }, [])
 
     useEffect(() => { loadSpaces() }, [loadSpaces])
+    // Live: the same two reads again every few seconds while the tab is visible, and at once when it comes back.
+    useEffect(() => {
+        const tick = () => { if (typeof document === 'undefined' || document.visibilityState !== 'hidden') loadSpaces() }
+        const id = setInterval(tick, LIVE_MS)
+        document.addEventListener('visibilitychange', tick)
+        return () => { clearInterval(id); document.removeEventListener('visibilitychange', tick) }
+    }, [loadSpaces])
 
     // Feed the slim admin topbar its counts (see PreferencesPage) without
     // lifting the fetches out of this section.
@@ -90,6 +130,8 @@ export default function AdminManageSection({ onStats }) {
         }
     }, [])
 
+    const projectsRef = useRef(projectsBySpace)
+    projectsRef.current = projectsBySpace
     const toggleExpand = useCallback((spaceId) => {
         setExpanded((prev) => {
             const next = new Set(prev)
@@ -97,11 +139,11 @@ export default function AdminManageSection({ onStats }) {
                 next.delete(spaceId)
             } else {
                 next.add(spaceId)
-                if (!projectsBySpace[spaceId]) loadProjects(spaceId)
+                if (!projectsRef.current[spaceId]) loadProjects(spaceId)
             }
             return next
         })
-    }, [projectsBySpace, loadProjects])
+    }, [loadProjects])
 
     const runMutation = useCallback(async (fn, fallbackMessage) => {
         try {
@@ -229,6 +271,15 @@ export default function AdminManageSection({ onStats }) {
         return projectsBySpace[selection.spaceId]?.items?.find((p) => p.id === selection.projectId) || null
     }, [selection, projectsBySpace])
 
+    // The selected space was deleted (here or elsewhere) while it was open: back to the overview, said once.
+    useEffect(() => {
+        if (!updatedAt || (selection.type !== 'space' && selection.type !== 'project')) return
+        if (spaces.some((sp) => sp.id === selection.spaceId)) return
+        setSelection({ type: 'root' })
+        setEditing(null)
+        setGoneNote('That space is gone, so the overview is shown.')
+    }, [spaces, selection, updatedAt])
+
     const startEdit = (type, id, value) => setEditing({ type, id, value })
     const submitEdit = () => {
         if (!editing) return
@@ -246,7 +297,141 @@ export default function AdminManageSection({ onStats }) {
         setEditing(null)
     }
 
+    // One way in to a space, from the list, the 2D map or the 3D room: select it and open its projects.
+    // Stable identities (state read through refs) so the memoised 3D map is not redrawn by every poll.
+    const expandedRef = useRef(expanded)
+    expandedRef.current = expanded
+    const openSpace = useCallback((spaceId) => {
+        setSelection({ type: 'space', spaceId })
+        setGoneNote('')
+        if (!expandedRef.current.has(spaceId)) toggleExpand(spaceId)
+    }, [toggleExpand])
+    const world = useMemo(() => buildSpacesWorld(spaces, users, { globalSpaceId }), [spaces, users, globalSpaceId])
+    const pickNode = useCallback((node) => {
+        // stacked (narrow screen): bring the detail into view; side by side it is already there
+        setTimeout(() => { try { if (window.innerWidth < 1100) detailRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }) } catch { /* no scroll */ } }, 50)
+        if (node.id.startsWith('space:')) openSpace(node.id.slice('space:'.length))
+        else if (node.id.startsWith('person:')) { setSelection({ type: 'person', userId: node.id.slice('person:'.length) }); setGoneNote('') }
+    }, [openSpace])
+    const selectedNodeId = selection.type === 'space' ? spaceNodeId(selection.spaceId) : selection.type === 'person' ? personNodeId(selection.userId) : null
+    const worldSubtitle = `${spaces.length} ${spaces.length === 1 ? 'space' : 'spaces'}, ${Array.isArray(users) ? users.length : 0} people · a line is a granted space · select a node for its details`
+    const stage = worldView === 'list' ? null : worldView === 'mixed' ? (
+        <ModuleSection className="monitor-map-section" title="Spaces world" subtitle={worldSubtitle}>
+            {world.nodes.length ? <SpacesMixed world={world} selectedId={selectedNodeId} onPick={pickNode} live />
+                : <div className="monitor-note">No spaces yet. Create one in the List view and it appears here.</div>}
+        </ModuleSection>
+    ) : (
+        <ModuleSection className="monitor-map-section" title="Spaces world"
+            subtitle={worldSubtitle}>
+            <MonitorMap map={world} selectedId={selectedNodeId} narrow={narrow} view={worldView} live world layoutFn={layoutSpacesWorld} onPick={pickNode}
+                onOpen={pickNode} empty="No spaces yet. Create one in the List view and it appears here." />
+        </ModuleSection>
+    )
+
+    const detailPane = (
+            <div className="preferences-manage-detail">
+                {goneNote ? <div className="monitor-note" role="status" data-gone-note>{goneNote}</div> : null}
+                {selection.type === 'root' && (
+                    <RootDetail
+                        spaces={spaces}
+                        users={users}
+                        globalSpaceId={globalSpaceId}
+                        draftSpace={draftSpace}
+                        setDraftSpace={setDraftSpace}
+                        onCreateSpace={createSpace}
+                        onPatchUser={patchUser}
+                        spaceLimit={spaceLimit}
+                    />
+                )}
+
+                {selection.type === 'space' && selectedSpace && (
+                    <SpaceDetail
+                        space={selectedSpace}
+                        users={users}
+                        projectsBucket={projectsBySpace[selectedSpace.id]}
+                        isGlobal={globalSpaceId === selectedSpace.id}
+                        isDefault={defaultSpaceId === selectedSpace.id}
+                        editing={editing}
+                        startEdit={startEdit}
+                        submitEdit={submitEdit}
+                        setEditing={setEditing}
+                        onPatch={(updates) => patchSpace(selectedSpace.id, updates)}
+                        onSetGlobal={() => setGuestGlobal(selectedSpace.id)}
+                        onSetDefault={() => setDefault(selectedSpace.id)}
+                        onDelete={() => removeSpace(selectedSpace)}
+                        draftProject={draftProject}
+                        setDraftProject={setDraftProject}
+                        onAddProject={() => addProject(selectedSpace.id)}
+                        onToggleUserSpace={toggleUserSpace}
+                        onSelectProject={(projectId) => setSelection({ type: 'project', spaceId: selectedSpace.id, projectId })}
+                    />
+                )}
+
+                {selection.type === 'project' && selectedProject && (
+                    <ProjectDetail
+                        space={selectedSpace}
+                        project={selectedProject}
+                        isPublished={selectedSpace?.publishedProjectId === selectedProject.id}
+                        editing={editing}
+                        startEdit={startEdit}
+                        submitEdit={submitEdit}
+                        setEditing={setEditing}
+                        onPublish={() => patchSpace(selection.spaceId, { publishedProjectId: selectedProject.id })}
+                        onUnpublish={() => patchSpace(selection.spaceId, { publishedProjectId: null })}
+                        onDelete={() => removeProject(selection.spaceId, selectedProject)}
+                    />
+                )}
+
+                {selection.type === 'person' && (
+                    <PersonCard
+                        user={Array.isArray(users) ? users.find((u) => u.id === selection.userId) : null}
+                        spaces={spaces}
+                        onOpenSpace={openSpace}
+                        onPatchUser={patchUser}
+                    />
+                )}
+
+                {selection.type === 'project' && !selectedProject && (
+                    <div className="preferences-empty">Select a project from the directory.</div>
+                )}
+            </div>
+    )
+
+    const toolbar = (
+        <div className="preferences-manage-toolbar">
+            <div className="monitor-map-views" role="group" aria-label="Spaces view">
+                {WORLD_VIEWS.map(([id, label]) => (
+                    <button key={id} type="button" data-world-view={id} className={`monitor-map-view${worldView === id ? ' is-active' : ''}`}
+                        aria-pressed={worldView === id} onClick={() => chooseWorld(id)}>{label}</button>
+                ))}
+            </div>
+            <span className="preferences-live-chip" role="status" data-live={updatedAt ? 'on' : 'off'}>
+                {updatedAt ? `Live · updated ${clockOf(updatedAt)}${usersStale ? ' · people list old' : ''}` : 'Loading…'}
+            </span>
+            <button type="button" className="toggle-button" onClick={loadSpaces}>Refresh now</button>
+        </div>
+    )
+
+    if (worldView !== 'list') {
+        return (
+            <div className="preferences-manage-world">
+                {toolbar}
+                {error && <div className="preferences-empty" role="status">{error}</div>}
+                <div className={`preferences-manage-world-body${worldView === 'mixed' ? ' is-mixed' : ''}${selection.type === 'root' ? '' : ' has-detail'}`}>
+                    {stage}
+                    <div className="preferences-manage-world-detail" ref={detailRef}>
+                        {selection.type === 'root' ? <div className="preferences-empty">Select a space or a person on the map to see and change it here.</div> : detailPane}
+                    </div>
+                </div>
+                {deleteUi}
+                {askDialog}
+            </div>
+        )
+    }
+
     return (
+        <div className="preferences-manage-world">
+        {toolbar}
         <div className="preferences-manage-layout">
             <div className="preferences-stage-sidebar-block">
                 <div className="preferences-stage-sidebar-title">Directory</div>
@@ -318,63 +503,35 @@ export default function AdminManageSection({ onStats }) {
                 {askDialog}
             </div>
 
-            <div className="preferences-manage-detail">
-                {selection.type === 'root' && (
-                    <RootDetail
-                        spaces={spaces}
-                        users={users}
-                        globalSpaceId={globalSpaceId}
-                        draftSpace={draftSpace}
-                        setDraftSpace={setDraftSpace}
-                        onCreateSpace={createSpace}
-                        onPatchUser={patchUser}
-                        spaceLimit={spaceLimit}
-                    />
-                )}
-
-                {selection.type === 'space' && selectedSpace && (
-                    <SpaceDetail
-                        space={selectedSpace}
-                        users={users}
-                        projectsBucket={projectsBySpace[selectedSpace.id]}
-                        isGlobal={globalSpaceId === selectedSpace.id}
-                        isDefault={defaultSpaceId === selectedSpace.id}
-                        editing={editing}
-                        startEdit={startEdit}
-                        submitEdit={submitEdit}
-                        setEditing={setEditing}
-                        onPatch={(updates) => patchSpace(selectedSpace.id, updates)}
-                        onSetGlobal={() => setGuestGlobal(selectedSpace.id)}
-                        onSetDefault={() => setDefault(selectedSpace.id)}
-                        onDelete={() => removeSpace(selectedSpace)}
-                        draftProject={draftProject}
-                        setDraftProject={setDraftProject}
-                        onAddProject={() => addProject(selectedSpace.id)}
-                        onToggleUserSpace={toggleUserSpace}
-                        onSelectProject={(projectId) => setSelection({ type: 'project', spaceId: selectedSpace.id, projectId })}
-                    />
-                )}
-
-                {selection.type === 'project' && selectedProject && (
-                    <ProjectDetail
-                        space={selectedSpace}
-                        project={selectedProject}
-                        isPublished={selectedSpace?.publishedProjectId === selectedProject.id}
-                        editing={editing}
-                        startEdit={startEdit}
-                        submitEdit={submitEdit}
-                        setEditing={setEditing}
-                        onPublish={() => patchSpace(selection.spaceId, { publishedProjectId: selectedProject.id })}
-                        onUnpublish={() => patchSpace(selection.spaceId, { publishedProjectId: null })}
-                        onDelete={() => removeProject(selection.spaceId, selectedProject)}
-                    />
-                )}
-
-                {selection.type === 'project' && !selectedProject && (
-                    <div className="preferences-empty">Select a project from the directory.</div>
-                )}
-            </div>
+            {detailPane}
         </div>
+        </div>
+    )
+}
+
+// One account, from the map: who they are, their role, and every space they can open (each one a way in).
+function PersonCard({ user, spaces, onOpenSpace, onPatchUser }) {
+    if (!user) return <div className="preferences-empty">That account is no longer listed.</div>
+    const granted = user.isUnrestricted ? spaces : spaces.filter((sp) => (user.spaces || []).includes(sp.id))
+    return (
+        <ModuleSection title={user.displayName || user.email || user.id} subtitle={user.email || user.id}>
+            <div className="preferences-command-grid">
+                {ROLES.map((role) => (
+                    <button key={role.key} type="button" title={role.hint}
+                        className={`toggle-button ${(user.role || 'viewer') === role.key ? 'active' : ''}`}
+                        onClick={() => onPatchUser(user.id, { role: role.key })}>{role.key}</button>
+                ))}
+                <button type="button" className={`toggle-button ${user.isUnrestricted ? 'active success-button' : ''}`}
+                    onClick={() => onPatchUser(user.id, { isUnrestricted: !user.isUnrestricted })} title="Access to every space">
+                    {user.isUnrestricted ? 'All spaces ✓' : 'Limit to granted spaces'}
+                </button>
+            </div>
+            <div className="preferences-person-spaces">
+                {granted.length === 0 ? <div className="preferences-empty">No space granted yet.</div> : granted.map((sp) => (
+                    <button key={sp.id} type="button" className="toggle-button" onClick={() => onOpenSpace(sp.id)}>{sp.label || sp.id}</button>
+                ))}
+            </div>
+        </ModuleSection>
     )
 }
 
@@ -479,12 +636,6 @@ export function SweepSection() {
 function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, onCreateSpace, onPatchUser, spaceLimit }) {
     return (
         <>
-            {/* Spaces and Users are already counted in the page header; repeating them here (and a lone
-                "Guest space" tile) read as noise. What is left is the one setting this card owns. */}
-            <ModuleSection title="Guest entry" subtitle="Where a visitor who is not signed in lands">
-                <InfoPair label="Guests land in" value={globalSpaceId ? `the shared space “${globalSpaceId}”` : 'their own private sandbox'} />
-            </ModuleSection>
-
             <ModuleSection
                 title="New space"
                 subtitle={Number.isFinite(spaceLimit) ? `Free accounts can create up to ${spaceLimit} spaces each` : 'A space holds projects, assets, and its own access'}
@@ -502,14 +653,8 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     />
                     <button type="submit" className="toggle-button" disabled={!draftSpace.trim()}>Create space</button>
                 </form>
-                <div className="preferences-empty">Pick a space on the left to manage its projects and access.</div>
+                <div className="preferences-empty">Or pick a space in the directory, or switch to 2D or 3D, to manage its projects and access.</div>
             </ModuleSection>
-
-            <TrafficSection />
-
-            <SweepSection />
-
-            <CommonsModerationSection />
 
             <ModuleSection title="People" subtitle="Account roles and overall reach">
                 {users === null && <div className="preferences-empty"><LoadingScreen variant="inline" label="Loading accounts" text="loading accounts" /></div>}
@@ -550,6 +695,19 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                     ))}
                 </div>
             </ModuleSection>
+
+            {/* Spaces and Users are already counted in the page header; repeating them here (and a lone
+                "Guest space" tile) read as noise. What is left is the one setting this card owns. */}
+            <ModuleSection title="Guest entry" subtitle="Where a visitor who is not signed in lands">
+                <InfoPair label="Guests land in" value={globalSpaceId ? `the shared space “${globalSpaceId}”` : 'their own private sandbox'} />
+            </ModuleSection>
+
+            <TrafficSection />
+
+            <SweepSection />
+
+            <CommonsModerationSection />
+
         </>
     )
 }

@@ -42,7 +42,7 @@ const renderAdmin = () => render(<PreferencesPage onNavigateToEditor={vi.fn()} /
 describe('admin console in plain words', () => {
     it('names the page by its job, not "Ops Graph", "Socket", "Estate" or "Inspect"', () => {
         renderAdmin()
-        expect(screen.getByRole('heading', { level: 1, name: 'Spaces and who can see them' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { level: 1, name: 'Spaces and users' })).toBeInTheDocument()
         const text = document.body.textContent
         for (const word of ['Ops Graph', 'Admin Management', 'Socket', 'Estate', 'Inspect', 'Back to Editor']) {
             expect(text).not.toContain(word)
@@ -50,11 +50,14 @@ describe('admin console in plain words', () => {
         expect(screen.getByRole('button', { name: 'Back to the space' })).toBeInTheDocument()
     })
 
-    it('the nav is plain labels in two named groups, no glyph icons', () => {
+    it('the nav is plain labels in four named groups, no glyph icons', () => {
         const { container } = renderAdmin()
         const nav = screen.getByRole('navigation', { name: 'Admin sections' })
-        expect(within(nav).getByText('Spaces and people')).toBeInTheDocument()
-        expect(within(nav).getByText('Operator tools (staff)')).toBeInTheDocument()
+        for (const g of ['Watch', 'People and spaces', 'Outreach', 'Operate (staff)']) expect(within(nav).getByText(g)).toBeInTheDocument()
+        // Open call is Outreach, never under People and spaces
+        const labels = [...nav.querySelectorAll('.preferences-nav-group-label, .preferences-nav-label')].map((n) => n.textContent)
+        expect(labels.indexOf('Open call')).toBe(labels.indexOf('Outreach') + 1)
+        expect(labels.indexOf('Spaces and users')).toBe(labels.indexOf('People and spaces') + 1)
         expect(within(nav).getByRole('button', { name: 'Machines' })).toBeInTheDocument()
         expect(container.querySelectorAll('.preferences-nav-glyph')).toHaveLength(0)
     })
@@ -62,7 +65,7 @@ describe('admin console in plain words', () => {
     it('a quick action that is on or off is a switch with its state, who it touches, and the same click to undo', () => {
         renderAdmin()
         fireEvent.click(screen.getByRole('button', { name: 'Overview' }))
-        expect(screen.getByRole('heading', { level: 1, name: 'Operator tools' })).toBeInTheDocument()
+        expect(screen.getByRole('heading', { level: 1, name: 'Overview' })).toBeInTheDocument()
         const lock = screen.getByRole('switch', { name: 'Lock editing' })
         expect(lock).toHaveAttribute('aria-checked', 'false')
         expect(lock).toHaveTextContent('Off')
