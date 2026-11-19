@@ -61,6 +61,20 @@ describe('the local Monitor\'s account feed', () => {
   })
 })
 
+describe('where the feed asks', () => {
+  it('uses the base di login stored for dev, but never sends the token to another host', async () => {
+    const urls = []
+    const fetchImpl = async (url) => { urls.push(url); return { ok: true, status: 200, json: async () => ({ reports: [] }) } }
+    await createAccountFeed({ home: homeWith({ ...login, base: 'https://dev.diiii.xyz/serverXR/' }), fetchImpl }).mine()
+    await createAccountFeed({ home: homeWith({ ...login, base: 'https://evil.example/x' }), fetchImpl }).mine()
+    expect(urls).toEqual(['https://dev.diiii.xyz/serverXR/api/monitor/mine', 'https://dev.diiii.xyz/serverXR/api/monitor/mine'])
+  })
+  it('a terminal login may reach GET /api/monitor/mine (the catalogue describes it)', () => {
+    const { reachRefusalFor } = require('./cliTokenGate.js')
+    expect(reachRefusalFor('GET', '/api/monitor/mine')).toBeNull()
+  })
+})
+
 describe('the account feed: login changes and bad rows', () => {
   it('a new sign-in is seen at once, not after the cache; bad rows from dev are dropped; 403 is not "expired"', async () => {
     const home = homeWith(login)

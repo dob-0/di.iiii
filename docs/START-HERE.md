@@ -60,6 +60,17 @@ In the browser, sign in as yourself (GitHub, Google or Telegram), open the page 
 The terminal can read and edit your spaces and projects. It cannot publish or delete a space, or change who owns or edits one: those stay in the browser.
 It lasts until you end it (`di logout`, or the list at /device), or 90 days unused (a year at most). It signs in to dev.diiii.xyz by default; add `--tier prod` or `--tier local` for another.
 
+### See all your machines in the Monitor (after door 4)
+
+Signed in, the local Monitor (`diiii.localhost/admin`, Monitor) lists every machine of your account; not signed in, it shows this machine only. A machine joins once, from a machine that can reach it:
+
+```bash
+scripts/monitor-join.sh <ssh-host>         # signs that machine in, sends one report, starts a 30 s report timer
+ssh <ssh-host> 'di monitor install-timer --remove'   # undo
+```
+
+Someone else who signs in sees only their own machines.
+
 ## Which door has what
 
 | You want | Door | Longer guide |

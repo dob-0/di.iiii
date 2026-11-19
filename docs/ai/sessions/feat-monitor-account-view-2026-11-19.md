@@ -6,4 +6,4 @@
 - `scripts/monitor-join.sh <host>`: a machine signs in once and starts the 30 s report timer; a `di-ask` window runs it.
 - Tests: monitorAccount.test.js (new), monitorRoutes.test.js, monitorHub, page test: 69 files, 737 passed on di-work; lint 0 errors.
 - Not done: nothing is live end to end until this is merged and dev is deployed (today dev has no `/api/monitor/mine`, so a signed-in local Monitor says "could not be reached"). di-work and the Mac have no di yet.
-- Stacked on `feat/monitor-devices-credits-2026-11-19` (PR #1323): merge that first.
+

@@ -1,172 +1,74 @@
-// Catalogue entries: agents. Shape and rules: ../index.js.
+// The account side of the local Monitor: when someone is signed in on this machine (`di login`),
+// the Monitor also lists THEIR other machines, which report to the dev tier. Signed out, expired or
+// offline: the Monitor shows this machine only and says why. The token is read from the user's own
+// credentials file, sent only to the dev tier, and never returned, logged or stored.
 
-module.exports = [
-  {
-    route: "GET /ai/context",
-    summary: "the one context as markdown, at the caller's level (public with no key); ?level= asks for a lower one, above the caller's is 403",
-    reach: "read",
-    role: "guest",
-    agent: true,
-    note: "the level is read from the caller's key, never from the request (aiContext.js); the MCP door's di_context tool reads this."
-  },
-  {
-    route: "GET /api/agent-board",
-    summary: "the operator's board of local Claude Code sessions (Ops Graph → Agents)",
-    reach: "read",
-    role: "guest",
-    agent: false,
-    note: "reads ~/.claude, whose transcripts can contain secrets — loopback + non-production (or DI_LOCAL=1) only, 404 otherwise. Not session-role gated."
-  },
-  {
-    route: "GET /api/monitor",
-    summary: "one snapshot of machines, network probes, agent sessions (every Claude login here), services, open PRs and operator feeds (tasks, shows) for Preferences → Monitor",
-    reach: "read",
-    role: "guest",
-    agent: false,
-    note: "lists machines, session titles, spaces and open asks — on a local server loopback + non-production (or DI_LOCAL=1) and admin, on the dev tier only the account ids in MONITOR_OWNER_USER_IDS (everyone else, admins too, gets the unknown-route 404), 404 on prod; adds reports, tiers, spaces, asks and map; commands come only from ~/.di/monitor.json, never from the request."
-  },
-  {
-    route: "GET /api/monitor/stream",
-    summary: "the monitor snapshot as server-sent events: one `snapshot` event whenever it changes (at most every 2 s), a heartbeat every 15 s",
-    reach: "read",
-    role: "guest",
-    agent: false,
-    note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server."
-  },
-  {
-    route: "GET /api/monitor/prs",
-    summary: "the open pull requests of the project repo (up to 50: number, title, author, draft, link) for Monitor → Work → Waiting to merge, read through the GitHub App and cached 60 s",
-    reach: "read",
-    role: "guest",
-    agent: false,
-    note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server. Answers ok:false with a plain reason when the App is not set up or lacks Pull requests: read."
-  },
-  {
-    route: "GET /api/monitor/tasks",
-    summary: "the owner's open asks from the ledger (state, age, who has it) and one ask's history, for Monitor → Tasks",
-    reach: "read",
-    role: "guest",
-    agent: false,
-    note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server. Reads only the configured ledger file."
-  },
-  {
-    route: "POST /api/monitor/tasks",
-    summary: "the owner marks one ask done, blocked, reopened or adds a note; written to the ledger through its own tool and logged",
-    reach: "private",
-    role: "guest",
-    agent: false,
-    note: "the owner only (others 404), a browser session on the same origin; fixed argument list, no shell, state and id allow-lists, text capped, Done needs evidence; 30 per minute (429); 404 on prod."
-  },
-  {
-    route: "POST /api/monitor/report",
-    summary: "a machine sends its own monitor panels (and, from aylmo, the open ledger asks); kept in memory, stale after 120 s",
-    reach: "private",
-    role: "guest",
-    agent: false,
-    note: "the owner's browser session, or a terminal login (di login) whose account is in MONITOR_OWNER_USER_IDS on the dev tier (an admin on a local server); others 404; 256 KB cap; 404 on prod. Telemetry only: it changes nothing else."
-  },
-  {
-    route: "POST /api/monitor/ask",
-    summary: "the owner types an ask on the overview page; stored and shown in the open asks",
-    reach: "private",
-    role: "guest",
-    agent: false,
-    note: "the owner only (MONITOR_OWNER_USER_IDS on the dev tier; others 404), a browser session, a terminal login is refused; 2000 characters, 30 per hour; 404 on prod."
-  },
-  {
-    route: "GET /api/agent-board/session/:sessionId",
-    summary: "one local Claude Code session's detail from the agent board",
-    reach: "read",
-    role: "guest",
-    agent: false,
-    note: "same loopback/local-operator-only guard and secret-exposure risk as GET /api/agent-board."
-  },
-  {
-    route: "GET /api/agent-runs",
-    summary: "local `claude -p` runs launched from this machine and their status",
-    reach: "read",
-    role: "guest",
-    agent: false,
-    note: "loopback + non-production (or DI_LOCAL=1) only. Not session-role gated."
-  },
-  {
-    route: "POST /api/agent-runs",
-    summary: "spawn a local `claude -p` process with a prompt and working directory, and start capturing its output",
-    reach: "private",
-    role: "guest",
-    agent: false,
-    note: "spawns a real child process, confined to the di.iiii checkout/worktrees; loopback + non-production (or DI_LOCAL=1) only."
-  },
-  {
-    route: "GET /api/agent-runs/:id",
-    summary: "one local agent run's status and output tail",
-    reach: "read",
-    role: "guest",
-    agent: false,
-    note: "loopback + non-production (or DI_LOCAL=1) only."
-  },
-  {
-    route: "POST /api/agent-runs/:id/stop",
-    summary: "stop a running local agent process",
-    reach: "private",
-    role: "guest",
-    agent: false,
-    note: "loopback + non-production (or DI_LOCAL=1) only."
-  },
-  {
-    route: "GET /api/ai/chats",
-    summary: "list the caller's own saved AI chat threads",
-    reach: "read",
-    role: "viewer",
-    agent: false,
-    note: "requires a real signed-in account (not a guest session)."
-  },
-  {
-    route: "POST /api/ai/chats",
-    summary: "start a new AI chat thread",
-    reach: "private",
-    role: "editor",
-    agent: false,
-    note: "requires a real signed-in account (not a guest session)."
-  },
-  {
-    route: "DELETE /api/ai/chats/:chatId",
-    summary: "delete one of the caller's chat threads",
-    reach: "private",
-    role: "editor",
-    agent: false,
-    note: "requires a real signed-in account (not a guest session)."
-  },
-  {
-    route: "GET /api/ai/chats/:chatId",
-    summary: "a chat thread and its messages",
-    reach: "read",
-    role: "viewer",
-    agent: false,
-    note: "requires a real signed-in account (not a guest session)."
-  },
-  {
-    route: "PATCH /api/ai/chats/:chatId",
-    summary: "rename a chat thread",
-    reach: "private",
-    role: "editor",
-    agent: false,
-    note: "requires a real signed-in account (not a guest session)."
-  },
-  {
-    route: "POST /api/ai/chats/:chatId/messages",
-    summary: "send a message in a chat thread and stream the reply back over SSE (Claude, or a local model as fallback)",
-    reach: "private",
-    role: "editor",
-    agent: false,
-    note: "text/event-stream response, and requires a real signed-in account with an AI connection (or a local machine that can answer instead)."
-  },
-  {
-    route: "GET /api/ai/providers",
-    summary: "whether the caller has a Claude API key connected, and whether a local Claude/local model is available on this machine",
-    reach: "read",
-    role: "viewer",
-    agent: false,
-    note: "requires a real signed-in account (not a guest session)."
-  },
-]
+const fs = require('fs')
+const os = require('os')
+const path = require('path')
+
+const DEV_BASE = 'https://dev.diiii.xyz/serverXR'
+// the base `di login` stored for the dev tier; the token goes only to the dev host, never to a base named elsewhere
+const devBase = (value) => { try { const u = new URL(value); return u.protocol === 'https:' && u.host === 'dev.diiii.xyz' ? u.origin + u.pathname.replace(/\/+$/, '') : null } catch { return null } }
+const CACHE_MS = 15000
+const TIMEOUT_MS = 4000
+
+const expiryMs = (value) => {
+  let n = Number(value)
+  if (typeof value === 'string' && !Number.isFinite(n)) n = Date.parse(value) / 1000
+  if (!Number.isFinite(n) || n <= 0) return null
+  return n < 1e11 ? n * 1000 : n
+}
+
+// a row from dev is shown only when it has the shape this page reads: a plain host name and a panels object of sane size
+const HOST_RE = /^[A-Za-z0-9._-]{1,64}$/
+const sound = (r) => {
+  if (!r || typeof r !== 'object' || typeof r.host !== 'string' || !HOST_RE.test(r.host)) return false
+  if (!r.panels || typeof r.panels !== 'object' || Array.isArray(r.panels)) return false
+  try { return JSON.stringify(r).length <= 256 * 1024 } catch { return false }
+}
+
+function createAccountFeed({ home = os.homedir(), fetchImpl = globalThis.fetch, now = () => Date.now(), base = DEV_BASE } = {}) {
+  let cache = null // { at, token, promise }
+
+  const readLogin = () => {
+    try {
+      const store = JSON.parse(fs.readFileSync(path.join(home, '.config', 'di', 'credentials.json'), 'utf8'))
+      const entry = store && typeof store === 'object' && Object.hasOwn(store, 'dev') ? store.dev : null
+      return entry && typeof entry.token === 'string' && entry.token ? entry : null
+    } catch { return null }
+  }
+
+  /** { state: 'signed-out'|'expired'|'offline'|'ok', name?, reports: [] } — never throws. */
+  async function mine() {
+    const login = readLogin()
+    const token = login?.token || ''
+    // one answer per login: a new sign-in, another person or a sign-out is seen at once; calls in flight share one request
+    if (cache && cache.token === token && now() - cache.at < CACHE_MS) return cache.promise
+    const promise = load(login)
+    cache = { at: now(), token, promise }
+    return promise
+  }
+
+  async function load(login) {
+    if (!login) return { state: 'signed-out', reports: [] }
+    const expires = expiryMs(login.expiresAt)
+    if (expires && expires < now()) return { state: 'expired', reports: [] }
+    if (!fetchImpl) return { state: 'offline', reports: [] }
+    try {
+      const res = await fetchImpl(`${devBase(login.base) || base}/api/monitor/mine`, {
+        headers: { Authorization: `Bearer ${login.token}` },
+        signal: AbortSignal.timeout(TIMEOUT_MS)
+      })
+      if (res.status === 401) return { state: 'expired', reports: [] }
+      if (!res.ok) return { state: 'offline', reports: [] }
+      const body = await res.json()
+      const reports = (Array.isArray(body?.reports) ? body.reports : []).filter(sound).slice(0, 40)
+      return { state: 'ok', name: typeof login.user?.name === 'string' ? login.user.name.slice(0, 60) : null, reports }
+    } catch { return { state: 'offline', reports: [] } }
+  }
+
+  return { mine }
+}
+
+module.exports = { createAccountFeed, DEV_BASE }
