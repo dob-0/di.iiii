@@ -598,7 +598,7 @@
       try {
         r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/sdp' }, body: pc.localDescription.sdp });
       } catch (e) {
-        throw new Error(`${host} did not answer — is the WHEP server running, and does it allow CORS?`);
+        throw new Error(`${host} did not answer — is the WHEP server running, and does it allow CORS?`, { cause: e });
       }
       if (gen !== whepGen) return gone();
       if (r.status !== 201 && r.status !== 200) {
