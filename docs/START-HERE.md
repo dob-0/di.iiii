@@ -69,7 +69,7 @@ scripts/monitor-join.sh <ssh-host>         # signs that machine in, sends one re
 ssh <ssh-host> 'di monitor install-timer --remove'   # undo
 ```
 
-Someone else who signs in sees only their own machines.
+Someone else who signs in sees only their own machines. The report timer follows the installed version (`~/.di/current`), so it keeps reporting after `di update`; a machine that joined before 2026-11-20 runs `di monitor install-timer` once more.
 
 ## Which door has what
 

@@ -20,6 +20,7 @@ import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { readLogin } from './loginStore.mjs'
 import { resolveTarget } from './login.mjs'
+import { diHome, paths } from './paths.mjs'
 
 export const USAGE = [
     'di monitor report [--once] [--every N] [--tier dev|prod | --to URL]   send this machine\'s panels to the overview',
@@ -155,7 +156,21 @@ export const timerUnits = ({ node, cli, every = EVERY_SECONDS }) => ({
     ].join('\n')
 })
 
-export const installTimer = async ({ home = os.homedir(), node = process.execPath, cli = path.join(here(), 'cli.mjs'), remove = false, exec = execText, say = console.log, fail = console.error } = {}) => {
+/**
+ * The cli.mjs a timer should run. An installed di keeps one folder per version (paths.mjs) and `di update` removes the old ones, so a
+ * unit that names the version folder stops working at the next update (aylmo, 2026-11-19 23:30: every run after the update failed with
+ * "Cannot find module .../versions/<old>/cli/cli.mjs"). `current` is the link the `di` shim itself follows: use it when it leads to
+ * THIS copy. A source tree has no such link, and a link that leads to another copy is not swapped in: the running file stays.
+ */
+export const stableCliPath = ({ cli, diRoot = diHome() } = {}) => {
+    const viaCurrent = path.join(paths(diRoot).current, 'cli', 'cli.mjs')
+    try {
+        if (fs.realpathSync(viaCurrent) === fs.realpathSync(cli)) return viaCurrent
+    } catch { /* no installed di here, or no such file: the running file is the only path there is */ }
+    return cli
+}
+
+export const installTimer = async ({ home = os.homedir(), diRoot = diHome(), node = process.execPath, cliFile = path.join(here(), 'cli.mjs'), cli = stableCliPath({ cli: cliFile, diRoot }), remove = false, exec = execText, say = console.log, fail = console.error } = {}) => {
     const dir = path.join(home, '.config', 'systemd', 'user')
     const units = timerUnits({ node, cli })
     if (remove) {

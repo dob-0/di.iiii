@@ -1,0 +1,7 @@
+## 2026-11-20 — the monitor sender timer names `~/.di/current`, not a version folder
+
+- Why: aylmo stopped reporting at 23:30 on 11-19. Its unit named `~/.di/versions/0.4.4-dev.ee04a819/cli/cli.mjs`, the autoupdate removed that folder, and every run after it failed with "Cannot find module" (161 runs to 00:55); the timer still showed `active`. A machine that stops reporting looks like a machine that is off, so the signed-in Monitor lost it.
+- What: `stableCliPath` in `scripts/di/monitorReport.mjs`; `installTimer` writes `~/.di/current/cli/cli.mjs` when that link leads to the running copy (an installed di), and the running file otherwise (a source tree). `installTimer` takes `diRoot` and `cliFile` so a test can build an install in a temp folder.
+- Tested: `npx vitest run scripts/di/monitorReport.test.js` 17 passed (2 new: link moved + old folder deleted, source tree); eslint on both files clean. Not tested: a real `di update` on a machine (the next autoupdate is the proof: the journal must show a successful run after it).
+- After it lands: every machine that already runs the timer re-runs `di monitor install-timer` once from the new version (aylmo first); `scripts/monitor-join.sh` already runs it on a machine that joins.
+- Not done: the macOS launch agent (PR #1322) needs `stableCliPath` for its `cli` default; the unit's node path is also a versioned folder on aylmo (`~/.local/opt/node-v22.23.2-linux-x64/bin/node`); no alarm when a timer's last run fails.

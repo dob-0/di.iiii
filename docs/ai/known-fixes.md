@@ -3,6 +3,14 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor sender dies at the first `di update`: its timer named a version folder that update removes (2026-11-20, N5852)
+
+Symptom: aylmo stopped reporting to dev at 23:30 on 2026-11-19 (last success 23:30:20, "sent to dev.diiii.xyz: 10 panels, 0 asks"); `journalctl --user -u di-monitor-report.service` then showed 161 failed runs from 23:30:54 to 00:55:44, each "Cannot find module '/home/dob/.di/versions/0.4.4-dev.ee04a819/cli/cli.mjs'". `systemctl --user is-active di-monitor-report.timer` still said `active`, so nothing looked wrong; the machine just aged out of every signed-in Monitor.
+Cause: `installTimer` defaulted `cli` to `path.join(here(), 'cli.mjs')`. Node resolves the running file to its physical path, `~/.di/versions/<v>/cli/cli.mjs`; `di update` installs the next version, moves the `current` link and removes the old folder, so the unit named a folder that was gone.
+Fix: `stableCliPath` (scripts/di/monitorReport.mjs) returns `~/.di/current/cli/cli.mjs`, the link the `di` shim itself follows, when that link leads to the running copy; a source tree (no link) and a link that leads to another copy keep the running file. A machine whose unit was written before this fix runs `di monitor install-timer` once more, from the new version.
+Regression tests: `scripts/di/monitorReport.test.js`, "an installed di: the unit names the `current` link, so it still runs after `di update` removed the old version folder" (install, move the link, delete the old folder, the unit's path still reaches the new version) and "a source tree (no ~/.di/current) keeps the running file; a link to another copy is not swapped in".
+Not done: the macOS launch agent (PR #1322) takes its `cli` from the same default and must use `stableCliPath` too; the unit also names the node that ran the install (`process.execPath`, a versioned folder on aylmo), which breaks the same way when that Node is upgraded in place; nothing yet tells the owner that a timer's last run failed.
+
 ## Monitor 3D map: hairball of lines, fixed camera, labels on top of each other (2026-11-19, N5646, N5648)
 
 Symptom: (1) every edge was a straight line from node to node, one tangle; (2) the camera only turned, no pan, no side/front views, no way to fly to a node; (3) with 65 nodes the cards covered each other (the old rule named tiers and machines, and every node once zoomed in); (4) "make 3d cooler".

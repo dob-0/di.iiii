@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, runMonitor, sendOnce } from './monitorReport.mjs'
+import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, stableCliPath, runMonitor, sendOnce } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -76,6 +76,48 @@ describe('body and timer units', () => {
         expect(calls).toContain('--user enable --now di-monitor-report.timer')
         expect(await installTimer({ home, node: '/n', cli: '/c', exec, remove: true, ...io })).toBe(0)
         expect(fs.readdirSync(dir)).toEqual([])
+    })
+    // aylmo 2026-11-19 23:30: the unit named .../versions/<old>/cli/cli.mjs, `di update` removed that folder, and 153 runs in a row
+    // failed with "Cannot find module". An installed di is versions/<v>/ plus a `current` link (paths.mjs): the unit must name the link.
+    const fakeVersion = (diRoot, name) => {
+        const dir = path.join(diRoot, 'versions', name, 'cli')
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, 'cli.mjs'), `// ${name}\n`)
+        return path.join(dir, 'cli.mjs')
+    }
+    const pointCurrent = (diRoot, name) => {
+        fs.rmSync(path.join(diRoot, 'current'), { force: true })
+        fs.symlinkSync(path.join('versions', name), path.join(diRoot, 'current'))
+    }
+    it('an installed di: the unit names the `current` link, so it still runs after `di update` removed the old version folder', async () => {
+        const home = tmpHome()
+        const diRoot = path.join(home, '.di')
+        const v1 = fakeVersion(diRoot, '0.4.4-dev.aaaa1111')
+        pointCurrent(diRoot, '0.4.4-dev.aaaa1111')
+        const exec = async (cmd, args) => (args.includes('is-active') ? 'active\n' : '')
+        expect(await installTimer({ home, diRoot, node: '/n', cliFile: v1, exec, ...quiet() })).toBe(0)
+        const unit = fs.readFileSync(path.join(home, '.config', 'systemd', 'user', 'di-monitor-report.service'), 'utf8')
+        const stable = path.join(diRoot, 'current', 'cli', 'cli.mjs')
+        expect(unit).toContain(`ExecStart="/n" "${stable}" monitor report --once`)
+        expect(unit).not.toContain('0.4.4-dev.aaaa1111')
+        // `di update`: the next version arrives, the link moves, the old folder goes.
+        fakeVersion(diRoot, '0.4.4-dev.bbbb2222')
+        pointCurrent(diRoot, '0.4.4-dev.bbbb2222')
+        fs.rmSync(path.join(diRoot, 'versions', '0.4.4-dev.aaaa1111'), { recursive: true })
+        expect(fs.existsSync(v1)).toBe(false) // what the old unit named: this is what failed on aylmo
+        expect(fs.readFileSync(stable, 'utf8')).toContain('bbbb2222') // what the unit names now reaches the new version
+    })
+    it('a source tree (no ~/.di/current) keeps the running file; a link to another copy is not swapped in', () => {
+        const home = tmpHome()
+        const diRoot = path.join(home, '.di')
+        const running = path.join(home, 'src', 'cli.mjs')
+        fs.mkdirSync(path.dirname(running), { recursive: true })
+        fs.writeFileSync(running, '//\n')
+        expect(stableCliPath({ cli: running, diRoot })).toBe(running)
+        const other = fakeVersion(diRoot, 'other')
+        pointCurrent(diRoot, 'other')
+        expect(stableCliPath({ cli: running, diRoot })).toBe(running)
+        expect(stableCliPath({ cli: other, diRoot })).toBe(path.join(diRoot, 'current', 'cli', 'cli.mjs'))
     })
     it('install fails loudly when systemd did not start the timer', async () => {
         const io = quiet()
