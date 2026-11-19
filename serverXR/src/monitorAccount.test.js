@@ -89,6 +89,21 @@ describe('the hub snapshot with an account', () => {
     expect(snap.account).toEqual({ state: 'ok', name: 'Ada', machines: 1 })
   })
 
+  it('another machine\'s chats reach the local chats block, and leave the reports rows', async () => {
+    const h = hub()
+    const src = { v: 2, generatedAt: Date.now() / 1000, chats: [{ sessionId: 's1', title: 'Light desk', group: 'ask', status: 'idle', idleMinutes: 3, asks: ['!! Say done.'] }] }
+    const snap = await h.getSnapshot({ account: { state: 'ok', name: 'Ada', reports: [{ host: 'r-di', panels: { chats: { ok: true, source: src } } }] } })
+    expect(snap.chats.rows.map((r) => [r.host, r.title])).toEqual([['r-di', 'Light desk']])
+    expect(snap.reports.find((r) => r.host === 'r-di').panels.chats).toBeUndefined()
+  })
+
+  it('the dev feed for /mine keeps chats; the public list does not', () => {
+    const store = createReportStore()
+    store.put({ host: 'r-di', panels: { chats: { ok: true, source: { v: 2, generatedAt: Date.now() / 1000, chats: [{ sessionId: 's', title: 't', group: 'ask', status: 'idle', idleMinutes: 1 }] } } } }, { subject: 'u1' })
+    expect(store.list({ subjects: ['u1'] })[0].panels.chats).toBeUndefined()
+    expect(store.list({ subjects: ['u1'], chats: true })[0].panels.chats.source.chats).toHaveLength(1)
+  })
+
   it('signed out still shows this machine and says so', async () => {
     const snap = await hub().getSnapshot({ account: { state: 'signed-out', reports: [] } })
     expect(snap.account).toMatchObject({ state: 'signed-out', machines: 0 })

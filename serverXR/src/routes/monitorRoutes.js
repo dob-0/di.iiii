@@ -194,7 +194,7 @@ function registerMonitorRoutes(router, {
   // The signed-in person's own machines, nothing else: this is what their local Monitor pulls.
   router.get('/api/monitor/mine', (req, res, next) => {
     if (tierOfDeployEnv(deployEnv()) !== 'dev' || !isAccount(req)) { next('route'); return }
-    res.json({ ok: true, reports: overview.reports.list({ subjects: [String(req.authState.subject)] }) })
+    res.json({ ok: true, reports: overview.reports.list({ subjects: [String(req.authState.subject)], chats: true }) })
   })
 
   router.post('/api/monitor/ask', gate, (req, res) => {

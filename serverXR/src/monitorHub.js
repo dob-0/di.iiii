@@ -146,13 +146,14 @@ function createReportStore({ now = () => Date.now() } = {}) {
 
   /** The `reports` contract rows, newest first. Stale ones stay (flagged) until an hour passes.
    *  `subjects` keeps only the machines reported by those accounts (the dev tier lists nobody else's). */
-  function list({ subjects = null } = {}) {
+  // `chats`: keep each machine's (already sanitised) chat panel; only the signed-in owner's own feed asks for it.
+  function list({ subjects = null, chats = false } = {}) {
     prune()
     const t = now()
     return [...byHost.values()]
       .filter((r) => !subjects || subjects.map(String).includes(String(r.subject)))
       .sort((a, b) => b.reportedAt - a.reportedAt)
-      .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: withoutChats(r.panels) }))
+      .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: chats ? r.panels : withoutChats(r.panels) }))
   }
 
   const raw = () => { prune(); return [...byHost.values()] }
@@ -468,11 +469,15 @@ function createHub({
 
   // Chats come through the same door as everything else: this machine's own chat panel (a feed in its
   // config) and the chat panel of every machine that reported. Nobody carrying chats is "no chat data".
-  const chatsFor = (base) => {
+  const chatsFor = (base, extra = []) => {
     const self = base.panels?.chats
     const inputs = []
     if (self && (self.source || self.ok === false)) inputs.push({ host: String(base.host || 'this machine').split('.')[0], source: self.source || null, error: self.ok === false ? (self.error || 'chat list not read') : null })
     for (const r of reports.raw()) {
+      const c = r.panels?.chats
+      if (c) inputs.push({ host: r.host, source: c.source || null, error: c.error || null })
+    }
+    for (const r of extra) {
       const c = r.panels?.chats
       if (c) inputs.push({ host: r.host, source: c.source || null, error: c.error || null })
     }
@@ -491,14 +496,14 @@ function createHub({
     const extra = (account?.reports || [])
       .filter((r) => r && typeof r.host === 'string' && !held.has(r.host))
       .map((r) => ({ ...r, via: 'dev' }))
-    const reportRows = [...own, ...extra]
+    const reportRows = [...own, ...extra.map(({ panels, ...r }) => ({ ...r, panels: withoutChats(panels) }))]
     return {
       ...base,
       account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
       tiers: tierBlock,
       parts: partsBlock(base),
-      chats: chatsFor(base),
+      chats: chatsFor(base, extra),
       spaces: spaceBlock,
       asks: asksBlock(),
       map: buildMap({ base, reportRows, tierBlock, spaceBlock })
