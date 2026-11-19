@@ -68,7 +68,7 @@ module.exports = [
   {
     route: "GET /api/monitor/mine",
     summary: "the signed-in account's own machines (their reports, chats included); this is what the local Monitor pulls after di login",
-    reach: "private",
+    reach: "read",
     role: "guest",
     agent: false,
     note: "a terminal login or browser session on the dev tier returns only that account's machines, never another person's; 404 elsewhere and on prod."

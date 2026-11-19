@@ -45,7 +45,7 @@ describe('the local Monitor\'s account feed', () => {
     expect(out).toMatchObject({ state: 'ok', name: 'Ada' })
     expect(out.reports.map((r) => r.host)).toEqual(['r-di'])
     expect(JSON.stringify(out)).not.toContain('secret-token-1')
-    expect(seen).toEqual([['https://dev.diiii.xyz/api/monitor/mine', 'Bearer secret-token-1']])
+    expect(seen).toEqual([['https://dev.diiii.xyz/serverXR/api/monitor/mine', 'Bearer secret-token-1']])
   })
 
   it('a refused token is expired; a network failure is offline; answers are cached 15 s', async () => {
