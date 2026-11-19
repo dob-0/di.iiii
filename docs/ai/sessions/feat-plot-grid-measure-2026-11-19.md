@@ -5,3 +5,4 @@
 - Compared once against the old script on one private real drawing: same pitch, outline, squares and LED line. Only that one drawing was compared.
 - README section added to `scripts/place/README.md`. A size read from a drawing stays a reading, not a confirmed size.
 - Round 2 (review of the PR): a bad `--picture` name and a cabinet size of zero or less are one FAIL line; a see-through PNG is laid on white; the LED line names the whole cabinet ratio; the test asks for numpy with `-I`; README names the uv route and the filled/coloured-outline limit; the examples use made-up numbers; new skill `venue-plot-measure`.
+- Round 3 (the lead's second review): the LED line prints the metres of whole cabinets exactly (a 2.25 m wall was printed as 2.2 m); `--cabinet-px 0` says "must be positive"; `--picture` never overwrites the drawing itself; the test's second rectangle sits on its grid lines and reads 3.00 x 2.00; README says what was read about pip on our Arch machines.

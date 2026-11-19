@@ -123,6 +123,12 @@ def near(values, want, what, tol):
     return best
 
 
+def exact(v):
+    """Metres of whole cabinets, never rounded away: 4.0, 2.5, 2.25 (a wall of 2.25 m is not 2.2 m)."""
+    text = f"{v:.3f}".rstrip("0")
+    return text + "0" if text.endswith(".") else text
+
+
 def load(args, tmp):
     src = args.drawing
     if not os.path.isfile(src):
@@ -279,10 +285,12 @@ def measure(args, img):
 
 def main():
     args = build_parser().parse_args()
-    if bool(args.cabinet_m) != bool(args.cabinet_px):
+    if (args.cabinet_m is None) != (args.cabinet_px is None):
         Parser.error(None, "--cabinet-m and --cabinet-px go together")
     if args.picture and not args.picture.lower().endswith(".png"):
-        Parser.error(None, f"--picture '{args.picture}' must be a name ending in .png — give a name ending in .png")
+        Parser.error(None, f"--picture '{args.picture}' must be a name ending in .png")
+    if args.picture and os.path.realpath(args.picture) == os.path.realpath(args.drawing):
+        Parser.error(None, "--picture would overwrite the drawing itself: give it another name")
     if (args.cabinet_px is not None and args.cabinet_px <= 0) or (args.cabinet_m is not None and args.cabinet_m <= 0) or args.grid_m <= 0 or args.dpi <= 0 or args.page < 1:
         Parser.error(None, "--grid-m, --cabinet-m, --cabinet-px, --dpi and --page must be positive")
     try:
@@ -320,7 +328,7 @@ def main():
         nw, nh = led["cabinets"]
         k = math.gcd(nw, nh)
         shape = "16:10" if (nw // k, nh // k) == (8, 5) else f"{nw // k}:{nh // k}"
-        print(f"LED: {led['cabinets_raw'][0]:.2f} x {led['cabinets_raw'][1]:.2f} cabinets -> {nw} x {nh} = {led['count']} cabinets = {led['px'][0]} x {led['px'][1]} px, {led['metres'][0]:.1f} x {led['metres'][1]:.1f} m, {shape}")
+        print(f"LED: {led['cabinets_raw'][0]:.2f} x {led['cabinets_raw'][1]:.2f} cabinets -> {nw} x {nh} = {led['count']} cabinets = {led['px'][0]} x {led['px'][1]} px, {exact(led['metres'][0])} x {exact(led['metres'][1])} m, {shape}")
     if pic:
         print(f"picture: {pic[0]} {pic[1][0]}x{pic[1][1]}")
     print(f"scale: one grid square = {args.grid_m:g} m (given, not measured)")

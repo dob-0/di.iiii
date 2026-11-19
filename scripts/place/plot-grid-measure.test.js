@@ -1,8 +1,8 @@
 // plot_grid_measure.py (2026-11-19): measures a rectangle on a light plot against the plot's own grid.
 // The test MAKES its drawing (Pillow, in a temp folder, removed afterwards): a white page, a light-grey grid of
-// 100 px, a black rectangle 4 squares wide and 2.5 high with its left and right edges on grid lines, and a
-// magenta bar 3 squares long. Skipped when python3 with numpy and Pillow is missing; the PDF case is skipped
-// when pdftoppm (poppler) is missing.
+// 100 px, a black rectangle 4 squares wide and 2.5 high with its left and right edges on grid lines, a second
+// one of 3 x 2 squares, and a magenta bar 3 squares long; the same page once more with a see-through background.
+// Skipped when python3 with numpy and Pillow is missing; the PDF case is skipped when pdftoppm (poppler) is missing.
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -33,7 +33,7 @@ d.rectangle([149, 399, 551, 401], fill=(0, 0, 0))
 d.rectangle([149, 149, 151, 401], fill=(0, 0, 0))
 d.rectangle([549, 149, 551, 401], fill=(0, 0, 0))
 d.rectangle([100, 600, 399, 605], fill=(255, 0, 255))
-for r in ([650, 450, 950, 452], [650, 648, 950, 650], [650, 450, 652, 650], [948, 450, 950, 650]):
+for r in ([649, 449, 951, 451], [649, 649, 951, 651], [649, 449, 651, 651], [949, 449, 951, 651]):
     d.rectangle(r, fill=(0, 0, 0))
 im.save(out_png)
 clear = im.convert('RGBA')
@@ -97,9 +97,15 @@ describe.skipIf(!hasPython)('plot_grid_measure.py', () => {
     it('names every cabinet ratio: 16:10 for the first rectangle, 3:2 for the second', () => {
         const second = run([png, '--near', '650,450,950,650', '--cabinet-m', '0.5', '--cabinet-px', '128'])
         expect(second.status).toBe(0)
-        expect(second.stdout).toMatch(/^LED: .* -> 6 x 4 = 24 cabinets = 768 x 512 px, 3\.0 x 2\.0 m, 3:2$/m)
+        expect(second.stdout).toMatch(/^LED: 6\.00 x 4\.00 cabinets -> 6 x 4 = 24 cabinets = 768 x 512 px, 3\.0 x 2\.0 m, 3:2$/m)
         const first = run([png, '--near', NEAR, '--cabinet-m', '0.5', '--cabinet-px', '128'])
         expect(first.stdout).toMatch(/16:10$/m)
+    })
+
+    it('LED metres are exact: a wall 1.25 m high is not printed as 1.2 m', () => {
+        const r = run([png, '--near', NEAR, '--grid-m', '0.5', '--cabinet-m', '0.25', '--cabinet-px', '128'])
+        expect(r.status).toBe(0)
+        expect(r.stdout).toMatch(/^LED: .* -> 8 x 5 = 40 cabinets = 1024 x 640 px, 2\.0 x 1\.25 m, 16:10$/m)
     })
 
     it('a see-through PNG is laid on white and gives the same squares', () => {
@@ -121,6 +127,9 @@ describe.skipIf(!hasPython)('plot_grid_measure.py', () => {
         expect(c.status).toBe(1)
         expect(c.stderr).toMatch(/^FAIL: /)
         expect(c.stdout).toBe('')
+        const zero = run([png, '--near', NEAR, '--cabinet-m', '0.5', '--cabinet-px', '0'])
+        expect(zero.status).toBe(1)
+        expect(zero.stderr).toMatch(/^FAIL: .*must be positive/)
     })
 
     it('--grid-m 0.5 halves the metres', () => {
@@ -184,5 +193,14 @@ describe.skipIf(!hasPython)('plot_grid_measure.py', () => {
         const j = JSON.parse(run([pdf, '--dpi', '100', '--near', NEAR, '--json']).stdout)
         expect(Math.abs(j.outline.squares[0] - 4)).toBeLessThanOrEqual(0.05)
         expect(Math.abs(j.outline.squares[1] - 2.5)).toBeLessThanOrEqual(0.05)
+    })
+
+    // last on purpose: before the guard existed this very run replaced the drawing the other cases read
+    it('--picture never overwrites the drawing itself', () => {
+        const before = fs.readFileSync(png)
+        const r = run([png, '--near', NEAR, '--picture', png])
+        expect(r.status).toBe(1)
+        expect(r.stderr).toMatch(/^FAIL: .*overwrite/)
+        expect(fs.readFileSync(png).equals(before)).toBe(true)
     })
 })

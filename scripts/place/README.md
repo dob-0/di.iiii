@@ -752,9 +752,10 @@ Production text lives in the `--meta`/`--front`/`--site` files beside the scenes
 
 A light plot (a PDF or an image) draws an LED wall, a riser or a truss as a rectangle on a regular grid.
 `plot_grid_measure.py` reads that rectangle in grid squares and metres, and an LED wall in whole cabinets and pixels.
-Needs python3 with numpy and Pillow; poppler (`pdftoppm`) only for PDF input. No numpy or Pillow on the machine (pip refuses on
-the Arch machines): `uv run --with numpy --with pillow python -I scripts/place/plot_grid_measure.py …` (run once with uv 0.13.8,
-Python 3.12.16, 2026-11-19, on a drawing made there; no more than that one run is claimed).
+Needs python3 with numpy and Pillow; poppler (`pdftoppm`) only for PDF input. No numpy or Pillow on the machine (the system python of
+our two Arch machines is marked as managed by the system and has no pip, read 2026-11-19):
+`uv run --with numpy --with pillow python -I scripts/place/plot_grid_measure.py …` (seen working on one machine: uv 0.13.8,
+Python 3.12.16, 2026-11-19, on a drawing made there; no more than that is claimed).
 
 1. Name the drawing: a PNG/JPG, or the PDF itself (`--dpi 300 --page 1`).
 2. Find the rough outline by eye in an image viewer, in raster pixels: `--near LEFT,TOP,RIGHT,BOTTOM`.
