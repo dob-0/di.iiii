@@ -466,7 +466,7 @@ describe('a reported credits panel', () => {
 
   it('keeps a long word and a rule line, masks a key shape', () => {
     const { sanitizeCredits } = require('./monitorCredits.js')
-    const [row] = sanitizeCredits([{ route: 'x', meter: '-'.repeat(40), have: 'hf_abcdefghijklmnop', why: 'internationalizationinternationalization' }])
+    const [row] = sanitizeCredits([{ route: 'x', meter: '-'.repeat(40), have: 'hf_abcdefgh1jklmnop', why: 'internationalizationinternationalization' }])
     expect(row.meter).toBe('-'.repeat(40))
     expect(row.have).toBe('(masked)')
     expect(row.id).toMatch(/^r[0-9a-f]{8}$/)
