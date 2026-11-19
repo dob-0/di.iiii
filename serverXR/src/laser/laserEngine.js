@@ -6,8 +6,9 @@
 // cubes (lasercubeProtocol.js) on a wired network.
 //
 // The rules that keep a class-4 laser from doing harm, in the order they apply:
-//   1. DISARMED at every start. Nothing is sent to a cube — not a blank point — until someone arms,
-//      and arming takes the exact sign-off phrase (ARM_PHRASE): the laser safety officer's
+//   1. DISARMED at every start. Nothing is sent to a cube — not a blank point — until a person arms.
+//      In 'click' mode (the default) that person's On is the yes; in 'phrase' mode (DI_LASER_SIGN_OFF=phrase)
+//      arming takes the exact sign-off phrase (ARM_PHRASE): the laser safety officer's
 //      assessment comes first (IEC 60825-1; MOXIR's policy: owner sign-off owed). It is never
 //      remembered across a restart.
 //   2. The KEEP-IN ZONE, per cube, in the cube's own field (x, y -1…1): a point outside it is
