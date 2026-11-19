@@ -457,6 +457,13 @@ describe('a reported credits panel', () => {
     expect(store.list()[0].panels.credits).toMatchObject({ ok: false })
   })
 
+  it('masks a lower-case hex key, keeps a plain name that starts like a key prefix', () => {
+    const { sanitizeCredits } = require('./monitorCredits.js')
+    const [row] = sanitizeCredits([{ route: 'hf-hub-credits', why: 'denied, key 3f9a1c0b7d2e4a5f8c6b1d0e9a7f3c2b4d5e6f70' }])
+    expect(row.name).toBe('hf-hub-credits')
+    expect(row.why).toBe('denied, key (masked)')
+  })
+
   it('keeps a long word and a rule line, masks a key shape', () => {
     const { sanitizeCredits } = require('./monitorCredits.js')
     const [row] = sanitizeCredits([{ route: 'x', meter: '-'.repeat(40), have: 'hf_abcdefghijklmnop', why: 'internationalizationinternationalization' }])

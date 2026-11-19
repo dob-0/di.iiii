@@ -123,7 +123,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
         let rows = (ok && sanitizeCredits(c.rows)) || []
         // rows that are not a list, a row without a name, or "configured" without rows: a changed shape greys the panel, never a quiet 0/0
         if (ok && (rows.dropped || (c.rows !== undefined && !Array.isArray(c.rows)) || (c.configured && !Array.isArray(c.rows)))) { ok = false; error = 'the credits rows were not in the expected shape'; rows = [] }
-        panels.credits = { ok, configured: ok && Array.isArray(c.rows) && c.configured ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(!ok ? { error } : {}) }
+        panels.credits = { ok, configured: ok && Array.isArray(c.rows) ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(!ok ? { error } : {}) }
       } else panels[name] = cleanPanelValue(body.panels[name])
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])

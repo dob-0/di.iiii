@@ -6,13 +6,17 @@
 const crypto = require('node:crypto')
 
 const short = (value, n) => crypto.createHash('sha1').update(String(value)).digest('hex').slice(0, n)
-const TOKEN_PREFIX = /\b(?:sk|pk|ghp|gho|ghs|ghu|glpat|hf|xox[a-z])[-_][A-Za-z0-9_-]{6,}|\b(?:AIza|ya29\.)[A-Za-z0-9_-]{8,}/g
+// a known key prefix, then a tail that holds a digit (so a plain name like hf-hub-credits stays)
+const TOKEN_PREFIX = /\b(?:sk|pk|ghp|gho|ghs|ghu|glpat|hf|xox[a-z])[-_](?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{6,}|\b(?:AIza|ya29\.)[A-Za-z0-9_-]{8,}/g
+// a hex run of 32 or more (a sha1, an md5, a lower-case key) is masked whatever its case
+const HEX_RUN = /\b[0-9a-fA-F]{32,}\b/g
 // a long run is a secret only when it mixes lower case, upper case and digits, so a model id, a long word or a rule line stays
 const LONG_RUN = /[A-Za-z0-9+/_-]{28,}/g
 const maskRun = (run) => (/[a-z]/.test(run) && /[A-Z]/.test(run) && /\d/.test(run) ? '(masked)' : run)
 const text = (value, max) => String(value ?? '')
   .replace(/[^\s@"'<>]+@[^\s@"'<>]+/g, (address) => `login-${short(address, 4)}`)
   .replace(TOKEN_PREFIX, '(masked)')
+  .replace(HEX_RUN, '(masked)')
   .replace(LONG_RUN, maskRun)
   .slice(0, max)
 

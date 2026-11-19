@@ -32,7 +32,7 @@ const DEFAULT_PROBES = [
 function run(command, args, { timeout = PANEL_TIMEOUT_MS, cwd } = {}) {
   return new Promise((resolve, reject) => {
     execFile(command, args, { timeout, cwd, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
-      if (error) { error.stdout = String(stdout || ''); reject(error) }
+      if (error) { Object.defineProperty(error, 'stdout', { value: String(stdout || ''), enumerable: false }); reject(error) }
       else resolve(String(stdout))
     })
   })
@@ -154,7 +154,7 @@ function createMonitorStore({
     })
     // Tailscale Funnel adds one placeholder peer per public hostname, tagged tag:ingress (no OS, no name of
     // its own, never a device); they are not machines, so they are left out of the list and the counts.
-    const isIngress = (p) => (p.Tags || []).includes('tag:ingress')
+    const isIngress = (p) => (p.Tags || []).includes('tag:ingress') || (p.ShareeNode === true && !p.OS && !p.DNSName)
     const rows = [toRow(raw.Self || {}, true), ...Object.values(raw.Peer || {}).filter((p) => !isIngress(p)).map((p) => toRow(p, false))]
     return { rows, online: rows.filter((r) => r.online).length, total: rows.length }
   }
@@ -388,7 +388,7 @@ function createMonitorStore({
 
   // The credits of this machine: a feed { panel: 'credits', kind: 'command' } in the config whose output is the
   // JSON list `di-credits status --json` prints (route, available, meter, have, why). Only those fields are kept,
-  // text is clipped, and an e-mail address is shown as "login" so no address leaves the machine in a report.
+  // text is clipped, an e-mail address is shown as "login-<4 hex>" and key-like text is masked (monitorCredits.js), so no address or key leaves the machine in a report.
   async function credits(config) {
     const list = (Array.isArray(config.feeds) ? config.feeds : []).filter((f) => f.panel === 'credits' && f.kind === 'command' && f.command).slice(0, 1)
     if (!list.length) return { configured: 0, rows: [], ready: 0, total: 0 }
