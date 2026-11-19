@@ -71,7 +71,20 @@ const execText = (cmd, args, opts = {}) => new Promise((resolve) => {
     execFile(cmd, args, { timeout: 5000, maxBuffer: 1024 * 1024, ...opts }, (error, stdout) => resolve(error ? '' : String(stdout)))
 })
 
-const repoRoot = () => path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+const here = () => path.dirname(fileURLToPath(import.meta.url))
+
+/**
+ * The folder that holds serverXR/src/monitorStore.js. This file sits two levels below it in the repo (scripts/di/)
+ * but one level below it in an installed di (cli/), so walk up until the collector is found.
+ */
+export const repoRoot = (start = here()) => {
+    let dir = start
+    for (let i = 0; i < 4; i += 1) {
+        if (fs.existsSync(path.join(dir, 'serverXR', 'src', 'monitorStore.js'))) return dir
+        dir = path.dirname(dir)
+    }
+    return path.resolve(start, '..', '..')
+}
 
 /** This machine's panels, from the server's own collectors. */
 export const collectSnapshot = async ({ root = repoRoot() } = {}) => {
@@ -84,7 +97,8 @@ export const collectSnapshot = async ({ root = repoRoot() } = {}) => {
 
 export const readRelease = async ({ root = repoRoot() } = {}) => {
     try {
-        const manifest = JSON.parse(fs.readFileSync(path.join(root, 'serverXR', 'release.json'), 'utf8'))
+        const file = [path.join(root, 'serverXR', 'release.json'), path.join(root, 'release.json')].find((f) => fs.existsSync(f))
+        const manifest = JSON.parse(fs.readFileSync(file, 'utf8'))
         const commit = manifest.gitCommit || manifest.git?.commit
         if (commit) return { commit: String(commit), builtAt: manifest.generatedAt || null }
     } catch { /* not a staged release: ask git */ }
@@ -141,7 +155,7 @@ export const timerUnits = ({ node, cli, every = EVERY_SECONDS }) => ({
     ].join('\n')
 })
 
-export const installTimer = async ({ home = os.homedir(), node = process.execPath, cli = path.join(repoRoot(), 'scripts', 'di', 'cli.mjs'), remove = false, exec = execText, say = console.log, fail = console.error } = {}) => {
+export const installTimer = async ({ home = os.homedir(), node = process.execPath, cli = path.join(here(), 'cli.mjs'), remove = false, exec = execText, say = console.log, fail = console.error } = {}) => {
     const dir = path.join(home, '.config', 'systemd', 'user')
     const units = timerUnits({ node, cli })
     if (remove) {
