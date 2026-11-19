@@ -2022,6 +2022,74 @@
 /* Pull requests in Monitor › Work: each row is a link, so it must not look underlined. */
 a.monitor-row { text-decoration: none; }
 a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* full data: chats, asks, reports and parts are buttons that open the one detail drawer */
+button.monitor-chat, button.monitor-ask {
+    border: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+}
+button.monitor-chat:hover, button.monitor-ask:hover, button.monitor-chat.is-selected { background: rgba(var(--tone-rgb), 0.24); }
+button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+.monitor-ask.tone-accent, .monitor-ask.tone-danger { --tone-rgb: 130, 130, 140; }
+.monitor-filter-count { font-family: var(--di-mono); font-size: var(--di-text-3); color: var(--di-text-muted); white-space: nowrap; }
+.monitor-hero-open { border: none; background: transparent; color: inherit; font: inherit; text-align: left; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.monitor-hero-open:focus-visible, .monitor-issue-open:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 2px; }
+.monitor-issue-open { border: none; background: transparent; color: inherit; font: inherit; padding: 0; cursor: pointer; text-align: left; }
+
+/* "live · heard 4 s ago" per panel: success when current, amber at twice its interval, muted-danger when old */
+.monitor-panel-live { display: inline-flex; align-items: center; gap: var(--di-space-2); font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-text-muted); }
+.monitor-panel-live i { width: 8px; height: 8px; background: var(--di-success); }
+.monitor-panel-live.is-late { color: var(--di-warning); }
+.monitor-panel-live.is-late i { background: var(--di-warning); }
+.monitor-panel-live.is-old { color: var(--di-danger); }
+.monitor-panel-live.is-old i { background: var(--di-danger); }
+.monitor-panel-live.is-waiting i, .monitor-panel-live.is-paused i { background: var(--pref-border); }
+
+/* the detail drawer: every field, exact and copyable */
+.monitor-drawer-kind { font-family: var(--di-mono); font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.06em; color: var(--di-text-muted); }
+.monitor-drawer-title { overflow-wrap: anywhere; }
+.monitor-fields { display: flex; flex-direction: column; margin: 0; }
+.monitor-field { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: var(--di-space-3); padding: var(--di-space-2) 0; border-bottom: 1px solid var(--pref-border); }
+.monitor-field dt { font-family: var(--di-mono); font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.04em; color: var(--di-text-muted); overflow-wrap: anywhere; }
+.monitor-field dd { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--di-space-1) var(--di-space-2); min-width: 0; }
+.monitor-field-age { grid-column: 1; }
+.monitor-field dd.is-empty { color: var(--di-text-muted); }
+.monitor-field-value { font-family: var(--di-mono); font-size: var(--di-text-3); overflow-wrap: anywhere; white-space: pre-wrap; min-width: 0; }
+.monitor-field .monitor-copy { grid-column: 2; grid-row: 1; }
+.monitor-field-age { font-size: var(--di-text-2); color: var(--di-cyan); white-space: nowrap; }
+.monitor-copy { padding: 0 var(--di-space-2); min-height: 24px; background: transparent; color: var(--di-text-muted); border: 1px solid var(--pref-border); border-radius: 0; font-family: var(--di-mono); font-size: var(--di-text-2); cursor: pointer; }
+.monitor-copy:hover { color: var(--di-text); border-color: var(--pref-border-active); }
+.monitor-copy:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+.monitor-related { display: flex; flex-direction: column; gap: var(--di-space-1); }
+/* a 2px leading edge, inset so it takes no layout; not a shadow */
+.monitor-related-item { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: var(--di-space-3); padding: var(--di-space-1) var(--di-space-3); font-size: var(--di-text-3); background: var(--di-surface); color: var(--di-text); border: none; border-radius: 0; box-shadow: inset 2px 0 0 var(--di-cyan); font: inherit; text-align: left; cursor: pointer; }
+.monitor-related-item:hover { background: color-mix(in srgb, var(--di-text) 8%, transparent); }
+.monitor-related-item:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+.monitor-related-label { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-text-muted); }
+.monitor-related-text { overflow-wrap: anywhere; }
+.monitor-raw summary { cursor: pointer; font-family: var(--di-mono); font-size: var(--di-text-3); padding: var(--di-space-2) 0; }
+.monitor-raw-bar { display: flex; justify-content: flex-end; }
+@media (max-width: 700px) {
+    .monitor-field, .monitor-related-item { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-1); }
+}
+
+
+/* Monitor → Tasks: the owner's open asks, and the change form in the drawer */
+.monitor-task-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.monitor-tasks-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-2); margin-bottom: var(--di-space-2); }
+.monitor-tasks-bar .monitor-meta { margin-right: auto; }
+.monitor-task-actions { display: flex; flex-direction: column; gap: var(--di-space-2); margin-top: var(--di-space-3); }
+.monitor-task-buttons { display: flex; flex-wrap: wrap; gap: var(--di-space-2); }
+.monitor-task-form { display: flex; flex-direction: column; gap: var(--di-space-2); }
+.monitor-task-form label { display: flex; flex-direction: column; gap: var(--di-space-1); color: var(--ui-text-muted); font-size: var(--di-text-2); }
+.monitor-task-form textarea { background: var(--di-surface); color: var(--di-text); border: 1px solid var(--pref-border); border-radius: 0; font: inherit; padding: var(--di-space-2); resize: vertical; }
+.monitor-task-history { padding: var(--di-space-2); background: var(--di-surface); font-size: var(--di-text-2); overflow-wrap: anywhere; }
+.monitor-row.tone-warning { --pref-tone: var(--di-warning); }
+
 /* Selected node's card inside a full-screen map: the detail page is hidden, so the card carries the way to it */
 .monitor-map-card {
     position: absolute; right: var(--di-space-3); bottom: var(--di-space-3); z-index: 2; max-width: 20rem;

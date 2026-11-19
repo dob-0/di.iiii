@@ -51,6 +51,14 @@ describe('3D map policy', () => {
         expect(pulseEdgeIndexes({ edges, pulsing: false, hoverId: 'machine:a' })).toEqual([0])
         expect(pulseEdgeIndexes({ edges, pulsing: true, hoverId: null })).toEqual([0, 1])
     })
+
+    it('the slow auto-rotate asks for frames until a touch stops it, never under reduced motion or a hidden tab', () => {
+        const { edges } = map()
+        expect(shouldAnimate({ edges: [], pulsing: false, hoverId: null, rotating: true })).toBe(true)
+        expect(shouldAnimate({ edges: [], pulsing: false, hoverId: null, rotating: false })).toBe(false)
+        expect(shouldAnimate({ edges, pulsing: false, hoverId: null, rotating: true, reduced: true })).toBe(false)
+        expect(shouldAnimate({ edges, pulsing: false, hoverId: null, rotating: true, visible: false })).toBe(false)
+    })
 })
 
 describe('3D map colours', () => {
@@ -58,5 +66,12 @@ describe('3D map colours', () => {
         const src = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'MonitorMap3D.jsx'), 'utf8')
         expect(src).not.toMatch(/#fff(fff)?\b/i)
         expect(src).toMatch(/ring=\{colors\.text\}/)
+    })
+})
+
+describe('3D map keyboard focus', () => {
+    it('the stage takes keyboard focus only when it is not pointer-only', () => {
+        const src = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'MonitorMap3D.jsx'), 'utf8')
+        expect(src).toMatch(/if \(!pointerOnly\) \{\s*el\.tabIndex = 0/)
     })
 })
