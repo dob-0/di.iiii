@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('./MonitorMap3D.jsx', () => ({
@@ -39,9 +39,9 @@ describe('map: when the wheel zooms', () => {
         const svg = container.querySelector('svg.monitor-map-svg')
         const before = svg.getAttribute('viewBox')
         const plain = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true })
-        svg.dispatchEvent(plain)
+        act(() => { svg.dispatchEvent(plain) })
         expect(plain.defaultPrevented).toBe(true)
-        return Promise.resolve().then(() => expect(svg.getAttribute('viewBox')).not.toBe(before))
+        expect(svg.getAttribute('viewBox')).not.toBe(before)
     })
 })
 

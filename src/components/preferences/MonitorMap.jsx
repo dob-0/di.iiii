@@ -174,7 +174,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
         const onWheel = (ev) => { if (!wheelZooms(ev, fsRef.current, kinds)) return; ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
         el.addEventListener('wheel', onWheel, { passive: false })
         return () => el.removeEventListener('wheel', onWheel)
-    }, [zoomAt])
+    }, [zoomAt, kinds])
 
     const onPointerDown = (ev) => {
         const d = drag.current
