@@ -343,4 +343,18 @@ describe('monitor devices and credits', () => {
     expect(rows[0].why).toBe('claude-sonnet-4-5-20250929-something')
     expect(sanitizeCredits([{ route: 'a' }, null]).dropped).toBe(1)
   })
+
+  it('pull requests: config.repo is passed to gh as -R', async () => {
+    const home = tmp()
+    fs.mkdirSync(path.join(home, '.di'))
+    fs.writeFileSync(path.join(home, '.di', 'monitor.json'), JSON.stringify({ repo: 'dob-0/di.iiii' }))
+    const seen = []
+    const store = createMonitorStore({ home, fetchImpl: null, runCommand: async (c, a) => {
+      if (c === 'tailscale') return tailscale
+      if (c === 'gh') { seen.push(a); return '[]' }
+      throw new Error('no')
+    } })
+    expect((await store.getMonitor()).panels.pullRequests.ok).toBe(true)
+    expect(seen[0].slice(0, 4)).toEqual(['pr', 'list', '-R', 'dob-0/di.iiii'])
+  })
 })

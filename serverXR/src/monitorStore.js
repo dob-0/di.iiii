@@ -342,8 +342,10 @@ function createMonitorStore({
     }
   }
 
-  async function pullRequests() {
-    const out = await runCommand('gh', ['pr', 'list', '--limit', '30', '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
+  async function pullRequests(config = {}) {
+    // config.repo ("owner/name") lets a server that does not run inside a checkout still list its pull requests
+    const repoArgs = typeof config.repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(config.repo) ? ['-R', config.repo] : []
+    const out = await runCommand('gh', ['pr', 'list', ...repoArgs, '--limit', '30', '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
     const rows = JSON.parse(out).map((p) => ({
       number: p.number,
       title: p.title,
@@ -446,7 +448,7 @@ function createMonitorStore({
       panel('presence', presence),
       panel('connected', () => connected(selfBase)),
       panel('services', services),
-      panel('pullRequests', pullRequests),
+      panel('pullRequests', () => pullRequests(config)),
       panel('tasks', () => feeds(config, 'tasks')),
       panel('shows', () => feeds(config, 'shows')),
       panel('chats', () => chats(config)),
