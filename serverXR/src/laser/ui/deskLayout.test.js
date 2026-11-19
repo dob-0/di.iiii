@@ -83,7 +83,7 @@ describe('nothing is lost', () => {
   it('the .editbody children keep their order, and the Grid rules place Shape and Colour by id (Emilya\'s Layers and Beam groups sit between, so :nth-child no longer names them)', () => {
     const label = (c) => (c.id ? `#${c.id}` : c.querySelector('#lookCubes') ? 'group.multi:Cubes' : `.${[...c.classList].join('.')}`)
     expect([...doc.getElementById('editor').children].map(label)).toEqual(['#followGroup', '#layersGroup', '#shapeGroup', '#colourGroup', '#pictureFields', '#moveFields', '#beamFields', 'group.multi:Cubes', '.actions'])
-    expect(grid('.editbody > #shapeGroup')).toMatch(/grid-area: 2 \/ 1 \/ 3 \/ 5/)
+    expect(grid('.editbody > #shapeGroup')).toMatch(/grid-area: 3 \/ 1 \/ 4 \/ 5/)
     expect(grid('.editbody > #colourGroup')).toMatch(/grid-area: 1 \/ 1/)
   })
   it('the base rules of the top bar and the stops are the ones Classic had (the Grid block overrides them only under its own scope)', () => {
