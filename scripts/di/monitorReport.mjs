@@ -157,10 +157,11 @@ export const timerUnits = ({ node, cli, every = EVERY_SECONDS }) => ({
 })
 
 /**
- * The cli.mjs a timer should run. An installed di keeps one folder per version (paths.mjs) and `di update` removes the old ones, so a
- * unit that names the version folder stops working at the next update (aylmo, 2026-11-19 23:30: every run after the update failed with
- * "Cannot find module .../versions/<old>/cli/cli.mjs"). `current` is the link the `di` shim itself follows: use it when it leads to
- * THIS copy. A source tree has no such link, and a link that leads to another copy is not swapped in: the running file stays.
+ * The cli.mjs a timer should run. An installed di keeps one folder per version (paths.mjs); `di update` keeps the new version and the
+ * one before it (`pruneVersions`) and removes the rest, so a unit that names a version folder runs through one update and stops at the
+ * second (aylmo, 2026-11-19: updates at 21:55 and 23:30; every run after the second failed with "Cannot find module
+ * .../versions/<old>/cli/cli.mjs"). `current` is the link the `di` shim itself follows: use it when it leads to THIS copy. A source
+ * tree has no such link, and a link that leads to another copy is not swapped in: the running file stays (and `installTimer` says so).
  */
 export const stableCliPath = ({ cli, diRoot = diHome() } = {}) => {
     const viaCurrent = path.join(paths(diRoot).current, 'cli', 'cli.mjs')
@@ -187,6 +188,9 @@ export const installTimer = async ({ home = os.homedir(), diRoot = diHome(), nod
     const active = (await exec('systemctl', ['--user', 'is-active', TIMER])).trim()
     if (active !== 'active') { fail(`the timer files are in ${dir} but systemd did not start it${out ? `: ${out.trim()}` : ''}`); return 1 }
     say(`monitor timer on: ${TIMER}, every ${EVERY_SECONDS} s. undo: di monitor install-timer --remove`)
+    // a unit that names a source tree or a version folder dies with that folder (a removed worktree, the second `di update`): say so
+    const link = path.join(paths(diRoot).current, 'cli', 'cli.mjs')
+    if (cli !== link) say(`note: the timer runs ${cli}, not the installed di (${link}), and stops when that folder is removed. To follow updates, run di monitor install-timer from the installed di.`)
     return 0
 }
 
