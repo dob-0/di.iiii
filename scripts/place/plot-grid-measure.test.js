@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const tool = path.join(here, 'plot_grid_measure.py')
-const hasPython = spawnSync('python3', ['-c', 'import numpy, PIL'], { encoding: 'utf8' }).status === 0
+const hasPython = spawnSync('python3', ['-I', '-c', 'import numpy, PIL'], { encoding: 'utf8' }).status === 0
 const hasPdftoppm = spawnSync('pdftoppm', ['-v'], { encoding: 'utf8' }).error === undefined
 const env = { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }
 
@@ -33,7 +33,12 @@ d.rectangle([149, 399, 551, 401], fill=(0, 0, 0))
 d.rectangle([149, 149, 151, 401], fill=(0, 0, 0))
 d.rectangle([549, 149, 551, 401], fill=(0, 0, 0))
 d.rectangle([100, 600, 399, 605], fill=(255, 0, 255))
+for r in ([650, 450, 950, 452], [650, 648, 950, 650], [650, 450, 652, 650], [948, 450, 950, 650]):
+    d.rectangle(r, fill=(0, 0, 0))
 im.save(out_png)
+clear = im.convert('RGBA')
+clear.putdata([(0, 0, 0, 0) if p[:3] == (255, 255, 255) else p for p in clear.getdata()])
+clear.save(out_png.replace('.png', '-alpha.png'))
 im.convert('P', palette=Image.ADAPTIVE, colors=8).save(out_pdf, resolution=100)
 `
 
@@ -87,6 +92,35 @@ describe.skipIf(!hasPython)('plot_grid_measure.py', () => {
         expect(j.led.count).toBe(40)
         expect(j.led.px).toEqual([1024, 640])
         expect(j.picture).toBeNull()
+    })
+
+    it('names every cabinet ratio: 16:10 for the first rectangle, 3:2 for the second', () => {
+        const second = run([png, '--near', '650,450,950,650', '--cabinet-m', '0.5', '--cabinet-px', '128'])
+        expect(second.status).toBe(0)
+        expect(second.stdout).toMatch(/^LED: .* -> 6 x 4 = 24 cabinets = 768 x 512 px, 3\.0 x 2\.0 m, 3:2$/m)
+        const first = run([png, '--near', NEAR, '--cabinet-m', '0.5', '--cabinet-px', '128'])
+        expect(first.stdout).toMatch(/16:10$/m)
+    })
+
+    it('a see-through PNG is laid on white and gives the same squares', () => {
+        const r = run([path.join(dir, 'plan-alpha.png'), '--near', NEAR, '--json'])
+        expect(r.status).toBe(0)
+        const j = JSON.parse(r.stdout)
+        expect(Math.abs(j.outline.squares[0] - 4)).toBeLessThanOrEqual(0.02)
+        expect(Math.abs(j.outline.squares[1] - 2.5)).toBeLessThanOrEqual(0.02)
+    })
+
+    it('a --picture name Pillow cannot save, and a cabinet size of zero or less, fail with one line', () => {
+        for (const name of ['out', 'out.txt']) {
+            const r = run([png, '--near', NEAR, '--picture', path.join(dir, name)])
+            expect(r.status).toBe(1)
+            expect(r.stderr).toMatch(/^FAIL: .*\.png/)
+            expect(r.stderr).not.toContain('Traceback')
+        }
+        const c = run([png, '--near', NEAR, '--cabinet-m', '0.5', '--cabinet-px', '-5'])
+        expect(c.status).toBe(1)
+        expect(c.stderr).toMatch(/^FAIL: /)
+        expect(c.stdout).toBe('')
     })
 
     it('--grid-m 0.5 halves the metres', () => {

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Measure a rectangle on a light plot (an LED wall, a riser, a truss) against the plot's OWN regular grid.
 
-    python3 -I scripts/place/plot_grid_measure.py plot.pdf --near 1830,1313,3041,2071 \\
-        --grid-m 1 --cabinet-m 0.5 --cabinet-px 128 --cue truss=1000,420,3900,480 --picture out.png
+    python3 -I scripts/place/plot_grid_measure.py plan.png --near 150,150,550,400 \\
+        --grid-m 1 --cabinet-m 0.5 --cabinet-px 128 --cue bar=100,590,420,610,magenta --picture out.png
 
 The drawing is a raster (PNG/JPG) or a PDF (rasterised with pdftoppm). --near is the rough outline in raster
 pixels, found by eye in an image viewer; the tool finds the real dark edges within --tolerance of it. The grid
@@ -19,6 +19,7 @@ Exit 0 with a full result; exit 1 and one `FAIL: <what> — <the cheapest fix>` 
 """
 import argparse
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -29,7 +30,7 @@ try:
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
 except ImportError as exc:  # a missing library is the user's machine, not a traceback
-    sys.stderr.write(f"FAIL: {exc.name} is not installed — pip install numpy pillow\n")
+    sys.stderr.write(f"FAIL: {exc.name} is not installed — run it as: uv run --with numpy --with pillow python -I scripts/place/plot_grid_measure.py ...\n")
     sys.exit(1)
 
 EXAMPLE = """example (made-up numbers):
@@ -138,7 +139,12 @@ def load(args, tmp):
             raise Fail(f"pdftoppm could not read page {args.page} ({run.stderr.strip()[:80]}) — check --page and the file")
         src = base + ".png"
     try:
-        return Image.open(src).convert("RGB")
+        im = Image.open(src)
+        if im.mode in ("RGBA", "LA") or (im.mode == "P" and "transparency" in im.info):
+            rgba = im.convert("RGBA")
+            white = Image.new("RGBA", rgba.size, (255, 255, 255, 255))
+            return Image.alpha_composite(white, rgba).convert("RGB")
+        return im.convert("RGB")
     except Exception as exc:
         raise Fail(f"cannot read the drawing ({type(exc).__name__}) — give a PNG, JPG or PDF")
 
@@ -275,8 +281,10 @@ def main():
     args = build_parser().parse_args()
     if bool(args.cabinet_m) != bool(args.cabinet_px):
         Parser.error(None, "--cabinet-m and --cabinet-px go together")
-    if args.cabinet_m is not None and args.cabinet_m <= 0 or args.grid_m <= 0 or args.dpi <= 0 or args.page < 1:
-        Parser.error(None, "--grid-m, --cabinet-m, --dpi and --page must be positive")
+    if args.picture and not args.picture.lower().endswith(".png"):
+        Parser.error(None, f"--picture '{args.picture}' must be a name ending in .png — give a name ending in .png")
+    if (args.cabinet_px is not None and args.cabinet_px <= 0) or (args.cabinet_m is not None and args.cabinet_m <= 0) or args.grid_m <= 0 or args.dpi <= 0 or args.page < 1:
+        Parser.error(None, "--grid-m, --cabinet-m, --cabinet-px, --dpi and --page must be positive")
     try:
         with tempfile.TemporaryDirectory() as tmp:
             img = load(args, tmp)
@@ -310,7 +318,8 @@ def main():
         print(f"cue {c['name']}: {c['px'][0]} x {c['px'][1]} px = {c['squares'][0]:.2f} x {c['squares'][1]:.2f} squares")
     if led:
         nw, nh = led["cabinets"]
-        shape = "16:10" if abs(nw / nh - 1.6) < 1e-9 else f"{nw / nh:.2f}:1"
+        k = math.gcd(nw, nh)
+        shape = "16:10" if (nw // k, nh // k) == (8, 5) else f"{nw // k}:{nh // k}"
         print(f"LED: {led['cabinets_raw'][0]:.2f} x {led['cabinets_raw'][1]:.2f} cabinets -> {nw} x {nh} = {led['count']} cabinets = {led['px'][0]} x {led['px'][1]} px, {led['metres'][0]:.1f} x {led['metres'][1]:.1f} m, {shape}")
     if pic:
         print(f"picture: {pic[0]} {pic[1][0]}x{pic[1][1]}")
