@@ -122,6 +122,7 @@ const boot = async (query, { unsaved = false } = {}) => {
     reset('live')
     desk.unsaved = unsaved
     document.body.innerHTML = indexHtml.match(/<body[^>]*>([\s\S]*)<\/body>/)[1].replace(/<script[\s\S]*?<\/script>/g, '')
+    new Function(fs.readFileSync(path.join(here, 'listen.js'), 'utf8'))() // desk.js reads window.DeskListen at load
     new Function(deskJs)()
     await sleep(150)
     // On a busy machine the page may need longer: a set link is ready once its question is painted.
