@@ -249,15 +249,17 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     useEffect(() => {
         const el = stageRef.current
         if (!el) return undefined
-        el.tabIndex = 0
-        el.setAttribute('aria-label', '3D map: arrow keys or WASD move the camera')
+        if (!pointerOnly) {
+            el.tabIndex = 0
+            el.setAttribute('aria-label', '3D map: arrow keys or WASD move the camera')
+        }
         const onKeys = (ev) => {
             if (ev.target !== el || ev.ctrlKey || ev.metaKey || ev.altKey) return
             if (api.current?.nudge(ev.key)) ev.preventDefault()
         }
         el.addEventListener('keydown', onKeys)
         return () => el.removeEventListener('keydown', onKeys)
-    }, [])
+    }, [pointerOnly])
     const reduced = useReducedMotion()
     const visible = useVisible()
     const colors = useMemo(() => readColors(), [])

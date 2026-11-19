@@ -68,3 +68,10 @@ describe('3D map colours', () => {
         expect(src).toMatch(/ring=\{colors\.text\}/)
     })
 })
+
+describe('3D map keyboard focus', () => {
+    it('the stage takes keyboard focus only when it is not pointer-only', () => {
+        const src = fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'MonitorMap3D.jsx'), 'utf8')
+        expect(src).toMatch(/if \(!pointerOnly\) \{\s*el\.tabIndex = 0/)
+    })
+})
