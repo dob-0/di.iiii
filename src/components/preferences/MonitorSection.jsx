@@ -106,6 +106,18 @@ function PanelNote({ panel, empty }) {
     return panel.rows?.length || !empty ? null : <div className="monitor-note">{empty}</div>
 }
 
+// Whose machines this Monitor lists: this one, plus the signed-in account's others (reported to dev).
+function AccountNote({ account }) {
+    if (!account) return null
+    const text = {
+        ok: `Signed in${account.name ? ` as ${account.name}` : ''}: this machine and ${account.machines} more from your account.`,
+        'signed-out': 'Not signed in: this machine only. Run di login to see your other machines.',
+        expired: 'Your sign-in ended: this machine only. Run di login again.',
+        offline: "Your account's machines could not be reached: this machine only."
+    }[account.state]
+    return text ? <div className="monitor-note" data-account={account.state}>{text}</div> : null
+}
+
 function Row({ id, selected, flash, tone, onSelect, children }) {
     return (
         <button
@@ -551,6 +563,7 @@ export default function MonitorSection({ onStats }) {
                     <div data-panel="machines"><ModuleSection title="Machines" subtitle="Tailnet — who is on, who was last seen">
                         <PanelLive name="machines" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.machines} empty="No machines reported." />
+                        <AccountNote account={snap?.account} />
                         <div className="monitor-grid">
                             {machines.map((m) => (
                                 <Row key={m.id} id={`m:${m.id}`} tone={m.online ? 'success' : 'muted'} flash={flash(`m:${m.id}`)}
