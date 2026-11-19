@@ -4,3 +4,4 @@
 - Not done: effect prototypes (freeze before the drop, silhouette over a changing background); screen size, video input and light console are still unknown.
 - Not tested: the page on dev after carry (import said "already here", page unread).
 - Added a prod tier to spaces/platina/di-space.space.json (declaration only, isPublic stays false): the space-sync test needs every declared space to name prod + dev.
+- 2026-11-19: added two reusable tools from the Platina prep: `scripts/td/td_describe.py` (headless TouchDesigner project reader, 274 of 274 read on 11-10) and `scripts/matte/speed-test/` (browser silhouette matte, 53.9 fps at 1920x1080 on RTX 3080 Laptop). Private footage and chat notes stay out of the repo (repo is public).
