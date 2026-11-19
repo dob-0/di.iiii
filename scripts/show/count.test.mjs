@@ -10,7 +10,6 @@ import { spawnSync } from 'node:child_process'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { main } from './cli.mjs'
 import { count } from './lib/countCore.mjs'
-import { makeTransport } from './lib/transport.mjs'
 
 const CORE = fileURLToPath(new URL('./lib/countCore.mjs', import.meta.url))
 const ROOT = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'di-count-'))
@@ -104,8 +103,35 @@ describe('exact counts on the made-up home', () => {
         expect(r.data.rule).toMatch(/~\/\.di/)
         expect(r.data.others).toEqual([expect.objectContaining({ state: 'there, not read' })])
     })
-    it('a bad flag is refused with exit 2', async () => {
+    it('an unknown venue is refused with exit 2', async () => {
         expect((await run(['count', '--venue', 'no-such-venue-zz'])).code).toBe(2)
+    })
+    it('a flag or a word the count does not know is refused with exit 2, and nothing is counted', async () => {
+        const there = path.join(HOME, '.di', 'data')
+        for (const argv of [['count', '--data-dri', there], ['count', `--data-dri=${there}`], ['count', '--josn'], ['count', 'a-word']]) {
+            const r = await run(argv)
+            expect(r.code).toBe(2)
+            expect(r.text).toMatch(/^!! REFUSED: di show count /)
+            expect(r.text).not.toMatch(/=== 1|document \d/)
+            expect(r.text).not.toContain(ROOT)
+        }
+        expect((await run(['count', '--data-dri', 'x'])).text).toContain('does not know --data-dri;')
+        expect((await run(['count', 'a-word'])).text).toContain('takes no word after it (1 given)')
+    })
+    it('a value flag without a value and a switch with a value are refused with exit 2', async () => {
+        for (const [argv, words] of [[['count', '--data-dir='], '--data-dir needs a value'], [['count', '--di-home='], '--di-home needs a value'], [['count', '--host='], '--host needs a value'], [['count', '--ids=1'], '--ids takes no value'], [['count', '--local=yes'], '--local takes no value'], [['count', '--json=true'], '--json takes no value']]) {
+            const r = await run(argv)
+            expect(r.code).toBe(2)
+            expect(r.text).toBe(`!! REFUSED: ${words}`)
+        }
+    })
+    it('--local is this machine, also beside --host', async () => {
+        const transportFactory = () => { throw new Error('no transport here') }
+        for (const argv of [['count', '--local'], ['count', '--host', 'ZZother', '--local']]) {
+            const r = await run(argv, { transportFactory })
+            expect(r.code).not.toBe(2)
+            expect(r.text).toMatch(/^counted on this machine /)
+        }
     })
 })
 
@@ -162,6 +188,19 @@ describe('the core on its own', () => {
         delete a.ms; delete b.ms
         expect(a).toEqual(b)
     })
+    it('options that are not one JSON object stop the run with exit 2, and nothing is counted', () => {
+        for (const bad of ['{dataDir: 1}', '5', '[]', 'null']) {
+            const r = spawnSync(process.execPath, ['--input-type=module', '-', bad], { input: fs.readFileSync(CORE), env: { PATH: BIN, HOME: HOME, DI_SHOW_COUNT_RUN: '1' }, encoding: 'utf8' })
+            expect(r.status).toBe(2)
+            expect(r.stdout).toBe('')
+            expect(r.stderr).toBe('the options are not one JSON object\n')
+        }
+    })
+    it('piped without options it counts the defaults', () => {
+        const r = spawnSync(process.execPath, ['--input-type=module', '-'], { input: fs.readFileSync(CORE), env: { PATH: BIN, HOME: HOME, DI_SHOW_COUNT_RUN: '1' }, encoding: 'utf8' })
+        expect(r.status).toBe(0)
+        expect(JSON.parse(r.stdout).data.rule).toContain('~/.di')
+    })
     it('evaluated without the marker it prints nothing', () => {
         const quiet = spawnSync(process.execPath, ['--input-type=module', '-e', fs.readFileSync(CORE, 'utf8'), '{}'], { env: { PATH: BIN, HOME: HOME }, encoding: 'utf8' })
         expect(quiet.status).toBe(0)
@@ -201,9 +240,6 @@ describe('the path to another machine (transport faked)', () => {
         const r = await run(['count', '--host', 'fake'], { transportFactory })
         expect(r.code).toBe(2)
         expect(r.text).toMatch(/no node/)
-    })
-    it('the real transport is not built by these tests', () => {
-        expect(typeof makeTransport).toBe('function')
     })
 })
 
@@ -250,13 +286,13 @@ describe('round 2: counts', () => {
         expect(d).toMatchObject({ holdingShow: 2, withRig: { documents: 1, cues: 1 }, cuesOnly: { documents: 1, cues: 2 } })
         expect((await runIn(h, ['count'])).text).toContain('2 hold a show: 1 with a lamp, a designed look or a laser object (1 cues), 1 with cues only (2 cues); in 1 spaces')
     })
-    it('A4 a lamp has a fixture type; the rest is counted apart; network lasers are counted', async () => {
+    it('A4 a lamp has a fixture type; the rest is counted apart; lamps off DMX are counted', async () => {
         const h = mk({ [P('s1', 'p1')]: doc({ entities: [lampT('e1'), lampT('e2', { dmx: false }), { id: 'e3', components: { fixture: {} } }] }) })
         const d = cnt(h).documents
         expect(d.totals).toMatchObject({ lamps: 2, lampsNotDmx: 1, fixtureNoType: 1 })
         const t = (await runIn(h, ['count'])).text
         expect(t).toContain('fixture marks without a type: 1, not counted as lamps')
-        expect(t).toContain('of the lamps 1 are network lasers')
+        expect(t).toContain('of the lamps 1 are off DMX (the mark a network laser carries)')
     })
     it('A5 one project id in two spaces keeps the lamps of both', () => {
         const h = mk({
@@ -293,6 +329,12 @@ describe('round 2: counts', () => {
         expect(r.deskFiles[0].unread).toBe(true)
         expect(r.unread[0].error).toBe('NotAnObject')
     })
+    it('B5 a laser desk file that parses but is not an object is a row, unread', () => {
+        const h = mk({ 'laser/desk.json': '[1,2]' })
+        const r = cnt(h)
+        expect(r.deskFiles).toEqual([expect.objectContaining({ kind: 'laser desk file', unread: true })])
+        expect(r.unread.map((u) => u.error)).toEqual(['NotAnObject'])
+    })
     it('B6 other files in the desk folders: counted, never opened, no name printed', async () => {
         const h = mk({
             'lighting/show.json': {}, 'lighting/show.prev.json': 'x'.repeat(7), 'lighting/backups/a.json': 'y'.repeat(3), 'lighting/backups/b.json': 'z'.repeat(5), 'lighting/ZZV-unknown.bin': 'q'.repeat(11)
@@ -308,7 +350,7 @@ describe('round 2: counts', () => {
     })
     it('E3 the save time: four numbers, and the text says without the disk write', async () => {
         const { text } = await run(['count'])
-        expect(text).toContain('without the disk write')
+        expect(text).toContain('=== 6. save time of the largest document that holds a show, median of 5, without the disk write')
         const r = JSON.parse((await run(['count', '--json'])).text)
         for (const k of ['read', 'parse', 'normalise', 'serialise']) expect(typeof r.saveTime[k]).toBe('number')
     })
@@ -353,16 +395,39 @@ describe('round 2: named folders and unreadable folders', () => {
             expect((await runIn(h, ['count'])).code).toBe(1)
         } finally { fs.chmodSync(dir, 0o755) }
     })
+    it.skipIf(process.getuid && process.getuid() === 0)('B3 a document that cannot be looked at is listed as unread, not counted as a folder without a document', () => {
+        const h = mk({ [P('s1', 'p1')]: doc({ entities: [lampT('e1')] }), [P('s1', 'p2')]: doc() })
+        const dir = path.join(h.home, '.di', 'data', 'spaces', 's1', 'projects', 'p2')
+        fs.chmodSync(dir, 0o000)
+        try {
+            const r = cnt(h)
+            expect(r.documents).toMatchObject({ projectFolders: 2, withoutDocument: 0, total: 1 })
+            expect(r.unread).toEqual([{ label: 'document of project folder 2 in space 1', bytes: null, error: 'EACCES' }])
+        } finally { fs.chmodSync(dir, 0o755) }
+    })
+    it.skipIf(process.getuid && process.getuid() === 0)('the laser rig file and the other files of a desk folder are not opened: without a read bit they count the same', () => {
+        const h = mk({ 'laser/laser.json': '{"ZZV":1}', 'lighting/show.prev.json': 'x'.repeat(7), 'lighting/backups/a.json': 'y'.repeat(3) })
+        const files = ['laser/laser.json', 'lighting/show.prev.json', 'lighting/backups/a.json'].map((rel) => path.join(h.home, '.di', 'data', rel))
+        const open = cnt(h)
+        for (const f of files) fs.chmodSync(f, 0o000)
+        try {
+            const shut = cnt(h)
+            expect(shut.unread).toEqual([])
+            expect(shut.names.laser.rigFile).toBe('there, 9 bytes (not opened)')
+            expect(shut.deskFolders).toEqual(open.deskFolders)
+            expect(open.deskFolders[0].kinds).toMatchObject({ 'previous copy': { files: 1, bytes: 7 }, backups: { files: 1, bytes: 3 } })
+        } finally { for (const f of files) fs.chmodSync(f, 0o644) }
+    })
 })
 
 describe('round 2: the path to another machine', () => {
     const viaBash = (env, seen = []) => ({ where: 'ZZhost', run: async (script) => { seen.push(script); const r = spawnSync('/bin/bash', ['-s'], { input: script, env }); return { code: r.status ?? 1, stdout: r.stdout, stderr: r.stderr.toString() } } })
-    it('C1 the node of di is used when it is there', async () => {
+    it('C1 the node of di is used when it is there, also when PATH holds another node', async () => {
         const h = mk({})
         const node = path.join(h.home, '.di', 'runtime', 'node', 'bin', 'node')
         fs.mkdirSync(path.dirname(node), { recursive: true })
         fs.writeFileSync(node, '#!/bin/sh\necho \'{"v":1,"node":"vSTANDIN","platform":"x","ids":false,"ok":false,"reason":"stand-in","data":{"read":null,"others":[]},"unread":[]}\'\n'); fs.chmodSync(node, 0o755)
-        const r = await run(['count', '--json', '--host', 'x'], { home: h.home, transportFactory: () => viaBash({ PATH: BIN, HOME: h.home }) })
+        const r = await run(['count', '--json', '--host', 'x'], { home: h.home, transportFactory: () => viaBash({ PATH: `${BIN}:${path.dirname(process.execPath)}`, HOME: h.home }) })
         expect(JSON.parse(r.text).node).toBe('vSTANDIN')
     })
     it('C1 no node anywhere: exit 127 and the words', async () => {
@@ -396,7 +461,6 @@ describe('round 2: the path to another machine', () => {
 
 describe('round 2: the per-browser stores in the code', () => {
     it('D lists every file, with literal, constant, run-time and helper rows; test files are left out', async () => {
-        const src = (rel, text) => text
         const h = mk({ [P('s1', 'p1')]: doc({ entities: [lampT('e1')] }) }, {
             'src/a/showKey.js': "localStorage.setItem('ZZkey-lit', 1)\n",
             'src/ui/theme.js': "const THEME_KEY = 'ZZtheme'\nwindow.localStorage.getItem(THEME_KEY)\n",
@@ -405,7 +469,6 @@ describe('round 2: the per-browser stores in the code', () => {
             'src/ui/db.js': "indexedDB.open('ZZdb')\n",
             'src/ui/x.test.js': "localStorage.setItem('ZZtest', 1)\n"
         })
-        src()
         const r = JSON.parse((await runIn(h, ['count', '--json'])).text)
         const by = (k) => r.stores.find((s) => s.key === k)
         expect(by('ZZkey-lit')).toMatchObject({ kind: 'localStorage', show: true })

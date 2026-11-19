@@ -7,4 +7,8 @@
 - Default output has no id, path or host; `--ids` adds them (for a list kept on our own machines); `--json` prints one object.
 - Tests: `scripts/show/count.test.mjs`, on a made-up home inside `TMPDIR`: exact counts, read-only (listing identical, also
   with write bits removed), no value, the core piped, the path to another machine with the transport faked.
+- A folder named by a flag or by the environment that is not there stops the count (exit 1); a flag or a word the count
+  does not know is refused (exit 2), so a mistyped `--data-dir` never falls back to the default folder.
+- On another machine di's own Node is used when it is there, then the one on PATH; the per-browser stores and the save
+  time come from this code tree, so they are left out there and the text says so.
 - Undo: remove the command. Plan: `docs/architecture/SHOW_IN_THE_PROJECT.md`, step 1.

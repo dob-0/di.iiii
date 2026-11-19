@@ -47,7 +47,7 @@ function findData(o) {
     add('--di-home', '--di-home, then data (scripts/di/paths.mjs)', o.diHome && path.join(at(o.diHome), 'data'), true)
     add('DATA_ROOT', 'DATA_ROOT (serverXR/src/config.js)', env.DATA_ROOT, true)
     add('DI_HOME', 'DI_HOME, then data (scripts/di/paths.mjs)', env.DI_HOME && path.join(at(env.DI_HOME), 'data'), true)
-    add('~/.di', 'DI_HOME or ~/.di, then data (scripts/di/paths.mjs)', path.join(home, '.di', 'data'), false)
+    add('~/.di', '~/.di, then data (scripts/di/paths.mjs)', path.join(home, '.di', 'data'), false)
     add('older path', 'the install folder of di.iiii (older path)', path.join(home, '.local', 'share', 'di.iiii', 'data'), false)
     if (o.repo) add('beside the server', 'data beside the server (serverXR/src/config.js)', path.join(o.repo, 'serverXR', 'data'), false)
     const entries = cands.map((c) => ({ ...c, real: realOrNull(c.dir) }))
@@ -123,8 +123,9 @@ export function count(o = {}) {
             projectFolders += 1
             projectFolderIds.add(pid)
             const file = path.join(spacesDir, sid, 'projects', pid, 'document.json')
-            const bytes = statSize(file, `desk file of project folder ${projectFolders} in space ${si + 1}`)
-            if (bytes === null) { withoutDocument += 1; continue }
+            const listed = unread.length
+            const bytes = statSize(file, `document of project folder ${projectFolders} in space ${si + 1}`)
+            if (bytes === null) { if (unread.length === listed) withoutDocument += 1; continue } // an error other than "not there" is in the unread list, not here
             docTotal += 1
             const n = docTotal
             spaceCounts.set(si, (spaceCounts.get(si) || 0) + 1)
@@ -146,7 +147,7 @@ export function count(o = {}) {
                     // the code's rule (src/rigbuild/autoPatch.js:16 isLamp): a lamp has a fixture type that is a non-empty string
                     if (typeof comp.fixture.type === 'string' && comp.fixture.type !== '') {
                         lamps += 1; cl.lamps += chars(comp.fixture); if (e.id !== undefined) lampSet.add(String(e.id))
-                        if (comp.fixture.dmx === false) notDmx += 1 // a network laser (src/rigbuild/laserShowState.js:32)
+                        if (comp.fixture.dmx === false) notDmx += 1 // off DMX: one of the marks of a network laser (src/rigbuild/laserShowState.js:32)
                     } else fixtureNoType += 1
                 }
                 if (isObj(comp.beam) && isObj(comp.beam.laser)) { lasers += 1; cl.lasers += chars(comp.beam.laser) }
@@ -286,7 +287,7 @@ export function count(o = {}) {
             laser.looksNamedByACue = named
             laser.bankLooks = lookRows.length
             laser.have = have
-        } else unread.push({ label: `desk file ${fileNo}`, bytes: laserBytes, error: 'NotAnObject' })
+        } else { unread.push({ label: `desk file ${fileNo}`, bytes: laserBytes, error: 'NotAnObject' }); row.unread = true }
         deskFiles.push(row)
     }
     // cues that name a laser look the desk file does not hold (a cue counted once per cue)
@@ -343,6 +344,10 @@ export function count(o = {}) {
 
 // Started with DI_SHOW_COUNT_RUN=1 (see the top): run, print one JSON object.
 if (process.env.DI_SHOW_COUNT_RUN === '1') {
-    const opts = (() => { try { return JSON.parse(process.argv[process.argv.length - 1]) } catch { return {} } })()
-    process.stdout.write(`${JSON.stringify(count(opts))}\n`)
+    // the last argument is the options, one JSON object; none (nothing, or the "-" of a piped run) means the defaults;
+    // anything else stops the run, so options that did not arrive whole never count the default folder instead
+    const arg = process.argv.length > 1 ? process.argv[process.argv.length - 1] : '-'
+    let opts = {}
+    if (arg !== '-') { try { opts = JSON.parse(arg) } catch { opts = null } }
+    if (!isObj(opts)) { process.stderr.write('the options are not one JSON object\n'); process.exitCode = 2 } else process.stdout.write(`${JSON.stringify(count(opts))}\n`)
 }

@@ -17,6 +17,9 @@ import { count } from './lib/countCore.mjs'
 const CORE_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', 'countCore.mjs')
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const REAL_KEYS = new Set(['spaceId', 'projectId', 'dir', 'path', 'file', 'real'])
+const VALUE_FLAGS = ['venue', 'venues-dir', 'host', 'user', 'data-dir', 'di-home']
+const SWITCHES = ['local', 'ids', 'json']
+const FLAGS = [...VALUE_FLAGS, ...SWITCHES]
 
 /** Removes every real id and path from a result (the default view). */
 export function redact(value) {
@@ -86,7 +89,7 @@ export function browserStores(repo = REPO) {
     return out.sort((a, b) => String(a.key ?? a.name).localeCompare(String(b.key ?? b.name)) || a.at.localeCompare(b.at))
 }
 
-// 6. the save time of the largest document, without the disk write: read, parse, normalise, serialise as the server does
+// 6. the save time of the largest document that holds a show, without the disk write: read, parse, normalise, serialise as the server does
 export function saveTime(file, repo = REPO) {
     const schema = path.join(repo, 'shared', 'projectSchema.cjs')
     if (!fs.existsSync(schema)) return null
@@ -116,7 +119,7 @@ export function format(r) {
     const d = r.documents
     L.push(`=== 1. project documents: ${n(d.total)} in ${d.spaces} spaces; ${d.holdingShow} hold a show: ${d.withRig.documents} with a lamp, a designed look or a laser object (${n(d.withRig.cues)} cues), ${d.cuesOnly.documents} with cues only (${n(d.cuesOnly.cues)} cues); in ${d.spacesHoldingShow} spaces; ${d.largestShare.inOneSpace} of ${d.largestShare.of} in one space`)
     L.push(`totals: ${n(d.totals.lamps)} lamps, ${n(d.totals.designedLooks)} designed looks, ${n(d.totals.cues)} cues, ${n(d.totals.laserObjects)} laser objects; cues naming a light look ${d.cuesNaming.lightLook}, a light scene ${d.cuesNaming.lightScene}, a laser look ${d.cuesNaming.laserLook} (of ${n(d.cuesTotal)} cues)`)
-    L.push(`  of the lamps ${n(d.totals.lampsNotDmx)} are network lasers`)
+    L.push(`  of the lamps ${n(d.totals.lampsNotDmx)} are off DMX (the mark a network laser carries)`)
     if (d.totals.fixtureNoType > 0) L.push(`  fixture marks without a type: ${n(d.totals.fixtureNoType)}, not counted as lamps`)
     if (d.withoutDocument > 0) L.push(`  project folders without a document file: ${d.withoutDocument} (of ${n(d.projectFolders)})`)
     for (const x of d.list) {
@@ -156,7 +159,7 @@ export function format(r) {
             }
         }
         if (r.saveTime !== undefined) {
-            L.push('=== 6. save time of the largest document, median of 5, without the disk write')
+            L.push('=== 6. save time of the largest document that holds a show, median of 5, without the disk write')
             L.push(r.saveTime ? `  read ${r.saveTime.read} ms, parse ${r.saveTime.parse} ms, normalise ${r.saveTime.normalise} ms, serialise ${r.saveTime.serialise} ms` : '  not measured (the repo is not on this machine, or no document holds a show)')
         }
     }
@@ -170,7 +173,15 @@ export function format(r) {
 /** Returns the exit code: 0 counted, 1 something it should read could not be read, 2 refused. */
 export async function runCount(args, { env = process.env, print, home = os.homedir(), transportFactory = makeTransport, repo = REPO } = {}) {
     const f = args.flags
-    let host = typeof f.host === 'string' ? f.host : null
+    // a mistyped flag must never fall back to the default folder without a word: the count refuses what it does not know
+    const unknown = Object.keys(f).find((k) => !FLAGS.includes(k))
+    if (unknown !== undefined) throw new Refusal(`di show count does not know --${unknown}; it takes ${FLAGS.map((k) => `--${k}`).join(', ')}`)
+    if (args._.length > 1) throw new Refusal(`di show count takes no word after it (${args._.length - 1} given)`)
+    const bare = VALUE_FLAGS.find((k) => f[k] === '' || f[k] === true)
+    if (bare !== undefined) throw new Refusal(`--${bare} needs a value`)
+    const valued = SWITCHES.find((k) => k in f && f[k] !== true)
+    if (valued !== undefined) throw new Refusal(`--${valued} takes no value`)
+    let host = f.local === true ? 'local' : typeof f.host === 'string' ? f.host : null
     let user = typeof f.user === 'string' ? f.user : null
     if (f.venue && !host) { const p = loadProfile({ flags: f, env, home }); host = p.host; user = user || p.user }
     if (typeof f.venue === 'string' && !host) throw new Refusal(`profile ${f.venue} names no machine: set "host" (or "local"), or pass --host`)
