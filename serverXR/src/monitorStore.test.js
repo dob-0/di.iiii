@@ -7,7 +7,7 @@ import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { createMonitorStore, findClaudeHomes, REMOTE_SESSIONS_COMMAND } = require('./monitorStore.js')
+const { createMonitorStore, findClaudeHomes, REMOTE_SESSIONS_COMMAND, CREDITS_COMMAND_MS } = require('./monitorStore.js')
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'di-monitor-'))
 
@@ -333,6 +333,116 @@ describe('monitor devices and credits', () => {
       throw Object.assign(new Error('Command failed'), { stdout: list, code: 1 })
     } })
     expect((await store.getMonitor()).panels.credits).toMatchObject({ ok: true, ready: 0, total: 1 })
+  })
+
+  // The credits command takes 12 s once an hour (its probe verdicts expire: measured 2026-11-20) and the panel used to be killed at 8 s.
+  // A store whose credits command is under the test's hand: each run waits for calls[i].resolve / reject; the clock is the test's too.
+  const creditsStore = (extra = {}, command = 'c') => {
+    const home = tmp()
+    fs.mkdirSync(path.join(home, '.di'))
+    const config = (cmd) => fs.writeFileSync(path.join(home, '.di', 'monitor.json'), JSON.stringify({ feeds: [{ panel: 'credits', kind: 'command', command: cmd }] }))
+    config(command)
+    const clock = { t: 1_000_000 }
+    const calls = []
+    const runCommand = (c) => (c === '/bin/sh'
+      ? new Promise((resolve, reject) => { calls.push({ resolve, reject }) })
+      : Promise.reject(new Error(`${c} not installed`)))
+    const store = createMonitorStore({ home, runCommand, fetchImpl: null, now: () => clock.t, ...extra })
+    return { store, calls, clock, config }
+  }
+  const creditList = (available) => JSON.stringify([{ route: 'plan:dob', available, meter: '', have: 'login', why: '' }])
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 5))
+
+  it('credits: a slow command does not hold the snapshot; the next snapshot has the list', async () => {
+    const { store, calls, clock } = creditsStore({ creditsWaitMs: 30 })
+    const first = (await store.getMonitor()).panels.credits
+    expect(first).toMatchObject({ ok: true, configured: 1, checking: true, rows: [] })
+    expect(calls).toHaveLength(1)
+    calls[0].resolve(creditList(true))
+    await settle()
+    clock.t += 6000 // past the 5 s snapshot cache, inside the one-minute freshness
+    const second = (await store.getMonitor()).panels.credits
+    expect(second).toMatchObject({ ok: true, ready: 1, total: 1 })
+    expect(second.checking).toBeUndefined()
+    expect(second.stale).toBeUndefined()
+    expect(second.checkedAt).toMatch(/^\d{4}-\d\d-\d\dT/)
+    expect(calls).toHaveLength(1) // the good answer is reused, not asked again
+  })
+
+  it('credits: after a minute the old list is shown at once while one new check runs in the background', async () => {
+    const { store, calls, clock } = creditsStore({ creditsWaitMs: 30 })
+    const first = store.getMonitor()
+    calls[0].resolve(creditList(true))
+    expect((await first).panels.credits).toMatchObject({ ok: true, ready: 1 })
+    clock.t += 61_000
+    const second = (await store.getMonitor()).panels.credits // the new check is still running: no waiting for it
+    expect(second).toMatchObject({ ok: true, ready: 1, total: 1 })
+    expect(second.checking).toBeUndefined()
+    expect(second.stale).toBeUndefined() // a minute old is not "stale" yet
+    expect(calls).toHaveLength(2)
+    clock.t += 6000
+    await store.getMonitor()
+    expect(calls).toHaveLength(2) // one check at a time
+    calls[1].resolve(creditList(false))
+    await settle()
+    clock.t += 6000
+    expect((await store.getMonitor()).panels.credits).toMatchObject({ ok: true, ready: 0, total: 1 })
+    expect(calls).toHaveLength(2)
+  })
+
+  it('credits: a check that keeps failing marks the list old after 5 minutes and stops showing it after 30', async () => {
+    const { store, calls, clock } = creditsStore({ creditsWaitMs: 30 })
+    const first = store.getMonitor()
+    calls[0].resolve(creditList(true))
+    await first
+    const fail = async (afterMs, why) => {
+      clock.t += afterMs
+      const snap = await store.getMonitor()
+      calls[calls.length - 1].reject(new Error(why))
+      await settle()
+      return snap.panels.credits
+    }
+    expect(await fail(61_000, 'Command failed: c\nboom')).toMatchObject({ ok: true, ready: 1 }) // 1 min: shown, nothing said yet
+    const old = await fail(299_000, 'Command failed: c\nboom again') // 6 min: older than 5 min
+    expect(old).toMatchObject({ ok: true, ready: 1, stale: true, refreshError: 'Command failed: c' })
+    clock.t += 6000
+    const late = await fail(1_500_000, 'Command failed: c') // 31 min: no list any more, a check is running
+    expect(late).toMatchObject({ ok: true, checking: true, rows: [] })
+    clock.t += 6000
+    expect((await store.getMonitor()).panels.credits).toMatchObject({ ok: false, error: expect.stringMatching(/Command failed: c/) })
+  })
+
+  it('credits: a command that fails is tried again only after the freshness window, not on every snapshot', async () => {
+    const { store, calls, clock } = creditsStore({ creditsWaitMs: 30 })
+    const first = store.getMonitor()
+    calls[0].reject(new Error('boom'))
+    expect((await first).panels.credits).toMatchObject({ ok: false, error: expect.stringMatching(/boom/) })
+    clock.t += 6000
+    expect((await store.getMonitor()).panels.credits).toMatchObject({ ok: false })
+    expect(calls).toHaveLength(1)
+    clock.t += 60_000
+    const third = store.getMonitor()
+    calls[1].resolve(creditList(true))
+    expect((await third).panels.credits).toMatchObject({ ok: true, ready: 1 })
+  })
+
+  it('credits: a changed command is another feed, the old list is not shown for it', async () => {
+    const { store, calls, clock, config } = creditsStore({ creditsWaitMs: 30 })
+    const first = store.getMonitor()
+    calls[0].resolve(creditList(true))
+    expect((await first).panels.credits).toMatchObject({ ready: 1 })
+    config('another-command')
+    clock.t += 6000
+    expect((await store.getMonitor()).panels.credits).toMatchObject({ ok: true, checking: true, rows: [] })
+    expect(calls).toHaveLength(2)
+  })
+
+  it('credits: the one-shot report waits for the whole command, so it carries the real list', async () => {
+    expect(CREDITS_COMMAND_MS).toBeGreaterThanOrEqual(30_000) // the cold run measured 12.1 s on 2026-11-20
+    const { store, calls } = creditsStore({ creditsWaitMs: CREDITS_COMMAND_MS + 1000 })
+    const first = store.getMonitor()
+    setTimeout(() => calls[0].resolve(creditList(true)), 60)
+    expect((await first).panels.credits).toMatchObject({ ok: true, ready: 1, total: 1 })
   })
 
   it('credits: more than 24 routes are cut quietly; a model id in the text is kept', async () => {

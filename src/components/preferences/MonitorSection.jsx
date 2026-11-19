@@ -103,6 +103,15 @@ function IssueItem({ issue, onOpen }) {
 function PanelNote({ panel, empty }) {
     if (!panel) return null
     if (!panel.ok) return <div className="monitor-note is-down">Unavailable here: {panel.error}</div>
+    // Credits only: the command that reads them is slow once an hour, so the server shows the last list and renews it in the background.
+    if (panel.checking) return <div className="monitor-note" data-credits="checking">Checking now: the list appears in a moment.</div>
+    if (panel.stale) {
+        return (
+            <div className="monitor-note is-down" data-credits="stale">
+                This list was read {ago(panel.checkedAt)}; {panel.refreshError ? `the latest check failed: ${panel.refreshError}` : 'the latest check is slow'}.
+            </div>
+        )
+    }
     return panel.rows?.length || !empty ? null : <div className="monitor-note">{empty}</div>
 }
 
@@ -417,8 +426,9 @@ export default function MonitorSection({ onStats }) {
             { id: 'machines', panel: 'machines', label: 'Machines online', value: p.machines?.ok ? `${p.machines.online}/${p.machines.total}` : '—',
                 tone: p.machines?.ok && p.machines.online ? 'success' : 'warning',
                 dots: (p.machines?.rows || []).map((m) => dot(m.online ? 'success' : 'muted', `${m.name}: ${m.online ? 'online' : 'offline'}`)) },
-            { id: 'credits', panel: 'credits', label: 'Credits ready', value: p.credits?.ok && p.credits.configured ? `${p.credits.ready}/${p.credits.total}` : '—',
-                tone: !p.credits?.ok || !p.credits.configured ? 'muted' : p.credits.ready ? 'success' : 'warning',
+            // while the first list is still being read there is no count yet (not "0/0"); an old list is a warning, not a green
+            { id: 'credits', panel: 'credits', label: 'Credits ready', value: p.credits?.ok && p.credits.configured && !p.credits.checking ? `${p.credits.ready}/${p.credits.total}` : '—',
+                tone: !p.credits?.ok || !p.credits.configured || p.credits.checking ? 'muted' : p.credits.ready && !p.credits.stale ? 'success' : 'warning',
                 dots: (p.credits?.rows || []).map((c) => dot(c.available ? 'success' : 'warning', `${c.name}: ${c.available ? 'ready' : 'not ready'}`)) },
             { id: 'network', panel: 'network', label: 'Network up', value: p.network?.ok ? `${p.network.up}/${p.network.total}` : '—',
                 tone: p.network?.up === p.network?.total ? 'success' : 'warning',

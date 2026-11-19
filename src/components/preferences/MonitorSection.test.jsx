@@ -209,6 +209,50 @@ describe('MonitorSection', () => {
         expect(within(document.querySelector('.monitor-drawer')).getAllByText('Credit route').length).toBeGreaterThan(0)
     })
 
+    // The credits command is slow once an hour (12 s measured 2026-11-20); the server then answers "checking" or shows the last list as old.
+    it('credits while the first list is still being read: says so, no 0/0, no "No credits reported"', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 0, total: 0, rows: [], checking: true }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits="checking"]').textContent).toMatch(/Checking now/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).not.toMatch(/0\/0/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/—/)
+        expect(screen.queryByText('No credits reported.')).toBeNull()
+    })
+
+    it('credits that were read a while ago: the list stays, the note says how old and why', async () => {
+        const rows = [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }]
+        const readAt = new Date(Date.now() - 12 * 60 * 1000).toISOString()
+        const failed = snapshot()
+        failed.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, rows, stale: true, checkedAt: readAt, refreshError: 'Command failed: di-credits' }
+        getMonitor.mockResolvedValue(failed)
+        const first = render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits="stale"]').textContent).toBe('This list was read 12m ago; the latest check failed: Command failed: di-credits.')
+        expect(document.querySelector('[data-monitor-id="cr:0:plan:dob"]').textContent).toMatch(/ready/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/1/)
+        first.unmount()
+
+        const slow = snapshot()
+        slow.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, rows, stale: true, checkedAt: readAt }
+        getMonitor.mockResolvedValue(slow)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits="stale"]').textContent).toBe('This list was read 12m ago; the latest check is slow.')
+    })
+
+    it('a fresh credits list carries no note', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, checkedAt: new Date().toISOString(),
+            rows: [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits]')).toBeNull()
+    })
+
     it('says whose machines are listed: signed in, signed out, expired, offline', async () => {
         const cases = [
             [{ state: 'ok', name: 'Ada', machines: 2 }, /Signed in as Ada: this machine and 2 more/],
