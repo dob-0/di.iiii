@@ -163,11 +163,18 @@ export const timerUnits = ({ node, cli, every = EVERY_SECONDS }) => ({
  * .../versions/<old>/cli/cli.mjs"). `current` is the link the `di` shim itself follows: use it when it leads to THIS copy. A source
  * tree has no such link, and a link that leads to another copy is not swapped in: the running file stays (and `installTimer` says so).
  */
+const FILE_NOT_THERE = new Set(['ENOENT', 'ENOTDIR', 'ELOOP', 'EACCES'])
 export const stableCliPath = ({ cli, diRoot = diHome() } = {}) => {
+    // a call without `cli` is a bug in the caller, and it must stay loud: a unit must never name `undefined`
+    if (typeof cli !== 'string' || !cli) throw new TypeError('stableCliPath needs `cli`, the file that is running')
     const viaCurrent = path.join(paths(diRoot).current, 'cli', 'cli.mjs')
     try {
         if (fs.realpathSync(viaCurrent) === fs.realpathSync(cli)) return viaCurrent
-    } catch { /* no installed di here, or no such file: the running file is the only path there is */ }
+    } catch (error) {
+        // no installed di here (no `current` link, or one that leads nowhere): the running file is the only path there is.
+        // Any other error is not "no installed di": it stays loud.
+        if (!FILE_NOT_THERE.has(error?.code)) throw error
+    }
     return cli
 }
 
@@ -190,7 +197,7 @@ export const installTimer = async ({ home = os.homedir(), diRoot = diHome(), nod
     say(`monitor timer on: ${TIMER}, every ${EVERY_SECONDS} s. undo: di monitor install-timer --remove`)
     // a unit that names a source tree or a version folder dies with that folder (a removed worktree, the second `di update`): say so
     const link = path.join(paths(diRoot).current, 'cli', 'cli.mjs')
-    if (cli !== link) say(`note: the timer runs ${cli}, not the installed di (${link}), and stops when that folder is removed. To follow updates, run di monitor install-timer from the installed di.`)
+    if (cli !== link) say(`note: the timer runs ${cli}, not the installed di (${link}), and stops when that folder is removed. To follow updates, install di and run di monitor install-timer from it.`)
     return 0
 }
 

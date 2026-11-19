@@ -91,7 +91,24 @@ describe('body and timer units', () => {
         fs.rmSync(path.join(diRoot, 'current'), { force: true })
         fs.symlinkSync(path.join('versions', name), path.join(diRoot, 'current'))
     }
-    it('an installed di: the unit names the `current` link, so it still runs after `di update` removed the old version folder', async () => {
+    // an install root for the code under test to find through DI_HOME (what `diHome()` reads), put back afterwards
+    const withDiHome = async (diRoot, run) => {
+        const before = process.env.DI_HOME
+        process.env.DI_HOME = diRoot
+        try { return await run() } finally {
+            if (before === undefined) delete process.env.DI_HOME
+            else process.env.DI_HOME = before
+        }
+    }
+    // an install whose `current` leads to a version whose `cli` folder IS this running copy: the link then leads to the file running now
+    const installWithThisCopy = (diRoot, name) => {
+        const version = path.join(diRoot, 'versions', name)
+        fs.mkdirSync(version, { recursive: true })
+        fs.symlinkSync(path.dirname(fileURLToPath(import.meta.url)), path.join(version, 'cli'))
+        pointCurrent(diRoot, name)
+        return path.join(diRoot, 'current', 'cli', 'cli.mjs')
+    }
+    it('an installed di: the unit names the `current` link, which still reaches the new version after `di update` removed the old folder', async () => {
         const home = tmpHome()
         const diRoot = path.join(home, '.di')
         const v1 = fakeVersion(diRoot, '0.4.4-dev.aaaa1111')
@@ -109,29 +126,45 @@ describe('body and timer units', () => {
         expect(fs.existsSync(v1)).toBe(false) // what the old unit named: this is what failed on aylmo
         expect(fs.readFileSync(stable, 'utf8')).toContain('bbbb2222') // what the unit names now reaches the new version
     })
-    it('install with no arguments but DI_HOME: the unit names that install\'s `current` link (the production wiring, not just the helper)', async () => {
+    it('installTimer with no `cli` and no `diRoot` (only DI_HOME set): the unit names that install\'s `current` link and prints no note', async () => {
         const home = tmpHome()
         const diRoot = path.join(home, 'elsewhere', '.di')
-        // `current` -> a version whose `cli` folder IS this running copy, so the link leads to the file that is running now
-        const version = path.join(diRoot, 'versions', '0.4.4-dev.cccc3333')
-        fs.mkdirSync(version, { recursive: true })
-        fs.symlinkSync(path.dirname(fileURLToPath(import.meta.url)), path.join(version, 'cli'))
-        pointCurrent(diRoot, '0.4.4-dev.cccc3333')
+        const link = installWithThisCopy(diRoot, '0.4.4-dev.cccc3333')
         const exec = async (cmd, args) => (args.includes('is-active') ? 'active\n' : '')
-        const before = process.env.DI_HOME
-        process.env.DI_HOME = diRoot
-        try {
+        await withDiHome(diRoot, async () => {
             const io = quiet()
             expect(await installTimer({ home, node: '/n', exec, ...io })).toBe(0)
             const unit = fs.readFileSync(path.join(home, '.config', 'systemd', 'user', 'di-monitor-report.service'), 'utf8')
-            expect(unit).toContain(`ExecStart="/n" "${path.join(diRoot, 'current', 'cli', 'cli.mjs')}" monitor report --once`)
+            expect(unit).toContain(`ExecStart="/n" "${link}" monitor report --once`)
             expect(io.out.join('\n')).not.toMatch(/note: the timer runs/) // it follows the installed di: nothing to warn about
-        } finally {
-            if (before === undefined) delete process.env.DI_HOME
-            else process.env.DI_HOME = before
-        }
+        })
     })
-    it('a running copy reached through a symlinked folder still matches `current` (a symlinked $HOME)', () => {
+    it('`di monitor install-timer` through the command entry (runMonitor) names the installed di\'s link, and --remove takes the units away', async () => {
+        // the production call site: it passes no `cli` (that was the bug: it named the running file's physical path) and passes `remove` on
+        const home = tmpHome()
+        const diRoot = path.join(home, 'elsewhere', '.di')
+        const link = installWithThisCopy(diRoot, '0.4.4-dev.ffff6666')
+        const exec = async (cmd, args) => (args.includes('is-active') ? 'active\n' : '')
+        const dir = path.join(home, '.config', 'systemd', 'user')
+        await withDiHome(diRoot, async () => {
+            expect(await runMonitor(parseArgs(['monitor', 'install-timer']), { home, timer: { node: '/n', exec }, ...quiet() })).toBe(0)
+            expect(fs.readFileSync(path.join(dir, 'di-monitor-report.service'), 'utf8')).toContain(`ExecStart="/n" "${link}" monitor report --once`)
+            expect(await runMonitor(parseArgs(['monitor', 'install-timer', '--remove']), { home, timer: { node: '/n', exec }, ...quiet() })).toBe(0)
+            expect(fs.readdirSync(dir)).toEqual([])
+        })
+    })
+    it('the default install root is DI_HOME: a running copy that is that install\'s `current` gets the link without `diRoot` being passed', async () => {
+        const diRoot = path.join(tmpHome(), 'custom-root')
+        const running = fakeVersion(diRoot, '0.4.4-dev.eeee5555')
+        pointCurrent(diRoot, '0.4.4-dev.eeee5555')
+        await withDiHome(diRoot, async () => {
+            expect(stableCliPath({ cli: running })).toBe(path.join(diRoot, 'current', 'cli', 'cli.mjs'))
+        })
+    })
+    it('a call without `cli` throws: a unit must never name `undefined`, and a real bug must not look like "no installed di"', () => {
+        expect(() => stableCliPath({ diRoot: path.join(tmpHome(), '.di') })).toThrow()
+    })
+    it('a running copy reached through a symlink to its version folder still matches `current`', () => {
         const home = tmpHome()
         const diRoot = path.join(home, '.di')
         const real = fakeVersion(diRoot, '0.4.4-dev.dddd4444')
@@ -144,8 +177,12 @@ describe('body and timer units', () => {
         const home = tmpHome()
         const exec = async (cmd, args) => (args.includes('is-active') ? 'active\n' : '')
         const io = quiet()
-        expect(await installTimer({ home, diRoot: path.join(home, '.di'), node: '/n', cli: '/work/tree/scripts/di/cli.mjs', exec, ...io })).toBe(0)
-        expect(io.out.join('\n')).toMatch(/note: the timer runs \/work\/tree\/scripts\/di\/cli\.mjs, not the installed di .*stops when that folder is removed/)
+        const diRoot = path.join(home, '.di')
+        expect(await installTimer({ home, diRoot, node: '/n', cli: '/work/tree/scripts/di/cli.mjs', exec, ...io })).toBe(0)
+        // the whole line: the path it runs, the link it is not, why that matters, and what to do (a person reads exactly this)
+        expect(io.out.filter((line) => line.startsWith('note:'))).toEqual([
+            `note: the timer runs /work/tree/scripts/di/cli.mjs, not the installed di (${path.join(diRoot, 'current', 'cli', 'cli.mjs')}), and stops when that folder is removed. To follow updates, install di and run di monitor install-timer from it.`
+        ])
     })
     it('a source tree (no ~/.di/current) keeps the running file; a link to another copy is not swapped in', () => {
         const home = tmpHome()
