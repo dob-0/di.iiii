@@ -1927,7 +1927,7 @@
     flex-direction: row; align-items: center; gap: var(--di-space-2);
     padding: 0 var(--di-space-3);
 }
-.monitor-page .monitor-tier > .monitor-meta, .monitor-page .monitor-spark, .monitor-page .monitor-dots { display: none; }
+@media (min-width: 901px) { .monitor-page .monitor-tier > .monitor-meta, .monitor-page .monitor-spark, .monitor-page .monitor-dots { display: none; } }
 .monitor-page .monitor-hero { padding: var(--di-space-2) var(--di-space-4); }
 .monitor-page .monitor-map-section { padding: 0; background: none; border: 0; }
 .monitor-page .monitor-map-section > .preferences-module-header { display: none; }
@@ -2186,7 +2186,7 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-page .monitor-hero-text { flex: 1 1 14rem; font-size: var(--di-text-5); font-weight: 700; letter-spacing: -0.01em; }
 .monitor-page .monitor-hero-live { font-size: var(--di-text-2); letter-spacing: 0.14em; text-transform: uppercase; }
 .monitor-page .monitor-live-mark { width: 0.5rem; height: 0.5rem; }
-.monitor-page .monitor-hero-issues { flex-wrap: wrap; max-height: 3.6rem; overflow: hidden; }
+.monitor-page .monitor-hero-issues { flex-wrap: wrap; }
 .monitor-page .monitor-hero-issues li {
     flex: 0 1 auto; max-width: 30rem; min-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     background: transparent; border: 1px solid var(--pref-border); color: var(--ui-text-muted);
@@ -2219,7 +2219,7 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-page .monitor-map-views { position: absolute; top: var(--di-space-2); left: var(--di-space-2); z-index: 3; }
 .monitor-page .monitor-map[data-monitor-map-view="list"] .monitor-map-views { position: static; }
 @media (min-width: 601px) { .monitor-page.tab-map .monitor-map-key { display: none; } }
-@media (max-width: 1400px) { .monitor-bar { flex-wrap: wrap; } .monitor-bar-actions { flex-wrap: wrap; } }
+@media (max-width: 1500px) { .monitor-bar { flex-wrap: wrap; } .monitor-bar-actions { flex-wrap: wrap; } }
 @media (max-width: 600px) { .monitor-page .monitor-map-views { position: static; } }
 /* Board: the panels flow in two columns on a wide screen instead of one long stack */
 .monitor-page.tab-board .monitor-main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--di-space-3); align-items: start; }

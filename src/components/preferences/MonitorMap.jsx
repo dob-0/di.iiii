@@ -111,7 +111,7 @@ const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.string
 
 // The wheel zooms the map in full screen, on a map that fills its screen (the Monitor map tab, `fills`), or with Ctrl/Cmd
 // (a trackpad pinch sends Ctrl). An embedded map keeps the page scrolling under the wheel.
-export const wheelZooms = (ev, fullscreen, fills = false) => Boolean(fullscreen || fills || ev.ctrlKey || ev.metaKey)
+export const wheelZooms = (ev, fullscreen, fills = false) => Boolean(fullscreen || (fills && (typeof window === 'undefined' || window.innerWidth > 900)) || ev.ctrlKey || ev.metaKey)
 
 export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false, kinds = false, pointerOnly = false }) {
     // pointerOnly: a mouse/touch surface only (the Mixed view): out of the tab order, one data-map-node per node (the list owns it)

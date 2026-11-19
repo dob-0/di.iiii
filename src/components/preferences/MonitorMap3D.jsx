@@ -242,7 +242,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     useEffect(() => {
         const el = stageRef.current
         if (!el) return undefined
-        const onWheel = (ev) => { if (!(freeRef.current || ev.ctrlKey || ev.metaKey)) ev.stopPropagation() }
+        const onWheel = (ev) => { if (!((freeRef.current && window.innerWidth > 900) || ev.ctrlKey || ev.metaKey)) ev.stopPropagation() }
         el.addEventListener('wheel', onWheel, { capture: true, passive: true })
         return () => el.removeEventListener('wheel', onWheel, { capture: true })
     }, [])
