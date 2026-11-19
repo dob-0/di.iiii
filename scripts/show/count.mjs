@@ -14,8 +14,11 @@ import { Refusal, loadProfile } from './lib/profile.mjs'
 import { assignments, makeTransport, tail } from './lib/transport.mjs'
 import { count } from './lib/countCore.mjs'
 
-const CORE_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib', 'countCore.mjs')
-const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const CORE_FILE = path.join(HERE, 'lib', 'countCore.mjs')
+// The source tree, when this file sits in it at scripts/show; null in the installed di, which keeps show/ beside cli/ with no
+// source tree. A folder that happens to sit two levels up is never listed, read or run as "the code".
+const REPO = path.basename(HERE) === 'show' && path.basename(path.dirname(HERE)) === 'scripts' ? path.resolve(HERE, '..', '..') : null
 const REAL_KEYS = new Set(['spaceId', 'projectId', 'dir', 'path', 'file', 'real'])
 const VALUE_FLAGS = ['venue', 'venues-dir', 'host', 'user', 'data-dir', 'di-home']
 const SWITCHES = ['local', 'ids', 'json']
@@ -50,6 +53,7 @@ export async function countRemote({ transport, options }) {
 const SHOWISH = /show|desk|project|rig|light|laser|cue|scene|perform|mapping/i
 const CALL = /\b(localStorage|sessionStorage)\s*\.\s*(?:getItem|setItem|removeItem)\s*\(\s*([^,)]*)|\b(indexedDB)\s*\.\s*open\s*\(\s*([^,)]*)/g
 export function browserStores(repo = REPO) {
+    if (!repo) return null
     const src = path.join(repo, 'src')
     if (!fs.existsSync(src)) return null
     const out = []
@@ -91,6 +95,7 @@ export function browserStores(repo = REPO) {
 
 // 6. the save time of the largest document that holds a show, without the disk write: read, parse, normalise, serialise as the server does
 export function saveTime(file, repo = REPO) {
+    if (!repo) return null
     const schema = path.join(repo, 'shared', 'projectSchema.cjs')
     if (!fs.existsSync(schema)) return null
     const { normalizeProjectDocument } = createRequire(import.meta.url)(schema)

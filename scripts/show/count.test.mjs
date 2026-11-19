@@ -6,11 +6,12 @@ import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
 import zlib from 'node:zlib'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawnSync } from 'node:child_process'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { main } from './cli.mjs'
 import { count } from './lib/countCore.mjs'
+import { usage } from './usage.mjs'
 
 const CORE = fileURLToPath(new URL('./lib/countCore.mjs', import.meta.url))
 const ROOT = fs.mkdtempSync(path.join(process.env.TMPDIR || os.tmpdir(), 'di-count-'))
@@ -152,6 +153,13 @@ describe('exact counts on the made-up home', () => {
             expect(r.code).not.toBe(2)
             expect(r.text).toMatch(/^counted on this machine /)
         }
+    })
+    it('the help text names every flag the count takes, and its own line says how the machine is picked', async () => {
+        const help = usage()
+        expect(help.split('\n').find((l) => l.startsWith('  di show count '))).toContain('di show count [--venue <id> | --host <h> | --local]  ')
+        const takes = (await run(['count', '--zz'])).text.split('it takes ')[1].split(', ')
+        expect(takes).toHaveLength(9)
+        for (const flag of takes) expect(help).toContain(flag)
     })
 })
 
@@ -439,9 +447,18 @@ describe('round 2: named folders and unreadable folders', () => {
         fs.chmodSync(dir, 0o000)
         try {
             const r = cnt(h)
-            expect(r.documents).toMatchObject({ projectFolders: 2, withoutDocument: 0, total: 1 })
+            expect(r.documents).toMatchObject({ projectFolders: 2, withoutDocument: 0, total: 1, holdingShow: 1, withoutShow: 0 })
             expect(r.unread).toEqual([{ label: 'document of project folder 2 in space 1', bytes: null, error: 'EACCES' }])
         } finally { fs.chmodSync(dir, 0o755) }
+    })
+    it('a document that cannot be looked at or read never changes the count of documents without a show', () => {
+        const h = mk({ [P('s1', 'p1')]: doc({ entities: [lampT('e1')] }), [P('s1', 'p2')]: doc({ title: 'ZZV plain' }), [P('s1', 'p3')]: '{ not json ZZV', [P('s1', 'p4')]: doc() })
+        // the fourth document is a link to itself: it cannot even be looked at (ELOOP), whoever runs the test
+        const loop = path.join(h.home, '.di', 'data', P('s1', 'p4'))
+        fs.rmSync(loop); fs.symlinkSync(loop, loop)
+        const r = cnt(h)
+        expect(r.documents).toMatchObject({ projectFolders: 4, withoutDocument: 0, total: 3, holdingShow: 1, withoutShow: 1 })
+        expect(r.unread).toEqual([{ label: 'document 3 in space 1', bytes: 14, error: 'ParseError' }, { label: 'document of project folder 4 in space 1', bytes: null, error: 'ELOOP' }])
     })
     it.skipIf(process.getuid && process.getuid() === 0)('the laser rig file and the other files of a desk folder are not opened: without a read bit they count the same', () => {
         const h = mk({ 'laser/laser.json': '{"ZZV":1}', 'lighting/show.prev.json': 'x'.repeat(7), 'lighting/backups/a.json': 'y'.repeat(3) })
@@ -520,5 +537,27 @@ describe('round 2: the per-browser stores in the code', () => {
         expect(t).toContain('=== 5. per-browser stores in the code: 5 rows in 5 files; 1 with a key built at run time (* = on show ground)')
         expect(t).toMatch(/\* ZZkey-lit/)
         expect(t).toMatch(/ {3}ZZtheme/)
+    })
+})
+
+describe('the installed layout: show/ beside cli/, no source tree', () => {
+    it('never takes a folder two levels up for the code: nothing there is listed, read or run', () => {
+        const versions = path.join(ROOT, 'installed', 'versions')
+        const show = path.join(versions, 'ZZV1', 'show')
+        // the same copy rule as scripts/pack-runtime.mjs: the family's folder without its tests
+        fs.cpSync(path.dirname(fileURLToPath(import.meta.url)), show, { recursive: true, filter: (src) => !/\.(test|spec)\.(js|mjs)$/.test(src) })
+        // the trap, two levels above show/: code with a store in it, a schema file that leaves a mark when it is run, a data folder
+        const mark = path.join(ROOT, 'installed', 'ZZ-was-run')
+        const trap = { 'src/trap.js': "localStorage.setItem('ZZtrap', 1)\n", 'shared/projectSchema.cjs': `require('node:fs').writeFileSync(${JSON.stringify(mark)}, 'x')\nmodule.exports = { normalizeProjectDocument: (d) => d }\n`, 'serverXR/data/spaces/ZZID-s/keep': '' }
+        for (const [rel, body] of Object.entries(trap)) { fs.mkdirSync(path.dirname(path.join(versions, rel)), { recursive: true }); fs.writeFileSync(path.join(versions, rel), body) }
+        const code = `import { main } from ${JSON.stringify(pathToFileURL(path.join(show, 'cli.mjs')).href)}; process.exitCode = await main(process.argv.slice(1), { print: (x) => console.log(x) })`
+        const r = spawnSync(process.execPath, ['--input-type=module', '-e', code, '--', 'count', '--data-dir', DATA], { env: { PATH: BIN, HOME: HOME }, encoding: 'utf8' })
+        expect(r.stdout).toMatch(/^counted on this machine /)
+        expect(r.stdout).toContain('=== 5. per-browser stores in the code: code not on this machine')
+        expect(r.stdout).toContain('  not measured (the repo is not on this machine, or no document holds a show)')
+        expect(r.stdout).not.toContain('ZZtrap')
+        expect(r.stdout).not.toContain('beside the server')
+        expect(fs.existsSync(mark)).toBe(false)
+        expect([r.status, r.stderr]).toEqual([1, '']) // 1: the made-up home holds files that cannot be read
     })
 })

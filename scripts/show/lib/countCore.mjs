@@ -202,7 +202,10 @@ export function count(o = {}) {
         largestShare: { inOneSpace: top, of: holding.length },
         totals: { lamps: sum('lamps'), lampsNotDmx: sum('lampsNotDmx'), fixtureNoType, designedLooks: sum('looks'), cues: sum('cues'), laserObjects: sum('lasers') },
         cuesNaming: cue.naming, cuesTotal: cue.total, gzipLevel: GZIP_LEVEL,
-        list: holding, withoutShow: docTotal - holding.length - unread.filter((u) => u.label.startsWith('document')).length
+        // read to the end and holding no show. Not in it: a document that cannot be read or is not a project document (in `total`
+        // and in the unread list), one that stat could not reach for another reason than "not there" (in the unread list, not
+        // in `total`), and a project folder with no document file (in `withoutDocument`)
+        list: holding, withoutShow: docs.length - holding.length
     }
 
     // ---- 2 and 3: the desk files

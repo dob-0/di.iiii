@@ -15,4 +15,7 @@
   without the show part) and gzip at level 6 with and without the show part. A door may compress at another level or not
   at all, so the text names the level. Of the other data folders it saw, one is called "the same folder as the one
   read" only when it is that folder.
+- Review round after the first push: the documents without a show are counted from the documents that were read (a
+  document that could not be looked at made that number one too small); the code tree is only the one the command sits in
+  at `scripts/show`, so the installed di never reads a folder two levels up as "the code"; the help line names `--local`.
 - Undo: remove the command. Plan: `docs/architecture/SHOW_IN_THE_PROJECT.md`, step 1.

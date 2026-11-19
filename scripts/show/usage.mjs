@@ -5,7 +5,7 @@ export const usage = () => [
     '  di show go --venue <id> [--why "<why>"]   checkpoint, soak, then GO or NO-GO (exit 0 or 1)',
     '  di show go --venue <id> --look            one quick read; never a GO (exit 3)',
     '  di show checkpoint --venue <id> "<why>"   snapshot before a change (exit 0 whole, 3 partial, 1 failed, 2 refused)',
-    '  di show count [--venue <id> | --host <h>]  read-only count of the project documents and desk files (--ids, --json, --data-dir <d>, --di-home <d>; another machine needs ssh, bash and node)',
+    '  di show count [--venue <id> | --host <h> | --local]  read-only count of the project documents and desk files (--ids, --json, --data-dir <d>, --di-home <d>; another machine needs ssh, bash and node)',
     '  di show profile --venue <id>              the resolved profile and where each value came from',
     '  di show profile --list                    the venue profiles this machine can read',
     '  di show mark <id>                         mark THIS machine as that venue\'s (no id: print the mark)',
