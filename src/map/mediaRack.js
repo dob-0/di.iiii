@@ -23,6 +23,11 @@ import { announceVisualParams } from './visualParams.js'
 
 const KEEP_MS = 4000
 const NO_FRAMES_MS = 6000
+// How many unused clip PAGES may wait for reuse. Each is a live WebGL page:
+// switching clips fast kept up to 30 alive for KEEP_MS each (+2.3 GB, past
+// Chrome's WebGL context limit; audit 11-12). The oldest unused one goes
+// first. Pictures, videos and cameras are cheap and keep the plain timer.
+export const MAX_IDLE_PAGES = 2
 
 // Which rack entry a source needs. A colour needs none; a page and a test card
 // are laid out at a size, so the size is part of what they are.
@@ -243,14 +248,29 @@ export function createMediaRack({ onDispose = null } = {}) {
             if (!entry) return
             entry.refs = Math.max(0, entry.refs - 1)
             if (entry.refs > 0) return
+            const drop = (dropKey, dropped) => {
+                clearTimeout(dropped.keep)
+                dropped.keep = null
+                dropped.dispose?.()
+                entries.delete(dropKey)
+                onDispose?.(dropKey)
+                statusChanged()
+            }
             clearTimeout(entry.keep)
+            entry.idleAt = Date.now()
             entry.keep = setTimeout(() => {
                 if (entry.refs > 0) return
-                entry.dispose?.()
-                entries.delete(key)
-                onDispose?.(key)
-                statusChanged()
+                drop(key, entry)
             }, KEEP_MS)
+            if (entry.kind === 'html') {
+                const idle = [...entries.entries()]
+                    .filter(([, other]) => other.kind === 'html' && other.refs === 0 && other.keep)
+                    .sort(([, a], [, b]) => a.idleAt - b.idleAt)
+                while (idle.length > MAX_IDLE_PAGES) {
+                    const [oldKey, oldest] = idle.shift()
+                    drop(oldKey, oldest)
+                }
+            }
         },
         entry: (key) => entries.get(key) || null,
         // The values a clip's settings are at; sent only when they change.

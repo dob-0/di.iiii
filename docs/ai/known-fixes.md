@@ -1962,3 +1962,42 @@ Symptom (owner, Mapping window → Place: "when I'm changing [height], Y is chan
 Cause: `src/map/sliceGeometry.js` `setFrameField` and `setBoxField` scaled a typed width or height about the slice's centre, but the panel shows X/Y (and Takes' Left/Top) as the left and top edges, so the typed-for edge slid by half the change.
 Fix: width and height scale about the frame's own top-left (turned with it; the straight box's left/top for a bent or keystoned slice). Moving and turning still use the centre.
 Guard: `src/map/sliceGeometry.test.js` ("width and height keep the left and top edges", and the straight-box case); both fail on the old code.
+
+## Map desk audit: live-show safety fixes (2026-11-12)
+
+Symptom (owner asked for a full audit of the mapping desk the day before a bar show; four testers on a copy of the project):
+1. In the Mapping window, keys meant for a focused Colour slider also moved the piece, and Delete deleted it.
+2. Typing the wall size (desk Output box and Mapping window) resized the wall on every key (1 → 12 → 128 px), and an empty box made it 1 px.
+3. Undo of a removed playing clip put it back ON THE WALL after the operator had moved on, and redo blacked the wall.
+4. A stray Delete on a focused tile removed the live clip.
+5. With the desk and /out in one browser, saves waited 10–45 s.
+6. Fast clip switching kept up to 30 WebGL clip pages alive (+2.3 GB).
+7. GIF and WebP were refused with a misleading "location data" message.
+8. HAP, ProRes and empty files became clips that never showed.
+9. Ctrl+C on nothing emptied the piece clipboard; pastes stacked on one spot; an empty rename showed the raw id; Place X/Y/W/H took any value.
+
+Cause:
+1. The window key handler skipped only INPUT/TEXTAREA/SELECT, and FillBar let handled keys bubble.
+2. The fields committed on change.
+3. The deleteMappingVisual inverse restored `playing`.
+4. Tile onKeyDown removed at once.
+5. The desk held an NDI scan SSE besides its doc events and machine long-poll. With /out's three streams that made six connections, Chrome's HTTP/1.1 per-host limit, so the ops POST queued.
+6. mediaRack kept every released page for KEEP_MS.
+7. On Windows, libvips holds a GIF/WebP input open, so the scrub's rename failed with EPERM.
+8. No pre-upload check.
+9. Unconditional setClipboard, a fixed +0.02 offset, and no bounds.
+
+Fix:
+- `MapAdvancedOutput.jsx`: the key handler skips role=slider/switch/radio targets (Ctrl chords still pass); Field gets a `lazy` mode for the wall size (Enter/blur, Esc cancels, min 16); Ctrl+X; copy only with a selection; cascading paste; Place bounds; rename trims, keeps the old name and selects its text.
+- `MapDeskDock.jsx`: FillBar stops its handled keys bubbling; the live clip needs a second Delete within 3 s; the notice clears itself.
+- `MapSurface.jsx`: WallSizeBox for the Output size; the desk polls NDI (`{ ndi: 'poll' }`) instead of holding a stream.
+- `projectSchema.js` (both twins): the inverse no longer restores `playing`.
+- `mediaRack.js`: MAX_IDLE_PAGES = 2.
+- `serverXR/src/assetScrub.js`: scrubs from a buffer and writes back in place.
+- `MapScreenParts.jsx`: checkVisualFile (empty, undecodable video or image, with advice) and shortFileName.
+
+Guard:
+- `src/map/MapAdvancedOutput.test.jsx` "keys and fields (audit 11-12)": 7 tests that fail on the old code.
+- `src/map/mappingState.test.js` "undoing a delete of the playing clip…", plus the `serverXR/src/schemaSync.test.js` twin.
+- `src/map/deckDelete.test.jsx`, `src/map/mediaRack.test.js` "unused clip pages are capped", `src/map/visualUploadCheck.test.js`.
+- Browser checks on the copy: desk+/out save 0.35 s (was 2.7–14.5 s), 30 fast switches keep ≤7 pages with 0 WebGL warnings, HAP and empty refused, H.264 added. The scrubber turns GIF (10 frames) and WebP into clean files on Windows.

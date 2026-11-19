@@ -153,6 +153,45 @@ export const deskLeadMs = () => (state.show && wantsLead ? leadMs : 0)
 const hearState = (body) => {
     const ahead = Number(body?.projAheadMs)
     if (Number.isFinite(ahead)) leadMs = Math.min(500, Math.max(0, ahead))
+    if (body && typeof body.auto === 'boolean') seeAutopilot(body.auto)
+}
+
+// The engine's autopilot (its state.auto: the pad's "Autopilot on/off"), so the
+// desk's Autopilot button shows and sets the same switch — on, the patterns
+// change with the music; off, the one playing stays until someone picks
+// another (Emily, 11-12). null while no engine is heard.
+let autopilot = null
+const autopilotListeners = new Set()
+const seeAutopilot = (value) => {
+    const next = typeof value === 'boolean' ? value : null
+    if (next === autopilot) return
+    autopilot = next
+    autopilotListeners.forEach((listener) => listener())
+}
+export const engineAutopilot = () => autopilot
+export const subscribeEngineAutopilot = (listener) => {
+    autopilotListeners.add(listener)
+    return () => autopilotListeners.delete(listener)
+}
+// Shown at once, then confirmed (or put back) by the engine's own 'state'.
+export const setEngineAutopilot = (on, { fetchImpl = typeof fetch === 'function' ? fetch : null } = {}) => {
+    if (!fetchImpl) return Promise.resolve(false)
+    const before = autopilot
+    seeAutopilot(Boolean(on))
+    return Promise.resolve()
+        .then(() => fetchImpl(`${ENGINE_URL}/api/set`, {
+            method: 'POST',
+            // X-Bar: pad, as the pad sends it (the engine answers 403 without).
+            // Only ever sent on a click: state.auto is saved by the engine, so a
+            // write on load or reconnect would undo the pad's choice (e3, 11-12).
+            headers: { 'Content-Type': 'application/json', 'X-Bar': 'pad' },
+            body: JSON.stringify({ patch: { auto: Boolean(on) } })
+        }))
+        .then((response) => {
+            if (!response?.ok) throw new Error('refused')
+            return true
+        })
+        .catch(() => { seeAutopilot(before); return false })
 }
 
 const giveUp = () => {
@@ -160,6 +199,7 @@ const giveUp = () => {
     source?.close()
     source = null
     setShowClock(null)
+    seeAutopilot(null)
     schedule()
 }
 
@@ -238,6 +278,7 @@ export const followShowClock = ({ out = false } = {}) => {
         wantsLead = false
         role = 'mapdesk'
         setShowClock(null)
+        seeAutopilot(null)
     }
 }
 
@@ -247,5 +288,7 @@ export const resetDeskBeat = () => {
     state.show = null
     state.slip = 0
     taps = []
+    autopilot = null
 }
 export const _setShowClockForTest = setShowClock
+export const _hearStateForTest = hearState

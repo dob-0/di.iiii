@@ -3205,7 +3205,9 @@ const invertSingleOp = (document, op) => {
       const index = visuals.findIndex((visual) => visual.id === visualId)
       if (index === -1) break
       const restore = [{ type: 'createMappingVisual', payload: { visual: cloneValue(visuals[index]), index } }]
-      if (state.playing === visualId) restore.push({ type: 'setMappingState', payload: { patch: { playing: visualId } } })
+      // Undo brings the clip back to the deck but never changes what is on the
+      // wall: restoring `playing` here put a deleted clip back on the wall after
+      // the operator had moved on, and redo then blacked the wall (audit 11-12).
       const pointsAt = (source) => Boolean(source) && source.kind === 'visual' && source.ref === visualId
       ;(state.surfaces || []).forEach((surface) => {
         if (pointsAt(surface.source)) {

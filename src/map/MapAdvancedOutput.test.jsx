@@ -160,3 +160,97 @@ describe('MapAdvancedOutput', () => {
         expect(container.querySelector('.map-mo-hint').textContent).toMatch(/Screen 1 · corners pin/)
     })
 })
+
+// Audit 11-12: keys on a focused control, the clipboard, the wall size, renaming.
+describe('MapAdvancedOutput keys and fields (audit 11-12)', () => {
+    const sent = () => applyOps.mock.calls.flatMap(([ops]) => ops)
+
+    it('Delete and arrows on a focused slider leave the piece alone', () => {
+        const { getByRole } = open()
+        const slider = getByRole('slider', { name: 'Brightness' })
+        slider.focus()
+        fireEvent.keyDown(slider, { key: 'Delete' })
+        fireEvent.keyDown(slider, { key: 'Backspace' })
+        fireEvent.keyDown(slider, { key: 'ArrowRight' })
+        expect(sent().map((op) => op.type)).not.toContain('deleteMappingSurface')
+        const patches = sent().map((op) => op.payload?.patch || {})
+        expect(patches.some((patch) => 'corners' in patch)).toBe(false)
+        expect(patches.some((patch) => 'brightness' in patch)).toBe(true)
+    })
+
+    it('with no control focused, Delete still deletes the picked piece', () => {
+        open()
+        fireEvent.keyDown(document.body, { key: 'Delete' })
+        expect(sent().map((op) => op.type)).toContain('deleteMappingSurface')
+    })
+
+    it('Ctrl+C on nothing keeps the copy, and each paste lands a step further on', () => {
+        const { surfaces } = open()
+        fireEvent.keyDown(document.body, { key: 'c', ctrlKey: true })
+        fireEvent.keyDown(document.body, { key: 'Escape' })
+        fireEvent.keyDown(document.body, { key: 'c', ctrlKey: true })
+        fireEvent.keyDown(document.body, { key: 'v', ctrlKey: true })
+        fireEvent.keyDown(document.body, { key: 'v', ctrlKey: true })
+        const made = sent().filter((op) => op.type === 'createMappingSurface').map((op) => op.payload.surface)
+        expect(made).toHaveLength(2)
+        const [x0] = surfaces[0].corners[0]
+        expect(made[0].corners[0][0]).toBeCloseTo(x0 + 0.02, 6)
+        expect(made[1].corners[0][0]).toBeCloseTo(x0 + 0.04, 6)
+    })
+
+    it('Ctrl+X copies and removes the picked piece', () => {
+        open()
+        fireEvent.keyDown(document.body, { key: 'x', ctrlKey: true })
+        expect(sent().map((op) => op.type)).toContain('deleteMappingSurface')
+        applyOps.mockClear()
+        fireEvent.keyDown(document.body, { key: 'v', ctrlKey: true })
+        expect(sent().map((op) => op.type)).toEqual(['createMappingSurface'])
+    })
+
+    it('the wall size is set on Enter, not on every key, and never below 16 px', () => {
+        const { container } = open()
+        const setOutput = vi.fn()
+        // re-render with a spy we can read
+        const view = render(<MapAdvancedOutput {...props(makeSurfaces())} setOutput={setOutput} />)
+        const height = within(view.container.querySelector('.map-mo-wall')).getByLabelText('Height')
+        fireEvent.focus(height)
+        fireEvent.change(height, { target: { value: '1' } })
+        fireEvent.change(height, { target: { value: '12' } })
+        expect(setOutput).not.toHaveBeenCalled()
+        fireEvent.change(height, { target: { value: '0' } })
+        fireEvent.keyDown(height, { key: 'Enter' })
+        fireEvent.blur(height)
+        expect(setOutput).toHaveBeenCalledTimes(1)
+        expect(setOutput.mock.calls[0][0].output.height).toBe(16)
+        expect(container).toBeTruthy()
+    })
+
+    it('Esc in the wall size puts the old number back', () => {
+        const setOutput = vi.fn()
+        const view = render(<MapAdvancedOutput {...props(makeSurfaces())} setOutput={setOutput} />)
+        const width = within(view.container.querySelector('.map-mo-wall')).getByLabelText('Width')
+        fireEvent.focus(width)
+        fireEvent.change(width, { target: { value: '99' } })
+        fireEvent.keyDown(width, { key: 'Escape' })
+        fireEvent.blur(width)
+        expect(setOutput).not.toHaveBeenCalled()
+    })
+
+    it('Place X is kept near the wall', () => {
+        const { container } = open()
+        const x = within(container.querySelector('.map-mo-place')).getByLabelText('X')
+        fireEvent.change(x, { target: { value: '99999999' } })
+        const corners = sent().find((op) => op.type === 'setMappingSurface').payload.patch.corners
+        expect(Math.max(...corners.map(([cx]) => cx))).toBeLessThan(5)
+    })
+
+    it('renaming to nothing keeps the old name', () => {
+        const { container } = open()
+        const row = container.querySelector('.map-mo-piece-row')
+        fireEvent.doubleClick(row)
+        const input = container.querySelector('.map-mo-rename')
+        fireEvent.change(input, { target: { value: '   ' } })
+        fireEvent.blur(input)
+        expect(sent().some((op) => op.payload?.patch && 'name' in op.payload.patch)).toBe(false)
+    })
+})

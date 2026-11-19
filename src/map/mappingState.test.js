@@ -631,8 +631,27 @@ describe('the visuals bank', () => {
             expect(m.cues[0].surfaces.s1.source).toEqual({ kind: 'wall', ref: '' })
             expect(m.cues[0].surfaces.s2.source).toEqual({ kind: 'visual', ref: 'c' })
             expect(m.cues[0].surfaces.s3).toEqual({ opacity: 0.5 })
-            expect(applyProjectOps(after, invertProjectOps(doc, ops)).mappingState).toEqual(doc.mappingState)
+            // Undo puts everything back except the wall: it stays as it is (audit 11-12).
+            const undone = applyProjectOps(after, invertProjectOps(doc, ops)).mappingState
+            expect(undone.playing).toBe('')
+            expect({ ...undone, playing: 'b' }).toEqual(doc.mappingState)
             expect(applyProjectOps(doc, [{ type: 'deleteMappingVisual', payload: { visualId: 'nope' } }]).mappingState).toEqual(doc.mappingState)
+        })
+        // Audit 11-12 (desk tester D1): delete the clip on the wall, play another,
+        // Ctrl+Z put the deleted one back ON THE WALL, and redo blacked the wall.
+        it('undoing a delete of the playing clip never takes the wall from what plays now', () => {
+            let doc = ['a', 'b'].reduce((d, id) => create(d, v(id)), visualDoc())
+            doc = applyProjectOps(doc, [{ type: 'setMappingState', payload: { patch: { playing: 'b' } } }])
+            const del = [{ type: 'deleteMappingVisual', payload: { visualId: 'b' } }]
+            const undoDel = invertProjectOps(doc, del)
+            let now = applyProjectOps(doc, del)
+            expect(now.mappingState.playing).toBe('')
+            now = applyProjectOps(now, [{ type: 'setMappingState', payload: { patch: { playing: 'a' } } }])
+            now = applyProjectOps(now, undoDel)
+            expect(now.mappingState.visuals.map((visual) => visual.id)).toEqual(['a', 'b'])
+            expect(now.mappingState.playing).toBe('a')
+            now = applyProjectOps(now, del)
+            expect(now.mappingState.playing).toBe('a')
         })
         it('deleteMappingVisual restores the last visual at the back', () => {
             const doc = ['a', 'b'].reduce((d, id) => create(d, v(id)), visualDoc())

@@ -21,7 +21,7 @@ import useSpaceIdentity from '../hooks/useSpaceIdentity.js'
 import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import { useLocalFileUrl } from './useLocalFileUrl.js'
 import { ADD_CHOICES, FILE_ACCEPT, MapScreenInspector, MapScreenList, MapVisualInspector, useVisualUpload, visualForChoice } from './MapScreenParts.jsx'
-import { MapDeck, MapEffectsBrowser, MapEffectsPanel, MapOutputMonitor, MapPreviewMonitor, newEffect } from './MapDeskDock.jsx'
+import { MapAutopilot, MapDeck, MapEffectsBrowser, MapEffectsPanel, MapOutputMonitor, MapPreviewMonitor, newEffect } from './MapDeskDock.jsx'
 import { MapSplit, useDeskSplits } from './MapSplit.jsx'
 import { paramSpecSignature, subscribeVisualParams } from './visualParams.js'
 import MapAdvancedOutput from './MapAdvancedOutput.jsx'
@@ -58,6 +58,31 @@ const writePreviewOn = (on) => {
 // compositor cannot sample a cross-origin page, and half the sources we must
 // show are cross-origin pages.
 
+// The wall size, typed: used on Enter or when the box is left, not on every
+// key. Typing 1920 resized the wall through 1, 19 and 192 px, live on the
+// projector, and an emptied box made it 1 px (audit 11-12). Esc puts it back.
+export function WallSizeBox({ value, label, onCommit }) {
+    const [draft, setDraft] = useState(null)
+    const cancel = useRef(false)
+    const commit = () => {
+        const next = Math.round(Number(String(draft ?? '').replace(',', '.')))
+        if (!cancel.current && draft !== null && String(draft).trim() !== '' && Number.isFinite(next) && next > 0 && next !== value) {
+            onCommit(Math.max(16, Math.min(16384, next)))
+        }
+        cancel.current = false
+        setDraft(null)
+    }
+    return (
+        <input type="number" min="16" max="16384" aria-label={label} value={draft ?? value}
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commit}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter') event.currentTarget.blur()
+                if (event.key === 'Escape') { cancel.current = true; event.currentTarget.blur() }
+            }} />
+    )
+}
+
 export default function MapSurface({ projectId, spaceId }) {
     const {
         store, document: doc, mapping, surfaces, syncState, applyOps,
@@ -74,7 +99,11 @@ export default function MapSurface({ projectId, spaceId }) {
     // link: a thumbnail is not a machine on the desk, and it must not appear
     // in the Machines list of whoever is really working here.
     const [isPreview] = useState(() => isPreviewRequest())
-    const { machines, ndiScan } = useMachinePresence(isPreview ? null : spaceId)
+    // NDI by a 5 s poll here too, not a held stream: the desk and /out in one
+    // browser held six connections to this address, Chrome's limit, and a save
+    // waited 10–45 s for one to free (audit 11-12). A new NDI source shows
+    // within 5 s instead of at once.
+    const { machines, ndiScan } = useMachinePresence(isPreview ? null : spaceId, { ndi: 'poll' })
     // The one bar, above the desk's own. Never on /out — that is MapOutput,
     // the wall's picture, and a bar there would be projected with the work.
     const localInstall = useLocalInstall()
@@ -643,14 +672,17 @@ export default function MapSurface({ projectId, spaceId }) {
                         title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
                     <label className="map-field map-field-inline" title="The composition: the size of the wall picture">
                         <span>Output</span>
-                        <input type="number" min="1" value={output.width}
-                            onChange={(event) => setOutput({ output: { ...output, width: Number(event.target.value) || 1 } })} />
+                        <WallSizeBox label="Output width" value={output.width}
+                            onCommit={(width) => setOutput({ output: { ...output, width } })} />
                         <span aria-hidden="true">x</span>
-                        <input type="number" min="1" value={output.height}
-                            onChange={(event) => setOutput({ output: { ...output, height: Number(event.target.value) || 1 } })} />
+                        <WallSizeBox label="Output height" value={output.height}
+                            onCommit={(height) => setOutput({ output: { ...output, height } })} />
                     </label>
                     <button type="button" className="map-action map-action-mapping" onClick={() => setMappingOpen(true)}
                         title="The mapping window: slices, input selection, transform, warp points, soft edge, the device the wall plays on">Mapping</button>
+                    {/* The bar show's autopilot (only while its engine runs): a show-wide
+                        switch like Live, so it sits up here, not in the crowded clip bar. */}
+                    <MapAutopilot />
                     <button type="button" className={`map-toggle${moreOpen ? ' is-on' : ''}`} onClick={() => setMoreOpen((value) => !value)}
                         title="Screens list, machines, wall photo, export / import">More</button>
                     <button type="button" className={`map-toggle${live ? ' is-on' : ''}`} onClick={() => setLive((value) => !value)}

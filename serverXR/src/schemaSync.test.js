@@ -1185,7 +1185,10 @@ describe('the visuals bank on the CJS twin', () => {
     const after = applyProjectOps(doc, ops)
     expect(after.mappingState.surfaces[0].source).toEqual({ kind: 'wall', ref: '' })
     expect(after.mappingState.playing).toBe('')
-    expect(applyProjectOps(after, schema.invertProjectOps(doc, ops)).mappingState).toEqual(doc.mappingState)
+    // the inverse restores everything but the wall, which it leaves as it is (audit 11-12)
+    const undone = applyProjectOps(after, schema.invertProjectOps(doc, ops)).mappingState
+    expect(undone.playing).toBe('')
+    expect({ ...undone, playing: 'a' }).toEqual(doc.mappingState)
   })
 
   it('matches the ESM twin on clamping, caps and kinds', () => {

@@ -28,9 +28,68 @@ export const FILE_ACCEPT = 'video/*,image/*,.html,.htm,text/html'
 
 // --- bringing files in ------------------------------------------------
 
+// What a file must pass before it is uploaded (audit 11-12). An empty file, a
+// video the browser cannot decode (HAP, ProRes, DXV: Resolume's own codecs)
+// and a picture that will not decode were all added as clips that never
+// showed anything. Returns '' when the file is fine, else why not.
+const VIDEO_ADVICE = 'can’t play in a browser (HAP, ProRes and DXV can’t). Export it as H.264 MP4 or WebM'
+export async function checkVisualFile(file, { probe = probeMediaFile } = {}) {
+    if (!file?.size) return 'is empty'
+    const kind = visualKindForFile(file)
+    if (kind !== 'video' && kind !== 'image') return ''
+    const answer = await probe(file, kind)
+    if (answer !== 'bad') return ''
+    return kind === 'video' ? VIDEO_ADVICE : 'could not be read as a picture'
+}
+
+// Can this browser decode it? 'ok', 'bad', or 'unknown' (no media here, or
+// slower than the wait: then it is let through, as before).
+export function probeMediaFile(file, kind, { timeoutMs = 5000 } = {}) {
+    if (typeof document === 'undefined' || typeof URL?.createObjectURL !== 'function' || /jsdom/i.test(globalThis.navigator?.userAgent || '')) {
+        return Promise.resolve('unknown')
+    }
+    return new Promise((resolve) => {
+        const url = URL.createObjectURL(file)
+        const element = kind === 'video' ? document.createElement('video') : new Image()
+        let done = false
+        let timer = 0
+        const finish = (answer) => {
+            if (done) return
+            done = true
+            clearTimeout(timer)
+            if (kind === 'video') { element.removeAttribute('src'); element.load?.() }
+            URL.revokeObjectURL(url)
+            resolve(answer)
+        }
+        timer = setTimeout(() => finish('unknown'), timeoutMs)
+        if (kind === 'video') {
+            element.muted = true
+            element.preload = 'auto'
+            element.addEventListener('loadeddata', () => finish('ok'), { once: true })
+            element.addEventListener('error', () => finish('bad'), { once: true })
+        } else {
+            element.onload = () => finish('ok')
+            element.onerror = () => finish('bad')
+        }
+        element.src = url
+    })
+}
+
+// A very long file name made the server answer only "Server error" (audit
+// 11-12): it is shortened before upload, keeping its ending.
+const MAX_FILE_NAME = 100
+export const shortFileName = (file) => {
+    const name = String(file?.name || '')
+    if (name.length <= MAX_FILE_NAME || typeof File !== 'function') return file
+    const dot = name.lastIndexOf('.')
+    const ext = dot > 0 && name.length - dot <= 10 ? name.slice(dot) : ''
+    return new File([file], name.slice(0, MAX_FILE_NAME - ext.length) + ext, { type: file.type, lastModified: file.lastModified })
+}
+const shownName = (name) => (name.length > 48 ? `${name.slice(0, 45)}…` : name)
+
 // Upload each file to the project and hand back one visual per file. HTML is
 // uploaded like any other file; serverXR serves it sandboxed.
-export function useVisualUpload({ projectId, onUpsertAsset }) {
+export function useVisualUpload({ projectId, onUpsertAsset, check = checkVisualFile }) {
     const [state, setState] = useState({ busy: false, notice: '', tone: 'ok' })
     const bringIn = async (fileList) => {
         const files = Array.from(fileList || [])
@@ -47,14 +106,17 @@ export function useVisualUpload({ projectId, onUpsertAsset }) {
         setState({ busy: true, notice: `Bringing in ${usable.length === 1 ? usable[0].name : `${usable.length} files`}…`, tone: 'ok' })
         const made = []
         const failed = []
-        for (const file of usable) {
+        for (const original of usable) {
+            const file = shortFileName(original)
+            const problem = await check(file)
+            if (problem) { failed.push(`${shownName(original.name)} ${problem}.`); continue }
             try {
                 const asset = await uploadProjectAsset(projectId, file)
                 if (!asset?.id) throw new Error('no file came back')
                 onUpsertAsset?.(asset)
                 made.push({ name: visualNameForFile(file), source: { kind: visualKindForFile(file), ref: asset.url || '' } })
             } catch (error) {
-                failed.push(`${file.name}: ${error?.message || 'could not bring it in'}`)
+                failed.push(`${shownName(original.name)}: ${error?.message || 'could not bring it in'}`)
             }
         }
         const skipped = files.length - usable.length

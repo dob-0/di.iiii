@@ -43,6 +43,8 @@
 .map-mo-btn:hover:not(:disabled) { border-color: var(--mo-line-strong); background: rgba(255, 255, 255, 0.04); }
 .map-mo-btn:disabled { opacity: 0.4; cursor: default; }
 .map-mo-btn.is-primary { background: var(--mo-accent); border-color: var(--mo-accent); color: #031314; font-weight: 600; }
+/* The bar show's Autopilot (MapAutopilot), lit while it changes the patterns. */
+.map-mo-btn.map-autopilot.is-on { border-color: var(--mo-accent); color: var(--mo-accent); background: rgba(var(--mo-accent-rgb), 0.14); }
 .map-mo-btn.is-on { border-color: rgba(var(--mo-accent-rgb), 0.6); background: rgba(var(--mo-accent-rgb), 0.16); color: var(--mo-accent); }
 .map-mo-icon { width: 26px; height: 26px; padding: 0; border: 1px solid transparent; background: transparent; color: var(--mo-muted); font-size: 15px; line-height: 1; cursor: pointer; }
 .map-mo-icon:hover:not(:disabled) { color: var(--mo-text); border-color: var(--mo-line); }
