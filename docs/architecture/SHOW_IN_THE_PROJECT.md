@@ -1,6 +1,6 @@
 # A show in its project: the plan of the move
 
-**Status: a plan. Nothing on this page is built.** Decided on 2026-11-19: a show lives in its project, and the machine keeps
+**Status: a plan. Step 1 is built (`di show count`); steps 2 to 6 are not.** Decided on 2026-11-19: a show lives in its project, and the machine keeps
 only the wire (`docs/ai/decisions/2026-11-19-a-show-lives-in-its-project.md`). This page is the road there: six steps, each its
 own job and its own pull request, each started on the owner's word. What is built today is described in
 `docs/architecture/LIGHTING_SHOW_PORTABILITY.md` and `docs/architecture/LIGHTING_DESK.md`.
@@ -79,7 +79,7 @@ project document.
 
 ### Step 1. Count every machine (read-only)
 
-- **Builds:** one read-only command in `scripts/` (planned). For the machine it runs on it prints: per project document, the
+- **Builds:** one read-only command, `di show count` (`scripts/show/count.mjs`). For the machine it runs on it prints: per project document, the
   lamps, designed looks, cues and laser objects; per desk file, a count of every kind it holds (lamps, looks, light scenes,
   layers, sets, effects, LFOs, the MIDI map, custom fixture types; the laser bank's looks, the palette, the link) and what
   names a project. It also lists the per-browser stores by name, from the code. It reads keys, counts and sizes, never a
