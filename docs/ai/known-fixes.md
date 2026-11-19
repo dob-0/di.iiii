@@ -3,6 +3,12 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor shows every chat (2026-11-19, N5508)
+
+Symptom: chats that wait for the owner were only text boxes low on the Board tab (one scrolled inside a 710 px window), not in the "things need you" strip.
+Fix: a `chats` panel through the report door (`serverXR/src/monitorChats.js`, `chatsBlock`), a `chats` block in GET /api/monitor, rows for asking chats in the strip (`MonitorOverview.heroState`) and a Chats lane of cards on the Work tab (`MonitorChats.jsx`). No list, or one older than 120 s, is "no chat data" / "old", never "all well". The owner's own message text is dropped on the server before it is stored.
+Regression tests: `serverXR/src/monitorChats.test.js`, `serverXR/src/monitorHub.test.js` (chats), `src/components/preferences/MonitorChats.test.jsx`.
+
 ## Admin MdiD: regroup, Spaces world, click walk (2026-11-18)
 
 Symptoms (owner): Spaces and users was hard to read, Open call sat under it, nothing was live or clickable as a picture.
@@ -1886,6 +1892,13 @@ Symptom: on a Raspberry Pi where a standby di.iiii held port 4000, a fresh insta
 Cause: `alive(home, port)` (`scripts/di/state.mjs`) only asks whether something answers `/serverXR/api/health` on the port; another install's serverXR answers the same, so `cmdUp` claimed it as this install's.
 Fix: `cmdUp` (`scripts/di/cli.mjs`) now asks `node.ownsServer(home)` (`scripts/di/runner-node.mjs`: supervisor, pid file, or a process out of this install's own versions directory) before saying "already running"; if the answerer is not this install it prints `ui.portTaken` ("port N is held by another program — not by this di.iiii", with a free port to use) and exits 1. Docker installs keep the old reading.
 Regression tests: `scripts/di/portTaken.test.js` (a stranger's health answer on a free port → "held by another program", exit 1; the install's own pid file → "already running"); `scripts/di/oneAddressPrinted.test.js` now gives its running install a pid file.
+
+## `di status`, `di update`, `di new` and the other commands trusted another program's server on the port (2026-11-19)
+
+Symptom: with a stranger's healthy serverXR on the port (the Pi's standby di, 2026-11-18), `di up` was fixed to say "held by another program", but `di status` reported it as this install, `di update`, `di restore`, `di open`, `di sync`, `di service` and `di spaces` acted on it, and `di new` talked to it (Unauthorized). The review of #1306 named this.
+Cause: every command still asked `alive(home, port)` (`scripts/di/state.mjs`), which only checks the health route; the ownership check lived only in `cmdUp`.
+Fix: `scripts/di/cli.mjs` has one reading, `ownAlive` / `heldByStranger` (node installs; `ownsPort` in `scripts/di/runner-node.mjs`, socket inode from /proc against this install's own pids); status, open, new, move, post, spaces, sync, restore, update, service and the info block use it and print the same "port N is held by another program" line. `di save` reads the install's data directly, so it needs no check.
+Regression tests: `scripts/di/heldPortCommands.test.js` (status and new refuse, and new stops after `di up` refuses; red with `ownAlive` back to `alive`); `scripts/di/oneAddressPrinted.test.js` now writes the pid file for the in-process server it starts.
 
 ## The Monitor page stayed on "loading…" in the dev server although every answer came back 200 (2026-11-16)
 Cause: `MonitorSection.jsx` set its `alive` flag to false in an unmount cleanup and never back to true. React StrictMode (`src/index.jsx`) mounts, unmounts and mounts again in development, so after the first cleanup every answer of `GET /api/monitor` was dropped; a production build (no double mount) showed the page. Fix: the effect sets `alive.current = true` on every mount. Guard: `src/components/preferences/MonitorSection.test.jsx` ("shows its data under StrictMode"), which fails without the fix (run both ways). Seen on studio-mac with `di-dev up monitor --api scratch`, desk 1440 and phone 390.

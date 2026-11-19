@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { postMonitorAsk } from '../../services/apiClient.js'
 import { ago } from './monitorFormat.js'
+import MonitorChats from './MonitorChats.jsx'
 
 // Work: one big ask bar on top, the open asks (newest first), what each agent is
 // doing (a live square when busy), and which machines reported lately, each with
@@ -24,7 +25,7 @@ export const dropSeen = (pending, serverRows) => {
     return left.length === pending.length ? pending : left
 }
 
-export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
+export default function MonitorWorkspace({ chats, asks, agents, reports, onPick }) {
     const [text, setText] = useState('')
     const [pending, setPending] = useState([])
     const [problem, setProblem] = useState('')
@@ -87,6 +88,9 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
                 <span className="monitor-meta monitor-ask-hint">Enter sends · Shift+Enter new line</span>
                 {problem ? <span className="monitor-note is-down">{problem}</span> : null}
             </form>
+
+            <div className="monitor-group-title">Chats <span className="preferences-tree-tag">{chats?.counts?.total ?? 0}</span></div>
+            <MonitorChats chats={chats} />
 
             <div className="monitor-group-title">Open asks <span className="preferences-tree-tag">{shown.length}</span></div>
             {asks && asks.ok === false ? <div className="monitor-note is-down">Asks unavailable here{asks.error ? `: ${asks.error}` : ''}</div> : null}

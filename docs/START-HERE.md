@@ -10,7 +10,7 @@ The same page with COPY buttons and walked / not-walked marks: open `docs/start-
 curl -fsSL https://diiii.xyz/get | sh     # installs into ~/.di
 # open a NEW terminal (that puts di on your PATH), then:
 di --version
-di up                                      # starts it and opens the address it prints
+di up                                      # starts it and opens http://diiii.localhost/ (port 80 taken: it prints another address)
 di new my-space                            # make a space
 di save my-space                           # one file: my-space.diiii
 ```

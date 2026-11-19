@@ -13,6 +13,7 @@ const os = require('node:os')
 const crypto = require('node:crypto')
 const { execFile } = require('node:child_process')
 const PARTS = require('./parts.json').parts
+const { sanitizeChats, chatsBlock } = require('./monitorChats')
 
 const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
@@ -23,7 +24,7 @@ const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
 const ASKS_MAX = 100
-const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows']
+const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
 
@@ -75,6 +76,7 @@ function cleanPanelValue(value, depth = 0, key = '') {
   }
   return undefined
 }
+const withoutChats = (panels) => { const { chats, ...rest } = panels || {}; return rest }
 const isUp = (status) => status >= 200 && status < 300
 
 // ---- reports from other machines -------------------------------------------
@@ -108,7 +110,10 @@ function createReportStore({ now = () => Date.now() } = {}) {
 
     const panels = {}
     for (const name of PANEL_NAMES) {
-      if (isPlainObject(body.panels[name])) panels[name] = cleanPanelValue(body.panels[name])
+      if (!isPlainObject(body.panels[name])) continue
+      // chats: only what the page shows is kept (no owner text, no paths); see monitorChats.js
+      if (name === 'chats') panels.chats = { source: sanitizeChats(body.panels.chats.source ?? body.panels.chats, host), ...(body.panels.chats.ok === false ? { error: cleanText(body.panels.chats.error, 200) || 'chat list not read' } : {}) }
+      else panels[name] = cleanPanelValue(body.panels[name])
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])
       .filter(isPlainObject)
@@ -133,7 +138,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
     const t = now()
     return [...byHost.values()]
       .sort((a, b) => b.reportedAt - a.reportedAt)
-      .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: r.panels }))
+      .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: withoutChats(r.panels) }))
   }
 
   const raw = () => { prune(); return [...byHost.values()] }
@@ -414,6 +419,19 @@ function createHub({
     return { rows, version: rel.version || null, packedAt: rel.packedAt || null }
   }
 
+  // Chats come through the same door as everything else: this machine's own chat panel (a feed in its
+  // config) and the chat panel of every machine that reported. Nobody carrying chats is "no chat data".
+  const chatsFor = (base) => {
+    const self = base.panels?.chats
+    const inputs = []
+    if (self && (self.source || self.ok === false)) inputs.push({ host: String(base.host || 'this machine').split('.')[0], source: self.source || null, error: self.ok === false ? (self.error || 'chat list not read') : null })
+    for (const r of reports.raw()) {
+      const c = r.panels?.chats
+      if (c) inputs.push({ host: r.host, source: c.source || null, error: c.error || null })
+    }
+    return chatsBlock(inputs, { now: now() })
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   async function getSnapshot({ selfBase = null } = {}) {
     const base = await store.getMonitor({ selfBase })
@@ -424,6 +442,7 @@ function createHub({
       reports: reportRows,
       tiers: tierBlock,
       parts: partsBlock(base),
+      chats: chatsFor(base),
       spaces: spaceBlock,
       asks: asksBlock(),
       map: buildMap({ base, reportRows, tierBlock, spaceBlock })
@@ -434,7 +453,7 @@ function createHub({
 }
 
 /** The stream compares snapshots without the fields that change on every scan. */
-const IGNORED_KEYS = new Set(['generatedAt', 'ms'])
+const IGNORED_KEYS = new Set(['generatedAt', 'ms', 'heardSecondsAgo'])
 function fingerprint(snapshot) {
   return crypto.createHash('sha1').update(JSON.stringify(snapshot, (key, value) => (IGNORED_KEYS.has(key) ? undefined : value))).digest('hex')
 }
