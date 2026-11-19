@@ -747,3 +747,29 @@ detached start, polling, download, stop — has been run against a real box.
 `python3 -I scripts/place/scenes_sheet.py SCENES.json out.html [--meta M.json] [--front F.html]` is the owner's picture per scene;
 `laser_sheet.py SCENES.json laser-plan.json out.html [--site S.json] [--meta M.json]` is the laser design sheet (plan from `laser_frames.py --plan-out`).
 Production text lives in the `--meta`/`--front`/`--site` files beside the scenes file (`rigs/moxir-*-2026-10-15*`); outside views for `look_shots.cjs`: `rigs/moxir-views-2026-10-15.json`.
+
+## Measure a drawn rectangle against the plot's own grid (`plot_grid_measure.py`, 2026-11-19)
+
+A light plot (a PDF or an image) draws an LED wall, a riser or a truss as a rectangle on a regular grid.
+`plot_grid_measure.py` reads that rectangle in grid squares and metres, and an LED wall in whole cabinets and pixels.
+Needs python3 with numpy and Pillow; poppler (`pdftoppm`) only for PDF input.
+
+1. Name the drawing: a PNG/JPG, or the PDF itself (`--dpi 300 --page 1`).
+2. Find the rough outline by eye in an image viewer, in raster pixels: `--near LEFT,TOP,RIGHT,BOTTOM`.
+3. Run it, with what you know of the drawing:
+
+```bash
+python3 -I scripts/place/plot_grid_measure.py plan.pdf --dpi 300 --near 1830,1313,3041,2071 \
+    --grid-m 1 --cabinet-m 0.5 --cabinet-px 128 --cue truss=1000,420,3900,480 --picture out.png
+```
+
+4. Read the lines: `grid` (the pitch is the median gap of the light-grey lines that cross the page), `outline` (squares and
+   metres), `edges on grid lines` (how far each edge sits from a grid line), one `cue` per `--cue` (the extent of a coloured or dark
+   mark in squares: a truss section of 3 m should read 3.00), `LED` (cabinets must come out whole, else it fails) and the last line,
+   the claim. `--json` prints the same as one object.
+
+`--grid-m` is what one grid square is in metres. It is your claim, not a measurement: the tool repeats it on its last line.
+A size read from a drawing is a reading, not a confirmed size: ask the maker of the wall to confirm it. When it fails it prints one
+`FAIL: <what> — <fix>` line and exits 1 (an edge not within `--tolerance` of `--near`, fewer than 3 grid lines, cabinets not whole).
+`--grid-grey`, `--grid-cover`, `--dark` and `--line-cover` tune what counts as a grid line and an outline edge. The test
+(`plot-grid-measure.test.js`) draws its own plot and needs no real drawing.
