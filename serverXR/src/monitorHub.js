@@ -13,19 +13,21 @@ const os = require('node:os')
 const crypto = require('node:crypto')
 const { execFile } = require('node:child_process')
 const PARTS = require('./parts.json').parts
+const { sanitizeCredits } = require('./monitorCredits')
 const { sanitizeChats, chatsBlock } = require('./monitorChats')
 const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
 const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
 const REPORT_MAX_BYTES = 256 * 1024
-const MAX_HOSTS = 40
+const MAX_HOSTS = 120
 const MAX_HOSTS_PER_SUBJECT = 12
+const MAX_OTHER_HOSTS = 80 // machines of senders without ledger rights (not the owner): the rest of MAX_HOSTS is kept for the owner
 const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
 const ASKS_MAX = 100
-const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats']
+const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats', 'credits']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
 
@@ -87,12 +89,12 @@ function createReportStore({ now = () => Date.now() } = {}) {
 
   const prune = () => {
     const t = now()
-    for (const [host, rec] of byHost) if (t - rec.reportedAt > KEEP_MS) byHost.delete(host)
+    for (const [key, rec] of byHost) if (t - rec.reportedAt > KEEP_MS) byHost.delete(key)
   }
 
   /**
-   * Returns { ok: true } or { error, status }. `subject` is who sent it: a host belongs to the
-   * subject that reported it until it goes stale (409 for anyone else), and one subject holds at
+   * Returns { ok: true } or { error, status }. `subject` is who sent it: a machine is keyed by its
+   * sender and name, so two people may each have an `aylmo`, and one subject holds at
    * most MAX_HOSTS_PER_SUBJECT hosts. `ledger` says the sender may bring ledger asks.
    */
   function put(body, { subject = null, ledger = false } = {}) {
@@ -104,9 +106,11 @@ function createReportStore({ now = () => Date.now() } = {}) {
     try { size = Buffer.byteLength(JSON.stringify(body)) } catch { return { error: 'bad_report', status: 400 } }
     if (size > REPORT_MAX_BYTES) return { error: 'too_large', status: 413, max: REPORT_MAX_BYTES }
     prune()
-    const held = byHost.get(host)
-    if (held && held.subject !== subject && now() - held.reportedAt <= STALE_MS) return { error: 'host_taken', status: 409 }
+    // a machine is keyed by who reported it AND its name: nobody can take another person's machine name
+    const key = `${subject}\n${host}`
+    const held = byHost.get(key)
     if (!held && byHost.size >= MAX_HOSTS) return { error: 'too_many_hosts', status: 429 }
+    if (!held && !ledger && [...byHost.values()].filter((r) => !r.ledger).length >= MAX_OTHER_HOSTS) return { error: 'too_many_hosts', status: 429 }
     if (!held && [...byHost.values()].filter((r) => r.subject === subject).length >= MAX_HOSTS_PER_SUBJECT) return { error: 'too_many_hosts', status: 429 }
 
     const panels = {}
@@ -114,7 +118,16 @@ function createReportStore({ now = () => Date.now() } = {}) {
       if (!isPlainObject(body.panels[name])) continue
       // chats: only what the page shows is kept (no owner text, no paths); see monitorChats.js
       if (name === 'chats') panels.chats = { source: sanitizeChats(body.panels.chats.source ?? body.panels.chats, host), ...(body.panels.chats.ok === false ? { error: cleanText(body.panels.chats.error, 200) || 'chat list not read' } : {}) }
-      else panels[name] = cleanPanelValue(body.panels[name])
+      else if (name === 'credits') {
+        // credits: only route, ready, meter, have, why are kept, an address becomes "login"; see monitorCredits.js
+        const c = body.panels.credits
+        let ok = c.ok !== false
+        let error = ok ? '' : cleanText(c.error, 200)
+        let rows = (ok && sanitizeCredits(c.rows)) || []
+        // rows that are not a list, a row without a name, or "configured" without rows: a changed shape greys the panel, never a quiet 0/0
+        if (ok && (rows.dropped || (c.rows !== undefined && !Array.isArray(c.rows)) || (c.configured && !Array.isArray(c.rows)))) { ok = false; error = 'the credits rows were not in the expected shape'; rows = [] }
+        panels.credits = { ok, configured: ok && Array.isArray(c.rows) ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(!ok ? { error } : {}) }
+      } else panels[name] = cleanPanelValue(body.panels[name])
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])
       .filter(isPlainObject)
@@ -129,20 +142,23 @@ function createReportStore({ now = () => Date.now() } = {}) {
       .filter((a) => a.id && a.text)
     const commit = typeof body.commit === 'string' && COMMIT_RE.test(body.commit.trim()) ? body.commit.trim() : null
     const builtAt = typeof body.builtAt === 'string' && !Number.isNaN(Date.parse(body.builtAt)) ? new Date(body.builtAt).toISOString() : null
-    byHost.set(host, { host, subject, reportedAt: now(), panels, asks, commit, builtAt })
+    byHost.set(key, { host, subject, ledger: !!ledger, reportedAt: now(), panels, asks, commit, builtAt })
     return { ok: true, host }
   }
 
-  /** The `reports` contract rows, newest first. Stale ones stay (flagged) until an hour passes. */
-  function list() {
+  /** The `reports` contract rows, newest first. Stale ones stay (flagged) until an hour passes.
+   *  `subjects` keeps only the machines reported by those accounts (the dev tier lists nobody else's). */
+  // `chats`: keep each machine's (already sanitised) chat panel; only the signed-in owner's own feed asks for it.
+  function list({ subjects = null, chats = false } = {}) {
     prune()
     const t = now()
     return [...byHost.values()]
+      .filter((r) => !subjects || subjects.map(String).includes(String(r.subject)))
       .sort((a, b) => b.reportedAt - a.reportedAt)
-      .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: withoutChats(r.panels) }))
+      .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: chats ? r.panels : withoutChats(r.panels) }))
   }
 
-  const raw = () => { prune(); return [...byHost.values()] }
+  const raw = ({ subjects = null } = {}) => { prune(); return [...byHost.values()].filter((r) => !subjects || subjects.map(String).includes(String(r.subject))) }
   const clear = () => byHost.clear()
   return { put, list, raw, clear }
 }
@@ -277,16 +293,16 @@ function createHub({
   // one probe round at a time: the GET and the SSE poller share the round in flight, so one
   // outage is never counted as two misses (same rule as monitorStore.getMonitor).
   let tiersInflight = null
-  async function tiers() {
+  async function tiers(subjects = null) {
     const t = now()
     if (tierCache && t - tierCache.at < TIER_CACHE_MS && tierCache.self === selfId()) return tierCache.value
     if (tiersInflight && tiersInflight.self === selfId()) return tiersInflight.promise
-    const promise = tiersScan().finally(() => { tiersInflight = null })
+    const promise = tiersScan(subjects).finally(() => { tiersInflight = null })
     tiersInflight = { self: selfId(), promise }
     return promise
   }
 
-  async function tiersScan() {
+  async function tiersScan(subjects = null) {
     const t = now()
     const self = selfId()
     const rel = releaseInfo() || {}
@@ -302,7 +318,7 @@ function createHub({
     if (self.startsWith('local:')) {
       rows.push({ id: self, url: '', source: 'self', status: 200, ms: 0, commit: rel.gitCommit || null, builtAt: rel.generatedAt || null, behindDev: null })
     }
-    for (const r of reports.raw()) {
+    for (const r of reports.raw({ subjects })) {
       const id = `local:${r.host}`
       if (rows.some((x) => x.id === id)) continue
       // a machine that only REPORTS was never probed: no status, a state from how fresh its report is
@@ -354,11 +370,11 @@ function createHub({
     return { ok, rows }
   }
 
-  function asksBlock() {
+  function asksBlock(subjects = null) {
     let page = []
     let ok = true
     try { page = asks ? asks.list() : [] } catch { ok = false }
-    const ledger = reports.raw().flatMap((r) => r.asks).slice(0, ASKS_MAX)
+    const ledger = reports.raw({ subjects }).flatMap((r) => r.asks).slice(0, ASKS_MAX)
     return { ok, rows: [...page, ...ledger] }
   }
 
@@ -455,11 +471,15 @@ function createHub({
 
   // Chats come through the same door as everything else: this machine's own chat panel (a feed in its
   // config) and the chat panel of every machine that reported. Nobody carrying chats is "no chat data".
-  const chatsFor = (base) => {
+  const chatsFor = (base, extra = [], subjects = null) => {
     const self = base.panels?.chats
     const inputs = []
     if (self && (self.source || self.ok === false)) inputs.push({ host: String(base.host || 'this machine').split('.')[0], source: self.source || null, error: self.ok === false ? (self.error || 'chat list not read') : null })
-    for (const r of reports.raw()) {
+    for (const r of reports.raw({ subjects })) {
+      const c = r.panels?.chats
+      if (c) inputs.push({ host: r.host, source: c.source || null, error: c.error || null })
+    }
+    for (const r of extra) {
       const c = r.panels?.chats
       if (c) inputs.push({ host: r.host, source: c.source || null, error: c.error || null })
     }
@@ -467,18 +487,29 @@ function createHub({
   }
 
   /** The whole contract object for GET /api/monitor and the stream. */
-  async function getSnapshot({ selfBase = null } = {}) {
+  // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
+  // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
+  // never replacing a machine this server already holds.
+  async function getSnapshot({ selfBase = null, subjects = null, account = null } = {}) {
     const base = await store.getMonitor({ selfBase })
-    const [tierBlock, spaceBlock] = await Promise.all([tiers(), spaces()])
-    const reportRows = reports.list()
+    const [tierBlock, spaceBlock] = await Promise.all([tiers(subjects), spaces()])
+    const own = reports.list({ subjects })
+    const shortHost = (v) => String(v || '').split('.')[0]
+    // never a second row for this machine itself (it may also report to dev), nor for a host the server already holds
+    const held = new Set([...own.map((r) => r.host), shortHost(base.host), shortHost(os.hostname())])
+    const extra = (account?.reports || [])
+      .filter((r) => r && typeof r.host === 'string' && !held.has(r.host) && !held.has(shortHost(r.host)))
+      .map((r) => ({ ...r, via: 'dev' }))
+    const reportRows = [...own, ...extra.map(({ panels, ...r }) => ({ ...r, panels: withoutChats(panels) }))]
     return {
       ...base,
+      account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
       tiers: tierBlock,
       parts: partsBlock(base),
-      chats: chatsFor(base),
+      chats: chatsFor(base, extra, subjects),
       spaces: spaceBlock,
-      asks: asksBlock(),
+      asks: asksBlock(subjects),
       map: buildMap({ base, reportRows, tierBlock, spaceBlock })
     }
   }

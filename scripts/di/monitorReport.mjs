@@ -20,6 +20,7 @@ import { execFile } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { readLogin } from './loginStore.mjs'
 import { resolveTarget } from './login.mjs'
+import { diHome, paths } from './paths.mjs'
 
 export const USAGE = [
     'di monitor report [--once] [--every N] [--tier dev|prod | --to URL]   send this machine\'s panels to the overview',
@@ -157,6 +158,28 @@ export const timerUnits = ({ node, cli, every = EVERY_SECONDS, envPath = '' }) =
     ].join('\n')
 })
 
+/**
+ * The cli.mjs a timer should run. An installed di keeps one folder per version (paths.mjs); `di update` keeps the new version and the
+ * one before it (`pruneVersions`) and removes the rest, so a unit that names a version folder runs through one update and stops at the
+ * second (aylmo, 2026-11-19: updates at 21:55 and 23:30; every run after the second failed with "Cannot find module
+ * .../versions/<old>/cli/cli.mjs"). `current` is the link the `di` shim itself follows: use it when it leads to THIS copy. A source
+ * tree has no such link, and a link that leads to another copy is not swapped in: the running file stays (and `installTimer` says so).
+ */
+const FILE_NOT_THERE = new Set(['ENOENT', 'ENOTDIR', 'ELOOP', 'EACCES'])
+export const stableCliPath = ({ cli, diRoot = diHome() } = {}) => {
+    // a call without `cli` is a bug in the caller, and it must stay loud: a unit must never name `undefined`
+    if (typeof cli !== 'string' || !cli) throw new TypeError('stableCliPath needs `cli`, the file that is running')
+    const viaCurrent = path.join(paths(diRoot).current, 'cli', 'cli.mjs')
+    try {
+        if (fs.realpathSync(viaCurrent) === fs.realpathSync(cli)) return viaCurrent
+    } catch (error) {
+        // no installed di here (no `current` link, or one that leads nowhere): the running file is the only path there is.
+        // Any other error is not "no installed di": it stays loud.
+        if (!FILE_NOT_THERE.has(error?.code)) throw error
+    }
+    return cli
+}
+
 const AGENT_LABEL = 'xyz.diiii.monitor-report'
 
 const xmlEscape = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -180,8 +203,8 @@ export const launchdPlist = ({ node, cli, every = EVERY_SECONDS, logDir, envPath
     ''
 ].join('\n')
 
-/** macOS: a user launch agent instead of a systemd timer. Same undo: --remove. */
-export const installLaunchAgent = async ({ home = os.homedir(), node = process.execPath, cli = path.join(here(), 'cli.mjs'), remove = false, uid = process.getuid?.() ?? 501, exec = execText, say = console.log, fail = console.error } = {}) => {
+/** macOS: a user launch agent instead of a systemd timer. The program path is the stable ~/.di/current one. Same undo: --remove. */
+export const installLaunchAgent = async ({ home = os.homedir(), diRoot = diHome(), node = process.execPath, cliFile = path.join(here(), 'cli.mjs'), cli = stableCliPath({ cli: cliFile, diRoot }), remove = false, uid = process.getuid?.() ?? 501, exec = execText, say = console.log, fail = console.error } = {}) => {
     const dir = path.join(home, 'Library', 'LaunchAgents')
     const file = path.join(dir, `${AGENT_LABEL}.plist`)
     const domain = `gui/${uid}`
@@ -203,7 +226,7 @@ export const installLaunchAgent = async ({ home = os.homedir(), node = process.e
     return 0
 }
 
-export const installTimer = async ({ home = os.homedir(), node = process.execPath, cli = path.join(here(), 'cli.mjs'), remove = false, exec = execText, say = console.log, fail = console.error } = {}) => {
+export const installTimer = async ({ home = os.homedir(), diRoot = diHome(), node = process.execPath, cliFile = path.join(here(), 'cli.mjs'), cli = stableCliPath({ cli: cliFile, diRoot }), remove = false, exec = execText, say = console.log, fail = console.error } = {}) => {
     const dir = path.join(home, '.config', 'systemd', 'user')
     const units = timerUnits({ node, cli, envPath: process.env.PATH || '' })
     if (remove) {
@@ -220,6 +243,9 @@ export const installTimer = async ({ home = os.homedir(), node = process.execPat
     const active = (await exec('systemctl', ['--user', 'is-active', TIMER])).trim()
     if (active !== 'active') { fail(`the timer files are in ${dir} but systemd did not start it${out ? `: ${out.trim()}` : ''}`); return 1 }
     say(`monitor timer on: ${TIMER}, every ${EVERY_SECONDS} s. undo: di monitor install-timer --remove`)
+    // a unit that names a source tree or a version folder dies with that folder (a removed worktree, the second `di update`): say so
+    const link = path.join(paths(diRoot).current, 'cli', 'cli.mjs')
+    if (cli !== link) say(`note: the timer runs ${cli}, not the installed di (${link}), and stops when that folder is removed. To follow updates, install di and run di monitor install-timer from it.`)
     return 0
 }
 
@@ -229,9 +255,11 @@ export const runMonitor = async (args, deps = {}) => {
         collect = collectSnapshot, release = readRelease, ledger = () => execText('ledger-open', []), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), loops = Infinity } = deps
     const parsed = parseMonitorArgs(args)
     if (parsed.error) { fail(parsed.error); return 1 }
-    if (parsed.sub === 'install-timer') return (deps.platform || process.platform) === 'darwin'
-        ? installLaunchAgent({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
-        : installTimer({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
+    if (parsed.sub === 'install-timer') {
+        return (deps.platform || process.platform) === 'darwin'
+            ? installLaunchAgent({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
+            : installTimer({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
+    }
 
     const target = resolveTarget(args.flags || {})
     if (target.error) { fail(target.error); return 1 }

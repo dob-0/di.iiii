@@ -3,9 +3,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, launchdPlist, installLaunchAgent, runMonitor, sendOnce } from './monitorReport.mjs'
+import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, launchdPlist, installLaunchAgent, stableCliPath, runMonitor, sendOnce } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -59,11 +60,6 @@ describe('body and timer units', () => {
         expect(units['di-monitor-report.service']).toContain('ExecStart="/usr/bin/node" "/x/cli.mjs" monitor report --once')
         expect(units['di-monitor-report.timer']).toContain('OnUnitActiveSec=30')
     })
-    it('the service carries the caller\'s PATH so `ledger-open` is found by the timer', () => {
-        const svc = timerUnits({ node: '/n', cli: '/c', envPath: '/h/.local/bin:/usr/bin' })['di-monitor-report.service']
-        expect(svc).toContain('Environment="PATH=/h/.local/bin:/usr/bin"')
-        expect(timerUnits({ node: '/n', cli: '/c' })['di-monitor-report.service']).not.toContain('Environment=')
-    })
     it('quotes the ExecStart paths for systemd: spaces kept, quote and backslash escaped, % and $ doubled', () => {
         expect(systemdQuote('/Users/a b/node')).toBe('"/Users/a b/node"')
         expect(systemdQuote('/x/"y"\\z')).toBe('"/x/\\"y\\"\\\\z"')
@@ -82,6 +78,124 @@ describe('body and timer units', () => {
         expect(await installTimer({ home, node: '/n', cli: '/c', exec, remove: true, ...io })).toBe(0)
         expect(fs.readdirSync(dir)).toEqual([])
     })
+    // aylmo 2026-11-19: the unit named .../versions/<old>/cli/cli.mjs; `di update` keeps the new version and the one before it, so the
+    // folder went at the SECOND update (23:30) and 161 runs in a row failed with "Cannot find module". An installed di is versions/<v>/
+    // plus a `current` link (paths.mjs): the unit must name the link.
+    const fakeVersion = (diRoot, name) => {
+        const dir = path.join(diRoot, 'versions', name, 'cli')
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, 'cli.mjs'), `// ${name}\n`)
+        return path.join(dir, 'cli.mjs')
+    }
+    const pointCurrent = (diRoot, name) => {
+        fs.rmSync(path.join(diRoot, 'current'), { force: true })
+        fs.symlinkSync(path.join('versions', name), path.join(diRoot, 'current'))
+    }
+    // an install root for the code under test to find through DI_HOME (what `diHome()` reads), put back afterwards
+    const withDiHome = async (diRoot, run) => {
+        const before = process.env.DI_HOME
+        process.env.DI_HOME = diRoot
+        try { return await run() } finally {
+            if (before === undefined) delete process.env.DI_HOME
+            else process.env.DI_HOME = before
+        }
+    }
+    // an install whose `current` leads to a version whose `cli` folder IS this running copy: the link then leads to the file running now
+    const installWithThisCopy = (diRoot, name) => {
+        const version = path.join(diRoot, 'versions', name)
+        fs.mkdirSync(version, { recursive: true })
+        fs.symlinkSync(path.dirname(fileURLToPath(import.meta.url)), path.join(version, 'cli'))
+        pointCurrent(diRoot, name)
+        return path.join(diRoot, 'current', 'cli', 'cli.mjs')
+    }
+    it('an installed di: the unit names the `current` link, which still reaches the new version after `di update` removed the old folder', async () => {
+        const home = tmpHome()
+        const diRoot = path.join(home, '.di')
+        const v1 = fakeVersion(diRoot, '0.4.4-dev.aaaa1111')
+        pointCurrent(diRoot, '0.4.4-dev.aaaa1111')
+        const exec = async (cmd, args) => (args.includes('is-active') ? 'active\n' : '')
+        expect(await installTimer({ home, diRoot, node: '/n', cliFile: v1, exec, ...quiet() })).toBe(0)
+        const unit = fs.readFileSync(path.join(home, '.config', 'systemd', 'user', 'di-monitor-report.service'), 'utf8')
+        const stable = path.join(diRoot, 'current', 'cli', 'cli.mjs')
+        expect(unit).toContain(`ExecStart="/n" "${stable}" monitor report --once`)
+        expect(unit).not.toContain('0.4.4-dev.aaaa1111')
+        // the second `di update` after the install (the first keeps this folder as "the one before"): the link moves, the old folder goes.
+        fakeVersion(diRoot, '0.4.4-dev.bbbb2222')
+        pointCurrent(diRoot, '0.4.4-dev.bbbb2222')
+        fs.rmSync(path.join(diRoot, 'versions', '0.4.4-dev.aaaa1111'), { recursive: true })
+        expect(fs.existsSync(v1)).toBe(false) // what the old unit named: this is what failed on aylmo
+        expect(fs.readFileSync(stable, 'utf8')).toContain('bbbb2222') // what the unit names now reaches the new version
+    })
+    it('installTimer with no `cli` and no `diRoot` (only DI_HOME set): the unit names that install\'s `current` link and prints no note', async () => {
+        const home = tmpHome()
+        const diRoot = path.join(home, 'elsewhere', '.di')
+        const link = installWithThisCopy(diRoot, '0.4.4-dev.cccc3333')
+        const exec = async (cmd, args) => (args.includes('is-active') ? 'active\n' : '')
+        await withDiHome(diRoot, async () => {
+            const io = quiet()
+            expect(await installTimer({ home, node: '/n', exec, ...io })).toBe(0)
+            const unit = fs.readFileSync(path.join(home, '.config', 'systemd', 'user', 'di-monitor-report.service'), 'utf8')
+            expect(unit).toContain(`ExecStart="/n" "${link}" monitor report --once`)
+            expect(io.out.join('\n')).not.toMatch(/note: the timer runs/) // it follows the installed di: nothing to warn about
+        })
+    })
+    it('`di monitor install-timer` through the command entry (runMonitor) names the installed di\'s link, and --remove takes the units away', async () => {
+        // the production call site: it passes no `cli` (that was the bug: it named the running file's physical path) and passes `remove` on
+        const home = tmpHome()
+        const diRoot = path.join(home, 'elsewhere', '.di')
+        const link = installWithThisCopy(diRoot, '0.4.4-dev.ffff6666')
+        const exec = async (cmd, args) => (args.includes('is-active') ? 'active\n' : '')
+        const dir = path.join(home, '.config', 'systemd', 'user')
+        await withDiHome(diRoot, async () => {
+            expect(await runMonitor(parseArgs(['monitor', 'install-timer']), { home, timer: { node: '/n', exec }, ...quiet() })).toBe(0)
+            expect(fs.readFileSync(path.join(dir, 'di-monitor-report.service'), 'utf8')).toContain(`ExecStart="/n" "${link}" monitor report --once`)
+            expect(await runMonitor(parseArgs(['monitor', 'install-timer', '--remove']), { home, timer: { node: '/n', exec }, ...quiet() })).toBe(0)
+            expect(fs.readdirSync(dir)).toEqual([])
+        })
+    })
+    it('the default install root is DI_HOME: a running copy that is that install\'s `current` gets the link without `diRoot` being passed', async () => {
+        const diRoot = path.join(tmpHome(), 'custom-root')
+        const running = fakeVersion(diRoot, '0.4.4-dev.eeee5555')
+        pointCurrent(diRoot, '0.4.4-dev.eeee5555')
+        await withDiHome(diRoot, async () => {
+            expect(stableCliPath({ cli: running })).toBe(path.join(diRoot, 'current', 'cli', 'cli.mjs'))
+        })
+    })
+    it('a call without `cli` throws: a unit must never name `undefined`, and a real bug must not look like "no installed di"', () => {
+        expect(() => stableCliPath({ diRoot: path.join(tmpHome(), '.di') })).toThrow()
+    })
+    it('a running copy reached through a symlink to its version folder still matches `current`', () => {
+        const home = tmpHome()
+        const diRoot = path.join(home, '.di')
+        const real = fakeVersion(diRoot, '0.4.4-dev.dddd4444')
+        pointCurrent(diRoot, '0.4.4-dev.dddd4444')
+        const alias = path.join(home, 'alias-to-version')
+        fs.symlinkSync(path.dirname(path.dirname(real)), alias)
+        expect(stableCliPath({ cli: path.join(alias, 'cli', 'cli.mjs'), diRoot })).toBe(path.join(diRoot, 'current', 'cli', 'cli.mjs'))
+    })
+    it('a unit that has to name a source tree or another version says it will stop when that folder goes', async () => {
+        const home = tmpHome()
+        const exec = async (cmd, args) => (args.includes('is-active') ? 'active\n' : '')
+        const io = quiet()
+        const diRoot = path.join(home, '.di')
+        expect(await installTimer({ home, diRoot, node: '/n', cli: '/work/tree/scripts/di/cli.mjs', exec, ...io })).toBe(0)
+        // the whole line: the path it runs, the link it is not, why that matters, and what to do (a person reads exactly this)
+        expect(io.out.filter((line) => line.startsWith('note:'))).toEqual([
+            `note: the timer runs /work/tree/scripts/di/cli.mjs, not the installed di (${path.join(diRoot, 'current', 'cli', 'cli.mjs')}), and stops when that folder is removed. To follow updates, install di and run di monitor install-timer from it.`
+        ])
+    })
+    it('a source tree (no ~/.di/current) keeps the running file; a link to another copy is not swapped in', () => {
+        const home = tmpHome()
+        const diRoot = path.join(home, '.di')
+        const running = path.join(home, 'src', 'cli.mjs')
+        fs.mkdirSync(path.dirname(running), { recursive: true })
+        fs.writeFileSync(running, '//\n')
+        expect(stableCliPath({ cli: running, diRoot })).toBe(running)
+        const other = fakeVersion(diRoot, 'other')
+        pointCurrent(diRoot, 'other')
+        expect(stableCliPath({ cli: running, diRoot })).toBe(running)
+        expect(stableCliPath({ cli: other, diRoot })).toBe(path.join(diRoot, 'current', 'cli', 'cli.mjs'))
+    })
     it('install fails loudly when systemd did not start the timer', async () => {
         const io = quiet()
         expect(await installTimer({ home: tmpHome(), exec: async () => 'inactive', ...io })).toBe(1)
@@ -89,21 +203,26 @@ describe('body and timer units', () => {
     })
 })
 
-describe('macOS launch agent', () => {
-    it('the plist runs `monitor report --once` every 30 s and at login, escaping paths', () => {
-        const text = launchdPlist({ node: '/n&d/node', cli: '/c/cli.mjs', logDir: '/h/.di' })
+describe('PATH for the timer and macOS launch agent', () => {
+    it('the systemd service carries the caller\'s PATH so `ledger-open` is found', () => {
+        const svc = timerUnits({ node: '/n', cli: '/c', envPath: '/h/.local/bin:/usr/bin' })['di-monitor-report.service']
+        expect(svc).toContain('Environment="PATH=/h/.local/bin:/usr/bin"')
+        expect(timerUnits({ node: '/n', cli: '/c' })['di-monitor-report.service']).not.toContain('Environment=')
+    })
+    it('the plist runs `monitor report --once` every 30 s and at login, escapes paths, carries PATH', () => {
+        const text = launchdPlist({ node: '/n&d/node', cli: '/c/cli.mjs', logDir: '/h/.di', envPath: '/h/.local/bin:/usr/bin' })
         expect(text).toContain('<string>/n&amp;d/node</string>')
         expect(text).toContain('<string>monitor</string><string>report</string><string>--once</string>')
         expect(text).toContain('<key>StartInterval</key><integer>30</integer>')
         expect(text).toContain('<key>RunAtLoad</key><true/>')
-        expect(launchdPlist({ node: '/n', cli: '/c', logDir: '/l', envPath: '/h/.local/bin:/usr/bin' })).toContain('<key>PATH</key><string>/h/.local/bin:/usr/bin</string>')
+        expect(text).toContain('<key>PATH</key><string>/h/.local/bin:/usr/bin</string>')
     })
     it('install writes the file and loads it; --remove undoes it', async () => {
         const home = tmpHome()
         const calls = []
         const exec = async (cmd, args) => { calls.push(`${cmd} ${args.join(' ')}`); return args[0] === 'print' ? 'xyz.diiii.monitor-report = {' : '' }
         const io = quiet()
-        expect(await installLaunchAgent({ home, node: '/n', cli: '/c', uid: 501, exec, ...io })).toBe(0)
+        expect(await installLaunchAgent({ home, cli: '/c', node: '/n', uid: 501, exec, ...io })).toBe(0)
         const file = path.join(home, 'Library', 'LaunchAgents', 'xyz.diiii.monitor-report.plist')
         expect(fs.existsSync(file)).toBe(true)
         expect(calls).toContain('launchctl bootstrap gui/501 ' + file)
@@ -112,13 +231,13 @@ describe('macOS launch agent', () => {
     })
     it('install fails loudly when launchd did not load it', async () => {
         const io = quiet()
-        expect(await installLaunchAgent({ home: tmpHome(), uid: 501, exec: async () => '', ...io })).toBe(1)
+        expect(await installLaunchAgent({ home: tmpHome(), cli: '/c', uid: 501, exec: async () => '', ...io })).toBe(1)
         expect(io.err[0]).toMatch(/did not load/)
     })
     it('on darwin `install-timer` takes the launch-agent road', async () => {
         const io = quiet()
         const calls = []
-        const code = await runMonitor({ _: ['monitor', 'install-timer'], flags: {} }, { home: tmpHome(), platform: 'darwin', timer: { node: '/n', cli: '/c', uid: 1, exec: async (c, a) => { calls.push(c); return 'xyz.diiii.monitor-report' } }, ...io })
+        const code = await runMonitor({ _: ['monitor', 'install-timer'], flags: {} }, { home: tmpHome(), platform: 'darwin', timer: { node: '/n', cli: '/c', uid: 1, exec: async (c) => { calls.push(c); return 'xyz.diiii.monitor-report' } }, ...io })
         expect(code).toBe(0)
         expect(calls.every((c) => c === 'launchctl')).toBe(true)
     })

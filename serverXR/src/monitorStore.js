@@ -16,6 +16,7 @@ const path = require('node:path')
 const { execFile } = require('node:child_process')
 const { createAgentBoardStore } = require('./agentBoardStore')
 const { sanitizeChats } = require('./monitorChats')
+const { sanitizeCredits } = require('./monitorCredits')
 const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
 const CACHE_TTL_MS = 5000
@@ -31,7 +32,7 @@ const DEFAULT_PROBES = [
 function run(command, args, { timeout = PANEL_TIMEOUT_MS, cwd } = {}) {
   return new Promise((resolve, reject) => {
     execFile(command, args, { timeout, cwd, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
-      if (error) reject(error)
+      if (error) { Object.defineProperty(error, 'stdout', { value: String(stdout || ''), enumerable: false }); reject(error) }
       else resolve(String(stdout))
     })
   })
@@ -151,7 +152,10 @@ function createMonitorStore({
       rx: p.RxBytes || 0,
       self
     })
-    const rows = [toRow(raw.Self || {}, true), ...Object.values(raw.Peer || {}).map((p) => toRow(p, false))]
+    // Tailscale Funnel adds one placeholder peer per public hostname, tagged tag:ingress (no OS, no name of
+    // its own, never a device); they are not machines, so they are left out of the list and the counts.
+    const isIngress = (p) => (p.Tags || []).includes('tag:ingress') || (p.ShareeNode === true && !p.OS && !p.DNSName)
+    const rows = [toRow(raw.Self || {}, true), ...Object.values(raw.Peer || {}).filter((p) => !isIngress(p)).map((p) => toRow(p, false))]
     return { rows, online: rows.filter((r) => r.online).length, total: rows.length }
   }
 
@@ -338,8 +342,10 @@ function createMonitorStore({
     }
   }
 
-  async function pullRequests() {
-    const out = await runCommand('gh', ['pr', 'list', '--limit', '30', '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
+  async function pullRequests(config = {}) {
+    // config.repo ("owner/name") lets a server that does not run inside a checkout still list its pull requests
+    const repoArgs = typeof config.repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(config.repo) ? ['-R', config.repo] : []
+    const out = await runCommand('gh', ['pr', 'list', ...repoArgs, '--limit', '30', '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
     const rows = JSON.parse(out).map((p) => ({
       number: p.number,
       title: p.title,
@@ -380,6 +386,25 @@ function createMonitorStore({
       }
     }))
     return { rows, configured: list.length }
+  }
+
+  // The credits of this machine: a feed { panel: 'credits', kind: 'command' } in the config whose output is the
+  // JSON list `di-credits status --json` prints (route, available, meter, have, why). Only those fields are kept,
+  // text is clipped, an e-mail address is shown as "login-<4 hex>" and key-like text is masked (monitorCredits.js), so no address or key leaves the machine in a report.
+  async function credits(config) {
+    const list = (Array.isArray(config.feeds) ? config.feeds : []).filter((f) => f.panel === 'credits' && f.kind === 'command' && f.command).slice(0, 1)
+    if (!list.length) return { configured: 0, rows: [], ready: 0, total: 0 }
+    // the command is killed by runCommand's own timeout, so a hung probe never leaves a process behind
+    // di-credits exits 1 when no route is ready, and still prints the full list: that list is what this panel is for
+    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command], { timeout: 8000 }).catch((error) => {
+      if (error && typeof error.stdout === 'string' && error.stdout.trim().startsWith('[') && !error.killed) return error.stdout
+      throw error
+    }), 8500)
+    let parsed
+    try { parsed = JSON.parse(out) } catch { throw new Error('the credits command did not print JSON') }
+    const rows = sanitizeCredits(parsed)
+    if (!rows || rows.dropped) throw new Error('the credits list was not in the expected shape')
+    return { configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length }
   }
 
   // The chat list of this machine: a feed { panel: 'chats', kind: 'command' } in the config whose output is
@@ -423,10 +448,11 @@ function createMonitorStore({
       panel('presence', presence),
       panel('connected', () => connected(selfBase)),
       panel('services', services),
-      panel('pullRequests', pullRequests),
+      panel('pullRequests', () => pullRequests(config)),
       panel('tasks', () => feeds(config, 'tasks')),
       panel('shows', () => feeds(config, 'shows')),
-      panel('chats', () => chats(config))
+      panel('chats', () => chats(config)),
+      panel('credits', () => credits(config))
     ])
     const value = {
       generatedAt: new Date(now()).toISOString(),

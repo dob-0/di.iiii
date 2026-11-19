@@ -48,25 +48,25 @@ describe('report store', () => {
     expect(store.list()[0].panels.agents.rows).toHaveLength(1)
   })
 
-  it('refuses a bad host, bad panels, a body over the cap, and a 41st host', () => {
+  it('refuses a bad host, bad panels, a body over the cap, and a 121st host', () => {
     const store = createReportStore()
     expect(store.put({ host: '../x', panels }).error).toBe('bad_host')
     expect(store.put({ host: 'ok', panels: [] }).error).toBe('bad_panels')
     expect(store.put(null).error).toBe('bad_report')
     const big = { host: 'big', panels: { tasks: { ok: true, rows: [{ lines: ['x'.repeat(300 * 1024)] }] } } }
     expect(store.put(big)).toMatchObject({ error: 'too_large', status: 413 })
-    for (let i = 0; i < 40; i += 1) store.put({ host: `h${i}`, panels }, { subject: `s${i}` })
+    for (let i = 0; i < 120; i += 1) store.put({ host: `h${i}`, panels }, { subject: `s${i}`, ledger: true })
     expect(store.put({ host: 'one-more', panels }, { subject: 'late' }).status).toBe(429)
   })
 
-  it('a host belongs to its sender until it goes stale (409), and one subject holds at most 12 hosts', () => {
-    let t = 1000
-    const store = createReportStore({ now: () => t })
+  it('a machine is keyed by sender and name: two people may both have aylmo; one subject holds at most 12', () => {
+    const store = createReportStore({ now: () => 1000 })
     expect(store.put({ host: 'aylmo', panels }, { subject: 'u1' }).ok).toBe(true)
-    expect(store.put({ host: 'aylmo', panels }, { subject: 'u2' })).toMatchObject({ error: 'host_taken', status: 409 })
-    expect(store.put({ host: 'aylmo', panels }, { subject: 'u1' }).ok).toBe(true)
-    t += STALE_MS + 1
     expect(store.put({ host: 'aylmo', panels }, { subject: 'u2' }).ok).toBe(true)
+    expect(store.list({ subjects: ['u1'] })).toHaveLength(1)
+    expect(store.list({ subjects: [7] }).length).toBe(0)
+    store.put({ host: 'num', panels }, { subject: 7 })
+    expect(store.list({ subjects: ['7'] }).map((r) => r.host)).toEqual(['num'])
     for (let i = 0; i < MAX_HOSTS_PER_SUBJECT - 1; i += 1) expect(store.put({ host: `m${i}`, panels }, { subject: 'u2' }).ok).toBe(true)
     expect(store.put({ host: 'one-too-many', panels }, { subject: 'u2' })).toMatchObject({ error: 'too_many_hosts', status: 429 })
     expect(store.put({ host: 'other', panels }, { subject: 'u3' }).ok).toBe(true)
@@ -421,5 +421,55 @@ describe('tier probe: cold start and shared rounds', () => {
     const [a, b] = await Promise.all([hub.getSnapshot(), hub.getSnapshot()])
     expect(prodRow(a).misses).toBe(1)
     expect(prodRow(b).misses).toBe(1)
+  })
+})
+
+describe('a reported credits panel', () => {
+  it('keeps only the shown fields and shows an e-mail address as "login"', () => {
+    const store = createReportStore()
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows: [
+      { route: 'plan:dob', available: true, meter: '7d 62%', have: 'login me@corp.example', why: '', token: 'secret' },
+      { route: 'api:lab', available: false, meter: 'n/a', have: 'key', why: 'denied for dob@studio' }
+    ], extra: 'x' } } })
+    const credits = store.list()[0].panels.credits
+    expect(credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2 })
+    expect(JSON.stringify(credits)).not.toMatch(/corp\.example|dob@studio|secret|"extra"/)
+    expect(credits.rows[0]).toEqual({ id: expect.stringMatching(/^r[0-9a-f]{8}$/), name: 'plan:dob', available: true, meter: '7d 62%', have: expect.stringMatching(/^login login-[0-9a-f]{4}$/), why: '' })
+  })
+
+  it('a broken report keeps no rows and is not counted as configured', () => {
+    const store = createReportStore()
+    store.put({ host: 'x', panels: { credits: { ok: false, configured: 'yes', rows: 'bad', error: 'no feed' } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: false, configured: 0, rows: [], ready: 0, total: 0, error: 'no feed' })
+  })
+
+  it('takes in the rows the machine\'s own store produced, keeps their ids, and greys a changed shape', () => {
+    const { sanitizeCredits } = require('./monitorCredits.js')
+    const rows = sanitizeCredits([{ route: 'plan:dob', available: true, meter: '7d', have: 'key', why: '' }, { route: 'ollama', available: false, meter: '', have: '', why: '' }])
+    const store = createReportStore()
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: true, ready: 1, total: 2, rows })
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows: [{ label: 'x' }] } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: false, total: 0 })
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows: { a: 1 } } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: false })
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1 } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: false })
+  })
+
+  it('masks a lower-case hex key, keeps a plain name that starts like a key prefix', () => {
+    const { sanitizeCredits } = require('./monitorCredits.js')
+    const [row] = sanitizeCredits([{ route: 'hf-hub-credits', why: 'denied, key 3f9a1c0b7d2e4a5f8c6b1d0e9a7f3c2b4d5e6f70' }])
+    expect(row.name).toBe('hf-hub-credits')
+    expect(row.why).toBe('denied, key (masked)')
+  })
+
+  it('keeps a long word and a rule line, masks a key shape', () => {
+    const { sanitizeCredits } = require('./monitorCredits.js')
+    const [row] = sanitizeCredits([{ route: 'x', meter: '-'.repeat(40), have: 'hf_abcdefgh1jklmnop', why: 'internationalizationinternationalization' }])
+    expect(row.meter).toBe('-'.repeat(40))
+    expect(row.have).toBe('(masked)')
+    expect(row.id).toMatch(/^r[0-9a-f]{8}$/)
+    expect(row.why).toBe('internationalizationinternationalization')
   })
 })

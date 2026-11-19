@@ -191,6 +191,42 @@ describe('MonitorSection', () => {
         expect(screen.getByText('/w2')).toBeTruthy()
     })
 
+    it('shows the Credits tile and box, and a credit row opens the drawer', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 1, total: 2, rows: [
+            { id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' },
+            { id: '1:api:studio', name: 'api:studio', available: false, meter: 'n/a', have: 'key SPENT', why: 'SPENT: credit balance is too low' }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(screen.getByText('Credits ready')).toBeTruthy()
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/2/)
+        const row = document.querySelector('[data-monitor-id="cr:1:api:studio"]')
+        expect(row.textContent).toMatch(/not ready/)
+        fireEvent.click(row)
+        expect(row.getAttribute('aria-pressed')).toBe('true')
+        expect(within(document.querySelector('.monitor-drawer')).getAllByText('Credit route').length).toBeGreaterThan(0)
+    })
+
+    it('says whose machines are listed: signed in, signed out, expired, offline', async () => {
+        const cases = [
+            [{ state: 'ok', name: 'Ada', machines: 2 }, /Signed in as Ada: this machine and 2 more/],
+            [{ state: 'signed-out', name: null, machines: 0 }, /Not signed in: this machine only\. Run di login/],
+            [{ state: 'expired', name: null, machines: 0 }, /sign-in ended/],
+            [{ state: 'offline', name: null, machines: 0 }, /could not be reached/]
+        ]
+        for (const [account, pattern] of cases) {
+            const snap = snapshot()
+            snap.account = account
+            getMonitor.mockResolvedValue(snap)
+            const { unmount } = render(<MonitorSection />)
+            await waitFor(() => screen.getByText('Build the monitor'))
+            expect(document.querySelector('[data-account]').textContent).toMatch(pattern)
+            unmount()
+        }
+    })
+
     it('two machines with the same host name both show and select on their own', async () => {
         const snap = snapshot()
         snap.panels.machines.rows.push({ id: '100.1.1.9', name: 'r-di', os: 'windows', ip: '100.1.1.9', online: false, lastSeen: null, tx: 0, rx: 0 })

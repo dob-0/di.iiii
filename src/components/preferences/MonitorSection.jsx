@@ -68,6 +68,7 @@ const signatures = (snap) => {
     const panels = snap?.panels
     const sig = {}
     for (const m of panels?.machines?.rows || []) sig[`m:${m.id}`] = String(m.online)
+    for (const c of panels?.credits?.rows || []) sig[`cr:${c.id}`] = String(c.available)
     for (const n of panels?.network?.rows || []) sig[`n:${n.id}`] = `${n.ok}:${n.status}`
     for (const a of panels?.agents?.rows || []) sig[`a:${a.machine || ''}${a.sessionId}`] = a.status
     for (const s of panels?.services?.rows || []) sig[`s:${s.unit}`] = s.active
@@ -77,6 +78,7 @@ const signatures = (snap) => {
     for (const t of snap?.tiers?.rows || []) sig[`t:${t.id}`] = `${t.status}:${t.commit}:${t.behindDev}`
     const k = panels
     sig['k:machines'] = `${k?.machines?.online}/${k?.machines?.total}`
+    sig['k:credits'] = `${k?.credits?.ready}/${k?.credits?.total}`
     sig['k:network'] = `${k?.network?.up}/${k?.network?.total}`
     sig['k:people'] = String(k?.presence?.people)
     sig['k:things'] = `${k?.connected?.live}/${k?.connected?.total}`
@@ -101,7 +103,19 @@ function IssueItem({ issue, onOpen }) {
 function PanelNote({ panel, empty }) {
     if (!panel) return null
     if (!panel.ok) return <div className="monitor-note is-down">Unavailable here: {panel.error}</div>
-    return panel.rows?.length ? null : <div className="monitor-note">{empty}</div>
+    return panel.rows?.length || !empty ? null : <div className="monitor-note">{empty}</div>
+}
+
+// Whose machines this Monitor lists: this one, plus the signed-in account's others (reported to dev).
+function AccountNote({ account }) {
+    if (!account) return null
+    const text = {
+        ok: `Signed in${account.name ? ` as ${account.name}` : ''}: this machine and ${account.machines} more from your account.`,
+        'signed-out': 'Not signed in: this machine only. Run di login to see your other machines.',
+        expired: 'Your sign-in ended: this machine only. Run di login again.',
+        offline: "Your account's machines could not be reached: this machine only."
+    }[account.state]
+    return text ? <div className="monitor-note" data-account={account.state}>{text}</div> : null
 }
 
 function Row({ id, selected, flash, tone, onSelect, children }) {
@@ -341,6 +355,10 @@ export default function MonitorSection({ onStats }) {
         () => (panels.machines?.rows || []).filter((m) => rowMatches(query, m)),
         [panels.machines, query]
     )
+    const credits = useMemo(
+        () => (panels.credits?.rows || []).filter((c) => rowMatches(query, c)),
+        [panels.credits, query]
+    )
     const probes = useMemo(
         () => (panels.network?.rows || []).filter((n) => rowMatches(query, n)),
         [panels.network, query]
@@ -378,7 +396,7 @@ export default function MonitorSection({ onStats }) {
     const selectedRow = useMemo(() => {
         if (!selected) return null
         const pool = {
-            machine: panels.machines?.rows, probe: panels.network?.rows, agent: panels.agents?.rows,
+            machine: panels.machines?.rows, credit: panels.credits?.rows, probe: panels.network?.rows, agent: panels.agents?.rows,
             service: panels.services?.rows, pr: panels.pullRequests?.rows,
             thing: panels.connected?.rows, place: panels.presence?.rows,
             node: snap?.map?.nodes, tier: snap?.tiers?.rows,
@@ -399,6 +417,9 @@ export default function MonitorSection({ onStats }) {
             { id: 'machines', panel: 'machines', label: 'Machines online', value: p.machines?.ok ? `${p.machines.online}/${p.machines.total}` : '—',
                 tone: p.machines?.ok && p.machines.online ? 'success' : 'warning',
                 dots: (p.machines?.rows || []).map((m) => dot(m.online ? 'success' : 'muted', `${m.name}: ${m.online ? 'online' : 'offline'}`)) },
+            { id: 'credits', panel: 'credits', label: 'Credits ready', value: p.credits?.ok && p.credits.configured ? `${p.credits.ready}/${p.credits.total}` : '—',
+                tone: !p.credits?.ok || !p.credits.configured ? 'muted' : p.credits.ready ? 'success' : 'warning',
+                dots: (p.credits?.rows || []).map((c) => dot(c.available ? 'success' : 'warning', `${c.name}: ${c.available ? 'ready' : 'not ready'}`)) },
             { id: 'network', panel: 'network', label: 'Network up', value: p.network?.ok ? `${p.network.up}/${p.network.total}` : '—',
                 tone: p.network?.up === p.network?.total ? 'success' : 'warning',
                 dots: (p.network?.rows || []).map((n) => dot(n.ok ? 'success' : 'danger', `${n.name}: ${n.ok ? 'up' : 'down'}`)) },
@@ -542,12 +563,28 @@ export default function MonitorSection({ onStats }) {
                     <div data-panel="machines"><ModuleSection title="Machines" subtitle="Tailnet — who is on, who was last seen">
                         <PanelLive name="machines" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.machines} empty="No machines reported." />
+                        <AccountNote account={snap?.account} />
                         <div className="monitor-grid">
                             {machines.map((m) => (
                                 <Row key={m.id} id={`m:${m.id}`} tone={m.online ? 'success' : 'muted'} flash={flash(`m:${m.id}`)}
                                     selected={selected?.kind === 'machine' && selected.id === m.id} onSelect={() => pick('machine', m)}>
                                     <span className="monitor-name">{m.name}{m.self ? ' · this' : ''}</span>
                                     <span className="monitor-meta">{m.online ? 'online' : `off · ${timeAgo(m.lastSeen)}`} · {m.os || '—'}</span>
+                                </Row>
+                            ))}
+                        </div>
+                    </ModuleSection></div>
+
+                    <div data-panel="credits"><ModuleSection title="Credits" subtitle="Claude plans, API keys, Ollama, Colab — what is ready to run our work">
+                        <PanelLive name="credits" ages={ages} nowMs={nowMs} paused={paused} />
+                        <PanelNote panel={panels.credits} empty={panels.credits?.configured ? 'No credits reported.' : ''} />
+                        {panels.credits?.ok && !panels.credits.configured ? <div className="monitor-note">This machine does not report credits (no credits feed in its monitor config).</div> : null}
+                        <div className="monitor-grid">
+                            {credits.map((c) => (
+                                <Row key={c.id} id={`cr:${c.id}`} tone={c.available ? 'success' : 'warning'} flash={flash(`cr:${c.id}`)}
+                                    selected={selected?.kind === 'credit' && selected.id === c.id} onSelect={() => pick('credit', c)}>
+                                    <span className="monitor-name">{c.name}</span>
+                                    <span className="monitor-meta">{[c.available ? 'ready' : 'not ready', c.meter, c.why].filter(Boolean).join(' · ')}</span>
                                 </Row>
                             ))}
                         </div>
