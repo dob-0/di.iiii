@@ -13,6 +13,8 @@ const os = require('node:os')
 const crypto = require('node:crypto')
 const { execFile } = require('node:child_process')
 const PARTS = require('./parts.json').parts
+const { sanitizeChats, chatsBlock } = require('./monitorChats')
+const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
 const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
@@ -23,7 +25,7 @@ const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
 const ASKS_MAX = 100
-const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows']
+const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
 
@@ -75,6 +77,7 @@ function cleanPanelValue(value, depth = 0, key = '') {
   }
   return undefined
 }
+const withoutChats = (panels) => { const { chats, ...rest } = panels || {}; return rest }
 const isUp = (status) => status >= 200 && status < 300
 
 // ---- reports from other machines -------------------------------------------
@@ -108,7 +111,10 @@ function createReportStore({ now = () => Date.now() } = {}) {
 
     const panels = {}
     for (const name of PANEL_NAMES) {
-      if (isPlainObject(body.panels[name])) panels[name] = cleanPanelValue(body.panels[name])
+      if (!isPlainObject(body.panels[name])) continue
+      // chats: only what the page shows is kept (no owner text, no paths); see monitorChats.js
+      if (name === 'chats') panels.chats = { source: sanitizeChats(body.panels.chats.source ?? body.panels.chats, host), ...(body.panels.chats.ok === false ? { error: cleanText(body.panels.chats.error, 200) || 'chat list not read' } : {}) }
+      else panels[name] = cleanPanelValue(body.panels[name])
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])
       .filter(isPlainObject)
@@ -133,7 +139,7 @@ function createReportStore({ now = () => Date.now() } = {}) {
     const t = now()
     return [...byHost.values()]
       .sort((a, b) => b.reportedAt - a.reportedAt)
-      .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: r.panels }))
+      .map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, panels: withoutChats(r.panels) }))
   }
 
   const raw = () => { prune(); return [...byHost.values()] }
@@ -214,25 +220,47 @@ function createHub({
   }
 
   let tierCache = null
-  async function probeTier(id, url) {
+  const tracker = createProbeTracker({ now })
+  // one check of one tier: the answer, how long it took, and whether it counts as up (2xx only)
+  async function checkTier(url) {
     const started = now()
-    const base = { id, url, source: 'probe', status: 0, ms: 0, commit: null, builtAt: null, behindDev: null }
-    if (!fetchImpl) return base
     try {
       const res = await fetchImpl(`${url}/serverXR/api/health`, { signal: AbortSignal.timeout(TIER_TIMEOUT_MS), redirect: 'manual' })
       const body = res.ok ? await res.json().catch(() => null) : null
       const rel = body?.release || {}
       return {
-        ...base,
+        ok: isUp(res.status),
         status: res.status,
         ms: now() - started,
         commit: typeof rel.gitCommit === 'string' && COMMIT_RE.test(rel.gitCommit) ? rel.gitCommit : null,
         builtAt: typeof rel.generatedAt === 'string' ? rel.generatedAt : null
       }
-    } catch {
-      return { ...base, ms: now() - started }
+    } catch (error) {
+      return { ok: false, status: 0, ms: now() - started, error: String(error?.message || error).slice(0, 120) }
     }
   }
+  async function probeTier(id, url) {
+    const base = { id, url, source: 'probe', status: 0, ms: 0, commit: null, builtAt: null, behindDev: null }
+    if (!fetchImpl) return base
+    const got = await checkWithRetry(() => checkTier(url))
+    const judged = tracker.judge(id, got)
+    if (got.ok) tierLastGood.set(id, { commit: got.commit, builtAt: got.builtAt })
+    return {
+      ...base,
+      status: judged.status,
+      rawStatus: judged.rawStatus,
+      ms: got.ms,
+      probe: judged.state,
+      note: judged.note,
+      misses: judged.misses,
+      lastGoodAt: judged.lastGoodAt,
+      ...(got.error ? { error: got.error } : {}),
+      // a missed check keeps the last good answer's commit, so a flicker never blanks the tile
+      commit: got.commit ?? (judged.state === 'doubt' ? tierLastGood.get(id)?.commit ?? null : null),
+      builtAt: got.builtAt ?? (judged.state === 'doubt' ? tierLastGood.get(id)?.builtAt ?? null : null)
+    }
+  }
+  const tierLastGood = new Map()
 
   async function behind(commit, devCommit) {
     if (!commit || !devCommit || !COMMIT_RE.test(commit) || !COMMIT_RE.test(devCommit)) return null
@@ -246,20 +274,31 @@ function createHub({
     }
   }
 
+  // one probe round at a time: the GET and the SSE poller share the round in flight, so one
+  // outage is never counted as two misses (same rule as monitorStore.getMonitor).
+  let tiersInflight = null
   async function tiers() {
     const t = now()
     if (tierCache && t - tierCache.at < TIER_CACHE_MS && tierCache.self === selfId()) return tierCache.value
+    if (tiersInflight && tiersInflight.self === selfId()) return tiersInflight.promise
+    const promise = tiersScan().finally(() => { tiersInflight = null })
+    tiersInflight = { self: selfId(), promise }
+    return promise
+  }
+
+  async function tiersScan() {
+    const t = now()
     const self = selfId()
     const rel = releaseInfo() || {}
     const rows = []
-    for (const [id, url] of Object.entries(tierSites)) {
+    const probed = await Promise.all(Object.entries(tierSites).map(async ([id, url]) => {
       if (id === self) {
         const commit = typeof rel.gitCommit === 'string' && COMMIT_RE.test(rel.gitCommit) ? rel.gitCommit : null
-        rows.push({ id, url, source: 'self', status: 200, ms: 0, commit, builtAt: rel.generatedAt || null, behindDev: null })
-      } else {
-        rows.push(await probeTier(id, url))
+        return { id, url, source: 'self', status: 200, ms: 0, commit, builtAt: rel.generatedAt || null, behindDev: null }
       }
-    }
+      return probeTier(id, url)
+    }))
+    rows.push(...probed)
     if (self.startsWith('local:')) {
       rows.push({ id: self, url: '', source: 'self', status: 200, ms: 0, commit: rel.gitCommit || null, builtAt: rel.generatedAt || null, behindDev: null })
     }
@@ -271,7 +310,7 @@ function createHub({
     }
     const devCommit = rows.find((r) => r.id === 'dev')?.commit || null
     for (const row of rows) row.behindDev = row.id === 'dev' ? 0 : await behind(row.commit, devCommit)
-    const value = { ok: rows.some((r) => r.id === 'dev' && isUp(r.status)) && rows.some((r) => r.id === 'prod' && isUp(r.status)), rows }
+    const value = { at: t, ok: rows.some((r) => r.id === 'dev' && isUp(r.status)) && rows.some((r) => r.id === 'prod' && isUp(r.status)), rows }
     tierCache = { at: t, value, self }
     return value
   }
@@ -350,7 +389,7 @@ function createHub({
     node('repo:di.iiii', 'repo', 'di.iiii', 'ok')
 
     for (const row of tierBlock.rows) {
-      const state = row.source === 'report' ? row.state : row.status === 0 ? 'off' : (!isUp(row.status) ? 'warn' : ((row.behindDev || 0) > 0 ? 'warn' : 'ok'))
+      const state = row.source === 'report' ? row.state : row.status === 0 ? 'off' : (!isUp(row.status) || row.probe === 'slow' || row.probe === 'doubt' ? 'warn' : ((row.behindDev || 0) > 0 ? 'warn' : 'ok'))
       node(`tier:${row.id}`, 'tier', row.id, state)
     }
     const self = selfId()
@@ -414,6 +453,19 @@ function createHub({
     return { rows, version: rel.version || null, packedAt: rel.packedAt || null }
   }
 
+  // Chats come through the same door as everything else: this machine's own chat panel (a feed in its
+  // config) and the chat panel of every machine that reported. Nobody carrying chats is "no chat data".
+  const chatsFor = (base) => {
+    const self = base.panels?.chats
+    const inputs = []
+    if (self && (self.source || self.ok === false)) inputs.push({ host: String(base.host || 'this machine').split('.')[0], source: self.source || null, error: self.ok === false ? (self.error || 'chat list not read') : null })
+    for (const r of reports.raw()) {
+      const c = r.panels?.chats
+      if (c) inputs.push({ host: r.host, source: c.source || null, error: c.error || null })
+    }
+    return chatsBlock(inputs, { now: now() })
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   async function getSnapshot({ selfBase = null } = {}) {
     const base = await store.getMonitor({ selfBase })
@@ -424,6 +476,7 @@ function createHub({
       reports: reportRows,
       tiers: tierBlock,
       parts: partsBlock(base),
+      chats: chatsFor(base),
       spaces: spaceBlock,
       asks: asksBlock(),
       map: buildMap({ base, reportRows, tierBlock, spaceBlock })
@@ -434,9 +487,25 @@ function createHub({
 }
 
 /** The stream compares snapshots without the fields that change on every scan. */
-const IGNORED_KEYS = new Set(['generatedAt', 'ms'])
+const IGNORED_KEYS = new Set(['generatedAt', 'ms', 'heardSecondsAgo', 'ages'])
+// `at` is a scan clock only where the scanners stamp it: the snapshot's own sections (tiers.at, spaces.at,
+// ...) and each panel (panels.<name>.at). Anywhere deeper (a report, an ask, a row) it is data and counts.
+const isScanStamp = (path) => path.length === 2 || (path.length === 3 && path[0] === 'panels')
+function stripNoise(value, path = []) {
+  if (Array.isArray(value)) return value.map((item, i) => stripNoise(item, [...path, String(i)]))
+  if (value && typeof value === 'object') {
+    const out = {}
+    for (const [key, v] of Object.entries(value)) {
+      if (IGNORED_KEYS.has(key)) continue
+      if (key === 'at' && isScanStamp([...path, key])) continue
+      out[key] = stripNoise(v, [...path, key])
+    }
+    return out
+  }
+  return value
+}
 function fingerprint(snapshot) {
-  return crypto.createHash('sha1').update(JSON.stringify(snapshot, (key, value) => (IGNORED_KEYS.has(key) ? undefined : value))).digest('hex')
+  return crypto.createHash('sha1').update(JSON.stringify(stripNoise(snapshot))).digest('hex')
 }
 
 module.exports = {

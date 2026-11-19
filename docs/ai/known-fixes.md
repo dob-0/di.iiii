@@ -3,6 +3,42 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor 3D map: hairball of lines, fixed camera, labels on top of each other (2026-11-19, N5646, N5648)
+
+Symptom: (1) every edge was a straight line from node to node, one tangle; (2) the camera only turned, no pan, no side/front views, no way to fly to a node; (3) with 65 nodes the cards covered each other (the old rule named tiers and machines, and every node once zoomed in); (4) "make 3d cooler".
+Cause: `MonitorMap3D.jsx` drew `layout.edges` one `<Line>` each, named nodes by a zoom flag, and had two camera buttons (Fit, Top view).
+Fix: `monitorMapEdges.js` (one faint thick curved bundle per lane pair, arcs bowed up and toward the hub; single lines only for the picked or hovered node), `monitorMapCamera.js` (Front / Side / Top / Iso / Reset view poses, fly-to, arrows and WASD, pan by right-drag or two fingers, double-click a node), `monitorMapOverlap.js` (projects every label, keeps one only where it covers no label, tool button or hint; fades with distance), depth fog, glowing lane rings, a soft glow on the selected node, a slow auto-rotate that stops on the first touch. The wheel rule is unchanged (zoom only in full screen or with Ctrl). Check: `node scripts/monitor/map-overlap.mjs` (exit 1 on any overlap).
+Regression tests: `src/components/preferences/monitorMapOverlap.test.js` (0 overlaps for 65 nodes in 5 camera presets at 1100x600 and 390x560, bundles, arcs, presets, keys), the rotate case in `monitorMap3dPolicy.test.js`.
+Not done: the Spaces world and SpacesMixed (PR #1309) use the same engine and must adopt the new props; labels hidden by the planner appear on hover, selection or when the camera comes closer, not as a list.
+
+## Monitor Tasks tab: looked at for the first time, three defects (2026-11-19)
+
+Symptom: (1) a server without the tasks door showed a whole web page as the error; (2) every row began with "verbatim, not restated:" so the part that tells asks apart was cut off by the ellipsis; (3) on a phone the Done form sat below the fold of the drawer.
+Fix: `plainError` and `askText` in `MonitorTasks.jsx` (plain error words; the row shows the ask after the intake words, two lines), the form scrolls into view when an action is chosen, the count line says "N open in the last D days, newest M shown".
+Regression tests: `MonitorTasks.test.jsx` ("Tasks lane words").
+Lesson: the dev API had been started before the commit that added the door, so the tab showed the 404 page; restart the tree's API after a server change (`di-dev down <tree>`, `di-dev up <tree> --api scratch`) before pictures.
+
+## Monitor Tasks lane: the owner's open asks, changed from the page (2026-11-19, N5632)
+
+Symptom: the owner's open asks could only be read and changed in a terminal.
+Cause: no page and no server door for the ledger.
+Fix: Monitor tab Tasks (asks by state, search, history in the shared drawer, Done / Blocked / Reopen / Note) over ONE owner-only door `POST /api/monitor/tasks` (same gate as the Monitor, else 404) that runs `ledger-add --ref` with a fixed argv (`execFile`, no shell); id `^N[0-9]+$`, fixed states, text capped and stripped of control characters, Done needs proof, one audit line per change (`~/.di/monitor-ledger-audit.log`); no ledger on the machine says so. Paths: MONITOR_LEDGER_ADD / MONITOR_LEDGER_OPEN / LEDGER_FILE.
+Regression tests: `serverXR/src/monitorLedger.test.js` (argv inert, audit, denial for another admin / actor / visitor / prod), `src/components/preferences/MonitorTasks.test.jsx`.
+
+## Monitor shows full data; the dev/prod line flipped to "stopped answering" on one slow answer (2026-11-19, N5631)
+
+Symptom: (1) the tier line said "prod stopped answering" while both pages answered 200, on one slow answer or one refusal; (2) cards and the old inspector showed a hand-picked part of each item, chats and asks had no details, the filter missed chats and most fields.
+Cause: (1) `probeTier` / `network()` judged one fetch with a 3 s limit; a miss was an outage and the feed said so. (2) each kind had its own hard-coded inspector block.
+Fix: `serverXR/src/monitorProbe.js` (a miss is retried once; down only after 2 checks in a row; slow is "slow (N ms)" and up; the last good time and answer are kept); one `MonitorDetail` drawer (every field, copy, related items, raw record, `#monitor/kind/id` link) used by Board, Map, Work, Parts, strip; the filter reads every field of every kind and counts matches; each panel shows "live · heard N s ago" from ages the stream heartbeat now carries.
+Regression tests: `serverXR/src/monitorHub.test.js` ("tier flap"), `serverXR/src/routes/monitorStream.test.js` (ages), `src/components/preferences/monitorDetail.test.js`, `MonitorSection.test.jsx` (chat drawer, filter, live words).
+Not done: rules, hooks, skills, to-do and helpers wait for #1294 / #1299; live push is the existing whole-snapshot stream (no per-row push).
+
+## Monitor shows every chat (2026-11-19, N5508)
+
+Symptom: chats that wait for the owner were only text boxes low on the Board tab (one scrolled inside a 710 px window), not in the "things need you" strip.
+Fix: a `chats` panel through the report door (`serverXR/src/monitorChats.js`, `chatsBlock`), a `chats` block in GET /api/monitor, rows for asking chats in the strip (`MonitorOverview.heroState`) and a Chats lane of cards on the Work tab (`MonitorChats.jsx`). No list, or one older than 120 s, is "no chat data" / "old", never "all well". The owner's own message text is dropped on the server before it is stored.
+Regression tests: `serverXR/src/monitorChats.test.js`, `serverXR/src/monitorHub.test.js` (chats), `src/components/preferences/MonitorChats.test.jsx`.
+
 ## Admin MdiD: regroup, Spaces world, click walk (2026-11-18)
 
 Symptoms (owner): Spaces and users was hard to read, Open call sat under it, nothing was live or clickable as a picture.
@@ -1910,3 +1946,5 @@ Owner: "i want to better 3d and 2d and where is the MdiD view where it is mixed 
 Guard: `SpacesMixed.test.jsx` (three panes, one shared selection, one poll reaches all panes, stacked column under 1100 px and DOM order), `spacesWorld.test.js` ("Spaces world clustered layout": no card overlaps for a small and a big world, people near their space, deterministic), `AdminManageSection.test.jsx` (tabs Mixed | List | 2D | 3D, Mixed default).
 
 - 2026-11-17 admin was hard to read (owner: "bad UI … not intuitive"): zero badges on every nav entry, a title that said "Spaces and who can see them" on Open call and Visitors, dash-only Spaces/Users cards on pages that carry their own counts, filter buttons drawn as a 2-column wall, and on a phone the section list filling the first screen. Fix: badges only when > 0, title = the section's name, no header cards on those two pages, `.preferences-filter-row` chips, one scrolling nav line on phones with the active entry scrolled into view; "Apps that visit" renamed "Visitors". Guard: `PreferencesShared.test.jsx` ("shows a count only when there is something to count") and the unchanged `PreferencesPage*.test.jsx`. Spaces and users, Monitor, Agents and the operator pages are not yet redesigned.
+
+- 2026-11-19 eye sweep: `/wiki` at 390 px had its article 37 px wider than the window (141 escapes) because the phone layout was `grid-template-columns: 1fr`, a track that grows to its widest content; it is `minmax(0, 1fr)` now. `/tools` at 700 px had a card's "where" label (`.kit-where`, `flex-shrink: 0`) 15 px past its card; the head now wraps and the label may shrink. Test: `src/styles/eyeSweepFit.test.js`; detector `scripts/check-box-escape.mjs` (0 escapes after).

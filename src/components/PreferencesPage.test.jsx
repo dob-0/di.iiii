@@ -1,6 +1,6 @@
 /* global __APP_VERSION__ */
 import React from 'react'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import PreferencesPage from './PreferencesPage.jsx'
 import {
@@ -185,6 +185,22 @@ describe('PreferencesPage', () => {
         spy.mockResolvedValue({ ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' })
         renderPreferencesPage()
         expect(await screen.findByRole('button', { name: /^Monitor/ })).toBeTruthy()
+    })
+
+    it('#monitor/chat/<id> and #monitor-full/chat/<id> open the Monitor on first load, and on a hash change', async () => {
+        const ok = { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' }
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok)
+        for (const hash of ['#monitor/chat/abc', '#monitor-full/chat/abc']) {
+            window.location.hash = hash
+            const view = renderPreferencesPage()
+            expect(await screen.findByRole('heading', { level: 1, name: 'Monitor' })).toBeTruthy()
+            view.unmount?.()
+        }
+        window.location.hash = ''
+        renderPreferencesPage()
+        await screen.findByRole('button', { name: /^Monitor/ })
+        act(() => { window.location.hash = '#monitor/chat/xyz'; window.dispatchEvent(new HashChangeEvent('hashchange')) })
+        expect(await screen.findByRole('heading', { level: 1, name: 'Monitor' })).toBeTruthy()
     })
 
     it('#monitor shows no Monitor text while the server has not answered, or on a 404; only a 200 mounts it', async () => {

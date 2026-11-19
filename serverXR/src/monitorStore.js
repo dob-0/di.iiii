@@ -15,6 +15,8 @@ const os = require('node:os')
 const path = require('node:path')
 const { execFile } = require('node:child_process')
 const { createAgentBoardStore } = require('./agentBoardStore')
+const { sanitizeChats } = require('./monitorChats')
+const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
 const CACHE_TTL_MS = 5000
 const PANEL_TIMEOUT_MS = 4000
@@ -132,6 +134,7 @@ function createMonitorStore({
     return { spaces: sh.spaceConnections, projects: sh.projectConnections }
   })()
   let cache = null
+  const probeTracker = createProbeTracker({ now })
 
   async function machines() {
     const raw = JSON.parse(await runCommand('tailscale', ['status', '--json']))
@@ -156,12 +159,21 @@ function createMonitorStore({
     const probes = Array.isArray(config.probes) && config.probes.length ? config.probes : DEFAULT_PROBES
     if (!fetchImpl) throw new Error('no fetch available')
     const rows = await Promise.all(probes.slice(0, 12).map(async (probe) => {
-      const started = now()
-      try {
-        const res = await fetchImpl(probe.url, { method: 'GET', signal: AbortSignal.timeout(3000), redirect: 'manual' })
-        return { id: probe.url, name: probe.name || probe.url, url: probe.url, status: res.status, ms: now() - started, ok: res.status < 500 }
-      } catch (error) {
-        return { id: probe.url, name: probe.name || probe.url, url: probe.url, status: 0, ms: now() - started, ok: false, error: String(error.message || error) }
+      const check = async () => {
+        const started = now()
+        try {
+          const res = await fetchImpl(probe.url, { method: 'GET', signal: AbortSignal.timeout(3000), redirect: 'manual' })
+          return { ok: res.status < 500, status: res.status, ms: now() - started }
+        } catch (error) {
+          return { ok: false, status: 0, ms: now() - started, error: String(error.message || error) }
+        }
+      }
+      const got = await checkWithRetry(check)
+      const judged = probeTracker.judge(probe.url, got)
+      return {
+        id: probe.url, name: probe.name || probe.url, url: probe.url, status: judged.status, ms: got.ms, ok: judged.ok,
+        probe: judged.state, note: judged.note, misses: judged.misses, lastGoodAt: judged.lastGoodAt,
+        ...(got.error ? { error: got.error } : {})
       }
     }))
     return { rows, up: rows.filter((r) => r.ok).length, total: rows.length }
@@ -370,13 +382,24 @@ function createMonitorStore({
     return { rows, configured: list.length }
   }
 
+  // The chat list of this machine: a feed { panel: 'chats', kind: 'command' } in the config whose output is
+  // the chat list as JSON. No such feed is "not configured", not an empty list. Only the shown fields are kept.
+  async function chats(config) {
+    const list = (Array.isArray(config.feeds) ? config.feeds : []).filter((f) => f.panel === 'chats' && f.kind === 'command' && f.command).slice(0, 1)
+    if (!list.length) return { configured: 0, source: null }
+    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command]), 6000)
+    const source = sanitizeChats(JSON.parse(out), os.hostname().split('.')[0])
+    if (!source) throw new Error('the chat list was not in the expected shape')
+    return { configured: 1, source }
+  }
+
   async function panel(name, fn) {
     const started = now()
     try {
       const data = await withTimeout(fn(), 9000)
-      return [name, { ok: true, ms: now() - started, ...data }]
+      return [name, { ok: true, ms: now() - started, ...data, at: now() }]
     } catch (error) {
-      return [name, { ok: false, ms: now() - started, error: String(error.message || error), rows: [] }]
+      return [name, { ok: false, ms: now() - started, error: String(error.message || error), rows: [], at: now() }]
     }
   }
 
@@ -402,7 +425,8 @@ function createMonitorStore({
       panel('services', services),
       panel('pullRequests', pullRequests),
       panel('tasks', () => feeds(config, 'tasks')),
-      panel('shows', () => feeds(config, 'shows'))
+      panel('shows', () => feeds(config, 'shows')),
+      panel('chats', () => chats(config))
     ])
     const value = {
       generatedAt: new Date(now()).toISOString(),

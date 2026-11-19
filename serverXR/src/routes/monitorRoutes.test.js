@@ -208,3 +208,38 @@ describe('GET /api/monitor/prs', () => {
     expect(res.body.reason).toBe('no-source')
   })
 })
+
+describe('POST /api/monitor/tasks: same-origin and a small rate limit', () => {
+  const run = async (req, { clock = { t: 0 }, ledger, router = makeRouter() } = {}) => {
+    if (!router.routes['POST /api/monitor/tasks']) registerMonitorRoutes(router, { hub, ledger, now: () => clock.t, requireAuth: () => true, deployEnv: () => 'staging', ownerIds: () => ['owner-1'] })
+    const chain = router.routes['POST /api/monitor/tasks']
+    const res = makeRes()
+    let i = 0
+    const next = async (arg) => { if (arg === 'route') { res.statusCode = 404; return } const h = chain[++i]; if (h) await h(req, res, next) }
+    await chain[0](req, res, next)
+    return res
+  }
+  const mk = (headers = {}) => ({ socket: remote, authState: owner, headers: { host: 'dev.diiii.xyz', ...headers }, body: { id: 'N7', action: 'note', text: 'hi' } })
+  const okLedger = () => { const l = { n: 0, change: async () => { l.n += 1; return { ok: true } } }; return l }
+
+  it('a cross-site or foreign-origin browser request is 403 and writes nothing', async () => {
+    const ledger = okLedger()
+    expect((await run(mk({ 'sec-fetch-site': 'cross-site' }), { ledger })).statusCode).toBe(403)
+    expect((await run(mk({ origin: 'https://evil.example' }), { ledger })).statusCode).toBe(403)
+    expect(ledger.n).toBe(0)
+    expect((await run(mk({ 'sec-fetch-site': 'same-origin' }), { ledger })).statusCode).toBe(200)
+    expect((await run(mk({ origin: 'https://dev.diiii.xyz' }), { ledger })).statusCode).toBe(200)
+    expect(ledger.n).toBe(2)
+  })
+
+  it('the 31st write inside a minute is 429; a minute later it works again', async () => {
+    const ledger = okLedger()
+    const clock = { t: 1000 }
+    const router = makeRouter()
+    for (let i = 0; i < 30; i += 1) expect((await run(mk(), { ledger, clock, router })).statusCode).toBe(200)
+    expect((await run(mk(), { ledger, clock, router })).statusCode).toBe(429)
+    expect(ledger.n).toBe(30)
+    clock.t += 61000
+    expect((await run(mk(), { ledger, clock, router })).statusCode).toBe(200)
+  })
+})
