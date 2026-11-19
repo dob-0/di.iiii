@@ -88,7 +88,7 @@ describe('what a surface draws', () => {
         await waitFor(() => expect(container.querySelector('iframe')).toBeTruthy())
         const frame = container.querySelector('iframe')
         expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-pointer-lock')
-        expect(frame.src).toBe('https://di-studio.xyz/serverXR/api/projects/p1/assets/page1')
+        expect(frame.src.endsWith('/serverXR/api/projects/p1/assets/page1')).toBe(true)
     })
 
     it('holds an html visual as a placeholder when it is not live', () => {

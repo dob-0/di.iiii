@@ -42,8 +42,13 @@ describe('MapStage slice settings', () => {
     })
 
     it('also meshes a test card', () => {
+        // jsdom has no object URLs; the media rack turns the test card's markup into one.
+        const had = URL.createObjectURL
+        URL.createObjectURL = () => 'blob:test'
+        URL.revokeObjectURL = () => {}
         const { container } = render(stage(build({ warp: bentWarp() }, { kind: 'test', ref: 'grid' })))
         expect(container.querySelector('.map-stage-mesh')).toBeTruthy()
+        URL.createObjectURL = had
     })
 
     it('keeps an unmoved warp on the plain corner-pin', () => {
