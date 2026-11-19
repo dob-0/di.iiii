@@ -286,7 +286,7 @@ describe('monitor devices and credits', () => {
     const store = createMonitorStore({ home, runCommand: async (c, a) => (c === 'tailscale' ? tailscale : a[1] === 'credits-json' ? list : Promise.reject(new Error('no'))), fetchImpl: null })
     const credits = (await store.getMonitor()).panels.credits
     expect(credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2 })
-    expect(credits.rows[0]).toEqual({ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '5h ?% 7d 62%', have: 'login login', why: '' })
+    expect(credits.rows[0]).toEqual({ id: expect.stringMatching(/^r[0-9a-f]{8}$/), name: 'plan:dob', available: true, meter: '5h ?% 7d 62%', have: expect.stringMatching(/^login login-[0-9a-f]{4}$/), why: '' })
     expect(JSON.stringify(credits)).not.toMatch(/example\.com|secret/)
   })
 
@@ -301,11 +301,12 @@ describe('monitor devices and credits', () => {
     const store = createMonitorStore({ home, runCommand: async (c) => (c === 'tailscale' ? tailscale : list), fetchImpl: null })
     const rows = (await store.getMonitor()).panels.credits.rows
     expect(new Set(rows.map((r) => r.id)).size).toBe(2)
+    expect(new Set(rows.map((r) => r.name)).size).toBe(2)
     expect(JSON.stringify(rows)).not.toMatch(/x\.com|y\.com|abcdefgh/)
   })
 
   it('credits: rows of a changed shape or text that is not JSON grey the panel, not a green 0/0', async () => {
-    for (const out of ['[{"name":"x"}]', 'oops']) {
+    for (const out of ['[{"label":"x"}]', 'oops', '[{"route":"a"},{"label":"b"}]']) {
       const home = tmp()
       fs.mkdirSync(path.join(home, '.di'))
       fs.writeFileSync(path.join(home, '.di', 'monitor.json'), JSON.stringify({ feeds: [{ panel: 'credits', kind: 'command', command: 'c' }] }))

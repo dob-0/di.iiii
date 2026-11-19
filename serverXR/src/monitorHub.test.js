@@ -434,12 +434,30 @@ describe('a reported credits panel', () => {
     const credits = store.list()[0].panels.credits
     expect(credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2 })
     expect(JSON.stringify(credits)).not.toMatch(/corp\.example|dob@studio|secret|"extra"/)
-    expect(credits.rows[0]).toEqual({ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login login', why: '' })
+    expect(credits.rows[0]).toEqual({ id: expect.stringMatching(/^r[0-9a-f]{8}$/), name: 'plan:dob', available: true, meter: '7d 62%', have: expect.stringMatching(/^login login-[0-9a-f]{4}$/), why: '' })
   })
 
   it('a broken report keeps no rows and is not counted as configured', () => {
     const store = createReportStore()
     store.put({ host: 'x', panels: { credits: { ok: false, configured: 'yes', rows: 'bad', error: 'no feed' } } })
     expect(store.list()[0].panels.credits).toMatchObject({ ok: false, configured: 0, rows: [], ready: 0, total: 0, error: 'no feed' })
+  })
+
+  it('takes in the rows the machine\'s own store produced, keeps their ids, and greys a changed shape', () => {
+    const { sanitizeCredits } = require('./monitorCredits.js')
+    const rows = sanitizeCredits([{ route: 'plan:dob', available: true, meter: '7d', have: 'key', why: '' }, { route: 'ollama', available: false, meter: '', have: '', why: '' }])
+    const store = createReportStore()
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: true, ready: 1, total: 2, rows })
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows: [{ label: 'x' }] } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: false, total: 0 })
+  })
+
+  it('keeps a long word and a rule line, masks a key shape', () => {
+    const { sanitizeCredits } = require('./monitorCredits.js')
+    const [row] = sanitizeCredits([{ route: 'x', meter: '-'.repeat(40), have: 'hf_abcdefghijklmnop', why: 'internationalizationinternationalization' }])
+    expect(row.meter).toBe('-'.repeat(40))
+    expect(row.have).toBe('(masked)')
+    expect(row.why).toBe('internationalizationinternationalization')
   })
 })

@@ -397,7 +397,7 @@ function createMonitorStore({
     let parsed
     try { parsed = JSON.parse(out) } catch { throw new Error('the credits command did not print JSON') }
     const rows = sanitizeCredits(parsed)
-    if (!rows || (parsed.length && !rows.length)) throw new Error('the credits list was not in the expected shape')
+    if (!rows || rows.length !== parsed.length) throw new Error('the credits list was not in the expected shape')
     return { configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length }
   }
 

@@ -1,18 +1,34 @@
-// The credits list as the Monitor shows it: only route, ready, meter, have, why; text is clipped, an e-mail
-// address is shown as "login" and anything that looks like a key or token is masked. Used where the list is
-// read (monitorStore) and where a report is taken in (monitorHub), so no sender can bring an address, a key
-// fragment or an extra field to the page.
-const SECRET = /\b(?:sk|pk|ghp|gho|xox[a-z])[-_][A-Za-z0-9_-]{6,}|[A-Za-z0-9+/_-]{28,}/g
-const text = (value, max) => String(value ?? '').replace(/[^\s@"'<>]+@[^\s@"'<>]+/g, 'login').replace(SECRET, '(masked)').slice(0, max)
+// The credits list as the Monitor shows it: only id, name, ready, meter, have, why; text is clipped, an e-mail
+// address is shown as "login-<4 letters>" (so two accounts stay apart) and anything that looks like a key or
+// token is masked. Used where the list is read (monitorStore) and where a report is taken in (monitorHub), so
+// no sender can bring an address, a key fragment or an extra field to the page. Both shapes are accepted: the
+// raw `di-credits status --json` rows ({ route }) and the rows this module already produced ({ id, name }).
+const crypto = require('node:crypto')
 
-/** The credits list as the page shows it, or null when it is not a list. The id is the row's place plus its
- *  shown name, so two routes whose names look alike after masking still have their own id. */
+const short = (value, n) => crypto.createHash('sha1').update(String(value)).digest('hex').slice(0, n)
+const TOKEN_PREFIX = /\b(?:sk|pk|ghp|gho|ghs|ghu|glpat|hf|xox[a-z])[-_][A-Za-z0-9_-]{6,}|\b(?:AIza|ya29\.)[A-Za-z0-9_-]{8,}/g
+// a long run is a secret only when it mixes letters and digits, so a long word or a rule line stays
+const LONG_RUN = /[A-Za-z0-9+/_-]{28,}/g
+const maskRun = (run) => (/[A-Za-z]/.test(run) && /\d/.test(run) ? '(masked)' : run)
+const text = (value, max) => String(value ?? '')
+  .replace(/[^\s@"'<>]+@[^\s@"'<>]+/g, (address) => `login-${short(address, 4)}`)
+  .replace(TOKEN_PREFIX, '(masked)')
+  .replace(LONG_RUN, maskRun)
+  .slice(0, max)
+
+/** The credits list as the page shows it, or null when it is not a list. A row without a name is dropped.
+ *  The id comes from the route itself (not its place in the list), so it holds when the order changes. */
 function sanitizeCredits(raw) {
   if (!Array.isArray(raw)) return null
-  return raw.slice(0, 24).filter((r) => r && typeof r.route === 'string').map((r, i) => ({
-    id: `${i}:${text(r.route, 40)}`, name: text(r.route, 40), available: r.available === true,
-    meter: text(r.meter, 120), have: text(r.have, 80), why: text(r.why, 160)
-  }))
+  const seen = new Map()
+  return raw.slice(0, 24).filter((r) => r && typeof (r.route ?? r.name) === 'string').map((r) => {
+    const route = r.route ?? r.name
+    const base = typeof r.id === 'string' && r.route === undefined ? text(r.id, 40) : `r${short(route, 8)}`
+    const n = seen.get(base) || 0
+    seen.set(base, n + 1)
+    return { id: n ? `${base}-${n}` : base, name: text(route, 40), available: r.available === true,
+      meter: text(r.meter, 120), have: text(r.have, 80), why: text(r.why, 160) }
+  })
 }
 
 module.exports = { sanitizeCredits }

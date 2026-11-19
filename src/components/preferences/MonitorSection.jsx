@@ -103,7 +103,7 @@ function IssueItem({ issue, onOpen }) {
 function PanelNote({ panel, empty }) {
     if (!panel) return null
     if (!panel.ok) return <div className="monitor-note is-down">Unavailable here: {panel.error}</div>
-    return panel.rows?.length ? null : <div className="monitor-note">{empty}</div>
+    return panel.rows?.length || !empty ? null : <div className="monitor-note">{empty}</div>
 }
 
 function Row({ id, selected, flash, tone, onSelect, children }) {
@@ -564,7 +564,7 @@ export default function MonitorSection({ onStats }) {
 
                     <div data-panel="credits"><ModuleSection title="Credits" subtitle="Claude plans, API keys, Ollama, Colab — what is ready to run our work">
                         <PanelLive name="credits" ages={ages} nowMs={nowMs} paused={paused} />
-                        <PanelNote panel={panels.credits} empty="No credits reported." />
+                        <PanelNote panel={panels.credits} empty={panels.credits?.configured ? 'No credits reported.' : ''} />
                         {panels.credits?.ok && !panels.credits.configured ? <div className="monitor-note">This machine does not report credits (no credits feed in its monitor config).</div> : null}
                         <div className="monitor-grid">
                             {credits.map((c) => (
