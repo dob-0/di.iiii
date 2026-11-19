@@ -2186,7 +2186,7 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-page .monitor-hero-text { flex: 1 1 14rem; font-size: var(--di-text-5); font-weight: 700; letter-spacing: -0.01em; }
 .monitor-page .monitor-hero-live { font-size: var(--di-text-2); letter-spacing: 0.14em; text-transform: uppercase; }
 .monitor-page .monitor-live-mark { width: 0.5rem; height: 0.5rem; }
-.monitor-page .monitor-hero-issues { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+.monitor-page .monitor-hero-issues { flex-wrap: wrap; max-height: 3.6rem; overflow: hidden; }
 .monitor-page .monitor-hero-issues li {
     flex: 0 1 auto; max-width: 30rem; min-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     background: transparent; border: 1px solid var(--pref-border); color: var(--ui-text-muted);
@@ -2219,12 +2219,10 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-page .monitor-map-views { position: absolute; top: var(--di-space-2); left: var(--di-space-2); z-index: 3; }
 .monitor-page .monitor-map[data-monitor-map-view="list"] .monitor-map-views { position: static; }
 @media (min-width: 601px) { .monitor-page.tab-map .monitor-map-key { display: none; } }
-@media (max-width: 1300px) { .monitor-bar { flex-wrap: wrap; } .monitor-bar-actions { flex-wrap: wrap; } }
+@media (max-width: 1400px) { .monitor-bar { flex-wrap: wrap; } .monitor-bar-actions { flex-wrap: wrap; } }
 @media (max-width: 600px) { .monitor-page .monitor-map-views { position: static; } }
-.monitor-bar-tabs { overflow-x: auto; scrollbar-width: none; }
 /* Board: the panels flow in two columns on a wide screen instead of one long stack */
-.monitor-page.tab-board .monitor-main { columns: 2 24rem; column-gap: var(--di-space-3); }
-.monitor-page.tab-board .monitor-main > * { break-inside: avoid; margin-bottom: var(--di-space-3); }
+.monitor-page.tab-board .monitor-main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--di-space-3); align-items: start; }
 .monitor-page.tab-board .monitor-main .monitor-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
 /* Work: chat cards read as a dense board, state on the 2px inset bar, ask and answer clamped */
 .monitor-chat-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); }

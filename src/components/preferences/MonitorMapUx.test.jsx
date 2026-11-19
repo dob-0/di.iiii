@@ -34,6 +34,13 @@ describe('map: when the wheel zooms', () => {
         svg.dispatchEvent(plain)
         expect(plain.defaultPrevented).toBe(false)
     })
+    it('Ctrl + wheel (a pinch) over an embedded 2D map zooms it and is cancelled', () => {
+        const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} />)
+        const svg = container.querySelector('svg.monitor-map-svg')
+        const pinch = new WheelEvent('wheel', { deltaY: -100, ctrlKey: true, bubbles: true, cancelable: true })
+        act(() => { svg.dispatchEvent(pinch) })
+        expect(pinch.defaultPrevented).toBe(true)
+    })
     it('a plain wheel over the Monitor map (kinds) zooms it and the page does not scroll under it', () => {
         const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} kinds />)
         const svg = container.querySelector('svg.monitor-map-svg')
