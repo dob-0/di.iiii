@@ -19,22 +19,17 @@ const map = {
 beforeEach(() => { window.localStorage.clear(); window.localStorage.setItem('di.monitor.map.view', '2d') })
 afterEach(() => { cleanup(); window.localStorage.clear(); document.body.style.overflow = '' })
 
-describe('map: the wheel only zooms when asked', () => {
-    it('plain wheel scrolls the page; Ctrl, Cmd (a pinch) or full screen zoom', () => {
-        expect(wheelZooms({ ctrlKey: false, metaKey: false }, false)).toBe(false)
+describe('map: the wheel always zooms the camera', () => {
+    it('a plain wheel zooms; nothing needs Ctrl or full screen', () => {
+        expect(wheelZooms({ ctrlKey: false, metaKey: false }, false)).toBe(true)
         expect(wheelZooms({ ctrlKey: true }, false)).toBe(true)
-        expect(wheelZooms({ metaKey: true }, false)).toBe(true)
-        expect(wheelZooms({}, true)).toBe(true)
     })
-    it('a plain wheel over the 2D map is not cancelled, so the page scrolls', () => {
+    it('a plain wheel over the 2D map is taken by the map, the page does not scroll under it', () => {
         const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} />)
         const svg = container.querySelector('svg.monitor-map-svg')
         const plain = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true })
         svg.dispatchEvent(plain)
-        expect(plain.defaultPrevented).toBe(false)
-        const pinch = new WheelEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true })
-        svg.dispatchEvent(pinch)
-        expect(pinch.defaultPrevented).toBe(true)
+        expect(plain.defaultPrevented).toBe(true)
     })
 })
 

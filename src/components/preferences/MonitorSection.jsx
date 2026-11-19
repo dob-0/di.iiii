@@ -464,11 +464,17 @@ export default function MonitorSection({ onStats }) {
         : String(selected?.id ?? '')
 
     return (
-        <div className={`monitor-page${full ? ' is-full' : ''}${tab === 'map' ? ' is-map' : ''}`} data-monitor-full={full ? 'on' : 'off'}>
+        <div className={`monitor-page${full ? ' is-full' : ''}${tab === 'map' ? ' is-map' : ''} tab-${tab}`} data-monitor-full={full ? 'on' : 'off'}>
             <header className="monitor-bar">
                 <div className="monitor-bar-title">
                     <h2>Monitor</h2>
                     <span>{`${snap?.host || 'this machine'} · ${live ? (streaming ? 'live' : 'polling') : paused ? 'paused' : 'offline'} · ${updated}`}</span>
+                </div>
+                <div className="monitor-bar-tabs monitor-tabs" role="tablist" aria-label="Monitor views">
+                    {TABS.map(([id, label], i) => (
+                        <button key={id} type="button" role="tab" aria-selected={tab === id} data-monitor-tab={id}
+                            className={`monitor-tab${tab === id ? ' is-active' : ''}`} onClick={() => setTab(id)}>{label}<i className="monitor-tab-key" data-key={i + 1} aria-hidden="true" /></button>
+                    ))}
                 </div>
                 <div className="monitor-bar-actions">
                     <input ref={filterRef} className="monitor-filter" type="search" placeholder="Filter everything  ( / )"
@@ -509,13 +515,6 @@ export default function MonitorSection({ onStats }) {
                     <div className="monitor-area-counts">
                         <CountTiles tiles={countTiles} flashing={flashing} onPick={jumpTo} />
                     </div>
-                </div>
-
-                <div className="monitor-area-tabs monitor-tabs" role="tablist" aria-label="Monitor views">
-                    {TABS.map(([id, label], i) => (
-                        <button key={id} type="button" role="tab" aria-selected={tab === id} data-monitor-tab={id}
-                            className={`monitor-tab${tab === id ? ' is-active' : ''}`} onClick={() => setTab(id)}>{label}<i className="monitor-tab-key" data-key={i + 1} aria-hidden="true" /></button>
-                    ))}
                 </div>
 
                 <div className="monitor-area-main monitor-main">

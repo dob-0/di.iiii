@@ -234,17 +234,6 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     const showKinds = world || kinds
     const stageRef = useRef(null)
     const api = useRef(null)
-    const fsRef = useRef(fullscreen)
-    useEffect(() => { fsRef.current = fullscreen }, [fullscreen])
-    // The wheel turns the camera's zoom only in full screen or with Ctrl/Cmd (a trackpad pinch sends Ctrl);
-    // otherwise the wheel never reaches the controls (stopped in the capture phase) and the page scrolls. Touch pinch is untouched.
-    useEffect(() => {
-        const el = stageRef.current
-        if (!el) return undefined
-        const onWheel = (ev) => { if (!(fsRef.current || ev.ctrlKey || ev.metaKey)) ev.stopPropagation() }
-        el.addEventListener('wheel', onWheel, { capture: true, passive: true })
-        return () => el.removeEventListener('wheel', onWheel, { capture: true })
-    }, [])
     // keyboard camera: the stage takes focus (tab or click on empty map); arrows or WASD move it
     useEffect(() => {
         const el = stageRef.current
@@ -322,12 +311,12 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
 
     return (
         <div className={`monitor-map-stage monitor-map-stage-3d${showKinds ? ' is-world' : ''}`} ref={stageRef}>
-            <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 200, position: [0, 6, 9] }}
+            <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 45, near: 0.1, far: 600, position: [0, 6, 9] }}
                 gl={{ antialias: true, powerPreference: 'low-power' }} style={{ background: colors.ground }}>
                 <Rig ground={colors.ground} layout={layout} preset={preset} points={points} fitDist={fitDist} api={api} autoRotate={rotating} reduced={reduced} onTouch={onTouch} />
                 <Planner layout={layout} fitDist={fitDist} focusIds={[selectedId, hover].filter(Boolean)} onPlan={setPlan} />
                 <Ticker on={animate} />
-                <OrbitControls makeDefault enableDamping={false} enablePan screenSpacePanning maxPolarAngle={Math.PI / 2 - 0.04} minDistance={1.5} maxDistance={60} />
+                <OrbitControls makeDefault enableDamping={false} enablePan screenSpacePanning maxPolarAngle={Math.PI} minDistance={0.4} maxDistance={160} zoomToCursor rotateSpeed={0.9} />
                 {rings.map((ring) => (
                     <group key={ring.r}>
                         <Line color={colors.cyan} lineWidth={5} transparent opacity={0.12} points={ring.pts} />
@@ -394,7 +383,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                 ))}
                 <button type="button" tabIndex={pointerOnly ? -1 : undefined} className="monitor-map-tool" data-map-tool="fit" onClick={() => { setRotating(false); api.current?.reset() }}>Reset view</button>
             </div>
-            <div className="monitor-map-hint">Drag to turn · right-drag or two fingers to move · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · arrows or WASD · double-click a card to fly to it</div>
+            <div className="monitor-map-hint">Drag to turn · right-drag or two fingers to move · scroll or pinch to zoom · arrows or WASD · double-click a card to fly to it</div>
         </div>
     )
 }
