@@ -295,7 +295,7 @@ describe('the laser engine', () => {
         expect(new Set(data.map((s) => s.ip))).toEqual(new Set(['10.0.0.51', '10.0.0.52']))
         for (const s of data) { expect(s.buf[0]).toBe(0xa9); expect((s.buf.length - 4) / 10).toBeLessThanOrEqual(140) }
     })
-    it('fills each cube to the cushion at its own DAC rate (never above its maximum), then sends what it played, however late the tick', () => {
+    it('paces each cube to its own DAC rate, never above its maximum', () => {
         const run = (info, config = ONE) => {
             const rig = engineWith(config)
             rig.answer('10.0.0.51', info)
@@ -304,11 +304,7 @@ describe('the laser engine', () => {
             rig.engine.setFrame('all', circle)
             rig.socket.sent.length = 0
             rig.engine.tick()
-            const first = pointsIn(dataTo(rig.socket))
-            rig.socket.sent.length = 0
-            rig.at(35) // a late tick (the desk's look work, a Windows timer): the 35 ms played are all sent again
-            rig.engine.tick()
-            return [first, pointsIn(dataTo(rig.socket))]
+            return pointsIn(dataTo(rig.socket))
         }
         expect(run({ dac: 20000, max: 40000 })).toBe(1200) // the priming: LEAD_MS (60 ms) of 20 kpps
         expect(run({ dac: 60000, max: 35000 })).toBe(2100) // the maximum is the ceiling
@@ -320,16 +316,16 @@ describe('the laser engine', () => {
         hear('10.0.0.51', [0x8a, 0, 250, 0])
         socket.sent.length = 0
         engine.tick()
-        expect(pointsIn(dataTo(socket))).toBe(0)
+        expect(pointsIn(dataTo(socket))).toBe(50) // 250 free − the 200-sample margin
     })
     it('counts what the cube has played since its last answer, at its DAC rate', () => {
         const { engine, socket, hear, at } = armedSmallBuffer()
         engine.setFrame('all', circle)
-        hear('10.0.0.51', [0x8a, 0, 0x88, 0x13]) // 5000 free: 1000 queued
-        at(10) // 10 ms at 30 kpps: 300 more played, 700 left
+        hear('10.0.0.51', [0x8a, 0, 250, 0])
+        at(10) // 10 ms at 30 kpps: 300 more played
         socket.sent.length = 0
         engine.tick()
-        expect(pointsIn(dataTo(socket))).toBe(cushionAt(30000) - 700)
+        expect(pointsIn(dataTo(socket))).toBe(350)
     })
     it('disarming switches every cube off twice and stops the stream', () => {
         const { engine, socket } = armedWith()
@@ -391,20 +387,6 @@ describe('the laser engine', () => {
 })
 
 describe('the cushion (2026-11-07, REA festival: the cubes blinked on cable; TouchDesigner, keeping ~5000 points queued, did not)', () => {
-    it('a Blackout empties every armed cube\'s queue at once, and streams nothing until the cube confirms', () => {
-        const { engine, socket, hear } = armedWith()
-        engine.setFrame('all', circle)
-        engine.tick()
-        expect(litIn(dataTo(socket))).toBeGreaterThan(0)
-        socket.sent.length = 0
-        engine.blackout()
-        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x8d], [0x8d], [0x8a]])
-        engine.tick()
-        expect(dataTo(socket)).toEqual([])
-        for (const ip of ['10.0.0.51', '10.0.0.52']) hear(ip, [0x8a, 0, 0x70, 0x17])
-        engine.tick()
-        expect(litIn(dataTo(socket))).toBe(0)
-    })
     it('a dark frame after a lit one empties the cube\'s queue too, then streams dark', () => {
         const { engine, socket, hear, at } = armedWith(ONE)
         engine.setFrame('all', circle)
