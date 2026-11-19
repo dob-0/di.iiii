@@ -14,7 +14,7 @@ const COALESCIBLE_TYPES = new Set([
     'setPublishState', 'setShowState', 'setWindowState', 'setWorkspaceState', 'setProjectMeta',
     // The projection desk (src/map): a corner-pin drag is one setMappingSurface per
     // frame, and without coalescing it filled the 50-step history in one gesture.
-    'setMappingState', 'setMappingSurface', 'setMappingCue'
+    'setMappingState', 'setMappingSurface', 'setMappingCue', 'setMappingVisual'
 ])
 
 const entrySignature = (ops) => {
@@ -87,6 +87,10 @@ const describeOp = (doc, op) => {
         case 'setMappingCue': return 'Edit cue'
         case 'deleteMappingCue': return 'Delete cue'
         case 'reorderMappingCues': return 'Reorder cues'
+        case 'createMappingVisual': return 'Add visual'
+        case 'deleteMappingVisual': return 'Remove visual'
+        case 'setMappingVisual': return 'Change visual'
+        case 'reorderMappingVisuals': return 'Reorder visuals'
         default: return SETTINGS_OP_LABELS[op?.type] || 'Edit'
     }
 }
