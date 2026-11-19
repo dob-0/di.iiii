@@ -1927,7 +1927,8 @@
     flex-direction: row; align-items: center; gap: var(--di-space-2);
     padding: 0 var(--di-space-3);
 }
-@media (min-width: 901px) { .monitor-page.tab-map .monitor-tier > .monitor-meta, .monitor-page.tab-map .monitor-tier .monitor-spark, .monitor-page.tab-map .monitor-tier .monitor-dots { display: none; } }
+/* The chip strip is one row on every tab: the tier meta, sparkline and dots stay in the hover tip (a measured picture with them on shows words cut mid-way). */
+@media (min-width: 901px) { .monitor-page .monitor-tier > .monitor-meta, .monitor-page .monitor-tier .monitor-spark, .monitor-page .monitor-tier .monitor-dots, .monitor-page .monitor-count .monitor-dots { display: none; } }
 .monitor-page .monitor-hero { padding: var(--di-space-2) var(--di-space-4); }
 .monitor-page .monitor-map-section { padding: 0; background: none; border: 0; }
 .monitor-page .monitor-map-section > .preferences-module-header { display: none; }
