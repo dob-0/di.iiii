@@ -13,6 +13,7 @@ const os = require('node:os')
 const crypto = require('node:crypto')
 const { execFile } = require('node:child_process')
 const PARTS = require('./parts.json').parts
+const { sanitizeCredits } = require('./monitorCredits')
 const { sanitizeChats, chatsBlock } = require('./monitorChats')
 const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
@@ -25,7 +26,7 @@ const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
 const ASKS_MAX = 100
-const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats']
+const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats', 'credits']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
 
@@ -114,7 +115,16 @@ function createReportStore({ now = () => Date.now() } = {}) {
       if (!isPlainObject(body.panels[name])) continue
       // chats: only what the page shows is kept (no owner text, no paths); see monitorChats.js
       if (name === 'chats') panels.chats = { source: sanitizeChats(body.panels.chats.source ?? body.panels.chats, host), ...(body.panels.chats.ok === false ? { error: cleanText(body.panels.chats.error, 200) || 'chat list not read' } : {}) }
-      else panels[name] = cleanPanelValue(body.panels[name])
+      else if (name === 'credits') {
+        // credits: only route, ready, meter, have, why are kept, an address becomes "login"; see monitorCredits.js
+        const c = body.panels.credits
+        let ok = c.ok !== false
+        let error = ok ? '' : cleanText(c.error, 200)
+        let rows = (ok && sanitizeCredits(c.rows)) || []
+        // rows that are not a list, a row without a name, or "configured" without rows: a changed shape greys the panel, never a quiet 0/0
+        if (ok && (rows.dropped || (c.rows !== undefined && !Array.isArray(c.rows)) || (c.configured && !Array.isArray(c.rows)))) { ok = false; error = 'the credits rows were not in the expected shape'; rows = [] }
+        panels.credits = { ok, configured: ok && Array.isArray(c.rows) ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(!ok ? { error } : {}) }
+      } else panels[name] = cleanPanelValue(body.panels[name])
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])
       .filter(isPlainObject)

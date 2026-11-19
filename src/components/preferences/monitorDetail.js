@@ -7,7 +7,7 @@ const ISO = /^\d{4}-\d\d-\d\d[T ]\d\d:\d\d/
 const MAX_DEPTH = 4
 
 export const KIND_LABEL = {
-    machine: 'Machine', tier: 'Tier', probe: 'Address probe', agent: 'Agent session', chat: 'Chat', thing: 'Connected thing',
+    machine: 'Machine', credit: 'Credit route', tier: 'Tier', probe: 'Address probe', agent: 'Agent session', chat: 'Chat', thing: 'Connected thing',
     place: 'People in a place', service: 'Service', pr: 'Pull request', node: 'Map item', ask: 'Ask', report: 'Machine report', part: 'Part', task: 'Task'
 }
 
@@ -131,7 +131,7 @@ export const rowMatches = (query, row) => {
 export function searchCounts(snap, query) {
     const p = snap?.panels || {}
     const pools = [
-        p.machines?.rows, p.network?.rows, p.agents?.rows, p.connected?.rows, p.presence?.rows, p.services?.rows, p.pullRequests?.rows,
+        p.machines?.rows, p.credits?.rows, p.network?.rows, p.agents?.rows, p.connected?.rows, p.presence?.rows, p.services?.rows, p.pullRequests?.rows,
         snap?.chats?.rows, snap?.asks?.rows, snap?.reports, snap?.parts?.rows, snap?.tiers?.rows
     ]
     let matched = 0

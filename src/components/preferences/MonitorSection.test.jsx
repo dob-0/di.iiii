@@ -191,6 +191,24 @@ describe('MonitorSection', () => {
         expect(screen.getByText('/w2')).toBeTruthy()
     })
 
+    it('shows the Credits tile and box, and a credit row opens the drawer', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 1, total: 2, rows: [
+            { id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' },
+            { id: '1:api:studio', name: 'api:studio', available: false, meter: 'n/a', have: 'key SPENT', why: 'SPENT: credit balance is too low' }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(screen.getByText('Credits ready')).toBeTruthy()
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/2/)
+        const row = document.querySelector('[data-monitor-id="cr:1:api:studio"]')
+        expect(row.textContent).toMatch(/not ready/)
+        fireEvent.click(row)
+        expect(row.getAttribute('aria-pressed')).toBe('true')
+        expect(within(document.querySelector('.monitor-drawer')).getAllByText('Credit route').length).toBeGreaterThan(0)
+    })
+
     it('two machines with the same host name both show and select on their own', async () => {
         const snap = snapshot()
         snap.panels.machines.rows.push({ id: '100.1.1.9', name: 'r-di', os: 'windows', ip: '100.1.1.9', online: false, lastSeen: null, tx: 0, rx: 0 })
