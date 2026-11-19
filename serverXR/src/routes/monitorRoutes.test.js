@@ -284,6 +284,7 @@ describe('GET /api/monitor/mine', () => {
 
   it('anonymous, an API token, prod and the local tier are hidden', async () => {
     expect((await run({ authenticated: false }, 'staging', store)).hidden).toBe(true)
+    expect((await run({ authenticated: false, type: 'cli-token', reason: 'cli-token' }, 'staging', store)).hidden).toBe(true) // a failed terminal login
     expect((await run({ authenticated: true, type: 'api-token', subject: 'person-1' }, 'staging', store)).hidden).toBe(true)
     expect((await run({ authenticated: true, type: 'session', subject: 'person-1' }, 'production', store)).hidden).toBe(true)
     expect((await run({ authenticated: true, type: 'session', subject: 'person-1' }, null, store)).hidden).toBe(true)
