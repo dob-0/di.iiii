@@ -3,7 +3,10 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// the seed-look sweeps (every seed x 32 beats x guards) take 5-8 s on a loaded CI runner; the default 5 s is not a bound on them
+vi.setConfig({ testTimeout: 60000 })
 
 const require = createRequire(import.meta.url)
 const { createLaserDesk, normaliseLook, lookPointsAt, capOf, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, OUT } = require('./laserDesk')
