@@ -120,7 +120,7 @@ module.exports = [
   },
   {
     route: "GET /laser/desk/api/state",
-    summary: "the laser desk: the bank of looks, the live look, master, BPM and beat, blackout, and each cube's desk setup (on, mirror, size, offset, order) and whether another Out holds it",
+    summary: "the laser desk: the bank of looks, the live look, master, BPM and beat, blackout, and each cube's desk setup (on, mirror, size, offset, order, map, brightness) and whether another Out holds it; `version` (server start and page files) changes when the desk is updated, and the desk's page reloads itself on it",
     reach: "read",
     role: "guest",
     agent: false,
@@ -296,7 +296,31 @@ module.exports = [
   },
   {
     route: "POST /laser/desk/api/cube",
-    summary: "one cube's place on the laser desk: { id, on?, flipX?, size? 0…2, x? y? −1…1, order? } — off lets the desk's hold on it run out",
+    summary: "one cube's place on the laser desk: { id, on?, flipX?, flipY?, size? 0…2, x? y? −1…1, order?, corners? [[x,y]×4] −1…1 (its map: bottom-left, bottom-right, top-right, top-left), brightness? 0…1 (the most that cube gives, under every look and the master) } — off lets the desk's hold on it run out",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/audio",
+    summary: "the music a desk page hears, about 20 times a second: { low 0…1 (the bass), level 0…1, kick? } — looks with Audio ride on it; silent for 0.6 s, they draw at their own size",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/sync",
+    summary: "the desk's clock follows the music (Auto BPM): { bpm, beatAt } — that tempo, and the beat that fell at beatAt (ms, within 10 s of now) lands on a whole beat, the count running on; or { resync: true } — beat one is now",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: `${SAME_MACHINE} ${OWN_PAGE}`
+  },
+  {
+    route: "POST /laser/desk/api/maptest",
+    summary: "mapping a cube: { id, on } — on, the cube shows the alignment picture (square, cross, diagonals) through its map instead of the live look; off gives it back (dark when no look is live)",
     reach: "private",
     role: "guest",
     agent: false,

@@ -11,11 +11,301 @@ const BLANK = [0, 0, 0, 0, 0]
 const TAU = Math.PI * 2
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
 
-/** A cube's place on the desk: whether the desk drives it, mirrored, its picture's size and offset in its field. */
-const CUBE_DEFAULTS = Object.freeze({ on: true, flipX: false, size: 1, x: 0, y: 0, order: 0 })
+/** The whole field as a cube's map: its corners bottom-left, bottom-right, top-right, top-left. */
+const FULL_CORNERS = Object.freeze([[-1, -1], [1, -1], [1, 1], [-1, 1]].map((c) => Object.freeze(c)))
+
+/**
+ * A cube's place on the desk: whether the desk drives it, mirrored (flipX across, flipY upside down), its picture's size
+ * and offset in its field, and its map (2026-10-31, the owner: "i need to mapp laser"): the four corners the whole field
+ * is pinned to, as Resolume's corner pin, so the picture lands on the wall or screen it is aimed at.
+ */
+const CUBE_DEFAULTS = Object.freeze({ on: true, flipX: false, flipY: false, size: 1, x: 0, y: 0, order: 0, corners: FULL_CORNERS, brightness: 1 })
+
+/** Four corners, each [x, y] in −1…1, or the full field when `raw` is not four pairs of numbers. Pure. */
+const normaliseCorners = (raw, base = FULL_CORNERS) => {
+    if (!Array.isArray(raw) || raw.length !== 4) return base
+    const out = raw.map((c) => (Array.isArray(c) && c.length === 2 && c.every((v) => Number.isFinite(Number(v)))
+        ? [clamp(Number(c[0]), -1, 1), clamp(Number(c[1]), -1, 1)]
+        : null))
+    return out.every(Boolean) ? out : base
+}
+
+/**
+ * The corner pin: a projective map (the square-to-quad homography, Heckbert 1989) from the field −1…1 onto the four
+ * corners, so straight lines stay straight as on a keystoned projector. Returns null for the full field (nothing to do)
+ * and for corners that fold or collapse (three in a line), which keep the field unmapped rather than draw garbage. Pure.
+ */
+const cornerPin = (corners) => {
+    const q = normaliseCorners(corners)
+    if (q.every((c, i) => c[0] === FULL_CORNERS[i][0] && c[1] === FULL_CORNERS[i][1])) return null
+    const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q
+    // A quad whose corners do not all turn the same way is folded (a bow tie) or collapsed: no map.
+    const turns = q.map((c, i) => {
+        const a = q[(i + 3) % 4]
+        const b = q[(i + 1) % 4]
+        return (c[0] - a[0]) * (b[1] - c[1]) - (c[1] - a[1]) * (b[0] - c[0])
+    })
+    if (!(turns.every((t) => t > 1e-9) || turns.every((t) => t < -1e-9))) return null
+    const dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2
+    const sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3
+    const det = dx1 * dy2 - dx2 * dy1
+    const g = (sx * dy2 - dx2 * sy) / det
+    const h = (dx1 * sy - sx * dy1) / det
+    const a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, c = x0
+    const d = y1 - y0 + g * y1, e = y3 - y0 + h * y3, f = y0
+    return (x, y) => {
+        const u = (x + 1) / 2
+        const v = (y + 1) / 2
+        const w = g * u + h * v + 1
+        return [clamp((a * u + b * v + c) / w, -1, 1), clamp((d * u + e * v + f) / w, -1, 1)]
+    }
+}
 
 /** Beats since the clock's zero. */
 const beatsAt = (clock, t) => ((t - clock.zero) / 1000) * (clock.bpm / 60)
+
+// Displace, Wobble and Strobe (2026-11-01, the owner: "add more parametres for changing shape like dis[place wobbines
+// strobe"). Displace bends the picture through a smooth field that drifts a whole turn every DISPLACE_BEATS; Wobble runs a
+// ripple along every line, once round every wobbleBeats; Strobe lights the picture for the first half of each flash.
+// The bends are measured in the picture's own size, so a small picture bends as much as a big one, for its size.
+const DISPLACE_BEATS = 8
+const DISPLACE_REACH = 0.3 // the most a point moves at Displace 1, of the picture's size
+const WOBBLE_REACH = 0.08 // the ripple's height at Wobble 1, of the picture's size
+const WOBBLE_WAVE = 0.5 // the ripple's length, of the picture's size
+const isLitPoint = (p) => p[2] > 0 || p[3] > 0 || p[4] > 0
+// A bent picture costs the cube more: its lines are longer and it has more corners, and a cube spends points on both.
+// A busy picture (sunflower, galaxy) bent in full would need more points than one pass of the cube may take, and the
+// engine would stop it. So the bends are eased off, as little as needed, until the picture costs at most BEND_MAX_GROWTH
+// more than unbent — or, for a simple picture far from the cube's limit, up to twice its cost while that stays under
+// BEND_FREE_COST, so a circle or a line bends in full. The cost counts as the engine's guards do
+// (serverXR/src/laser/laserGuards.js DEFAULT_GUARDS): a point every litStep of lit line and every blankStep of blank move,
+// and at a corner sharper than cornerAngleDeg one point per cornerRadPerPoint of the turn. Every seed look bent in full
+// fits a LaserCube Ultra's 2333-point pass at 35 kpps (laserDesk.test.js).
+const BEND_MAX_GROWTH = 1.1
+const BEND_FREE_COST = 1200
+const COST = Object.freeze({ litStep: 2 / 80, blankStep: 2 / 20, cornerRad: (30 * Math.PI) / 180, cornerRadPerPoint: 0.6 })
+const costOf = (points) => {
+    let sum = 0
+    for (let k = 1; k < points.length; k += 1) {
+        const a = points[k - 1]
+        const p = points[k]
+        const d = Math.hypot(p[0] - a[0], p[1] - a[1])
+        if (!isLitPoint(p)) { sum += d / COST.blankStep; continue }
+        sum += d / COST.litStep
+        const c = points[k + 1]
+        if (!c || !isLitPoint(c) || d < 1e-9) continue
+        const e = Math.hypot(c[0] - p[0], c[1] - p[1])
+        if (e < 1e-9) continue
+        const turn = Math.acos(clamp(((p[0] - a[0]) * (c[0] - p[0]) + (p[1] - a[1]) * (c[1] - p[1])) / (d * e), -1, 1))
+        if (turn > COST.cornerRad) sum += turn / COST.cornerRadPerPoint
+    }
+    return sum
+}
+const bendWithin = (points, opts) => {
+    const plain = costOf(points)
+    const most = Math.max(plain * BEND_MAX_GROWTH, Math.min(plain * 2, BEND_FREE_COST))
+    const full = bend(points, opts)
+    if (!(most > 0) || costOf(full) <= most) return full
+    let lo = 0
+    let hi = 1
+    for (let k = 0; k < 6; k += 1) {
+        const mid = (lo + hi) / 2
+        if (costOf(bend(points, { ...opts, displace: opts.displace * mid, wobble: opts.wobble * mid })) <= most) lo = mid
+        else hi = mid
+    }
+    return bend(points, { ...opts, displace: opts.displace * lo, wobble: opts.wobble * lo })
+}
+const bend = (points, { displace, wobble, wobbleBeats, size, b }) => {
+    const s = Math.max(size, 0.05)
+    const out = points.map((p) => [...p])
+    if (wobble > 0) {
+        const amp = wobble * WOBBLE_REACH * s
+        const phase = (TAU * b) / wobbleBeats
+        // One stroke (a run of lit points) at a time: each point moves across its line, by a sine of how far along it is.
+        for (let i = 0; i < points.length;) {
+            if (!isLitPoint(points[i])) { i += 1; continue }
+            let j = i
+            while (j < points.length && isLitPoint(points[j])) j += 1
+            let along = 0
+            for (let k = i; k < j; k += 1) {
+                if (k > i) along += Math.hypot(points[k][0] - points[k - 1][0], points[k][1] - points[k - 1][1])
+                const a = points[Math.max(i, k - 1)]
+                const c = points[Math.min(j - 1, k + 1)]
+                const len = Math.hypot(c[0] - a[0], c[1] - a[1])
+                if (len < 1e-9) continue
+                const off = amp * Math.sin((TAU * along) / (WOBBLE_WAVE * s) - phase)
+                out[k][0] = points[k][0] - ((c[1] - a[1]) / len) * off
+                out[k][1] = points[k][1] + ((c[0] - a[0]) / len) * off
+            }
+            i = j
+        }
+    }
+    if (displace > 0) {
+        const amp = (displace * DISPLACE_REACH * s) / 1.5
+        const turn = (TAU * b) / DISPLACE_BEATS
+        for (const p of out) {
+            const u = (p[0] / s) * 1.5
+            const v = (p[1] / s) * 1.5
+            const ox = Math.sin(2.1 * u + 1.7 * v + turn) + 0.5 * Math.sin(3.7 * v - 2.3 * u + 1.3 * turn)
+            const oy = Math.sin(1.9 * v - 2.4 * u + 1.1 * turn + 1.7) + 0.5 * Math.sin(3.1 * u + 2.9 * v - 0.7 * turn)
+            p[0] += amp * ox
+            p[1] += amp * oy
+        }
+    }
+    // A blank move arrives where its stroke now starts, so no light is drawn on the way in.
+    for (let k = 0; k < out.length - 1; k += 1) {
+        if (!isLitPoint(out[k]) && isLitPoint(out[k + 1])) { out[k][0] = out[k + 1][0]; out[k][1] = out[k + 1][1] }
+    }
+    return out
+}
+
+// Speed, Split and Flicker (2026-11-06 evening, from the owner's laser.html and LASER_BRIEF.md: "red + green beams
+// slightly misaligned (they turn yellow where they overlap)", its scan speed and its flicker). Speed runs the shape's own
+// animation faster or slower than the desk's beat; Pulse, Sweep, the bends, Strobe and Chase keep the desk's beat. Split
+// draws the picture twice, the second time in colour2 and SPLIT_REACH apart at Split 1 (of the whole field, as a
+// projector's misaligned colours are, whatever the picture's size), straight below it (2026-11-07, the owner: "distance
+// should be y not x side"; it first turned round the first beam). The two share the look's points, so the cube's pass is no longer, and where the beams meet their
+// light adds: red and green make yellow. Flicker dips each beam's brightness at random, by up to FLICKER_DIP at Flicker 1,
+// a new dip every FLICKER_MS (the desk's frame), every cube and every beam its own. The page's exposure, glow, sparks and
+// hot tip are not here: they are what a camera and haze do to a real beam.
+const SPLIT_REACH = 0.04
+// Distance (2026-11-07, the owner: "second line … make lines far and near option"): how far apart the two beams are at
+// Split 1, from SPLIT_REACH (near, as before) at Distance 0 to SPLIT_FAR at Distance 1, growing by the same factor each
+// step, so the near end, where a small change shows, has as much of the slider as the far end.
+const SPLIT_FAR = 0.6
+const splitReachOf = (far) => SPLIT_REACH * (SPLIT_FAR / SPLIT_REACH) ** (Number.isFinite(far) ? clamp(far, 0, 1) : 0)
+const SPLIT_COLOUR = '#14ff28'
+const FLICKER_DIP = 0.5
+const FLICKER_MS = 50
+// Drawing twice costs the cube twice the blank waits and dwells at the strokes' ends and twice the corners, which sharing
+// the points does not save: a busy picture split (galaxy, sunflower, dust, weave's grid) would need more than one pass of
+// the cube may take, and the engine would stop it. So the two beams are drawn only while they fit in SPLIT_PASS_MOST of
+// a LaserCube Ultra's 2333-point pass at 35 kpps, counted as the engine's guards will draw them (passPointsOf, which comes
+// out at most 12 % under the guards' own count over every seed look); a picture too busy for that stays one beam, with
+// all the look's points.
+const SPLIT_PASS_MOST = 1900
+// Layers (2026-11-07, the owner: "copy and change heit of secon pattern but they will be in same signal", then "insted
+// second pattern we are adding + and opening same pattern copy and alll the paraamamtres"): a look may carry `layers`,
+// more patterns with every setting of their own, drawn after it in the same pass of the cube, each joined by a blank
+// move. A layer is drawn only while the whole fits LAYERS_PASS_MOST as passPointsOf counts it (at most 12 % under the
+// guards' own count, so under the real cube's 2333); one that does not fit is left out (and the ones after it), and the
+// points carry `layersDrawn`, so the editor can say so. The engine never stops the cube for it.
+const LAYERS_PASS_MOST = 2000
+// The guards' plan at 35 kpps (serverXR/src/laser/laserGuards.js DEFAULT_GUARDS through pathPlan, reference 30 kpps).
+const PASS = Object.freeze({
+    litStep: (2 / 80) * (30000 / 35000),
+    blankStep: (2 / 20) * (30000 / 35000),
+    cornerRad: (30 * Math.PI) / 180,
+    cornerRadPerPoint: 0.6,
+    cornerScale: 35000 / 30000,
+    startDwell: 2,
+    endDwell: 2,
+    blankBeforeOn: 35,
+    litBeforeOff: 11
+})
+const cheb = (a, b) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]))
+// The points one pass of the cube takes for these points, as laserGuards.js optimisePath counts them: each point, the blank
+// wait and the dwells where a stroke starts and ends, the hold at a sharp corner, and the steps filled in between, the
+// frame looping back to its start.
+const passPointsOf = (points) => {
+    const n = points.length
+    let count = 0
+    for (let i = 0; i < n; i += 1) {
+        const p = points[i]
+        const next = points[(i + 1) % n]
+        const prev = points[(i - 1 + n) % n]
+        const litIn = isLitPoint(p)
+        const litOut = isLitPoint(next)
+        count += 1
+        if (!litIn && litOut) count += PASS.blankBeforeOn + PASS.startDwell
+        else if (litIn && !litOut) count += PASS.endDwell + PASS.litBeforeOff
+        else if (litIn) {
+            const la = Math.hypot(p[0] - prev[0], p[1] - prev[1])
+            const lb = Math.hypot(next[0] - p[0], next[1] - p[1])
+            if (la > 1e-9 && lb > 1e-9) {
+                const turn = Math.acos(clamp(((p[0] - prev[0]) * (next[0] - p[0]) + (p[1] - prev[1]) * (next[1] - p[1])) / (la * lb), -1, 1))
+                if (turn >= PASS.cornerRad - 1e-9) count += Math.round(Math.ceil(turn / PASS.cornerRadPerPoint - 1e-9) * PASS.cornerScale)
+            }
+        }
+        if (n > 1) count += Math.max(0, Math.ceil(cheb(p, next) / (litOut ? PASS.litStep : PASS.blankStep) - 1e-9) - 1)
+    }
+    return count
+}
+// A number in 0…1 from a few integers, the same on every machine (laserShapes.cjs hash01): Flicker's dips.
+const noise01 = (...ints) => {
+    let h = 2166136261
+    for (const v of ints) h = Math.imul(h ^ (v | 0), 16777619)
+    h = Math.imul(h ^ (h >>> 15), 2246822507)
+    h = Math.imul(h ^ (h >>> 13), 3266489909)
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+}
+
+// LFO (2026-11-07, the owner: "add lfo paramatre for laser desk"; she picked "on every slider", as Resolume's BPM-synced
+// parameter animation): a look's `lfo` holds, per slider, { on, wave, beats, depth }, and that slider then moves by itself
+// once round every `beats` of the desk's beat (the Chase delay included, so an LFO chases across the cubes too). Only
+// sliders that are an AMOUNT or a PLACE have one: a rate (Speed, Spin, Strobe, the "every"s) moved by an LFO would make
+// the picture jump, as the time it multiplies is the whole show's. An amount's slider is the LFO's top and Depth how far
+// down it goes (100 %: down to nothing), as Pulse does for the size; a place swings round its slider by Depth of the
+// slider's half-width (Height, Across: ±1, the whole field; Rotation: ±half a turn, so Saw at 100 % turns it round once).
+// Size never goes under LFO_SIZE_LEAST by an LFO (unless the slider is under it): a small picture is a still beam, and
+// the engine stops a cube that draws one. On beat one each wave is at its top; Random takes a new place every round.
+const LFO_WAVES = Object.freeze(['sine', 'tri', 'saw', 'square', 'random'])
+const LFO_FIELDS = Object.freeze({
+    size: { kind: 'amount' },
+    height: { kind: 'place', half: 1, min: -1, max: 1 },
+    x: { kind: 'place', half: 1, min: -1, max: 1 },
+    rotation: { kind: 'place', half: 0.5 },
+    level: { kind: 'amount' },
+    pulse: { kind: 'amount' },
+    sweep: { kind: 'amount' },
+    displace: { kind: 'amount' },
+    wobble: { kind: 'amount' },
+    split: { kind: 'amount' },
+    splitFar: { kind: 'amount' },
+    flicker: { kind: 'amount' }
+})
+const LFO_KEYS = Object.keys(LFO_FIELDS)
+const LFO_DEFAULT = Object.freeze({ on: true, wave: 'sine', beats: 4, depth: 0.5 })
+const LFO_BEATS_MIN = 0.25
+const LFO_BEATS_MAX = 64
+const LFO_SIZE_LEAST = 0.15 // laserShapes.cjs MARK_MIN_SIZE: the smallest size every shape is drawn without a still beam
+/** A wave's height in 0…1 at `b` beats: 1 on beat one. `seed` keeps each slider's Random its own. */
+const lfoWave = (wave, b, beats, seed = 0) => {
+    const turns = b / beats
+    const p = turns - Math.floor(turns)
+    if (wave === 'tri') return Math.abs(1 - 2 * p)
+    if (wave === 'saw') return 1 - p
+    if (wave === 'square') return p < 0.5 ? 1 : 0
+    if (wave === 'random') return noise01(Math.floor(turns), seed, 7919)
+    return 0.5 + 0.5 * Math.cos(TAU * p)
+}
+/** Where the slider `key` set at `value` is at `b` beats, its LFO `lfo` running (an LFO that is off leaves it). */
+const lfoValueAt = (key, value, lfo, b) => {
+    const field = LFO_FIELDS[key]
+    if (!field || !lfo || !lfo.on || !(lfo.depth > 0) || !Number.isFinite(value)) return value
+    const depth = clamp(lfo.depth, 0, 1)
+    const w = lfoWave(lfo.wave, b, clamp(Number(lfo.beats) || LFO_DEFAULT.beats, LFO_BEATS_MIN, LFO_BEATS_MAX), LFO_KEYS.indexOf(key) + 1)
+    if (field.kind === 'place') {
+        const v = value + depth * field.half * (2 * w - 1)
+        return field.min === undefined ? v : clamp(v, field.min, field.max)
+    }
+    let low = value * (1 - depth)
+    if (key === 'size') low = Math.max(low, Math.min(value, LFO_SIZE_LEAST))
+    return low + (value - low) * w
+}
+/** The look with every running LFO applied at `b` beats (the same look when it has none). */
+const lfoLook = (look, b) => {
+    const lfo = look.lfo
+    if (!lfo || typeof lfo !== 'object') return look
+    let out = look
+    for (const key of LFO_KEYS) {
+        const one = lfo[key]
+        if (!one || !one.on || !(one.depth > 0)) continue
+        if (out === look) out = { ...look }
+        out[key] = lfoValueAt(key, look[key], one, b)
+    }
+    return out
+}
 
 /**
  * One cube's points for `look` at time t (ms): the Laser node's shape, moved on the beat, then the cube's own setup.
@@ -24,38 +314,100 @@ const beatsAt = (clock, t) => ((t - clock.zero) / 1000) * (clock.bpm / 60)
  * `stats`, when given, is filled with `lit` (lit points the look drew) and `off` (of those, the ones pushed off the field
  * and blanked), so a cut picture can be counted and shown (stage audit 2026-10-30, rows 19, 23).
  */
-const lookPointsAt = (look, { t, clock, index = 0, cube = CUBE_DEFAULTS, master = 1, stats = null }) => {
-    const level = look.level * clamp(master, 0, 1)
+const pictureAt = (set, { t, clock, index = 0, cube = CUBE_DEFAULTS, master = 1, audio = null, stats = null }) => {
+    const b = beatsAt(clock, t) - index * set.phase
+    // The sliders where their LFOs have them now (LFO_FIELDS above).
+    const look = lfoLook(set, b)
+    // A cube's brightness (Setup, 2026-11-01, the owner: "i want laser brighntess controll in setup") is the most that
+    // cube ever gives: every look and the master scale under it.
+    const brightness = Number.isFinite(cube.brightness) ? clamp(cube.brightness, 0, 1) : 1
+    const level = look.level * clamp(master, 0, 1) * brightness
     if (!(level > 0)) return [BLANK]
     const bpm = clock.bpm
-    const b = beatsAt(clock, t) - index * look.phase
+    if (look.strobe > 0 && (((b * look.strobe) % 1) + 1) % 1 >= 0.5) return [BLANK]
     const seconds = (b * 60) / bpm
     const breathe = look.pulse > 0 ? 1 - look.pulse * 0.5 * (1 - Math.cos((TAU * b) / look.pulseBeats)) : 1
-    const points = generateShape({
+    // The music (2026-10-31, the owner: "add audio analyze"): `audio` is the bass and the kicks, 0…1, while the desk hears
+    // it (null when it does not). `react` of the size rides on it: quiet draws the picture smaller, a kick full size.
+    const swell = look.react > 0 && audio !== null && Number.isFinite(audio) ? 1 - look.react * 0.6 * (1 - clamp(audio, 0, 1)) : 1
+    const size = clamp(look.size * cube.size * breathe * swell, 0, 1)
+    // Speed, Split and Flicker (SPLIT_REACH above).
+    const speed = Number.isFinite(look.speed) && look.speed > 0 ? look.speed : 1
+    const split = Number.isFinite(look.split) ? clamp(look.split, 0, 1) : 0
+    const flicker = Number.isFinite(look.flicker) ? clamp(look.flicker, 0, 1) : 0
+    const beam = (colour, k, points) => generateShape({
         shape: look.shape,
-        size: clamp(look.size * cube.size * breathe, 0, 1),
+        size,
         height: 0,
         rotation: look.rotation,
         spin: (look.spin * bpm) / 60,
         time: seconds,
-        beat: b,
-        colour: look.colour,
-        level,
-        points: look.points,
+        beat: b * speed,
+        speed,
+        colour,
+        // A shape's second part (vortex's dot) in the second colour.
+        colour2: look.colour2,
+        level: flicker > 0 ? level * (1 - flicker * FLICKER_DIP * noise01(Math.floor(t / FLICKER_MS), index, k)) : level,
+        points,
         copies: look.copies,
         rainbow: look.rainbow,
         cycle: look.cycle > 0 ? (look.cycle * 60) / bpm : 0
     })
+    const bent = (drawn) => (look.displace > 0 || look.wobble > 0
+        ? bendWithin(drawn, { displace: look.displace, wobble: look.wobble, wobbleBeats: look.wobbleBeats || 1, size, b })
+        : drawn)
     const flip = (look.mirror && index % 2 === 1) !== cube.flipX ? -1 : 1
+    const flipY = cube.flipY ? -1 : 1
     const dx = look.x + (look.sweep > 0 ? look.sweep * Math.sin((TAU * b) / look.sweepBeats) : 0)
-    const dy = look.height + cube.y
-    return points.map((p) => {
+    // The map last: the picture is placed in the cube's field, then the field is pinned to its corners.
+    const pin = cornerPin(cube.corners)
+    const placed = (points) => points.map((p) => {
         const x = (p[0] + dx) * flip + cube.x
-        const y = p[1] + dy
+        const y = (p[1] + look.height) * flipY + cube.y
         const inside = x >= -1 && x <= 1 && y >= -1 && y <= 1
         if (stats && (p[2] > 0 || p[3] > 0 || p[4] > 0)) { stats.lit = (stats.lit || 0) + 1; if (!inside) stats.off = (stats.off || 0) + 1 }
-        return inside ? [x, y, p[2], p[3], p[4]] : [clamp(x, -1, 1), clamp(y, -1, 1), 0, 0, 0]
+        const at = inside ? [x, y] : [clamp(x, -1, 1), clamp(y, -1, 1)]
+        const [mx, my] = pin ? pin(at[0], at[1]) : at
+        return inside ? [mx, my, p[2], p[3], p[4]] : [mx, my, 0, 0, 0]
     })
+    // Split is weighed as the cube will get it: bent, placed and mapped (a line that leaves the field breaks there, and
+    // every break costs the cube a stroke's waits and dwells).
+    if (split > 0) {
+        const half = Math.max(8, Math.round(look.points / 2))
+        const below = split * splitReachOf(look.splitFar)
+        const second = beam(look.colour2 || SPLIT_COLOUR, 1, half).map((p) => [p[0], p[1] - below, p[2], p[3], p[4]])
+        const both = placed(bent([...beam(look.colour, 0, half), [second[0][0], second[0][1], 0, 0, 0], ...second]))
+        if (passPointsOf(both) <= SPLIT_PASS_MOST) return both
+    }
+    return placed(bent(beam(look.colour, 0, look.points)))
+}
+
+/**
+ * One cube's points for `look` at time t (ms) — the look's picture, then each of its layers (LAYERS_PASS_MOST) — with
+ * `layersDrawn` on the array: how many layers made it into the pass.
+ */
+const lookPointsAt = (look, ctx) => {
+    const layers = Array.isArray(look.layers) ? look.layers : []
+    // On a laser (ctx.cubeId, from the desk): ONE picture, never two in its signal (2026-11-07, the owner: "u are
+    // dublicating the signal i just need visuulisation of it"): the last layer whose cubes pick that laser, else the
+    // look's own. Without a laser (the Preview, the tiles) every layer is drawn, to see the whole.
+    if (layers.length && ctx && ctx.cubeId) {
+        const on = (cubes) => cubes === 'all' || (Array.isArray(cubes) && cubes.includes(ctx.cubeId))
+        for (let i = layers.length - 1; i >= 0; i -= 1) if (on(layers[i].cubes)) return pictureAt(layers[i], ctx)
+        return pictureAt(look, ctx)
+    }
+    let out = pictureAt(look, ctx)
+    let drawn = 0
+    for (const layer of layers) {
+        const more = pictureAt(layer, ctx) // layers come normalised (laserDesk.js normaliseLook)
+        if (!more.some(isLitPoint)) { drawn += 1; continue }
+        const next = out.some(isLitPoint) ? [...out, [more[0][0], more[0][1], 0, 0, 0], ...more] : more
+        if (passPointsOf(next) > LAYERS_PASS_MOST) break
+        out = next
+        drawn += 1
+    }
+    if (layers.length) out.layersDrawn = drawn
+    return out
 }
 
 /**
@@ -63,12 +415,28 @@ const lookPointsAt = (look, { t, clock, index = 0, cube = CUBE_DEFAULTS, master 
  * sweep. A picture framed on it holds still while the look moves inside it, so a pulse or a sweep shows.
  */
 const lookBox = (look) => {
-    const reach = Math.max(0.05, look.size * 1.2)
-    const across = look.sweep > 0 ? look.sweep : 0
-    return [
+    const reach = Math.max(0.05, look.size * (1.2 + DISPLACE_REACH * (look.displace || 0) + WOBBLE_REACH * (look.wobble || 0)) + splitReachOf(look.splitFar) * (look.split || 0))
+    // An LFO on an amount only takes it down, so the box holds; one on Across or Height swings the picture as far as
+    // its Depth (LFO_FIELDS).
+    const swing = (key) => {
+        const one = look.lfo && look.lfo[key]
+        return one && one.on && one.depth > 0 ? clamp(one.depth, 0, 1) * LFO_FIELDS[key].half : 0
+    }
+    const across = (look.sweep > 0 ? look.sweep : 0) + swing('x')
+    const up = swing('height')
+    const box = [
         clamp(look.x - reach - across, -1, 1), clamp(look.x + reach + across, -1, 1),
-        clamp(look.height - reach, -1, 1), clamp(look.height + reach, -1, 1),
+        clamp(look.height - reach - up, -1, 1), clamp(look.height + reach + up, -1, 1),
     ]
+    // Its layers too: the box holds them all.
+    for (const layer of Array.isArray(look.layers) ? look.layers : []) {
+        const [x0, x1, y0, y1] = lookBox({ ...layer, layers: [] })
+        box[0] = Math.min(box[0], x0); box[1] = Math.max(box[1], x1); box[2] = Math.min(box[2], y0); box[3] = Math.max(box[3], y1)
+    }
+    return box
 }
 
-module.exports = { CUBE_DEFAULTS, beatsAt, lookPointsAt, lookBox }
+module.exports = {
+    CUBE_DEFAULTS, FULL_CORNERS, normaliseCorners, cornerPin, beatsAt, lookPointsAt, lookBox,
+    LFO_WAVES, LFO_FIELDS, LFO_DEFAULT, LFO_BEATS_MIN, LFO_BEATS_MAX, LFO_SIZE_LEAST, lfoWave, lfoValueAt, lfoLook
+}
