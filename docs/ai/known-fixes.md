@@ -3,6 +3,14 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor Credits box empty ("does not report credits", tile "—") on a machine with no credits feed, although the account's list was known (2026-11-20, N6020, N6026, N6027)
+
+Symptom: on studio-mac (any machine with no credits feed in `~/.di/monitor.json`) the Credits box said "This machine does not report credits" and the tile showed "—", while aylmo's report in the same account held 6 routes (4 ready).
+Cause: each machine read credits from its own feed and nothing merged them: other machines' lists stayed inside their report rows, and the page read only the local `panels.credits`. A report's `configured` cannot tell "no feed": the hub's ingest sets `configured: 1` for any rows array, an empty one too, so the choice of a list to lend goes by rows, never by `configured`.
+Fix: `serverXR/src/monitorHub.js` `creditsFor` fills a healthy panel that has no feed and no list with the freshest fresh, non-empty list of the owner's other machines (the hub's own reports, or the signed-in account's rows from dev), marked `from` and `reportedAt`; the ingest now keeps `stale: true` so an old list is not lent. `MonitorSection.jsx` says "From <machine>, reported <age>: this machine has no credits list of its own." No probe runs for it (a probe is about 113,000 tokens), and the machine's own report still carries its own panel, so a lent list is never reported back as its own.
+Regression tests: `serverXR/src/monitorHub.test.js` "credits on every machine" (lent and marked; a missing panel; an own list, a failing, a checking and an empty configured panel are never covered; a stale report, a stale, failing or empty list is not lent; the freshest, then the longer, then the name; the account's rows from dev; never another account's machine) and "keeps \"stale\" on a list the machine itself marked old"; `src/components/preferences/MonitorSection.test.jsx` "a credits list lent by another machine says whose it is and how old".
+Not done: a stale list is not lent (the box then reads "does not report credits", not an old list); the age shown is when the report came in, and the list in it is under five minutes old by construction (an older one is `stale` and is not lent).
+
 ## The local Monitor got 404 from dev's /api/monitor/mine for a real terminal login (2026-11-20, N5850)
 
 Symptom: signed in with `di login`, the local Monitor said "could not be reached" and listed no other machine; a real call to dev answered 404 "Cannot GET /serverXR/api/monitor/mine".
