@@ -418,9 +418,9 @@ describe('project contracts', () => {
             form.append('asset', new Blob([bytes], { type: 'text/html' }), name)
             return fetch(`${server.baseUrl}/api/projects/bytes-project/assets`, { method: 'POST', body: form })
         }
-        const head = Buffer.from('<html><body><h1>\u0130\u0130\u0130\u0130\u0130</h1><p>', 'utf8')
+        const head = Buffer.from('<html><body><h1>\u0130\u0130\u0130\u0130\u0130</h1>', 'utf8')
         const bad = Buffer.from([0xe9, 0xff, 0xc3])
-        const tail = Buffer.from('</p></body></html>', 'utf8')
+        const tail = Buffer.from('</body></html>', 'utf8')
         const res = await upload(Buffer.concat([head, bad, tail]), 'latin.html')
         expect(res.status).toBe(200)
         const served = Buffer.from(await (await fetch(new URL((await res.json()).asset.url, server.baseUrl))).arrayBuffer())
