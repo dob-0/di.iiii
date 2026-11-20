@@ -1,4 +1,4 @@
-# 2026-11-20 — Monitor chips stay whole on narrow screens
+## 2026-11-20 — Monitor chips stay whole on narrow screens
 
 Another session found words broken mid-word ("refere / nce", "commi / t unkno / wn") in the DEV / PROD / LOCAL strips at 768 px and 390 px after the Monitor look (#1325).
 
