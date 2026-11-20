@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useWideScreen } from './useWideScreen.js'
 import WorldLegend, { shapePoints } from './WorldLegend.jsx'
 import { ASPECT, KIND_ORDER, KIND_STYLE, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
@@ -16,8 +17,8 @@ const LIVE_EDGES = new Set(['runs', 'serves'])
 const PHONE_QUERY = '(max-width: 600px)'
 const VIEW_KEY = 'di.monitor.map.view'
 const VIEWS = [['2d', '2D'], ['3d', '3D'], ['list', 'List']]
-const MIN_ZOOM = 0.25
-const MAX_ZOOM = 6
+const MIN_ZOOM = 0.1
+const MAX_ZOOM = 24
 
 export const useNarrow = () => {
     const get = () => (typeof window !== 'undefined' && window.matchMedia ? window.matchMedia(PHONE_QUERY).matches : false)
@@ -109,14 +110,16 @@ const readPos = () => {
 }
 const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.stringify(o)) } catch { /* the arrangement just is not kept */ } }
 
-/** The wheel zooms the map only when you asked for it: full screen, or Ctrl/Cmd (a trackpad pinch sends Ctrl). Otherwise the page scrolls. */
-export const wheelZooms = (ev, fullscreen) => Boolean(fullscreen || ev.ctrlKey || ev.metaKey)
+// The wheel zooms the map in full screen, on a map that fills its screen (the Monitor map tab, `fills`), or with Ctrl/Cmd
+// (a trackpad pinch sends Ctrl). An embedded map keeps the page scrolling under the wheel.
+export const wheelZooms = (ev, fullscreen, fills = false) => Boolean(fullscreen || (fills && (typeof window === 'undefined' || window.innerWidth > 900)) || ev.ctrlKey || ev.metaKey)
 
 export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false, kinds = false, pointerOnly = false }) {
     // pointerOnly: a mouse/touch surface only (the Mixed view): out of the tab order, one data-map-node per node (the list owns it)
     const nodeAttr = pointerOnly ? 'data-pointer-node' : 'data-map-node'
     const tab = pointerOnly ? -1 : undefined
     const showKinds = world || kinds
+    const wide = useWideScreen()
     const svgRef = useRef(null)
     const [vb, setVb] = useState(() => fitBox(layout, world))
     const [hover, setHover] = useState(null)
@@ -170,10 +173,10 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
     useEffect(() => {
         const el = svgRef.current
         if (!el) return undefined
-        const onWheel = (ev) => { if (!wheelZooms(ev, fsRef.current)) return; ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
+        const onWheel = (ev) => { if (!wheelZooms(ev, fsRef.current, kinds)) return; ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
         el.addEventListener('wheel', onWheel, { passive: false })
         return () => el.removeEventListener('wheel', onWheel)
-    }, [zoomAt])
+    }, [zoomAt, kinds])
 
     const onPointerDown = (ev) => {
         const d = drag.current
@@ -331,7 +334,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                 <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
             {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
-            <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
+            <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen || (kinds && wide) ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
         </div>
     )
 }
