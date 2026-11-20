@@ -187,7 +187,14 @@ export const planRewriteOps = (before, after) => {
                 const keys = changedKeys(c, a.cues[i])
                 ops.push({ type: 'setMappingCue', payload: { cueId: c.id, patch: patchOf(a.cues[i], keys) } })
             })
-            const rest = changedKeys({ ...b, surfaces: 0, cues: 0 }, { ...a, surfaces: 0, cues: 0 })
+            // The visuals bank is written by its own op: setMappingState ignores `visuals`, so a
+            // visual's source.ref / thumb asset URL would silently keep the old id.
+            ;(b.visuals || []).forEach((v, i) => {
+                if (same(v, a.visuals?.[i])) return
+                const keys = changedKeys(v, a.visuals[i]).filter((k) => k !== 'id')
+                ops.push({ type: 'setMappingVisual', payload: { visualId: v.id, patch: patchOf(a.visuals[i], keys) } })
+            })
+            const rest = changedKeys({ ...b, surfaces: 0, cues: 0, visuals: 0 }, { ...a, surfaces: 0, cues: 0, visuals: 0 })
             if (rest.length) ops.push({ type: 'setMappingState', payload: { patch: patchOf(a, rest) } })
             continue
         }

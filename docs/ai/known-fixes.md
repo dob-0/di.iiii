@@ -1971,6 +1971,59 @@ Guard: `SpacesMixed.test.jsx` (three panes, one shared selection, one poll reach
 - 2026-11-17 admin was hard to read (owner: "bad UI … not intuitive"): zero badges on every nav entry, a title that said "Spaces and who can see them" on Open call and Visitors, dash-only Spaces/Users cards on pages that carry their own counts, filter buttons drawn as a 2-column wall, and on a phone the section list filling the first screen. Fix: badges only when > 0, title = the section's name, no header cards on those two pages, `.preferences-filter-row` chips, one scrolling nav line on phones with the active entry scrolled into view; "Apps that visit" renamed "Visitors". Guard: `PreferencesShared.test.jsx` ("shows a count only when there is something to count") and the unchanged `PreferencesPage*.test.jsx`. Spaces and users, Monitor, Agents and the operator pages are not yet redesigned.
 
 - 2026-11-19 eye sweep: `/wiki` at 390 px had its article 37 px wider than the window (141 escapes) because the phone layout was `grid-template-columns: 1fr`, a track that grows to its widest content; it is `minmax(0, 1fr)` now. `/tools` at 700 px had a card's "where" label (`.kit-where`, `flex-shrink: 0`) 15 px past its card; the head now wraps and the label may shrink. Test: `src/styles/eyeSweepFit.test.js`; detector `scripts/check-box-escape.mjs` (0 escapes after).
+
+## A page visual reached the projection wall at half its frame rate (2026-11-12)
+
+Symptom (owner, at the bar show's mapping desk: "lag and not smooth"): a visual page drawing at 61 fps reached the desk's monitors and the /out wall at about 28 fps (measured by a MessagePort hook on the desk side, on the redesign copy of this desk).
+Cause: the frame relay (`serverXR/src/frameRelay.js`) sends a frame only after the desk says `next`, one frame in flight, and `src/map/mediaRack.js` said `next` only when a frame arrived. That reply often landed just after the page's following animation frame, so the page skipped every other frame. Not the copy: `createImageBitmap` of a 1920×1080 WebGL canvas takes ~0.2 ms.
+Fix: `src/map/mediaRack.js` html branch: once connected, the desk also says `next` on each of its own animation frames and half a frame (8 ms) later, since the two frame loops run in different processes. Still one frame in flight; it stops on dispose, so a dropped visual stops asking. Desk side only: no server restart, no served-HTML change.
+Guard: `src/map/mediaRack.test.js` (fails on the old code: no frame arrives, so it said `next` 0 times in 5 desk frames instead of 10; and nothing is asked after the visual is let go).
+
+## Typing a slice's Height moved its Y in the Mapping window (2026-11-12)
+
+Symptom (owner, Mapping window → Place: "when I'm changing [height], Y is changing automatically, I don't want it"): Height 404 → 410 moved Y from 223 to 220.
+Cause: `src/map/sliceGeometry.js` `setFrameField` and `setBoxField` scaled a typed width or height about the slice's centre, but the panel shows X/Y (and Takes' Left/Top) as the left and top edges, so the typed-for edge slid by half the change.
+Fix: width and height scale about the frame's own top-left (turned with it; the straight box's left/top for a bent or keystoned slice). Moving and turning still use the centre.
+Guard: `src/map/sliceGeometry.test.js` ("width and height keep the left and top edges", and the straight-box case); both fail on the old code.
+
+## Map desk audit: live-show safety fixes (2026-11-12)
+
+Symptom (owner asked for a full audit of the mapping desk the day before a bar show; four testers on a copy of the project):
+1. In the Mapping window, keys meant for a focused Colour slider also moved the piece, and Delete deleted it.
+2. Typing the wall size (desk Output box and Mapping window) resized the wall on every key (1 → 12 → 128 px), and an empty box made it 1 px.
+3. Undo of a removed playing clip put it back ON THE WALL after the operator had moved on, and redo blacked the wall.
+4. A stray Delete on a focused tile removed the live clip.
+5. With the desk and /out in one browser, saves waited 10–45 s.
+6. Fast clip switching kept up to 30 WebGL clip pages alive (+2.3 GB).
+7. GIF and WebP were refused with a misleading "location data" message.
+8. HAP, ProRes and empty files became clips that never showed.
+9. Ctrl+C on nothing emptied the piece clipboard; pastes stacked on one spot; an empty rename showed the raw id; Place X/Y/W/H took any value.
+
+Cause:
+1. The window key handler skipped only INPUT/TEXTAREA/SELECT, and FillBar let handled keys bubble.
+2. The fields committed on change.
+3. The deleteMappingVisual inverse restored `playing`.
+4. Tile onKeyDown removed at once.
+5. The desk held an NDI scan SSE besides its doc events and machine long-poll. With /out's three streams that made six connections, Chrome's HTTP/1.1 per-host limit, so the ops POST queued.
+6. mediaRack kept every released page for KEEP_MS.
+7. On Windows, libvips holds a GIF/WebP input open, so the scrub's rename failed with EPERM.
+8. No pre-upload check.
+9. Unconditional setClipboard, a fixed +0.02 offset, and no bounds.
+
+Fix:
+- `MapAdvancedOutput.jsx`: the key handler skips role=slider/switch/radio targets (Ctrl chords still pass); Field gets a `lazy` mode for the wall size (Enter/blur, Esc cancels, min 16); Ctrl+X; copy only with a selection; cascading paste; Place bounds; rename trims, keeps the old name and selects its text.
+- `MapDeskDock.jsx`: FillBar stops its handled keys bubbling; the live clip needs a second Delete within 3 s; the notice clears itself.
+- `MapSurface.jsx`: WallSizeBox for the Output size; the desk polls NDI (`{ ndi: 'poll' }`) instead of holding a stream.
+- `projectSchema.js` (both twins): the inverse no longer restores `playing`.
+- `mediaRack.js`: MAX_IDLE_PAGES = 2.
+- `serverXR/src/assetScrub.js`: scrubs from a buffer and writes back in place.
+- `MapScreenParts.jsx`: checkVisualFile (empty, undecodable video or image, with advice) and shortFileName.
+
+Guard:
+- `src/map/MapAdvancedOutput.test.jsx` "keys and fields (audit 11-12)": 7 tests that fail on the old code.
+- `src/map/mappingState.test.js` "undoing a delete of the playing clip…", plus the `serverXR/src/schemaSync.test.js` twin.
+- `src/map/deckDelete.test.jsx`, `src/map/mediaRack.test.js` "unused clip pages are capped", `src/map/visualUploadCheck.test.js`.
+- Browser checks on the copy: desk+/out save 0.35 s (was 2.7–14.5 s), 30 fast switches keep ≤7 pages with 0 WebGL warnings, HAP and empty refused, H.264 added. The scrubber turns GIF (10 frames) and WebP into clean files on Windows.
 | **Pressing any scene deleted an LFO added after it** (lighting desk, found in the studio copy 2026-09-19, ported 2026-09-24) — a red LFO set up on two pars vanished on every scene press and every chase step | `captureScene` stored the LFO list even when no LFO was running, and `recallScene` REPLACES the live list whenever a scene carries one — so a still look saved before the LFO existed wiped it | Capture stores `lfos` only when at least one LFO is enabled; a scene without the field leaves running LFOs alone (the rule objects and colour already follow). Guard: `serverXR/src/lighting/tests/test.js` "a scene saved with no LFO running leaves a later LFO alone on recall" | `serverXR/src/lighting/engine.js` |
 | **A compact rig flashed in unison under a spatial effect** (lighting desk, studio copy 2026-09-18/24, ported 2026-09-24) — five pars within 0.3 of each other on the stage all fell in one chase lane; later, two rows of four landed on lanes 0, 2, 5 and 7 of 8, a lopsided rhythm | `fxPhase` normalised positions against the whole -1..2 stage world, and every stepped mode used a fixed lane count whatever the rig looked like | `fxBounds` of the lights the effect moves: positions normalise to the rig's own extent, lights roughly in line are grouped into slots (`fxFindSlots`, tolerance min(0.12, 0.6/n)) and stepped evenly (`fxSlotOf`), chase/comet/bars/pingpong use one lane per slot (`fxLanes`), a short tail for 3 lanes or fewer, radar turns round the rig centre. Guards: `tests/test.js` "a compact rig sweeps across its own extent…", "Follow steps evenly…", "short tail…", "radar turns round…" | `serverXR/src/lighting/fx.js` `serverXR/src/lighting/engine.js` |
 | **One failed save of the light show could take serverXR down, and lost the edit** (lighting desk, found by the studio desk audit 2026-09-24) — a read-only or locked `show.json` (OneDrive, an antivirus, a full disk) | `save()` ran `writeShow` from a bare `setTimeout`: a throw from `writeWhole` escaped the timer (serverXR has no uncaughtException guard; only `standalone.js` does), and `writeShow` had already cleared `dirty`, so the edit was never retried | The timer calls `saveSoon`, which never throws: a failure keeps the show dirty, retries with backoff (0.5 s doubling, max 15 s), falls back to writing in place after three failed renames, and publishes `status.save {ok, lastError, failures, lastOkAt}`. The empty-boot guard (`bootedWithNothing`) and `dirty` clear only after the write lands, a space's rig still owed to the machine show is retried on its own, and a show switch saves through the same path and is refused (409) while the show being left cannot be saved. Guards (all block the save with a directory at `show.json.tmp`, which fails on every OS and as root): `serverXR/src/lighting/tests/test-http.js` "a show file that cannot be written does not stop the desk…", "a save that failed after an empty boot still keeps aside a show that turned up…", "in a space, a machine-rig write that failed is retried…", "a show switch whose save fails is refused…" | `serverXR/src/lighting/desk.js` |
