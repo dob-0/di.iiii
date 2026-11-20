@@ -2577,6 +2577,7 @@ const monitorRoutes = registerMonitorRoutes(router, {
     store: createMonitorStore(),
     asks: createMonitorAskStore({ getDb }),
     releaseInfo: () => releaseInfo,
+    provenFile: path.join(config.directories.dataDir, 'monitor-proven.json'),
     listSpaces
   })
 })

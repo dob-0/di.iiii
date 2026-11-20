@@ -1,6 +1,6 @@
 {
   "schema": "di.parts/1",
-  "note": "The parts the Monitor shows, one per owning directory set. `probe` is the route (documentation) and `rows` the Connected-panel row ids that carry its state (serverXR/src/monitorStore.js); `probe` is a route the server already answers on loopback, or null when the part has no server side (it is shown as 'no live probe', never as healthy). The light desk probe is /light/api/clock on purpose: any other light route BUILDS the desk (40 Hz loop, Art-Net bind), see serverXR/src/routes/lightingRoutes.js. Versions are not written here: the packer stamps each part with the last commit that touched its dirs.",
+  "note": "The parts the Monitor shows, one per owning directory set. `probe` is the route (documentation) and `rows` the Connected-panel row ids that carry its state (serverXR/src/monitorStore.js); `probe` is a route the server already answers on loopback, or null when the part has no server side (it is shown as 'no live probe', never as healthy). The light desk probe is /light/api/clock on purpose: any other light route BUILDS the desk (40 Hz loop, Art-Net bind), see serverXR/src/routes/lightingRoutes.js. Versions are not written here: the packer stamps each part with the last commit that touched its dirs. di.bo and MOXIR live outside this repository (di.bo in its own repo, MOXIR as a space), so they are not listed here.",
   "parts": [
     {
       "id": "light",
@@ -82,6 +82,43 @@
       "rows": [
         "osc"
       ]
+    },
+    {
+      "id": "app",
+      "name": "di.iiii app (editor shell)",
+      "dirs": [
+        "src/components",
+        "src/pages",
+        "src/contexts",
+        "src/hooks"
+      ],
+      "probe": null
+    },
+    {
+      "id": "server",
+      "name": "serverXR (routes and catalogue)",
+      "dirs": [
+        "serverXR/src/routes",
+        "serverXR/src/catalogue"
+      ],
+      "probe": null
+    },
+    {
+      "id": "map",
+      "name": "Mapping desk",
+      "dirs": [
+        "src/map"
+      ],
+      "probe": null
+    },
+    {
+      "id": "rig",
+      "name": "Rig",
+      "dirs": [
+        "src/rig",
+        "serverXR/src/rig"
+      ],
+      "probe": null
     }
   ]
 }
