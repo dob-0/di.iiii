@@ -286,6 +286,99 @@ describe('MonitorSection', () => {
         expect(document.querySelector('[data-credits="from"]').textContent).toBe('From aylmo: this machine has no credits list of its own.')
     })
 
+    // Agents are the owner's: the list holds every machine's agents, each group says where it runs, and a machine whose agents are not in it says why (on the server's clock).
+    it('agents of every machine: groups name their machine, the subtitle counts machines, a machine that is not in the list says why', async () => {
+        const at = Date.parse('2026-01-01T12:00:00Z')
+        const row = (id, title, machine, status = 'idle') => ({ account: '.claude', machine, sessionId: id, title, status, kind: 'interactive', branch: null, cwd: '/w', model: 'm', lastActivity: new Date(at - 60 * 1000).toISOString() })
+        const snap = contract()
+        snap.panels.agents = { ok: true, at, live: 3, busy: 2, total: 20, accounts: ['.claude'], rows: [
+            row('aaaaaaaa-1', 'Build the monitor', 'aylmo', 'busy'), row('bbbbbbbb-2', 'Platina lights', 'aylmo'), row('cccccccc-3', 'Studio chat', 'studio-mac', 'busy')
+        ], machines: [
+            { host: 'aylmo', state: 'ok', live: 2, self: true },
+            { host: 'bad-pc', state: 'failed', error: 'no Claude homes found' },
+            { host: 'di-server', state: 'stale', reportedAt: new Date(at - 5 * 60 * 1000).toISOString() },
+            { host: 'new-pc', state: 'stale', reportedAt: null },
+            { host: 'old-pc', state: 'none' },
+            { host: 'r-di', state: 'ok', live: 0, shown: 0 },
+            { host: 'studio-mac', state: 'ok', live: 60, shown: 50, capped: true }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        const panel = document.querySelector('[data-panel="agents"]')
+        // 7 machines in the account, 3 of them (aylmo, r-di and the cut studio-mac) have their agents in the list
+        expect(panel.textContent).toMatch(/3 live of 20 sessions · 3 of 7 machines · accounts: \.claude/)
+        expect([...panel.querySelectorAll('.monitor-group-title')].map((n) => n.firstChild.textContent.trim())).toEqual(['aylmo / .claude', 'studio-mac / .claude'])
+        const notes = (kind) => [...panel.querySelectorAll(`[data-agents="${kind}"]`)]
+        expect(notes('stale').map((n) => n.textContent)).toEqual([
+            'di-server: last report 5m ago, so its agents are not in this list.',
+            'new-pc: no recent report, so its agents are not in this list.'
+        ])
+        expect(notes('none').map((n) => n.textContent)).toEqual(['old-pc: its report has no agents list.'])
+        expect(notes('failed').map((n) => n.textContent)).toEqual(['bad-pc: its agents list could not be read (no Claude homes found).'])
+        expect(notes('cut').map((n) => n.textContent)).toEqual(['studio-mac: 50 of 60 agents shown.'])
+        // only a machine that could not be read is red; a stale or cut one is a plain note
+        expect(notes('failed')[0].className).toBe('monitor-note is-down')
+        expect([...notes('stale'), ...notes('none'), ...notes('cut')].map((n) => n.className)).toEqual(['monitor-note', 'monitor-note', 'monitor-note', 'monitor-note'])
+        // this machine and a machine that answered with nothing to cut have no note
+        expect(panel.querySelectorAll('[data-agents]').length).toBe(5)
+        // the tile dots and the lanes name the machine too
+        expect([...document.querySelectorAll('[data-count-id="agents"] .monitor-dot')].map((d) => d.getAttribute('title'))).toEqual([
+            'Build the monitor · aylmo: busy', 'Platina lights · aylmo: idle', 'Studio chat · studio-mac: busy'
+        ])
+        expect(document.querySelector('[data-count-id="agents"]').textContent).toMatch(/Agents live · 2 busy/)
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        expect(document.querySelector('[data-lane-id="cccccccc-3"]').textContent).toMatch(/busy · studio-mac/)
+        expect(document.querySelector('[data-lane-id="aaaaaaaa-1"]').textContent).toMatch(/busy · aylmo/)
+    })
+
+    it('the subtitle counts every machine when all are in the list, "K of N" when some are not', async () => {
+        const snap = contract()
+        snap.panels.agents = { ...snap.panels.agents, machines: [
+            { host: 'aylmo', state: 'ok', live: 2, self: true }, { host: 'r-di', state: 'ok', live: 0, shown: 0 }, { host: 'studio-mac', state: 'ok', live: 60, shown: 50, capped: true }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        const { unmount } = render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        // all three answered (one of them cut): "3 machines", never "3 of 3"
+        expect(document.querySelector('[data-panel="agents"]').textContent).toMatch(/2 live of 9 sessions · 3 machines · accounts: /)
+        unmount()
+        const part = contract()
+        part.panels.agents = { ...part.panels.agents, machines: [{ host: 'aylmo', state: 'ok', live: 2, self: true }, { host: 'di-server', state: 'stale', reportedAt: null }] }
+        getMonitor.mockResolvedValue(part)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        expect(document.querySelector('[data-panel="agents"]').textContent).toMatch(/2 live of 9 sessions · 1 of 2 machines · accounts: /)
+    })
+
+    // the row's flash looks the agent up by its row id (`a:<session id>`): a signature that names the machine would never match it
+    it('flashes an agent row that names its machine', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        const named = () => { const s = snapshot(); s.panels.agents.rows.forEach((r) => { r.machine = 'studio-mac' }); return s }
+        getMonitor.mockResolvedValueOnce(named())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const next = named()
+        next.panels.agents.rows[0].status = 'idle'
+        getMonitor.mockResolvedValue(next)
+        await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
+        await waitFor(() => expect(document.querySelector('[data-monitor-id="a:aaaaaaaa-1"]').className).toMatch(/is-changed/))
+        // an agent that did not change does not flash
+        expect(document.querySelector('[data-monitor-id="a:bbbbbbbb-2"]').className).not.toMatch(/is-changed/)
+    })
+
+    it('with one machine only there is no machines count and no note', async () => {
+        const snap = contract()
+        snap.panels.agents = { ...snap.panels.agents, machines: [{ host: 'aylmo', state: 'ok', live: 2, self: true }] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        const panel = document.querySelector('[data-panel="agents"]')
+        expect(panel.textContent).toMatch(/2 live of 9 sessions · accounts: \.claude, \.claude-di/)
+        expect(panel.textContent).not.toMatch(/machines ·/)
+        expect(panel.querySelector('[data-agents]')).toBeNull()
+    })
+
     it('the credits tile is grey while the first list is read, amber when the list is old, green when it is fresh', async () => {
         const rows = [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }]
         const at = Date.parse('2026-01-01T12:00:00Z')

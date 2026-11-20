@@ -29,6 +29,11 @@ const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
 const ASKS_MAX = 100
+// live agents of the owner's OTHER machines shown in the Agents box: at most this many per machine and in all (a safety limit; the page says when it cuts)
+const AGENTS_PER_MACHINE_MAX = 50
+const AGENTS_MAX = 150
+// the Claude homes named in the Agents box (the union over the machines in the list): a safety limit, a machine has 1 to 4
+const ACCOUNTS_MAX = 20
 const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats', 'credits']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
@@ -566,6 +571,64 @@ function createHub({
     return { ...mine, ok: true, configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length, from: donor.host, reportedAt: donor.reportedAt }
   }
 
+  // Agents belong to the owner, not to one machine. The Agents box and the "Agents at work" lanes list the live agents of this
+  // machine AND of every other machine of the owner with a fresh report, read from the reports the hub already holds (nothing is
+  // asked or probed here). Each row says where it runs (`machine`): a row another machine sent keeps the machine it names (a host
+  // that machine reached by ssh), else it is the reporting machine; this machine's own rows are named too (always, not only
+  // while another machine is listed: the page's change feed and flash key an agent by machine + session, so a name that came and
+  // went with the other machines would make every agent of this machine "end" and "start" again). `machines` says, for this
+  // machine and every other one, whether its agents are in the list: a stale report or a failed or missing list is named, never
+  // shown as zero. A session already in the list (same sessionId) is listed once. This machine's own panel stays the base: a
+  // failing one is never covered, and `from` (the credits note's field) is never set. The page only: the machine's own report
+  // to dev carries its own panel (the sender reads the store, not this snapshot), so a lent agent is never reported back as its own.
+  const agentsFor = (base, sources) => {
+    const mine = base.panels?.agents
+    if (!(isPlainObject(mine) && mine.ok === true && Array.isArray(mine.rows))) return mine
+    const selfHost = String(base.host || 'this machine').split('.')[0]
+    const ownRows = mine.rows.filter(isPlainObject).map((x) => (typeof x.machine === 'string' && x.machine ? x : { ...x, machine: selfHost }))
+    const count = (n) => (Number.isFinite(n) && n > 0 ? n : 0)
+    const names = (list) => (Array.isArray(list) ? list.filter((x) => typeof x === 'string').map((x) => cleanText(x, 80)).filter(Boolean) : [])
+    const known = new Set([selfHost.toLowerCase()])
+    const others = [] // { info: what the page is told about the machine, rows: its usable rows }
+    for (const r of sources) {
+      if (!r || typeof r.host !== 'string') continue
+      const host = r.host.split('.')[0]
+      if (!host || known.has(host.toLowerCase())) continue
+      known.add(host.toLowerCase())
+      const a = r.panels?.agents
+      if (r.stale === true) others.push({ info: { host, state: 'stale', reportedAt: typeof r.reportedAt === 'string' ? r.reportedAt : null }, rows: [] })
+      else if (!isPlainObject(a)) others.push({ info: { host, state: 'none' }, rows: [] })
+      else if (a.ok !== true || !Array.isArray(a.rows)) others.push({ info: { host, state: 'failed', error: cleanText(a.ok === false ? a.error : 'the agents list was not a list', 200) }, rows: [] })
+      else others.push({ info: { host, state: 'ok', total: count(a.total) }, rows: a.rows.filter((x) => isPlainObject(x) && typeof x.sessionId === 'string' && x.sessionId), accounts: names(a.accounts) })
+    }
+    others.sort((a, b) => a.info.host.localeCompare(b.info.host))
+    const seen = new Set(ownRows.map((x) => x.sessionId))
+    const lent = []
+    for (const { info, rows } of others) {
+      if (info.state !== 'ok') continue
+      info.live = rows.length
+      info.shown = 0
+      for (const row of rows) {
+        if (seen.has(row.sessionId)) continue
+        if (info.shown >= AGENTS_PER_MACHINE_MAX || ownRows.length + lent.length >= AGENTS_MAX) { info.capped = true; continue }
+        seen.add(row.sessionId)
+        lent.push({ ...row, machine: typeof row.machine === 'string' && row.machine ? row.machine : info.host })
+        info.shown += 1
+      }
+    }
+    const rows = [...ownRows, ...lent]
+    const accounts = [...new Set([...names(mine.accounts), ...others.flatMap((o) => o.accounts || [])])].slice(0, ACCOUNTS_MAX)
+    return {
+      ...mine,
+      rows,
+      accounts,
+      live: rows.length,
+      busy: rows.filter((x) => x.status === 'busy').length,
+      total: count(mine.total) + others.reduce((n, { info }) => n + (info.total || 0), 0),
+      machines: [{ host: selfHost, state: 'ok', live: ownRows.length, self: true }, ...others.map(({ info }) => info)]
+    }
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
   // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
@@ -581,11 +644,13 @@ function createHub({
       .filter((r) => r && typeof r.host === 'string' && !held.has(r.host) && !held.has(shortHost(r.host)))
       .map((r) => ({ ...r, via: 'dev' }))
     const reportRows = [...own, ...extra.map(({ panels, ...r }) => ({ ...r, panels: withoutChats(panels) }))]
-    // a new panels object only when a list is lent: the store's own scan (cached, shared) is never written to
+    // a new panels object only when something is lent (credits, agents): the store's own scan (cached, shared) is never written to
     const credits = creditsFor(base, [...own, ...extra])
+    const agents = agentsFor(base, [...own, ...extra])
+    const lent = { ...(credits !== base.panels?.credits ? { credits } : {}), ...(agents !== base.panels?.agents ? { agents } : {}) }
     return {
       ...base,
-      ...(credits !== base.panels?.credits ? { panels: { ...base.panels, credits } } : {}),
+      ...(Object.keys(lent).length ? { panels: { ...base.panels, ...lent } } : {}),
       account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
       tiers: tierBlock,
