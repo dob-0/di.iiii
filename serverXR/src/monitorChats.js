@@ -11,11 +11,26 @@ const CHATS_STALE_MS = 120 * 1000
 const CHATS_MAX = 60
 const SAYS_MAX = 240
 const ASKS_PER_CHAT = 3
+const STEPS_OPEN_MAX = 5
+const LEFT_BEHIND_MIN = 24 * 60 // unfinished steps and no word for a day
 const GROUPS = ['ask', 'working', 'idle']
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F‪-‮⁦-⁩]/g
 const clean = (value, max) => String(value ?? '').replace(/\r\n?/g, '\n').replace(CONTROL, '').trim().slice(0, max)
 const isObj = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)
+
+// the chat's own step list: counts and up to five unfinished titles; nothing else of a step is kept
+function cleanSteps(s) {
+  if (!isObj(s)) return null
+  const total = Math.round(Number(s.total))
+  const done = Math.round(Number(s.done))
+  if (!Number.isFinite(total) || !Number.isFinite(done) || total < 1 || total > 500 || done < 0) return null
+  return {
+    done: Math.min(done, total),
+    total,
+    open: (Array.isArray(s.open) ? s.open : []).slice(0, STEPS_OPEN_MAX).map((x) => clean(x, 60)).filter(Boolean)
+  }
+}
 
 function groupOf(chat) {
   if (GROUPS.includes(chat.group)) return chat.group
@@ -29,10 +44,16 @@ function cleanChat(c, host) {
   const id = clean(c.id || c.sessionId || c.name || c.title, 80)
   if (!id) return null
   const idle = c.idleMinutes === null || c.idleMinutes === undefined ? NaN : Number(c.idleMinutes)
+  const group = groupOf(c)
+  const steps = cleanSteps(c.steps)
+  const idleMin = Number.isFinite(idle) && idle >= 0 ? Math.round(idle) : null
   return {
     id,
     title: clean(c.title || c.name || id, 80),
-    group: groupOf(c),
+    group,
+    steps,
+    // work left behind: steps still open, the chat is not working, and it has been quiet for a day
+    leftBehind: Boolean(steps && steps.done < steps.total && group !== 'working' && idleMin !== null && idleMin >= LEFT_BEHIND_MIN),
     status: clean(c.status, 20) || 'idle',
     // a raw chat has says.first; one already cleaned has says as text (cleaning twice must keep it)
     says: clean(isObj(c.says) ? c.says.first : c.says, SAYS_MAX),
@@ -95,8 +116,8 @@ function chatsBlock(inputs, { now = Date.now() } = {}) {
     }
   }
   all.sort((a, b) => rank(a.group) - rank(b.group) || (a.idleMinutes ?? 1e9) - (b.idleMinutes ?? 1e9))
-  const counts = { ask: 0, working: 0, idle: 0, total: all.length }
-  for (const chat of all) counts[chat.group] += 1
+  const counts = { ask: 0, working: 0, idle: 0, left: 0, total: all.length }
+  for (const chat of all) { counts[chat.group] += 1; if (chat.leftBehind) counts.left += 1 }
   const newest = used.length ? Math.min(...used.map((u) => u.age)) : null
   return {
     ok: state === 'live',

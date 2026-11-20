@@ -1903,6 +1903,9 @@
 .monitor-chat[data-chat-group="ask"] { background: rgba(var(--tone-rgb), 0.18); }
 .monitor-chat-head { display: flex; align-items: center; gap: var(--di-space-2); min-width: 0; }
 .monitor-chat-title { flex: 1 1 auto; min-width: 0; font-size: var(--di-text-5); font-weight: 600; overflow-wrap: anywhere; }
+.monitor-chat-steps { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.monitor-chat-bar { flex: none; width: 64px; height: 6px; background: rgba(var(--tone-rgb), 0.25); }
+.monitor-chat-bar i { display: block; height: 100%; background: rgb(var(--tone-rgb)); }
 .monitor-chat-tag { flex: none; color: rgb(var(--tone-rgb)); font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.1em; text-transform: uppercase; }
 .monitor-chat-ask { margin: 0; font-size: var(--di-text-4); font-weight: 600; overflow-wrap: anywhere; }
 .monitor-chat-says { margin: 0; color: var(--ui-text-muted); font-size: var(--di-text-3); overflow-wrap: anywhere; }
