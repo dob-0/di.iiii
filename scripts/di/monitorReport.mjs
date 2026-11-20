@@ -25,7 +25,7 @@ import { runFeed } from './monitorFeed.mjs'
 
 export const USAGE = [
     'di monitor report [--once] [--every N] [--tier dev|prod | --to URL]   send this machine\'s panels to the overview',
-    'di monitor install-timer [--remove]                                  a user timer that does it every 30 seconds',
+    'di monitor install-timer [--remove]                                  a user timer (systemd) or launch agent (macOS) that does it every 30 seconds',
     '',
     'Needs `di login` as an admin. Without --once it keeps sending every 30 seconds (--every 10..300).',
     '',
@@ -135,13 +135,15 @@ const TIMER = 'di-monitor-report.timer'
 export const systemdQuote = (value) => `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/%/g, '%%').replace(/\$/g, '$$$$')}"`
 
 /** The two unit files. `node` and `cli` are absolute paths so the timer does not depend on a login shell. */
-export const timerUnits = ({ node, cli, every = EVERY_SECONDS }) => ({
+export const timerUnits = ({ node, cli, every = EVERY_SECONDS, envPath = '' }) => ({
     [SERVICE]: [
         '[Unit]',
         'Description=Send this machine to the di.iiii overview (di monitor report --once)',
         '',
         '[Service]',
         'Type=oneshot',
+        // a user unit gets systemd's short PATH: without the login's PATH `ledger-open` is not found and the asks go out empty
+        ...(envPath ? [`Environment=${systemdQuote(`PATH=${envPath}`)}`] : []),
         `ExecStart=${systemdQuote(node)} ${systemdQuote(cli)} monitor report --once`,
         'TimeoutStartSec=60',
         ''
@@ -183,9 +185,55 @@ export const stableCliPath = ({ cli, diRoot = diHome() } = {}) => {
     return cli
 }
 
+const AGENT_LABEL = 'xyz.diiii.monitor-report'
+
+const xmlEscape = (v) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+/** The macOS launch agent: the same job as the systemd pair, run every `every` seconds and at login. */
+export const launchdPlist = ({ node, cli, every = EVERY_SECONDS, logDir, envPath = '' }) => [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+    '<plist version="1.0">',
+    '<dict>',
+    `  <key>Label</key><string>${AGENT_LABEL}</string>`,
+    '  <key>ProgramArguments</key>',
+    `  <array><string>${xmlEscape(node)}</string><string>${xmlEscape(cli)}</string><string>monitor</string><string>report</string><string>--once</string></array>`,
+    ...(envPath ? ['  <key>EnvironmentVariables</key>', `  <dict><key>PATH</key><string>${xmlEscape(envPath)}</string></dict>`] : []),
+    `  <key>StartInterval</key><integer>${every}</integer>`,
+    '  <key>RunAtLoad</key><true/>',
+    `  <key>StandardOutPath</key><string>${xmlEscape(path.join(logDir, 'monitor-report.log'))}</string>`,
+    `  <key>StandardErrorPath</key><string>${xmlEscape(path.join(logDir, 'monitor-report.log'))}</string>`,
+    '</dict>',
+    '</plist>',
+    ''
+].join('\n')
+
+/** macOS: a user launch agent instead of a systemd timer. The program path is the stable ~/.di/current one. Same undo: --remove. */
+export const installLaunchAgent = async ({ home = os.homedir(), diRoot = diHome(), node = process.execPath, cliFile = path.join(here(), 'cli.mjs'), cli = stableCliPath({ cli: cliFile, diRoot }), remove = false, uid = process.getuid?.() ?? 501, exec = execText, say = console.log, fail = console.error } = {}) => {
+    const dir = path.join(home, 'Library', 'LaunchAgents')
+    const file = path.join(dir, `${AGENT_LABEL}.plist`)
+    const domain = `gui/${uid}`
+    if (remove) {
+        await exec('launchctl', ['bootout', `${domain}/${AGENT_LABEL}`])
+        fs.rmSync(file, { force: true })
+        say('the monitor launch agent is off and its file is removed')
+        return 0
+    }
+    const logDir = path.join(home, '.di')
+    fs.mkdirSync(dir, { recursive: true })
+    fs.mkdirSync(logDir, { recursive: true })
+    fs.writeFileSync(file, launchdPlist({ node, cli, logDir, envPath: process.env.PATH || '' }), { mode: 0o644 })
+    await exec('launchctl', ['bootout', `${domain}/${AGENT_LABEL}`])
+    await exec('launchctl', ['bootstrap', domain, file])
+    const listed = await exec('launchctl', ['print', `${domain}/${AGENT_LABEL}`])
+    if (!listed.includes(AGENT_LABEL)) { fail(`the launch agent file is in ${dir} but launchd did not load it`); return 1 }
+    say(`monitor launch agent on: ${AGENT_LABEL}, every ${EVERY_SECONDS} s. undo: di monitor install-timer --remove`)
+    return 0
+}
+
 export const installTimer = async ({ home = os.homedir(), diRoot = diHome(), node = process.execPath, cliFile = path.join(here(), 'cli.mjs'), cli = stableCliPath({ cli: cliFile, diRoot }), remove = false, exec = execText, say = console.log, fail = console.error } = {}) => {
     const dir = path.join(home, '.config', 'systemd', 'user')
-    const units = timerUnits({ node, cli })
+    const units = timerUnits({ node, cli, envPath: process.env.PATH || '' })
     if (remove) {
         await exec('systemctl', ['--user', 'disable', '--now', TIMER])
         for (const name of Object.keys(units)) fs.rmSync(path.join(dir, name), { force: true })
@@ -212,7 +260,11 @@ export const runMonitor = async (args, deps = {}) => {
         collect = collectSnapshot, release = readRelease, ledger = () => execText('ledger-open', []), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), loops = Infinity } = deps
     const parsed = parseMonitorArgs(args)
     if (parsed.error) { fail(parsed.error); return 1 }
-    if (parsed.sub === 'install-timer') return installTimer({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
+    if (parsed.sub === 'install-timer') {
+        return (deps.platform || process.platform) === 'darwin'
+            ? installLaunchAgent({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
+            : installTimer({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
+    }
 
     if (parsed.sub === 'feed') return runFeed(args, { env, home, say, fail, root: repoRoot(), ...(deps.feed || {}) })
 

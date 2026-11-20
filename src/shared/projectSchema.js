@@ -907,7 +907,7 @@ const lookHex = (value) => (typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.tes
 // A look may MOVE (docs/architecture/RIG_BUILD.md §11.4, 2026-10-09): `motion` names an effect of the desk's FX engine
 // (serverXR/src/lighting/fx.js FX_MODES - the same words), its tempo, depth, the way it fans across the rig and the
 // lamp kinds it moves. Level and colour only: nothing here can say pan or tilt (`heads`, below, does). src/rigbuild/lookMotion.js plays it.
-export const MOTION_MODES = ['strobe', 'chase', 'pulse', 'sine', 'sparkle', 'comet', 'bars', 'glitch', 'radar', 'pump', 'breathe', 'pingpong', 'blocks']
+export const MOTION_MODES = ['strobe', 'chase', 'pulse', 'sine', 'sparkle', 'comet', 'bars', 'glitch', 'radar', 'pump', 'breathe', 'pingpong', 'blocks', 'fade']
 export const MOTION_SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-']
 const normalizeLookMotion = (value) => {
   if (!value || typeof value !== 'object' || !MOTION_MODES.includes(value.mode)) return null
