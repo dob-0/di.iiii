@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, stableCliPath, runMonitor, sendOnce } from './monitorReport.mjs'
+import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, launchdPlist, installLaunchAgent, stableCliPath, runMonitor, sendOnce } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -200,6 +200,46 @@ describe('body and timer units', () => {
         const io = quiet()
         expect(await installTimer({ home: tmpHome(), exec: async () => 'inactive', ...io })).toBe(1)
         expect(io.err[0]).toMatch(/did not start/)
+    })
+})
+
+describe('PATH for the timer and macOS launch agent', () => {
+    it('the systemd service carries the caller\'s PATH so `ledger-open` is found', () => {
+        const svc = timerUnits({ node: '/n', cli: '/c', envPath: '/h/.local/bin:/usr/bin' })['di-monitor-report.service']
+        expect(svc).toContain('Environment="PATH=/h/.local/bin:/usr/bin"')
+        expect(timerUnits({ node: '/n', cli: '/c' })['di-monitor-report.service']).not.toContain('Environment=')
+    })
+    it('the plist runs `monitor report --once` every 30 s and at login, escapes paths, carries PATH', () => {
+        const text = launchdPlist({ node: '/n&d/node', cli: '/c/cli.mjs', logDir: '/h/.di', envPath: '/h/.local/bin:/usr/bin' })
+        expect(text).toContain('<string>/n&amp;d/node</string>')
+        expect(text).toContain('<string>monitor</string><string>report</string><string>--once</string>')
+        expect(text).toContain('<key>StartInterval</key><integer>30</integer>')
+        expect(text).toContain('<key>RunAtLoad</key><true/>')
+        expect(text).toContain('<key>PATH</key><string>/h/.local/bin:/usr/bin</string>')
+    })
+    it('install writes the file and loads it; --remove undoes it', async () => {
+        const home = tmpHome()
+        const calls = []
+        const exec = async (cmd, args) => { calls.push(`${cmd} ${args.join(' ')}`); return args[0] === 'print' ? 'xyz.diiii.monitor-report = {' : '' }
+        const io = quiet()
+        expect(await installLaunchAgent({ home, cli: '/c', node: '/n', uid: 501, exec, ...io })).toBe(0)
+        const file = path.join(home, 'Library', 'LaunchAgents', 'xyz.diiii.monitor-report.plist')
+        expect(fs.existsSync(file)).toBe(true)
+        expect(calls).toContain('launchctl bootstrap gui/501 ' + file)
+        expect(await installLaunchAgent({ home, uid: 501, exec, remove: true, ...io })).toBe(0)
+        expect(fs.existsSync(file)).toBe(false)
+    })
+    it('install fails loudly when launchd did not load it', async () => {
+        const io = quiet()
+        expect(await installLaunchAgent({ home: tmpHome(), cli: '/c', uid: 501, exec: async () => '', ...io })).toBe(1)
+        expect(io.err[0]).toMatch(/did not load/)
+    })
+    it('on darwin `install-timer` takes the launch-agent road', async () => {
+        const io = quiet()
+        const calls = []
+        const code = await runMonitor({ _: ['monitor', 'install-timer'], flags: {} }, { home: tmpHome(), platform: 'darwin', timer: { node: '/n', cli: '/c', uid: 1, exec: async (c) => { calls.push(c); return 'xyz.diiii.monitor-report' } }, ...io })
+        expect(code).toBe(0)
+        expect(calls.every((c) => c === 'launchctl')).toBe(true)
     })
 })
 
