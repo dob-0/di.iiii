@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 
 import { parseArgs } from './args.mjs'
 import { parseMonitorArgs, runMonitor } from './monitorReport.mjs'
-import { CHECK_LIMIT_MS, checkFeedCommand, jsonErrorOffset, parseFeedArgs, readFeedConfig, runFeed, stamp } from './monitorFeed.mjs'
+import { CHECK_LIMIT_MS, checkFeedCommand, jsonErrorOffset, limitFor, parseFeedArgs, readFeedConfig, runFeed, stamp } from './monitorFeed.mjs'
 
 const POSIX = process.platform !== 'win32'
 const posixOnly = it.skipIf(!POSIX)
@@ -561,12 +561,50 @@ describe('--check', () => {
         expect(failing.err).toBe('the command failed (exit 4): broken. Nothing was saved.')
     })
 
-    it('the limits are the Monitor\'s: 4 s for chats, 8 s for credits', async () => {
+    // a tree with just the files --check reads: the credits reader, and a store that holds `store` (no store file when it is undefined)
+    const treeWith = (store) => {
+        const root = tmp()
+        const src = path.join(root, 'serverXR', 'src')
+        fs.mkdirSync(src, { recursive: true })
+        fs.copyFileSync(path.join(ROOT, 'serverXR', 'src', 'monitorCredits.js'), path.join(src, 'monitorCredits.js'))
+        if (store !== undefined) fs.writeFileSync(path.join(src, 'monitorStore.js'), store)
+        return root
+    }
+
+    it('the fixed limits are the Monitor\'s: 4 s for chats, 8 s for credits in the older trees', () => {
         expect(CHECK_LIMIT_MS).toEqual({ chats: 4000, credits: 8000 })
+        expect(limitFor('chats', treeWith())).toBe(4000)
+        expect(limitFor('credits', treeWith())).toBe(8000) // no store in the tree
+        expect(limitFor('credits', treeWith('module.exports = { createMonitorStore() {} }'))).toBe(8000) // an older store: nothing exported
+        expect(limitFor('credits', undefined)).toBe(8000) // no tree given
+    })
+
+    it('credits: the limit is the one the store states (CREDITS_COMMAND_MS), and --check runs the command under it', async () => {
+        const root = treeWith('module.exports = { CREDITS_COMMAND_MS: 30000 }')
+        expect(limitFor('credits', root)).toBe(30000)
+        expect(limitFor('chats', root)).toBe(4000)
         const seen = []
         const exec = async (command, opts) => { seen.push(opts.timeout); return { error: null, stdout: '[]', stderr: '' } }
-        await checkFeedCommand({ panel: 'credits', command: 'cr', root: ROOT, exec })
-        expect(seen).toEqual([8000])
+        await checkFeedCommand({ panel: 'credits', command: 'cr', root, exec })
+        expect(seen).toEqual([30000])
+    })
+
+    it('credits: a store that states something that is not a limit, or does not load, is ignored', () => {
+        for (const stated of ['"soon"', '"5000"', '0', '-5', 'null', 'NaN', 'Infinity']) {
+            expect(limitFor('credits', treeWith(`module.exports = { CREDITS_COMMAND_MS: ${stated} }`))).toBe(8000)
+        }
+        expect(limitFor('credits', treeWith('throw new Error("broken store")'))).toBe(8000)
+    })
+
+    it('no other number has crept into the server: its source states the limits --check uses', () => {
+        const source = fs.readFileSync(path.join(ROOT, 'serverXR', 'src', 'monitorStore.js'), 'utf8')
+        expect(source).toContain(`const PANEL_TIMEOUT_MS = ${CHECK_LIMIT_MS.chats}\n`)
+        const limit = limitFor('credits', ROOT)
+        if (source.includes('{ timeout: CREDITS_COMMAND_MS }')) {
+            expect(source).toMatch(/module\.exports = \{[^}]*\bCREDITS_COMMAND_MS\b/) // used, so it must be exported for limitFor() to see it
+        } else {
+            expect(source).toContain(`{ timeout: ${limit} }`) // the fixed number of the older trees, the one --check falls back to
+        }
     })
 })
 

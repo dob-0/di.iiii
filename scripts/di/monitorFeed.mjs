@@ -28,9 +28,21 @@ export const PANELS = ['chats', 'credits']
 const DEFAULT_TITLE = { chats: 'Chats', credits: 'Credits' }
 
 // What the Monitor does with a feed command (serverXR/src/monitorStore.js): chats() runs it through run(), whose own limit is
-// PANEL_TIMEOUT_MS = 4000 (the 6000 around it never fires first); credits() passes timeout: 8000. --check uses the same limits, so a
-// command it lets through is not killed by the server.
+// PANEL_TIMEOUT_MS = 4000 (the 6000 around it never fires first); credits() runs it under a limit of its own: a fixed 8000 in older
+// trees, CREDITS_COMMAND_MS (30 s, exported by the store) once a cold probe of 12 s had to fit. --check uses the same limits, so a
+// command it lets through is not killed by the server. CHECK_LIMIT_MS holds the fixed numbers; limitFor() takes the credits one from the
+// store when the store states it, and a test reads the store's source so that no other number creeps in unseen.
 export const CHECK_LIMIT_MS = { chats: 4000, credits: 8000 }
+
+/** The limit the Monitor gives this panel's command in the tree at `root` (a folder that holds serverXR/). */
+export const limitFor = (panel, root) => {
+    if (panel !== 'credits') return CHECK_LIMIT_MS[panel]
+    try {
+        const stated = createRequire(import.meta.url)(path.join(root, 'serverXR', 'src', 'monitorStore.js')).CREDITS_COMMAND_MS
+        if (Number.isFinite(stated) && stated > 0) return stated
+    } catch { /* no store in this copy, or none that loads: the fixed limit of the older trees */ }
+    return CHECK_LIMIT_MS.credits
+}
 const SERVER_READERS = { chats: ['monitorChats.js', 'sanitizeChats'], credits: ['monitorCredits.js', 'sanitizeCredits'] }
 const SHOW_CHARS = 100
 const MAX_OUTPUT = 4 * 1024 * 1024
@@ -195,7 +207,7 @@ const execShell = (command, { timeout, env }) => new Promise((resolve) => {
 const seconds = (ms) => `${Number((ms / 1000).toFixed(2))} s`
 
 /** Runs the feed command once the way the Monitor will and reads its output with the Monitor's own reader: { line } or { error }. */
-export const checkFeedCommand = async ({ panel, command, root, limitMs = CHECK_LIMIT_MS[panel], exec = execShell, env = process.env }) => {
+export const checkFeedCommand = async ({ panel, command, root, limitMs = limitFor(panel, root), exec = execShell, env = process.env }) => {
     const [file, name] = SERVER_READERS[panel]
     let reader
     try { reader = createRequire(import.meta.url)(path.join(root, 'serverXR', 'src', file))[name] } catch {
@@ -305,7 +317,7 @@ const removeFeed = ({ cmd, file, read, feeds, say, fail, info, now }) => {
  * --check needs it: the Monitor's own reader of the list). A dry run keeps stdout for the JSON and says the rest on stderr.
  */
 export const runFeed = async (args, deps = {}) => {
-    const { env = process.env, home = os.homedir(), say = console.log, fail = console.error, now = () => new Date(), root, limits = CHECK_LIMIT_MS, exec = execShell } = deps
+    const { env = process.env, home = os.homedir(), say = console.log, fail = console.error, now = () => new Date(), root, limits = {}, exec = execShell } = deps
     const cmd = parseFeedArgs(args)
     if (cmd.error) { fail(cmd.error); return 2 }
     const file = env.DI_MONITOR_CONFIG || path.join(home, '.di', 'monitor.json')
