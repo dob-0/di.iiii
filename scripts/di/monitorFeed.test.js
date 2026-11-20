@@ -509,7 +509,8 @@ describe('a file that changes while --check runs', () => {
 // drop what the first wrote, with exit 0 for both (60 parallel pairs: 19 times, measured by the review). The write runs under
 // <file>.lock (git's lock file); a command that finds it held writes nothing and says so.
 describe('two commands at the same moment', () => {
-    const lockOf = (file) => `${file}.lock`
+    // the lock is named after the file on the disk (a temp folder can itself sit behind a link, as /var does on a Mac)
+    const lockOf = (file) => path.join(fs.realpathSync(path.dirname(file)), `${path.basename(file)}.lock`)
     const HELD = (file) => `another di monitor feed command is writing ${file} (${lockOf(file)} exists), so nothing was written. `
         + `Run the command again. If this stays and no other command is running, delete the lock: rm '${lockOf(file)}'`
     const CREDITS_CMD = 'di-credits status --json'
@@ -528,6 +529,54 @@ describe('two commands at the same moment', () => {
         expect(other.out).toBe('')
         expect(readJson(file)).toEqual({ port: 1, feeds: [CHATS] }) // the first command's feed, and nothing of the second
         expect(ls(dir)).toEqual(['monitor.json', `monitor.json.bak-${STAMP}`]) // one backup, and the lock is gone
+    })
+
+    // One file, two spellings of its path: the lock is named after the file on the disk, not after the path as typed. Named after the
+    // path as typed, the two commands below get two different locks and both write (the second review: 18 of 60 parallel pairs).
+    posixOnly('a link to the file and the file itself share one lock: the second command is refused, the link stays a link', async () => {
+        const { dir, file } = place(json({ port: 1 }))
+        const link = path.join(tmp(), 'monitor.json')
+        fs.symlinkSync(file, link)
+        let second
+        const now = () => { second ??= feed(file, ['add', 'credits', '--command', CREDITS_CMD]); return CLOCK }
+        const first = await feed(link, ['add', 'chats', '--command', CMD], { now }) // this one is typed through the link, the other through the real path
+        expect(second).toBeDefined()
+        const other = await second
+        expect(first.code).toBe(0)
+        expect(other.code).toBe(1)
+        expect(other.err).toBe(HELD(file))
+        expect(fs.lstatSync(link).isSymbolicLink()).toBe(true)
+        expect(readJson(file)).toEqual({ port: 1, feeds: [CHATS] })
+        expect(ls(dir)).toEqual(['monitor.json']) // the real file's folder: the lock is gone, nothing else is left
+        expect(ls(path.dirname(link))).toEqual(['monitor.json', `monitor.json.bak-${STAMP}`]) // the backup is made next to the path as typed (as before the lock)
+    })
+
+    // A linked folder needs no care in the code: the OS resolves it, so both spellings are already the same lock file. This test holds
+    // that (it is green without the realpath too); it was the review's open question, and it guards the lock's name against a spelling.
+    posixOnly('a linked folder and the real folder share one lock, also when the file is not there yet', async () => {
+        const real = path.join(tmp(), 'real')
+        fs.mkdirSync(real)
+        const linked = path.join(tmp(), 'linked')
+        fs.symlinkSync(real, linked)
+        const viaLink = path.join(linked, 'monitor.json')
+        const viaReal = path.join(real, 'monitor.json')
+        // a new file makes no backup, so no clock is read inside the write: the second command starts at the read-again, which is under the lock
+        const readFile = fs.readFileSync
+        let reads = 0
+        let second
+        const spy = vi.spyOn(fs, 'readFileSync').mockImplementation((target, ...rest) => {
+            if (target === viaLink && (reads += 1) === 2) second = feed(viaReal, ['add', 'credits', '--command', CREDITS_CMD])
+            return readFile(target, ...rest)
+        })
+        let first
+        try { first = await feed(viaLink, ['add', 'chats', '--command', CMD]) } finally { spy.mockRestore() }
+        expect(second).toBeDefined()
+        const other = await second
+        expect(first.code).toBe(0)
+        expect(other.code).toBe(1)
+        expect(other.err).toBe(HELD(viaReal))
+        expect(readJson(viaReal)).toEqual({ feeds: [CHATS] })
+        expect(ls(real)).toEqual(['monitor.json'])
     })
 
     it('a lock that is already there refuses add and remove, writes nothing and is left exactly where it is', async () => {

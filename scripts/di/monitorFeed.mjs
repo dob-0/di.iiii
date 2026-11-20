@@ -210,17 +210,31 @@ const bytesNow = (file) => {
 }
 
 /**
+ * The lock's path: named after the file on the disk, not after the path as typed. monitor.json can be a symlink to the real file;
+ * two commands that reach it by the two spellings (the link, the real path) must get ONE lock, or both write (the second review:
+ * 18 of 60 parallel pairs lost a feed). A linked folder above the file needs no care: the OS resolves it, so both spellings are
+ * already the same lock file. A file that is not there yet has no link to follow.
+ */
+const lockPathFor = (file) => {
+    try { return `${fs.realpathSync(file)}.lock` } catch (error) {
+        if (error?.code === 'ENOENT') return `${file}.lock`
+        throw error
+    }
+}
+
+/**
  * Runs `section` while this command holds `<file>.lock`. The read-again, the backup and the rename (saveConfig) must not run in two
  * commands at once: both would read the same bytes, both would pass, and the second rename would drop what the first wrote, with
  * exit 0 for both. Method: git's lock file (lockfile.c, `config.lock`): open(2) with O_CREAT|O_EXCL is atomic on a local disk, so
  * one command makes the file, does the section (milliseconds; --check is never inside it) and removes it. A command that finds the
  * lock neither waits nor takes it over: it throws code ELOCKED, writes nothing, and is run again (git: "Unable to create
  * 'config.lock': File exists"). The lock is only removed by the command that made it. A program that does not use the lock, an
- * editor, is covered by the read-again alone, so an edit that lands between that read and the rename is still lost.
+ * editor, is covered by the read-again alone, so an edit that lands between that read and the rename is still lost. A command
+ * killed inside the section (SIGKILL, SIGTERM, Ctrl-C) leaves the lock: the refusal says how to delete it.
  */
 const withWriteLock = (file, section) => {
-    const lock = `${file}.lock`
     fs.mkdirSync(path.dirname(file), { recursive: true })
+    const lock = lockPathFor(file)
     let fd
     try { fd = fs.openSync(lock, 'wx', 0o600) } catch (error) {
         if (error?.code === 'EEXIST') throw Object.assign(new Error(`${lock} exists`), { code: 'ELOCKED', lock })
