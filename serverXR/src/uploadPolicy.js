@@ -11,7 +11,9 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/zip',
   'application/x-zip-compressed',
   'application/gzip',
-  'text/plain'
+  'text/plain',
+  // single-file HTML "visuals" — stored and served sandboxed (projectRoutes.js)
+  'text/html'
 ])
 const ALLOWED_EXTENSIONS = new Set([
   '.glb',
@@ -39,7 +41,10 @@ const ALLOWED_EXTENSIONS = new Set([
   '.exr',
   // A laser drawing for Laser File (nodes/laser.file). Browsers send it as application/octet-stream or
   // with no type at all, so only its extension can let it in.
-  '.ild'
+  '.ild',
+  // single-file HTML visuals for Mapping screens
+  '.html',
+  '.htm'
 ])
 
 const isAllowedUpload = (file) => {
