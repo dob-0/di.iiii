@@ -114,6 +114,10 @@ function PanelNote({ panel, empty }) {
             </div>
         )
     }
+    // Credits only: a machine with no list of its own shows the one another machine reported; the server marks it `from`, and the age is on its clock.
+    if (panel.from) {
+        return <div className="monitor-note" data-credits="from">From {panel.from}{panel.reportedAt ? `, reported ${ago(panel.reportedAt, panel.at)}` : ''}: this machine has no credits list of its own.</div>
+    }
     return panel.rows?.length || !empty ? null : <div className="monitor-note">{empty}</div>
 }
 

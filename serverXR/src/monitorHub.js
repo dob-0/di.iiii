@@ -128,7 +128,8 @@ function createReportStore({ now = () => Date.now() } = {}) {
         let rows = (ok && sanitizeCredits(c.rows)) || []
         // rows that are not a list, a row without a name, or "configured" without rows: a changed shape greys the panel, never a quiet 0/0
         if (ok && (rows.dropped || (c.rows !== undefined && !Array.isArray(c.rows)) || (c.configured && !Array.isArray(c.rows)))) { ok = false; error = 'the credits rows were not in the expected shape'; rows = [] }
-        panels.credits = { ok, configured: ok && Array.isArray(c.rows) ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(!ok ? { error } : {}) }
+        // `stale` stays (only that one word of its age): another machine must not be lent a list its own machine calls old
+        panels.credits = { ok, configured: ok && Array.isArray(c.rows) ? 1 : 0, rows, ready: rows.filter((r) => r.available).length, total: rows.length, ...(ok && c.stale === true ? { stale: true } : {}), ...(!ok ? { error } : {}) }
       } else panels[name] = cleanPanelValue(body.panels[name])
     }
     const asks = (ledger && Array.isArray(body.asks) ? body.asks : [])
@@ -541,6 +542,30 @@ function createHub({
     return chatsBlock(inputs, { now: now() })
   }
 
+  // Credits belong to the account, not to one machine. A machine with no credits list of its own (no credits feed in
+  // its monitor config) shows the freshest list another machine of the same owner reported, marked `from` (that
+  // machine) and `reportedAt` (when it came in), so the page says whose list it is and how old. Nothing is read or
+  // probed here: the list is the one the other machine already made (a probe is a real model call of about 113,000
+  // tokens, so a probe per machine would cost every hour). A panel that is the machine's own is never covered: a list,
+  // a failing check, a check still running, a feed that answered empty. Only a whole, fresh list is lent: a stale report
+  // or one with no readable time, a stale, failing, still-checking or empty list, or rows that are not all objects (dev's
+  // account rows are only checked to be objects) are skipped, so a bad row can never fail the snapshot. The page only:
+  // the machine's own report to dev still carries its own panel, so a lent list is never reported back as its own.
+  // Limit: the freshest report wins, so with two or more fit donors `from` (and the rows, if their lists differ) can
+  // change from one scan to the next as their reports arrive; the meters in a list are as old as that machine's own read.
+  const creditsFor = (base, sources) => {
+    const mine = base.panels?.credits
+    if (mine && !(mine.ok === true && !mine.configured && !mine.checking && !mine.rows?.length)) return mine
+    const donor = sources
+      .filter((r) => r && typeof r.host === 'string' && r.stale !== true && isPlainObject(r.panels?.credits))
+      .map((r) => ({ host: r.host, reportedAt: r.reportedAt, at: typeof r.reportedAt === 'string' ? Date.parse(r.reportedAt) : NaN, c: r.panels.credits }))
+      .filter(({ at, c }) => Number.isFinite(at) && c.ok === true && c.stale !== true && !c.checking && Array.isArray(c.rows) && c.rows.length > 0 && c.rows.every(isPlainObject))
+      .sort((a, b) => b.at - a.at || b.c.rows.length - a.c.rows.length || a.host.localeCompare(b.host))[0]
+    if (!donor) return mine
+    const rows = donor.c.rows
+    return { ...mine, ok: true, configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length, from: donor.host, reportedAt: donor.reportedAt }
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
   // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
@@ -556,8 +581,11 @@ function createHub({
       .filter((r) => r && typeof r.host === 'string' && !held.has(r.host) && !held.has(shortHost(r.host)))
       .map((r) => ({ ...r, via: 'dev' }))
     const reportRows = [...own, ...extra.map(({ panels, ...r }) => ({ ...r, panels: withoutChats(panels) }))]
+    // a new panels object only when a list is lent: the store's own scan (cached, shared) is never written to
+    const credits = creditsFor(base, [...own, ...extra])
     return {
       ...base,
+      ...(credits !== base.panels?.credits ? { panels: { ...base.panels, credits } } : {}),
       account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
       tiers: tierBlock,

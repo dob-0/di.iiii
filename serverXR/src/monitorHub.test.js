@@ -214,6 +214,140 @@ describe('hub snapshot', () => {
     expect((await hub.getSnapshot()).chats).toMatchObject({ state: 'none', ok: false, rows: [] })
   })
 
+  // Credits belong to the account, not to one machine: a machine with no credits list of its own shows the list another
+  // of the owner's machines reported (marked `from` and `reportedAt`). Nothing is probed: a probe is a real model call.
+  describe('credits on every machine', () => {
+    const T0 = 1_800_000_000_000
+    const rows = [
+      { route: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' },
+      { route: 'api:lab', available: false, meter: 'n/a', have: 'key', why: 'no credit' }
+    ]
+    const list = (extra = {}) => ({ ok: true, configured: 1, rows, ...extra })
+    const nothing = () => ({ ok: true, ms: 4, configured: 0, rows: [], ready: 0, total: 0, at: 111 })
+    const make = (credits) => {
+      let t = T0
+      const reports = createReportStore({ now: () => t })
+      const store = { getMonitor: async () => ({ generatedAt: 'now', host: 'studio', configured: true, panels: { ...panels, ...(credits ? { credits } : {}) } }) }
+      const { hub } = build({ store, reports, now: () => t })
+      return { hub, reports, tick: (ms) => { t += ms } }
+    }
+
+    it('a machine with no credits feed shows the list another machine reported, marked with whose and when', async () => {
+      const local = nothing()
+      const { hub, reports } = make(local)
+      reports.put({ host: 'aylmo', panels: { credits: list() } })
+      const snap = await hub.getSnapshot()
+      expect(snap.panels.credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2, from: 'aylmo', reportedAt: new Date(T0).toISOString(), ms: 4, at: 111 })
+      expect(snap.panels.credits.rows.map((r) => [r.name, r.available])).toEqual([['plan:dob', true], ['api:lab', false]])
+      // the machine's own panel is not touched: the next scan starts from the same local truth, and a report never carries a lent list
+      expect(local).toEqual(nothing())
+      expect(snap.reports.find((r) => r.host === 'aylmo').panels.credits.from).toBeUndefined()
+    })
+
+    it('a panel that is missing altogether is filled the same way', async () => {
+      const { hub, reports } = make(null)
+      reports.put({ host: 'aylmo', panels: { credits: list() } })
+      expect((await hub.getSnapshot()).panels.credits).toMatchObject({ ok: true, configured: 1, total: 2, from: 'aylmo' })
+    })
+
+    it('its own list always wins; a failing, a still-checking and an empty configured panel are never covered up', async () => {
+      const ownRow = { id: 'r1', name: 'plan:own', available: true, meter: '', have: '', why: '' }
+      const own = { ok: true, configured: 1, rows: [ownRow], ready: 1, total: 1 }
+      const unflagged = { ok: true, configured: 0, rows: [ownRow], ready: 1, total: 1 }
+      const failing = { ok: false, error: 'the credits command has not answered', rows: [] }
+      const checking = { ok: true, configured: 1, rows: [], ready: 0, total: 0, checking: true }
+      const checkingFirst = { ok: true, configured: 0, rows: [], ready: 0, total: 0, checking: true }
+      const empty = { ok: true, configured: 1, rows: [], ready: 0, total: 0 }
+      for (const mine of [own, unflagged, failing, checking, checkingFirst, empty]) {
+        const { hub, reports } = make(mine)
+        reports.put({ host: 'aylmo', panels: { credits: list() } })
+        const credits = (await hub.getSnapshot()).panels.credits
+        expect(credits).toEqual(mine)
+        expect(credits.from).toBeUndefined()
+      }
+    })
+
+    it('only a fresh, healthy, non-empty list is lent: not a stale report, a stale or failing list, or an empty one', async () => {
+      const { hub, reports, tick } = make(nothing())
+      reports.put({ host: 'old-pc', panels: { credits: list() } })
+      tick(STALE_MS + 1000)
+      reports.put({ host: 'broken', panels: { credits: { ok: false, configured: 1, error: 'nope' } } })
+      reports.put({ host: 'old-list', panels: { credits: list({ stale: true }) } })
+      reports.put({ host: 'empty', panels: { credits: { ok: true, configured: 1, rows: [] } } })
+      reports.put({ host: 'no-feed', panels: { credits: { ok: true, configured: 0, rows: [] } } })
+      const snap = await hub.getSnapshot()
+      expect(snap.reports.find((r) => r.host === 'old-pc').stale).toBe(true)
+      expect(snap.panels.credits).toMatchObject({ ok: true, configured: 0, rows: [] })
+      expect(snap.panels.credits.from).toBeUndefined()
+    })
+
+    it('the freshest report lends, then the longer list, then the name, whatever order they came in', async () => {
+      const one = rows.slice(0, 1)
+      // a newer short list beats an older long one
+      const a = make(nothing())
+      a.reports.put({ host: 'aylmo', panels: { credits: list() } })
+      a.tick(5000)
+      a.reports.put({ host: 'r-di', panels: { credits: list({ rows: one }) } })
+      expect((await a.hub.getSnapshot()).panels.credits).toMatchObject({ from: 'r-di', total: 1, reportedAt: new Date(T0 + 5000).toISOString() })
+      // the same moment: the longer list wins even when its name sorts later and it came in last
+      const b = make(nothing())
+      b.reports.put({ host: 'a-short', panels: { credits: list({ rows: one }) } })
+      b.reports.put({ host: 'z-long', panels: { credits: list() } })
+      expect((await b.hub.getSnapshot()).panels.credits).toMatchObject({ from: 'z-long', total: 2 })
+      // the same moment and length: the name decides, not the order they came in (both orders)
+      for (const order of [['b-pc', 'a-pc'], ['a-pc', 'b-pc']]) {
+        const c = make(nothing())
+        for (const host of order) c.reports.put({ host, panels: { credits: list() } })
+        expect((await c.hub.getSnapshot()).panels.credits).toMatchObject({ from: 'a-pc' })
+      }
+    })
+
+    it('the signed-in account\'s machines (the rows dev sends) lend too', async () => {
+      const { hub } = make(nothing())
+      const account = { state: 'ok', name: 'Ada', reports: [
+        { host: 'lab-pc', reportedAt: new Date(T0 - 20_000).toISOString(), stale: false, panels: { credits: { ok: true, configured: 1, rows: [{ id: 'r1', name: 'plan:dob', available: true, meter: '', have: '', why: '' }], ready: 1, total: 1 } } },
+        { host: 'old-pc', reportedAt: new Date(T0 - 600_000).toISOString(), stale: true, panels: { credits: list() } }
+      ] }
+      const snap = await hub.getSnapshot({ account })
+      expect(snap.panels.credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 1, from: 'lab-pc', reportedAt: new Date(T0 - 20_000).toISOString() })
+    })
+
+    it('on the account path too, a list is lent only when it is whole and fresh (a bad row never fails the snapshot)', async () => {
+      const row = { id: 'r1', name: 'plan:dob', available: true, meter: '', have: '', why: '' }
+      const at = new Date(T0 - 20_000).toISOString()
+      const credits = (extra) => ({ ok: true, configured: 1, rows: [row], ...extra })
+      const unfit = {
+        'a stale report': { reportedAt: at, stale: true, panels: { credits: credits() } },
+        'a report with no time': { reportedAt: null, stale: false, panels: { credits: credits() } },
+        'a report with an unreadable time': { reportedAt: 'soon', stale: false, panels: { credits: credits() } },
+        'a list its machine calls old': { reportedAt: at, stale: false, panels: { credits: credits({ stale: true }) } },
+        'a failing list': { reportedAt: at, stale: false, panels: { credits: credits({ ok: false, error: 'nope' }) } },
+        'a list still being checked': { reportedAt: at, stale: false, panels: { credits: credits({ checking: true }) } },
+        'an empty list': { reportedAt: at, stale: false, panels: { credits: credits({ rows: [] }) } },
+        'rows that are text': { reportedAt: at, stale: false, panels: { credits: credits({ rows: 'abc' }) } },
+        'a null row': { reportedAt: at, stale: false, panels: { credits: credits({ rows: [row, null] }) } },
+        'rows that are not objects': { reportedAt: at, stale: false, panels: { credits: credits({ rows: ['x', 3] }) } }
+      }
+      for (const [what, r] of Object.entries(unfit)) {
+        const { hub } = make(nothing())
+        const snap = await hub.getSnapshot({ account: { state: 'ok', name: null, reports: [{ host: 'lab-pc', ...r }] } })
+        expect([what, snap.panels.credits.from]).toEqual([what, undefined])
+        expect(snap.panels.credits).toMatchObject({ ok: true, configured: 0, rows: [] })
+      }
+      // the same machine with a whole, fresh list is lent
+      const { hub } = make(nothing())
+      const fit = await hub.getSnapshot({ account: { state: 'ok', name: null, reports: [{ host: 'lab-pc', reportedAt: at, stale: false, panels: { credits: credits() } }] } })
+      expect(fit.panels.credits).toMatchObject({ from: 'lab-pc', total: 1, reportedAt: at })
+    })
+
+    it('never from a machine of another account', async () => {
+      const { hub, reports } = make(nothing())
+      reports.put({ host: 'stranger-pc', panels: { credits: list() } }, { subject: 'u9' })
+      expect((await hub.getSnapshot({ subjects: ['owner-1'] })).panels.credits.from).toBeUndefined()
+      expect((await hub.getSnapshot({ subjects: ['u9'] })).panels.credits.from).toBe('stranger-pc')
+    })
+  })
+
   it('parts: state from the Connected rows, version from the pack stamps, honest when unprobed or unread', async () => {
     const H = 'd'.repeat(40)
     const rows = [
@@ -473,6 +607,18 @@ describe('a reported credits panel', () => {
     expect(credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 2 })
     expect(JSON.stringify(credits)).not.toMatch(/corp\.example|dob@studio|secret|"extra"/)
     expect(credits.rows[0]).toEqual({ id: expect.stringMatching(/^r[0-9a-f]{8}$/), name: 'plan:dob', available: true, meter: '7d 62%', have: expect.stringMatching(/^login login-[0-9a-f]{4}$/), why: '' })
+  })
+
+  it('keeps "stale" on a list the machine itself marked old (so it is not lent on), and nothing else of its age', () => {
+    const store = createReportStore()
+    const rows = [{ route: 'plan:dob', available: true, meter: '', have: 'key', why: '' }]
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows, stale: true, checkedAt: '2026-11-20T10:00:00.000Z', refreshError: 'x' } } })
+    expect(store.list()[0].panels.credits).toMatchObject({ ok: true, stale: true, total: 1 })
+    expect(store.list()[0].panels.credits.checkedAt).toBeUndefined()
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows, stale: 'yes' } } })
+    expect(store.list()[0].panels.credits.stale).toBeUndefined()
+    store.put({ host: 'r-di', panels: { credits: { ok: true, configured: 1, rows } } })
+    expect(store.list()[0].panels.credits.stale).toBeUndefined()
   })
 
   it('a broken report keeps no rows and is not counted as configured', () => {

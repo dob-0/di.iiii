@@ -259,6 +259,33 @@ describe('MonitorSection', () => {
         expect(document.querySelector('[data-credits]')).toBeNull()
     })
 
+    // Credits are the account's: a machine with no feed shows the list another machine reported, and says whose and how old (on the server's clock).
+    it('a credits list lent by another machine says whose it is and how old; the tile and rows read as an own list', async () => {
+        const at = Date.parse('2026-01-01T12:00:00Z')
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 1, total: 2, at, from: 'aylmo', reportedAt: new Date(at - 20 * 1000).toISOString(), rows: [
+            { id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' },
+            { id: '1:api:studio', name: 'api:studio', available: false, meter: 'n/a', have: 'key', why: 'SPENT: credit balance is too low' }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        const first = render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const note = document.querySelector('[data-credits="from"]')
+        expect(note.textContent).toBe('From aylmo, reported 20s ago: this machine has no credits list of its own.')
+        expect(note.className).toBe('monitor-note')
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/2/)
+        expect(document.querySelector('[data-monitor-id="cr:1:api:studio"]').textContent).toMatch(/not ready/)
+        expect(screen.queryByText(/does not report credits/)).toBeNull()
+        first.unmount()
+
+        const undated = snapshot()
+        undated.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, from: 'aylmo', reportedAt: null, rows: [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '', have: '', why: '' }] }
+        getMonitor.mockResolvedValue(undated)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits="from"]').textContent).toBe('From aylmo: this machine has no credits list of its own.')
+    })
+
     it('the credits tile is grey while the first list is read, amber when the list is old, green when it is fresh', async () => {
         const rows = [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }]
         const at = Date.parse('2026-01-01T12:00:00Z')
