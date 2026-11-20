@@ -2245,5 +2245,6 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 @media (max-width: 600px) {
     .monitor-page .monitor-hero-issues, .monitor-page .monitor-hero-issues li { max-width: 100%; min-width: 0; }
     .monitor-page .monitor-hero-issues li { overflow: hidden; text-overflow: ellipsis; }
+    .monitor-page .monitor-bar-actions { flex: 1 1 100%; max-width: 100%; min-width: 0; }
     .monitor-page .monitor-bar-actions input, .monitor-page .monitor-bar-actions .monitor-filter { max-width: 100%; min-width: 0; width: 100%; }
 }
