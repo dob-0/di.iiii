@@ -248,11 +248,14 @@ describe('hub snapshot', () => {
     })
 
     it('its own list always wins; a failing, a still-checking and an empty configured panel are never covered up', async () => {
-      const own = { ok: true, configured: 1, rows: [{ id: 'r1', name: 'plan:own', available: true, meter: '', have: '', why: '' }], ready: 1, total: 1 }
+      const ownRow = { id: 'r1', name: 'plan:own', available: true, meter: '', have: '', why: '' }
+      const own = { ok: true, configured: 1, rows: [ownRow], ready: 1, total: 1 }
+      const unflagged = { ok: true, configured: 0, rows: [ownRow], ready: 1, total: 1 }
       const failing = { ok: false, error: 'the credits command has not answered', rows: [] }
       const checking = { ok: true, configured: 1, rows: [], ready: 0, total: 0, checking: true }
+      const checkingFirst = { ok: true, configured: 0, rows: [], ready: 0, total: 0, checking: true }
       const empty = { ok: true, configured: 1, rows: [], ready: 0, total: 0 }
-      for (const mine of [own, failing, checking, empty]) {
+      for (const mine of [own, unflagged, failing, checking, checkingFirst, empty]) {
         const { hub, reports } = make(mine)
         reports.put({ host: 'aylmo', panels: { credits: list() } })
         const credits = (await hub.getSnapshot()).panels.credits
@@ -275,15 +278,25 @@ describe('hub snapshot', () => {
       expect(snap.panels.credits.from).toBeUndefined()
     })
 
-    it('the freshest report lends, then the longer list, then the name', async () => {
-      const { hub, reports, tick } = make(nothing())
-      reports.put({ host: 'aylmo', panels: { credits: list() } })
-      tick(5000)
-      reports.put({ host: 'r-di', panels: { credits: list({ rows: rows.slice(0, 1) }) } })
-      expect((await hub.getSnapshot()).panels.credits).toMatchObject({ from: 'r-di', total: 1, reportedAt: new Date(T0 + 5000).toISOString() })
-      reports.put({ host: 'b-pc', panels: { credits: list({ rows: rows.slice(0, 1) }) } })
-      reports.put({ host: 'a-pc', panels: { credits: list() } })
-      expect((await hub.getSnapshot()).panels.credits).toMatchObject({ from: 'a-pc', total: 2 })
+    it('the freshest report lends, then the longer list, then the name, whatever order they came in', async () => {
+      const one = rows.slice(0, 1)
+      // a newer short list beats an older long one
+      const a = make(nothing())
+      a.reports.put({ host: 'aylmo', panels: { credits: list() } })
+      a.tick(5000)
+      a.reports.put({ host: 'r-di', panels: { credits: list({ rows: one }) } })
+      expect((await a.hub.getSnapshot()).panels.credits).toMatchObject({ from: 'r-di', total: 1, reportedAt: new Date(T0 + 5000).toISOString() })
+      // the same moment: the longer list wins even when its name sorts later and it came in last
+      const b = make(nothing())
+      b.reports.put({ host: 'a-short', panels: { credits: list({ rows: one }) } })
+      b.reports.put({ host: 'z-long', panels: { credits: list() } })
+      expect((await b.hub.getSnapshot()).panels.credits).toMatchObject({ from: 'z-long', total: 2 })
+      // the same moment and length: the name decides, not the order they came in (both orders)
+      for (const order of [['b-pc', 'a-pc'], ['a-pc', 'b-pc']]) {
+        const c = make(nothing())
+        for (const host of order) c.reports.put({ host, panels: { credits: list() } })
+        expect((await c.hub.getSnapshot()).panels.credits).toMatchObject({ from: 'a-pc' })
+      }
     })
 
     it('the signed-in account\'s machines (the rows dev sends) lend too', async () => {
@@ -294,6 +307,34 @@ describe('hub snapshot', () => {
       ] }
       const snap = await hub.getSnapshot({ account })
       expect(snap.panels.credits).toMatchObject({ ok: true, configured: 1, ready: 1, total: 1, from: 'lab-pc', reportedAt: new Date(T0 - 20_000).toISOString() })
+    })
+
+    it('on the account path too, a list is lent only when it is whole and fresh (a bad row never fails the snapshot)', async () => {
+      const row = { id: 'r1', name: 'plan:dob', available: true, meter: '', have: '', why: '' }
+      const at = new Date(T0 - 20_000).toISOString()
+      const credits = (extra) => ({ ok: true, configured: 1, rows: [row], ...extra })
+      const unfit = {
+        'a stale report': { reportedAt: at, stale: true, panels: { credits: credits() } },
+        'a report with no time': { reportedAt: null, stale: false, panels: { credits: credits() } },
+        'a report with an unreadable time': { reportedAt: 'soon', stale: false, panels: { credits: credits() } },
+        'a list its machine calls old': { reportedAt: at, stale: false, panels: { credits: credits({ stale: true }) } },
+        'a failing list': { reportedAt: at, stale: false, panels: { credits: credits({ ok: false, error: 'nope' }) } },
+        'a list still being checked': { reportedAt: at, stale: false, panels: { credits: credits({ checking: true }) } },
+        'an empty list': { reportedAt: at, stale: false, panels: { credits: credits({ rows: [] }) } },
+        'rows that are text': { reportedAt: at, stale: false, panels: { credits: credits({ rows: 'abc' }) } },
+        'a null row': { reportedAt: at, stale: false, panels: { credits: credits({ rows: [row, null] }) } },
+        'rows that are not objects': { reportedAt: at, stale: false, panels: { credits: credits({ rows: ['x', 3] }) } }
+      }
+      for (const [what, r] of Object.entries(unfit)) {
+        const { hub } = make(nothing())
+        const snap = await hub.getSnapshot({ account: { state: 'ok', name: null, reports: [{ host: 'lab-pc', ...r }] } })
+        expect([what, snap.panels.credits.from]).toEqual([what, undefined])
+        expect(snap.panels.credits).toMatchObject({ ok: true, configured: 0, rows: [] })
+      }
+      // the same machine with a whole, fresh list is lent
+      const { hub } = make(nothing())
+      const fit = await hub.getSnapshot({ account: { state: 'ok', name: null, reports: [{ host: 'lab-pc', reportedAt: at, stale: false, panels: { credits: credits() } }] } })
+      expect(fit.panels.credits).toMatchObject({ from: 'lab-pc', total: 1, reportedAt: at })
     })
 
     it('never from a machine of another account', async () => {

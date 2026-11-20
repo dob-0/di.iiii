@@ -490,18 +490,22 @@ function createHub({
   // Credits belong to the account, not to one machine. A machine with no credits list of its own (no credits feed in
   // its monitor config) shows the freshest list another machine of the same owner reported, marked `from` (that
   // machine) and `reportedAt` (when it came in), so the page says whose list it is and how old. Nothing is read or
-  // probed here: the list is the one the other machine already made (a probe is a real model call, so a probe per
-  // machine would cost every hour). A panel that is the machine's own is never covered: a list, a failing check, a
-  // check still running, a feed that answered empty. A stale, failing or empty list is not lent. The page only: the
-  // machine's own report to dev still carries its own panel, so a lent list is never reported back as its own.
+  // probed here: the list is the one the other machine already made (a probe is a real model call of about 113,000
+  // tokens, so a probe per machine would cost every hour). A panel that is the machine's own is never covered: a list,
+  // a failing check, a check still running, a feed that answered empty. Only a whole, fresh list is lent: a stale report
+  // or one with no readable time, a stale, failing, still-checking or empty list, or rows that are not all objects (dev's
+  // account rows are only checked to be objects) are skipped, so a bad row can never fail the snapshot. The page only:
+  // the machine's own report to dev still carries its own panel, so a lent list is never reported back as its own.
+  // Limit: the freshest report wins, so with two or more fit donors `from` (and the rows, if their lists differ) can
+  // change from one scan to the next as their reports arrive; the meters in a list are as old as that machine's own read.
   const creditsFor = (base, sources) => {
     const mine = base.panels?.credits
     if (mine && !(mine.ok === true && !mine.configured && !mine.checking && !mine.rows?.length)) return mine
     const donor = sources
       .filter((r) => r && typeof r.host === 'string' && r.stale !== true && isPlainObject(r.panels?.credits))
-      .map((r) => ({ host: r.host, reportedAt: typeof r.reportedAt === 'string' ? r.reportedAt : null, c: r.panels.credits }))
-      .filter(({ c }) => c.ok === true && c.stale !== true && !c.checking && Array.isArray(c.rows) && c.rows.length > 0)
-      .sort((a, b) => (Date.parse(b.reportedAt) || 0) - (Date.parse(a.reportedAt) || 0) || b.c.rows.length - a.c.rows.length || a.host.localeCompare(b.host))[0]
+      .map((r) => ({ host: r.host, reportedAt: r.reportedAt, at: typeof r.reportedAt === 'string' ? Date.parse(r.reportedAt) : NaN, c: r.panels.credits }))
+      .filter(({ at, c }) => Number.isFinite(at) && c.ok === true && c.stale !== true && !c.checking && Array.isArray(c.rows) && c.rows.length > 0 && c.rows.every(isPlainObject))
+      .sort((a, b) => b.at - a.at || b.c.rows.length - a.c.rows.length || a.host.localeCompare(b.host))[0]
     if (!donor) return mine
     const rows = donor.c.rows
     return { ...mine, ok: true, configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length, from: donor.host, reportedAt: donor.reportedAt }
