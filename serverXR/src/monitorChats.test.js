@@ -20,7 +20,7 @@ describe('chats block', () => {
     expect(b.state).toBe('live')
     expect(b.rows.map((r) => r.group)).toEqual(['ask', 'working', 'idle', 'idle'])
     expect(b.rows[2].idleMinutes).toBe(0)
-    expect(b.counts).toEqual({ ask: 1, working: 1, idle: 2, total: 4 })
+    expect(b.counts).toEqual({ ask: 1, working: 1, idle: 2, left: 0, total: 4 })
   })
 
   it('never carries the owner message text or session paths', () => {
