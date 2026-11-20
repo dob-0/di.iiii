@@ -1,6 +1,7 @@
 #!/bin/bash
 # Join a machine to the di.iiii Monitor: sign in once (a code shows here, you type it in the browser),
-# then it reports every 30 s. Needs di (a dev build, 0.4.4 or newer) on that machine.
+# then it reports every 30 s. Needs di (a dev build from 2026-11-20 or later, PR #1328) on that machine: the timer that build writes
+# names ~/.di/current and survives `di update`; an older build pins a version folder and stops at the second update.
 # Usage: scripts/monitor-join.sh <ssh-host>      Undo: ssh <host> 'di monitor install-timer --remove'
 set -e
 

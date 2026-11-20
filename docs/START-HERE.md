@@ -69,7 +69,7 @@ scripts/monitor-join.sh <ssh-host>         # signs that machine in, sends one re
 ssh <ssh-host> 'di monitor install-timer --remove'   # undo
 ```
 
-Someone else who signs in sees only their own machines.
+Someone else who signs in sees only their own machines. A report timer written by a build with the timer fix (PR #1328, 2026-11-20 or later) follows the installed version (`~/.di/current`), so it keeps reporting after `di update`. A timer written before that names a version folder and stops at the second `di update`: run `di monitor install-timer` once more, from a build that has the fix.
 
 ## Which door has what
 
