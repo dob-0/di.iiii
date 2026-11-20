@@ -2248,3 +2248,42 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
     .monitor-page .monitor-bar-actions { flex: 1 1 100%; max-width: 100%; min-width: 0; }
     .monitor-page .monitor-bar-actions input, .monitor-page .monitor-bar-actions .monitor-filter { max-width: 100%; min-width: 0; width: 100%; }
 }
+
+/* Versions tab: machines against dev on top, then one card per part with its past versions.
+   Cards fill the width (auto-fit), state is the 2px inset edge; no shadow, square corners. */
+.monitor-versions { display: flex; flex-direction: column; gap: var(--di-space-3); }
+.monitor-grid-machines { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.monitor-machine-version { cursor: default; }
+.monitor-versions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: var(--di-space-2); align-items: start; }
+.monitor-version-card {
+    --pref-tone: var(--pref-border);
+    display: flex; flex-direction: column; gap: var(--di-space-1); min-width: 0;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-surface); border-radius: 0;
+    box-shadow: inset 2px 0 0 var(--pref-tone);
+}
+.monitor-version-card.tone-success { --pref-tone: var(--di-success); }
+.monitor-version-card.tone-danger { --pref-tone: var(--di-danger); }
+.monitor-version-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--di-space-2); min-width: 0; }
+.monitor-works { flex: none; font-size: var(--di-text-1); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ui-text-muted); }
+.monitor-works.tone-success { color: var(--di-success); }
+.monitor-works.tone-danger { color: var(--di-danger); }
+.monitor-version-list { list-style: none; margin: var(--di-space-1) 0 0; padding: 0; display: flex; flex-direction: column; }
+.monitor-version-item {
+    display: grid; grid-template-columns: 5.5rem 5.5rem minmax(0, 1fr) auto; align-items: baseline; gap: var(--di-space-2);
+    padding: 2px 0; border-top: 1px solid var(--pref-border); font-size: var(--di-text-2);
+}
+.monitor-version-item.is-running { background: rgba(255, 255, 255, 0.05); }
+.monitor-version-date, .monitor-version-hash { color: var(--ui-text-muted); font-variant-numeric: tabular-nums; }
+.monitor-version-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.monitor-version-marks { display: inline-flex; gap: var(--di-space-2); align-items: baseline; justify-content: flex-end; }
+.monitor-version-marks a { color: var(--di-cyan); text-decoration: none; }
+.monitor-version-marks a:hover, .monitor-version-marks a:focus-visible { text-decoration: underline; outline: none; }
+.monitor-mark { font-weight: 600; font-size: var(--di-text-1); letter-spacing: 0.04em; text-transform: uppercase; }
+.monitor-mark.is-running { color: var(--di-cyan); }
+.monitor-mark.is-proven { color: var(--di-success); }
+@media (max-width: 640px) {
+    .monitor-version-item { grid-template-columns: 4.6rem minmax(0, 1fr) auto; }
+    .monitor-version-hash { display: none; }
+    .monitor-version-title { white-space: normal; overflow-wrap: anywhere; }
+}

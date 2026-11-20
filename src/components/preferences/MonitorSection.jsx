@@ -8,6 +8,7 @@ import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import { layoutMonitorMap } from './monitorMapLayout.js'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
 import MonitorParts from './MonitorParts.jsx'
+import MonitorVersions from './MonitorVersions.jsx'
 import MonitorPrs from './MonitorPrs.jsx'
 import MonitorTasks, { TaskActions } from './MonitorTasks.jsx'
 import MonitorDetail from './MonitorDetail.jsx'
@@ -22,12 +23,12 @@ import { rowMatches, searchCounts } from './monitorDetail.js'
 // triple for state, motion under 0.2 s on named properties only.
 
 const POLL_MS = 5000
-const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work'], ['parts', 'Parts'], ['tasks', 'Tasks']]
+const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work'], ['parts', 'Parts'], ['versions', 'Versions'], ['tasks', 'Tasks']]
 const FLASH_MS = 2500
 const FULL_KEY = 'di.monitor.full'
 const SPARK_SAMPLES = 30
-const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace', 4: 'parts', 5: 'tasks' }
-const KEYS_HELP = [['1  2  3  4  5', 'Board, Map, Work, Parts, Tasks'], ['/', 'Filter everything'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
+const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace', 4: 'parts', 5: 'versions', 6: 'tasks' }
+const KEYS_HELP = [['1  2  3  4  5  6', 'Board, Map, Work, Parts, Versions, Tasks'], ['/', 'Filter everything'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
 
 // remembered per browser; storage can be blocked, so every touch is guarded
 const readFull = () => {
@@ -562,6 +563,12 @@ export default function MonitorSection({ onStats }) {
                         <ModuleSection title="Parts" subtitle="Light desk, show desk, lasers, 3D Studio — live state and the version each was packed at">
                             <PanelLive name="parts" ages={ages} nowMs={nowMs} paused={paused} />
                             <MonitorParts parts={snap?.parts} query={query} selectedId={selected?.kind === 'part' ? selected.id : null} onPick={(row) => pick('part', row)} />
+                        </ModuleSection>
+                    ) : null}
+                    {tab === 'versions' ? (
+                        <ModuleSection title="Versions" subtitle="What each machine runs against dev, and every part's latest and past versions — merged pull requests, newest first">
+                            <PanelLive name="parts" ages={ages} nowMs={nowMs} paused={paused} />
+                            <MonitorVersions snap={snap} query={query} />
                         </ModuleSection>
                     ) : null}
                     {tab === 'workspace' ? (

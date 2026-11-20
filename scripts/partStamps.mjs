@@ -23,5 +23,22 @@ export function lastCommitFor(dirs, { cwd, run = spawnSync, shallow = isShallow(
 /** parts.json's list → [{ id, commit, date }], same order. */
 export function stampParts(parts, options = {}) {
   const shallow = isShallow(options) // asked once, not once per part
-  return parts.map((part) => ({ id: part.id, ...lastCommitFor(part.dirs, { ...options, shallow }) }))
+  return parts.map((part) => ({ id: part.id, ...lastCommitFor(part.dirs, { ...options, shallow }), history: historyFor(part.dirs, { ...options, shallow }) }))
+}
+
+/**
+ * Past versions of a part: the last commits that touched its dirs, newest first, with the merged PR number
+ * parsed from the subject ("... (#1303)", the squash-merge form). Read at pack time like the stamp.
+ * Shallow clone or no git: [] (unknown), never a guess.
+ */
+export function historyFor(dirs, { cwd, run = spawnSync, shallow = isShallow({ cwd, run }), limit = 10 } = {}) {
+  if (shallow) return []
+  const result = run('git', ['log', `-${limit}`, '--format=%H%x09%cs%x09%s', '--', ...dirs], { cwd, encoding: 'utf8' })
+  if (!result || result.status !== 0) return []
+  return String(result.stdout || '').split('\n').map((line) => {
+    const [commit, date, ...rest] = line.split('\t')
+    const title = rest.join('\t').trim().slice(0, 140)
+    const pr = /\(#(\d{1,7})\)\s*$/.exec(title)
+    return { commit, date, title, pr: pr ? Number(pr[1]) : null }
+  }).filter((h) => /^[0-9a-f]{40}$/.test(h.commit || '') && /^\d{4}-\d{2}-\d{2}$/.test(h.date || ''))
 }
