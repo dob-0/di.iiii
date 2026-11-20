@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('./MonitorMap3D.jsx', () => ({
@@ -19,22 +19,36 @@ const map = {
 beforeEach(() => { window.localStorage.clear(); window.localStorage.setItem('di.monitor.map.view', '2d') })
 afterEach(() => { cleanup(); window.localStorage.clear(); document.body.style.overflow = '' })
 
-describe('map: the wheel only zooms when asked', () => {
-    it('plain wheel scrolls the page; Ctrl, Cmd (a pinch) or full screen zoom', () => {
+describe('map: when the wheel zooms', () => {
+    it('plain wheel scrolls an embedded map; Ctrl, Cmd (a pinch), full screen or a map that fills its screen zoom', () => {
         expect(wheelZooms({ ctrlKey: false, metaKey: false }, false)).toBe(false)
         expect(wheelZooms({ ctrlKey: true }, false)).toBe(true)
         expect(wheelZooms({ metaKey: true }, false)).toBe(true)
         expect(wheelZooms({}, true)).toBe(true)
+        expect(wheelZooms({}, false, true)).toBe(true)
     })
-    it('a plain wheel over the 2D map is not cancelled, so the page scrolls', () => {
+    it('a plain wheel over an embedded 2D map is not cancelled, so the page scrolls', () => {
         const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} />)
         const svg = container.querySelector('svg.monitor-map-svg')
         const plain = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true })
         svg.dispatchEvent(plain)
         expect(plain.defaultPrevented).toBe(false)
-        const pinch = new WheelEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true })
-        svg.dispatchEvent(pinch)
+    })
+    it('Ctrl + wheel (a pinch) over an embedded 2D map zooms it and is cancelled', () => {
+        const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} />)
+        const svg = container.querySelector('svg.monitor-map-svg')
+        const pinch = new WheelEvent('wheel', { deltaY: -100, ctrlKey: true, bubbles: true, cancelable: true })
+        act(() => { svg.dispatchEvent(pinch) })
         expect(pinch.defaultPrevented).toBe(true)
+    })
+    it('a plain wheel over the Monitor map (kinds) zooms it and the page does not scroll under it', () => {
+        const { container } = render(<MonitorMap map={map} selectedId={null} onPick={() => {}} narrow={false} kinds />)
+        const svg = container.querySelector('svg.monitor-map-svg')
+        const before = svg.getAttribute('viewBox')
+        const plain = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true })
+        act(() => { svg.dispatchEvent(plain) })
+        expect(plain.defaultPrevented).toBe(true)
+        expect(svg.getAttribute('viewBox')).not.toBe(before)
     })
 })
 
