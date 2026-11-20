@@ -91,16 +91,17 @@ export default function MonitorOverview({ tiers, spaces, history, flashing, sele
         <div className="monitor-overview" aria-label="Tiers overview">
             {rows.map((row) => {
                 const state = tierState(row, dev?.commit)
+                const metaLines = [`built ${row.builtAt ? ago(row.builtAt) : 'n/a'}`, row.probe === 'doubt' ? `one check missed${row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}` : `${row.status ?? '—'}${typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}${row.probe === 'down' && row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}`, spaces?.ok === false ? 'spaces n/a' : `${counts[row.id] || 0} ${row.source === 'self' ? '' : 'public '}space${counts[row.id] === 1 ? '' : 's'}`]
                 const cls = ['monitor-tier', `tone-${state.tone}`, flashing?.has(`t:${row.id}`) ? 'is-changed' : '', selectedId === row.id ? 'is-selected' : ''].filter(Boolean).join(' ')
                 return (
-                    <button key={row.id} type="button" className={cls} data-tier-id={row.id} data-tier-tone={state.tone}
+                    <button key={row.id} type="button" className={cls} data-tier-id={row.id} data-tier-tone={state.tone} title={`${tierLabel(row.id)} · ${metaLines.join(' · ')}`}
                         aria-pressed={selectedId === row.id} onClick={() => onPick?.(row)}>
                         <span className="monitor-tier-name">{tierLabel(row.id)}</span>
                         <span className="monitor-tier-commit">{shortCommit(row.commit)}</span>
                         <span className="monitor-tier-note">{state.note}</span>
                         <Sparkline values={history?.[row.id]} />
                         <span className="monitor-meta">built {row.builtAt ? ago(row.builtAt) : 'n/a'}</span>
-                        <span className="monitor-meta">{row.probe === 'doubt' ? `one check missed · last answered ${ago(row.lastGoodAt)}` : `${row.status ?? '—'}${typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}${row.probe === 'down' && row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}`}</span>
+                        <span className="monitor-meta">{row.probe === 'doubt' ? `one check missed${row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}` : `${row.status ?? '—'}${typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}${row.probe === 'down' && row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}`}</span>
                         <span className="monitor-meta">{spaces?.ok === false ? 'spaces n/a' : `${counts[row.id] || 0} ${row.source === 'self' ? '' : 'public '}space${counts[row.id] === 1 ? '' : 's'}`}</span>
                     </button>
                 )
