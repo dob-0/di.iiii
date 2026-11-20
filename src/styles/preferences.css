@@ -2260,6 +2260,7 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
     display: flex; flex-direction: column; gap: var(--di-space-1); min-width: 0;
     padding: var(--di-space-2) var(--di-space-3);
     background: var(--di-surface); border-radius: 0;
+    /* A 2px tone line on the leading edge, inset so it takes no layout; not a shadow. */
     box-shadow: inset 2px 0 0 var(--pref-tone);
 }
 .monitor-version-card.tone-success { --pref-tone: var(--di-success); }
@@ -2272,7 +2273,7 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-version-list { list-style: none; margin: var(--di-space-1) 0 0; padding: 0; display: flex; flex-direction: column; }
 .monitor-version-item {
     display: grid; grid-template-columns: 5.5rem 5.5rem minmax(0, 1fr) auto; align-items: start; gap: var(--di-space-2);
-    padding: 2px 0; border-top: 1px solid var(--pref-border); font-size: var(--di-text-2);
+    padding: var(--di-space-1) 0; border-top: 1px solid var(--pref-border); font-size: var(--di-text-2);
 }
 .monitor-version-item.is-running { background: rgba(255, 255, 255, 0.05); }
 .monitor-version-date, .monitor-version-hash { color: var(--ui-text-muted); font-variant-numeric: tabular-nums; }
