@@ -223,7 +223,7 @@ const lockPathFor = (file) => {
 }
 
 /**
- * Runs `section` while this command holds `<file>.lock`. The read-again, the backup and the rename (saveConfig) must not run in two
+ * Runs `section` while this command holds the file's lock (lockPathFor: the real file's path + `.lock`). The read-again, the backup and the rename (saveConfig) must not run in two
  * commands at once: both would read the same bytes, both would pass, and the second rename would drop what the first wrote, with
  * exit 0 for both. Method: git's lock file (lockfile.c, `config.lock`): open(2) with O_CREAT|O_EXCL is atomic on a local disk, so
  * one command makes the file, does the section (milliseconds; --check is never inside it) and removes it. A command that finds the
