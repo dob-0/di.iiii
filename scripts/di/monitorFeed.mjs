@@ -11,14 +11,16 @@
  * JSON object is refused and stays byte for byte as it was. Everything else in the file (other keys, other feeds) is kept.
  * --check can run for seconds between the first read and the write, so the file is read again right before a changing write: other
  * bytes than the first read saw (an edit made meanwhile, a file that appeared or vanished) refuse the write and leave the file as the
- * other hand left it; the same bytes written again by an editor do not.
+ * other hand left it; the same bytes written again by an editor do not. Two feed commands at the same moment cannot both write:
+ * the read-again, the backup and the rename run under a lock file (withWriteLock), and the one that finds it held is refused.
  *
  * --check runs the command once under the Monitor's own limit and reads its output with the Monitor's own reader
  * (serverXR/src/monitorChats.js, monitorCredits.js), so a command that passes is one the Monitor accepts: a chat list also needs a
  * "generatedAt" the reader keeps (a number of seconds since 1970), because without it the Monitor shows the list as stale. Without
  * --check the command is stored and never run here.
  *
- * Exit codes: 0 done or nothing to do, 1 refused (bad file, failed check, file changed meanwhile, could not write), 2 usage.
+ * Exit codes: 0 done or nothing to do, 1 refused (bad file, failed check, file changed meanwhile, another command writing, could not
+ * write), 2 usage.
  * Pure parts are exported for tests: arg parsing, the file reader, the check.
  */
 import fs from 'node:fs'
@@ -208,21 +210,44 @@ const bytesNow = (file) => {
 }
 
 /**
+ * Runs `section` while this command holds `<file>.lock`. The read-again, the backup and the rename (saveConfig) must not run in two
+ * commands at once: both would read the same bytes, both would pass, and the second rename would drop what the first wrote, with
+ * exit 0 for both. Method: git's lock file (lockfile.c, `config.lock`): open(2) with O_CREAT|O_EXCL is atomic on a local disk, so
+ * one command makes the file, does the section (milliseconds; --check is never inside it) and removes it. A command that finds the
+ * lock neither waits nor takes it over: it throws code ELOCKED, writes nothing, and is run again (git: "Unable to create
+ * 'config.lock': File exists"). The lock is only removed by the command that made it. A program that does not use the lock, an
+ * editor, is covered by the read-again alone, so an edit that lands between that read and the rename is still lost.
+ */
+const withWriteLock = (file, section) => {
+    const lock = `${file}.lock`
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    let fd
+    try { fd = fs.openSync(lock, 'wx', 0o600) } catch (error) {
+        if (error?.code === 'EEXIST') throw Object.assign(new Error(`${lock} exists`), { code: 'ELOCKED', lock })
+        throw error
+    }
+    try { return section() } finally {
+        try { fs.closeSync(fd) } catch { /* closed already */ }
+        try { fs.unlinkSync(lock) } catch { /* gone already */ }
+    }
+}
+
+/**
  * Writes the config; returns the backup path (null for a new file). `config` was made from `read`, and --check can have run for
  * seconds since: if the file is not what `read` saw (other bytes, appeared, vanished) the write is refused with code ECHANGED before
- * anything is made, so what the other hand wrote is neither overwritten nor hidden in a backup. The same bytes pass.
+ * anything is made, so what the other hand wrote is neither overwritten nor hidden in a backup. The same bytes pass. The read-again
+ * is inside the lock: before it, two commands would both pass it (see withWriteLock).
  */
-const saveConfig = ({ file, read, config, now }) => {
+const saveConfig = ({ file, read, config, now }) => withWriteLock(file, () => {
     const current = bytesNow(file)
     if (read.exists ? current === null || !current.equals(read.raw) : current !== null) {
         throw Object.assign(new Error(`${file} changed after it was read`), { code: 'ECHANGED' })
     }
-    fs.mkdirSync(path.dirname(file), { recursive: true })
     const backup = read.exists ? keepBackup(file, read.raw, now) : null
     // through a symlink to the real file: a rename over the link would replace the link with a plain file
     writeFileAtomicSync(read.exists ? fs.realpathSync(file) : file, `${JSON.stringify(config, null, 2)}\n`, { mode: 0o600 })
     return backup
-}
+})
 
 const execShell = (command, { timeout, env }) => new Promise((resolve) => {
     execFile('/bin/sh', ['-c', command], { timeout, env, maxBuffer: MAX_OUTPUT }, (error, stdout, stderr) => resolve({ error, stdout: String(stdout || ''), stderr: String(stderr || '') }))
@@ -354,7 +379,9 @@ export const runFeed = async (args, deps = {}) => {
         return await (cmd.action === 'remove' ? removeFeed(ctx) : addFeed(ctx))
     } catch (error) {
         if (error?.code === 'ECHANGED') fail(`${file} changed while this command ran, so nothing was written. Run the command again.`)
-        else fail(`could not change ${file}: ${error?.code || String(error?.message || error).split('\n')[0]}. The file was not changed.`)
+        else if (error?.code === 'ELOCKED') {
+            fail(`another di monitor feed command is writing ${file} (${error.lock} exists), so nothing was written. Run the command again. If this stays and no other command is running, delete the lock: rm ${quote(error.lock)}`)
+        } else fail(`could not change ${file}: ${error?.code || String(error?.message || error).split('\n')[0]}. The file was not changed.`)
         return 1
     }
 }

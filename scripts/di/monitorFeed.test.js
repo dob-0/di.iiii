@@ -2,7 +2,7 @@
 // `di monitor feed add|remove|list`: every test works on a file in its own temp folder (DI_MONITOR_CONFIG) with HOME pointed at
 // another temp folder, so the real ~/.di is never read or written. Backups are counted in the folder, "no write" is proved by a
 // modification time pinned to 2001 and an unchanged inode, "atomic" by the inode changing and no temp file left behind.
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -502,6 +502,84 @@ describe('a file that changes while --check runs', () => {
         expect(readJson(file)).toEqual({ port: 1, feeds: [CHATS] })
         expect(backups(dir)).toHaveLength(1)
         expect(ls(dir)).toHaveLength(2)
+    })
+})
+
+// Two commands that both reach the write would both read the same bytes in the read-again and both pass; the second rename would
+// drop what the first wrote, with exit 0 for both (60 parallel pairs: 19 times, measured by the review). The write runs under
+// <file>.lock (git's lock file); a command that finds it held writes nothing and says so.
+describe('two commands at the same moment', () => {
+    const lockOf = (file) => `${file}.lock`
+    const HELD = (file) => `another di monitor feed command is writing ${file} (${lockOf(file)} exists), so nothing was written. `
+        + `Run the command again. If this stays and no other command is running, delete the lock: rm '${lockOf(file)}'`
+    const CREDITS_CMD = 'di-credits status --json'
+
+    it('a second command that reaches the write while the first one holds it is refused; the first is written whole', async () => {
+        const { dir, file } = place(json({ port: 1 }))
+        let second
+        // the clock is first read inside the write (the backup's time stamp): the second command starts right there, as a parallel process would
+        const now = () => { second ??= feed(file, ['add', 'credits', '--command', CREDITS_CMD]); return CLOCK }
+        const first = await feed(file, ['add', 'chats', '--command', CMD], { now })
+        expect(second).toBeDefined()
+        const other = await second
+        expect(first.code).toBe(0)
+        expect(other.code).toBe(1)
+        expect(other.err).toBe(HELD(file))
+        expect(other.out).toBe('')
+        expect(readJson(file)).toEqual({ port: 1, feeds: [CHATS] }) // the first command's feed, and nothing of the second
+        expect(ls(dir)).toEqual(['monitor.json', `monitor.json.bak-${STAMP}`]) // one backup, and the lock is gone
+    })
+
+    it('a lock that is already there refuses add and remove, writes nothing and is left exactly where it is', async () => {
+        const { dir, file } = place(json({ port: 1, feeds: [CHATS] }))
+        fs.writeFileSync(lockOf(file), '4242\n')
+        pin(file)
+        const before = snap(file)
+        const add = await feed(file, ['add', 'credits', '--command', CREDITS_CMD])
+        const remove = await feed(file, ['remove', 'chats'])
+        for (const r of [add, remove]) {
+            expect(r.code).toBe(1)
+            expect(r.err).toBe(HELD(file))
+        }
+        expect(snap(file)).toEqual(before)
+        expect(fs.readFileSync(lockOf(file), 'utf8')).toBe('4242\n') // not removed by the command that did not make it
+        expect(ls(dir)).toEqual(['monitor.json', 'monitor.json.lock']) // no backup, no temp file
+    })
+
+    it('what does not write does not care about the lock: list, --dry-run, the same feed again, a feed that is not there', async () => {
+        const { file } = place(json({ feeds: [CHATS] }))
+        fs.writeFileSync(lockOf(file), '4242\n')
+        const list = await feed(file, ['list'])
+        const dry = await feed(file, ['add', 'chats', '--command', 'new', '--dry-run'])
+        const same = await feed(file, ['add', 'chats', '--command', CMD])
+        const none = await feed(file, ['remove', 'credits'])
+        expect([list.code, dry.code, same.code, none.code]).toEqual([0, 0, 0, 0])
+        expect(same.out).toBe('the chats feed is already set, nothing changed')
+        expect([list.err, same.err, none.err]).toEqual(['', '', ''])
+    })
+
+    it('the file is read again while the lock is held, not before it (a read before it passes for both commands)', async () => {
+        const { file } = place(json({ port: 1 }))
+        const real = fs.readFileSync
+        const lockHeld = []
+        const spy = vi.spyOn(fs, 'readFileSync').mockImplementation((target, ...rest) => {
+            if (target === file) lockHeld.push(fs.existsSync(lockOf(file)))
+            return real(target, ...rest)
+        })
+        try { expect((await feed(file, ['add', 'chats', '--command', CMD])).code).toBe(0) } finally { spy.mockRestore() }
+        expect(lockHeld).toEqual([false, true]) // the first read of the command, then the read-again under the lock
+    })
+
+    it('the lock is removed after a write that fails inside it (100 backups with one time stamp are already there)', async () => {
+        const { file } = place(json({ port: 1 }))
+        fs.writeFileSync(`${file}.bak-${STAMP}`, 'x')
+        for (let n = 1; n < 100; n += 1) fs.writeFileSync(`${file}.bak-${STAMP}-${n}`, 'x')
+        const before = snap(file)
+        const r = await feed(file, ['add', 'chats', '--command', CMD])
+        expect(r.code).toBe(1)
+        expect(r.err).toContain('100 backups with one time stamp')
+        expect(snap(file)).toEqual(before)
+        expect(fs.existsSync(lockOf(file))).toBe(false)
     })
 })
 

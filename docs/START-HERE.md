@@ -81,7 +81,7 @@ di monitor feed remove chats                                        # undo
 
 The command prints the list as JSON: `{ "generatedAt": <seconds since 1970>, "chats": [ ... ] }`. `generatedAt` is the time the list was made, as a number (for example 1795137071). Without it the Monitor shows the list as stale, so `--check` refuses a list that has none.
 
-`--dry-run` prints the file it would write and writes nothing. If the file is edited while `--check` runs, nothing is written and the command says so: run it again. `credits` works the same way for the Credits box; its command prints a list of routes, `[ { "route": "<name>", "available": true, "meter": "...", "have": "...", "why": "..." } ]` (every row needs a route name).
+`--dry-run` prints the file it would write and writes nothing. If the file is edited while `--check` runs, or another `di monitor feed` command is writing it at that moment, nothing is written and the command says so: run it again. `credits` works the same way for the Credits box; its command prints a list of routes, `[ { "route": "<name>", "available": true, "meter": "...", "have": "...", "why": "..." } ]` (every row needs a route name).
 
 ## Which door has what
 
