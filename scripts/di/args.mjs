@@ -42,6 +42,8 @@ export const parseArgs = (argv) => {
         // media items a forced replace removes, passed to space-bundle.mjs.
         // `di monitor report --every 45` — seconds between sends.
         if (name === 'every') { args.flags.every = argv[++i]; continue }
+        // `di monitor feed add chats --command "python3 x --json" --id main --title "Chats"` — a command with spaces is ONE value.
+        if (name === 'command' || name === 'id' || name === 'title') { args.flags[name] = argv[++i]; continue }
         if (name === 'accept-loss') { args.flags['accept-loss'] = argv[++i]; continue }
         args.flags[name] = true
     }

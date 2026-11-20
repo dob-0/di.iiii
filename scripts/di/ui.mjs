@@ -1052,6 +1052,7 @@ export const ui = {
         `  ${CMD} spaces        what is in this di.iiii`,
         `  ${CMD} tell USER "TEXT"   message another person's agent (${CMD} inbox, ${CMD} contacts; ${CMD} agents remote on|off)`,
         `  ${CMD} monitor report [--once]   send this machine to the overview (${CMD} monitor install-timer: every 30 s)`,
+        `  ${CMD} monitor feed add chats --command "..."   set where this machine's chats come from (${CMD} monitor feed remove chats: undo)`,
         `  ${CMD} move PROJECT --to SPACE   move a project into another space (--dry-run to look first)`,
         `  ${CMD} backup        every space and the light show, in one file`,
         `  ${CMD} restore FILE  read one back in`,
