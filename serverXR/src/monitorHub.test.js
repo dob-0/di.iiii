@@ -1,11 +1,14 @@
 // @vitest-environment node
 
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { DatabaseSync } = require('node:sqlite')
-const { createReportStore, createAskStore, createHub, tierOfDeployEnv, fingerprint, STALE_MS, MAX_HOSTS_PER_SUBJECT } = require('./monitorHub.js')
+const { createProvenStore, createReportStore, createAskStore, createHub, tierOfDeployEnv, fingerprint, STALE_MS, MAX_HOSTS_PER_SUBJECT } = require('./monitorHub.js')
 
 const panels = { agents: { ok: true, rows: [{ sessionId: 'abcdef123456', title: 'work', status: 'busy' }] }, shows: { ok: true, rows: [{ id: 's1', title: 'Show' }] } }
 
@@ -361,6 +364,41 @@ describe('hub snapshot', () => {
     expect(by('studio')).toMatchObject({ state: 'unprobed', detail: 'no live probe', commit: null })
     expect(by('osc')).toMatchObject({ state: 'unknown', detail: 'not read' })
     expect(parts).toMatchObject({ version: '1.2.3', packedAt: '2026-11-17T00:00:00Z' })
+  })
+
+  it('parts: works says working / not working / idle / unknown from the probe, and carries the pack-time history', async () => {
+    const H = 'd'.repeat(40)
+    const history = [{ commit: H, date: '2026-11-12', title: 'fix (#9)', pr: 9 }]
+    const rows = [{ id: 'light', state: 'idle', detail: 'x' }, { id: 'laser', state: 'ok', detail: 'y' }, { id: 'laser-desk', state: 'ok', detail: 'y' }, { id: 'show', state: 'off', detail: 'z' }]
+    const fakeStore = { getMonitor: async () => ({ panels: { connected: { ok: true, rows } } }) }
+    const { hub } = build({ store: fakeStore, releaseInfo: () => ({ parts: [{ id: 'laser', commit: H, date: '2026-11-12', history }] }) })
+    const by = (id, snap) => snap.parts.rows.find((r) => r.id === id)
+    const snap = await hub.getSnapshot()
+    expect(by('laser', snap)).toMatchObject({ works: 'working', history, proven: { commit: H, date: '2026-11-12' } })
+    expect(by('light', snap).works).toBe('idle')
+    expect(by('show', snap)).toMatchObject({ works: 'not working', proven: null, history: [] })
+    expect(by('studio', snap).works).toBe('unknown')
+    expect(by('osc', snap).works).toBe('unknown')
+  })
+
+  it('proven store: keeps the last commit seen working, rewrites at most hourly, survives a restart, ignores junk', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'proven-'))
+    const file = path.join(dir, 'p.json')
+    let t = 1000
+    const store = createProvenStore({ file, now: () => t })
+    expect(store.get('light')).toBeNull()
+    store.see('light', 'a'.repeat(40), '2026-11-01')
+    store.see('light', 'not-a-hash', null)
+    expect(store.get('light')).toEqual({ commit: 'a'.repeat(40), date: '2026-11-01', at: 1000 })
+    t += 5000
+    store.see('light', 'a'.repeat(40), '2026-11-01') // same commit, within the hour: no rewrite
+    expect(store.get('light').at).toBe(1000)
+    t += 3600 * 1000
+    store.see('light', 'b'.repeat(40), '2026-11-20')
+    expect(createProvenStore({ file }).get('light')).toMatchObject({ commit: 'b'.repeat(40), date: '2026-11-20' })
+    fs.writeFileSync(file, '{"light":{"commit":"zzz","at":1},"../x":{"commit":"abcdef1","at":1}}')
+    expect(createProvenStore({ file }).get('light')).toBeNull()
+    expect(createProvenStore({ file: path.join(dir, 'no', 'such', 'dir', 'x.json') }).get('light')).toBeNull()
   })
 
   it('parts: a failed Connected panel reads as off, never as healthy', async () => {

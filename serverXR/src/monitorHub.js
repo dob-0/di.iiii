@@ -10,6 +10,8 @@
 // survive a restart); asks a machine reports (the ledger) live with its report.
 
 const os = require('node:os')
+const fs = require('node:fs')
+const path = require('node:path')
 const crypto = require('node:crypto')
 const { execFile } = require('node:child_process')
 const PARTS = require('./parts.json').parts
@@ -209,6 +211,51 @@ function createAskStore({ getDb, now = () => Date.now() }) {
   return { add, list }
 }
 
+// ---- last version seen working ------------------------------------------------
+// "Proven" here means one thing: the part's live probe answered (live / ok) while the part ran this
+// commit. Kept per part so that after an update that breaks it, the Monitor still names the last version
+// that was seen working, and a rollback is one look. A part with no probe is never proven. With no file the
+// store lives in memory only (tests, an install with no data dir).
+const PROVEN_REFRESH_MS = 60 * 60 * 1000
+function createProvenStore({ file = null, now = () => Date.now() } = {}) {
+  let data = null
+  const load = () => {
+    if (data) return data
+    data = {}
+    if (!file) return data
+    try {
+      const raw = JSON.parse(fs.readFileSync(file, 'utf8'))
+      for (const [id, v] of Object.entries(raw && typeof raw === 'object' ? raw : {})) {
+        if (/^[a-z0-9-]{1,40}$/.test(id) && COMMIT_RE.test(String(v?.commit || '')) && Number.isFinite(v?.at)) {
+          data[id] = { commit: v.commit, date: /^\d{4}-\d{2}-\d{2}$/.test(String(v.date || '')) ? v.date : null, at: v.at }
+        }
+      }
+    } catch { /* no file yet, or unreadable: nothing proven so far */ }
+    return data
+  }
+  const save = () => {
+    if (!file) return
+    try {
+      fs.mkdirSync(path.dirname(file), { recursive: true })
+      const tmp = `${file}.${process.pid}.tmp`
+      fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`)
+      fs.renameSync(tmp, file)
+    } catch { /* a read-only data dir must never break the Monitor */ }
+  }
+  return {
+    get: (id) => load()[id] || null,
+    /** The part answered while running `commit`: remember it (rewritten at most once an hour per commit). */
+    see(id, commit, date) {
+      if (!COMMIT_RE.test(String(commit || ''))) return
+      const cur = load()[id]
+      const t = now()
+      if (cur && cur.commit === commit && t - cur.at < PROVEN_REFRESH_MS) return
+      data[id] = { commit, date: date || null, at: t }
+      save()
+    }
+  }
+}
+
 // ---- tiers, spaces, map -----------------------------------------------------
 
 function runGit(args, { cwd, timeout = 3000 } = {}) {
@@ -222,6 +269,7 @@ function createHub({
   reports = createReportStore(),
   asks,
   releaseInfo = () => ({}),
+  provenFile = null,
   listSpaces = null,
   fetchImpl = (typeof fetch === 'function' ? fetch : null),
   git = runGit,
@@ -236,6 +284,7 @@ function createHub({
     return tier === 'local' ? `local:${String(hostname()).split('.')[0]}` : tier
   }
 
+  const proven = createProvenStore({ file: provenFile, now })
   let tierCache = null
   const tracker = createProbeTracker({ now })
   // one check of one tier: the answer, how long it took, and whether it counts as up (2xx only)
@@ -465,7 +514,13 @@ function createHub({
         }
       }
       const stamp = stamps.get(part.id)
-      return { id: part.id, name: part.name, state, detail, commit: stamp?.commit || null, date: stamp?.date || null }
+      // works: only a probe that answered AND shows it running counts; idle = answered, not started; unprobed and unread stay 'unknown'
+      const works = state === 'off' ? 'not working' : (state === 'live' || state === 'ok') ? 'working' : state === 'idle' ? 'idle' : 'unknown'
+      if (works === 'working' && stamp?.commit) proven.see(part.id, stamp.commit, stamp.date)
+      return {
+        id: part.id, name: part.name, state, detail, commit: stamp?.commit || null, date: stamp?.date || null,
+        works, history: Array.isArray(stamp?.history) ? stamp.history : [], proven: proven.get(part.id)
+      }
     })
     return { rows, version: rel.version || null, packedAt: rel.packedAt || null }
   }
@@ -568,6 +623,7 @@ function fingerprint(snapshot) {
 }
 
 module.exports = {
+  createProvenStore,
   STALE_MS,
   REPORT_MAX_BYTES,
   PANEL_NAMES,
