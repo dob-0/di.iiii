@@ -38,7 +38,10 @@
     // sends one. "spots" (dots) comes first on the strip, so any live look becomes dots with one tap.
     const SHAPES = ['circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid',
         'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble',
-        'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse']
+        'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse', 'unfold', 'lissajous', 'helix', 'tunnel',
+        'echo', 'sides', 'count', 'rain', 'cube', 'dust', 'heartbeat', 'point', 'weave', 'venn', 'lava', 'magma',
+        'eruption', 'bubble', 'crack', 'drip', 'volcano', 'strands', 'contour', 'draw', 'blade', 'coil', 'down', 'vortex',
+        'phyllotaxis', 'phyllolines', 'crossgrid', 'phyllochaos', 'horse']
     // Every field of a look the laser desk knows (laser/laserDesk.js normaliseLook): its range there, its step here.
     const LIVE = {
         level: { label: 'Level', min: 0, max: 1, step: 0.01, pct: true },

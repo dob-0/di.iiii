@@ -71,6 +71,10 @@
 //   "stopResume": "person" (default) | "legacy" — after a still-beam, frame-too-long or over-temperature stop the cube
 //   stays dark until a person: Off then On, On, or a new Go (a frame posted with go: true); either way only a NEW frame that passes the guards lights it; after a no-frame stop it resumes by itself
 //   within 2 s for the same Out, else it is disarmed. "legacy" is the old rule (any fresh frame resumes). Stage audit 2026-10-30, row 34.
+//   "dots": ON by default, as run at the REA (owner 2026-11-20: real dots, laser at full power); "dots": false turns it off. When on,
+//   two or more held dots (each at most 12 % of the frame's time) skip the still-beam guard. A single dot, a dot above 12 % and
+//   any dwell spot still stop the cube. With it off, Phyllotaxis and Phyllo chaos are still beams and stop the cube (the desk
+//   says so in the cube row).
 // No file: six cubes cube-1…cube-6 without addresses (the rig's six), sim.
 'use strict'
 
@@ -83,6 +87,10 @@ const guardsLib = require('./laserGuards')
 
 const ARM_PHRASE = 'the laser safety officer has signed off'
 const DEFAULT_ZONE = Object.freeze({ xMin: -1, xMax: 1, yMin: 0, yMax: 1 })
+// The stream's own record, per cube, over STREAM_WINDOW_MS windows: the least queued just before a top-up, the
+// longest gap between top-ups, how often the cube ran dry (by the estimate) and how often a tick came late.
+const STREAM_WINDOW_MS = 10000
+const LATE_TICK_MS = 30
 const DEFAULT_CUBES = Object.freeze(Array.from({ length: 6 }, (_, i) => ({ id: `cube-${i + 1}`, name: `Cube ${i + 1}`, ip: null })))
 const TICK_MS = 20
 const BUFFER_MARGIN = 200
@@ -98,6 +106,8 @@ const CATCH_UP_MAX_MS = 100
 // second set), 80 ms 3 of 3; without it no value 40-120 passed (the misses were ticks of 26-46 ms
 // against a 20 ms queue, not stalls longer than the lead). So 60 is the smallest that passes.
 const LEAD_MS = 60
+// Emilya's name for the same thing (PR #1218 topped the cube up to CUSHION_MS = 100): one pacing, dev's LEAD_MS; the alias keeps her name.
+const CUSHION_MS = LEAD_MS
 const INFO_POLL_MS = 1000
 const SHUTDOWN_WAIT_MS = 250
 // A Laser Out holds its cube while it says so (frame, keep-alive, its 3-second check): 10 s of silence
@@ -159,6 +169,13 @@ const GUARD = Object.freeze({
     VALIDATED: false
 })
 const STILL_WINDOW_FIELD = GUARD.STILL_WINDOW_DEG / GUARD.SCAN_HALF_ANGLE_DEG
+// POINT DOTS (2026-11-07, REA, the owner, who runs these cubes: "i dont need tiny rings, jsut points smallest one …
+// lasers are relly safe and not danagerouse setup"; her TouchDesigner draws a seed as a point held still). With laser.json
+// `"dots"` on (the default), a frame of separate dots is not a still beam while there are at least two and no one dot holds more
+// than DOTS_MAX_SHARE of the frame's time. One dot alone (all the power in one spot) and any spot holding half the
+// frame (the dwell rule) still stop the cube. On unless laser.json says "dots": false.
+const DOTS_MAX_SHARE = 0.12
+const dotsAllowed = (list) => list.length >= 2 && list.every((s) => s.kind === 'dot' && s.share <= DOTS_MAX_SHARE)
 const STOP = Object.freeze({ NO_INFO: 'no-info', NO_FRAME: 'no-frame', STILL_BEAM: 'still-beam', LINK_LOST: 'link-lost', FRAME_TOO_LONG: 'frame-too-long', OVER_TEMPERATURE: 'over-temperature' })
 const STOP_TEXT = Object.freeze({
     [STOP.NO_INFO]: 'not armed: the cube never answered the info question',
@@ -319,9 +336,9 @@ const readConfig = (dir) => {
         const base = guardsLib.normaliseGuards(raw.guards)
         const list = Array.isArray(raw.cubes) && raw.cubes.length ? raw.cubes : DEFAULT_CUBES
         const cubes = list.map((c, i) => cubeFrom(c, i, base))
-        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null, guards: base, stopResume: raw.stopResume === 'legacy' ? 'legacy' : 'person' }
+        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null, guards: base, stopResume: raw.stopResume === 'legacy' ? 'legacy' : 'person', dots: raw.dots !== false }
     } catch {
-        return { cubes: DEFAULT_CUBES.map((c, i) => cubeFrom(c, i)), zone: normaliseZone(), dacRate: null, guards: guardsLib.DEFAULT_GUARDS, stopResume: 'person' }
+        return { cubes: DEFAULT_CUBES.map((c, i) => cubeFrom(c, i)), zone: normaliseZone(), dacRate: null, guards: guardsLib.DEFAULT_GUARDS, stopResume: 'person', dots: true }
     }
 }
 
@@ -363,6 +380,7 @@ const createLaserEngine = ({
         offBy: null,
         info: null, infoAt: null, heardAt: null,
         bufferFree: null, bufferAt: null, sentSince: 0, streamAt: null, streamCarry: 0,
+        topAt: null, streamNow: null, streamLast: null, streamTotal: { dry: 0, late: 0 },
         playing: null, index: 0, message: 0, frameNum: 0, lastPoint: [0, 0],
         armed: false, stop: null, stillSince: null,
         pointLoss: { blanked: 0, dropped: 0, blankedTotal: 0, droppedTotal: 0, frames: 0 },
@@ -472,7 +490,10 @@ const createLaserEngine = ({
     const stillOf = (c, frame) => {
         if (!frame) return []
         const prep = prepare(c, frame)
-        return [...frame.rawStill, ...(prep?.still || [])].filter((s) => !allowed(c, s))
+        // laser.json `dots`: a frame of many small dots, none holding more than DOTS_MAX_SHARE, is not still.
+        const posted = config.dots && dotsAllowed(frame.rawStill) ? [] : frame.rawStill
+        const sent = config.dots && dotsAllowed(prep?.still || []) ? [] : prep?.still || []
+        return [...posted, ...sent].filter((s) => !allowed(c, s))
     }
     // Brightness: the averaged-temperature limiter, and the cube's own temperature warning (byte 5)
     // takes it straight to the limiter's minimum.
@@ -498,6 +519,7 @@ const createLaserEngine = ({
         c.clearAt = t
         c.clearConfirmed = false
         c.streamAt = null
+        c.topAt = null
         c.streamCarry = 0
         c.playing = null
         c.index = 0
@@ -550,13 +572,37 @@ const createLaserEngine = ({
     // the end of the one playing (no torn figures; one pass is at most the frame budget, ≤ 67 ms); a
     // DARK frame, blackout and stops cut at once (round 2, review §1: no lit point of a replaced
     // figure after the editor went dark).
+    // One top-up of a cube, on its record: `queuedMs` is what it held just before, by the estimate (<= 0: it ran dry and
+    // the beam waited). The first top-up after a clear counts no gap and no dry spell: the clear emptied it on purpose.
+    const noteStream = (c, t, queuedMs) => {
+        const gap = c.topAt === null ? null : t - c.topAt
+        c.topAt = t
+        if (!c.streamNow || t - c.streamNow.since >= STREAM_WINDOW_MS) {
+            if (c.streamNow) c.streamLast = { ...c.streamNow, ms: t - c.streamNow.since }
+            c.streamNow = { since: t, tops: 0, lowMs: null, maxGapMs: 0, dry: 0, late: 0 }
+        }
+        const w = c.streamNow
+        w.tops += 1
+        if (gap === null) return
+        if (queuedMs !== null) {
+            w.lowMs = w.lowMs === null ? queuedMs : Math.min(w.lowMs, queuedMs)
+            if (queuedMs <= 0) { w.dry += 1; c.streamTotal.dry += 1 }
+        }
+        w.maxGapMs = Math.max(w.maxGapMs, gap)
+        if (gap > LATE_TICK_MS) { w.late += 1; c.streamTotal.late += 1 }
+    }
+
     const stream = (c, frame, t) => {
         if (!c.ip) return
         const rate = rateOf(c)
         if (!rate) return
         if (holdingForClear(c, t)) return
         const prep = prepare(c, frame)
-        if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) { c.playing = null; c.index = 0 }
+        // A dark frame after a lit one: the cube's queue is emptied too, so no queued lit point plays on.
+        if (c.playing && c.playingPrep && c.playingPrep !== prep && !frame?.lit) {
+            clearBuffer(c, t)
+            return
+        }
         // Catch-up pacing (ledger N1501.18): the points due are the cube's rate × the time since the
         // last stream (the fraction carried), so a late tick sends the points it missed and the mean
         // rate is the DAC rate, not 600 / mean tick. A stall longer than CATCH_UP_MAX_MS is not
@@ -571,6 +617,7 @@ const createLaserEngine = ({
             room = Math.min(room, Math.max(0, Math.floor(free - BUFFER_MARGIN)))
             const size = c.info?.rxBufferSize
             if (size) room = Math.min(room, Math.max(0, Math.floor(free - (size - (rate * LEAD_MS) / 1000))))
+            noteStream(c, t, size ? ((size - free) * 1000) / rate : null)
         }
         c.streamCarry = Math.min(due - Math.floor(due), 1)
         // The next pass of the frame, as optimised; a new frame is reached by a blank bridge.
@@ -690,6 +737,10 @@ const createLaserEngine = ({
     }
 
     const infoView = (c, t) => (c.info ? { ...c.info, ageMs: t - c.infoAt } : null)
+    // The stream's record (noteStream): this window so far, the last whole one, and the counts since the desk started.
+    const ms1 = (v) => (v === null ? null : Math.round(v * 10) / 10)
+    const windowView = (w, t) => (w ? { ms: w.ms ?? t - w.since, tops: w.tops, lowMs: ms1(w.lowMs), maxGapMs: ms1(w.maxGapMs), dry: w.dry, late: w.late } : null)
+    const streamView = (c, t) => ({ cushionMs: CUSHION_MS, now: windowView(c.streamNow, t), last: windowView(c.streamLast, t), total: { ...c.streamTotal } })
     // What the guards did to the frame this cube is drawing: points in and out, the longest steps,
     // and how many times a second the figure is drawn at the cube's rate.
     const pathView = (c) => {
@@ -753,6 +804,8 @@ const createLaserEngine = ({
                 stillWindowDeg: GUARD.STILL_WINDOW_DEG,
                 stillDwellShare: GUARD.STILL_DWELL_SHARE,
                 stillHoldMs: GUARD.STILL_HOLD_MS,
+                dots: config.dots,
+                dotsMaxShare: DOTS_MAX_SHARE,
                 darkIdleMs: DARK_IDLE_MS,
                 validated: GUARD.VALIDATED,
                 path: { ...config.guards, referenceRate: guardsLib.REFERENCE_RATE }
@@ -780,7 +833,8 @@ const createLaserEngine = ({
                 nothingToDraw: nothingToDraw(c, t),
                 guards: c.guards,
                 path: pathView(c),
-                temperature: temperatureView(c)
+                temperature: temperatureView(c),
+                stream: streamView(c, t)
             }))
         }
     }
@@ -1081,4 +1135,4 @@ const createLaserEngine = ({
     return { state, setFrame, alive, blackout, dark, arm, frames: framesView, close: shutdown, shutdown, tick, canTake, upsertCube, heardAt }
 }
 
-module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, GUARD, STOP, OFF, CLAIM_TTL_MS }
+module.exports = { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, dotsAllowed, DOTS_MAX_SHARE, ARM_PHRASE, DEFAULT_ZONE, TICK_MS, CUSHION_MS, GUARD, STOP, OFF, CLAIM_TTL_MS }

@@ -44,7 +44,8 @@ const sent = (url) => posts.filter((p) => p.url === url)
 const key = (k, init = {}, target = document.body) => target.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true, ...init }))
 const page = (name) => document.querySelector(`.page-tab[data-page=${name}]`).click()
 const settle = () => sleep(30)
-const ranges = () => [...document.querySelectorAll('#cubeRows input[type=range]')]
+// The placement sliders only (size, x, y): Setup also has a Brightness slider per cube (Emilya's desk), which is not a placement.
+const ranges = () => [...document.querySelectorAll('#cubeRows input[type=range]')].filter((r) => !/brightness/.test(r.getAttribute('aria-label') || ''))
 
 beforeAll(async () => {
     const html = fs.readFileSync(path.join(here, 'index.html'), 'utf8')
@@ -56,6 +57,7 @@ beforeAll(async () => {
     globalThis.fetch = fakeFetch
     window.DiLaserDraw = require('./drawRuns.js')
     reset()
+    new Function(fs.readFileSync(path.join(here, 'listen.js'), 'utf8'))() // desk.js reads window.DeskListen at load
     new Function(fs.readFileSync(path.join(here, 'desk.js'), 'utf8'))()
     await sleep(80)
 })
