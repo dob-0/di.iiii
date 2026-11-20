@@ -74,12 +74,14 @@ Someone else who signs in sees only their own machines. A report timer written b
 The chats of a machine reach the Monitor only when that machine says where its chat list comes from. One command sets it: it edits `~/.di/monitor.json` for you, keeps the old file once as `monitor.json.bak-<time>`, and changes nothing when the feed is already set.
 
 ```bash
-di monitor feed add chats --command "my-chat-list --json" --check   # the command prints { "chats": [ ... ] } as JSON; --check runs it once, under the Monitor's own 4 s limit, and saves nothing the Monitor would not accept
+di monitor feed add chats --command "my-chat-list --json" --check   # --check runs the command once, under the Monitor's own 4 s limit, and saves nothing the Monitor would not accept
 di monitor feed list                                                # what is set
 di monitor feed remove chats                                        # undo
 ```
 
-`--dry-run` prints the file it would write and writes nothing. `credits` works the same way for the Credits box.
+The command prints the list as JSON: `{ "generatedAt": <seconds since 1970>, "chats": [ ... ] }`. `generatedAt` is the time the list was made, as a number (for example 1795137071). Without it the Monitor shows the list as stale, so `--check` refuses a list that has none.
+
+`--dry-run` prints the file it would write and writes nothing. If the file is edited while `--check` runs, nothing is written and the command says so: run it again. `credits` works the same way for the Credits box; its command prints a list of routes, `[ { "route": "<name>", "available": true, "meter": "...", "have": "...", "why": "..." } ]` (every row needs a route name).
 
 ## Which door has what
 

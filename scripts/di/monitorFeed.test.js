@@ -7,11 +7,12 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 import { parseArgs } from './args.mjs'
 import { parseMonitorArgs, runMonitor } from './monitorReport.mjs'
-import { CHECK_LIMIT_MS, checkFeedCommand, jsonErrorOffset, limitFor, parseFeedArgs, readFeedConfig, runFeed, stamp } from './monitorFeed.mjs'
+import { CHECK_LIMIT_MS, FEED_USAGE, checkFeedCommand, jsonErrorOffset, limitFor, parseFeedArgs, readFeedConfig, runFeed, stamp } from './monitorFeed.mjs'
 
 const POSIX = process.platform !== 'win32'
 const posixOnly = it.skipIf(!POSIX)
@@ -20,10 +21,14 @@ const posixNotRoot = it.skipIf(!POSIX || process.getuid?.() === 0)
 const here = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(here, '..', '..') // holds serverXR/src/monitorChats.js, the Monitor's own reader that --check uses
 const CLI = path.join(here, 'cli.mjs')
+const monitorChats = createRequire(import.meta.url)(path.join(ROOT, 'serverXR', 'src', 'monitorChats.js'))
 const CLOCK = new Date(2026, 10, 20, 4, 5, 6) // local time, so the stamp below holds in every time zone
 const STAMP = '20261120-040506'
 const PAST = new Date(2001, 0, 2, 3, 4, 5)
 const CMD = 'di-chats --json'
+// what a chat list carries for the Monitor: the time it was made, in seconds since 1970 (2026-11-20 01:11 UTC)
+const GENERATED_AT = 1795137071
+const chatList = (chats) => JSON.stringify({ generatedAt: GENERATED_AT, chats })
 const CHATS = { id: 'chats', title: 'Chats', panel: 'chats', kind: 'command', command: CMD }
 const TASKS = { id: 'tasks', title: 'Tasks', panel: 'tasks', kind: 'file', path: '/x/tasks.json' }
 
@@ -347,6 +352,27 @@ describe('usage mistakes are exit 2 and touch nothing', () => {
         expect(r.err).toBe('"tasks" is not a feed this command sets: use chats or credits')
     })
 
+    it('the usage text shows the real shapes: chats with generatedAt, credits as a list of routes', async () => {
+        const { dir, file } = place()
+        const r = await feed(file, [])
+        expect(r.code).toBe(2)
+        expect(r.err).toContain('{ "generatedAt": <seconds since 1970>, "chats": [ ... ] }')
+        expect(r.err).toContain('[ { "route": "<name>", "available": true or false, "meter": "...", "have": "...", "why": "..." } ]')
+        expect(r.err).not.toContain('{ "chats"')
+        expect(fs.existsSync(dir)).toBe(false)
+    })
+
+    it('the Monitor\'s own readers accept the shapes in the usage text once their placeholders are filled in', async () => {
+        const shape = (panel) => FEED_USAGE.split('\n').map((line) => line.trim()).find((line) => line.startsWith(`${panel} `)).slice(panel.length).replace(/\(every row .*\)$/, '').trim()
+        const chats = shape('chats').replace('<seconds since 1970>', String(Math.floor(Date.now() / 1000))).replace('[ ... ]', '[ { "id": "a" } ]')
+        const credits = shape('credits').replace('<name>', 'plan-a').replace('true or false', 'true')
+        for (const [panel, stdout] of [['chats', chats], ['credits', credits]]) {
+            const r = await checkFeedCommand({ panel, command: 'x', root: ROOT, exec: fakeRun({ stdout }) })
+            expect(r.error).toBeUndefined()
+            expect(r.line).toMatch(/^the command printed 1 /)
+        }
+    })
+
     it('parses the words and flags into one plain object', () => {
         expect(parseFeedArgs(parseArgs(['monitor', 'feed', 'add', 'chats', '--command', 'c', '--check', '--dry-run']))).toEqual({ action: 'add', panel: 'chats', id: 'chats', dryRun: true, command: 'c', title: undefined, check: true })
         expect(parseFeedArgs(parseArgs(['monitor', 'feed', 'remove', 'credits', '--id', 'x']))).toEqual({ action: 'remove', panel: 'credits', id: 'x', dryRun: false })
@@ -422,6 +448,63 @@ describe('files are written the safe way', () => {
     })
 })
 
+// --check can run for seconds (4 s for chats, up to 30 s for credits) between the first read of the file and the write. The command
+// under check is replaced here by a function that changes the file the way another hand would, while the check is "running".
+describe('a file that changes while --check runs', () => {
+    const SENTENCE = (file) => `${file} changed while this command ran, so nothing was written. Run the command again.`
+    const printed = { error: null, stdout: chatList([]), stderr: '' }
+
+    it('an edit made during the check is kept: refused, exit 1, no backup, no write', async () => {
+        const { dir, file } = place(json({ port: 1 }))
+        const edited = json({ port: 1, feeds: [TASKS], note: 'typed by hand while the check ran' })
+        let during
+        const exec = async () => { fs.writeFileSync(file, edited); pin(file); during = snap(file); return printed }
+        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec })
+        expect(r.code).toBe(1)
+        expect(r.err).toBe(SENTENCE(file))
+        expect(fs.readFileSync(file, 'utf8')).toBe(edited)
+        expect(snap(file)).toEqual(during) // same bytes, same inode, same time: not written
+        expect(ls(dir)).toEqual(['monitor.json']) // no backup, no temp file
+    })
+
+    it('a file that was not there and appears during the check is not overwritten', async () => {
+        const { dir, file } = place()
+        const theirs = json({ port: 2, feeds: [TASKS] })
+        const exec = async () => { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(file, theirs, { mode: 0o600 }); return printed }
+        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec })
+        expect(r.code).toBe(1)
+        expect(r.err).toBe(SENTENCE(file))
+        expect(fs.readFileSync(file, 'utf8')).toBe(theirs)
+        expect(ls(dir)).toEqual(['monitor.json'])
+    })
+
+    it('a file that vanishes during the check is not written back from the old read, and no folder or backup is made', async () => {
+        const { dir, file } = place(json({ port: 1 }))
+        const exec = async () => { fs.rmSync(file); return printed }
+        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec })
+        expect(r.code).toBe(1)
+        expect(r.err).toBe(SENTENCE(file))
+        expect(ls(dir)).toEqual([])
+    })
+
+    it('the same bytes written again during the check are no change: the feed is saved, with its backup', async () => {
+        const { dir, file } = place(json({ port: 1 }))
+        const exec = async () => {
+            fs.writeFileSync(file, fs.readFileSync(file)) // an editor that saves without a change
+            const swap = `${file}.swap` // and one that saves through a new file: another inode, another time, the same bytes
+            fs.writeFileSync(swap, fs.readFileSync(file), { mode: 0o600 })
+            fs.renameSync(swap, file)
+            return printed
+        }
+        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec })
+        expect(r.code).toBe(0)
+        expect(r.err).toBe('')
+        expect(readJson(file)).toEqual({ port: 1, feeds: [CHATS] })
+        expect(backups(dir)).toHaveLength(1)
+        expect(ls(dir)).toHaveLength(2)
+    })
+})
+
 describe('--check', () => {
     it('refuses output that is not JSON, saves nothing, exits 1', async () => {
         const { dir, file } = place(json({ port: 1 }))
@@ -447,7 +530,7 @@ describe('--check', () => {
         for (const stdout of ['{"a":1}', '[]', '{"chats":"x"}', 'null']) {
             const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec: fakeRun({ stdout }) })
             expect(r.code).toBe(1)
-            expect(r.err).toContain('not a chat list: it must print { "chats": [ ... ] }. Nothing was saved.')
+            expect(r.err).toContain('not a chat list: it must print { "generatedAt": <seconds since 1970>, "chats": [ ... ] }. Nothing was saved.')
         }
         expect(fs.existsSync(file)).toBe(false)
     })
@@ -481,7 +564,7 @@ describe('--check', () => {
 
     it('a good chat list passes: "the command printed N chats", and the feed is saved', async () => {
         const { dir, file } = place(json({ port: 1 }))
-        const exec = fakeRun({ stdout: JSON.stringify({ generatedAt: 1, chats: [{ id: 'a', title: 'one' }, { id: 'b' }] }) })
+        const exec = fakeRun({ stdout: chatList([{ id: 'a', title: 'one' }, { id: 'b' }]) })
         const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec })
         expect(r.code).toBe(0)
         expect(r.out.split('\n')[0]).toBe('the command printed 2 chats')
@@ -491,17 +574,47 @@ describe('--check', () => {
 
     it('one chat is "1 chat"; an empty list is fine ("0 chats")', async () => {
         const { file } = place()
-        const one = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec: fakeRun({ stdout: '{"chats":[{"id":"a"}]}' }) })
+        const one = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec: fakeRun({ stdout: chatList([{ id: 'a' }]) }) })
         expect(one.out.split('\n')[0]).toBe('the command printed 1 chat')
-        const none = await feed(file, ['add', 'chats', '--check', '--command', 'other', '--id', 'x'], { exec: fakeRun({ stdout: '{"chats":[]}' }) })
+        const none = await feed(file, ['add', 'chats', '--check', '--command', 'other', '--id', 'x'], { exec: fakeRun({ stdout: chatList([]) }) })
         expect(none.out.split('\n')[0]).toBe('the command printed 0 chats')
     })
 
     it('says when the Monitor would keep fewer chats than the command printed (chats without an identity)', async () => {
         const { file } = place()
-        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec: fakeRun({ stdout: JSON.stringify({ chats: [{ id: 'a' }, { title: '' }, 'text'] }) }) })
+        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec: fakeRun({ stdout: chatList([{ id: 'a' }, { title: '' }, 'text']) }) })
         expect(r.code).toBe(0)
         expect(r.out.split('\n')[0]).toBe('the command printed 3 chats (the Monitor keeps 1)')
+    })
+
+    // what the Monitor makes of a chat list: its own reader and its own Chats block, so these tests judge --check by the Monitor, not by a copy of its rule
+    const monitorShows = (doc) => monitorChats.chatsBlock([{ host: 'h', source: monitorChats.sanitizeChats(doc, 'h'), error: null }], { now: Date.now() }).state
+    const NO_TIME = 'the chat list has no "generatedAt" as a number of seconds since 1970 (for example 1795137071), so the Monitor would show the list as stale. Nothing was saved.'
+
+    it.each([
+        ['no generatedAt', { chats: [{ id: 'a' }] }],
+        ['generatedAt as an ISO time', { generatedAt: '2026-11-20T01:11:11Z', chats: [{ id: 'a' }] }],
+        ['generatedAt null', { generatedAt: null, chats: [{ id: 'a' }] }],
+        ['generatedAt 0', { generatedAt: 0, chats: [{ id: 'a' }] }],
+        ['generatedAt as a word', { generatedAt: 'soon', chats: [{ id: 'a' }] }]
+    ])('a chat list with %s is refused: the Monitor would show it as stale, and nothing is saved', async (_name, doc) => {
+        const { file } = place()
+        expect(monitorShows(doc)).toBe('stale')
+        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec: fakeRun({ stdout: JSON.stringify(doc) }) })
+        expect(r.code).toBe(1)
+        expect(r.err).toBe(NO_TIME)
+        expect(r.out).toBe('')
+        expect(fs.existsSync(file)).toBe(false)
+    })
+
+    it('a chat list with generatedAt as a number of seconds is accepted, and the Monitor shows it as live', async () => {
+        const { file } = place()
+        const doc = { generatedAt: Math.floor(Date.now() / 1000), chats: [{ id: 'a' }] }
+        expect(monitorShows(doc)).toBe('live')
+        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { exec: fakeRun({ stdout: JSON.stringify(doc) }) })
+        expect(r.code).toBe(0)
+        expect(r.out.split('\n')[0]).toBe('the command printed 1 chat')
+        expect(readJson(file)).toEqual({ feeds: [CHATS] })
     })
 
     it('credits: a list of routes passes, also when the command exits 1 because no route is ready', async () => {
@@ -536,7 +649,7 @@ describe('--check', () => {
 
     it('--check with --dry-run keeps stdout for the JSON alone', async () => {
         const { file } = place()
-        const r = await feed(file, ['add', 'chats', '--check', '--dry-run', '--command', CMD], { exec: fakeRun({ stdout: '{"chats":[]}' }) })
+        const r = await feed(file, ['add', 'chats', '--check', '--dry-run', '--command', CMD], { exec: fakeRun({ stdout: chatList([]) }) })
         expect(r.code).toBe(0)
         expect(JSON.parse(r.out)).toEqual({ feeds: [CHATS] })
         expect(r.err).toContain('the command printed 0 chats')
@@ -545,7 +658,7 @@ describe('--check', () => {
 
     it('says so when it cannot reach the Monitor\'s own reader instead of passing a command unchecked', async () => {
         const { file } = place()
-        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { root: tmp(), exec: fakeRun({ stdout: '{"chats":[]}' }) })
+        const r = await feed(file, ['add', 'chats', '--check', '--command', CMD], { root: tmp(), exec: fakeRun({ stdout: chatList([]) }) })
         expect(r.code).toBe(1)
         expect(r.err).toContain('cannot check here: serverXR/src/monitorChats.js')
         expect(fs.existsSync(file)).toBe(false)
@@ -553,7 +666,7 @@ describe('--check', () => {
 
     posixOnly('the real runner starts the command through /bin/sh, like the Monitor does', async () => {
         const { file } = place()
-        const r = await feed(file, ['add', 'chats', '--check', '--command', 'printf \'%s\' \'{"chats":[{"id":"a"},{"id":"b"}]}\''])
+        const r = await feed(file, ['add', 'chats', '--check', '--command', `printf '%s' '${chatList([{ id: 'a' }, { id: 'b' }])}'`])
         expect(r.code).toBe(0)
         expect(r.out.split('\n')[0]).toBe('the command printed 2 chats')
         const failing = await feed(file, ['add', 'chats', '--check', '--id', 'x', '--command', 'echo broken >&2; exit 4'])

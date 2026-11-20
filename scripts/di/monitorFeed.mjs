@@ -9,12 +9,16 @@
  * names shell commands). A changing write first keeps the old bytes in monitor.json.bak-<YYYYMMDD-HHMMSS> (exclusive create: two
  * writes in one second never overwrite each other's backup). The same feed again = no write and no backup. A file that is not a
  * JSON object is refused and stays byte for byte as it was. Everything else in the file (other keys, other feeds) is kept.
+ * --check can run for seconds between the first read and the write, so the file is read again right before a changing write: other
+ * bytes than the first read saw (an edit made meanwhile, a file that appeared or vanished) refuse the write and leave the file as the
+ * other hand left it; the same bytes written again by an editor do not.
  *
  * --check runs the command once under the Monitor's own limit and reads its output with the Monitor's own reader
- * (serverXR/src/monitorChats.js, monitorCredits.js), so a command that passes is one the Monitor accepts. Without --check the command
- * is stored and never run here.
+ * (serverXR/src/monitorChats.js, monitorCredits.js), so a command that passes is one the Monitor accepts: a chat list also needs a
+ * "generatedAt" the reader keeps (a number of seconds since 1970), because without it the Monitor shows the list as stale. Without
+ * --check the command is stored and never run here.
  *
- * Exit codes: 0 done or nothing to do, 1 refused (bad file, failed check, could not write), 2 usage.
+ * Exit codes: 0 done or nothing to do, 1 refused (bad file, failed check, file changed meanwhile, could not write), 2 usage.
  * Pure parts are exported for tests: arg parsing, the file reader, the check.
  */
 import fs from 'node:fs'
@@ -53,7 +57,10 @@ export const FEED_USAGE = [
     'di monitor feed add chats --command "<command>" [--id ID] [--title TEXT] [--check] [--dry-run]   set where this machine\'s chats come from',
     'di monitor feed remove chats [--id ID] [--dry-run]                                               undo it',
     'di monitor feed list                                                                             show what is set',
-    'The panel is chats or credits. The command must print the list as JSON ({ "chats": [ ... ] }); --check runs it once to see.'
+    'The panel is chats or credits. The command prints its list as JSON:',
+    '  chats    { "generatedAt": <seconds since 1970>, "chats": [ ... ] }',
+    '  credits  [ { "route": "<name>", "available": true or false, "meter": "...", "have": "...", "why": "..." } ]   (every row needs a route name)',
+    '--check runs the command once, the way the Monitor does, and saves it only if the Monitor accepts what it prints.'
 ].join('\n')
 
 const isObj = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)
@@ -192,8 +199,24 @@ const keepBackup = (file, raw, now) => {
     throw new Error(`100 backups with one time stamp are already in ${path.dirname(file)}`)
 }
 
-/** Writes the config; returns the backup path (null for a new file). */
+// the file's bytes as they are right now, null when it is not there; any other failure to read is thrown as it is
+const bytesNow = (file) => {
+    try { return fs.readFileSync(file) } catch (error) {
+        if (error?.code === 'ENOENT') return null
+        throw error
+    }
+}
+
+/**
+ * Writes the config; returns the backup path (null for a new file). `config` was made from `read`, and --check can have run for
+ * seconds since: if the file is not what `read` saw (other bytes, appeared, vanished) the write is refused with code ECHANGED before
+ * anything is made, so what the other hand wrote is neither overwritten nor hidden in a backup. The same bytes pass.
+ */
 const saveConfig = ({ file, read, config, now }) => {
+    const current = bytesNow(file)
+    if (read.exists ? current === null || !current.equals(read.raw) : current !== null) {
+        throw Object.assign(new Error(`${file} changed after it was read`), { code: 'ECHANGED' })
+    }
     fs.mkdirSync(path.dirname(file), { recursive: true })
     const backup = read.exists ? keepBackup(file, read.raw, now) : null
     // through a symlink to the real file: a rename over the link would replace the link with a plain file
@@ -228,7 +251,9 @@ export const checkFeedCommand = async ({ panel, command, root, limitMs = limitFo
     }
     if (panel === 'chats') {
         const kept = reader(parsed, '')
-        if (!kept) return { error: 'the command printed JSON, but not a chat list: it must print { "chats": [ ... ] }' }
+        if (!kept) return { error: 'the command printed JSON, but not a chat list: it must print { "generatedAt": <seconds since 1970>, "chats": [ ... ] }' }
+        // sanitizeChats keeps generatedAt only as a number above 0; chatsBlock ages a list without it as stale and not ok
+        if (kept.generatedAt === null) return { error: 'the chat list has no "generatedAt" as a number of seconds since 1970 (for example 1795137071), so the Monitor would show the list as stale' }
         const n = parsed.chats.length
         return { line: `the command printed ${n} chat${n === 1 ? '' : 's'}${kept.chats.length === n ? '' : ` (the Monitor keeps ${kept.chats.length})`}` }
     }
@@ -328,7 +353,8 @@ export const runFeed = async (args, deps = {}) => {
         if (cmd.action === 'list') return listFeeds(ctx)
         return await (cmd.action === 'remove' ? removeFeed(ctx) : addFeed(ctx))
     } catch (error) {
-        fail(`could not change ${file}: ${error?.code || String(error?.message || error).split('\n')[0]}. The file was not changed.`)
+        if (error?.code === 'ECHANGED') fail(`${file} changed while this command ran, so nothing was written. Run the command again.`)
+        else fail(`could not change ${file}: ${error?.code || String(error?.message || error).split('\n')[0]}. The file was not changed.`)
         return 1
     }
 }
