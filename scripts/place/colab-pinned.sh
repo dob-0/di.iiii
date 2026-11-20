@@ -15,5 +15,19 @@
 set -euo pipefail
 VERSION="${PLACE_COLAB_VERSION:-0.7.5}"
 REAL_HOME="$(getent passwd "$(id -un)" | cut -d: -f6)"
-exec uvx --cache-dir "${UV_CACHE_DIR:-$REAL_HOME/.cache/uv}" \
-  --from "google-colab-cli==${VERSION}" colab "$@"
+CMD=(uvx --cache-dir "${UV_CACHE_DIR:-$REAL_HOME/.cache/uv}" --from "google-colab-cli==${VERSION}" colab "$@")
+
+# The work runs on Colab; only the waiting client runs here, and it spins while
+# it waits. Measured 2026-11-20 on aylmo: one `colab exec` used 164 of 500 CPU
+# ticks in 5 s while reading 2415 bytes; three of them held the package at
+# 100 °C for 2 h. So the client runs at the lowest priority and, where systemd
+# runs the user session, capped at PLACE_COLAB_CPU (default 15 % of one core).
+# PLACE_COLAB_CPU=off runs it uncapped (still lowest priority).
+CAP="${PLACE_COLAB_CPU:-15%}"
+LOW=(nice -n 19)
+command -v ionice >/dev/null 2>&1 && LOW+=(ionice -c 3)
+if [ "$CAP" != off ] && command -v systemd-run >/dev/null 2>&1 \
+  && case "$(systemctl --user is-system-running 2>/dev/null)" in running|degraded) true;; *) false;; esac; then
+  exec systemd-run --user --scope --quiet --collect -p "CPUQuota=$CAP" "${LOW[@]}" "${CMD[@]}"
+fi
+exec "${LOW[@]}" "${CMD[@]}"
