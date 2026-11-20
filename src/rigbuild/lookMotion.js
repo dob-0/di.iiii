@@ -26,7 +26,7 @@
 import { MAX_STROBE_HZ } from './strobeCap.js'
 
 export const FX_MODES = ['none', 'strobe', 'chase', 'pulse', 'sine', 'sparkle', 'comet', 'bars', 'glitch', 'radar',
-    'pump', 'breathe', 'pingpong', 'blocks']
+    'pump', 'breathe', 'pingpong', 'blocks', 'fade']
 export const FX_SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-']
 export const FRAME_MS = 25
 
@@ -143,6 +143,14 @@ export const motionLevel = (fx, fixture, i, n, now) => {
             const period = beatMs * 4
             const p = (t % period) / period
             return applyDepth(Math.floor(((1 - Math.cos(p * TAU)) / 2) * 255), depth)
+        }
+        case 'fade': {
+            // port of fx.js 'fade': raised cosine over twelve beats, 2.2 power curve, lag along Follow up to 2/3 of a cycle
+            const period = beatMs * 12
+            const lag = phaseOf(fx, fixture, i, n) * (2 / 3)
+            const p = ((t % period) / period + 1 - lag) % 1
+            const open = (1 - Math.cos(p * TAU)) / 2
+            return applyDepth(Math.round(Math.pow(open, 2.2) * 255), depth)
         }
         case 'pingpong': {
             const lanes = 16
