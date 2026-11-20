@@ -6225,26 +6225,36 @@ $('#setPrev').addEventListener('click', () => goSetStep(liveSet.pos - 1));
 // chase, which is the thing that already knows how to advance on a clock — so "Play" is
 // load-and-arm rather than a second player that could drift out of step with the first.
 // Pressing it while that same set is running stops it, so the button is its own undo.
+// The set as the chase will actually hold it: ids of scenes that still exist, in order.
+// POST /api/chase drops dead ids, so every comparison with the chase must use this list,
+// never st.sceneIds — otherwise a set holding a deleted scene never reads as running.
+function setLiveIds(st, scenes) {
+  const have = new Set((scenes || []).map((x) => x.id));
+  return ((st && st.sceneIds) || []).filter((id) => have.has(id));
+}
+function setIsRunning(chase, st, scenes) {
+  const ids = setLiveIds(st, scenes);
+  return !!(chase && chase.enabled && ids.length
+    && chase.sceneIds.length === ids.length && chase.sceneIds.every((id, i) => id === ids[i]));
+}
+// What Play posts. sync:'clock' is explicit: a chase left in 'beat' sync ignores the Hold
+// slider, which would make the set play at a speed the screen does not show.
+function setPlayBody(st, scenes, holdMs, fadeMs) {
+  return { sceneIds: setLiveIds(st, scenes), holdMs, fadeMs, sync: 'clock', enabled: true };
+}
+
 $('#setPlay').addEventListener('click', () => {
   const st = currentSet();
-  if (!st || !st.sceneIds.length) return say('pick a set with some scenes in it first', true);
-  const same = S.chase.enabled
-    && S.chase.sceneIds.length === st.sceneIds.length
-    && S.chase.sceneIds.every((id, i) => id === st.sceneIds[i]);
-  if (same) {
+  const ids = setLiveIds(st, S && S.scenes);
+  if (!st || !ids.length) return say('pick a set with some scenes in it first', true);
+  if (setIsRunning(S.chase, st, S.scenes)) {
     post('api/chase', { enabled: false }).then(pullState);
     say(`stopped "${st.name}"`);
     return;
   }
-  // Dead ids are dropped by the server, so a set pointing at a deleted scene still plays
-  // the rest of itself instead of refusing outright.
-  post('api/chase', {
-    sceneIds: st.sceneIds,
-    holdMs: +$('#setHold').value,
-    fadeMs: +$('#setFade').value,
-    enabled: true,
-  }).then(pullState);
-  say(`playing "${st.name}" — ${st.sceneIds.length} scenes`);
+  post('api/chase', setPlayBody(st, S.scenes, +$('#setHold').value, +$('#setFade').value)).then(pullState);
+  const gone = st.sceneIds.length - ids.length;
+  say(`playing "${st.name}" — ${ids.length} scenes${gone ? ` (${gone} deleted, skipped)` : ''}`);
 });
 
 const setTimingOut = () => {
@@ -6264,15 +6274,33 @@ setTimingOut();
 // Deliberately writes the ONE bpm every effect and every LFO already reads, rather than
 // introducing a second clock. recallScene keeps the live bpm, so changing scenes never
 // changes the speed and this fader stays the room's tempo across the whole set.
+const clampBpm = (bpm) => Math.max(20, Math.min(300, Math.round(bpm)));
+// Half / double read the number on the fader, not the last poll: two quick taps on x2 then
+// compound (60 -> 120 -> 240) instead of posting the same value twice.
+const tempoStep = (shown, factor) => clampBpm((+shown || 120) * factor);
+// Trailing throttle: at most one POST per `ms`, always ending on the last value, so a drag
+// is a handful of requests and the final position is never lost.
+function makeTrailing(fn, ms, nowFn, timerFn) {
+  let last = -Infinity, timer = null, pending;
+  const fire = () => { timer = null; last = nowFn(); fn(pending); };
+  return (v) => {
+    pending = v;
+    if (timer) return;
+    const wait = last + ms - nowFn();
+    if (wait <= 0) fire(); else timer = timerFn(fire, wait);
+  };
+}
+const postTempo = makeTrailing((v) => post('api/fx', { bpm: v }), 80, Date.now, setTimeout);
 function setTempo(bpm) {
-  const v = Math.max(20, Math.min(300, Math.round(bpm)));
+  const v = clampBpm(bpm);
   $('#tSpeed').value = v;
   $('#tSpeedOut').textContent = v;
-  post('api/fx', { bpm: v });
+  $('#tBpm').textContent = v;   // the header answers the finger at once, not on the next poll
+  postTempo(v);
 }
 $('#tSpeed').addEventListener('input', () => setTempo(+$('#tSpeed').value));
-$('#tHalf').addEventListener('click', () => setTempo((S && S.fx.bpm ? S.fx.bpm : 120) / 2));
-$('#tDouble').addEventListener('click', () => setTempo((S && S.fx.bpm ? S.fx.bpm : 120) * 2));
+$('#tHalf').addEventListener('click', () => setTempo(tempoStep($('#tSpeed').value, 0.5)));
+$('#tDouble').addEventListener('click', () => setTempo(tempoStep($('#tSpeed').value, 2)));
 $('#setNow').addEventListener('click', () => {
   spOpen = !spOpen;
   if (!spOpen) spEdit = false;
@@ -6426,8 +6454,7 @@ function buildTouchStrip() {
   }
   // Play doubles as Stop, so it has to say which it currently is.
   const st = currentSet();
-  const running = !!(st && S.chase.enabled && S.chase.sceneIds.length === st.sceneIds.length
-    && S.chase.sceneIds.every((id, i) => id === st.sceneIds[i]));
+  const running = setIsRunning(S.chase, st, S.scenes);
   $('#setPlay').textContent = running ? '■ Stop' : '▶ Play';
   $('#setPlay').classList.toggle('on', running);
   if (document.activeElement !== $('#setHold')) $('#setHold').value = S.chase.holdMs;

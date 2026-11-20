@@ -862,8 +862,16 @@
     // Any channel (owner 2026-11-01, "make all mapped, maybe they do not trigger the right one"): a control that matches
     // the map on its own channel wins; when none does, the same kind and number on ANY channel takes that row, so a K2
     // set to another MIDI channel (or another controller) still drives the desk. The exact-channel map is kept whole.
-    const midiFind = (ctl) => midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
-        || midiMap.find((x) => x.kind === ctl.kind && x.num === ctl.num)
+    // The fallback only fires when it is unambiguous: with two rows on the same number the first one is a guess, and a
+    // wrong guess moves the wrong fader. Then Blackout still wins if it is one of them, otherwise the control is left
+    // unmapped and the line says so.
+    const midiFind = (ctl) => {
+        const exact = midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
+        if (exact) return exact
+        const any = midiMap.filter((x) => x.kind === ctl.kind && x.num === ctl.num)
+        if (any.length === 1) return any[0]
+        return any.find((x) => x.target === 'blackout') || null
+    }
     let midiLast = ''
     const midiLine = (note = '') => {
         const base = midiNames && midiNames.length ? `MIDI: ${midiNames.join(', ')}` : `MIDI: ${midiNames ? 'none seen' : midiWhy}`
