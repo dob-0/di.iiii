@@ -161,9 +161,9 @@ the owner's word so the team can see it; the branch is not rebased on dev yet (d
 - **Engine** (`laserEngine.js`): the stream keeps `CUSHION_MS` 100 queued in each cube (the old pacing never caught up
   after a late tick, and the cubes ran dry 580–620 times in 20 s: the flicker seen at REA); Blackout and lit→dark clear
   the cube's ring buffer at once; a per-cube `stream` record (low, max gap, dry, late) in `/laser/api/state`. Dev has a
-  smaller catch-up fix (no cushion): reconcile when this lands. `laser.json` `dots: true` lets a frame of ≥ 2 separate
+  smaller catch-up fix (no cushion): reconcile when this lands. `laser.json` `dots` is ON by default as run at the REA (owner 2026-11-20); `"dots": false` turns it off. When on, a frame of ≥ 2 separate
   dots each ≤ 12 % of the pass through the still-beam guard (a lone dot, or one dwell ≥ 50 %, still stops the cube); off
-  without the flag. Guard stops still never latch.
+  with `"dots": false`. Guard stops still never latch.
 - **Tested** (Windows, 2026-11-19): `vitest serverXR/src/laser src/project/nodes/laser.shape serverXR/src/routes shared`
   = 1053 pass, 6 fail, all known Windows-only ones (SIGINT/SIGTERM shutdown, three byte-for-byte twin checks under CRLF).
   On real cubes: the REA desk ran from this code 11-07 (4 cubes, Wi-Fi then cable; queue low ≥ 72 ms, 0 dry).

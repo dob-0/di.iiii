@@ -71,10 +71,10 @@
 //   "stopResume": "person" (default) | "legacy" — after a still-beam, frame-too-long or over-temperature stop the cube
 //   stays dark until a person: Off then On, On, or a new Go (a frame posted with go: true); either way only a NEW frame that passes the guards lights it; after a no-frame stop it resumes by itself
 //   within 2 s for the same Out, else it is disarmed. "legacy" is the old rule (any fresh frame resumes). Stage audit 2026-10-30, row 34.
-//   "dots": true — OFF BY DEFAULT. When on, two or more held dots (each at most 12 % of the frame's time) skip the still-beam
-//   guard: the beam rests on each dot with no time limit, so this is outside what GUARD.VALIDATED covers and needs the safety
-//   officer's word. A single dot, a dot above 12 % and any dwell spot still stop the cube. With it off, Phyllotaxis and Phyllo
-//   chaos are still beams and stop the cube (the desk says so in the cube row).
+//   "dots": ON by default, as run at the REA (owner 2026-11-20: real dots, laser at full power); "dots": false turns it off. When on,
+//   two or more held dots (each at most 12 % of the frame's time) skip the still-beam guard. A single dot, a dot above 12 % and
+//   any dwell spot still stop the cube. With it off, Phyllotaxis and Phyllo chaos are still beams and stop the cube (the desk
+//   says so in the cube row).
 // No file: six cubes cube-1…cube-6 without addresses (the rig's six), sim.
 'use strict'
 
@@ -171,9 +171,9 @@ const GUARD = Object.freeze({
 const STILL_WINDOW_FIELD = GUARD.STILL_WINDOW_DEG / GUARD.SCAN_HALF_ANGLE_DEG
 // POINT DOTS (2026-11-07, REA, the owner, who runs these cubes: "i dont need tiny rings, jsut points smallest one …
 // lasers are relly safe and not danagerouse setup"; her TouchDesigner draws a seed as a point held still). With laser.json
-// `"dots": true`, a frame of separate dots is not a still beam while there are at least two and no one dot holds more
+// `"dots"` on (the default), a frame of separate dots is not a still beam while there are at least two and no one dot holds more
 // than DOTS_MAX_SHARE of the frame's time. One dot alone (all the power in one spot) and any spot holding half the
-// frame (the dwell rule) still stop the cube. Off unless laser.json says so.
+// frame (the dwell rule) still stop the cube. On unless laser.json says "dots": false.
 const DOTS_MAX_SHARE = 0.12
 const dotsAllowed = (list) => list.length >= 2 && list.every((s) => s.kind === 'dot' && s.share <= DOTS_MAX_SHARE)
 const STOP = Object.freeze({ NO_INFO: 'no-info', NO_FRAME: 'no-frame', STILL_BEAM: 'still-beam', LINK_LOST: 'link-lost', FRAME_TOO_LONG: 'frame-too-long', OVER_TEMPERATURE: 'over-temperature' })
@@ -336,9 +336,9 @@ const readConfig = (dir) => {
         const base = guardsLib.normaliseGuards(raw.guards)
         const list = Array.isArray(raw.cubes) && raw.cubes.length ? raw.cubes : DEFAULT_CUBES
         const cubes = list.map((c, i) => cubeFrom(c, i, base))
-        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null, guards: base, stopResume: raw.stopResume === 'legacy' ? 'legacy' : 'person', dots: raw.dots === true }
+        return { cubes, zone: normaliseZone(raw.zone), dacRate: Number(raw.dacRate) > 0 ? Number(raw.dacRate) : null, guards: base, stopResume: raw.stopResume === 'legacy' ? 'legacy' : 'person', dots: raw.dots !== false }
     } catch {
-        return { cubes: DEFAULT_CUBES.map((c, i) => cubeFrom(c, i)), zone: normaliseZone(), dacRate: null, guards: guardsLib.DEFAULT_GUARDS, stopResume: 'person', dots: false }
+        return { cubes: DEFAULT_CUBES.map((c, i) => cubeFrom(c, i)), zone: normaliseZone(), dacRate: null, guards: guardsLib.DEFAULT_GUARDS, stopResume: 'person', dots: true }
     }
 }
 

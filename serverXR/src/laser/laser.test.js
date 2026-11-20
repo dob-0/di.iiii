@@ -541,8 +541,12 @@ describe('the still-beam guard', () => {
         const a = (i * 2 * Math.PI) / n
         return Array.from({ length: 6 }, () => [Math.cos(a) * at, 0.5 + Math.sin(a) * at * 0.4, 0, 1, 1])
     }).flatMap((d) => [...d, [d[0][0], d[0][1], 0, 0, 0]])
-    it('with laser.json "dots": true, many separate dots play; without it they are a still beam, as before', () => {
-        const off = armedWith(ONE)
+    it('dots are ON by default; laser.json "dots": false makes many separate dots a still beam', () => {
+        const dflt = armedWith(ONE)
+        holdStill(dflt, dots(17), 2000)
+        expect(dflt.engine.state().cubes[0].stop).toBe(null)
+        expect(dflt.engine.state().guard.dots).toBe(true)
+        const off = armedWith({ ...ONE, dots: false })
         holdStill(off, dots(17), GUARD.STILL_HOLD_MS + 40)
         expect(off.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
         const on = armedWith({ ...ONE, dots: true })
@@ -551,9 +555,9 @@ describe('the still-beam guard', () => {
         expect(on.engine.state().guard).toMatchObject({ dots: true, dotsMaxShare: DOTS_MAX_SHARE })
         expect(off.engine.state().guard.dots).toBe(false)
     })
-    it('with "dots": true one dot alone, a few big dots, or one spot holding half the frame still stop the cube', () => {
+    it('with dots on one dot alone, a few big dots, or one spot holding half the frame still stop the cube', () => {
         for (const frame of [dot(), dots(4), [...dots(9), ...Array.from({ length: 400 }, () => [0.6, 0.5, 0, 1, 1])]]) {
-            const rig = armedWith({ ...ONE, dots: true })
+            const rig = armedWith(ONE)
             holdStill(rig, frame, GUARD.STILL_HOLD_MS + 40)
             expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
         }
