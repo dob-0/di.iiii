@@ -71,6 +71,16 @@ ssh <ssh-host> 'di monitor install-timer --remove'   # undo
 
 Someone else who signs in sees only their own machines. A report timer written by a build with the timer fix (PR #1328, 2026-11-20 or later) follows the installed version (`~/.di/current`), so it keeps reporting after `di update`. A timer written before that names a version folder and stops at the second `di update`: run `di monitor install-timer` once more, from a build that has the fix.
 
+The chats of a machine reach the Monitor only when that machine says where its chat list comes from. One command sets it: it edits `~/.di/monitor.json` for you, keeps the old file once as `monitor.json.bak-<time>`, and changes nothing when the feed is already set.
+
+```bash
+di monitor feed add chats --command "my-chat-list --json" --check   # the command prints { "chats": [ ... ] } as JSON; --check runs it once, under the Monitor's own 4 s limit, and saves nothing the Monitor would not accept
+di monitor feed list                                                # what is set
+di monitor feed remove chats                                        # undo
+```
+
+`--dry-run` prints the file it would write and writes nothing. `credits` works the same way for the Credits box.
+
 ## Which door has what
 
 | You want | Door | Longer guide |

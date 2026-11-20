@@ -21,12 +21,16 @@ import { fileURLToPath } from 'node:url'
 import { readLogin } from './loginStore.mjs'
 import { resolveTarget } from './login.mjs'
 import { diHome, paths } from './paths.mjs'
+import { runFeed } from './monitorFeed.mjs'
 
 export const USAGE = [
     'di monitor report [--once] [--every N] [--tier dev|prod | --to URL]   send this machine\'s panels to the overview',
     'di monitor install-timer [--remove]                                  a user timer that does it every 30 seconds',
     '',
-    'Needs `di login` as an admin. Without --once it keeps sending every 30 seconds (--every 10..300).'
+    'Needs `di login` as an admin. Without --once it keeps sending every 30 seconds (--every 10..300).',
+    '',
+    'di monitor feed add chats --command "<cmd>" [--check] [--dry-run]    set where this machine\'s chats come from (credits too)',
+    'di monitor feed remove chats | di monitor feed list                  undo it | show what is set'
 ].join('\n')
 
 export const EVERY_SECONDS = 30
@@ -36,6 +40,7 @@ const LEDGER_ROW = /^(N\d+(?:\.\d+)?)\s+(\d\d-\d\d \d\d:\d\d)\s+(\S+)\s+(\S+)\s+
 export const parseMonitorArgs = (args) => {
     const sub = args._?.[1]
     const flags = args.flags || {}
+    if (sub === 'feed') return { sub }
     if (sub !== 'report' && sub !== 'install-timer') return { error: USAGE }
     if (sub === 'install-timer') return { sub, remove: Boolean(flags.remove) }
     let every = EVERY_SECONDS
@@ -208,6 +213,8 @@ export const runMonitor = async (args, deps = {}) => {
     const parsed = parseMonitorArgs(args)
     if (parsed.error) { fail(parsed.error); return 1 }
     if (parsed.sub === 'install-timer') return installTimer({ home, remove: parsed.remove, say, fail, ...(deps.timer || {}) })
+
+    if (parsed.sub === 'feed') return runFeed(args, { env, home, say, fail, root: repoRoot(), ...(deps.feed || {}) })
 
     const target = resolveTarget(args.flags || {})
     if (target.error) { fail(target.error); return 1 }
