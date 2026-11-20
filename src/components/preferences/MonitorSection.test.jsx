@@ -209,6 +209,74 @@ describe('MonitorSection', () => {
         expect(within(document.querySelector('.monitor-drawer')).getAllByText('Credit route').length).toBeGreaterThan(0)
     })
 
+    // The credits command is slow once an hour (12 s measured 2026-11-20); the server then answers "checking" or shows the last list as old.
+    it('credits while the first list is still being read: says so, no 0/0, no "No credits reported"', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 0, total: 0, rows: [], checking: true }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits="checking"]').textContent).toMatch(/Checking now/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).not.toMatch(/0\/0/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/—/)
+        expect(screen.queryByText('No credits reported.')).toBeNull()
+    })
+
+    it('credits that were read a while ago: the list stays, the note says how old (on the server clock) and why', async () => {
+        const rows = [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }]
+        // the server's clock, a long way from this page's: the age is the server's `at` minus `checkedAt`, never this page's own now
+        const at = Date.parse('2026-01-01T12:00:00Z')
+        const readAt = new Date(at - 12 * 60 * 1000).toISOString()
+        const failed = snapshot()
+        failed.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, rows, at, stale: true, checkedAt: readAt, refreshError: 'Command failed: di-credits' }
+        getMonitor.mockResolvedValue(failed)
+        const first = render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const note = document.querySelector('[data-credits="stale"]')
+        expect(note.textContent).toBe('This list was read 12m ago; the latest check failed: Command failed: di-credits.')
+        expect(note.className).toBe('monitor-note is-down')
+        expect(document.querySelector('[data-monitor-id="cr:0:plan:dob"]').textContent).toMatch(/ready/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/1/)
+        first.unmount()
+
+        const slow = snapshot()
+        slow.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, rows, at, stale: true, checkedAt: readAt }
+        getMonitor.mockResolvedValue(slow)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const waiting = document.querySelector('[data-credits="stale"]')
+        expect(waiting.textContent).toBe('This list was read 12m ago; a new check is running.')
+        expect(waiting.className).toBe('monitor-note is-down')
+    })
+
+    it('a fresh credits list carries no note', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 1, total: 1,
+            rows: [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits]')).toBeNull()
+    })
+
+    it('the credits tile is grey while the first list is read, amber when the list is old, green when it is fresh', async () => {
+        const rows = [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }]
+        const at = Date.parse('2026-01-01T12:00:00Z')
+        const tileClass = async (credits) => {
+            const snap = snapshot()
+            snap.panels.credits = credits
+            getMonitor.mockResolvedValue(snap)
+            const view = render(<MonitorSection />)
+            await waitFor(() => screen.getByText('Build the monitor'))
+            const cls = document.querySelector('[data-count-id="credits"]').className
+            view.unmount()
+            return cls
+        }
+        expect(await tileClass({ ok: true, configured: 1, ready: 0, total: 0, rows: [], checking: true })).toMatch(/\btone-muted\b/)
+        expect(await tileClass({ ok: true, configured: 1, ready: 1, total: 1, rows, at, stale: true, checkedAt: new Date(at - 12 * 60 * 1000).toISOString() })).toMatch(/\btone-warning\b/)
+        expect(await tileClass({ ok: true, configured: 1, ready: 1, total: 1, rows })).toMatch(/\btone-success\b/)
+    })
+
     it('says whose machines are listed: signed in, signed out, expired, offline', async () => {
         const cases = [
             [{ state: 'ok', name: 'Ada', machines: 2 }, /Signed in as Ada: this machine and 2 more/],

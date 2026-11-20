@@ -95,9 +95,12 @@ export const repoRoot = (start = here()) => {
 /** This machine's panels, from the server's own collectors. */
 export const collectSnapshot = async ({ root = repoRoot() } = {}) => {
     const require = createRequire(import.meta.url)
-    const { createMonitorStore } = require(path.join(root, 'serverXR', 'src', 'monitorStore.js'))
+    const { createMonitorStore, CREDITS_COMMAND_MS } = require(path.join(root, 'serverXR', 'src', 'monitorStore.js'))
     // no realtime hub in this process: nobody is "connected" here
-    const store = createMonitorStore({ connections: { spaces: new Map(), projects: new Map() }, repoDir: root })
+    // This process lives for one snapshot, so it has no earlier credits list to show while a slow check runs on: it waits for the
+    // credits command's whole limit (the server's page does not, it shows the last list). Without this the one-shot report would
+    // say "checking" for ever on the hour the command is slow.
+    const store = createMonitorStore({ connections: { spaces: new Map(), projects: new Map() }, repoDir: root, creditsWaitMs: CREDITS_COMMAND_MS + 2000 })
     return store.getMonitor({ selfBase: null })
 }
 
