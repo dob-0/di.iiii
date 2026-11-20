@@ -367,6 +367,25 @@ describe('MonitorSection', () => {
         expect(document.querySelector('[data-monitor-id="a:bbbbbbbb-2"]').className).not.toMatch(/is-changed/)
     })
 
+    it('this machine\'s own agents list that cannot be read is named like any other machine\'s, and the other machines\' agents are still listed', async () => {
+        const snap = contract()
+        snap.panels.agents = { ok: true, at: 1, live: 1, busy: 1, total: 12, accounts: ['.claude-di'], remotes: [], rows: [
+            { account: '.claude-di', machine: 'studio-mac', sessionId: 'cccccccc-3', title: 'Studio chat', status: 'busy', kind: 'interactive', branch: null, cwd: '/w', model: 'm', lastActivity: null }
+        ], machines: [
+            { host: 'aylmo', state: 'failed', error: 'timed out after 9000 ms', self: true },
+            { host: 'studio-mac', state: 'ok', live: 1, shown: 1 }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        const panel = document.querySelector('[data-panel="agents"]')
+        expect(panel.textContent).toMatch(/1 live of 12 sessions · 1 of 2 machines · accounts: \.claude-di/)
+        expect([...panel.querySelectorAll('[data-agents]')].map((n) => [n.getAttribute('data-agents'), n.textContent, n.className])).toEqual([
+            ['failed', 'aylmo: its agents list could not be read (timed out after 9000 ms).', 'monitor-note is-down']
+        ])
+        expect([...panel.querySelectorAll('.monitor-group-title')].map((n) => n.firstChild.textContent.trim())).toEqual(['studio-mac / .claude-di'])
+    })
+
     it('with one machine only there is no machines count and no note', async () => {
         const snap = contract()
         snap.panels.agents = { ...snap.panels.agents, machines: [{ host: 'aylmo', state: 'ok', live: 2, self: true }] }

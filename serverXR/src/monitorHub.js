@@ -583,9 +583,12 @@ function createHub({
   // and every other one, whether its agents are in the list: a stale report or a failed or missing list is named, never shown as
   // zero. A machine with several reports (one machine under two spellings, or heard here and through dev) is shown by its best
   // one: a list beats a failed list, that a missing one, that a stale report; of two equal ones the newer wins. A session already
-  // in the list (same sessionId) is listed once. When this machine's own list cannot be read (a machine with no Claude homes, such
-  // as di-server) it is named in `machines` with the reason, its own rows are not trusted, and the other machines' agents are
-  // still listed; when no other machine has a list either, its own panel is returned as it was. `from` (the credits note's field)
+  // in the list (same sessionId) is listed once. This machine's own rows are never cut; of every other machine at most
+  // AGENTS_PER_MACHINE_MAX are listed, and no more once the list holds AGENTS_MAX rows (this machine's counted): the machine says
+  // so (`capped`). When this machine's own list cannot be read (its scan failed or took longer than the panel's time limit; a
+  // machine with no Claude homes is not this case, its list is a list with no agents) it is named in `machines` with the reason,
+  // its own rows are not trusted, and the other machines' agents are still listed; when no other machine has a list either, its
+  // own panel is returned as it was. `from` (the credits note's field)
   // is never set. The page only: the machine's own report to dev carries its own panel (the sender reads the store, not this
   // snapshot), so a lent agent is never reported back as its own.
   const agentsFor = (base, sources) => {

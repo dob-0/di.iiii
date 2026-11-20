@@ -411,7 +411,7 @@ describe('hub snapshot', () => {
       const cases = [
         // [this machine's own panel, how the box names this machine, the panel's ms and at]
         [{ ok: false, error: homes, ms: 1, at: 5 }, { state: 'failed', error: homes }, 1, 5],
-        [{ ok: false, error: homes, ms: 2, at: 6, rows: [agent('own-1')], total: 40, accounts: ['.claude-x'] }, { state: 'failed', error: homes }, 2, 6], // its rows, total and accounts are not trusted
+        [{ ok: false, error: homes, ms: 2, at: 6, rows: [agent('own-1')], total: 40, accounts: ['.claude-x'], remotes: ['x'] }, { state: 'failed', error: homes }, 2, 6], // its rows, total, accounts and remotes are not trusted
         [{ ok: true, rows: 'abc', live: 0 }, { state: 'failed', error: 'the agents list was not a list' }, 0, T0],
         [null, { state: 'none' }, 0, T0]
       ]
@@ -491,6 +491,42 @@ describe('hub snapshot', () => {
         const r = await hub.getSnapshot({ account: { state: 'ok', name: null, reports: [viaDev('lab-pc', bad), { host: 'x-pc', stale: false }, null, { host: 7, panels: {} }] } })
         expect(r.panels.agents.rows.map((x) => x.sessionId)).toEqual(['own-1'])
       }
+    })
+
+    it('the machines are listed by name whatever the letter case: "alpha" comes before "Beta"', async () => {
+      const { hub } = make()
+      const account = { state: 'ok', name: null, reports: [viaDev('Beta', theirs([agent('b-1')])), viaDev('alpha', theirs([agent('a-1')]))] }
+      const a = (await hub.getSnapshot({ account })).panels.agents
+      expect(a.machines.map((m) => m.host)).toEqual(['studio', 'alpha', 'Beta'])
+      expect(a.rows.map((r) => r.sessionId)).toEqual(['own-1', 'a-1', 'b-1'])
+    })
+
+    it('a report with no usable machine name is not a machine, and only a report marked stale with true is stale', async () => {
+      const { hub } = make()
+      const nameless = [viaDev('', theirs([agent('x-1')])), viaDev('.', theirs([agent('x-2')])), viaDev('..lan', theirs([agent('x-3')]))]
+      const a = (await hub.getSnapshot({ account: { state: 'ok', name: null, reports: nameless } })).panels.agents
+      expect(a.machines.map((m) => m.host)).toEqual(['studio'])
+      expect(a.rows.map((r) => r.sessionId)).toEqual(['own-1'])
+      // a text or a number in the stale field is junk, read as a fresh report
+      const junk = [viaDev('a-pc', theirs([agent('a-1')]), { stale: 'yes' }), viaDev('b-pc', theirs([agent('b-1')]), { stale: 1 })]
+      const b = (await hub.getSnapshot({ account: { state: 'ok', name: null, reports: junk } })).panels.agents
+      expect(b.machines.map((m) => [m.host, m.state])).toEqual([['studio', 'ok'], ['a-pc', 'ok'], ['b-pc', 'ok']])
+      expect(b.rows.map((r) => r.sessionId)).toEqual(['own-1', 'a-1', 'b-1'])
+    })
+
+    it('a row whose machine is not a name (an object, a number) is named by the machine that reported it', async () => {
+      const { hub, reports } = make(own([agent('own-1', { machine: { x: 1 } }), agent('own-2', { machine: 5 })]))
+      reports.put({ host: 'studio-mac', panels: { agents: theirs([agent('m1', { machine: { x: 1 } }), agent('m2', { machine: 5 })]) } })
+      const a = (await hub.getSnapshot()).panels.agents
+      expect(a.rows.map((r) => [r.sessionId, r.machine])).toEqual([['own-1', 'studio'], ['own-2', 'studio'], ['m1', 'studio-mac'], ['m2', 'studio-mac']])
+    })
+
+    it('a session another machine already lists is a copy, not a cut: 50 agents and one copy of another machine\'s session do not make the machine "cut"', async () => {
+      const { hub, reports } = make(own([agent('dup-1')]))
+      reports.put({ host: 'a-pc', panels: { agents: theirs([...many('a', 50), agent('dup-1')]) } })
+      const m = (await hub.getSnapshot()).panels.agents.machines.find((x) => x.host === 'a-pc')
+      expect(m).toMatchObject({ live: 51, shown: 50 })
+      expect(m.capped).toBeUndefined()
     })
 
     it('a session is listed once, however many machines report it: this machine first, then the machines by name', async () => {

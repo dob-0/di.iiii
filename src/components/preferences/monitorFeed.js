@@ -58,12 +58,22 @@ export const diffSnapshots = (prev, next, now = Date.now()) => {
     const agentKey = (a) => `${a.machine || ''}/${a.sessionId}`
     const prevAgents = byKey(rows(pp.agents), agentKey)
     const nextAgents = byKey(rows(np.agents), agentKey)
+    // The agents of another machine are in the list only while that machine's report is fresh: when its report goes stale (or it is
+    // listed for the first time, or dropped) its agents leave or join the rows without having ended or started. So an agent starts or
+    // ends only if its machine was listed the same way in both snapshots (`panels.agents.machines`; an older server sends none, then
+    // every change counts, as before). A machine is known by the first word of its name, in lower case; an IP address is one name.
+    const wordOf = (s) => { const t = String(s ?? '').toLowerCase(); return /^\d{1,3}(\.\d{1,3}){3}$/.test(t) ? t : t.split('.')[0] }
+    const stateIn = (panel, machine) => {
+        const hit = Array.isArray(panel?.machines) ? panel.machines.find((m) => wordOf(m?.host) === wordOf(machine)) : null
+        return hit ? hit.state : null
+    }
+    const settled = (a) => stateIn(pp.agents, a.machine) === stateIn(np.agents, a.machine)
     for (const [k, a] of nextAgents) {
         const old = prevAgents.get(k)
-        if (!old) add(`agent:${k}:new`, 'accent', `agent '${clip(a.title)}' started`)
+        if (!old) { if (settled(a)) add(`agent:${k}:new`, 'accent', `agent '${clip(a.title)}' started`) }
         else if (old.status !== a.status) add(`agent:${k}:status`, a.status === 'blocked' ? 'warning' : 'accent', `agent '${clip(a.title)}' ${old.status} → ${a.status}`)
     }
-    for (const [k, a] of prevAgents) if (!nextAgents.has(k)) add(`agent:${k}:gone`, 'muted', `agent '${clip(a.title)}' ended`)
+    for (const [k, a] of prevAgents) if (!nextAgents.has(k) && settled(a)) add(`agent:${k}:gone`, 'muted', `agent '${clip(a.title)}' ended`)
 
     // services
     const prevServices = byKey(rows(pp.services), (r) => r.unit)
