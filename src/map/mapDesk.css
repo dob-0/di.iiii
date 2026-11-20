@@ -73,8 +73,8 @@
 .map-deck-head { display: flex; align-items: center; gap: var(--di-space-3); min-width: 0; flex: 0 0 auto; }
 .map-deck-head h2 { margin: 0; font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ui-text-muted); font-weight: 500; }
 .map-deck-add { width: auto; max-width: 180px; }
-.map-deck-notice { flex: 1 1 auto; min-width: 0; color: var(--ui-text-muted); font-size: var(--di-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.map-deck-notice.is-error { color: var(--ui-warning); white-space: normal; }
+.map-deck-notice { flex: 1 1 auto; min-width: 0; color: var(--ui-text-muted); font-size: var(--di-text-2); line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
+.map-deck-notice.is-error { color: var(--ui-warning); }
 
 .map-deck-tiles {
     flex: 1 1 auto;

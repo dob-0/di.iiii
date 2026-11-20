@@ -36,13 +36,41 @@ const FRAME_RELAY_SCRIPT = '<script data-di-frame-relay>(function(){'
     + 'if(!started){started=true;requestAnimationFrame(tick)}})'
     + '})()</script>'
 
-// Before the last </body> if there is one, else at the very end — a browser
-// runs a script after </html> just the same.
+// Where the relay goes: before the last real </body> (matched on the original
+// text, never on a lowercased copy, whose indexes drift for characters like
+// U+0130), else at the very end - a browser runs a script after </html> just
+// the same. A "</body>" inside a <script>...</script> block is JS text, not the
+// tag, so it is skipped.
+const findInsertAt = (text) => {
+    const scripts = []
+    const scriptRe = /<script\b[\s\S]*?<\/script\s*>/gi
+    let m
+    while ((m = scriptRe.exec(text))) scripts.push([m.index, m.index + m[0].length])
+    let at = -1
+    const bodyRe = /<\/body\s*>/gi
+    while ((m = bodyRe.exec(text))) {
+        if (!scripts.some(([a, b]) => m.index > a && m.index < b)) at = m.index
+    }
+    return at
+}
+
 const injectFrameRelay = (html) => {
     const text = String(html)
     if (text.includes('data-di-frame-relay')) return text
-    const at = text.toLowerCase().lastIndexOf('</body>')
+    const at = findInsertAt(text)
     return at === -1 ? text + FRAME_RELAY_SCRIPT : text.slice(0, at) + FRAME_RELAY_SCRIPT + text.slice(at)
 }
 
-module.exports = { FRAME_RELAY_SCRIPT, injectFrameRelay }
+// The same for raw bytes: the stored file goes out byte for byte, only the
+// script is added. Searching a latin1 view keeps every byte one character, so
+// the index is a byte offset whatever the page's own encoding is.
+const injectFrameRelayBuffer = (buf) => {
+    const view = buf.toString('latin1')
+    if (view.includes('data-di-frame-relay')) return buf
+    const at = findInsertAt(view)
+    const script = Buffer.from(FRAME_RELAY_SCRIPT, 'utf8')
+    if (at === -1) return Buffer.concat([buf, script])
+    return Buffer.concat([buf.subarray(0, at), script, buf.subarray(at)])
+}
+
+module.exports = { FRAME_RELAY_SCRIPT, injectFrameRelay, injectFrameRelayBuffer }

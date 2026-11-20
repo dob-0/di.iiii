@@ -11,7 +11,7 @@ const { createKeyedLock } = require('../asyncLock')
 const { createTestBarrier } = require('../testBarrier')
 const logger = require('../logger')
 const { applyAssetSafetyHeaders, applyHtmlAssetHeaders, isHtmlAssetMime } = require('../spaceStore')
-const { injectFrameRelay } = require('../frameRelay')
+const { injectFrameRelayBuffer } = require('../frameRelay')
 
 // A single-file HTML page uploaded as a project asset (a map "visual").
 const MAX_HTML_ASSET_BYTES = 10 * 1024 * 1024
@@ -1615,8 +1615,8 @@ function registerProjectRoutes(router, {
       // so the mapper can bend it through a warp mesh. The stored bytes are
       // untouched; HTML is capped at 10 MB on upload, so reading it whole is fine.
       if (isHtmlAssetMime(meta?.mimeType)) {
-        const html = await fsp.readFile(servePath, 'utf8')
-        return res.send(Buffer.from(injectFrameRelay(html), 'utf8'))
+        const html = await fsp.readFile(servePath)
+        return res.send(injectFrameRelayBuffer(html))
       }
       // `root` + a name, never sendFile(absolutePath). `send` applies
       // dotfiles: 'ignore' to EVERY segment of an absolute path, and the

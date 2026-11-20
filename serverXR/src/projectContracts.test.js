@@ -403,6 +403,32 @@ describe('project contracts', () => {
         expect(big.status).toBe(413)
     })
 
+    // The page goes out byte for byte: a latin-1 page (no charset) must not be
+    // turned into U+FFFD by a text round trip, and a U+0130 in the text must not
+    // move the relay out of place.
+    it('serves an HTML visual with its own bytes unchanged and the relay before the real </body>', async () => {
+        const server = await startServer()
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Bytes Project', slug: 'bytes-project' })
+        })
+        const upload = (bytes, name) => {
+            const form = new FormData()
+            form.append('asset', new Blob([bytes], { type: 'text/html' }), name)
+            return fetch(`${server.baseUrl}/api/projects/bytes-project/assets`, { method: 'POST', body: form })
+        }
+        const head = Buffer.from('<html><body><h1>\u0130\u0130\u0130\u0130\u0130</h1><p>', 'utf8')
+        const bad = Buffer.from([0xe9, 0xff, 0xc3])
+        const tail = Buffer.from('</p></body></html>', 'utf8')
+        const res = await upload(Buffer.concat([head, bad, tail]), 'latin.html')
+        expect(res.status).toBe(200)
+        const served = Buffer.from(await (await fetch(new URL((await res.json()).asset.url, server.baseUrl))).arrayBuffer())
+        expect(served.subarray(0, head.length + bad.length).equals(Buffer.concat([head, bad]))).toBe(true)
+        expect(served.subarray(served.length - tail.length).equals(tail)).toBe(true)
+        expect(served.toString('latin1')).toContain('data-di-frame-relay')
+    })
+
     // A published project is a public URL, so an asset that still carries the
     // photographer's GPS is a leak. The scrubber handles the formats sharp can
     // re-encode; anything else must be refused rather than stored verbatim,
