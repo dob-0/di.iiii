@@ -1151,6 +1151,11 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     // darkOff 'never': a plain hint on the cube's card while it is On with nothing to draw (no countdown, no Off). A cube
     // the desk holds with nothing live has nothing to draw too, though the desk keeps a Release's blank frame fresh.
     const idleHint = (e) => (e && engine && !engine.sim && !darkAuto() && e.armed && !e.stop && (e.nothingToDraw || (e.claimedBy === OUT && !desk?.live)) ? `On, nothing to draw.${desk?.live ? '' : ' Pick a look.'}` : null)
+    // Why a dot look stops the cube while laser.json `dots` is off (the default): its dots rest on a spot, which the
+    // still-beam guard stops. Shown as a plain line in the cube row; shapes as shared/laserShapes.cjs DOT_SHAPES.
+    const DOT_LOOKS = ['phyllotaxis', 'phyllochaos']
+    const dotNote = (e) => (e && e.stop?.reason === 'still-beam' && engine?.guard?.dots === false && DOT_LOOKS.includes(desk?.live?.shape)
+        ? 'Dot looks (Phyllotaxis, Phyllo chaos) are off: the beam rests on each dot, so the cube stops. Turn them on with "dots": true in laser.json.' : null)
     const renderCubeNote = () => {
         const notes = (engine?.cubes || []).map((e) => [e, darkNote(e)]).filter(([, text]) => text)
         $('cubeNote').hidden = notes.length === 0
@@ -1330,7 +1335,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 ? el('button', { class: 'danger', text: 'On · turn off', onclick: () => post('api/arm', { armed: false, cube: c.id, out: OUT }).then(refreshEngine) })
                 : el('button', { text: 'On', disabled: !e.ip, title: e.ip ? 'Arm this cube (in phrase mode the first On of a run asks for the phrase)' : 'No address: Find cubes, then Use these', onclick: () => arm(c.id) })
             const now = c.held ? el('span', { class: 'warn', text: 'held by another Out', title: c.held })
-                : e.stop && !engine.sim ? el('span', { class: 'warn', text: `${e.stop.text || e.stop.reason}${e.armed && desk.live ? ' — press Go' : ''}` })
+                : e.stop && !engine.sim ? el('span', { class: 'warn', text: `${e.stop.text || e.stop.reason}${e.armed && desk.live ? ' — press Go' : ''}`, title: dotNote(e) || '' }, dotNote(e) ? el('div', { class: 'muted', text: dotNote(e) }) : null)
                     : darkNote(e) ? el('span', { class: 'warn', text: darkNote(e) })
                     : c.driving ? el('span', { text: `${c.lit} lit points` })
                         : c.dark ? el('span', { class: 'warn', text: desk.blackout ? 'dark · blackout' : c.offPercent > 0 ? `dark · ${c.offPercent} % off the field` : 'dark' })

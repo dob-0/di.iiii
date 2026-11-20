@@ -71,6 +71,10 @@
 //   "stopResume": "person" (default) | "legacy" — after a still-beam, frame-too-long or over-temperature stop the cube
 //   stays dark until a person: Off then On, On, or a new Go (a frame posted with go: true); either way only a NEW frame that passes the guards lights it; after a no-frame stop it resumes by itself
 //   within 2 s for the same Out, else it is disarmed. "legacy" is the old rule (any fresh frame resumes). Stage audit 2026-10-30, row 34.
+//   "dots": true — OFF BY DEFAULT. When on, two or more held dots (each at most 12 % of the frame's time) skip the still-beam
+//   guard: the beam rests on each dot with no time limit, so this is outside what GUARD.VALIDATED covers and needs the safety
+//   officer's word. A single dot, a dot above 12 % and any dwell spot still stop the cube. With it off, Phyllotaxis and Phyllo
+//   chaos are still beams and stop the cube (the desk says so in the cube row).
 // No file: six cubes cube-1…cube-6 without addresses (the rig's six), sim.
 'use strict'
 
