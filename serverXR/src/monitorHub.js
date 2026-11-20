@@ -49,6 +49,9 @@ const TIER_TIMEOUT_MS = 3000
 const CONTROL = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F‪-‮⁦-⁩]/g
 const cleanText = (value, max) => String(value ?? '').replace(/\r\n?/g, '\n').replace(CONTROL, '').trim().slice(0, max)
 const isPlainObject = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)
+// A machine is known by the first word of its name ("studio-mac.local" and "Studio-Mac.lan" are one machine); an IP address has no words to cut.
+const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/
+const machineName = (host) => (IPV4_RE.test(host) ? host : host.split('.')[0])
 
 /**
  * 'dev' | 'prod' | 'local' from the release manifest. Fails closed: only a missing or empty
@@ -571,37 +574,58 @@ function createHub({
     return { ...mine, ok: true, configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length, from: donor.host, reportedAt: donor.reportedAt }
   }
 
-  // Agents belong to the owner, not to one machine. The Agents box and the "Agents at work" lanes list the live agents of this
+  // Agents belong to the owner, not to one machine. The Agents box and the "Agents at work" list show the live agents of this
   // machine AND of every other machine of the owner with a fresh report, read from the reports the hub already holds (nothing is
   // asked or probed here). Each row says where it runs (`machine`): a row another machine sent keeps the machine it names (a host
   // that machine reached by ssh), else it is the reporting machine; this machine's own rows are named too (always, not only
-  // while another machine is listed: the page's change feed and flash key an agent by machine + session, so a name that came and
-  // went with the other machines would make every agent of this machine "end" and "start" again). `machines` says, for this
-  // machine and every other one, whether its agents are in the list: a stale report or a failed or missing list is named, never
-  // shown as zero. A session already in the list (same sessionId) is listed once. This machine's own panel stays the base: a
-  // failing one is never covered, and `from` (the credits note's field) is never set. The page only: the machine's own report
-  // to dev carries its own panel (the sender reads the store, not this snapshot), so a lent agent is never reported back as its own.
+  // while another machine is listed: the page's change feed keys an agent by machine + session, so a name that came and went
+  // with the other machines would make every agent of this machine "end" and "start" again). `machines` says, for this machine
+  // and every other one, whether its agents are in the list: a stale report or a failed or missing list is named, never shown as
+  // zero. A machine with several reports (one machine under two spellings, or heard here and through dev) is shown by its best
+  // one: a list beats a failed list, that a missing one, that a stale report; of two equal ones the newer wins. A session already
+  // in the list (same sessionId) is listed once. When this machine's own list cannot be read (a machine with no Claude homes, such
+  // as di-server) it is named in `machines` with the reason, its own rows are not trusted, and the other machines' agents are
+  // still listed; when no other machine has a list either, its own panel is returned as it was. `from` (the credits note's field)
+  // is never set. The page only: the machine's own report to dev carries its own panel (the sender reads the store, not this
+  // snapshot), so a lent agent is never reported back as its own.
   const agentsFor = (base, sources) => {
     const mine = base.panels?.agents
-    if (!(isPlainObject(mine) && mine.ok === true && Array.isArray(mine.rows))) return mine
-    const selfHost = String(base.host || 'this machine').split('.')[0]
-    const ownRows = mine.rows.filter(isPlainObject).map((x) => (typeof x.machine === 'string' && x.machine ? x : { ...x, machine: selfHost }))
+    const selfHost = machineName(String(base.host || 'this machine'))
     const count = (n) => (Number.isFinite(n) && n > 0 ? n : 0)
     const names = (list) => (Array.isArray(list) ? list.filter((x) => typeof x === 'string').map((x) => cleanText(x, 80)).filter(Boolean) : [])
-    const known = new Set([selfHost.toLowerCase()])
-    const others = [] // { info: what the page is told about the machine, rows: its usable rows }
+    // what a machine's agents list is: a list (ok), no list at all (none), or one that could not be read (failed, with the reason)
+    const listOf = (a) => {
+      if (!isPlainObject(a)) return { state: 'none' }
+      if (a.ok !== true || !Array.isArray(a.rows)) return { state: 'failed', error: cleanText(a.ok === false ? a.error : 'the agents list was not a list', 200) }
+      return { state: 'ok' }
+    }
+    const own = listOf(mine)
+    const ownRows = own.state === 'ok' ? mine.rows.filter(isPlainObject).map((x) => (typeof x.machine === 'string' && x.machine ? x : { ...x, machine: selfHost })) : []
+    const RANK = { ok: 0, failed: 1, none: 2, stale: 3 }
+    const best = new Map() // first word of the name, lower case -> the report that tells most about that machine
     for (const r of sources) {
       if (!r || typeof r.host !== 'string') continue
-      const host = r.host.split('.')[0]
-      if (!host || known.has(host.toLowerCase())) continue
-      known.add(host.toLowerCase())
+      const host = machineName(r.host)
+      if (!host || host.toLowerCase() === selfHost.toLowerCase()) continue
+      const reportedAt = typeof r.reportedAt === 'string' ? r.reportedAt : null
       const a = r.panels?.agents
-      if (r.stale === true) others.push({ info: { host, state: 'stale', reportedAt: typeof r.reportedAt === 'string' ? r.reportedAt : null }, rows: [] })
-      else if (!isPlainObject(a)) others.push({ info: { host, state: 'none' }, rows: [] })
-      else if (a.ok !== true || !Array.isArray(a.rows)) others.push({ info: { host, state: 'failed', error: cleanText(a.ok === false ? a.error : 'the agents list was not a list', 200) }, rows: [] })
-      else others.push({ info: { host, state: 'ok', total: count(a.total) }, rows: a.rows.filter((x) => isPlainObject(x) && typeof x.sessionId === 'string' && x.sessionId), accounts: names(a.accounts) })
+      const list = r.stale === true ? { state: 'stale' } : listOf(a)
+      const found = { full: r.host, at: Number.isFinite(Date.parse(reportedAt)) ? Date.parse(reportedAt) : -Infinity, rows: [], accounts: [] }
+      if (list.state === 'stale') found.info = { host, state: 'stale', reportedAt }
+      else if (list.state === 'none') found.info = { host, state: 'none' }
+      else if (list.state === 'failed') found.info = { host, state: 'failed', error: list.error }
+      else {
+        found.info = { host, state: 'ok', total: count(a.total) }
+        found.rows = a.rows.filter((x) => isPlainObject(x) && typeof x.sessionId === 'string' && x.sessionId)
+        found.accounts = names(a.accounts)
+      }
+      const had = best.get(host.toLowerCase())
+      const better = !had || RANK[list.state] < RANK[had.info.state] || (RANK[list.state] === RANK[had.info.state] && (found.at > had.at || (found.at === had.at && found.full.localeCompare(had.full) < 0)))
+      if (better) best.set(host.toLowerCase(), found)
     }
-    others.sort((a, b) => a.info.host.localeCompare(b.info.host))
+    const others = [...best.values()].sort((a, b) => a.info.host.localeCompare(b.info.host))
+    // nothing to lend: this machine's own list could not be read and no other machine has one, so its panel stays as it was
+    if (own.state !== 'ok' && !others.some(({ info }) => info.state === 'ok')) return mine
     const seen = new Set(ownRows.map((x) => x.sessionId))
     const lent = []
     for (const { info, rows } of others) {
@@ -617,15 +641,15 @@ function createHub({
       }
     }
     const rows = [...ownRows, ...lent]
-    const accounts = [...new Set([...names(mine.accounts), ...others.flatMap((o) => o.accounts || [])])].slice(0, ACCOUNTS_MAX)
+    const accounts = [...new Set([...(own.state === 'ok' ? names(mine.accounts) : []), ...others.flatMap((o) => o.accounts || [])])].slice(0, ACCOUNTS_MAX)
     return {
-      ...mine,
+      ...(own.state === 'ok' ? mine : { ok: true, ms: count(mine?.ms), at: Number.isFinite(mine?.at) ? mine.at : now(), remotes: [] }),
       rows,
       accounts,
       live: rows.length,
       busy: rows.filter((x) => x.status === 'busy').length,
-      total: count(mine.total) + others.reduce((n, { info }) => n + (info.total || 0), 0),
-      machines: [{ host: selfHost, state: 'ok', live: ownRows.length, self: true }, ...others.map(({ info }) => info)]
+      total: (own.state === 'ok' ? count(mine.total) : 0) + others.reduce((n, { info }) => n + (info.total || 0), 0),
+      machines: [own.state === 'ok' ? { host: selfHost, state: 'ok', live: ownRows.length, self: true } : { host: selfHost, ...own, self: true }, ...others.map(({ info }) => info)]
     }
   }
 

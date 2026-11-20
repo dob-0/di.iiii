@@ -406,15 +406,48 @@ describe('hub snapshot', () => {
       expect((await quiet.hub.getSnapshot()).panels.agents.rows).toEqual(q.rows)
     })
 
-    it('this machine\'s own panel stays the base: a failing one, one that is not a list and a missing one are never covered up', async () => {
-      const failing = { ok: false, error: 'the Claude homes could not be read', ms: 1, at: 5 }
-      const failingWithRows = { ok: false, error: 'the Claude homes could not be read', ms: 1, at: 5, rows: [agent('own-1')] }
-      const notAList = { ok: true, rows: 'abc', live: 0 }
-      for (const mine of [failing, failingWithRows, notAList, null]) {
+    it('when this machine\'s own agents list cannot be read, the other machines\' agents are still listed and this machine is named with the reason, never shown as zero', async () => {
+      const homes = 'the Claude homes could not be read'
+      const cases = [
+        // [this machine's own panel, how the box names this machine, the panel's ms and at]
+        [{ ok: false, error: homes, ms: 1, at: 5 }, { state: 'failed', error: homes }, 1, 5],
+        [{ ok: false, error: homes, ms: 2, at: 6, rows: [agent('own-1')], total: 40, accounts: ['.claude-x'] }, { state: 'failed', error: homes }, 2, 6], // its rows, total and accounts are not trusted
+        [{ ok: true, rows: 'abc', live: 0 }, { state: 'failed', error: 'the agents list was not a list' }, 0, T0],
+        [null, { state: 'none' }, 0, T0]
+      ]
+      for (const [mine, named, ms, at] of cases) {
         const { hub, reports } = make(mine)
-        reports.put({ host: 'studio-mac', panels: { agents: theirs([agent('mac-1')]) } })
+        reports.put({ host: 'studio-mac', panels: { agents: theirs([agent('mac-1', { status: 'busy' })], { total: 12, accounts: ['.claude-di'] }) } })
         const a = (await hub.getSnapshot()).panels.agents
-        expect(a).toEqual(mine)
+        expect(a).toMatchObject({ ok: true, ms, at, live: 1, busy: 1, total: 12, accounts: ['.claude-di'], remotes: [] })
+        expect(a.error).toBeUndefined()
+        expect(a.from).toBeUndefined()
+        expect(a.rows.map((r) => [r.machine, r.sessionId])).toEqual([['studio-mac', 'mac-1']])
+        expect(a.machines).toEqual([{ host: 'studio', ...named, self: true }, { host: 'studio-mac', state: 'ok', total: 12, live: 1, shown: 1 }])
+      }
+    })
+
+    it('a list with no agents at all is still a list to lend: the box says nothing is live, and this machine\'s unreadable list is named', async () => {
+      const { hub, reports } = make({ ok: false, error: 'no Claude homes found' })
+      reports.put({ host: 'studio-mac', panels: { agents: theirs([], { total: 9 }) } })
+      const a = (await hub.getSnapshot()).panels.agents
+      expect(a).toMatchObject({ ok: true, live: 0, busy: 0, total: 9, rows: [] })
+      expect(a.machines.map((m) => [m.host, m.state])).toEqual([['studio', 'failed'], ['studio-mac', 'ok']])
+    })
+
+    it('when this machine\'s own list cannot be read and no other machine has a list to lend, its panel stays exactly as it was', async () => {
+      const failing = { ok: false, error: 'the Claude homes could not be read', ms: 1, at: 5 }
+      const notAList = { ok: true, rows: 'abc', live: 0 }
+      for (const mine of [failing, notAList, null]) {
+        const alone = make(mine)
+        expect((await alone.hub.getSnapshot()).panels.agents).toEqual(mine)
+        // a stale report, a failed list and a report with no list lend nothing either
+        const quiet = make(mine)
+        quiet.reports.put({ host: 'old-pc', panels: { agents: theirs([agent('old-1')]) } })
+        quiet.tick(STALE_MS + 1000)
+        quiet.reports.put({ host: 'broken', panels: { agents: { ok: false, error: 'no Claude homes found' } } })
+        quiet.reports.put({ host: 'no-list', panels: { shows: { ok: true, rows: [] } } })
+        expect((await quiet.hub.getSnapshot()).panels.agents).toEqual(mine)
       }
     })
 
@@ -537,6 +570,47 @@ describe('hub snapshot', () => {
       const a = (await hub.getSnapshot({ account })).panels.agents
       expect(a.rows.map((r) => [r.machine, r.sessionId])).toEqual([['studio', 'own-1'], ['mac', 'mac-1']])
       expect(a.machines.map((m) => m.host)).toEqual(['studio', 'mac'])
+    })
+
+    it('a machine with two reports (heard here and through dev) is shown by its best one: a list beats a failed list, that a missing one, that a stale report; of two lists the newer wins, and a tie does not depend on who came first', async () => {
+      const list = (id) => theirs([agent(id)])
+      const old = { stale: true, reportedAt: new Date(T0 - 600_000).toISOString() }
+      const failed = { ok: false, error: 'no Claude homes found' }
+      const noList = { shows: { ok: true, rows: [] } } // a report whose panels have no agents list
+      const devRow = (host, panels, extra = {}) => ({ host, reportedAt: new Date(T0 - 20_000).toISOString(), stale: false, panels, ...extra })
+      const same = { reportedAt: new Date(T0).toISOString() } // the age of a report heard here when it is put
+      // [what is checked, heard here (host, panels, went stale), sent by dev, the machine's name, its state, the agents shown]
+      const scenes = [
+        ['a stale report heard here does not hide the fresh list dev sends', 'mac.local', { agents: list('here-1') }, true, devRow('Mac.lan', { agents: list('dev-1') }), 'Mac', 'ok', ['dev-1']],
+        ['a stale report from dev does not hide the fresh list heard here', 'mac.local', { agents: list('here-1') }, false, devRow('Mac.lan', { agents: list('dev-1') }, old), 'mac', 'ok', ['here-1']],
+        ['a fresh failed list says more than an old list', 'mac.local', { agents: failed }, false, devRow('Mac.lan', { agents: list('dev-1') }, old), 'mac', 'failed', []],
+        ['a fresh failed list beats a fresh report with no list', 'mac.local', noList, false, devRow('Mac.lan', { agents: failed }), 'Mac', 'failed', []],
+        ['a fresh report with no list says more than an old list', 'mac.local', noList, false, devRow('Mac.lan', { agents: list('dev-1') }, old), 'mac', 'none', []],
+        ['a fresh list beats a fresh failed list, even a newer one', 'mac.local', { agents: failed }, false, devRow('Mac.lan', { agents: list('dev-1') }), 'Mac', 'ok', ['dev-1']],
+        ['a fresh list beats a fresh report with no list, even a newer one', 'mac.local', noList, false, devRow('Mac.lan', { agents: list('dev-1') }), 'Mac', 'ok', ['dev-1']],
+        ['of two lists the one with no date is the oldest', 'mac.local', { agents: list('here-1') }, false, devRow('Mac.lan', { agents: list('dev-1') }, { reportedAt: undefined }), 'mac', 'ok', ['here-1']],
+        ['of two lists the newer wins: the one heard here', 'mac.local', { agents: list('here-1') }, false, devRow('Mac.lan', { agents: list('dev-1') }), 'mac', 'ok', ['here-1']],
+        ['of two lists the newer wins: the one dev sends', 'mac.local', { agents: list('here-1') }, false, devRow('Mac.lan', { agents: list('dev-1') }, { reportedAt: new Date(T0 + 5_000).toISOString() }), 'Mac', 'ok', ['dev-1']],
+        ['two lists of the same age: the name that sorts first wins', 'mac.local', { agents: list('here-1') }, false, devRow('mac.lan', { agents: list('dev-1') }, same), 'mac', 'ok', ['dev-1']],
+        ['two lists of the same age: the same, whoever came first', 'mac.lan', { agents: list('here-1') }, false, devRow('mac.local', { agents: list('dev-1') }, same), 'mac', 'ok', ['here-1']]
+      ]
+      for (const [what, hereHost, panels, hereStale, dev, name, state, shown] of scenes) {
+        const m = make()
+        m.reports.put({ host: hereHost, panels })
+        if (hereStale) m.tick(STALE_MS + 1000)
+        const a = (await m.hub.getSnapshot({ account: { state: 'ok', name: null, reports: [dev] } })).panels.agents
+        const seen = [what, a.machines.filter((x) => !x.self).map((x) => [x.host, x.state]), a.rows.filter((r) => r.machine !== 'studio').map((r) => r.sessionId)]
+        expect(seen).toEqual([what, [[name, state]], shown])
+      }
+    })
+
+    it('an IP address is one name, not a first word and a rest: two machines known by their address are two machines', async () => {
+      const { hub, reports } = make()
+      reports.put({ host: '100.107.177.72', panels: { agents: theirs([agent('ip-1')]) } })
+      reports.put({ host: '100.64.0.9', panels: { agents: theirs([agent('ip-2')]) } })
+      const a = (await hub.getSnapshot()).panels.agents
+      expect(a.machines.map((m) => m.host)).toEqual(['studio', '100.107.177.72', '100.64.0.9'])
+      expect(a.rows.map((r) => [r.machine, r.sessionId])).toEqual([['studio', 'own-1'], ['100.107.177.72', 'ip-1'], ['100.64.0.9', 'ip-2']])
     })
 
     it('the reason a machine\'s list could not be read is cut at 200 characters', async () => {
