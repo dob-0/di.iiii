@@ -30,10 +30,11 @@ const LINE_MAX_CHARS = 200
 // at 8 s every hour and held every snapshot back that long. So the last good list is kept and renewed in the background.
 const CREDITS_FRESH_MS = 60 * 1000 // a good answer is reused this long; then one background refresh runs (a failed one is retried this often)
 const CREDITS_STALE_MS = 5 * 60 * 1000 // a list older than this is marked stale: the renewal is slow or failing
-const CREDITS_DROP_MS = 30 * 60 * 1000 // a list older than this is not shown any more: the panel says why instead
+const CREDITS_DROP_MS = 30 * 60 * 1000 // a list older than this is not shown any more: the panel shows the failure, or "checking" while a new check runs
 const CREDITS_WAIT_MS = 3000 // with no list yet, a snapshot waits this long for the command, then says "checking"
-// The command's own limit. A cold probe (12.1 s measured) must end INSIDE it: di-credits writes its verdict cache only when it ends,
-// so a command killed first (the old 8 s limit) never caches and every snapshot starts another real model call.
+// The command's own limit. A cold probe (12.1 s measured) must end INSIDE it: di-credits writes each route's verdict when that
+// route's probe ends, so a probe still running when the command is killed (the old 8 s limit) never caches and every snapshot
+// starts that real model call again.
 // It must also stay short enough for the one-shot report (scripts/di/monitorReport.mjs), which waits for all of it, to end before its
 // timer unit's TimeoutStartSec=60: the credits read ends 0.5 s after the limit at the latest (30.5 s), then git 5 s + ledger 5 s
 // + send 15 s = 55.5 s < 60 s. A longer limit makes the timer unit kill the report; scripts/di/monitorCollect.test.js checks the sum.
