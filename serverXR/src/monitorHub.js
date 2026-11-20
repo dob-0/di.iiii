@@ -578,10 +578,11 @@ function createHub({
   // machine AND of every other machine of the owner with a fresh report, read from the reports the hub already holds (nothing is
   // asked or probed here). Each row says where it runs (`machine`): a row another machine sent keeps the machine it names (a host
   // that machine reached by ssh), else it is the reporting machine; this machine's own rows are named too (always, not only
-  // while another machine is listed: the page's change feed keys an agent by machine + session, so a name that came and went
-  // with the other machines would make every agent of this machine "end" and "start" again). `machines` says, for this machine
+  // while another machine is listed: a name that came and went with the other machines would change the label of every agent of
+  // this machine each time). `machines` says, for this machine
   // and every other one, whether its agents are in the list: a stale report or a failed or missing list is named, never shown as
-  // zero. A machine with several reports (one machine under two spellings, or heard here and through dev) is shown by its best
+  // zero (the page's change feed reads it: an agent starts or ends only if it is the same in both snapshots and no list is cut).
+  // A machine with several reports (one machine under two spellings, or heard here and through dev) is shown by its best
   // one: a list beats a failed list, that a missing one, that a stale report; of two equal ones the newer wins. A session already
   // in the list (same sessionId) is listed once. This machine's own rows are never cut; of every other machine at most
   // AGENTS_PER_MACHINE_MAX are listed, and no more once the list holds AGENTS_MAX rows (this machine's counted): the machine says
