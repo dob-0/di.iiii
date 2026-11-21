@@ -74,6 +74,14 @@ module.exports = [
     note: "a terminal login or browser session on the dev tier returns only that account's machines, never another person's; 404 elsewhere and on prod."
   },
   {
+    route: "GET /api/monitor/shared",
+    summary: "the shared picture every machine's Monitor shows from dev: machines with versions, tiers, the freshest pull request list, spaces, asks, shows and tasks, built from the owners' machine reports (no chats or credits)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "the owner's terminal login (di login) on the dev tier only; any other account, a browser session, a cross-site request, an API token, the local tier and prod get the unknown-route 404."
+  },
+  {
     route: "POST /api/monitor/ask",
     summary: "the owner types an ask on the overview page; stored and shown in the open asks",
     reach: "private",
