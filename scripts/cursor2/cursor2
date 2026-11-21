@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# scripts/cursor2/cursor2 — on | off | status | dry-run   (PROTOTYPE, owner N3083)
+# on      grab the touchpad and show cursor 2; auto-off after CURSOR2_MAX s (default 120)
+# off     stop it, give the touchpad back to Hyprland
+# status  say if it runs
+# dry-run find the touchpad and the monitors, grab nothing
+set -euo pipefail
+HERE=$(cd "$(dirname "$0")" && pwd)
+RUN=${XDG_RUNTIME_DIR:-/tmp}/cursor2
+PID=$RUN/pid
+LOG=$RUN/log
+mkdir -p "$RUN"
+alive() { [ -f "$PID" ] && kill -0 "$(cat "$PID")" 2>/dev/null; }
+case "${1:-status}" in
+  on)
+    alive && { echo "already on (pid $(cat "$PID"))"; exit 0; }
+    setsid -f python3 -I "$HERE/cursor2.py" >"$LOG" 2>&1 < /dev/null
+    sleep 1
+    pgrep -f "$HERE/cursor2.py" | head -1 > "$PID" || true
+    alive && echo "on (pid $(cat "$PID")); auto-off in ${CURSOR2_MAX:-120}s; log $LOG" || { echo "failed:"; tail -5 "$LOG"; exit 1; }
+    ;;
+  off)
+    if alive; then kill "$(cat "$PID")"; sleep 1; alive && kill -9 "$(cat "$PID")" || true; fi
+    rm -f "$PID"; echo "off"
+    ;;
+  status) alive && echo "on (pid $(cat "$PID"))" || echo "off" ;;
+  dry-run) python3 -I "$HERE/cursor2.py" --dry-run ;;
+  *) echo "usage: cursor2 on|off|status|dry-run"; exit 2 ;;
+esac
