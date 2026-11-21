@@ -71,7 +71,8 @@ const signatures = (snap) => {
     for (const m of panels?.machines?.rows || []) sig[`m:${m.id}`] = String(m.online)
     for (const c of panels?.credits?.rows || []) sig[`cr:${c.id}`] = String(c.available)
     for (const n of panels?.network?.rows || []) sig[`n:${n.id}`] = `${n.ok}:${n.status}`
-    for (const a of panels?.agents?.rows || []) sig[`a:${a.machine || ''}${a.sessionId}`] = a.status
+    // the key is the row's own id (`a:<session id>`, see the Agents rows): a machine in it would never match, and no agent would flash
+    for (const a of panels?.agents?.rows || []) sig[`a:${a.sessionId}`] = a.status
     for (const s of panels?.services?.rows || []) sig[`s:${s.unit}`] = s.active
     for (const c of panels?.connected?.rows || []) sig[`c:${c.id}`] = `${c.state}:${c.detail}`
     for (const u of panels?.presence?.rows || []) sig[`u:${u.id}`] = String(u.people.length)
@@ -119,6 +120,22 @@ function PanelNote({ panel, empty }) {
         return <div className="monitor-note" data-credits="from">From {panel.from}{panel.reportedAt ? `, reported ${ago(panel.reportedAt, panel.at)}` : ''}: this machine has no credits list of its own.</div>
     }
     return panel.rows?.length || !empty ? null : <div className="monitor-note">{empty}</div>
+}
+
+// Agents of every machine: a machine whose agents are not (all) in the list says why, in plain words. The age is on the server's clock (panel.at).
+function agentsMachineNote(m, at) {
+    if (m.state === 'stale') return `${m.host}: ${m.reportedAt ? `last report ${ago(m.reportedAt, at)}` : 'no recent report'}, so its agents are not in this list.`
+    if (m.state === 'none') return `${m.host}: its report has no agents list.`
+    if (m.state === 'failed') return `${m.host}: its agents list could not be read${m.error ? ` (${m.error})` : ''}.`
+    return `${m.host}: ${m.shown} of ${m.live} agents shown.`
+}
+
+// The subtitle's machine count: "4 machines" when every machine's agents are in the list, "3 of 4 machines" when some are not (the notes say which).
+function agentsMachinesText(machines) {
+    const all = Array.isArray(machines) ? machines.length : 0
+    if (all < 2) return ''
+    const listed = machines.filter((m) => m.state === 'ok').length
+    return listed === all ? `${all} machines · ` : `${listed} of ${all} machines · `
 }
 
 // Whose machines this Monitor lists: this one, plus the signed-in account's others (reported to dev).
@@ -447,7 +464,7 @@ export default function MonitorSection({ onStats }) {
                 dots: (p.connected?.rows || []).map((c) => dot(THING_TONE[c.state] || 'muted', `${c.title}: ${c.state}`)) },
             { id: 'agents', panel: 'agents', label: `Agents live · ${p.agents?.busy ?? 0} busy`, value: p.agents?.ok ? p.agents.live : '—',
                 tone: 'accent',
-                dots: (p.agents?.rows || []).map((a) => dot(AGENT_TONE[a.status] || 'accent', `${a.title}: ${a.status}`)) },
+                dots: (p.agents?.rows || []).map((a) => dot(AGENT_TONE[a.status] || 'accent', `${a.title}${a.machine ? ` · ${a.machine}` : ''}: ${a.status}`)) },
             { id: 'prs', panel: 'prs', label: `Open PRs · ${p.pullRequests?.drafts ?? 0} draft`, value: p.pullRequests?.ok ? p.pullRequests.open : '—',
                 tone: 'accent',
                 dots: (p.pullRequests?.rows || []).map((r) => dot(r.draft ? 'muted' : 'accent', `#${r.number} ${r.draft ? 'draft' : 'open'}`)) },
@@ -653,11 +670,14 @@ export default function MonitorSection({ onStats }) {
                         </div>
                     </ModuleSection></div>
 
-                    <div data-panel="agents"><ModuleSection title="Agents" subtitle={`${panels.agents?.live ?? 0} live of ${panels.agents?.total ?? 0} sessions · accounts: ${(panels.agents?.accounts || []).join(', ') || 'none found'}`}>
+                    <div data-panel="agents"><ModuleSection title="Agents" subtitle={`${panels.agents?.live ?? 0} live of ${panels.agents?.total ?? 0} sessions · ${agentsMachinesText(panels.agents?.machines)}accounts: ${(panels.agents?.accounts || []).join(', ') || 'none found'}`}>
                         <PanelLive name="agents" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.agents} empty="No live agent sessions." />
                         {(panels.agents?.remotes || []).filter((r) => !r.ok).map((r) => (
                             <div key={r.name} className="monitor-note">{r.name}: not reachable ({r.error})</div>
+                        ))}
+                        {(panels.agents?.machines || []).filter((m) => m.state !== 'ok' || m.capped).map((m) => (
+                            <div key={m.host} className={`monitor-note${m.state === 'failed' ? ' is-down' : ''}`} data-agents={m.state === 'ok' ? 'cut' : m.state}>{agentsMachineNote(m, panels.agents.at)}</div>
                         ))}
                         {agentGroups.map(([account, rows]) => (
                             <div key={account} className="monitor-group">

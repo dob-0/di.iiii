@@ -29,6 +29,11 @@ const MAX_ASKS_PER_REPORT = 100
 const ASK_TEXT_MAX = 2000
 const ASK_PER_HOUR = 30
 const ASKS_MAX = 100
+// live agents of the owner's OTHER machines shown in the Agents box: at most this many per machine and in all (a safety limit; the page says when it cuts)
+const AGENTS_PER_MACHINE_MAX = 50
+const AGENTS_MAX = 150
+// the Claude homes named in the Agents box (the union over the machines in the list): a safety limit, a machine has 1 to 4
+const ACCOUNTS_MAX = 20
 const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats', 'credits']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
@@ -44,6 +49,9 @@ const TIER_TIMEOUT_MS = 3000
 const CONTROL = /[\u0000-\u0008\u000B-\u001F\u007F-\u009F‪-‮⁦-⁩]/g
 const cleanText = (value, max) => String(value ?? '').replace(/\r\n?/g, '\n').replace(CONTROL, '').trim().slice(0, max)
 const isPlainObject = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)
+// A machine is known by the first word of its name ("studio-mac.local" and "Studio-Mac.lan" are one machine); an IP address has no words to cut.
+const IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/
+const machineName = (host) => (IPV4_RE.test(host) ? host : host.split('.')[0])
 
 /**
  * 'dev' | 'prod' | 'local' from the release manifest. Fails closed: only a missing or empty
@@ -566,6 +574,89 @@ function createHub({
     return { ...mine, ok: true, configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length, from: donor.host, reportedAt: donor.reportedAt }
   }
 
+  // Agents belong to the owner, not to one machine. The Agents box and the "Agents at work" list show the live agents of this
+  // machine AND of every other machine of the owner with a fresh report, read from the reports the hub already holds (nothing is
+  // asked or probed here). Each row says where it runs (`machine`): a row another machine sent keeps the machine it names (a host
+  // that machine reached by ssh), else it is the reporting machine; this machine's own rows are named too (always, not only
+  // while another machine is listed: a name that came and went with the other machines would change the label of every agent of
+  // this machine each time). `machines` says, for this machine
+  // and every other one, whether its agents are in the list: a stale report or a failed or missing list is named, never shown as
+  // zero (the page's change feed reads it: an agent starts or ends only if it is the same in both snapshots and no list is cut).
+  // A machine with several reports (one machine under two spellings, or heard here and through dev) is shown by its best
+  // one: a list beats a failed list, that a missing one, that a stale report; of two equal ones the newer wins. A session already
+  // in the list (same sessionId) is listed once. This machine's own rows are never cut; of every other machine at most
+  // AGENTS_PER_MACHINE_MAX are listed, and no more once the list holds AGENTS_MAX rows (this machine's counted): the machine says
+  // so (`capped`). When this machine's own list cannot be read (its scan failed or took longer than the panel's time limit; a
+  // machine with no Claude homes is not this case, its list is a list with no agents) it is named in `machines` with the reason,
+  // its own rows are not trusted, and the other machines' agents are still listed; when no other machine has a list either, its
+  // own panel is returned as it was. `from` (the credits note's field)
+  // is never set. The page only: the machine's own report to dev carries its own panel (the sender reads the store, not this
+  // snapshot), so a lent agent is never reported back as its own.
+  const agentsFor = (base, sources) => {
+    const mine = base.panels?.agents
+    const selfHost = machineName(String(base.host || 'this machine'))
+    const count = (n) => (Number.isFinite(n) && n > 0 ? n : 0)
+    const names = (list) => (Array.isArray(list) ? list.filter((x) => typeof x === 'string').map((x) => cleanText(x, 80)).filter(Boolean) : [])
+    // what a machine's agents list is: a list (ok), no list at all (none), or one that could not be read (failed, with the reason)
+    const listOf = (a) => {
+      if (!isPlainObject(a)) return { state: 'none' }
+      if (a.ok !== true || !Array.isArray(a.rows)) return { state: 'failed', error: cleanText(a.ok === false ? a.error : 'the agents list was not a list', 200) }
+      return { state: 'ok' }
+    }
+    const own = listOf(mine)
+    const ownRows = own.state === 'ok' ? mine.rows.filter(isPlainObject).map((x) => (typeof x.machine === 'string' && x.machine ? x : { ...x, machine: selfHost })) : []
+    const RANK = { ok: 0, failed: 1, none: 2, stale: 3 }
+    const best = new Map() // first word of the name, lower case -> the report that tells most about that machine
+    for (const r of sources) {
+      if (!r || typeof r.host !== 'string') continue
+      const host = machineName(r.host)
+      if (!host || host.toLowerCase() === selfHost.toLowerCase()) continue
+      const reportedAt = typeof r.reportedAt === 'string' ? r.reportedAt : null
+      const a = r.panels?.agents
+      const list = r.stale === true ? { state: 'stale' } : listOf(a)
+      const found = { full: r.host, at: Number.isFinite(Date.parse(reportedAt)) ? Date.parse(reportedAt) : -Infinity, rows: [], accounts: [] }
+      if (list.state === 'stale') found.info = { host, state: 'stale', reportedAt }
+      else if (list.state === 'none') found.info = { host, state: 'none' }
+      else if (list.state === 'failed') found.info = { host, state: 'failed', error: list.error }
+      else {
+        found.info = { host, state: 'ok', total: count(a.total) }
+        found.rows = a.rows.filter((x) => isPlainObject(x) && typeof x.sessionId === 'string' && x.sessionId)
+        found.accounts = names(a.accounts)
+      }
+      const had = best.get(host.toLowerCase())
+      const better = !had || RANK[list.state] < RANK[had.info.state] || (RANK[list.state] === RANK[had.info.state] && (found.at > had.at || (found.at === had.at && found.full.localeCompare(had.full) < 0)))
+      if (better) best.set(host.toLowerCase(), found)
+    }
+    const others = [...best.values()].sort((a, b) => a.info.host.localeCompare(b.info.host))
+    // nothing to lend: this machine's own list could not be read and no other machine has one, so its panel stays as it was
+    if (own.state !== 'ok' && !others.some(({ info }) => info.state === 'ok')) return mine
+    const seen = new Set(ownRows.map((x) => x.sessionId))
+    const lent = []
+    for (const { info, rows } of others) {
+      if (info.state !== 'ok') continue
+      info.live = rows.length
+      info.shown = 0
+      for (const row of rows) {
+        if (seen.has(row.sessionId)) continue
+        if (info.shown >= AGENTS_PER_MACHINE_MAX || ownRows.length + lent.length >= AGENTS_MAX) { info.capped = true; continue }
+        seen.add(row.sessionId)
+        lent.push({ ...row, machine: typeof row.machine === 'string' && row.machine ? row.machine : info.host })
+        info.shown += 1
+      }
+    }
+    const rows = [...ownRows, ...lent]
+    const accounts = [...new Set([...(own.state === 'ok' ? names(mine.accounts) : []), ...others.flatMap((o) => o.accounts || [])])].slice(0, ACCOUNTS_MAX)
+    return {
+      ...(own.state === 'ok' ? mine : { ok: true, ms: count(mine?.ms), at: Number.isFinite(mine?.at) ? mine.at : now(), remotes: [] }),
+      rows,
+      accounts,
+      live: rows.length,
+      busy: rows.filter((x) => x.status === 'busy').length,
+      total: (own.state === 'ok' ? count(mine.total) : 0) + others.reduce((n, { info }) => n + (info.total || 0), 0),
+      machines: [own.state === 'ok' ? { host: selfHost, state: 'ok', live: ownRows.length, self: true } : { host: selfHost, ...own, self: true }, ...others.map(({ info }) => info)]
+    }
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
   // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
@@ -581,11 +672,13 @@ function createHub({
       .filter((r) => r && typeof r.host === 'string' && !held.has(r.host) && !held.has(shortHost(r.host)))
       .map((r) => ({ ...r, via: 'dev' }))
     const reportRows = [...own, ...extra.map(({ panels, ...r }) => ({ ...r, panels: withoutChats(panels) }))]
-    // a new panels object only when a list is lent: the store's own scan (cached, shared) is never written to
+    // a new panels object only when something is lent (credits, agents): the store's own scan (cached, shared) is never written to
     const credits = creditsFor(base, [...own, ...extra])
+    const agents = agentsFor(base, [...own, ...extra])
+    const lent = { ...(credits !== base.panels?.credits ? { credits } : {}), ...(agents !== base.panels?.agents ? { agents } : {}) }
     return {
       ...base,
-      ...(credits !== base.panels?.credits ? { panels: { ...base.panels, credits } } : {}),
+      ...(Object.keys(lent).length ? { panels: { ...base.panels, ...lent } } : {}),
       account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
       tiers: tierBlock,
