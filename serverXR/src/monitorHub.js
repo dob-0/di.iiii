@@ -661,7 +661,7 @@ function createHub({
   // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
   // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
   // never replacing a machine this server already holds.
-  async function getSnapshot({ selfBase = null, subjects = null, account = null } = {}) {
+  async function getSnapshot({ selfBase = null, subjects = null, account = null, shared = null } = {}) {
     const base = await store.getMonitor({ selfBase })
     const [tierBlock, spaceBlock] = await Promise.all([tiers(subjects), spaces()])
     const own = reports.list({ subjects })
@@ -675,10 +675,16 @@ function createHub({
     // a new panels object only when something is lent (credits, agents): the store's own scan (cached, shared) is never written to
     const credits = creditsFor(base, [...own, ...extra])
     const agents = agentsFor(base, [...own, ...extra])
-    const lent = { ...(credits !== base.panels?.credits ? { credits } : {}), ...(agents !== base.panels?.agents ? { agents } : {}) }
+    // PRs: this machine's own list when it has one; else the shared one from dev (no GitHub login needed here)
+    const sharedPrs = shared?.data?.pullRequests
+    const prs = base.panels?.pullRequests?.ok !== true && sharedPrs?.ok === true
+      ? { ok: true, ms: 0, at: Date.parse(sharedPrs.reportedAt) || now(), rows: sharedPrs.rows, open: sharedPrs.rows.length, drafts: sharedPrs.rows.filter((p) => p.draft).length, from: sharedPrs.from }
+      : null
+    const lent = { ...(credits !== base.panels?.credits ? { credits } : {}), ...(agents !== base.panels?.agents ? { agents } : {}), ...(prs ? { pullRequests: prs } : {}) }
     return {
       ...base,
       ...(Object.keys(lent).length ? { panels: { ...base.panels, ...lent } } : {}),
+      shared: shared ? { state: shared.state, at: shared.at || null, lastGoodAt: shared.lastGoodAt || null, data: shared.data || null } : null,
       account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
       tiers: tierBlock,
@@ -690,7 +696,40 @@ function createHub({
     }
   }
 
-  return { getSnapshot, reports, asks, selfTier, selfId }
+  // The SHARED picture (dev tier only, built from the owners' machine reports): one answer for every machine's Monitor.
+  // Machines with the version each reports, the freshest good pull request list, spaces, the owner's asks, and each machine's
+  // tasks/shows feed lines tagged with the machine. Bounded; nothing is probed here. Chats and credits are NOT in it (personal).
+  const SHARED_ROWS = 60
+  const pickFeed = (raw, name) => {
+    const rows = []
+    for (const r of raw) {
+      const p = r.panels?.[name]
+      if (!isPlainObject(p) || p.ok === false || !Array.isArray(p.rows)) continue
+      for (const x of p.rows.filter(isPlainObject)) rows.push({ machine: r.host, stale: now() - r.reportedAt > STALE_MS, ...x })
+    }
+    return rows.slice(0, SHARED_ROWS)
+  }
+  async function getShared({ subjects = null } = {}) {
+    const [tierBlock, spaceBlock] = await Promise.all([tiers(subjects), spaces()])
+    const raw = reports.raw({ subjects }).sort((a, b) => b.reportedAt - a.reportedAt)
+    const t = now()
+    const prSources = raw
+      .map((r) => ({ host: r.host, at: r.reportedAt, p: r.panels?.pullRequests }))
+      .filter(({ p }) => isPlainObject(p) && p.ok !== false && Array.isArray(p.rows))
+    const pr = prSources[0] || null // newest report first, so the freshest list wins
+    return {
+      generatedAt: new Date(t).toISOString(),
+      machines: raw.slice(0, SHARED_ROWS).map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, commit: r.commit, builtAt: r.builtAt })),
+      tiers: tierBlock.rows.slice(0, SHARED_ROWS).map((r) => ({ id: r.id, status: r.status, commit: r.commit, builtAt: r.builtAt, behindDev: r.behindDev ?? null, state: r.state || null })),
+      pullRequests: pr ? { ok: true, from: pr.host, reportedAt: new Date(pr.at).toISOString(), rows: pr.p.rows.filter(isPlainObject).slice(0, 40) } : { ok: false, rows: [], error: 'no machine has sent a pull request list' },
+      spaces: { ok: spaceBlock.ok, rows: spaceBlock.rows.slice(0, 200) },
+      asks: asksBlock(subjects),
+      shows: pickFeed(raw, 'shows'),
+      tasks: pickFeed(raw, 'tasks')
+    }
+  }
+
+  return { getSnapshot, getShared, reports, asks, selfTier, selfId }
 }
 
 /** The stream compares snapshots without the fields that change on every scan. */

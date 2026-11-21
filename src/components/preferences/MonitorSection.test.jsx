@@ -125,6 +125,22 @@ describe('MonitorSection', () => {
         expect(ids[0]).toBe('s:broken.service')
     })
 
+    it('the Shared tab shows the dev picture; the other tabs say they are this machine', async () => {
+        const data = contract({ host: 'studio-mac', shared: { state: 'ok', at: new Date().toISOString(), data: {
+            machines: [{ host: 'aylmo', reportedAt: new Date().toISOString(), stale: false, commit: 'abcdef1234' }],
+            pullRequests: { ok: true, from: 'aylmo', rows: [{ number: 5, title: 'Shared PR', draft: false }] },
+            spaces: { ok: true, rows: [] }, asks: { ok: true, rows: [] }, shows: [], tasks: []
+        } } })
+        getMonitor.mockResolvedValue(data)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        expect(document.querySelector('[data-this-machine]').textContent).toContain('This machine: studio-mac')
+        fireEvent.click(document.querySelector('[data-monitor-tab="shared"]'))
+        expect(document.querySelector('[data-shared-pr="5"]').textContent).toContain('Shared PR')
+        expect(document.querySelector('[data-shared-machine="aylmo"]')).toBeTruthy()
+        expect(document.querySelector('[data-this-machine]')).toBeNull()
+    })
+
     it('a chat opens the one drawer with every field, a link to its machine, the raw record, and the link keeps it', async () => {
         const data = contract({ chats: { ok: true, state: 'live', counts: { ask: 1, working: 0, idle: 0, total: 1 }, heardSecondsAgo: 3, rows: [
             { id: 'chat-1', title: 'Cinema job', group: 'ask', status: 'idle', says: 'waiting', asks: ['plug it in', 'and this'], idleMinutes: 4, failed: false, host: 'aylmo' }

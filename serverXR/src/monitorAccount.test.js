@@ -149,3 +149,43 @@ describe('the hub snapshot with an account', () => {
     expect(snap.reports.map((r) => r.host)).toEqual(['mine'])
   })
 })
+
+describe('the shared picture feed', () => {
+  const shared = { generatedAt: 't', machines: [{ host: 'aylmo', reportedAt: 'x', stale: false }], tiers: [], shows: [], tasks: [], pullRequests: { ok: true, from: 'aylmo', rows: [{ number: 1, title: 'a' }] }, spaces: { ok: true, rows: [{ slug: 's' }] }, asks: { ok: true, rows: [] }, evil: 'dropped' }
+  const okRes = { ok: true, status: 200, json: async () => ({ ok: true, shared }) }
+
+  it('signed out: no request; signed in: token goes to dev /shared only, never returned, unknown keys dropped', async () => {
+    let calls = 0
+    const feed0 = createAccountFeed({ home: homeWith(), fetchImpl: async () => { calls++ } })
+    expect(await feed0.shared()).toMatchObject({ state: 'signed-out', data: null })
+    expect(calls).toBe(0)
+    const seen = []
+    const feed = createAccountFeed({ home: homeWith(login), fetchImpl: async (url, opts) => { seen.push([url, opts.headers.Authorization]); return okRes } })
+    const out = await feed.shared()
+    expect(out.state).toBe('ok')
+    expect(out.data.machines[0].host).toBe('aylmo')
+    expect(out.data.evil).toBeUndefined()
+    expect(JSON.stringify(out)).not.toContain('secret-token-1')
+    expect(seen).toEqual([['https://dev.diiii.xyz/serverXR/api/monitor/shared', 'Bearer secret-token-1']])
+  })
+
+  it('dev not answering keeps the last good picture with its time; 404 is refused; 401 is expired', async () => {
+    let t = Date.parse('2026-11-21T10:00:00Z')
+    let status = 200
+    const feed = createAccountFeed({ home: homeWith(login), now: () => t, fetchImpl: async () => { if (status === 0) throw new Error('down'); return status === 200 ? okRes : { ok: false, status, json: async () => ({}) } } })
+    expect((await feed.shared()).state).toBe('ok')
+    t += 16000; status = 0
+    const off = await feed.shared()
+    expect(off).toMatchObject({ state: 'offline', lastGoodAt: '2026-11-21T10:00:00.000Z' })
+    expect(off.data.machines).toHaveLength(1)
+    t += 16000; status = 404
+    expect((await feed.shared()).state).toBe('refused')
+    t += 16000; status = 401
+    expect((await feed.shared()).state).toBe('expired')
+  })
+
+  it('a bad body or an oversize one is offline, not shown', async () => {
+    const feed = createAccountFeed({ home: homeWith(login), fetchImpl: async () => ({ ok: true, status: 200, json: async () => ({ ok: true, shared: { machines: 'x'.repeat(600000) } }) }) })
+    expect((await feed.shared()).state).toBe('offline')
+  })
+})

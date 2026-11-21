@@ -2288,3 +2288,12 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
     .monitor-version-item { grid-template-columns: 5.8rem minmax(0, 1fr) auto; }
     .monitor-version-hash { display: none; }
 }
+
+/* Shared tab: one picture from dev. Boxes fill the width (auto-fit); an old picture (dev not answering) is dimmed, not hidden. */
+.monitor-shared { display: flex; flex-direction: column; gap: var(--di-space-3); }
+.monitor-shared-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--di-space-3); align-items: start; }
+.monitor-shared-box { min-width: 0; }
+.monitor-shared.is-old .monitor-shared-grid { opacity: 0.7; }
+.monitor-this-machine { grid-column: 1 / -1; }
+/* titles in the Shared boxes wrap instead of being cut: the picture is for reading, not scanning */
+.monitor-shared .monitor-name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
