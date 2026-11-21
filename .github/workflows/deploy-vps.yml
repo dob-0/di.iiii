@@ -20,7 +20,6 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
 
 env:
   REGISTRY: ghcr.io
@@ -40,6 +39,10 @@ jobs:
     needs: test
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # Pushes the images to ghcr.io; only this job needs packages: write.
+    permissions:
+      contents: read
+      packages: write
     strategy:
       matrix:
         include:
