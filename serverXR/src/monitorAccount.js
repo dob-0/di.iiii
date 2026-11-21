@@ -41,6 +41,19 @@ const row = (r) => {
   return { host: r.host, reportedAt: Number.isFinite(at) ? new Date(at).toISOString() : null, stale: !Number.isFinite(at) || Date.now() - at > STALE_MS, panels: r.panels }
 }
 
+// the shared picture is kept only in the shape the page reads: known keys, arrays of plain objects, a size limit
+const LISTS = ['machines', 'tiers', 'shows', 'tasks']
+const plain = (v) => Boolean(v) && typeof v === 'object' && !Array.isArray(v)
+const bounded = (d) => {
+  try { if (JSON.stringify(d).length > 512 * 1024) return null } catch { return null }
+  const out = { generatedAt: typeof d.generatedAt === 'string' ? d.generatedAt.slice(0, 40) : null }
+  for (const k of LISTS) out[k] = (Array.isArray(d[k]) ? d[k] : []).filter(plain).slice(0, 60)
+  const prs = plain(d.pullRequests) ? d.pullRequests : {}
+  out.pullRequests = { ok: prs.ok === true, from: typeof prs.from === 'string' ? prs.from.slice(0, 64) : null, reportedAt: typeof prs.reportedAt === 'string' ? prs.reportedAt.slice(0, 40) : null, rows: (Array.isArray(prs.rows) ? prs.rows : []).filter(plain).slice(0, 40), ...(typeof prs.error === 'string' ? { error: prs.error.slice(0, 200) } : {}) }
+  for (const k of ['spaces', 'asks']) { const b = plain(d[k]) ? d[k] : {}; out[k] = { ok: b.ok !== false, rows: (Array.isArray(b.rows) ? b.rows : []).filter(plain).slice(0, 200) } }
+  return out
+}
+
 function createAccountFeed({ home = os.homedir(), fetchImpl = globalThis.fetch, now = () => Date.now(), base = DEV_BASE } = {}) {
   let cache = null // { at, token, promise }
 
@@ -82,7 +95,44 @@ function createAccountFeed({ home = os.homedir(), fetchImpl = globalThis.fetch, 
     } catch { return { state: 'offline', reports: [] } }
   }
 
-  return { mine }
+  // The SHARED picture from dev (GET /api/monitor/shared, owner's terminal login only). Same login, same cache rules as mine().
+  // States: ok, signed-out, expired, offline (dev not answering), refused (this account is not the owner: dev answers 404).
+  // After a failure the last good answer is kept (with when it was read) so the page can show it, marked old.
+  let sharedCache = null
+  let lastGood = null // { at, data }
+  async function shared() {
+    const login = readLogin()
+    const token = login?.token || ''
+    if (sharedCache && sharedCache.token === token && now() - sharedCache.at < sharedCache.ttl) return sharedCache.promise
+    if (lastGood && lastGood.token !== token) lastGood = null // another person: never their predecessor's picture
+    const promise = loadShared(login)
+    const entry = { at: now(), token, ttl: CACHE_BAD_MS, promise }
+    sharedCache = entry
+    promise.then((v) => { if (v.state === 'ok') entry.ttl = CACHE_MS })
+    return promise
+  }
+  async function loadShared(login) {
+    const keep = (state) => ({ state, data: lastGood?.data || null, lastGoodAt: lastGood ? new Date(lastGood.at).toISOString() : null })
+    if (!login) return keep('signed-out')
+    if (!fetchImpl) return keep('offline')
+    try {
+      const res = await fetchImpl(`${devBase(login.base) || base}/api/monitor/shared`, {
+        headers: { Authorization: `Bearer ${login.token}` },
+        signal: AbortSignal.timeout(TIMEOUT_MS)
+      })
+      if (res.status === 401) return keep('expired')
+      if (res.status === 404 || res.status === 403) return keep('refused')
+      if (!res.ok) return keep('offline')
+      const body = await res.json()
+      if (!body || body.ok !== true || !body.shared || typeof body.shared !== 'object') return keep('offline')
+      const data = bounded(body.shared)
+      if (!data) return keep('offline')
+      lastGood = { at: now(), token: login.token, data }
+      return { state: 'ok', at: new Date(lastGood.at).toISOString(), lastGoodAt: new Date(lastGood.at).toISOString(), data }
+    } catch { return keep('offline') }
+  }
+
+  return { mine, shared }
 }
 
 module.exports = { createAccountFeed, DEV_BASE }

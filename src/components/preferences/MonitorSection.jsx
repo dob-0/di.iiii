@@ -8,6 +8,7 @@ import MonitorMap, { useNarrow } from './MonitorMap.jsx'
 import { layoutMonitorMap } from './monitorMapLayout.js'
 import MonitorWorkspace from './MonitorWorkspace.jsx'
 import MonitorParts from './MonitorParts.jsx'
+import MonitorShared from './MonitorShared.jsx'
 import MonitorVersions from './MonitorVersions.jsx'
 import MonitorPrs from './MonitorPrs.jsx'
 import MonitorTasks, { TaskActions } from './MonitorTasks.jsx'
@@ -23,11 +24,11 @@ import { rowMatches, searchCounts } from './monitorDetail.js'
 // triple for state, motion under 0.2 s on named properties only.
 
 const POLL_MS = 5000
-const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work'], ['parts', 'Parts'], ['versions', 'Versions'], ['tasks', 'Tasks']]
+const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work'], ['parts', 'Parts'], ['versions', 'Versions'], ['tasks', 'Tasks'], ['shared', 'Shared']]
 const FLASH_MS = 2500
 const FULL_KEY = 'di.monitor.full'
 const SPARK_SAMPLES = 30
-const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace', 4: 'parts', 5: 'versions', 6: 'tasks' }
+const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace', 4: 'parts', 5: 'versions', 6: 'tasks', 7: 'shared' }
 const KEYS_HELP = [['1  2  3  4  5  6', 'Board, Map, Work, Parts, Versions, Tasks'], ['/', 'Filter everything'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
 
 // remembered per browser; storage can be blocked, so every touch is guarded
@@ -563,6 +564,14 @@ export default function MonitorSection({ onStats }) {
                 </div>
 
                 <div className="monitor-area-main monitor-main">
+                    {snap?.shared && tab !== 'shared' && tab !== 'versions' && tab !== 'tasks' ? (
+                        <div className="monitor-note monitor-this-machine" data-this-machine="">This machine{snap.host ? `: ${String(snap.host).split('.')[0]}` : ''} — its own chats, agents and services. The picture shared by every machine is in the Shared tab.</div>
+                    ) : null}
+                    {tab === 'shared' ? (
+                        <ModuleSection title="Shared" subtitle="One picture from the dev server, the same on every machine — machines, versions, pull requests, spaces, shows, asks, tasks">
+                            <MonitorShared shared={snap?.shared || null} query={query} />
+                        </ModuleSection>
+                    ) : null}
                     {tab === 'map' ? (
                         <ModuleSection className="monitor-map-section" title="Map" subtitle="Machines, tiers, spaces and shows — select a node for its details">
                             <MonitorMap map={snap?.map} selectedId={selected?.kind === 'node' ? selected.id : null} narrow={narrow}

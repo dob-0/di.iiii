@@ -72,7 +72,10 @@ function registerMonitorRoutes(router, {
   const snapshot = async () => {
     const tier = tierOfDeployEnv(deployEnv())
     if (tier === 'dev') return overview.getSnapshot({ selfBase: selfBase(), subjects: (ownerIds() || []).map((id) => String(id).trim()).filter(Boolean) })
-    if (tier === 'local') return overview.getSnapshot({ selfBase: selfBase(), account: await account.mine() })
+    if (tier === 'local') {
+      const [mine, shared] = await Promise.all([account.mine(), account.shared ? account.shared() : null])
+      return overview.getSnapshot({ selfBase: selfBase(), account: mine, shared })
+    }
     return overview.getSnapshot({ selfBase: selfBase() })
   }
 
@@ -197,6 +200,18 @@ function registerMonitorRoutes(router, {
     // a page on another site cannot read it with the visitor's cookie
     if (String(req.headers?.['sec-fetch-site'] || '') === 'cross-site') { next('route'); return }
     res.json({ ok: true, reports: overview.reports.list({ subjects: [String(req.authState.subject)], chats: true }) })
+  })
+
+  // The shared picture for every machine's local Monitor: the OWNER's terminal login only (the same 404 as everything here
+  // for anyone else), never a browser session, never cross-site. Built from the owners' reports, so it is the same for all.
+  router.get('/api/monitor/shared', async (req, res, next) => {
+    if (tierOfDeployEnv(deployEnv()) !== 'dev' || !isOwner(req, { terminal: true }) || req.authState.actor !== 'di.cli') { next('route'); return }
+    if (String(req.headers?.['sec-fetch-site'] || '') === 'cross-site') { next('route'); return }
+    try {
+      res.json({ ok: true, shared: await overview.getShared({ subjects: (ownerIds() || []).map((id) => String(id).trim()).filter(Boolean) }) })
+    } catch (error) {
+      res.status(500).json({ error: error.message || 'shared picture failed' })
+    }
   })
 
   router.post('/api/monitor/ask', gate, (req, res) => {

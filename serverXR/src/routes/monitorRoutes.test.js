@@ -290,3 +290,34 @@ describe('GET /api/monitor/mine', () => {
     expect((await run({ authenticated: true, type: 'session', subject: 'person-1' }, null, store)).hidden).toBe(true)
   })
 })
+
+describe('GET /api/monitor/shared', () => {
+  const run = async (state, deployEnv, headers = {}) => {
+    const router = makeRouter()
+    const calls = []
+    const shared = { ...hub, getShared: async (a) => { calls.push(a); return { machines: [] } } }
+    registerMonitorRoutes(router, { hub: shared, requireAuth: () => true, deployEnv: () => deployEnv, ownerIds: () => ['owner-1'] })
+    const [handler] = router.routes['GET /api/monitor/shared']
+    const res = makeRes()
+    let hidden = false
+    await handler({ socket: remote, headers, authState: state }, res, (arg) => { if (arg === 'route') hidden = true })
+    return hidden ? { hidden: true } : { res, calls }
+  }
+  const owner = { authenticated: true, type: 'cli-token', actor: 'di.cli', cliDbRole: 'admin', subject: 'owner-1' }
+
+  it('the owner terminal login on dev gets the shared picture, scoped to the owners', async () => {
+    const out = await run(owner, 'staging')
+    expect(out.res.body).toEqual({ ok: true, shared: { machines: [] } })
+    expect(out.calls).toEqual([{ subjects: ['owner-1'] }])
+  })
+
+  it('another signed-in person, a browser session, cross-site, an API token, prod and the local tier are hidden', async () => {
+    expect((await run({ ...owner, subject: 'person-1' }, 'staging')).hidden).toBe(true)
+    expect((await run({ authenticated: true, type: 'session', subject: 'owner-1' }, 'staging')).hidden).toBe(true)
+    expect((await run(owner, 'staging', { 'sec-fetch-site': 'cross-site' })).hidden).toBe(true)
+    expect((await run({ authenticated: true, type: 'api-token', subject: 'owner-1' }, 'staging')).hidden).toBe(true)
+    expect((await run(owner, 'production')).hidden).toBe(true)
+    expect((await run(owner, null)).hidden).toBe(true)
+    expect((await run({ authenticated: false }, 'staging')).hidden).toBe(true)
+  })
+})

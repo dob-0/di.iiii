@@ -182,6 +182,40 @@ describe('hub snapshot', () => {
     expect(snap.map.edges.some((e) => e.kind === 'shows-on')).toBe(true)
   })
 
+  it('getShared: machines with versions, freshest good PR list, spaces, asks, feeds tagged by machine; no chats or credits', async () => {
+    const { hub, reports } = build()
+    const pr = (n) => ({ ok: true, rows: [{ number: n, title: 't', draft: false }] })
+    reports.put({ host: 'old', panels: { pullRequests: pr(1) }, commit: 'aaaaaaa1' }, { subject: 'o', ledger: true })
+    reports.put({ host: 'broken', panels: { pullRequests: { ok: false, error: 'no gh', rows: [] } } }, { subject: 'o', ledger: true })
+    reports.put({ host: 'fresh', panels: { pullRequests: pr(2), shows: { ok: true, rows: [{ id: 's1', title: 'Show' }] }, credits: { ok: true, rows: [] } }, asks: [{ id: 'N1', state: 'NEW', touched: 't', text: 'do' }], commit: 'ccccccc3' }, { subject: 'o', ledger: true })
+    reports.put({ host: 'stranger', panels: { pullRequests: pr(99) } }, { subject: 'x' })
+    const shared = await hub.getShared({ subjects: ['o'] })
+    expect(shared.machines.map((m) => m.host).sort()).toEqual(['broken', 'fresh', 'old'])
+    expect(shared.machines.find((m) => m.host === 'fresh')).toMatchObject({ commit: 'ccccccc3', stale: false })
+    expect(shared.pullRequests).toMatchObject({ ok: true, rows: [{ number: expect.any(Number) }] })
+    expect(['old', 'fresh']).toContain(shared.pullRequests.from)
+    expect(shared.pullRequests.rows[0].number).not.toBe(99)
+    expect(shared.spaces.rows.map((r) => r.slug)).toContain('alpha')
+    expect(shared.asks.rows.map((a) => a.id)).toContain('N1')
+    expect(shared.shows).toEqual([expect.objectContaining({ machine: 'fresh', id: 's1' })])
+    expect(JSON.stringify(shared)).not.toContain('credits')
+    expect(JSON.stringify(shared)).not.toContain('chats')
+  })
+
+  it('getShared with no PR list says so; the snapshot lends the shared PR list only when its own failed', async () => {
+    const { hub } = build()
+    expect((await hub.getShared({ subjects: ['o'] })).pullRequests).toMatchObject({ ok: false, rows: [] })
+    const data = { pullRequests: { ok: true, from: 'aylmo', reportedAt: '2026-11-21T10:00:00.000Z', rows: [{ number: 7, title: 'x', draft: true }] } }
+    const withShared = await hub.getSnapshot({ shared: { state: 'offline', lastGoodAt: 'then', data } })
+    expect(withShared.shared).toMatchObject({ state: 'offline', lastGoodAt: 'then' })
+    const own = build({ store: { getMonitor: async () => ({ host: 'studio', panels: { ...panels, pullRequests: { ok: false, rows: [], error: 'gh: not logged in' } } }) } })
+    const lent = (await own.hub.getSnapshot({ shared: { state: 'ok', data } })).panels.pullRequests
+    expect(lent).toMatchObject({ ok: true, from: 'aylmo', open: 1, drafts: 1 })
+    const fine = build({ store: { getMonitor: async () => ({ host: 'studio', panels: { ...panels, pullRequests: { ok: true, rows: [{ number: 3 }] } } }) } })
+    expect((await fine.hub.getSnapshot({ shared: { state: 'ok', data } })).panels.pullRequests.rows[0].number).toBe(3)
+    expect((await hub.getSnapshot()).shared).toBeNull()
+  })
+
   it('a 3xx answer is not up; labels are never "undefined"; the serves edge goes to the tier that took the report', async () => {
     const { hub, reports } = build({ fetchImpl: async (url) => (url.endsWith('/api/health') ? { ok: false, status: 302 } : { ok: false, status: 302 }), hostname: () => 'studio.local' })
     reports.put({ host: 'aylmo', panels: { shows: { ok: true, rows: [{ ok: true }] }, agents: { ok: true, rows: [{ status: 'busy' }, {}] } } })
