@@ -54,8 +54,8 @@ export const diffSnapshots = (prev, next, now = Date.now()) => {
         if (old && old.ok !== n.ok) add(`probe:${n.id}`, n.ok ? 'success' : 'danger', n.ok ? `${n.name} answers again` : `${n.name} stopped answering`)
     }
 
-    // agents: a new one, one that left, one that changed what it is doing. An agent is one session: the hub lists a session once,
-    // whichever machine has it, and the page's rows are keyed by the session too.
+    // agents: a new one, one that left, one that changed what it is doing. An agent is one session: the hub lists a lent session once
+    // (not again if this machine lists it), and the page's rows are keyed by the session too.
     const agentKey = (a) => String(a.sessionId)
     const prevAgents = byKey(rows(pp.agents), agentKey)
     const nextAgents = byKey(rows(np.agents), agentKey)
@@ -66,7 +66,10 @@ export const diffSnapshots = (prev, next, now = Date.now()) => {
     // (`panels.agents.machines`: who is listed, in which state) is the same in both snapshots and no list is cut at its limit (a cut
     // list hides rows, and a real end shows one of them). A start or end in the same poll as such a change is not said; a change of
     // what an agent does always is. An older server sends no list: then every change counts, as before. A machine is known by the
-    // first word of its name, in lower case; an IP address is one name.
+    // first word of its name, in lower case; an IP address is one name. Known limit: the list does not say when a machine fails to
+    // read part of its own agents, an ssh read of another machine (`remoteAgents` in ~/.di/monitor.json, the page names the failed
+    // read) or a Claude login folder it cannot read: those agents leave the rows with the list unchanged and the feed says they ended,
+    // and started when they are back. It did so before this list existed, for this machine's own agents too.
     const wordOf = (s) => { const t = String(s ?? '').toLowerCase(); return /^\d{1,3}(\.\d{1,3}){3}$/.test(t) ? t : t.split('.')[0] }
     const machinesOf = (panel) => (Array.isArray(panel?.machines) ? panel.machines : null)
     const standing = (panel) => { const list = machinesOf(panel); return list && JSON.stringify(list.map((m) => [wordOf(m?.host), m?.state]).sort()) }

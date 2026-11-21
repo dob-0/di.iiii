@@ -387,7 +387,7 @@ describe('hub snapshot', () => {
       expect(snap.reports.find((r) => r.host === 'studio-mac').panels.agents).toEqual(sent)
     })
 
-    it('this machine\'s own rows are named with it whatever the other machines do (a name that came and went would make every agent end and start again in the change feed)', async () => {
+    it('this machine\'s own rows are named with it whatever the other machines do (a name that came and went would change the label of every agent of this machine each time)', async () => {
       const alone = own()
       const one = make(alone)
       const a = (await one.hub.getSnapshot()).panels.agents
