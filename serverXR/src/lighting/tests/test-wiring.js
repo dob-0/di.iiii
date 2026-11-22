@@ -452,5 +452,24 @@ check('the page shows a failing show save (status.save) in the top bar', () => {
   if (!/\$\('#savePill'\)/.test(js) || !/\bst\.save\b/.test(js)) throw new Error('app.js does not paint #savePill from status.save');
 });
 
+// The keyboard-mappings panel (the studio desk's keys button): every id the block reaches is
+// in the markup, the button is in the top bar, and the safety rules are still in the code:
+// B is refused, the Blackout buttons are not mappable, New goes through the ask bar, and a
+// mapped key fires between the scene keys and the digit row.
+check('the keyboard-mappings panel is wired: ids, top-bar button, B refused, New asks', () => {
+  for (const id of ['keysBtn', 'keyPanel', 'keyClose', 'keyNew', 'keyImport', 'keyImportFile', 'keyExport', 'keyHint', 'keyLearn', 'keyList']) {
+    if (!new RegExp('id="' + id + '"').test(html)) throw new Error('index.html has no #' + id);
+  }
+  if (html.indexOf('id="keysBtn"') > html.indexOf('</header>')) throw new Error('#keysBtn is not in the top bar');
+  const block = js.slice(js.indexOf('keyboard mappings: any button'), js.indexOf('// ---- the menu rows ----'));
+  if (!block) throw new Error('the keyboard-mappings block moved — update this check');
+  if (!block.includes("b: 'B is the blackout key")) throw new Error('B is no longer refused as a mapping');
+  if (!block.includes("matches('.blackout')")) throw new Error('the Blackout buttons are mappable again');
+  if (!block.includes("askThen('Clear every keyboard mapping")) throw new Error('New no longer asks through the ask bar');
+  if (/\bconfirm\(/.test(block)) throw new Error('the keys block uses a native confirm');
+  const kd = js.indexOf('fireKeymap(deskKeymap['), scene = js.indexOf('recallByName(sceneHotkeys[e.key.toLowerCase()])'), digits = js.indexOf('/^[1-9]$/.test(e.key) && S');
+  if (!(scene > 0 && kd > scene && digits > kd)) throw new Error('desk mappings must fire between the scene keys and the digit row');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
