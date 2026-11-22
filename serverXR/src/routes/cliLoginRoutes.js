@@ -143,7 +143,7 @@ const registerCliLoginRoutes = (router, {
       }
       const answered = decide({ userCode: req.body?.userCode, userId: who.user.id, approve: req.body.approve, spaceIds })
       if (!answered) return res.status(404).json({ error: 'unknown_code' })
-      logger.info(`[cli-token] decision ${JSON.stringify({ subject: who.user.id, approved: answered.approved, scope: pending?.scope || 'login', spaces: spaceIds ? spaceIds.length : undefined })}`)
+      logger.info(`[cli-token] decision ${JSON.stringify({ subject: who.user.id, approved: answered.approved, scope: pending ? pending.scope : null, spaces: spaceIds ? spaceIds.length : undefined })}`)
       res.json({ approved: answered.approved })
     } catch (error) { next(error) }
   })
