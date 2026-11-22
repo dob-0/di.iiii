@@ -712,3 +712,90 @@ describe('Displace, Wobble and Strobe (2026-11-01, the owner: "add more parametr
         expect(normaliseLook({ displace: 5, wobble: -1, wobbleBeats: 0, strobe: 9 })).toMatchObject({ displace: 1, wobble: 0, wobbleBeats: 0.25, strobe: 2 })
     })
 })
+
+describe('Speed, Split and Flicker (2026-11-06 evening, from the owner\'s laser.html: "red + green beams slightly misaligned")', () => {
+    const g = require('./laserGuards')
+    const { applyZone, normaliseZone, stillBeams } = require('./laserEngine')
+    const { flattenLaserPaths } = require('../../../shared/laserFrame.cjs')
+    const full = { xMin: -1, xMax: 1, yMin: -1, yMax: 1 }
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const hex = (p) => '#' + [p[2], p[3], p[4]].map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
+
+    it('a look keeps them in range, and one saved before them reads as off', () => {
+        expect(normaliseLook({})).toMatchObject({ speed: 1, split: 0, colour2: '#14ff28', flicker: 0 })
+        expect(normaliseLook({ speed: 9, split: 2, flicker: -1, colour2: 'green' })).toMatchObject({ speed: 4, split: 1, flicker: 0, colour2: '#14ff28' })
+        expect(normaliseLook({ speed: 0, colour2: '#0f0' })).toMatchObject({ speed: 0.25, colour2: '#00ff00' })
+        expect(LOOK_DEFAULTS).toMatchObject({ speed: 1, split: 0, colour2: '#14ff28', flicker: 0 })
+    })
+
+    it('Split draws the picture again in the split colour, a little apart, sharing the look\'s points', () => {
+        const look = normaliseLook({ shape: 'circle', size: 0.5, height: 0, points: 400, colour: '#ff0000', colour2: '#00ff00' })
+        const at = (l) => lookPointsAt(l, { t: 0, clock: clock(120, 0) })
+        const plain = strokes(at(look))
+        const split = strokes(at({ ...look, split: 0.5 }))
+        expect(plain).toHaveLength(1)
+        expect(split).toHaveLength(2)
+        expect(hex(split[0][0])).toBe('#ff0000')
+        expect(hex(split[1][0])).toBe('#00ff00')
+        expect(split[0].length + split[1].length).toBe(plain[0].length)
+        // The second beam is the first moved 0.02 of the field (Split 0.5 of SPLIT_REACH 0.04), the same way for every point.
+        const moves = split[1].map((p, i) => [p[0] - split[0][i][0], p[1] - split[0][i][1]])
+        for (const m of moves) {
+            expect(Math.hypot(m[0], m[1])).toBeCloseTo(0.02, 6)
+            expect(m[0]).toBeCloseTo(moves[0][0], 9)
+        }
+        expect(at({ ...look, split: 0 })).toEqual(at(look))
+    })
+
+    it('Flicker dips the brightness by up to half, new every frame, each beam and cube its own; the same moment draws the same', () => {
+        const look = normaliseLook({ shape: 'circle', size: 0.5, height: 0, colour: '#ff0000', flicker: 1 })
+        const red = (t, index = 0) => lookPointsAt(look, { t, clock: clock(120, 0), index }).find(isLit)[2]
+        const reds = Array.from({ length: 40 }, (_, k) => red(k * 50))
+        for (const r of reds) { expect(r).toBeGreaterThanOrEqual(0.5 - 1e-9); expect(r).toBeLessThanOrEqual(1) }
+        expect(new Set(reds.map((r) => r.toFixed(4))).size).toBeGreaterThan(30)
+        expect(red(1234)).toBe(red(1234))
+        expect(red(1210)).toBe(red(1240))
+        expect(red(1234, 1)).not.toBe(red(1234, 0))
+        expect(lookPointsAt({ ...look, flicker: 0 }, { t: 0, clock: clock(120, 0) }).find(isLit)[2]).toBe(1)
+    })
+
+    it('Speed runs the shape\'s own beat; Strobe keeps the desk\'s', () => {
+        const look = normaliseLook({ shape: 'volcano', size: 0.5, height: 0, points: 300 })
+        const at = (l, beat) => lookPointsAt(l, { t: beat * 500, clock: clock(120, 0) })
+        for (const beat of [0.3, 2.6, 5.2, 9.1]) expect(at({ ...look, speed: 2 }, beat)).toEqual(at(look, beat * 2))
+        expect(at({ ...look, speed: 0.5 }, 9.1)).toEqual(at(look, 4.55))
+        const lit = (beat) => at({ ...look, speed: 2, strobe: 1 }, beat).some(isLit)
+        expect([0.1, 0.4, 0.6, 0.9, 1.1].map(lit)).toEqual([true, true, false, false, true])
+    })
+
+    it('at Split 1, with Speed 4 or with Displace and Wobble in full, every seed look still fits the real cube (2333 points at 35 kpps) and is never still', () => {
+        const plan = g.pathPlan(g.DEFAULT_GUARDS, 35000)
+        const budget = g.frameBudget(35000, 6000)
+        for (const seed of SEED_LOOKS) {
+            for (const more of [{ speed: 4 }, { displace: 1, wobble: 1, wobbleBeats: 1 }]) {
+                const look = normaliseLook({ ...seed, size: 0.99, height: 0, x: 0, split: 1, ...more })
+                for (let beat = 0; beat < 16; beat += 0.5) {
+                    const raw = lookPointsAt(look, { t: beat * 500, clock: clock(120, 0) })
+                    if (!raw.some(isLit)) continue
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(raw, { budget: null }).points, normaliseZone(full)).points, plan).points
+                    const label = `${seed.id} ${JSON.stringify(more)} beat ${beat}`
+                    expect(frame.length, label).toBeLessThanOrEqual(budget)
+                    expect(stillBeams(frame), label).toEqual([])
+                }
+            }
+        }
+    })
+
+    it('a picture too busy to draw twice in one pass stays one beam with all its points; Strands always gets both', () => {
+        const at = (l, beat = 0) => lookPointsAt(l, { t: beat * 500, clock: clock(120, 0) })
+        const galaxy = normaliseLook({ ...SEED_LOOKS.find((l) => l.id === 'galaxy'), size: 0.99, height: 0, x: 0 })
+        expect(at({ ...galaxy, split: 1 })).toEqual(at(galaxy))
+        const strands = normaliseLook({ ...SEED_LOOKS.find((l) => l.id === 'strands'), size: 1, height: 0, x: 0 })
+        expect(strands).toMatchObject({ shape: 'strands', colour: '#ff190a', colour2: '#14ff28', split: 0.25, flicker: 0.4 })
+        for (let beat = 0; beat < 16; beat += 1 / 8) expect(strokes(at(strands, beat)), `beat ${beat}`).toHaveLength(2)
+    })
+})

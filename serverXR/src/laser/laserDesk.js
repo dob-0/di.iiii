@@ -82,6 +82,11 @@ const LOOK_DEFAULTS = Object.freeze({
     wobble: 0, // 0…1: a ripple runs along every line, once round every wobbleBeats
     wobbleBeats: 1,
     strobe: 0, // flashes per beat, 0 (off) to 2: the picture is on for the first half of each
+    // From the owner's laser.html (2026-11-06 evening), shared/laserLook.cjs SPLIT_REACH:
+    speed: 1, // 0.25…4: how fast the shape moves by itself against the desk's beat
+    split: 0, // 0…1: the picture again in colour2, a little apart, as a laser's misaligned colours (red + green = yellow)
+    colour2: '#14ff28', // the split beam's colour
+    flicker: 0, // 0…1: each beam's brightness dips at random every frame, by up to half
     cubes: 'all' // 'all' or the cube ids this look draws on; the others are held dark
 })
 
@@ -89,9 +94,9 @@ const shapeOf = (v) => {
     const names = shapeListOf(v).filter((s) => LASER_SHAPES.includes(s))
     return names.length ? names.join(',') : LOOK_DEFAULTS.shape
 }
-const colourOf = (v) => {
+const colourOf = (v, fallback = LOOK_DEFAULTS.colour) => {
     const text = String(v ?? '').trim()
-    if (!/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(text)) return LOOK_DEFAULTS.colour
+    if (!/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(text)) return fallback
     const rgb = parseLaserColour(text)
     return '#' + rgb.map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
 }
@@ -156,6 +161,10 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
         wobble: clamp(num(pick('wobble'), 0), 0, 1),
         wobbleBeats: clamp(num(pick('wobbleBeats'), 1), 0.25, 64),
         strobe: clamp(num(pick('strobe'), 0), 0, 2),
+        speed: clamp(num(pick('speed'), 1), 0.25, 4),
+        split: clamp(num(pick('split'), 0), 0, 1),
+        colour2: colourOf(pick('colour2'), LOOK_DEFAULTS.colour2),
+        flicker: clamp(num(pick('flicker'), 0), 0, 1),
         cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all'
     }
 }
@@ -253,7 +262,13 @@ const SEED_LOOKS = [
     { id: 'bubble', name: 'Bubble', shape: 'bubble', colour: '#ff4000', size: 0.5, points: 500 },
     { id: 'crack', name: 'Crack', shape: 'crack', colour: '#ffa000', size: 0.5, points: 500 },
     { id: 'drip', name: 'Drip', shape: 'drip', colour: '#ff2010', size: 0.5, points: 600 },
-    { id: 'lava-show', name: 'Lava', shape: 'magma,lava,bubble,drip,crack,eruption', cycle: 16, colour: '#ff4000', size: 0.5, points: 600 }
+    { id: 'lava-show', name: 'Lava', shape: 'magma,lava,bubble,drip,crack,eruption', cycle: 16, colour: '#ff4000', size: 0.5, points: 600 },
+    // The same evening, "okay doing lava laser animation": the lava story in one line over four bars (a drop falls into
+    // the pool, the pool swells into a volcano, it erupts, it melts back).
+    { id: 'volcano', name: 'Volcano', shape: 'volcano', colour: '#ff4000', size: 0.5, points: 600 },
+    // Then the owner's laser.html: "organic, tangled, wandering strands", in its own colours, red split with green (its
+    // brief: "red + green beams slightly misaligned (they turn yellow where they overlap)"), and its flicker.
+    { id: 'strands', name: 'Strands', shape: 'strands', colour: '#ff190a', colour2: '#14ff28', split: 0.25, flicker: 0.4, size: 0.5, points: 600 }
 ].map((look) => normaliseLook(look))
 // The seed looks a bank saved before `seeded` was kept (2026-10-29 evening) had been offered: the first fourteen.
 const FIRST_SEEDS = ['ring', 'star', 'fan', 'wave', 'triangle', 'square', 'spiral', 'scan', 'galaxy', 'sunflower', 'noisy', 'grid', 'td-cycle', 'pairs']
