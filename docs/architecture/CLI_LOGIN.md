@@ -161,6 +161,13 @@ No second flow: the same codes, limits, ten minutes, `/device` page.
 8. **`di login` offers it.** After a sign-in on a terminal, one Enter runs `di connect` (`n` or `--no-connect` skips; no terminal, no question).
    Nothing in connect needs a login: an install without one works alone as before.
 
+9. **A connect key lives on its person's right** (review 2026-11-22). Connect keys carry a server-set `connect` flag and a `machine_tag` column
+   (the label is display only; a hand-made key labelled like one gets nothing from sync, revoke or the machines list). At every use the account
+   must exist and still own or trusted-edit the (untrashed) space, else the key answers as no key. One key per (machine, space) ever (unique index):
+   a revoked row stays, so ending one space's key is not undone by the next sync, and parallel syncs cannot double-mint; an expired row is cleared
+   first. Approving a connect needs a positive sign-in cookie (`via: signin`) and a separate session secret, like minting a manage key.
+   Not done: the same use-time check for hand-made user-owned keys, and a "blocked account" state (none exists in `users`).
+
 **What did not change.** `cliTokenGate.js`: a `dii_cli_` login still cannot mint a key or approve a code (`not_through_cli`); the consent
 is the signed-in browser's. Tests: `serverXR/src/connectContracts.test.js`, `scripts/di/connect.test.js`,
 `src/pages/DeviceLoginPage.test.jsx` ("di connect" block).

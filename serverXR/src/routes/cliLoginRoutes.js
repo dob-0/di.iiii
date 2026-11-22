@@ -41,7 +41,8 @@ const registerCliLoginRoutes = (router, {
   startLimiter = (req, res, next) => next(),
   pollLimiter = (req, res, next) => next(),
   answerLimiters = [],
-  listSpaces = async () => []
+  listSpaces = async () => [],
+  isSignedInPerson = () => true
 }) => {
   const unavailable = (res) => res.status(404).json({ error: 'login_not_available' })
 
@@ -135,6 +136,7 @@ const registerCliLoginRoutes = (router, {
       const pending = describePending(req.body?.userCode)
       let spaceIds = null
       if (pending && isConnectScope(pending.scope) && req.body.approve) {
+        if (!isSignedInPerson(who.state)) return res.status(403).json({ error: 'signin_required' })
         // The ticked list is cut down to what this person may connect; nothing else can be asked for by id.
         if (!Array.isArray(req.body.spaceIds)) return res.status(400).json({ error: 'spaceIds must be a list' })
         const allowed = new Set((await connectableSpaces(who.user.id, listSpaces)).map((space) => space.id))

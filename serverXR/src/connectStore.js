@@ -13,6 +13,7 @@
 const crypto = require('node:crypto')
 const { getDb } = require('./db')
 const { mintSyncKey, resolveSyncKey, revokeSyncKey, TTL_MS } = require('./syncKeyStore')
+const { findUserById } = require('./userStore')
 
 const CONNECT_LABEL_PREFIX = 'connect '
 const MAX_SPACES = 200
@@ -58,7 +59,13 @@ const mintConnectKeys = async ({ userId, spaceIds, machine, listSpaces, now = Da
   for (const id of new Set(spaceIds)) {
     const space = allowed.get(id)
     if (!space) continue
-    const { token, key } = mintSyncKey({ spaceId: id, ownerUserId: userId, label, ttlMs: TTL_MS.edit, scope: 'edit' })
+    let minted
+    // (machine, space) is unique: a second mint for the same pair — a parallel sync, or a space whose key was revoked on purpose — is refused here.
+    try { minted = mintSyncKey({ spaceId: id, ownerUserId: userId, label, ttlMs: TTL_MS.edit, scope: 'edit', connect: true, machineTag: tag }) } catch (error) {
+      if (/UNIQUE|constraint/i.test(String(error?.message || error?.code || ''))) continue
+      throw error
+    }
+    const { token, key } = minted
     out.push({ spaceId: id, name: space.label, key: token, keyId: key.id, expiresAt: now + TTL_MS.edit })
   }
   return out
@@ -68,7 +75,7 @@ const mintConnectKeys = async ({ userId, spaceIds, machine, listSpaces, now = Da
 // not made by a connect — is refused, so this route is no way to revoke the keys a person made by hand.
 const revokeOwnConnectKey = (token) => {
   const resolved = resolveSyncKey(token)
-  if (!resolved || resolved.scope !== 'edit' || !String(resolved.label || '').startsWith(CONNECT_LABEL_PREFIX)) return false
+  if (!resolved || resolved.scope !== 'edit' || !resolved.connect) return false
   revokeSyncKey(resolved.spaceId, resolved.keyId)
   return true
 }
@@ -77,17 +84,17 @@ const revokeOwnConnectKey = (token) => {
 const listConnectedMachines = async (userId, listSpaces, now = Date.now()) => {
   if (!userId) return []
   const rows = getDb().prepare(
-    `SELECT * FROM space_sync_keys WHERE owner_user_id = ? AND revoked = 0 AND label LIKE 'connect %' AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at`
+    `SELECT * FROM space_sync_keys WHERE owner_user_id = ? AND revoked = 0 AND connect = 1 AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at`
   ).all(userId, now)
   const names = new Map((await listSpaces()).map((meta) => [meta.id, meta.label || meta.slug || meta.id]))
   const machines = new Map()
   for (const row of rows) {
-    const parsed = parseLabel(row.label)
-    if (!parsed) continue
-    const machine = machines.get(parsed.tag) || { id: parsed.tag, name: parsed.name, since: parsed.date, lastUsedAt: null, spaces: [] }
+    if (!row.machine_tag) continue
+    const parsed = parseLabel(row.label) || { name: 'a machine', date: '' }
+    const machine = machines.get(row.machine_tag) || { id: row.machine_tag, name: parsed.name, since: parsed.date, lastUsedAt: null, spaces: [] }
     machine.spaces.push({ id: row.space_id, label: names.get(row.space_id) || row.space_id })
     if (row.last_used_at && row.last_used_at > (machine.lastUsedAt || 0)) machine.lastUsedAt = row.last_used_at
-    machines.set(parsed.tag, machine)
+    machines.set(row.machine_tag, machine)
   }
   return [...machines.values()].sort((a, b) => b.since.localeCompare(a.since))
 }
@@ -96,8 +103,8 @@ const listConnectedMachines = async (userId, listSpaces, now = Date.now()) => {
 const disconnectMachine = (userId, tag) => {
   if (!userId || !/^[0-9a-f]{8}$/.test(String(tag || ''))) return 0
   const res = getDb().prepare(
-    `UPDATE space_sync_keys SET revoked = 1 WHERE owner_user_id = ? AND revoked = 0 AND label LIKE 'connect %' AND label LIKE ?`
-  ).run(userId, `% ~${tag}`)
+    `UPDATE space_sync_keys SET revoked = 1 WHERE owner_user_id = ? AND revoked = 0 AND connect = 1 AND machine_tag = ?`
+  ).run(userId, tag)
   return res.changes
 }
 
@@ -107,16 +114,30 @@ const disconnectMachine = (userId, tag) => {
 const EDIT_SCOPE = 'edit'
 const keyHasScope = (key, scope) => key.scope === scope
 
+// Does this connect key still carry its person's right to the space? Checked at every use, not only at minting:
+// the account must still exist, and the person must still own the space or be a trusted editor of it (not trashed).
+const connectKeyHolds = (key) => {
+  if (!key || !key.connect || !key.ownerUserId) return false
+  try {
+    if (!findUserById(key.ownerUserId)) return false
+    const row = getDb().prepare('SELECT owner_user_id, trusted_user_ids, deleted_at FROM spaces WHERE id = ?').get(key.spaceId)
+    if (!row || row.deleted_at) return false
+    let trusted = []
+    try { const list = JSON.parse(row.trusted_user_ids || '[]'); trusted = Array.isArray(list) ? list.map(String) : [] } catch { trusted = [] }
+    return row.owner_user_id === key.ownerUserId || trusted.includes(key.ownerUserId)
+  } catch { return false }
+}
+
 const syncConnectedMachine = async ({ token, listSpaces, now = Date.now() }) => {
   const resolved = resolveSyncKey(token)
-  const parsed = resolved && keyHasScope(resolved, EDIT_SCOPE) ? parseLabel(resolved.label) : null
-  if (!parsed || !resolved.ownerUserId) return null
-  const have = new Set(getDb().prepare(
-    `SELECT space_id FROM space_sync_keys WHERE owner_user_id = ? AND revoked = 0 AND label LIKE ?`
-  ).all(resolved.ownerUserId, `% ~${parsed.tag}`).map((row) => row.space_id))
+  if (!resolved || !keyHasScope(resolved, EDIT_SCOPE) || !resolved.machineTag || !connectKeyHolds(resolved)) return null
+  const db = getDb()
+  // A key past its end is dead anyway; clearing it lets the pair be minted again. Revoked rows stay: that is the memory of "not this one".
+  db.prepare('DELETE FROM space_sync_keys WHERE machine_tag = ? AND revoked = 0 AND expires_at IS NOT NULL AND expires_at <= ?').run(resolved.machineTag, now)
+  const have = new Set(db.prepare('SELECT space_id FROM space_sync_keys WHERE machine_tag = ?').all(resolved.machineTag).map((row) => row.space_id))
   const wanted = (await connectableSpaces(resolved.ownerUserId, listSpaces)).filter((space) => !have.has(space.id)).map((space) => space.id)
-  const keys = await mintConnectKeys({ userId: resolved.ownerUserId, spaceIds: wanted, listSpaces, now, label: resolved.label })
+  const keys = await mintConnectKeys({ userId: resolved.ownerUserId, spaceIds: wanted, listSpaces, now, label: resolved.label, tag: resolved.machineTag })
   return { userId: resolved.ownerUserId, keys }
 }
 
-module.exports = { listConnectedMachines, disconnectMachine, syncConnectedMachine, parseLabel, connectableSpaces, mintConnectKeys, revokeOwnConnectKey, connectLabel, roleIn, CONNECT_LABEL_PREFIX }
+module.exports = { connectKeyHolds, listConnectedMachines, disconnectMachine, syncConnectedMachine, parseLabel, connectableSpaces, mintConnectKeys, revokeOwnConnectKey, connectLabel, roleIn, CONNECT_LABEL_PREFIX }

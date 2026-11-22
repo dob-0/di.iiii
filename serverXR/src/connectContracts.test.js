@@ -81,8 +81,8 @@ const seedAccount = (server, id, { name = id, role = 'editor', spaces = [] } = {
     write(server, `INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
         VALUES (?, 'github', ?, ?, ?, ?, ?, ?, ?)`, id, id, `${id}@example.com`, name, role, JSON.stringify(spaces), now, now)
 }
-const cookieFor = (subject, { role = 'editor', spaces = [] } = {}) => {
-    const { value } = createAuthSessionValue({ secret: SESSION_SECRET, session: { subject, label: subject, role, spaces, tokenVersion: 0 } })
+const cookieFor = (subject, { role = 'editor', spaces = [], via = 'signin' } = {}) => {
+    const { value } = createAuthSessionValue({ secret: SESSION_SECRET, session: { subject, label: subject, role, spaces, tokenVersion: 0, ...(via ? { via } : {}) } })
     return { Cookie: `dii_serverxr_session=${value}` }
 }
 const bearer = (token, extra = {}) => ({ Authorization: `Bearer ${token}`, ...extra })
@@ -273,5 +273,74 @@ describe('di connect — one login, every space of the person', () => {
         let last = null
         for (let i = 0; i < 11; i += 1) last = await post(server, '/api/auth/device/lookup', { userCode: started.userCode }, ann)
         expect(last.status).toBe(429)
+    })
+})
+
+describe('di connect — review fixes (keys live on the right, one key per machine and space)', () => {
+    const connectKeys = async (server, person, spaceIds, label) => {
+        const started = await startConnect(server, label)
+        expect((await post(server, '/api/auth/device/decision', { userCode: started.userCode, approve: true, spaceIds }, person)).status).toBe(200)
+        return (await (await post(server, '/api/auth/device/token', { deviceCode: started.deviceCode })).json()).keys
+    }
+
+    it('a connect key stops working when the person loses the role, the space is trashed, or the account is deleted', async () => {
+        const { server, ann } = await connectSetup()
+        const keys = await connectKeys(server, ann, ['ann-space', 'ben-space'])
+        const byId = Object.fromEntries(keys.map((k) => [k.spaceId, k.key]))
+        expect(await keyWorks(server, byId['ben-space'], 'ben-space')).toBe(200)
+        own(server, 'ben-space', 'ben', [])   // Ann is no longer an editor there
+        expect(await keyWorks(server, byId['ben-space'], 'ben-space')).toBeGreaterThanOrEqual(401)
+        expect(await keyWorks(server, byId['ann-space'], 'ann-space')).toBe(200)
+        write(server, 'UPDATE spaces SET deleted_at = ? WHERE id = ?', Date.now(), 'ann-space')
+        expect(await keyWorks(server, byId['ann-space'], 'ann-space')).toBeGreaterThanOrEqual(401)
+        write(server, 'UPDATE spaces SET deleted_at = NULL WHERE id = ?', 'ann-space')
+        expect(await keyWorks(server, byId['ann-space'], 'ann-space')).toBe(200)
+        write(server, 'DELETE FROM users WHERE id = ?', 'ann')
+        expect(await keyWorks(server, byId['ann-space'], 'ann-space')).toBeGreaterThanOrEqual(401)
+    })
+
+    it('sync refuses a deleted account, a lost role on the shown key, and ignores nothing about expiry', async () => {
+        const { server, ann } = await connectSetup()
+        const keys = await connectKeys(server, ann, ['ann-space'])
+        write(server, 'UPDATE space_sync_keys SET expires_at = ? WHERE machine_tag IS NOT NULL', Date.now() - 1000)
+        expect((await post(server, '/api/auth/connect/sync', {}, bearer(keys[0].key))).status).toBe(404)
+        write(server, 'UPDATE space_sync_keys SET expires_at = ? WHERE machine_tag IS NOT NULL', Date.now() + 100000)
+        expect((await post(server, '/api/auth/connect/sync', {}, bearer(keys[0].key))).status).toBe(200)
+        write(server, 'DELETE FROM users WHERE id = ?', 'ann')
+        expect((await post(server, '/api/auth/connect/sync', {}, bearer(keys[0].key))).status).toBe(404)
+    })
+
+    it('a space whose key was ended on purpose is not minted again by the next sync, and parallel syncs mint each space once', async () => {
+        const { server, ann } = await connectSetup()
+        const keys = await connectKeys(server, ann, ['ann-space'])
+        own(server, 'nobody-space', 'ben', ['ann'])
+        const [a, b] = await Promise.all([1, 2].map(() => post(server, '/api/auth/connect/sync', {}, bearer(keys[0].key))))
+        expect([a.status, b.status]).toEqual([200, 200])
+        const perSpace = rows(server, 'SELECT space_id, COUNT(*) AS n FROM space_sync_keys GROUP BY space_id')
+        for (const row of perSpace) expect(row.n).toBe(1)
+        // The person ends the key of one space by hand: it stays ended.
+        write(server, "UPDATE space_sync_keys SET revoked = 1 WHERE space_id = 'nobody-space'")
+        const again = await (await post(server, '/api/auth/connect/sync', {}, bearer(keys[0].key))).json()
+        expect(again.keys.map((k) => k.spaceId)).not.toContain('nobody-space')
+        expect(rows(server, "SELECT COUNT(*) AS n FROM space_sync_keys WHERE space_id = 'nobody-space'")[0].n).toBe(1)
+    })
+
+    it('a hand-made key with a connect-looking label cannot sync or be ended through the connect routes', async () => {
+        const { server, ann } = await connectSetup()
+        const made = await (await post(server, '/api/spaces/ann-space/sync-keys', { label: 'connect fake 2026-11-22 ~abcdef12' }, bearer(API_TOKEN))).json()
+        expect(made.token).toBeTruthy()
+        expect((await post(server, '/api/auth/connect/sync', {}, bearer(made.token))).status).toBe(404)
+        expect((await post(server, '/api/auth/connect/revoke', {}, bearer(made.token))).status).toBe(404)
+        expect(await keyWorks(server, made.token, 'ann-space')).toBe(200)
+        const machines = await (await fetch(`${server.baseUrl}/api/auth/connect/machines`, { headers: ann })).json()
+        expect(machines.machines).toEqual([])
+    })
+
+    it('a cookie that is not a positive sign-in cannot approve a connect', async () => {
+        const { server } = await connectSetup()
+        const started = await startConnect(server)
+        const noStamp = await post(server, '/api/auth/device/decision', { userCode: started.userCode, approve: true, spaceIds: ['ann-space'] }, cookieFor('ann', { via: null }))
+        expect(noStamp.status).toBe(403)
+        expect(rows(server, 'SELECT COUNT(*) AS n FROM space_sync_keys')[0].n).toBe(0)
     })
 })
