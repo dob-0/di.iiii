@@ -48,7 +48,7 @@
   <nav class="pages">
     <button class="page-tab is-active" data-page="setup">Setup</button>
     <button class="page-tab" data-page="control">Control</button>
-    <button class="page-tab" data-page="stage" title="The stage as a whole workspace — lights, objects, video">Stage</button>
+    <button class="page-tab" data-page="stage" title="The whole stage on one page — lights, objects, video">Stage</button>
     <button class="page-tab" data-page="touch">Touch</button>
     <button class="page-tab" data-page="fader">Fader</button>
     <!-- MIDI was a separate midi.html with its own stylesheet and its own map in one
@@ -690,6 +690,7 @@
     <div class="pane attrpane">
       <div class="attr-head">
         <span class="who" id="attrWho">nothing selected</span>
+        <label class="autowhite" id="autoWhiteWrap" title="Move the shared colour onto the W channel" hidden><input type="checkbox" id="autoWhite"> Auto white</label>
         <button class="sq" id="attrOn">On</button>
         <button class="sq" id="attrOff">Off</button>
       </div>
@@ -743,7 +744,7 @@
       </div>
     </div>
     <aside class="pane sp-insp" aria-label="Inspector" data-obj-keep>
-      <div class="pane-head"><h2 id="spInspTitle">Inspector</h2><span class="flex"></span><button class="sq" id="spInspClose" title="Hide the inspector — the stage gets the room">⟩</button></div>
+      <div class="pane-head"><h2 id="spInspTitle">Inspector</h2><span class="flex"></span><button class="sq" id="spInspClose" title="Hide the inspector — the stage gets the width">⟩</button></div>
       <div class="sp-insp-body" id="spInspBody"></div>
       <!-- Effects (her ask, 2026-09-26: "like colours, I want effects there too"): the Control
            rail's pads — brightness effects act on the selected lights, or the whole rig when
