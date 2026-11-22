@@ -3420,6 +3420,322 @@ document.addEventListener('pointerdown', (e) => {
   closeBindPop();
 });
 
+/* =============== keyboard mappings: any button, any key (ported from the studio desk) =============== */
+
+// Open the panel (the ⌨ in the top bar), click any button on the desk, press a key, and
+// that key IS that button from then on: FX pads, Next scene, Tap, a container tab, a page,
+// a group... Scenes keep going through sceneHotkeys (by NAME, so the tile badges and the
+// right-click "Bind key" stay one truth); everything else lands in deskKeymap as
+// {kind, id, label} and fires by clicking the very element it was learned from, so it
+// inherits that button's own wiring and its own messages. Bindings are this browser's,
+// like the scene keys; Export/Import carry both as one file.
+const KEYMAP_STORE = 'deskKeymap';
+let deskKeymap = {};                     // { key: { kind, id, label } }
+try {
+  const raw = JSON.parse(localStorage.getItem(KEYMAP_STORE));
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) deskKeymap = raw;
+} catch (e) { /* start empty */ }
+function saveKeymap() {
+  try { localStorage.setItem(KEYMAP_STORE, JSON.stringify(deskKeymap)); } catch (e) { /* session only */ }
+}
+let keyLearnTarget = null;               // {kind,id,label,el} while waiting for a key
+let keyPanelOpen = false;
+let keyFiring = false;                   // a mapping's own click must not be learned as a pick
+
+// An element's own words, without the key badge or the count it carries.
+const keyOwnText = (el) => [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\s+/g, ' ').trim();
+
+// What a press in learn mode resolves to. Order matters: a scene tile carries data-id and
+// sits inside nothing else mappable; an FX pad has data-fx (the library list uses data-fx
+// for fixture keys, hence .fxpad); a container tab has data-bank (Control) or data-tab (Touch).
+function keyTargetOf(el) {
+  const c = (sel) => el.closest && el.closest(sel);
+  let t;
+  if ((t = c('.bankrow[data-id], .tbtn[data-id]'))) { const sc = S && S.scenes.find((s) => s.id === t.dataset.id); return sc ? { kind: 'scene', id: sc.name, label: sc.name, el: t } : null; }
+  if ((t = c('.fxpad[data-fx]'))) return { kind: 'fx', id: t.dataset.fx, label: 'FX · ' + keyOwnText(t), el: t };
+  if ((t = c('.btab[data-bank]')) && t.dataset.bank !== '+') return { kind: 'bank', id: t.dataset.bank, label: 'Container · ' + keyOwnText(t), el: t };
+  if ((t = c('.btab[data-tab]'))) return { kind: 'tbank', id: t.dataset.tab, label: 'Container · ' + keyOwnText(t), el: t };
+  if ((t = c('.page-tab[data-page]'))) return { kind: 'page', id: t.dataset.page, label: 'Page · ' + keyOwnText(t), el: t };
+  if ((t = c('.gtab[data-g]'))) return { kind: 'group', id: t.dataset.g, label: 'Group · ' + keyOwnText(t), el: t };
+  if ((t = c('.fxspat'))) return { kind: 'css', id: '.fxspat:nth-of-type(' + ([...t.parentElement.querySelectorAll('.fxspat')].indexOf(t) + 1) + ')', label: 'FX follow · ' + keyOwnText(t), el: t };
+  if ((t = c('button[id]')) && !t.closest('#keyPanel') && !t.closest('#bindPop') && !t.closest('#deskAsk')) {
+    return { kind: 'btn', id: t.id, label: keyButtonLabel(t), el: t };
+  }
+  return null;
+}
+// A button's name for the list: its text, else its title, else its id.
+function keyButtonLabel(b) {
+  const txt = keyOwnText(b);
+  const title = (b.title || '').split(/ — |\(/)[0].trim();
+  return (txt && txt.length <= 24 && !/^[^\w]+$/.test(txt) ? txt : '') || title || b.id;
+}
+// Two things on this desk are deliberately NOT a key's to press: blackout is the one-way B
+// (panicKeys.js; a mapped key could release it, or repeat), and the output switch has its
+// own two-press arm. Said at the pick, so nobody learns it at the desk.
+function keyRefusal(t) {
+  if (t.kind !== 'btn' || !t.el) return null;
+  if (t.el.matches('.blackout')) return 'Blackout is the B key and only ever turns blackout on — pick something else';
+  if (t.id === 'outEnable') return 'The output switch stays a deliberate click — pick something else';
+  return null;
+}
+const KEY_CATEGORY = { scene: 'Scene', fx: 'FX', bank: 'Container', tbank: 'Container', page: 'Page', group: 'Group', css: 'FX', btn: 'Desk' };
+
+// Fire a mapping: find the element it was learned from and click it, hidden or not (a page
+// you are not on still has its buttons in the DOM, and click() does not care).
+function fireKeymap(m) {
+  keyFiring = true;
+  try { return fireKeymapInner(m); } finally { keyFiring = false; }
+}
+function fireKeymapInner(m) {
+  let el = null;
+  if (m.kind === 'fx') el = $(`.fxpad[data-fx="${CSS.escape(m.id)}"]`);
+  else if (m.kind === 'bank') { if (m.id === UNFILED || bankById(m.id)) { setBankView(m.id); return true; } return false; }
+  else if (m.kind === 'tbank') { if (m.id === UNFILED || bankById(m.id)) { setBankTab(m.id); return true; } return false; }
+  else if (m.kind === 'page') { location.hash = m.id; showPage(m.id); return true; }
+  else if (m.kind === 'group') el = $(`.gtab[data-g="${CSS.escape(m.id)}"]`);
+  else if (m.kind === 'css') el = $('#fxSpatial ' + m.id);
+  else if (m.kind === 'btn') el = document.getElementById(m.id);
+  if (!el) return false;
+  el.click();
+  return true;
+}
+
+// The key itself: one printable character or an F-key, no ctrl/alt/meta chords (those stay
+// the browser's). Space is the stage pan, Tab walks objects, Enter/Esc/Backspace/Delete
+// have their jobs, arrows and the like are not a single character.
+function keyFromEvent(e) {
+  if (e.ctrlKey || e.altKey || e.metaKey) return null;
+  const key = e.key.toLowerCase();
+  if (['shift', 'control', 'alt', 'meta', 'capslock', ' ', 'tab', 'enter', 'escape', 'backspace', 'delete'].includes(key)) return null;
+  if (!(key.length === 1 || /^f\d{1,2}$/.test(key))) return null;
+  return key;
+}
+// Keys this desk already spends on something that must not be shadowed: B (panic) and F2
+// (renames the selected stage label).
+const KEY_RESERVED = {
+  b: 'B is the blackout key everywhere — pick another key',
+  f2: 'F2 renames the selected label on the stage — pick another key',
+};
+
+function bindDeskKey(key, target) {
+  // One key, one thing: the key is taken from whatever held it, scene or desk, and a
+  // target keeps only its newest key.
+  const prevScene = sceneHotkeys[key];
+  const prevDesk = deskKeymap[key];
+  delete sceneHotkeys[key];
+  delete deskKeymap[key];
+  if (target.kind === 'scene') {
+    for (const k of Object.keys(sceneHotkeys)) if (sceneHotkeys[k] === target.id) delete sceneHotkeys[k];
+    sceneHotkeys[key] = target.id;
+  } else {
+    for (const k of Object.keys(deskKeymap)) if (deskKeymap[k].kind === target.kind && deskKeymap[k].id === target.id) delete deskKeymap[k];
+    deskKeymap[key] = { kind: target.kind, id: target.id, label: target.label };
+  }
+  saveHotkeys(); saveKeymap();
+  const taken = prevScene ? ` — taken from "${prevScene}"` : prevDesk ? ` — taken from ${prevDesk.label}` : '';
+  say(`${hotkeyLabel(key)} now fires ${target.kind === 'scene' ? `"${target.id}"` : target.label}${taken}`);
+  if (S) buildBank();
+  paintKeyPanel(); paintKeyBadges();
+}
+function unbindDeskKey(key) {
+  const was = sceneHotkeys[key] ? `"${sceneHotkeys[key]}"` : deskKeymap[key] ? deskKeymap[key].label : null;
+  delete sceneHotkeys[key]; delete deskKeymap[key];
+  saveHotkeys(); saveKeymap();
+  if (was) say(`removed ${hotkeyLabel(key)} from ${was}`);
+  if (S) buildBank();
+  paintKeyPanel(); paintKeyBadges();
+}
+
+// The list: every binding, scenes and desk together, sorted by key.
+function paintKeyPanel() {
+  if (!keyPanelOpen) return;
+  const rows = [
+    ...Object.entries(sceneHotkeys).map(([k, name]) => ({ key: k, cat: 'Scene', label: name })),
+    ...Object.entries(deskKeymap).map(([k, m]) => ({ key: k, cat: KEY_CATEGORY[m.kind] || 'Desk', label: m.label })),
+  ].sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+  $('#keyList').innerHTML = rows.length
+    ? `<table><thead><tr><th>Category</th><th>Target</th><th>Key</th><th></th></tr></thead><tbody>${rows.map((r) =>
+      `<tr><td class="cat">${esc(r.cat)}</td><td class="tgt" title="${esc(r.label)}">${esc(r.label)}</td><td class="key"><span class="kbd">${esc(hotkeyLabel(r.key))}</span></td><td class="rm"><button data-unbind="${esc(r.key)}" title="Remove this mapping">✕</button></td></tr>`).join('')}</tbody></table>`
+    : '<p class="muted">Nothing mapped yet. Click any button on the desk, then press a key.</p>';
+  $('#keyLearn').hidden = !keyLearnTarget;
+  if (keyLearnTarget) $('#keyLearn').textContent = `Press a key for ${keyLearnTarget.kind === 'scene' ? `"${keyLearnTarget.id}"` : keyLearnTarget.label} — Esc to cancel`;
+  $('#keyHint').textContent = keyLearnTarget
+    ? 'Press the key you want. Esc picks something else.'
+    : (rows.length ? 'Click any button on the desk, then press a key. Click a mapped one to change its key.' : 'Click any button on the desk, then press a key.');
+}
+// Mapped desk buttons wear their key, the way scene tiles wear theirs.
+function paintKeyBadges() {
+  for (const b of $$('.kbadge')) b.remove();
+  for (const h of $$('.kbadge-host')) h.classList.remove('kbadge-host');
+  if (!keyPanelOpen) return;   // badges only while the panel is open — the desk stays clean otherwise
+  for (const [k, m] of Object.entries(deskKeymap)) {
+    let el = null;
+    if (m.kind === 'fx') el = $(`.fxpad[data-fx="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'btn') el = document.getElementById(m.id);
+    else if (m.kind === 'group') el = $(`.gtab[data-g="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'bank') el = $(`#bankTabs .btab[data-bank="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'tbank') el = $(`#tBankTabs .btab[data-tab="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'page') el = $(`.page-tab[data-page="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'css') el = $('#fxSpatial ' + m.id);
+    if (!el) continue;
+    el.classList.add('kbadge-host');
+    el.insertAdjacentHTML('beforeend', `<kbd class="kbadge">${esc(hotkeyLabel(k))}</kbd>`);
+  }
+}
+function setKeyLearnTarget(t) {
+  if (keyLearnTarget && keyLearnTarget.el) keyLearnTarget.el.classList.remove('keypick');
+  keyLearnTarget = t;
+  if (t && t.el) t.el.classList.add('keypick');
+  paintKeyPanel();
+}
+function openKeyPanel() {
+  keyPanelOpen = true;
+  $('#keyPanel').hidden = false;
+  $('#keysBtn').classList.add('is-active');
+  document.body.classList.add('keylearn');
+  paintKeyPanel(); paintKeyBadges();
+}
+function closeKeyPanel() {
+  setKeyLearnTarget(null);
+  keyPanelOpen = false;
+  $('#keyPanel').hidden = true;
+  $('#keysBtn').classList.remove('is-active');
+  document.body.classList.remove('keylearn');
+  paintKeyBadges();
+}
+// Drag the head to move the panel off whatever it is covering; where it lands is kept.
+(() => {
+  const panel = $('#keyPanel'), head = panel.querySelector('.keyhead');
+  let drag = null;
+  try {
+    const p = JSON.parse(localStorage.getItem('keyPanelPos'));
+    if (p && isFinite(p.x) && isFinite(p.y)) { panel.classList.add('moved'); panel.style.left = p.x + 'px'; panel.style.top = p.y + 'px'; panel.style.height = (p.h || 600) + 'px'; }
+  } catch (e) { /* default dock */ }
+  head.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const r = panel.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, h: r.height };
+    panel.classList.add('moved'); panel.style.height = r.height + 'px';
+    try { head.setPointerCapture(e.pointerId); } catch (err) { /* no capture: still tracks */ }
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const x = clamp(e.clientX - drag.dx, 0, Math.max(0, window.innerWidth - 120));
+    const y = clamp(e.clientY - drag.dy, 0, Math.max(0, window.innerHeight - 40));
+    panel.style.left = x + 'px'; panel.style.top = y + 'px';
+  });
+  const end = () => {
+    if (!drag) return;
+    drag = null;
+    try { localStorage.setItem('keyPanelPos', JSON.stringify({ x: parseFloat(panel.style.left) || 8, y: parseFloat(panel.style.top) || 54, h: parseFloat(panel.style.height) || 600 })); } catch (e) { /* this session only */ }
+  };
+  head.addEventListener('pointerup', end);
+  head.addEventListener('pointercancel', end);
+  head.addEventListener('dblclick', (e) => {   // back to the dock
+    if (e.target.closest('button')) return;
+    panel.classList.remove('moved'); panel.style.left = panel.style.top = panel.style.height = '';
+    try { localStorage.removeItem('keyPanelPos'); } catch (err) { /* nothing kept */ }
+  });
+})();
+$('#keysBtn').addEventListener('click', () => (keyPanelOpen ? closeKeyPanel() : openKeyPanel()));
+$('#keyClose').addEventListener('click', closeKeyPanel);
+$('#keyList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-unbind]');
+  if (b) unbindDeskKey(b.dataset.unbind);
+});
+// New forgets every mapping, so it asks first, the way every destructive step on this desk does.
+$('#keyNew').addEventListener('click', () => {
+  askThen('Clear every keyboard mapping, scene keys included?', 'Clear all', () => {
+    sceneHotkeys = {}; deskKeymap = {}; saveHotkeys(); saveKeymap();
+    if (S) buildBank();
+    paintKeyPanel(); paintKeyBadges();
+    say('All keyboard mappings cleared');
+  });
+});
+// Export/Import: one JSON file carrying both stores. Import replaces (it is a preset, not
+// a merge) and refuses a file that is not ours.
+function keymapExportJson() {
+  return JSON.stringify({ desk: 'artnet-controller', version: 1, savedAt: new Date().toISOString(), scenes: sceneHotkeys, map: deskKeymap }, null, 2);
+}
+function keymapImportJson(text) {
+  const j = JSON.parse(text);
+  if (!j || j.desk !== 'artnet-controller' || !j.scenes || typeof j.scenes !== 'object' || !j.map || typeof j.map !== 'object') throw new Error('not a keyboard-mappings file from this desk');
+  const scenes = {}, map = {};
+  for (const [k, v] of Object.entries(j.scenes || {})) if (typeof v === 'string' && v) scenes[String(k).toLowerCase()] = v;
+  for (const [k, m] of Object.entries(j.map || {})) if (m && typeof m.kind === 'string' && typeof m.id === 'string') map[String(k).toLowerCase()] = { kind: m.kind, id: m.id, label: String(m.label || m.id) };
+  sceneHotkeys = scenes; deskKeymap = map;
+  saveHotkeys(); saveKeymap();
+  if (S) buildBank();
+  paintKeyPanel(); paintKeyBadges();
+  return Object.keys(scenes).length + Object.keys(map).length;
+}
+$('#keyExport').addEventListener('click', () => {
+  const blob = new Blob([keymapExportJson()], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `desk-keys-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  say(`Exported ${Object.keys(sceneHotkeys).length + Object.keys(deskKeymap).length} mappings`);
+});
+$('#keyImport').addEventListener('click', () => $('#keyImportFile').click());
+$('#keyImportFile').addEventListener('change', () => {
+  const f = $('#keyImportFile').files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try { say(`Imported ${keymapImportJson(String(rd.result))} mappings`); }
+    catch (err) { say('Import failed — ' + err.message, true); }
+    $('#keyImportFile').value = '';
+  };
+  rd.readAsText(f);
+});
+// Learn mode: with the panel open, the first press on any mappable control is CAUGHT here
+// (capture phase, before the control's own handler) and becomes the thing to bind. It has
+// to be the POINTERDOWN, not the click: the FX pads and the tiles act on press, and a pad
+// that rebuilds its row on press leaves the click with no pad under it.
+let keyLearnSwallowUntil = 0;
+const keyLearnIgnores = (e) => !keyPanelOpen || keyFiring || e.target.closest('#keyPanel') || e.target.closest('#keysBtn') || e.target.closest('#bindPop') || e.target.closest('#deskAsk');
+function keyLearnPick(t) {
+  const why = keyRefusal(t);
+  if (why) { say(why, true); return; }
+  setKeyLearnTarget(t);
+}
+document.addEventListener('pointerdown', (e) => {
+  if (keyLearnIgnores(e) || e.button !== 0) return;
+  const t = keyTargetOf(e.target);
+  if (!t) return;
+  e.preventDefault(); e.stopPropagation();
+  keyLearnSwallowUntil = Date.now() + 500;   // the click this press turns into must not fire the control
+  keyLearnPick(t);
+}, true);
+document.addEventListener('click', (e) => {
+  if (keyLearnIgnores(e)) return;
+  if (Date.now() < keyLearnSwallowUntil) { e.preventDefault(); e.stopPropagation(); return; }
+  const t = keyTargetOf(e.target);   // a click that arrived without a press (a synthetic one)
+  if (!t) return;
+  e.preventDefault(); e.stopPropagation();
+  keyLearnPick(t);
+}, true);
+// ...and the key that follows is the binding. Capture phase, ahead of every other keydown
+// handler; Esc steps back (first out of the pick, then out of the panel) and yields to the
+// ask bar and the scene popover, which own their own Esc.
+document.addEventListener('keydown', (e) => {
+  if (!keyPanelOpen || bindTarget != null || window.deskAsk.isOpen()) return;
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (keyLearnTarget) setKeyLearnTarget(null); else closeKeyPanel(); return; }
+  if (!keyLearnTarget) return;
+  if (isTypingTarget(e.target)) return;
+  e.preventDefault(); e.stopPropagation();
+  const key = keyFromEvent(e);
+  if (!key || e.repeat) return;
+  if (KEY_RESERVED[key]) { say(KEY_RESERVED[key], true); return; }
+  const t = keyLearnTarget;
+  setKeyLearnTarget(null);
+  bindDeskKey(key, t);
+}, true);
+
+
 // ---- the menu rows ----
 $('#miBind').addEventListener('click', () => {
   $('#bindHint').textContent = 'Press a key to bind — Esc to cancel';   // midicap may have changed it
@@ -6866,6 +7182,13 @@ document.addEventListener('keydown', (e) => {
   if (!e.ctrlKey && !e.altKey && !e.metaKey && sceneHotkeys[e.key.toLowerCase()] != null && S) {
     e.preventDefault();
     recallByName(sceneHotkeys[e.key.toLowerCase()]);
+    return;
+  }
+  // Desk mappings (the keyboard-mappings panel): a bound key clicks the very button it was
+  // learned from. Not on auto-repeat: a held key must not run Next scene through the show.
+  if (!e.ctrlKey && !e.altKey && !e.metaKey && deskKeymap[e.key.toLowerCase()]) {
+    e.preventDefault();
+    if (!e.repeat) fireKeymap(deskKeymap[e.key.toLowerCase()]);
     return;
   }
   // With the filter active, 1-9 fire the Nth VISIBLE row — the row the eye is counting —

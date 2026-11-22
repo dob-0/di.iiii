@@ -73,6 +73,7 @@
     <button id="inPill" class="wirepill" hidden title="Input — a console driving this desk"></button>
   </div>
   <div class="topright">
+    <button id="keysBtn" class="keysbtn" title="Keyboard mappings — click any button on the desk, then press a key" aria-label="Keyboard mappings">⌨</button>
     <button id="topBlackout" class="blackout topbo" title="Blackout (B) — reaches every page">Blackout</button>
     <button id="goBtn" class="go" title="Step to the next desk scene">Next scene</button>
     <div class="bpm"><span>BPM</span><div class="bpmbar"><i id="bpmBar"></i></div></div>
@@ -97,6 +98,24 @@
 
 <div id="statusStrip" class="statusstrip" hidden></div>
 <div id="renderNote" class="statusstrip bad" hidden></div>
+
+<!-- Keyboard mappings (the studio desk's panel): while this is open the desk is in learn
+     mode — click any button, press a key, that key is now that button. Bindings live in
+     this browser (localStorage), like the scene keys they extend; Export/Import move them
+     between machines as a JSON file. -->
+<aside id="keyPanel" class="keypanel" hidden aria-label="Keyboard mappings">
+  <div class="keyhead"><h2>Keyboard mappings</h2><button id="keyClose" class="sq" title="Close (Esc)">✕</button></div>
+  <div class="keytools">
+    <button id="keyNew" class="sq" title="Start again with no mappings">New</button>
+    <button id="keyImport" class="sq" title="Load mappings from a file">Import</button>
+    <input type="file" id="keyImportFile" accept="application/json,.json" hidden>
+    <button id="keyExport" class="sq" title="Save these mappings to a file">Export</button>
+  </div>
+  <div id="keyHint" class="keyhint">Click any button on the desk, then press a key.</div>
+  <div id="keyLearn" class="keylearn-line" hidden></div>
+  <div class="keylist" id="keyList"></div>
+  <p class="muted keynote">B is always blackout, and it only turns blackout on. Keys fire on every page; typing in a field keeps its letters.</p>
+</aside>
 
 <!-- ===================== SETUP ===================== -->
 <main class="page is-active" data-page="setup">
