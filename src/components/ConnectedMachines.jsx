@@ -7,7 +7,9 @@ import './connectedMachines.css'
 // A machine stays connected on its own (new spaces are followed on its next check); Disconnect ends its keys
 // and nothing else — the work on that machine is not touched (docs/architecture/CLI_LOGIN.md, "Connecting a machine").
 
-const text = (value) => String(value ?? '').replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, '').slice(0, 80)
+// Machine-chosen text, shown as text only: control and direction-override characters are taken out first.
+const hidden = (cp) => cp < 0x20 || cp === 0x7f || (cp >= 0x202a && cp <= 0x202e) || (cp >= 0x2066 && cp <= 0x2069)
+const text = (value) => Array.from(String(value ?? '')).filter((ch) => !hidden(ch.codePointAt(0))).join('').slice(0, 80)
 
 export const normaliseMachines = (list) => (Array.isArray(list) ? list : [])
     .filter((m) => m && typeof m.id === 'string' && m.id)
