@@ -252,8 +252,9 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     const isAdminSection = ADMIN_SECTION_KEYS.has(activeSection)
     // Scene counters and the copy-snapshot / XR-debug buttons describe the open scene; the Machines page is not about it.
     const isSceneSection = activeSection !== 'estate'
-    // Pages that carry their own counts (or none) get no header cards.
-    const hideHeaderCards = isAdminSection ? ['manage', 'opencall', 'visitors', 'agents', 'monitor'].includes(activeSection) : !isSceneSection
+    // Pages that carry their own counts (or none) get no header cards. Agent sessions shows its counts here, in the one slim row
+    // (owner 11-22, N6201: the header was big with almost no information).
+    const hideHeaderCards = isAdminSection ? ['manage', 'opencall', 'visitors', 'monitor'].includes(activeSection) : !isSceneSection
 
     return (
         <div className="preferences-page">
