@@ -43,6 +43,7 @@
         "deploy:cpanel": "node scripts/stage-cpanel-nodeapp-release.mjs",
         "env:serverxr": "node scripts/write-server-env.mjs",
         "smoke": "node scripts/smoke-check.mjs",
+        "address-guard": "node scripts/address-guard.mjs",
         "checkpoint": "node scripts/create-checkpoint.mjs",
         "sync:space-assets": "node scripts/sync-space-assets.mjs",
         "space:new": "node scripts/space-new.mjs",
