@@ -390,14 +390,17 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                     <div className="monitor-card3d is-hub"><span className="monitor-card3d-name">di.iiii</span></div>
                 </Html>
             </Canvas>
-            {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             <div className="monitor-map-tools" role="group" aria-label="Camera">
                 {PRESET_NAMES.map((name) => (
                     <button key={name} type="button" tabIndex={pointerOnly ? -1 : undefined} className="monitor-map-tool" data-map-tool={name} onClick={() => { setRotating(false); api.current?.fly(name) }}>{PRESET_LABEL[name]}</button>
                 ))}
                 <button type="button" tabIndex={pointerOnly ? -1 : undefined} className="monitor-map-tool" data-map-tool="fit" onClick={() => { setRotating(false); api.current?.reset() }}>Reset view</button>
             </div>
-            <div className="monitor-map-hint">Drag to turn · right-drag or two fingers to move · {wheelFree ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · arrows or WASD · double-click a card to fly to it</div>
+            {/* hint and legend stack in one foot: they never sit on each other, however the legend wraps */}
+            <div className="monitor-map-foot">
+                <div className="monitor-map-hint">Drag to turn · right-drag or two fingers to move · {wheelFree ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom · arrows or WASD · double-click a card to fly to it</div>
+                {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
+            </div>
         </div>
     )
 }
