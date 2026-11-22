@@ -98,7 +98,8 @@ describe('blackout survives a reload (level kept in the document)', () => {
         await press('Blackout · on')
         expect(ctx.applyLocalOps).toHaveBeenCalledTimes(1)
         expect(patchOf(ctx, 0).deck.master).toBe(0.6)
-        expect(patchOf(ctx, 0).blackoutRestore).toBeUndefined()
+        // written as 0, not left out: values merge, so an omitted key would keep the old level
+        expect(patchOf(ctx, 0).blackoutRestore).toBe(0)
     })
 })
 

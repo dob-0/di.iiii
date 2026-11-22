@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { addEffect, createDeck } from '../../project/tops/vjDeck.js'
-import { applyMidi, isContinuousEntry, entryFor, learnEntry, targetFromKey } from './deckBinding.js'
+import { applyMidi, describeAction, isContinuousEntry, entryFor, ledColour, learnEntry, targetFromKey } from './deckBinding.js'
 import { XONE_K2_CONTROLS, defaultMap } from './xoneK2.js'
 
 const cc = (number, value) => ({ kind: 'cc', channel: 15, cc: number, value })
@@ -54,5 +54,80 @@ describe('effect MIDI targets', () => {
         expect(applyMidi(deck, cc(30, 127), [learned], {}).layers[1].effects[0].mix).toBe(1)
         const low = applyMidi(deck, cc(30, 0), [learned], {})
         expect(low.layers[1].effects[0].mix).toBe(0)
+    })
+})
+
+describe('fxSet (a toggle key on a master effect value)', () => {
+    const args = { type: 'top.angles', param: 'screens', value: 3, label: 'Screens 3' }
+    const map = [{ match: { kind: 'note', number: 5, channel: 15 }, action: 'fxSet', args }]
+    const on = (note) => ({ kind: 'noteOn', channel: 15, note, velocity: 127 })
+    const off = (note) => ({ kind: 'noteOff', channel: 15, note, velocity: 0 })
+    const deck = () => addEffect(createDeck(), 'master', 'top.angles')
+
+    it('press sets the value, a second press puts the default back, release changes nothing', () => {
+        const start = deck()
+        expect(start.effects[0].params.screens).toBe(1)
+        const set = applyMidi(start, on(5), map)
+        expect(set.effects[0].params.screens).toBe(3)
+        expect(applyMidi(set, off(5), map)).toBe(set)
+        expect(applyMidi(start, off(5), map)).toBe(start)
+        const back = applyMidi(set, on(5), map)
+        expect(back.effects[0].params.screens).toBe(1)
+    })
+    it('bad args or an effect not on the deck change nothing', () => {
+        const start = deck()
+        const run = (a, d = start) => applyMidi(d, on(5), [{ match: map[0].match, action: 'fxSet', args: a }])
+        expect(run({ ...args, type: 7 })).toBe(start)
+        expect(run({ ...args, param: null })).toBe(start)
+        expect(run({ ...args, value: NaN })).toBe(start)
+        expect(run({ ...args, value: '3' })).toBe(start)
+        expect(run({ ...args, type: 'top.cuts' })).toBe(start)
+        const bare = createDeck()
+        expect(run(args, bare)).toBe(bare)
+    })
+    it('LED: green when equal, amber when another value, none when the effect is missing', () => {
+        const start = deck()
+        expect(ledColour(start, map[0])).toBe('amber')
+        expect(ledColour(applyMidi(start, on(5), map), map[0])).toBe('green')
+        expect(ledColour(createDeck(), map[0])).toBeNull()
+    })
+    it('describeAction uses the label, else says what it sets', () => {
+        expect(describeAction(map[0])).toBe('Screens 3')
+        expect(describeAction({ action: 'fxSet', args: { ...args, label: '' } })).toBe('Set screens 3')
+        expect(describeAction({ action: 'fxSet', args: { type: args.type, param: 'screens', value: 2 } })).toBe('Set screens 2')
+    })
+})
+
+describe('layerBlend: a key puts a layer on one blend mode', () => {
+    const entry = { match: { kind: 'note', number: 83, channel: 1 }, action: 'layerBlend', args: { layer: 0, blend: 3, off: 2, label: 'Text: window' } }
+    const press = { kind: 'noteOn', channel: 1, note: 83, velocity: 127 }
+    const release = { kind: 'noteOff', channel: 1, note: 83, velocity: 0 }
+    it('press sets the blend, a second press goes back to off, a release changes nothing', () => {
+        const deck = createDeck()
+        const on = applyMidi(deck, press, [entry])
+        expect(on.layers[0].blend).toBe('3')
+        expect(applyMidi(on, release, [entry])).toBe(on)
+        expect(applyMidi(on, press, [entry]).layers[0].blend).toBe('2')
+    })
+    it('a blend that does not exist, or a layer that does not, changes nothing', () => {
+        const deck = createDeck()
+        expect(applyMidi(deck, press, [{ ...entry, args: { layer: 0, blend: 42 } }])).toBe(deck)
+        expect(applyMidi(deck, press, [{ ...entry, args: { layer: 99, blend: 3 } }])).toBe(deck)
+    })
+    it('says its label', () => {
+        expect(describeAction(entry)).toBe('Text: window')
+    })
+})
+
+describe('layerOver: a key puts a layer under the master effects and back', () => {
+    const entry = { match: { kind: 'note', number: 86, channel: 1 }, action: 'layerOver', args: { layer: 0, label: 'Text: in the look' } }
+    it('each press flips it; a release changes nothing', () => {
+        const deck = createDeck()
+        expect(deck.layers[0].over).toBe(false)
+        const on = applyMidi(deck, { kind: 'noteOn', channel: 1, note: 86, velocity: 127 }, [entry])
+        expect(on.layers[0].over).toBe(true)
+        expect(applyMidi(on, { kind: 'noteOff', channel: 1, note: 86, velocity: 0 }, [entry])).toBe(on)
+        expect(applyMidi(on, { kind: 'noteOn', channel: 1, note: 86, velocity: 127 }, [entry]).layers[0].over).toBe(false)
+        expect(describeAction(entry)).toBe('Text: in the look')
     })
 })

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { BODY_STATUS_TEXT, confidenceToBytes, createBodyMatte } from './bodyMatte.js'
-import { EFFECT_TYPE_IDS, addEffect, createDeck, effectMainParams, expandDeck, layerEffectMixNodeId, layerEffectNodeId, setClip, setEffectOn, stackOf, trigger } from './vjDeck.js'
+import { EFFECT_TYPE_IDS, addEffect, createDeck, effectMainParams, expandDeck, layerEffectNodeId, setClip, setEffectOn, stackOf, trigger } from './vjDeck.js'
 import { TOP_OPERATORS, resolveTopParams } from './topOperators.js'
 import { checkShader } from './topEngine.js'
 
@@ -13,7 +13,7 @@ describe('Body effect registry', () => {
         expect(EFFECT_TYPE_IDS).toContain('top.matte')
         expect(TOP_OPERATORS['top.matte'].label).toBe('Body')
         expect(effectMainParams('top.matte').slice(0, 3).map((p) => p.name)).toEqual(['soft', 'drift', 'echo'])
-        expect(effectMainParams('top.matte').map((p) => p.name)).toEqual(['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert'])
+        expect(effectMainParams('top.matte').map((p) => p.name)).toEqual(['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert', 'keep', 'refine'])
     })
 
     it('keeps defaults that give a clean black body on a colour, flat, still, no echo', () => {
@@ -46,7 +46,7 @@ describe('Body effect registry', () => {
         const id = layerEffectNodeId('D', 0, matte.id)
         const into = wires.filter((w) => w.to === id)
         expect(into.map((w) => w.port).sort()).toEqual(['a', 'b'])
-        expect(into.find((w) => w.port === 'a').from).toBe(layerEffectMixNodeId('D', 0, level.id))
+        expect(into.find((w) => w.port === 'a').from).toBe(layerEffectNodeId('D', 0, level.id))
         expect(into.find((w) => w.port === 'b').from).toMatch(/clip/i)
         const off = expand(setEffectOn(deck, 0, matte.id, false))
         expect(off.nodes.some((n) => n.type === 'top.matte')).toBe(false)

@@ -65,3 +65,12 @@
 .k2-control:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 1px; }
 .k2-control-value { position: absolute; top: 2px; right: var(--di-space-1); font-family: var(--di-mono); color: var(--di-cyan); }
 .k2-detail { margin: 0; min-height: 1.4em; font-size: var(--di-text-2); font-family: var(--di-mono); color: var(--di-ink); }
+
+/* The APC40 mkII layout (Apc40Layout.jsx): wider panel, rows of up to nine controls. */
+.k2-panel--apc { width: min(820px, calc(100% - 2 * var(--di-space-2))); }
+.apc-body { display: flex; flex-direction: column; gap: var(--di-space-1); }
+.apc-row { display: flex; flex-direction: column; gap: 2px; }
+.apc-row-title { font-size: var(--di-text-2); color: var(--di-dim); }
+.apc-cells { display: grid; grid-template-columns: repeat(var(--apc-cols, 8), minmax(0, 1fr)); gap: 2px; }
+.apc-control { min-height: 36px; }
+.apc-control--fader { min-height: 48px; }

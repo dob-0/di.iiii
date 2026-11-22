@@ -46,6 +46,7 @@ export const WINDOW_KINDS = {
     wallout: { label: 'Wall out', family: 'pictures', phase: 1 },
     machines: { label: 'Machines', family: 'rig', phase: 1 },
     surface: { label: 'Surface settings', family: 'wall', phase: 1 },
+    room: { label: 'Room 3D', family: 'pictures', phase: 1 },
     scenes: { label: 'Scenes', family: 'light', phase: 2, coming: 'The Light desk’s scenes as a window. Today they are on the Light page.' },
     looks: { label: 'Looks · FX', family: 'light', phase: 2, coming: 'Looks and FX from the Light desk, beside the deck. Today they are on the Light page.' },
     audio: { label: 'Audio', family: 'light', phase: 2, coming: 'The mic, its level and the beats it hears. Today on the Light page.' },
@@ -57,7 +58,7 @@ export const WINDOW_KINDS = {
 
 // The order of the "+ window" list. Nodes is not a window: it is the way to
 // the whole patch, and sits under the list on its own line.
-export const WINDOW_ORDER = ['deck', 'out', 'clock', 'master', 'lightlooks', 'laser', 'wall', 'wallout', 'surfaces', 'cues', 'machines', 'surface', 'scenes', 'looks', 'audio', 'status', 'footage', 'mysurface', 'now']
+export const WINDOW_ORDER = ['deck', 'out', 'room', 'clock', 'master', 'lightlooks', 'laser', 'wall', 'wallout', 'surfaces', 'cues', 'machines', 'surface', 'scenes', 'looks', 'audio', 'status', 'footage', 'mysurface', 'now']
 
 export const isKnownKind = (kind) => Object.prototype.hasOwnProperty.call(WINDOW_KINDS, kind)
 export const isComingKind = (kind) => isKnownKind(kind) && WINDOW_KINDS[kind].phase > 1
@@ -94,8 +95,10 @@ export const BUILT_IN_PRESETS = [
     {
         id: 'vj',
         name: 'VJ',
-        who: 'Club and laser nights. The deck is the instrument and fills the room: grid, preview, output, sources and clip settings in one.',
+        who: 'Club and laser nights. The deck is the instrument and fills the room: grid, preview, output, sources and clip settings in one, with a small 3D room under the output.',
         windows: [w('deck')],
+        // Room 3D is the deck's own third monitor now (PerformWindows.jsx DeckWindow), not a window beside it:
+        // two windows meant two 3D scenes on a show machine.
         ...layout({ deck: [0, 0, 12, 8] }, { deck: [0, 0, 4, 8] })
     },
     {
