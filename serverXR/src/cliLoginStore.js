@@ -99,6 +99,7 @@ const hashDeviceCode = (code) => sha256Hex(`device-code:${code}`)
 
 const SCOPES = Object.freeze(['login', 'connect'])
 const normalizeScope = (value) => (value === 'connect' ? 'connect' : 'login')
+const isConnectScope = (value) => normalizeScope(value) === 'connect'
 
 const startDeviceLogin = ({ label = null, from = null, scope = 'login', now = Date.now() } = {}) => {
   const db = getDb()
@@ -309,6 +310,7 @@ const pruneCliLogin = (now = Date.now()) => {
 
 module.exports = {
   SCOPES,
+  isConnectScope,
   normalizeScope,
   startDeviceLogin,
   describePending,
