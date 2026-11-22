@@ -394,7 +394,7 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .bankrow .bar { background: var(--line); }
 .bankrow.active .bar { background: var(--accent); }
 
-.railmaster { display: grid; justify-items: center; gap: 8px; padding: 12px; }
+.railmaster { display: grid; justify-items: center; gap: 4px; padding: 4px 12px; }
 .railmaster output { font-family: var(--mono); font-size: 15px; }
 /* The rail stacks Master + FX + LFO + Audio + Output — far taller than the pane. Every
    child is flex:none so nothing gets crushed to make room; the pane itself scrolls.
@@ -447,12 +447,12 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 
 /* ---------------- vertical faders ---------------- */
 .vwrap { position: relative; width: 36px; height: 150px; flex: none; }
-.vwrap.tall { height: 190px; }
+.vwrap.tall { height: 120px; }   /* was 190: with FX/LFO/Audio folded the rail fits the pane */
 .vwrap input[type=range] {
   position: absolute; top: 50%; left: 50%; width: 150px;
   transform: translate(-50%, -50%) rotate(-90deg); transform-origin: center;
 }
-.vwrap.tall input[type=range] { width: 190px; }
+.vwrap.tall input[type=range] { width: 120px; }
 .vwrap input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
 .vwrap input[type=range]::-moz-range-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
 .vwrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 26px; margin-top: -10px; border-radius: 0; background: var(--cell2); border: 1px solid var(--muted); }
@@ -461,26 +461,41 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 /* ---------------- attribute editor ---------------- */
 .attr-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); flex: none; }
 .attr-head .who { flex: 1; color: var(--muted); font-size: 12px; }
+.attr-head .autowhite { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.attr-head .autowhite[hidden] { display: none; }
 .attr-body { flex: 1; display: grid; grid-template-columns: 118px minmax(0, 1fr); min-height: 0; }
 .attr-tabs { border-right: 1px solid var(--line); overflow: auto; }
 .atab { display: flex; align-items: center; gap: 7px; width: 100%; background: none; border: 0; text-align: left; padding: 11px 12px; color: var(--muted); font-size: 12px; }
 .atab.is-active { background: var(--pane2); color: var(--text); }
 .atab i { width: 6px; height: 6px; border-radius: 0; background: var(--muted); flex: none; }
 .atab.is-active i { background: var(--accent); }
-.attr-panels { overflow: auto; padding: 12px; }
+.attr-panels { overflow: auto; padding: 2px 12px; }   /* 2 vertical, not 12: the Color tab's height budget is exact */
 .apanel { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
-.faders { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+/* ONE row that scrolls sideways, never a wall you scroll down (her ask: "around 12, and
+   scroll right for more, not down"). A 32-channel fixture used to wrap into six rows. Columns
+   are a twelfth of the VISIBLE width (11 gaps taken off), never narrower than --fmin, so a
+   squeezed pane shows fewer at a usable size instead of threads. */
+.faders {
+  --fmin: 52px;
+  display: grid; grid-auto-flow: column; gap: 6px; align-items: start;
+  grid-auto-columns: minmax(var(--fmin), calc((100% - 11 * 6px) / 12));
+  overflow-x: auto; overflow-y: hidden; min-width: 0; flex: 1 1 0;   /* basis 0: it sits beside the Color column / pad instead of wrapping under it */
+  overscroll-behavior-x: contain;   /* the sideways scroll stops here, it does not walk the pane */
+}
+/* Up to twelve there is no wall to avoid, so the tile keeps its roomy width; only a chart
+   long enough to overflow packs down to a twelfth of the pane. */
+.faders:not(:has(> .fader:nth-child(13))) { grid-auto-columns: minmax(var(--fmin), 82px); }
 /* Fan, under the faders: the whole row is one gesture, so it reads as one line. */
 .fanrow { flex: 1 1 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; }
 .fanrow .fanlabel { color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
 .fanrow label { display: flex; align-items: center; gap: 4px; color: var(--muted); }
 .fanrow input[type=number] { width: 4.5em; }
-.fader { width: 82px; display: grid; justify-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 0; padding: 8px 4px; background: var(--bg); }
+.fader { width: auto; min-width: 0; display: grid; justify-items: center; gap: 3px; border: 1px solid var(--line); border-radius: 0; padding: 6px 3px; background: var(--bg); }
 .fader .fh { display: flex; align-items: center; gap: 5px; font-size: 11px; }
 .fader .fh i { width: 7px; height: 7px; border-radius: 0; flex: none; }
 .fader .chip { width: 26px; height: 26px; border-radius: 0; border: 1px solid var(--line); }
 .fader .fv { font-family: var(--mono); font-size: 11px; color: var(--muted); min-height: 16px; }
-.fader .inedit { width: 100%; box-sizing: border-box; }
+.fader .inedit { width: 100%; box-sizing: border-box; }   /* the typed-value field takes the tile, not a fixed 52px */
 
 /* ---------------- value gestures ---------------- */
 /* The cursor says what a surface does: sideways on anything you can grab and push,
@@ -498,8 +513,8 @@ body.scrubbing, body.scrubbing * { cursor: ew-resize !important; user-select: no
 .editable { cursor: text; }
 .inedit { width: 52px; font-family: var(--mono); font-size: 11px; padding: 1px 3px; text-align: center; background: var(--field); border: 1px solid var(--accent); border-radius: 0; }
 .inedit::-webkit-inner-spin-button, .inedit::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.fader .quick { display: flex; gap: 3px; }
-.fader .quick button { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; font-size: 10px; padding: 2px 5px; color: var(--text); }
+.fader .quick { display: flex; gap: 3px; width: 100%; }
+.fader .quick button { flex: 1; min-width: 0; min-height: 24px; background: var(--pane2); border: 1px solid var(--line); border-radius: 0; font-size: 10px; padding: 2px 0; color: var(--text); }   /* flex:1, no side padding: a packed tile is ~13px per button */
 
 /* Width pinned to the swatch square. Left to size itself the column took its width from
    the "move shared colour onto the W channel" note, which pushed the palettes column onto
@@ -1180,8 +1195,8 @@ body.space .stage { cursor: grab; }
   .mf .vwrap { width: 44px; }
   .faderbank { grid-template-columns: repeat(auto-fill, minmax(min(76px, 100%), 1fr)); }
   .mf-rel { padding: 5px 10px; font-size: 14px; }
-  .fader { width: 92px; }
-  .fader .quick button { padding: 6px 9px; font-size: 11px; }
+  .faders { --fmin: 88px; }   /* a finger needs the width back; the row still scrolls sideways */
+  .fader .quick button { padding: 6px 0; font-size: 11px; }
   .atab { padding: 13px 12px; }
   .bankrow .txt { padding: 10px; }
   .selrow { padding: 9px 10px; }

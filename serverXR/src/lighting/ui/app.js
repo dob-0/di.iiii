@@ -2015,6 +2015,7 @@ function buildAttr() {
 
   if (!tabs.length) {
     $('#attrTabs').innerHTML = '';
+    $('#autoWhiteWrap').hidden = true;
     $('#attrPanels').innerHTML = '<p class="muted">Select fixtures on the stage below, in the list, or with a group tab.</p>';
     return;
   }
@@ -2027,6 +2028,11 @@ function buildAttr() {
   }));
 
   const active = tabs.find(([n]) => n === attrTab)[1];
+  // Auto white sits in the header row, only on the Color tab; wired once.
+  const awWrap = $('#autoWhiteWrap'); const aw = $('#autoWhite');
+  awWrap.hidden = attrTab !== 'Color';
+  aw.checked = autoWhite;
+  if (!aw.dataset.wired) { aw.dataset.wired = '1'; aw.addEventListener('change', () => { autoWhite = aw.checked; }); }
   // Read each value from a fixture that actually HAS the role. With everything selected,
   // fixture one is a wash — so the pan/tilt pad recentred to 50/50 and the position faders
   // read 0 while the beams were really at 64/191. The editor was describing a position no
@@ -2039,11 +2045,11 @@ function buildAttr() {
   if (attrTab === 'Color') {
     // Picker and palette share ONE column, with the faders beside them (the studio desk's
     // layout). The palette's Basic row stands where the quick-hue strip used to be; Auto white,
-    // which the studio desk dropped but this desk keeps, stays under the picker.
+    // which the studio desk dropped but this desk keeps, lives in the attribute header (it
+    // cost the column a row, and the Color tab is budgeted to fit without scrolling).
     html += `<div class="colorcol">
       <div class="picker">
         <div class="sqpick" id="sqpick"><div class="dot" style="left:50%;top:0"></div></div>
-        <label class="pickfoot" title="Move the shared colour onto the W channel"><input type="checkbox" id="autoWhite"${autoWhite ? ' checked' : ''}> Auto white</label>
       </div>
       <div class="palettes">${paletteBlock()}</div>
     </div>`;
@@ -2128,7 +2134,6 @@ function buildAttr() {
     sq.addEventListener('pointerdown', (e) => { down = true; sq.setPointerCapture(e.pointerId); pick(e); });
     sq.addEventListener('pointermove', (e) => down && pick(e));
     sq.addEventListener('pointerup', () => { down = false; });
-    $('#autoWhite').addEventListener('change', (e) => { autoWhite = e.target.checked; });
     wirePalette();
   }
 
@@ -7051,6 +7056,9 @@ $$('.railpane > .pane-head').forEach((head) => {
       el && !el.classList.contains('pane-head') && el.tagName !== 'DETAILS';
       el = el.nextElementSibling) el.classList.toggle('railfold', fold);
   };
+  // FX, LFO and Audio start folded on a first run (the studio desk's budget: the rail fits
+  // without scrolling); a stored choice, either way, always wins.
+  if (!(key in railFold) && ['FX', 'LFO', 'Audio'].includes(key)) railFold[key] = true;
   if (railFold[key]) setFold(true);
   head.addEventListener('click', () => {
     const fold = !head.classList.contains('folded');

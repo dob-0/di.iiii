@@ -263,7 +263,10 @@ check('colour palettes: the Color tab posts to api/colors, the desk has the rout
   for (const fn of ['paletteBlock', 'paletteMenuHtml', 'wirePalette']) if (!js.includes(`function ${fn}`)) throw new Error(`${fn} is missing`);
   if (!/lastColor = hexColor/.test(js)) throw new Error('applyColor does not remember the last colour for "+"');
   if (/HUES/.test(js)) throw new Error('the quick-hue strip is back beside the palette');
-  if (!/id="autoWhite"/.test(js)) throw new Error('Auto white left the Color tab');
+  // Auto white moved out of the picker column into the attribute header (the Color tab is
+  // budgeted to fit without scrolling); it must still exist, and app.js must still wire it.
+  if (!/id="autoWhite"/.test(html)) throw new Error('Auto white left the desk');
+  if (!js.includes(`$('#autoWhite')`)) throw new Error('Auto white is not wired');
 });
 
 // Regression guard (2026-10-01, MOXIR UI audit): the Touch cue bar said "Nothing fired" while a
