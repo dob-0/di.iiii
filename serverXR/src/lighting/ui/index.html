@@ -376,8 +376,10 @@
 <main class="page" data-page="control">
 
   <section class="ctl-top">
-    <!-- scene bank -->
-    <div class="pane bankpane">
+    <!-- Scene containers (from the studio desk): a tab row, one tile grid at a time, each
+         container with its own +. .scenearea is the grid's flex pane — the stack splitter
+         resizes against it. -->
+    <div class="pane scenearea bankpane bankcols-pane">
       <!-- The cue list the desk plays (cuerun.js) — a project's looks on their holds, one
            clock for every page. Shown only while the desk holds a list. -->
       <div class="cuestrip" id="cueStrip" hidden>
@@ -389,46 +391,33 @@
           <button class="sq toggle" id="cueLoop" aria-pressed="false" title="Loop off — after the last cue, cue 1 again">Loop</button>
         </div>
       </div>
-      <!-- With no desk scenes (a show of looks and cues) the Scenes and Chase panes are empty
-           and three cyan buttons: they give way to one muted line (MOXIR UI audit, 2026-10-01). -->
+      <!-- With no desk scenes (a show of looks and cues) the Scenes pane is empty
+           and a few cyan buttons: it gives way to one muted line (MOXIR UI audit, 2026-10-01). -->
       <p class="muted noscenes" id="ctlNoScenes" hidden>No desk scenes in this show — looks and the cue list are on Touch.</p>
-      <div id="ctlScenes">
-      <div class="pane-head"><h2>Scenes</h2></div>
-      <div class="transport">
-        <button class="sq" id="chasePause" title="Stop the chase">❚❚</button>
-        <button class="sq" id="scenePrev" title="Previous scene">|◀</button>
-        <button class="sq" id="sceneNext" title="Next scene">▶|</button>
-        <button class="sq accent" id="saveScene" title="Save the current look as a scene">+</button>
+      <div id="ctlScenes" class="ctlscenes">
+      <div class="bankbar">
+        <div class="transport">
+          <button class="sq" id="chasePause" title="Stop the chase">❚❚</button>
+          <button class="sq" id="scenePrev" title="Previous scene">|◀</button>
+          <button class="sq" id="sceneNext" title="Next scene">▶|</button>
+        </div>
+        <div class="chasebar" id="ctlChase" title="The chase steps through the scenes marked 'Add to chase' in the right-click menu">
+          <span class="muted">Chase</span><span class="muted" id="chaseCount"></span>
+          <label>Hold <input type="number" id="chaseHold" min="0.05" step="0.1" value="2">s</label>
+          <label>Fade <input type="number" id="chaseFade" min="0" step="0.1" value="0.8">s</label>
+          <button class="sq accent" id="chaseToggle">Start</button>
+        </div>
+        <!-- At a few hundred scenes the bank is unfindable without this. Filters as you type. -->
+        <div class="search scenesearch">
+          <input type="text" id="sceneFilter" placeholder="filter scenes" autocomplete="off">
+          <button id="sceneFilterClear" title="Clear">✕</button>
+        </div>
       </div>
-      <!-- At a few hundred scenes the bank is unfindable without this. Filters as you type. -->
-      <div class="search scenesearch">
-        <input type="text" id="sceneFilter" placeholder="filter scenes" autocomplete="off">
-        <button id="sceneFilterClear" title="Clear">✕</button>
-        <button class="kindbtn is-active" data-kind="all" title="Show all scenes">All</button>
-        <button class="kindbtn" data-kind="anim" title="Only › animations">›</button>
-        <button class="kindbtn" data-kind="static" title="Only · static looks">·</button>
+      <!-- Container tabs (coloured): each container = a tile grid she fills by dragging scenes
+           onto its tab or with its own +. -->
+      <div class="banktabs bankrow-tabs" id="bankTabs"></div>
+      <div class="bankcols" id="bankList"></div>
       </div>
-      <div class="banklist" id="bankList"></div>
-      <div class="inline pad">
-        <input type="text" id="sceneName" placeholder="name the next save" maxlength="40">
-      </div>
-      </div>
-      <div id="ctlChase">
-      <div class="pane-head"><h2>Chase</h2><span class="muted" id="chaseCount"></span></div>
-      <div class="railchase">
-        <label>Hold <input type="number" id="chaseHold" min="0.05" step="0.1" value="2">s</label>
-        <label>Fade <input type="number" id="chaseFade" min="0" step="0.1" value="0.8">s</label>
-        <button class="sq accent" id="chaseToggle">Start</button>
-      </div>
-      </div>
-    </div>
-
-    <div class="splitter v" data-split="ctl-bank" title="Drag to resize — double-click to reset"></div>
-
-    <!-- scene detail -->
-    <div class="pane scenearea">
-      <div class="pane-head"><h2 id="sceneTitle">No scene selected</h2></div>
-      <div class="scenedetail" id="sceneDetail"></div>
     </div>
 
     <div class="splitter v" data-split="ctl-stack" title="Drag to resize — double-click to reset"></div>
@@ -719,10 +708,9 @@
     <div class="search scenesearch touchsearch">
       <input type="text" id="tSceneFilter" placeholder="filter scenes" autocomplete="off">
       <button id="tSceneFilterClear" title="Clear">✕</button>
-      <button class="kindbtn is-active" data-kind="all" title="Show all scenes">All</button>
-      <button class="kindbtn" data-kind="anim" title="Only › animations">›</button>
-      <button class="kindbtn" data-kind="static" title="Only · static looks">·</button>
     </div>
+    <!-- same containers, same state, as the Control bank -->
+    <div class="banktabs touchtabs" id="tBankTabs"></div>
     <div class="touchbody">
       <!-- The cue list the desk plays (cuerun.js), for a performer with a tablet and no
            Control page: GO, back, stop and loop go to the same routes the Control page's
@@ -1060,6 +1048,7 @@
     <button class="popitem" id="miRename">Rename…</button>
     <button class="popitem" id="miFade">Fade…</button>
     <button class="popitem" id="miRestage">Overwrite with current look</button>
+    <button class="popitem" id="miChase">Add to chase</button>
     <button class="popitem danger" id="miDelete">Delete scene</button>
   </div>
   <div class="bindhint" id="bindHint" hidden>Press a key to bind — Esc to cancel</div>

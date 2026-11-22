@@ -165,6 +165,10 @@ function createDesk(opts = {}) {
     // page. They reference scenes by id and tolerate dead references — the player shows a
     // missing step rather than silently renumbering the operator's set list mid-show.
     sets: [],
+    // Scene containers (called banks in code; Daslight-style, from the studio desk): named,
+    // coloured lists of scenes filled by hand. A scene can sit in any number of them, and a
+    // container tolerates ids of scenes since deleted (the interface skips them).
+    banks: [],
     // A project's cue list, played by the desk (cuerun.js): the list, where it is, and
     // whether it runs and loops — saved with the show, so a restart carries on.
     cues: sanitizeCues(null),
@@ -178,6 +182,34 @@ function createDesk(opts = {}) {
       sceneIds: (Array.isArray(s?.sceneIds) ? s.sceneIds : [])
         .filter((id) => typeof id === 'string' && id).slice(0, 1000),
     }));
+  }
+
+  // Every entry has to read as lettering on the near-black ground: #7a1fd6 was 2.7:1 there
+  // (layout audit, 2026-09-05) and became #9a5cff, 4.9:1. Existing containers keep whatever
+  // they were given — the interface lifts any colour toward white before using it as ink.
+  const BANK_COLORS = ['#f5c518', '#f0902f', '#f04ab0', '#a05fd6', '#9a5cff', '#2f9fe0', '#35d2dd', '#2fd93a', '#e0524a'];
+  function sanitizeBanks(list) {
+    if (!Array.isArray(list)) return [];
+    return list.slice(0, 24).map((b, i) => ({
+      id: typeof b?.id === 'string' && b.id ? b.id.slice(0, 40) : 'bank' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: String(b?.name || ('Bank ' + (i + 1))).slice(0, 40),
+      color: sanitizeHex(b?.color) || BANK_COLORS[i % BANK_COLORS.length],
+      sceneIds: [...new Set((Array.isArray(b?.sceneIds) ? b.sceneIds : []).filter((id) => typeof id === 'string' && id))].slice(0, 1000),
+      // Optional chase timing for "▶ Chase" on this container (2026-09-19): a smooth wave
+      // wants fade = hold, a strobe sequence wants hard cuts. Absent = use the chase's own.
+      ...(Number.isFinite(+b?.holdMs) && b.holdMs != null ? { holdMs: Math.max(50, Math.min(600000, +b.holdMs | 0)) } : {}),
+      ...(Number.isFinite(+b?.fadeMs) && b.fadeMs != null ? { fadeMs: Math.max(0, Math.min(60000, +b.fadeMs | 0)) } : {}),
+    }));
+  }
+
+  // Hex only, and always the same shape: '#rrggbb' lowercase. The colour row is rendered
+  // straight into a style attribute, so anything that is not a hex triple never gets stored.
+  function sanitizeHex(v) {
+    if (typeof v !== 'string') return null;
+    const m = v.trim().toLowerCase().match(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/);
+    if (!m) return null;
+    const h = m[1];
+    return '#' + (h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h);
   }
 
   // AUDIO_MODES and sanitizeAudioCfg live in engine.js now — recallScene applies the same
@@ -325,6 +357,7 @@ function createDesk(opts = {}) {
       s.lfos = sanitizeLfos(disk.lfos) || [];
       s.audioCfg = sanitizeAudioCfg({ ...DEFAULT_STATE.audioCfg, ...(disk.audioCfg || {}) });
       s.sets = sanitizeSets(disk.sets);
+      s.banks = sanitizeBanks(disk.banks);
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
@@ -1324,6 +1357,7 @@ function createDesk(opts = {}) {
       // Same rule for the effects: the pads are built from this list, so an effect added to
       // fx.js appears on the page without anyone remembering to add it twice.
       fxModes: FX_MODES,
+      bankColors: BANK_COLORS,
       fxSpatial: FX_SPATIAL,
       fanStyles: FAN_STYLES,
       lfoWaves: LFO_WAVES,
@@ -2283,6 +2317,15 @@ function createDesk(opts = {}) {
       save(); json(res, { ok: true, scene });
     },
 
+    // Scene containers: replace-whole, like /api/sets. The interface edits its copy (add,
+    // remove, rename, recolour, reorder) and posts the list; the server only decides what a
+    // container may contain. BANK_COLORS is published on /api/state so the two never disagree.
+    'POST /api/banks': (req, res, body) => {
+      if (!Array.isArray(body.banks)) return json(res, { error: 'banks must be an array' }, 400);
+      state.banks = sanitizeBanks(body.banks);
+      save(); json(res, { ok: true, banks: state.banks });
+    },
+
     // Live sets: replaced whole, like /api/lfos. Dead scene ids are kept on purpose — the
     // player marks them missing instead of silently shortening the operator's set.
     'POST /api/sets': (req, res, body) => {
@@ -2325,9 +2368,11 @@ function createDesk(opts = {}) {
       save(); json(res, { ok: true, count: clean.length });
     },
 
+    // {id} removes one; {ids:[...]} removes a selection in one call.
     'POST /api/scenes/remove': (req, res, body) => {
-      state.scenes = state.scenes.filter((s) => s.id !== body.id);
-      state.chase.sceneIds = state.chase.sceneIds.filter((id) => id !== body.id);
+      const gone = new Set(Array.isArray(body.ids) ? body.ids.filter((x) => typeof x === 'string') : [body.id]);
+      state.scenes = state.scenes.filter((s) => !gone.has(s.id));
+      state.chase.sceneIds = state.chase.sceneIds.filter((id) => !gone.has(id));
       // Removing the last step disarms the chase outright — see POST /api/chase.
       if (state.chase.sceneIds.length === 0 && state.chase.enabled) {
         state.chase.enabled = false;

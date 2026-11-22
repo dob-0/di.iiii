@@ -235,6 +235,23 @@ check('a show with no desk scenes hides the Scenes and Chase panes and says wher
   if (!/paintControlScenes\(\)/.test(js.slice(js.indexOf('function paintCues')))) throw new Error('a cue list arriving does not repaint the Control panes');
 });
 
+// Scene containers (ported from the studio desk): the tab rows and the right-click chase item are in
+// the page, the routes they post to are on the desk, and the page asks the desk for its colours.
+check('scene containers: tab rows, tile grid and chase item are in the page and their routes are on the desk', () => {
+  for (const id of ['bankTabs', 'bankList', 'tBankTabs', 'miChase']) {
+    if (!html.includes(`id="${id}"`)) throw new Error(`#${id} is not in the page`);
+    if (!js.includes(`'#${id}'`)) throw new Error(`app.js never reaches #${id}`);
+  }
+  for (const r of ['api/banks', 'api/chase', 'api/scenes/save', 'api/scenes/update', 'api/scenes/remove']) {
+    if (!js.includes(`'${r}'`)) throw new Error(`app.js never posts to ${r}`);
+    if (!server.includes(`'POST /${r}'`)) throw new Error(`the desk has no POST /${r}`);
+  }
+  if (!/bankColors:\s*BANK_COLORS/.test(server)) throw new Error('publicState does not publish bankColors');
+  if (/^let touchBank/m.test(js) === false || /^let bankView/m.test(js) === false) throw new Error('bankView / touchBank are not declared with the page state');
+  if (!/askedAt < banksPostedAt\) next\.banks = S\.banks/.test(js)) throw new Error('pullState does not drop a poll older than the last container save');
+  if (/sceneGroupOf|buildSceneDetail/.test(js)) throw new Error('the flat list helpers are back');
+});
+
 // Regression guard (2026-10-01, MOXIR UI audit): the Touch cue bar said "Nothing fired" while a
 // look fired by hand was on. Its headline now reads the desk's one NOW (state.now).
 check('the Touch cue bar headline reads state.now, never "Nothing fired"', () => {

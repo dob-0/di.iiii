@@ -363,7 +363,7 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 /* ---------------- control page ---------------- */
 /* The rail default was 240px — too narrow for the FX/LFO/Audio stacks on a wide screen —
    and both side columns are now draggable (.splitter): the vars are the knobs. */
-.ctl-top { --sp-1: 250px; --sp-3: 290px; --sp-2: 300px; display: grid; grid-template-columns: var(--sp-1) 6px minmax(0, 1fr) 6px var(--sp-3) 6px var(--sp-2); gap: 4px 0; padding: 4px; height: var(--sp-h, 50%); min-height: 260px; }
+.ctl-top { --sp-3: 290px; --sp-2: 300px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--sp-3) 6px var(--sp-2); gap: 4px 0; padding: 4px; height: var(--sp-h, 50%); min-height: 260px; }
 .ctl-bottom { --sp-1: 180px; --sp-2: 640px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--sp-1) 6px var(--sp-2); gap: 4px 0; padding: 4px; flex: 1; min-height: 0; }
 @media (max-width: 1400px) { .ctl-bottom { --sp-1: 150px; --sp-2: 520px; } }
 @media (max-width: 1250px) { .ctl-top { --sp-2: 260px; --sp-3: 250px; } .ctl-bottom { --sp-1: 140px; --sp-2: 440px; } }
@@ -374,9 +374,8 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .transport { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); flex: none; }
 .transport .sq { flex: 1; }
 .banklist { flex: 1; overflow: auto; min-height: 60px; }
-/* group headers in the bank — derived from the scene naming convention in buildBank();
-   sticky so the section you are scrolled into stays named, and not .bankrow so every
-   click/long-press/hotkey path skips them by construction */
+/* section headers on the Touch page (Looks, Stage, Pixel strips) — sticky so the section you are
+   scrolled into stays named, and not .bankrow so every click/long-press/hotkey path skips them */
 .bankhead {
   position: sticky; top: 0; z-index: 1; background: var(--pane);
   padding: 5px 10px 3px; font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
@@ -385,7 +384,9 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 }
 .bankrow { display: grid; grid-template-columns: 1fr 16px; border-bottom: 1px solid #ffffff08; cursor: pointer; }
 .bankrow:hover { background: #ffffff08; }
-.bankrow.sel { background: var(--pane2); }   /* the scene open in the detail pane, as opposed to .active, the one on stage */
+/* .sel = in the multi-selection (shift/ctrl-click), as opposed to .active, the one on stage.
+   The accent edge is what makes a five-row range readable at a glance. */
+.bankrow.sel { background: var(--pane2); box-shadow: inset 3px 0 0 var(--accent); }
 .bankrow .txt { padding: 7px 10px; }
 .bankrow .nm { display: block; }
 .bankrow.active .nm { color: var(--accent); }
@@ -393,16 +394,8 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .bankrow .bar { background: var(--line); }
 .bankrow.active .bar { background: var(--accent); }
 
-.scenedetail { flex: 1; overflow: auto; padding: 14px; }
-.scenedetail .strip { display: flex; height: 26px; border-radius: 0; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--line); }   /* a blackout scene is a black strip — keep its edge */
-.scenedetail .strip i { flex: 1; }
-.sd-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
-.sd-empty { color: var(--muted); }
-
 .railmaster { display: grid; justify-items: center; gap: 8px; padding: 12px; }
 .railmaster output { font-family: var(--mono); font-size: 15px; }
-.railchase { display: grid; gap: 6px; padding: 10px 12px; }
-.railchase label { display: flex; justify-content: space-between; align-items: center; color: var(--muted); }
 /* The rail stacks Master + FX + LFO + Audio + Output — far taller than the pane. Every
    child is flex:none so nothing gets crushed to make room; the pane itself scrolls.
    (Same fix .bankpane needed: shrinking flex children clip instead of scrolling.) */
@@ -598,7 +591,7 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bord
   .stagepane { min-height: min(420px, 60vh); }
   .attrpane { min-height: 300px; }
   .library .tree { max-height: 200px; }
-  .banklist { max-height: 45vh; }
+  .bankcols { max-height: 60vh; min-height: 280px; }
   .title { display: none; }
   .pills { margin-left: auto; }
   /* .pills and .topright stay — they carry blackout and the safety warnings. */
@@ -635,17 +628,8 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bord
 .gc.drop { outline: 2px solid var(--accent); background: #35d2dd22; }
 .stage.dropping { box-shadow: inset 0 0 0 2px var(--accent); }
 
-/* The scenes pane stacks head + transport + list + chase; on a short window the chase
-   block used to overflow the pane and land on top of the groups bar. */
-.bankpane { overflow: auto; }
-.bankpane .transport, .bankpane .railchase, .bankpane .inline.pad { flex: none; }
-.banklist { flex: 1 1 auto; }
-
-/* Chase controls: two rows instead of three, so the scenes pane fits on a short window. */
-.railchase { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.railchase label { justify-content: flex-start; }
-.railchase input[type=number] { width: 56px; }
-.railchase .sq { flex: 1 1 100%; }
+/* The scenes pane stacks cues + bar + container tabs + tile grid; the grid scrolls on its own. */
+.bankpane .transport { flex: none; }
 
 /* Drop feedback: where it can go, and what is in the way. */
 .gc.freehint { box-shadow: inset 0 0 0 1px var(--accent); }
@@ -1018,7 +1002,7 @@ body.space .stage { cursor: grab; }
 /* The badge marks a tile with its bound key; the popover captures the next keypress.
    Long-press is the finger's right-click, so neither the bank list nor the Touch
    page's tile grid may offer the OS callout. */
-.banklist, #touchGrid { -webkit-touch-callout: none; }
+.banklist, .bankcols, #touchGrid { -webkit-touch-callout: none; }
 /* On the rows/tiles themselves too: a long-press must never raise the OS text-selection
    or callout UI on the very elements whose long-press IS the context menu. */
 .bankrow, .tbtn { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -1162,7 +1146,7 @@ body.space .stage { cursor: grab; }
 /* 1366×768 showed ONE scene row: the bank keeps real height (its pane scrolls), and the
    top half takes a little more of the page by default on short screens. */
 @media (max-height: 800px) and (min-width: 1101px) {
-  .banklist { min-height: 40vh; }
+  .bankcols { min-height: 40vh; }
   .ctl-top { height: var(--sp-h, 56%); }
 }
 
@@ -1316,14 +1300,6 @@ body.space .stage { cursor: grab; }
 .strow .sq { min-height: 36px; min-width: 40px; flex: none; }
 .sb-tools { display: flex; gap: 6px; flex-wrap: wrap; flex: none; }
 .sb-tools .sq { min-height: 44px; }
-
-/* Kind toggle beside the scene filter: All / animations / statics. Matches the search
-   row's height; the active one reads bright like an active page tab. */
-.kindbtn {
-  background: var(--pane2); color: var(--muted); border: 1px solid var(--line);
-  min-width: 40px; min-height: 44px; font-size: 15px; border-radius: 6px; cursor: pointer;
-}
-.kindbtn.is-active { color: #fff; border-color: #fff; }
 
 /* ================ MIDI page ================ */
 /* The control surface, in the same panes and the same buttons as every other page. It
@@ -1508,9 +1484,113 @@ button.ndrow:hover { outline: 1px solid var(--muted); }
 /* ---- The laser look a scene puts live (2026-10-31, the scene link): small, never the alarm colour of a .tnote */
 .tbtn .tnote.tlaser { color: var(--muted); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---- The scene list's filter keeps a usable width (2026-10-31, Projector Room). In the ~230 px list column the clear button and the three kind buttons left the box 42 px
-   ("filte"); this predates the scene link (the same 42 px with Follow off). The box now takes the whole first row and the buttons wrap under it. */
-.scenesearch { flex-wrap: wrap; }
-#sceneFilter { flex: 1 1 100%; }
-.scenesearch .kindbtn { order: 1; }
-#sceneFilterClear { order: 2; margin-left: auto; }
+/* ================ scene containers (from the studio desk) ================
+   Coloured tabs, one tile grid at a time, the same containers on Control and on Touch.
+   Every container colour that becomes lettering is lifted toward white (--bc-ink) so a
+   dark pick still reads on the near-black ground; the swatch and the underline keep the
+   true colour. */
+.banktabs { display: flex; gap: 2px; padding: 4px; flex: none; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 1px solid var(--line); }   /* overflow-y explicit: `auto` there gave the tab row a 2px vertical scroll of its own */
+.banktabs::-webkit-scrollbar { display: none; }
+.btab {
+  display: flex; align-items: center; gap: 5px; flex: none;
+  background: var(--field); border: 1px solid var(--line); border-radius: 0;
+  color: var(--muted); font-size: 11px; padding: 4px 8px; white-space: nowrap;
+}
+.btab:hover { color: var(--text); border-color: var(--muted); }
+.btab.is-active { color: var(--accent); border-color: var(--accent); background: #35d2dd14; }
+.btab i { font-style: normal; font-size: 10px; color: var(--muted); }
+.btab.is-active i { color: var(--accent); }
+/* The phone is the performance surface: 44px targets. These tabs are her containers, so each
+   one wears the container's own colour — the same container reads the same on the desk and in the hand. */
+.touchtabs { padding: 6px 0; gap: 4px; border-bottom: 0; }
+.touchtabs .btab { min-height: 44px; font-size: 13px; padding: 6px 14px; border-color: color-mix(in srgb, var(--bc, var(--line)) 40%, var(--line)); }
+.touchtabs .btab i { font-size: 12px; }
+.touchtabs .btab.is-active { color: color-mix(in oklch, var(--bc) 78%, white); color: oklch(from var(--bc) max(l, 0.74) c h); border-color: var(--bc); background: color-mix(in srgb, var(--bc) 14%, transparent); }
+.touchtabs .btab.is-active i { color: color-mix(in oklch, var(--bc) 78%, white); color: oklch(from var(--bc) max(l, 0.74) c h); }
+.touchtabs .btab.unfiled { font-style: italic; }
+/* A Touch tile carries a thin edge in its container's colour. */
+.tbtn { border-left: 3px solid color-mix(in srgb, var(--bc, var(--line)) 60%, var(--line)); }
+
+.bankcols-pane { display: flex; flex-direction: column; }
+.ctlscenes { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.ctlscenes[hidden] { display: none; }
+/* Chase settings live in the bar beside the transport. */
+.chasebar { display: flex; align-items: center; gap: 6px; flex: none; padding: 0 8px; border-left: 1px solid var(--line); }
+.chasebar[hidden] { display: none; }
+.chasebar label { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.chasebar input[type=number] { width: 52px; padding: 3px 6px; }
+.chasebar .sq { padding: 4px 10px; }
+/* Start with nothing in the chase: still pressable — pressing it is how you find out why —
+   but it stops claiming it will do something. */
+.sq.accent.inert { background: none; color: var(--muted); border-color: var(--line); font-weight: 400; }
+.chasebar > .muted { font-size: 12px; }
+.bankbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.bankbar .transport { padding: 0; border: 0; flex: none; }
+.bankbar .transport .sq { flex: none; padding: 5px 10px; }
+.bankbar .search { flex: 1; min-width: 140px; border-bottom: 0; }
+.bankcols { flex: 1; min-height: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); overflow: hidden; }
+.colempty { padding: 10px; font-size: 11px; }
+
+/* Bank rows on one line: name left, fade (or the health note) right. */
+.bankrow .txt { display: flex; align-items: baseline; gap: 8px; padding: 5px 10px; }
+.bankrow .nm { flex: 1; min-width: 0; }
+.bankrow .sub { flex: none; max-width: 55%; }
+.bankrow:has(.hk) .nm { padding-right: 0; }
+.bankrow:has(.hk) .sub { padding-right: 30px; }
+@media (pointer: coarse) { .bankrow .txt { padding: 9px 10px; } }
+/* Tab row across the bank area. Each tab carries its container's colour in --bc: the text and
+   the underline of the open one, and a wash behind it while a scene is dragged over. */
+.banktabs.bankrow-tabs { padding: 0 6px; gap: 0; border-bottom: 2px solid var(--line); background: var(--pane); }
+.bankrow-tabs .btab {
+  --bc: var(--muted);
+  background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px;
+  --bc-ink: color-mix(in oklch, var(--bc) 78%, white);
+  --bc-ink: oklch(from var(--bc) max(l, 0.74) c h);   /* lift ONLY a dark pick: yellow stays yellow */
+  color: var(--bc-ink); font-size: 12px; font-weight: 600; padding: 7px 12px; min-height: 34px; gap: 6px;
+}
+.bankrow-tabs .btab i { color: var(--muted); font-weight: 400; }
+.bankrow-tabs .btab:hover { background: #ffffff08; }
+.bankrow-tabs .btab.is-active { border-bottom-color: var(--bc); background: #ffffff0a; }
+.bankrow-tabs .btab.add { color: var(--muted); font-size: 16px; padding: 4px 12px; }
+.bankrow-tabs .btab.dragover { background: color-mix(in srgb, var(--bc) 25%, transparent); outline: 1px dashed var(--bc); outline-offset: -1px; }
+body.dragscene .bankrow-tabs .btab:not(.add):not(.unfiled) { outline: 1px dashed var(--line); outline-offset: -1px; }
+
+/* One container: a head row in its colour, then tiles filling the width. */
+.bankhead-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px 5px 10px; border-bottom: 1px solid var(--line); flex: none; }
+.bankhead-row .swatch { width: 14px; height: 14px; background: var(--bc); border: 1px solid #00000066; cursor: pointer; flex: none; }
+.bankhead-row .nm { font-size: 12px; font-weight: 600; color: color-mix(in oklch, var(--bc) 78%, white); color: oklch(from var(--bc) max(l, 0.74) c h); cursor: text; }
+.bankhead-row .cnt { flex: 1; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.bankhead-row .bankdel { color: var(--muted); padding: 2px 8px; }
+.bankhead-row .bankdel:hover { color: var(--danger); border-color: var(--danger); }
+.bankrename { font-size: 12px; padding: 2px 6px; width: 160px; }
+.tiles {
+  flex: 1; min-height: 0; overflow: auto; padding: 8px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: 58px; gap: 8px; align-content: start;
+}
+.tiles > .colempty { grid-column: 1 / -1; }
+/* A tile is a .bankrow (same click / long-press / selection wiring) drawn as a card:
+   the container's colour on its left edge, name over the kind. */
+.bankrow.tile {
+  display: grid; grid-template-columns: 1fr 12px; background: var(--pane2); border: 1px solid var(--line);
+  border-left: 4px solid var(--bc); cursor: pointer; overflow: hidden; min-width: 0;
+}
+.bankrow.tile .txt { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 8px; min-width: 0; }
+.bankrow.tile .nm { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bankrow.tile .sub { font-size: 9px; color: var(--muted); max-width: 100%; margin-right: 0; }   /* a tile stacks, so .sub may use the width; the row rule's ellipsis still applies */
+.bankrow.tile .bar { background: var(--line); }
+.bankrow.tile.active { border-color: var(--bc); background: color-mix(in srgb, var(--bc) 22%, var(--pane2)); }
+.bankrow.tile.active .nm { color: var(--bc); }
+.bankrow.tile.active .bar { background: var(--bc); }
+.bankrow.tile.sel { box-shadow: inset 0 0 0 1px var(--accent); }
+.bankrow.tile:hover { border-color: var(--muted); }
+.bankrow.tile .hk { position: absolute; right: 16px; top: 4px; }
+/* dragging a tile: the browser draws the ghost; we only need the grab cursor */
+.bankrow[draggable="true"] { cursor: grab; }
+body.dragscene .bankrow { cursor: grabbing; }
+/* a container is a column (head + grid) */
+.bankcols.asbank { display: flex; flex-direction: column; }
+/* a tile's name in edit, straight after + made it (startTileRename) */
+.bankrow.tile .tilerename { width: 100%; min-width: 0; font-size: 12px; font-weight: 600; padding: 1px 4px; background: var(--field); border: 1px solid var(--accent); border-radius: 0; color: var(--text); }
+/* the automatic Unfiled tab reads quieter than a real container */
+.bankrow-tabs .btab.unfiled { font-weight: 400; font-style: italic; }
+.bankrow-tabs .tabrename { width: 120px; font-size: 12px; font-weight: 600; padding: 2px 6px; background: var(--field); border: 1px solid var(--bc); border-radius: 0; color: var(--text); }

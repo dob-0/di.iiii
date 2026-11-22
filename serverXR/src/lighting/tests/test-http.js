@@ -2267,6 +2267,83 @@ check('loading another show stops a follow sequence started in the one that was 
   } finally { await d.stop(); }
 });
 
+// ---- scene containers ("banks", from the studio desk) --------------------------------
+
+check('scene containers are replaced whole, cleaned, kept across a re-read, and their colours published', async () => {
+  const a = (await POST('/api/scenes/save', { name: 'In a container A' })).body.scene;
+  const b = (await POST('/api/scenes/save', { name: 'In a container B' })).body.scene;
+  const before = (await GET('/api/state')).body.banks;
+  try {
+    assert.ok(Array.isArray(before), 'the state carries banks');
+    assert.ok(Array.isArray((await GET('/api/state')).body.bankColors) && (await GET('/api/state')).body.bankColors.length >= 8, 'and the colours the page recolours from');
+    assert.strictEqual((await POST('/api/banks', { banks: 'x' })).status, 400, 'a non-array is refused');
+    const r = await POST('/api/banks', { banks: [
+      { id: 'k1', name: 'x'.repeat(60), color: 'F00', sceneIds: [a.id, a.id, b.id, 7, '', 'ghost'], holdMs: 10, fadeMs: 99999999 },
+      { id: 'k2', name: '', color: 'not a colour', sceneIds: 'nope' },
+      { name: 'No id' },
+    ] });
+    assert.strictEqual(r.status, 200, r.text);
+    const got = (await GET('/api/state')).body.banks;
+    assert.strictEqual(got.length, 3);
+    assert.strictEqual(got[0].name.length, 40, 'names are capped');
+    assert.strictEqual(got[0].color, '#ff0000', 'a short hex is widened and lower-cased');
+    assert.deepStrictEqual(got[0].sceneIds, [a.id, b.id, 'ghost'], 'duplicates and non-ids go; an id for a scene since deleted stays');
+    assert.strictEqual(got[0].holdMs, 50, 'a hold below 50ms is raised to it');
+    assert.strictEqual(got[0].fadeMs, 60000, 'a fade is capped at a minute');
+    assert.strictEqual(got[1].name, 'Bank 2', 'a nameless container gets one');
+    assert.match(got[1].color, /^#[0-9a-f]{6}$/, 'a colour that is not hex becomes one from the palette');
+    assert.deepStrictEqual(got[1].sceneIds, [], 'scene ids that are not a list become none');
+    assert.strictEqual('holdMs' in got[1], false, 'no chase timing stays absent');
+    assert.ok(got[2].id && got[2].id !== 'k1', 'a container with no id is given one');
+    assert.ok((await POST('/api/banks', { banks: [] })).body.banks.length === 0, 'replace-whole: an empty list empties it');
+  } finally {
+    await POST('/api/banks', { banks: before || [] });
+    await POST('/api/scenes/remove', { ids: [a.id, b.id] });
+  }
+});
+
+check('removing scenes takes a whole selection in one call and drops them from the chase', async () => {
+  const a = (await POST('/api/scenes/save', { name: 'Gone A' })).body.scene;
+  const b = (await POST('/api/scenes/save', { name: 'Gone B' })).body.scene;
+  const c = (await POST('/api/scenes/save', { name: 'Stays' })).body.scene;
+  try {
+    await POST('/api/chase', { sceneIds: [a.id, b.id, c.id] });
+    assert.strictEqual((await POST('/api/scenes/remove', { ids: [a.id, b.id] })).status, 200);
+    const st = (await GET('/api/state')).body;
+    assert.deepStrictEqual(st.scenes.filter((s) => [a.id, b.id, c.id].includes(s.id)).map((s) => s.id), [c.id], 'only the one not named is left');
+    assert.deepStrictEqual(st.chase.sceneIds, [c.id], 'and the chase lost the two');
+    // the single-id form still works
+    assert.strictEqual((await POST('/api/scenes/remove', { id: c.id })).status, 200);
+    assert.ok(!(await GET('/api/state')).body.scenes.some((s) => s.id === c.id));
+  } finally {
+    await POST('/api/scenes/remove', { ids: [a.id, b.id, c.id] });
+    await POST('/api/chase', { sceneIds: [], enabled: false });
+  }
+});
+
+check('a show opened from disk has its containers cleaned like a posted list, and the desk reads the other show own list', async () => {
+  const d = await spaceDesk();
+  try {
+    fs.mkdirSync(path.dirname(d.spaceShow('lab')), { recursive: true });
+    fs.writeFileSync(d.spaceShow('lab'), JSON.stringify({
+      fixtures: [], scenes: [],
+      banks: [{ id: 'k', name: 'Hand edited', color: 'javascript:alert(1)', sceneIds: ['s1', 's1', 5] }, 'junk', null],
+    }));
+    await d.post('/api/banks', { banks: [{ id: 'machine', name: 'This machine', sceneIds: [] }] });
+    assert.strictEqual((await d.post('/api/show/open', { space: 'lab' })).status, 200);
+    const banks = (await d.get('/api/state')).body.banks;
+    assert.strictEqual(banks.length, 3, 'the junk entries become containers, never a crash');
+    assert.strictEqual(banks[0].name, 'Hand edited');
+    assert.match(banks[0].color, /^#[0-9a-f]{6}$/, 'a colour that is not hex never reaches the page');
+    assert.deepStrictEqual(banks[0].sceneIds, ['s1'], 'one id, once');
+    // the route reads the CURRENT show, not the one that was open when the desk was made
+    await d.post('/api/banks', { banks: [{ id: 'lab-only', name: 'Lab only', sceneIds: [] }] });
+    assert.deepStrictEqual((await d.get('/api/state')).body.banks.map((b) => b.id), ['lab-only']);
+    await d.post('/api/show/open', { space: null });
+    assert.deepStrictEqual((await d.get('/api/state')).body.banks.map((b) => b.id), ['machine'], 'back on the machine show, its own list');
+  } finally { await d.stop(); }
+});
+
 async function main() {
   const argv = process.argv.slice(2);
   const ci = argv.indexOf('--class');
