@@ -250,6 +250,67 @@ describe('hub snapshot', () => {
 
   // Credits belong to the account, not to one machine: a machine with no credits list of its own shows the list another
   // of the owner's machines reported (marked `from` and `reportedAt`). Nothing is probed: a probe is a real model call.
+  describe('tasks and shows on every machine', () => {
+    const feed = (id, extra = {}) => ({ id, title: `T ${id}`, ok: true, lines: ['a line'], ...extra })
+    const own = (tasks, shows) => build({ store: { getMonitor: async () => ({ host: 'studio-mac.tail', configured: true, panels: { tasks, shows } }) } }).hub
+    const sharedWith = (tasks, shows = []) => ({ state: 'ok', data: { tasks, shows } })
+
+    it('lends another machine\'s rows the machine has not, tagged with the machine; own rows first and never replaced', async () => {
+      const hub = own({ ok: true, rows: [feed('chats-ask', { lines: ['mine'] })] }, { ok: true, rows: [] })
+      const snap = await hub.getSnapshot({ shared: sharedWith(
+        [{ machine: 'aylmo', ...feed('chats-ask', { lines: ['theirs'] }) }, { machine: 'aylmo', ...feed('ledger') }, { machine: 'aylmo', ...feed('left-open') }],
+        [{ machine: 'aylmo.tail', ...feed('platina-facts') }]
+      ) })
+      expect(snap.panels.tasks.rows.map((r) => [r.id, r.machine || null])).toEqual([['chats-ask', null], ['ledger', 'aylmo'], ['left-open', 'aylmo']])
+      expect(snap.panels.tasks.rows[0].lines).toEqual(['mine'])
+      expect(snap.panels.tasks.lentFrom).toEqual(['aylmo'])
+      expect(snap.panels.shows).toMatchObject({ ok: true, lentFrom: ['aylmo'], rows: [{ id: 'platina-facts', machine: 'aylmo' }] })
+    })
+
+    it('never lends this machine\'s own rows back, nor stale, failing, broken or duplicate rows', async () => {
+      const mine = { ok: true, rows: [] }
+      const hub = own(mine, mine)
+      const snap = await hub.getSnapshot({ shared: sharedWith([
+        { machine: 'studio-mac', ...feed('self') },
+        { machine: 'Studio-Mac.lan', ...feed('self2') },
+        { machine: 'aylmo', stale: true, ...feed('old') },
+        { machine: 'aylmo', ...feed('down', { ok: false, error: 'x' }) },
+        { machine: 'aylmo', ...feed('nolines', { lines: 'x' }) },
+        { machine: 'aylmo', ...feed('badline', { lines: [1] }) },
+        { machine: 'aylmo', ...feed(7) },
+        { machine: '', ...feed('nomachine') },
+        'not a row',
+        { machine: 'aylmo', ...feed('dup', { lines: ['newest'] }) },
+        { machine: 'r-di', ...feed('dup', { lines: ['older'] }) }
+      ]) })
+      expect(snap.panels.tasks.rows.map((r) => [r.id, r.machine, r.lines[0]])).toEqual([['dup', 'aylmo', 'newest']])
+      expect(snap.panels.shows).toBe(mine)
+    })
+
+    it('with no shared picture, or nothing to lend, the panel is the machine\'s own object', async () => {
+      const tasks = { ok: true, rows: [feed('chats-ask')] }
+      const hub = own(tasks, undefined)
+      expect((await hub.getSnapshot()).panels.tasks).toBe(tasks)
+      expect((await hub.getSnapshot({ shared: { state: 'offline', data: null } })).panels.tasks).toBe(tasks)
+      const snap = await hub.getSnapshot({ shared: sharedWith([{ machine: 'aylmo', ...feed('chats-ask') }]) })
+      expect(snap.panels.tasks).toBe(tasks)
+      expect(snap.panels.shows).toBeUndefined()
+    })
+
+    it('a machine with no feed of its own (or a failed one) still shows the account\'s rows', async () => {
+      const hub = own(undefined, { ok: false, error: 'no feed', rows: [] })
+      const snap = await hub.getSnapshot({ shared: sharedWith([{ machine: 'aylmo', ...feed('ledger') }], [{ machine: 'aylmo', ...feed('platina-lanes') }]) })
+      expect(snap.panels.tasks).toMatchObject({ ok: true, rows: [{ id: 'ledger', machine: 'aylmo' }] })
+      expect(snap.panels.shows).toMatchObject({ ok: false, error: 'no feed', rows: [{ id: 'platina-lanes' }] })
+    })
+
+    it('lends at most 40 rows', async () => {
+      const hub = own({ ok: true, rows: [] }, { ok: true, rows: [] })
+      const many = Array.from({ length: 60 }, (_, i) => ({ machine: 'aylmo', ...feed(`t${i}`) }))
+      expect((await hub.getSnapshot({ shared: sharedWith(many) })).panels.tasks.rows).toHaveLength(40)
+    })
+  })
+
   describe('credits on every machine', () => {
     const T0 = 1_800_000_000_000
     const rows = [

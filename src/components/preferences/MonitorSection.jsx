@@ -169,6 +169,14 @@ const RECONNECT_MIN_MS = 3000
 const RECONNECT_MAX_MS = 30000
 export const nextBackoff = (ms) => Math.min(RECONNECT_MAX_MS, ms * 2)
 
+// Tasks and shows are the account's: rows another machine read are lent here (each tagged with its machine).
+export function feedsSubtitle(panels) {
+    const from = [...new Set([...(panels?.tasks?.lentFrom || []), ...(panels?.shows?.lentFrom || [])])].sort()
+    return from.length
+        ? `This machine's feeds and your account's from ${from.join(', ')}`
+        : 'Your feeds from ~/.di/monitor.json'
+}
+
 export default function MonitorSection({ onStats }) {
     const [snap, setSnap] = useState(null)
     const [unavailable, setUnavailable] = useState(false)
@@ -704,13 +712,13 @@ export default function MonitorSection({ onStats }) {
                         ))}
                     </ModuleSection></div>
 
-                    <ModuleSection title="Tasks and shows" subtitle="Your feeds from ~/.di/monitor.json">
-                        {!snap?.configured ? (
+                    <ModuleSection title="Tasks and shows" subtitle={feedsSubtitle(panels)}>
+                        {!snap?.configured && !(panels.tasks?.rows?.length || panels.shows?.rows?.length) ? (
                             <div className="monitor-note">No feeds yet. Add feeds with panel &ldquo;tasks&rdquo; or &ldquo;shows&rdquo; to ~/.di/monitor.json — a command, a file or a URL each.</div>
                         ) : null}
                         {['tasks', 'shows'].map((key) => (panels[key]?.rows || []).map((feedRow) => (
                             <div key={`${key}:${feedRow.id}`} className={`monitor-feed${feedRow.ok ? '' : ' is-down'}`}>
-                                <div className="monitor-group-title">{feedRow.title} <span className="preferences-tree-tag">{key}</span>{feedRow.updatedAt ? <span className="monitor-meta"> · {timeAgo(feedRow.updatedAt)}</span> : null}</div>
+                                <div className="monitor-group-title">{feedRow.title} <span className="preferences-tree-tag">{key}</span>{feedRow.machine ? <span className="monitor-meta" data-feed-machine={feedRow.machine}> · from {feedRow.machine}</span> : null}{feedRow.updatedAt ? <span className="monitor-meta"> · {timeAgo(feedRow.updatedAt)}</span> : null}</div>
                                 {feedRow.ok
                                     ? <pre className="monitor-pre">{feedRow.lines.filter((l) => matches(query, l)).join('\n') || '—'}</pre>
                                     : <div className="monitor-note is-down">Unavailable here: {feedRow.error}</div>}
