@@ -50,7 +50,7 @@ describe('the device sign-in page', () => {
 
     it('reads every corner from the radius token and no tracking literal', () => {
         const radii = css.match(/border-radius:[^;]+;/g) || []
-        expect(radii.length).toBe(6)
+        expect(radii.length).toBe(7)
         for (const r of radii) expect(r).toBe('border-radius: var(--di-radius);')
         expect(css).not.toMatch(/letter-spacing:\s*0\.2em/)
     })

@@ -58,3 +58,11 @@ export const listTerminalLogins = () => call('/api/auth/cli/tokens')
 export const revokeTerminalLogin = (id) => call(`/api/auth/cli/tokens/${encodeURIComponent(id)}`, {
     method: 'DELETE'
 })
+
+// This account's connected machines (made by `di connect`): { machines: [{ id, name, since, lastUsedAt, spaces: [{ id, label }] }] }.
+export const listMachines = () => call('/api/auth/connect/machines')
+
+// Disconnects one: ends every key that machine holds. { disconnected: <n> }. 404 when it is not this account's.
+export const disconnectMachine = (id) => call(`/api/auth/connect/machines/${encodeURIComponent(id)}`, {
+    method: 'DELETE'
+})

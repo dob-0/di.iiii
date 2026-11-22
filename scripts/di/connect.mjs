@@ -81,11 +81,77 @@ export const hostProjects = async ({ base, spaceId, key }) => {
     } catch { return null }
 }
 
+// ── follow each key, with the safety check (shared by `di connect` and the stay-connected sync) ──
+
+const followKeys = async (d, { site, base, keys }) => {
+    const local = d.local || {}
+    const followed = []
+    const skipped = []
+    for (const { spaceId, key } of keys) {
+        const mine = await (local.projects || (async () => ({ exists: false, ids: [] })))(spaceId)
+        let into = null
+        if (mine.exists) {
+            // A space of that name is here. Safe only when the host holds every project this copy holds.
+            const theirs = await (d.hostProjects || (async () => null))({ base, spaceId, key })
+            if (mine.ids === null || theirs === null) { skipped.push({ spaceId, why: 'could not compare this copy with the host' }); continue }
+            const lacking = mine.ids.filter((id) => !theirs.includes(id))
+            if (lacking.length) { skipped.push({ spaceId, work: lacking.length }); continue }
+            into = spaceId
+        }
+        const out = await d.follow({ spaceId, key, from: site, into })
+        if (out.ok) followed.push(spaceId)
+        else skipped.push({ spaceId, why: out.reason === 'merge' ? 'a space of that name is here' : `refused (${out.reason})` })
+    }
+    return { followed, skipped }
+}
+
+const rememberConnected = (d, site, followed) => {
+    const old = readConnected(d.home)
+    const keep = (old?.remote === site ? old.spaces : []).filter((id) => !followed.includes(id))
+    writeConnected(d.home, { remote: site, spaces: [...keep, ...followed], at: new Date(d.now()).toISOString() })
+}
+
+// ── di connect --sync: a connected machine stays connected ─────────────────
+
+/**
+ * Shows the host one of this machine's live connect keys and follows the spaces the person gained since.
+ * Covered by the first consent; ended by `di disconnect` / the Disconnect button. Quiet when there is nothing new.
+ * Returns { code, followed, skipped, said }: code 0 = fine or nothing connected here; 1 = the host refused or was unreachable.
+ */
+export const syncConnected = async (deps = {}, { quiet = false } = {}) => {
+    const d = withDefaults(deps)
+    const record = readConnected(d.home)
+    if (!record || !record.spaces.length) return { code: 0, followed: [], skipped: [], said: false }
+    const known = readFollows(paths(d.home).data)
+    const site = record.remote
+    const candidates = record.spaces.map((id) => known[id]).filter((f) => f && f.token && (f.remote === `${site}/serverXR` || f.remote === site))
+    if (!candidates.length) { d.warn(ui.syncNoKey()); return { code: 1, followed: [], skipped: [], said: true } }
+    let answer = null
+    for (const follow of candidates) {
+        answer = await ask(d, 'POST', `${follow.remote.replace(/\/+$/, '')}/api/auth/connect/sync`, { token: follow.token })
+        if (answer.status === 200) break
+    }
+    if (answer?.status !== 200) {
+        const host = new URL(site).host
+        d.warn(ui.syncRefused(host, answer?.status || 0))
+        return { code: 1, followed: [], skipped: [], said: true }
+    }
+    const got = readKeys(answer.body)
+    const fresh = (got?.keys || []).filter((k) => !record.spaces.includes(k.spaceId))
+    if (!fresh.length) { if (!quiet) d.say(ui.syncNothingNew()); return { code: 0, followed: [], skipped: [], said: !quiet } }
+    const { followed, skipped } = await followKeys(d, { site, base: `${site}/serverXR`, keys: fresh })
+    for (const id of followed) d.say(ui.connectFollowed(id))
+    for (const s of skipped) d.say(s.work ? ui.connectSkippedWork(s.spaceId, s.work) : ui.connectSkippedWhy(s.spaceId, s.why))
+    if (followed.length) rememberConnected(d, site, followed)
+    return { code: 0, followed, skipped, said: true }
+}
+
 // ── di connect ─────────────────────────────────────────────────────────────
 
 export const cmdConnect = async (args, deps = {}) => {
     const d = withDefaults(deps)
     const flags = { ...(args?.flags || {}) }
+    if (flags.sync) return (await syncConnected(deps)).code
     if (Object.hasOwn(flags, 'from')) { flags.to = flags.from; delete flags.from }
     const target = resolveTarget(flags)
     if (target.error) { d.fail(target.error); return 1 }
@@ -115,32 +181,10 @@ export const cmdConnect = async (args, deps = {}) => {
     const name = nameOf(user)
     if (!keys.length) { d.say(ui.connectNone(host)); return 0 }
 
-    const local = d.local || {}
-    const followed = []
-    const skipped = []
-    for (const { spaceId, key } of keys) {
-        const mine = await (local.projects || (async () => ({ exists: false, ids: [] })))(spaceId)
-        let into = null
-        if (mine.exists) {
-            // A space of that name is here. Safe only when the host holds every project this copy holds.
-            const theirs = await (d.hostProjects || (async () => null))({ base, spaceId, key })
-            if (mine.ids === null || theirs === null) { skipped.push({ spaceId, why: 'could not compare this copy with the host' }); continue }
-            const lacking = mine.ids.filter((id) => !theirs.includes(id))
-            if (lacking.length) { skipped.push({ spaceId, work: lacking.length }); continue }
-            into = spaceId
-        }
-        const out = await d.follow({ spaceId, key, from: site, into })
-        if (out.ok) followed.push(spaceId)
-        else skipped.push({ spaceId, why: out.reason === 'merge' ? 'a space of that name is here' : `refused (${out.reason})` })
-    }
-
+    const { followed, skipped } = await followKeys(d, { site, base, keys })
     for (const id of followed) d.say(ui.connectFollowed(id))
     for (const s of skipped) d.say(s.work ? ui.connectSkippedWork(s.spaceId, s.work) : ui.connectSkippedWhy(s.spaceId, s.why))
-    if (followed.length) {
-        const old = readConnected(d.home)
-        const keep = (old?.remote === site ? old.spaces : []).filter((id) => !followed.includes(id))
-        writeConnected(d.home, { remote: site, spaces: [...keep, ...followed], at: new Date(d.now()).toISOString() })
-    }
+    if (followed.length) rememberConnected(d, site, followed)
     d.say(ui.connectDone(host, name, followed.length, skipped.length))
     return followed.length || !skipped.length ? 0 : 1
 }

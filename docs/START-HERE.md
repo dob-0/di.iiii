@@ -1,6 +1,13 @@
 # New machine → working on di.iiii
 
-One page, four doors. Pick the one you need. Every step was run on a bare Raspberry Pi (Debian 13, Node 24) on 2026-11-18 unless it says "not walked".
+One page, four doors. Pick the one you need.
+
+**Three ways of working — all kept, switch any time (nothing needs a login unless you choose it):**
+1. **Browser only:** sign in at dev.diiii.xyz, nothing installed.
+2. **Install, no login:** door 1. The local copy works alone and offline, exactly as before.
+3. **Install + `di login`** (the same account as dev.diiii.xyz): door 4. `di connect` follows all your spaces, and every machine you connect stays connected.
+Switch 2 → 3: `di login`, then `di connect`. Switch 3 → 2: `di disconnect` (your work on the machine stays).
+ Every step was run on a bare Raspberry Pi (Debian 13, Node 24) on 2026-11-18 unless it says "not walked".
 The same page with COPY buttons and walked / not-walked marks: open `docs/start-here.html` in a browser.
 
 
@@ -57,9 +64,10 @@ di whoami                                  # names you, this machine, and when t
 di connect                                 # same sign-in; tick your spaces in the browser, this machine follows them all
 ```
 
+`di login` ends by asking for one Enter to run `di connect` for you, so a fresh machine is `di login` and Enter. (Skip it with `n`, or `--no-connect`.)
 In the browser, sign in as yourself (GitHub, Google or Telegram), open the page it shows, and type the code.
 The terminal can read and edit your spaces and projects. It cannot publish or delete a space, or change who owns or edits one: those stay in the browser.
-`di connect` follows every space you own or edit with one approval (`di disconnect` undoes it; a local space with work the host lacks is skipped and named). It lasts until you end it (`di logout`, or the list at /device), or 90 days unused (a year at most). It signs in to dev.diiii.xyz by default; add `--tier prod` or `--tier local` for another.
+`di connect` follows every space you own or edit with one approval, and the machine **stays connected**: spaces you get later (new, or added as editor) are followed on the next `di up`, `di connect --sync`, or (Linux and Raspberry Pi) the `di autoupdate` timer; macOS has no timer, so there it is at `di up` or by hand. The list of connected machines, each with Disconnect, is at /device and in `diiii.localhost/admin` (Spaces and users). (`di disconnect` undoes it; a local space with work the host lacks is skipped and named). It lasts until you end it (`di logout`, or the list at /device), or 90 days unused (a year at most). It signs in to dev.diiii.xyz by default; add `--tier prod` or `--tier local` for another.
 
 ### See all your machines in the Monitor (after door 4)
 

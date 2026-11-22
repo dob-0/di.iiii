@@ -299,6 +299,12 @@ export const cmdLogin = async (args, deps) => {
     await d.say(ui.loginDone(host, user.name))
     const note = envWins(d.env)
     if (note) d.say(note)
+    // One Enter connects this machine to every space of the account. Only offered where a person can answer
+    // (the caller injects `offerConnect` + `confirm` for a terminal); a script, a pipe or --no-connect never waits.
+    if (d.offerConnect && d.confirm && !flags['no-connect']) {
+        await d.say(ui.loginOfferConnect())
+        if (await d.confirm()) return d.offerConnect({ ...args, _: ['connect'], flags: { from: site, ...(flags['no-open'] ? { 'no-open': true } : {}) } })
+    }
     return 0
 }
 
@@ -397,6 +403,14 @@ export const moveToken = ({ from, env = process.env, home = os.homedir() } = {})
 }
 
 // ── what cli.mjs registers ────────────────────────────────────────────────
+
+/** Enter or y = yes; n = no. Reads one line from the terminal; false at once when there is none. */
+export const askEnter = () => new Promise((resolve) => {
+    if (!process.stdin.isTTY) { resolve(false); return }
+    process.stdin.setEncoding('utf8')
+    process.stdin.once('data', (chunk) => { process.stdin.pause(); resolve(!/^\s*n/i.test(String(chunk))) })
+    process.stdin.resume()
+})
 
 export const runLogin = async (args, extra = {}) => {
     // Ctrl-C stops the wait and writes nothing; a second one is the default (kill).

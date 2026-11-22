@@ -109,7 +109,7 @@ const mode = (target) => fs.statSync(target).mode & 0o777
 const rewrite = (url) => String(url).replace(/^(https:\/\/(dev\.diiii\.xyz|diiii\.xyz|di-studio\.xyz)|http:\/\/localhost:4000)/, ORIGIN)
 
 /** One command, in process: real HTTP to the stub, everything else fake. */
-const run = async (command, argv, { env = { DISPLAY: ':0' }, platform = 'linux', fetchImpl = null, signal = null, onSleep = null, hostname = 'taron-laptop', version = '0.4.17' } = {}) => {
+const run = async (command, argv, { env = { DISPLAY: ':0' }, platform = 'linux', fetchImpl = null, signal = null, onSleep = null, hostname = 'taron-laptop', version = '0.4.17', extraDeps = {} } = {}) => {
     const out = []
     const err = []
     const sleeps = []
@@ -124,7 +124,7 @@ const run = async (command, argv, { env = { DISPLAY: ':0' }, platform = 'linux',
         fail: (text) => { err.push(String(text)) },
         warn: (text) => { err.push(String(text)) },
         open: (url) => { opened.push(url) },
-        home, env, hostname, version, platform, signal
+        home, env, hostname, version, platform, signal, ...extraDeps
     }
     const code = await command(parseArgs(argv), deps)
     const outText = out.join('\n')
@@ -342,6 +342,29 @@ describe('di login — the flow', () => {
         expect(r.out).toContain('stopped — nothing was saved')
         expect(S.seen.filter(isPoll)).toHaveLength(1)
         expect(fs.existsSync(credentialsFile(home))).toBe(false)
+    })
+})
+
+describe('di login — offers to connect', () => {
+    it('one Enter runs connect against the same host; "no" and --no-connect never do; no terminal never asks', async () => {
+        const calls = []
+        const extraDeps = (answer) => ({ confirm: async () => answer, offerConnect: async (a) => { calls.push(a); return 0 } })
+        S.polls = [approved()]
+        const yes = await login(['--no-open'], { extraDeps: extraDeps(true) })
+        expect(yes.code).toBe(0)
+        expect(yes.out).toContain('di connect')
+        expect(calls).toHaveLength(1)
+        expect(calls[0].flags.from).toBe(ORIGIN)
+        expect(JSON.stringify(calls)).not.toContain(TOKEN)
+
+        calls.length = 0
+        S.polls = [approved()]
+        await login(['--no-open'], { extraDeps: extraDeps(false) })
+        S.polls = [approved()]
+        await login(['--no-open', '--no-connect'], { extraDeps: extraDeps(true) })
+        S.polls = [approved()]
+        await login(['--no-open'])
+        expect(calls).toEqual([])
     })
 })
 

@@ -12,7 +12,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { parseArgs } from './args.mjs'
-import { cmdConnect, cmdDisconnect, readConnected } from './connect.mjs'
+import { cmdConnect, cmdDisconnect, readConnected, syncConnected } from './connect.mjs'
 import { addFollow, readFollows } from './follows.mjs'
 import { paths } from './paths.mjs'
 
@@ -36,6 +36,7 @@ beforeAll(async () => {
             const reply = (status, body) => { res.writeHead(status, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)) }
             if (req.url.endsWith('/api/auth/device/start')) return reply(201, GRANT)
             if (req.url.endsWith('/api/auth/device/token')) return reply(S.poll.status, S.poll.body)
+            if (req.url.endsWith('/api/auth/connect/sync')) return reply(...(S.sync(req.headers.authorization || '') || [404, { error: 'not_found' }]))
             if (req.url.endsWith('/api/auth/connect/revoke')) return reply(...(S.revoke(req.headers.authorization || '') || [404, { error: 'not_found' }]))
             return reply(404, {})
         })
@@ -46,7 +47,7 @@ beforeAll(async () => {
 afterAll(() => new Promise((resolve) => server.close(resolve)))
 beforeEach(() => {
     seen.length = 0
-    S = { poll: { status: 200, body: BODY(['alpha', 'beta', 'main']) }, revoke: () => [200, { revoked: true }] }
+    S = { poll: { status: 200, body: BODY(['alpha', 'beta', 'main']) }, revoke: () => [200, { revoked: true }], sync: () => [200, { scope: 'connect', keys: [] }] }
     home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-connect-'))
 })
 
@@ -187,5 +188,73 @@ describe('di disconnect', () => {
         S.revoke = () => [500, { error: 'boom' }]
         await run(cmdDisconnect, ['disconnect'])
         expect(Object.keys(readFollows(data))).toEqual(['alpha'])
+    })
+})
+
+describe('di connect --sync (stays connected)', () => {
+    const seed = async (spaces) => {
+        const data = paths(home).data
+        fs.mkdirSync(data, { recursive: true })
+        for (const [i, id] of spaces.entries()) await addFollow(data, id, { remote: `${ORIGIN}/serverXR`, token: KEY(i + 1), start: null })
+        fs.writeFileSync(path.join(data, 'connect.json'), JSON.stringify({ remote: ORIGIN, spaces, at: 'x' }))
+    }
+    const keyFor = (id, n) => ({ spaceId: id, name: id, key: KEY(n) })
+
+    it('does nothing, and asks nothing, on a machine that was never connected', async () => {
+        const r = await run(syncConnected.bind(null), [], {})
+        expect(seen).toHaveLength(0)
+        expect(r.code.code).toBe(0)
+    })
+
+    it('shows a connect key (bearer, never in the URL) and follows only the spaces gained since', async () => {
+        await seed(['alpha'])
+        S.sync = () => [200, { scope: 'connect', keys: [keyFor('alpha', 1), keyFor('gamma', 7)] }]
+        const calls = []
+        const out = []
+        const r = await syncConnected({
+            home, say: async (t) => { out.push(t) }, warn: (t) => out.push(t), fail: (t) => out.push(t), now: () => T0,
+            local: { projects: async () => ({ exists: false, ids: [] }) },
+            follow: async (c) => { calls.push(c); return { ok: true } }
+        })
+        expect(r.code).toBe(0)
+        expect(calls.map((c) => c.spaceId)).toEqual(['gamma'])
+        expect(readConnected(home).spaces).toEqual(['alpha', 'gamma'])
+        const hit = seen.find((x) => x.url.endsWith('/connect/sync'))
+        expect(hit.auth).toBe(`Bearer ${KEY(1)}`)
+        expect(JSON.stringify(seen.map((x) => x.url))).not.toContain('SECRETSECRET')
+        expect(out.join('\n')).not.toContain('SECRETSECRET')
+    })
+
+    it('skips a new space whose local copy holds work the host lacks, like connect does', async () => {
+        await seed(['alpha'])
+        S.sync = () => [200, { scope: 'connect', keys: [keyFor('gamma', 7)] }]
+        const calls = []
+        const out = []
+        await syncConnected({
+            home, say: async (t) => { out.push(t) }, warn: (t) => out.push(t), now: () => T0,
+            local: { projects: async () => ({ exists: true, ids: ['mine'] }) }, hostProjects: async () => [],
+            follow: async (c) => { calls.push(c); return { ok: true } }
+        })
+        expect(calls).toEqual([])
+        expect(out.join('\n')).toMatch(/gamma — skipped: this copy holds 1 project/)
+        expect(readConnected(home).spaces).toEqual(['alpha'])
+    })
+
+    it('says so loudly when the host refuses (key ended) and changes nothing', async () => {
+        await seed(['alpha'])
+        S.sync = () => [404, { error: 'not_found' }]
+        const out = []
+        const r = await syncConnected({ home, say: async (t) => { out.push(t) }, warn: (t) => out.push(t), follow: async () => ({ ok: true }) })
+        expect(r.code).toBe(1)
+        expect(out.join('\n')).toContain('could not check')
+        expect(readConnected(home).spaces).toEqual(['alpha'])
+    })
+
+    it('quiet when nothing is new, and the CLI flag routes to it', async () => {
+        await seed(['alpha'])
+        S.sync = () => [200, { scope: 'connect', keys: [keyFor('alpha', 1)] }]
+        const r = await run(cmdConnect, ['connect', '--sync'], { follow: async () => ({ ok: true }) })
+        expect(r.code).toBe(0)
+        expect(r.text).toContain('no new spaces')
     })
 })

@@ -351,6 +351,10 @@ follows each one from now on. A space of that name that exists here is followed 
 holds; otherwise it is skipped and reported, and the existing choices (`--take-host`, `--take-mine`) stay the way to decide. `di disconnect`
 stops those follows and ends those keys; it deletes no work.
 
+Stay-connected (same day): a machine that connected is checked again by `di connect --sync` / `di up` / `di autoupdate run`; spaces gained since
+are followed under the same consent with the same "host holds everything this copy holds" rule, and an ahead copy is skipped and named.
+Details: docs/architecture/CLI_LOGIN.md, "Connecting a machine", items 6-8.
+
 ## Resolving a name (2026-10-28)
 
 `di follow <space> --from <label> --key <key>`: a bare label (no scheme, no dot) is a network name; the zone

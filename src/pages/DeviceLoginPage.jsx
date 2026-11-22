@@ -13,6 +13,7 @@ import {
 import './legal.css'
 import './deviceLogin.css'
 import LoadingScreen from '../components/LoadingScreen.jsx'
+import ConnectedMachines from '../components/ConnectedMachines.jsx'
 
 // `/device` — the browser half of `di login` (docs/architecture/CLI_LOGIN.md).
 //
@@ -633,7 +634,7 @@ function TerminalList({ onNeedsAccount }) {
 export default function DeviceLoginPage() {
     const rootRef = useRef(null)
     useKeyboardPageScroll(rootRef)
-    useDocumentTitle('Terminal sign-in — di.iiii')
+    useDocumentTitle('Connect a machine — di.iiii')
     useNoIndex()
 
     const session = useAuthSession()
@@ -678,8 +679,15 @@ export default function DeviceLoginPage() {
     } else {
         body = (
             <>
-                <Flow onNeedsAccount={needAccount} />
-                <TerminalList onNeedsAccount={needAccount} />
+                <div className="device-cols">
+                    <div className="device-col">
+                        <Flow onNeedsAccount={needAccount} />
+                        <TerminalList onNeedsAccount={needAccount} />
+                    </div>
+                    <div className="device-col">
+                        <ConnectedMachines />
+                    </div>
+                </div>
             </>
         )
     }
@@ -695,10 +703,10 @@ export default function DeviceLoginPage() {
             </nav>
 
             <header className="legal-header">
-                <p className="legal-eyebrow">terminal sign-in</p>
-                <h1 className="legal-title">sign a terminal in</h1>
+                <p className="legal-eyebrow">connect a machine</p>
+                <h1 className="legal-title">connect a machine</h1>
                 <p className="legal-lede">
-                    A terminal shows a short code. Type it here to sign that terminal in as you.
+                    A machine shows a short code. Type it here to connect it to your spaces, or to sign its terminal in as you.
                 </p>
             </header>
 

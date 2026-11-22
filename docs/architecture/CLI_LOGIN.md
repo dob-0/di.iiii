@@ -150,6 +150,17 @@ No second flow: the same codes, limits, ten minutes, `/device` page.
    connect is refused 404 and its follow is left alone) and removes the follow. It deletes no space or project. `connect.json` in the data
    folder lists what connect did (space ids, no keys).
 
+6. **Stays connected.** Each key's label ends with a machine tag (`connect <machine> <date> ~<8 hex>`); every key one connect made shares it.
+   `POST /api/auth/connect/sync` (bearer = one of the machine's live connect keys, nothing else) answers `{ scope: 'connect', keys }` for the
+   spaces the person gained since, minted under the same label (so the same consent and the same Disconnect). 404 when the key is not a live
+   connect key. `di connect --sync`, the end of `di up` and `di autoupdate run` call it, quietly when nothing is new; a refusal is said, never
+   swallowed. macOS has no autoupdate timer: it syncs at `di up` or by hand. Spaces the person lost are not touched (their key stops with the role).
+7. **Machines list.** `GET /api/auth/connect/machines` (account session) lists the person's machines (keys grouped by tag, with space labels);
+   `DELETE /api/auth/connect/machines/:id` ends every key of that machine (404 when not theirs). Shown at `/device` (right column from 1100 px)
+   and in `diiii.localhost/admin` (Spaces and users). No work is deleted by either.
+8. **`di login` offers it.** After a sign-in on a terminal, one Enter runs `di connect` (`n` or `--no-connect` skips; no terminal, no question).
+   Nothing in connect needs a login: an install without one works alone as before.
+
 **What did not change.** `cliTokenGate.js`: a `dii_cli_` login still cannot mint a key or approve a code (`not_through_cli`); the consent
 is the signed-in browser's. Tests: `serverXR/src/connectContracts.test.js`, `scripts/di/connect.test.js`,
 `src/pages/DeviceLoginPage.test.jsx` ("di connect" block).
