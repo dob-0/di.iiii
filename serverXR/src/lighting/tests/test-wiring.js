@@ -252,6 +252,19 @@ check('scene containers: tab rows, tile grid and chase item are in the page and 
   if (/sceneGroupOf|buildSceneDetail/.test(js)) throw new Error('the flat list helpers are back');
 });
 
+// Colour palettes and favourites (ported from the studio desk): the Color tab builds them and posts
+// to a route the desk has; the built-in sixteen are the page's own and never saved.
+check('colour palettes: the Color tab posts to api/colors, the desk has the route, and the built-ins stay out of the show', () => {
+  if (!js.includes(`'api/colors'`)) throw new Error('app.js never posts to api/colors');
+  if (!server.includes(`'POST /api/colors'`)) throw new Error('the desk has no POST /api/colors');
+  if ((js.match(/^  \['[^']+', \['#/gm) || []).length !== 16) throw new Error('PALETTES is not the sixteen built-in palettes');
+  if (!/s\.colors = sanitizeColors\(disk\.colors\)/.test(server)) throw new Error('colours are not sanitised on load');
+  for (const fn of ['paletteBlock', 'paletteMenuHtml', 'wirePalette']) if (!js.includes(`function ${fn}`)) throw new Error(`${fn} is missing`);
+  if (!/lastColor = hexColor/.test(js)) throw new Error('applyColor does not remember the last colour for "+"');
+  if (/HUES/.test(js)) throw new Error('the quick-hue strip is back beside the palette');
+  if (!/id="autoWhite"/.test(js)) throw new Error('Auto white left the Color tab');
+});
+
 // Regression guard (2026-10-01, MOXIR UI audit): the Touch cue bar said "Nothing fired" while a
 // look fired by hand was on. Its headline now reads the desk's one NOW (state.now).
 check('the Touch cue bar headline reads state.now, never "Nothing fired"', () => {

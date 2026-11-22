@@ -483,17 +483,77 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .fader .quick { display: flex; gap: 3px; }
 .fader .quick button { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; font-size: 10px; padding: 2px 5px; color: var(--text); }
 
-.picker { display: grid; gap: 8px; }
+/* Width pinned to the swatch square. Left to size itself the column took its width from
+   the "move shared colour onto the W channel" note, which pushed the palettes column onto
+   a second row and the favourites off the bottom of the pane. */
+/* The Color tab's left column: picker on top, palette under it, faders alongside. Sized so
+   the whole column clears the pane without scrolling — see .colorcol's height budget. */
+.colorcol { display: grid; gap: 3px; align-content: start; width: 226px; }   /* 3, not 8: the column was 17px over the pane at the 900px stress height */
+.picker { display: grid; gap: 6px; width: 226px; max-width: 100%; }
 .sqpick {
-  width: 226px; max-width: 100%; height: 186px; position: relative; border: 1px solid var(--line); cursor: crosshair;
+  width: 226px; max-width: 100%; height: 156px; position: relative; border: 1px solid var(--line); cursor: crosshair;
   background: linear-gradient(to bottom, rgba(255,255,255,0), #fff),
               linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
 }
 .sqpick .dot { position: absolute; width: 12px; height: 12px; border: 2px solid #fff; border-radius: 0; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 4px #000; }
-.hues { display: flex; height: 14px; gap: 2px; }
-.hues button { flex: 1; border: 1px solid var(--line); padding: 0; border-radius: 0; }   /* the black swatch needs an edge on a near-black pane */
-.pickfoot { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+.pickfoot { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); }
 
+/* ---- colour palettes + favourites ----
+   A column of its own beside the picker, not stacked under it: stacked, the favourites
+   row fell below the fold of a 900px window and read as missing. */
+.palettes { display: grid; gap: 4px; align-content: start; width: 208px; }
+.palrow { position: relative; }
+.palbtn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: var(--field); border: 1px solid var(--line); border-radius: 0;
+  color: var(--text); font-size: 12px; padding: 5px 8px; text-align: left;
+}
+.palbtn:hover { border-color: var(--accent); }
+.palbtn i { color: var(--muted); font-style: normal; font-size: 9px; }
+/* Fixed, and parented to <body> rather than to the button: .attr-panels scrolls, and an
+   absolutely-positioned menu inside it gets clipped at the pane edge — the list ran off
+   the bottom of the window with half the palettes unreachable. Placed by wirePalette. */
+.palmenu {
+  position: fixed; z-index: 60; min-width: 244px;
+  background: var(--pane2); border: 1px solid var(--line);
+  box-shadow: 0 8px 24px #000000aa; max-height: 340px; display: flex; flex-direction: column;
+}
+.palmenu-list { overflow: auto; flex: 1; min-height: 0; }
+.palitem {
+  position: relative; width: 100%; display: grid; gap: 3px; padding: 6px 8px;
+  background: none; border: 0; border-bottom: 1px solid #ffffff08; border-radius: 0;
+  color: var(--text); font-size: 12px; text-align: left; cursor: pointer;
+}
+.palitem:hover { background: #ffffff0d; }
+.palitem.is-active .paln { color: var(--accent); }
+.palitem .paln { display: flex; align-items: center; gap: 6px; }
+.palitem .paln em { font-style: normal; font-size: 9px; color: var(--muted); border: 1px solid var(--line); padding: 0 3px; }
+.palstrip { display: flex; height: 12px; }
+.palstrip i { flex: 1; }
+.paldel { position: absolute; right: 6px; top: 6px; font-style: normal; font-size: 11px; color: var(--muted); padding: 0 3px; }
+.paldel:hover { color: var(--danger); }
+.palmenu-foot { border-top: 1px solid var(--line); padding: 8px; flex: none; }
+.palsave { display: flex; gap: 5px; }
+.palsave input { flex: 1; min-width: 0; }
+.palmenu-foot p { margin: 6px 0 0; font-size: 10px; line-height: 1.4; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 3px; }
+.swatches .sw { width: 20px; height: 20px; padding: 0; border: 1px solid var(--line); border-radius: 0; }
+.swatches .sw:hover { border-color: var(--accent); }
+.swatches .sw.rm { position: relative; border-color: var(--danger); }
+/* A remove-mode swatch says so on its face — a mode you cannot see is this desk's
+   oldest bug, so the cross is drawn on the colour rather than left to the cursor. */
+.swatches .sw.rm::after {
+  content: '✕'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff; text-shadow: 0 0 3px #000;
+}
+.swatches .sw.add { background: var(--field); color: var(--muted); font-size: 13px; line-height: 1; }
+.swatches .sw.add:hover { color: var(--accent); }
+.favhead { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.favempty { font-size: 10px; align-self: center; }
+.palmore { background: none; border: 1px solid transparent; border-radius: 0; color: var(--muted); font-size: 11px; padding: 0 4px; letter-spacing: 1px; }
+.palmore:hover { color: var(--accent); }
+.palmore.is-active { color: var(--danger); border-color: var(--danger); }
 .xypad {
   width: 186px; max-width: 100%; height: 186px; position: relative; border: 1px solid var(--line); cursor: crosshair;
   background: repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 23px),
@@ -1109,7 +1169,6 @@ body.space .stage { cursor: grab; }
   .selrow { padding: 9px 10px; }
   .tree .item { padding-top: 7px; padding-bottom: 7px; }
   .bmv { width: 34px; height: 32px; }
-  .hues { height: 24px; }
   .gtab { padding: 8px 14px; }
   .fxpad { padding: 10px 4px; }
   /* new controls: LFO rows, audio panel, FX-skip chips — same ≥40px rule */
@@ -1134,6 +1193,8 @@ body.space .stage { cursor: grab; }
   /* splitter bars: 14px grab zone around the 6px bar */
   .splitter.v::before { left: -4px; right: -4px; }
   .splitter.h::before { top: -4px; bottom: -4px; }
+  .swatches .sw { width: 34px; height: 34px; }
+  .palbtn, .palitem { padding-top: 10px; padding-bottom: 10px; }
 }
 
 /* ================ visual-audit fixes ================ */

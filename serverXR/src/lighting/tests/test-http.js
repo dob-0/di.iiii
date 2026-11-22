@@ -2344,6 +2344,38 @@ check('a show opened from disk has its containers cleaned like a posted list, an
   } finally { await d.stop(); }
 });
 
+// ---- colour favourites and palettes (from the studio desk) ---------------------------
+
+check('colours: favourites and palettes are each replaced on their own, hex only, and survive a re-read', async () => {
+  const before = (await GET('/api/state')).body.colors;
+  try {
+    assert.deepStrictEqual(Object.keys(before).sort(), ['favorites', 'palettes'], 'the state carries both lists');
+    const r = await POST('/api/colors', { favorites: ['#FF0000', 'f80', 'red', '#12345', 42, null, ' #00ff00 '] });
+    assert.strictEqual(r.status, 200, r.text);
+    let c = (await GET('/api/state')).body.colors;
+    assert.deepStrictEqual(c.favorites, ['#ff0000', '#ff8800', '#00ff00'], 'lower-case #rrggbb, shorthand widened, anything else dropped');
+    await POST('/api/colors', { palettes: [
+      { id: 'p1', name: 'Mine', colors: ['#112233', 'nope', '#fff'] },
+      { name: '', colors: ['#000000'] },
+      { id: 'empty', name: 'No colours', colors: ['zzz'] },
+    ] });
+    c = (await GET('/api/state')).body.colors;
+    assert.deepStrictEqual(c.favorites, ['#ff0000', '#ff8800', '#00ff00'], 'saving a palette leaves the favourites alone');
+    assert.strictEqual(c.palettes.length, 2, 'a palette with no usable colour is dropped');
+    assert.deepStrictEqual(c.palettes[0], { id: 'p1', name: 'Mine', colors: ['#112233', '#ffffff'] });
+    assert.strictEqual(c.palettes[1].name, 'Palette', 'a nameless palette gets one');
+    assert.ok(c.palettes[1].id, 'and an id');
+    await POST('/api/colors', { favorites: [] });
+    c = (await GET('/api/state')).body.colors;
+    assert.strictEqual(c.favorites.length, 0, 'favourites can be emptied');
+    assert.strictEqual(c.palettes.length, 2, 'without touching the palettes');
+    const big = await POST('/api/colors', { favorites: Array.from({ length: 100 }, (_, i) => '#' + (0x100000 + i).toString(16)) });
+    assert.strictEqual(big.body.colors.favorites.length, 64, 'favourites are capped at 64');
+  } finally {
+    await POST('/api/colors', { favorites: before.favorites, palettes: before.palettes });
+  }
+});
+
 async function main() {
   const argv = process.argv.slice(2);
   const ci = argv.indexOf('--class');

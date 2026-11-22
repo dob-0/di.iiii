@@ -56,6 +56,7 @@
         "sets",
         "banks",
         "bankColors",
+        "colors",
         "audioCfg",
         "audio",
         "caps",
@@ -700,6 +701,21 @@
     {
       "method": "POST",
       "path": "api/banks",
+      "class": "b",
+      "reply": {
+        "error": "string"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string"
+        },
+        "text": "{error:'not on this node'}"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/colors",
       "class": "b",
       "reply": {
         "error": "string"

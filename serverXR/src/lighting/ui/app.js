@@ -146,7 +146,51 @@ const ROLE_COLOR = {
 // The library's internal category keys are not display text. They were being rendered
 // verbatim — block capitals with a leading underscore — in the first pane you look at.
 const CAT_LABEL = { _GENERIC: 'Generic', _MOVING: 'Moving heads', _CUSTOM: 'Your fixtures' };
-const HUES = ['#ff0000', '#ff7700', '#ffee00', '#00ff00', '#00ffcc', '#0044ff', '#8800ff', '#ff00aa', '#ffffff', '#000000'];
+
+// Built-in colour palettes (from the studio desk). These are the interface's, not the show's —
+// like the built-in fixture profiles, they are the same on every desk and are not written to
+// show.json. Only palettes she makes herself persist (state.colors.palettes).
+const PALETTES = [
+  ['Black and white', ['#000000', '#808080', '#ffffff']],
+  ['Basic', ['#ffffff', '#ff0000', '#ff8800', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff']],
+  ['Pastel', ['#ff6f61', '#ffb27f', '#ffe9a8', '#bfe3b4', '#a8c8e8', '#c3b7e8', '#f4bcd8']],
+  ['Temperature', ['#ff7a00', '#ff9d3d', '#ffbe7a', '#ffd6a8', '#ffe9cf', '#fff6ea']],
+  ['Autumn', ['#f0e2b6', '#f5a623', '#d99a5b', '#e2622a', '#d63a1e']],
+  ['Blue gradient', ['#7a1fd6', '#1b1b6e', '#1f5fd6', '#1f9fd6', '#22c9e8']],
+  ['Condition of possibility', ['#ff5fa2', '#d94fd0', '#6a2fd0', '#5fbf2f', '#f0c419']],
+  ['Fire', ['#f7e04a', '#f5a623', '#f07020', '#d93a1e', '#8e1508']],
+  ['From blue to white', ['#1b4f66', '#2f7f99', '#6fb3c4', '#b7dbe0']],
+  ['Grayscale', ['#111111', '#333333', '#555555', '#777777', '#999999', '#bbbbbb', '#dddddd', '#f2f2f2']],
+  ['Liquid shape', ['#3a2fd0', '#6a2fd0', '#a52fd0', '#e02fa5', '#ef7a2f']],
+  ['Magma', ['#1a0a12', '#4a1030', '#7a1a45', '#a83a6a', '#c95a9a', '#a06ad0', '#7a6ae0']],
+  ['Pink gradient', ['#e8407a', '#f06a9a', '#f79ac0', '#fbc4da', '#fde3ee']],
+  ['Retrowave', ['#f0245f', '#2a1030', '#7a1fd6', '#4a1a7a', '#f5c518']],
+  ['Tropical', ['#2fd93a', '#a52fd0', '#e02020', '#2fd6b0', '#f0902f']],
+  ['Vaporwave', ['#2a3ad6', '#f04ab0', '#a05fd6', '#2f9fe0', '#2fd6d0']],
+];
+
+let paletteName = 'Basic';   // which palette the swatch row is showing
+let lastColor = '#ffffff';   // the colour last sent to the rig, for "+ add to favourites"
+let favRemoveMode = false;   // ••• turns the favourites row into a remove row
+
+// Built-ins first, then hers. Custom ones carry an id so they can be deleted.
+function allPalettes() {
+  const custom = ((S && S.colors && S.colors.palettes) || []).map((p) => [p.name, p.colors, p.id]);
+  return [...PALETTES.map(([n, c]) => [n, c, null]), ...custom];
+}
+function activePalette() {
+  const all = allPalettes();
+  return all.find(([n]) => n === paletteName) || all[0];
+}
+function favorites() { return (S && S.colors && S.colors.favorites) || []; }
+
+// Both halves are replace-whole, and the server merges by key — so saving a palette
+// cannot drop the favourites and vice versa.
+function postColors(patch) {
+  if (!S.colors) S.colors = { favorites: [], palettes: [] };
+  Object.assign(S.colors, patch);
+  post('api/colors', patch);
+}
 
 // Which attribute tab each role belongs to. Anything not claimed here — including roles
 // added later, or a profile with a channel name nobody has seen — is placed by its kind,
@@ -289,6 +333,7 @@ async function pullState() {
       // Containers are replace-whole too: two drops a second apart, and a poll that left before
       // the first save came back after it — the second save was then built on the stale copy.
       if (S.banks) next.banks = S.banks;
+      if (S.colors) next.colors = S.colors;   // favourites and palettes are replace-whole edits too
       if (S.objects) next.objects = S.objects;   // stage objects and labels are edited the same way
       if (S.markers) next.markers = S.markers;
     }
@@ -405,6 +450,7 @@ function setRole(role, value) {
 // Set colour on the selection. With auto-white on, fixtures that have a white channel
 // get the common part of the colour moved onto it — the usual RGBW conversion.
 function applyColor(hexColor) {
+  lastColor = hexColor;   // what "+ add to favourites" will store
   const c = parseHex(hexColor);
   for (const f of selectedFixtures()) {
     const ch = profileOf(f).channels;
@@ -1568,6 +1614,139 @@ function fader(role, value, profileName) {
   </div>`;
 }
 
+/* ---- colour palettes + favourites (Color tab; from the studio desk) ---- */
+
+const swatch = (hex, extra) => `<button class="sw${extra || ''}" data-hex="${hex}" style="background:${hex}" title="${hex}"></button>`;
+const strip = (colors) => `<span class="palstrip">${colors.slice(0, 12).map((c) => `<i style="background:${c}"></i>`).join('')}</span>`;
+
+function paletteBlock() {
+  const [name, colors] = activePalette();
+  const favs = favorites();
+  return `<div class="palrow">
+      <button class="palbtn" id="palBtn" title="Choose a palette">${esc(name)}<i>▾</i></button>
+      <div class="palmenu" id="palMenu" hidden></div>
+    </div>
+    <div class="swatches" id="palSwatches">${colors.map((c) => swatch(c)).join('')}</div>
+    <div class="favhead">
+      <span>Favourites</span>
+      <button class="palmore${favRemoveMode ? ' is-active' : ''}" id="favMore"
+        title="${favRemoveMode ? 'Done removing' : 'Remove favourites'}">•••</button>
+    </div>
+    <div class="swatches favs" id="favSwatches">${
+      favs.length ? favs.map((c) => swatch(c, favRemoveMode ? ' rm' : '')).join('')
+        : '<span class="muted favempty">none yet — set a colour, then +</span>'
+    }<button class="sw add" id="favAdd" title="Add the current colour to favourites">+</button></div>`;
+}
+
+// The palette menu: built-ins, then hers, then the two things you can do to them.
+function paletteMenuHtml() {
+  const all = allPalettes();
+  const rows = all.map(([n, c, id]) => `<button class="palitem${n === paletteName ? ' is-active' : ''}" data-pal="${esc(n)}">
+      <span class="paln">${esc(n)}${id ? '<em>mine</em>' : ''}</span>${strip(c)}
+      ${id ? `<i class="paldel" data-del="${esc(id)}" title="Delete this palette">✕</i>` : ''}
+    </button>`).join('');
+  return `<div class="palmenu-list">${rows}</div>
+    <div class="palmenu-foot">
+      <div class="palsave">
+        <input type="text" id="palName" placeholder="name this palette" maxlength="40" autocomplete="off">
+        <button class="sq small" id="palSave">Save favourites</button>
+      </div>
+      <p class="muted">Collect colours in favourites, then save them here as a palette of your own.</p>
+    </div>`;
+}
+
+// One document-level listener for the whole page: the Color tab is rebuilt on every selection
+// change, and a listener added per build would pile up. It closes whichever menu is current.
+let closePaletteMenu = null;
+document.addEventListener('click', () => { if (closePaletteMenu) closePaletteMenu(); });
+
+function wirePalette() {
+  // A menu left on <body> by the previous build would still answer to #palMenu and the
+  // new button would drive a detached element. Clear strays before looking anything up.
+  $$('body > .palmenu').forEach((m) => m.remove());
+  const btn = $('#palBtn'); const menu = $('#palMenu');
+  if (!btn || !menu) return;
+
+  const close = () => {
+    menu.hidden = true;
+    if (menu.parentNode === document.body) $('.palrow').appendChild(menu);
+  };
+  closePaletteMenu = close;
+  // Placed by hand because the menu is fixed and lives on <body>: below the button when
+  // there is room, flipped above it when there is not, and never off either edge.
+  const place = () => {
+    const r = btn.getBoundingClientRect();
+    menu.style.width = Math.max(244, r.width) + 'px';
+    menu.style.left = Math.round(Math.min(r.left, innerWidth - Math.max(244, r.width) - 8)) + 'px';
+    const h = menu.offsetHeight;
+    menu.style.top = (r.bottom + 2 + h > innerHeight - 8 && r.top - h - 2 > 8)
+      ? Math.round(r.top - h - 2) + 'px'
+      : Math.round(Math.min(r.bottom + 2, innerHeight - h - 8)) + 'px';
+  };
+  const open = () => {
+    menu.innerHTML = paletteMenuHtml();
+    document.body.appendChild(menu);
+    menu.hidden = false;
+    place();
+    $$('.palitem', menu).forEach((it) => it.addEventListener('click', (e) => {
+      // The delete cross sits inside the row — it must not also select the palette.
+      const del = e.target.closest('.paldel');
+      if (del) {
+        e.stopPropagation();
+        const gone = (S.colors.palettes || []).find((p) => p.id === del.dataset.del);
+        postColors({ palettes: (S.colors.palettes || []).filter((p) => p.id !== del.dataset.del) });
+        if (gone && gone.name === paletteName) paletteName = 'Basic';
+        say('Deleted palette "' + (gone ? gone.name : '') + '"');
+        attrSig = ''; buildAttr();
+        return;
+      }
+      paletteName = it.dataset.pal;
+      close(); attrSig = ''; buildAttr();
+    }));
+
+    // Save what is in favourites as a named palette. No prompt() — a modal dialog blocks
+    // the browser harnesses this project tests the UI with.
+    $('#palSave').addEventListener('click', () => {
+      const nm = $('#palName').value.trim();
+      const favs = favorites();
+      if (!favs.length) return say('Favourites are empty — add some colours first', true);
+      if (!nm) { $('#palName').focus(); return say('Give the palette a name', true); }
+      const list = (S.colors.palettes || []).filter((p) => p.name !== nm);
+      list.push({ id: 'pal' + Date.now().toString(36), name: nm, colors: [...favs] });
+      postColors({ palettes: list });
+      paletteName = nm;
+      say(`Saved "${nm}" — ${favs.length} colour${favs.length === 1 ? '' : 's'}`);
+      close(); attrSig = ''; buildAttr();
+    });
+    $('#palName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#palSave').click(); });
+  };
+
+  btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? open() : close(); });
+  menu.addEventListener('click', (e) => e.stopPropagation());
+  // Fixed to the viewport, so scrolling the pane would slide the button out from under it.
+  $('#attrPanels').addEventListener('scroll', close);
+
+  // Palette swatches apply the colour. Favourites either apply or remove, depending on •••.
+  $$('#palSwatches .sw').forEach((b) => b.addEventListener('click', () => applyColor(b.dataset.hex)));
+  $$('#favSwatches .sw:not(.add)').forEach((b) => b.addEventListener('click', () => {
+    if (!favRemoveMode) return applyColor(b.dataset.hex);
+    const i = favorites().indexOf(b.dataset.hex);
+    const next = favorites().slice();
+    if (i > -1) next.splice(i, 1);
+    postColors({ favorites: next });
+    attrSig = ''; buildAttr();
+  }));
+  $('#favAdd').addEventListener('click', () => {
+    const favs = favorites();
+    if (favs.includes(lastColor)) return say(lastColor + ' is already a favourite');
+    if (favs.length >= 64) return say('That is 64 favourites — remove one first', true);
+    postColors({ favorites: [...favs, lastColor] });
+    say('Added ' + lastColor + ' to favourites');
+    attrSig = ''; buildAttr();
+  });
+  $('#favMore').addEventListener('click', () => { favRemoveMode = !favRemoveMode; attrSig = ''; buildAttr(); });
+}
+
 function buildAttr() {
   if (!S) return;
   const roles = selectedRoles();
@@ -1622,11 +1801,15 @@ function buildAttr() {
   let html = '';
 
   if (attrTab === 'Color') {
-    html += `<div class="picker">
-      <div class="sqpick" id="sqpick"><div class="dot" style="left:50%;top:0"></div></div>
-      <div class="hues">${HUES.map((h) => `<button data-hex="${h}" style="background:${h}"></button>`).join('')}</div>
-      <label class="pickfoot"><input type="checkbox" id="autoWhite"${autoWhite ? ' checked' : ''}> Auto white
-        <span class="muted">move shared colour onto the W channel</span></label>
+    // Picker and palette share ONE column, with the faders beside them (the studio desk's
+    // layout). The palette's Basic row stands where the quick-hue strip used to be; Auto white,
+    // which the studio desk dropped but this desk keeps, stays under the picker.
+    html += `<div class="colorcol">
+      <div class="picker">
+        <div class="sqpick" id="sqpick"><div class="dot" style="left:50%;top:0"></div></div>
+        <label class="pickfoot" title="Move the shared colour onto the W channel"><input type="checkbox" id="autoWhite"${autoWhite ? ' checked' : ''}> Auto white</label>
+      </div>
+      <div class="palettes">${paletteBlock()}</div>
     </div>`;
   }
   if (attrTab === 'Position') {
@@ -1696,8 +1879,8 @@ function buildAttr() {
     sq.addEventListener('pointerdown', (e) => { down = true; sq.setPointerCapture(e.pointerId); pick(e); });
     sq.addEventListener('pointermove', (e) => down && pick(e));
     sq.addEventListener('pointerup', () => { down = false; });
-    $$('.hues button').forEach((b) => b.addEventListener('click', () => applyColor(b.dataset.hex)));
     $('#autoWhite').addEventListener('change', (e) => { autoWhite = e.target.checked; });
+    wirePalette();
   }
 
   const pad = $('#xypad');

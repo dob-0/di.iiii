@@ -169,6 +169,10 @@ function createDesk(opts = {}) {
     // coloured lists of scenes filled by hand. A scene can sit in any number of them, and a
     // container tolerates ids of scenes since deleted (the interface skips them).
     banks: [],
+    // Colour palettes and favourites for the attribute editor's Color tab. The named
+    // palettes she picks FROM are built into the interface; only what she makes herself
+    // lives here, so the show file stays about the show. From the studio desk.
+    colors: { favorites: [], palettes: [] },
     // A project's cue list, played by the desk (cuerun.js): the list, where it is, and
     // whether it runs and loops — saved with the show, so a restart carries on.
     cues: sanitizeCues(null),
@@ -210,6 +214,19 @@ function createDesk(opts = {}) {
     if (!m) return null;
     const h = m[1];
     return '#' + (h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h);
+  }
+
+  function sanitizeColors(c) {
+    const hexes = (list, cap) => (Array.isArray(list) ? list : [])
+      .map(sanitizeHex).filter(Boolean).slice(0, cap);
+    return {
+      favorites: hexes(c?.favorites, 64),
+      palettes: (Array.isArray(c?.palettes) ? c.palettes : []).slice(0, 50).map((p) => ({
+        id: typeof p?.id === 'string' && p.id ? p.id.slice(0, 40) : 'pal' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        name: String(p?.name || 'Palette').slice(0, 40),
+        colors: hexes(p?.colors, 32),
+      })).filter((p) => p.colors.length),
+    };
   }
 
   // AUDIO_MODES and sanitizeAudioCfg live in engine.js now — recallScene applies the same
@@ -358,6 +375,7 @@ function createDesk(opts = {}) {
       s.audioCfg = sanitizeAudioCfg({ ...DEFAULT_STATE.audioCfg, ...(disk.audioCfg || {}) });
       s.sets = sanitizeSets(disk.sets);
       s.banks = sanitizeBanks(disk.banks);
+      s.colors = sanitizeColors(disk.colors);
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
@@ -2315,6 +2333,16 @@ function createDesk(opts = {}) {
         scene.audioCfg = sanitizeAudioCfg({ ...(scene.audioCfg || {}), ...body.audioCfg });
       }
       save(); json(res, { ok: true, scene });
+    },
+
+    // Favourite colours and saved palettes. Replace-whole PER KEY like /api/sets: the Color
+    // tab posts favourites and palettes separately, so sending one must not wipe the other.
+    'POST /api/colors': (req, res, body) => {
+      state.colors = sanitizeColors({
+        favorites: body.favorites != null ? body.favorites : state.colors.favorites,
+        palettes: body.palettes != null ? body.palettes : state.colors.palettes,
+      });
+      save(); json(res, { ok: true, colors: state.colors });
     },
 
     // Scene containers: replace-whole, like /api/sets. The interface edits its copy (add,
