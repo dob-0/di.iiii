@@ -1538,13 +1538,237 @@ function paintSelList() {
   }
 }
 
+/* =============== value gestures =============== */
+
+// Daslight's mechanic, ported from the studio desk: you do not aim at a fader, you grab
+// the value and push it sideways. Right raises, left lowers (up and down work too), and the
+// travel is relative — where you grabbed does not matter, only how far you moved.
+//   · drag a fader tile (its name, chip or percentage), the master block, or the label
+//     beside a slider — anywhere that is not itself an input or a button
+//   · the wheel nudges ONLY the control you last clicked (outlined while armed): ±4 DMX a
+//     tick, ±1 on a number
+//   · Shift is fine (a percent takes real travel), Ctrl is coarse (top to bottom in a
+//     flick); double-click a readout to type it (see dblEdit below)
+//
+// No pointer lock on purpose: Chrome answers it with a "press Esc" bubble over the page.
+// ~320px of travel covers the full range instead.
+const TRAVEL = 320;
+// Level readouts are percent, and a typed percent is turned back into the DMX value.
+const pctToDmx = (p) => clamp(Math.round(p / 100 * 255), 0, 255);
+const dmxToPct = (v) => Math.round(v / 255 * 100);
+const overControl = (e) => !!(e.target.closest && e.target.closest('input, button, select, a, textarea'));
+
+// The wheel edits ONLY the control you have clicked, so a wheel over an un-armed control
+// does nothing and the pane scrolls, which is what a wheel means everywhere else.
+// Armed on pointerdown, in the capture phase so it is set before any control's own
+// handler runs; pressing anything that is not a value disarms. It is deliberately NOT
+// focus: a scrub host captures the pointer on its tile, so the input underneath never
+// takes focus.
+let wheelArmed = null;
+function armWheel(el) {
+  if (wheelArmed === el) return;
+  if (wheelArmed) wheelArmed.classList.remove('wheelarmed');
+  wheelArmed = el;
+  if (el) el.classList.add('wheelarmed');
+}
+// Does a wheel over `el` belong to the armed control? Either direction of containment
+// counts: the document handler sees the input, scrub() sees the tile around it.
+const wheelAllowed = (el) => !!(wheelArmed && el && (wheelArmed === el || wheelArmed.contains(el) || el.contains(wheelArmed)));
+document.addEventListener('pointerdown', (e) => {
+  const t = e.target;
+  armWheel((t.closest && t.closest('.scrubhost, input[type=range], input[type=number]')) || null);
+}, true);
+
+function scrub(el, { get, set, done, min = 0, max = 255, step = 1, wheel = true } = {}) {
+  const span = max - min;
+  const rate = (e) => (e.shiftKey ? span / (TRAVEL * 4.4) : (e.ctrlKey || e.metaKey) ? span / (TRAVEL / 3.5) : span / TRAVEL);
+  const quant = (v) => clamp(Math.round(v / step) * step, min, max);
+  // The drag is accumulated as a float and only rounded on the way out: at fine rate a
+  // pixel is worth less than one DMX step, and rounding per event would swallow every
+  // one of them and read as a control that has stuck.
+  //
+  // Deltas come from clientX/Y, not movementX (Chrome on Windows reports movementX in
+  // physical pixels). A drag only starts after a few pixels of travel (a click or a
+  // double-click never nudges the value), and the moves are applied once per animation
+  // frame.
+  const DEAD = 3;
+  let from = null, acc = 0, last = null, live = false, raf = 0, pendingV = null;
+  el.classList.add('scrubhost');
+  const flush = () => { raf = 0; if (pendingV != null) { const v = pendingV; pendingV = null; set(v); } };
+  el.addEventListener('pointerdown', (e) => {
+    // Mouse and pen only. On a phone the same gesture is a scroll, and a control that eats
+    // the scroll would make the Touch page unusable — the touch way to this value is the
+    // fader it sits on, which still works.
+    if (e.pointerType === 'touch') return;
+    if (e.button !== 0 || overControl(e)) return;
+    from = get(); acc = 0; live = false; pendingV = null;
+    last = { x: e.clientX, y: e.clientY };
+    // A pointer that is already gone (or a synthetic event from a harness) makes this
+    // throw, and an exception here would take the whole pointerdown handler down with it.
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* no capture: the drag still tracks */ }
+    e.preventDefault();          // a drag across a label must not start a text selection
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (from == null) return;
+    const dx = e.clientX - last.x, dy = e.clientY - last.y;
+    if (!live) {
+      if (Math.abs(dx) < DEAD && Math.abs(dy) < DEAD) return;   // still a click
+      live = true;
+      el.classList.add('scrubbing');
+      document.body.classList.add('scrubbing');
+    }
+    last = { x: e.clientX, y: e.clientY };
+    acc += (dx - dy) * rate(e);
+    pendingV = quant(from + acc);
+    if (!raf) raf = requestAnimationFrame(flush);
+  });
+  const end = () => {
+    if (from == null) return;
+    from = null;
+    if (raf) { cancelAnimationFrame(raf); flush(); }
+    el.classList.remove('scrubbing');
+    document.body.classList.remove('scrubbing');
+    if (live && done) done();
+    live = false;
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  el.addEventListener('lostpointercapture', end);
+
+  if (wheel) el.addEventListener('wheel', (e) => {
+    // over a button or a number field the wheel is theirs; over the slider it is ours
+    if (overControl(e) && !e.target.matches('input[type=range]')) return;
+    // A sideways gesture is a SCROLL, never a value: the attribute faders are one row you
+    // scroll right through, and a two-finger swipe across a tile has to move the row, not
+    // the channel. deltaY 0 used to read as "down" and nudge it.
+    if (!e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    if (!wheelAllowed(el)) return;   // not the control you clicked: let the pane scroll
+    e.preventDefault();
+    const n = e.shiftKey ? 1 : (e.ctrlKey || e.metaKey) ? 16 : 4;
+    set(quant(get() + (e.deltaY < 0 ? n : -n) * step));
+    if (done) done();
+  }, { passive: false });
+}
+
+// Double-click a readout to type the number. The readout becomes a small number field
+// with the value selected; Enter or clicking away commits, Esc puts it back. What is
+// typed is what is shown: a percent on every level readout, milliseconds on a time.
+function dblEdit(el, get, set, { min = 0, max = 255, step = 1, fmt = String } = {}) {
+  if (!el) return;
+  el.title = (el.title ? el.title + ' — ' : '') + 'double-click to type a value';
+  el.classList.add('editable');
+  // Listen on the tile the readout sits in, not the readout: a scrub tile captures the
+  // pointer on press, and a captured pointer's click and double-click are retargeted to
+  // the capturing element, so a listener on the readout itself never hears them. On the
+  // tile, any double-click that is not on a button or the slider opens the field.
+  const host = el.closest('.scrubhost') || el;
+  host.addEventListener('dblclick', (e) => {
+    if (host !== el && overControl(e)) return;
+    if (el.hidden) return;
+    e.preventDefault(); e.stopPropagation();
+    const cur = get();
+    const input = document.createElement('input');
+    input.type = 'number'; input.className = 'inedit';
+    input.min = min; input.max = max; input.step = step; input.value = cur;
+    // The field sits BESIDE the readout, which is hidden meanwhile — not inside it. The
+    // readouts are repainted from the poll by writing textContent, and a field inside one
+    // would be wiped by the next repaint before a digit could be typed.
+    el.hidden = true;
+    el.insertAdjacentElement('afterend', input);
+    input.focus({ preventScroll: true }); input.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return; done = true;
+      const typed = input.value;
+      const v = clamp(Math.round((+typed || 0) / step) * step, min, max);
+      input.remove();
+      el.hidden = false;
+      if (commit && typed !== '' && !Number.isNaN(+typed)) set(v);
+      el.textContent = fmt(get());
+    };
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+      ev.stopPropagation();   // the desk's hotkeys must not fire while a number is typed
+    });
+    input.addEventListener('blur', () => finish(true));
+  });
+}
+// The readout beside a slider: typing goes through the slider's own events, like scrub.
+// A 0–255 slider and a 0–1 fraction (LFO spread) both show and take percent; anything
+// else — a time in ms — shows and takes its own unit.
+function dblEditRange(out, input) {
+  if (!out || !input) return;
+  const b = fieldBounds(input);
+  const frac = b.max === 1 && b.step < 1;
+  const dmx = b.min === 0 && b.max === 255;
+  const pct100 = b.min === 0 && b.max === 100;   // layer levels are 0–100 already
+  if (frac || dmx || pct100) {
+    dblEdit(out,
+      () => (frac ? Math.round(+input.value * 100) : dmx ? dmxToPct(+input.value) : +input.value),
+      (p) => applyField(input, frac ? p / 100 : dmx ? pctToDmx(p) : p, b, true),
+      { min: 0, max: 100, step: 1, fmt: (p) => p + '%' });
+  } else {
+    dblEdit(out, () => +input.value, (v) => applyField(input, v, b, true),
+      { min: b.min, max: b.max, step: b.step, fmt: (v) => (input.id === 'audRelease' ? v + 'ms' : String(v)) });
+  }
+}
+
+// What a field can hold, read off its own attributes.
+function fieldBounds(input) {
+  const range = input.type === 'range';
+  const step = parseFloat(input.step) || 1;
+  const min = input.min !== '' ? +input.min : (range ? 0 : -Infinity);
+  const max = input.max !== '' ? +input.max : (range ? 100 : Infinity);
+  return { step, min, max, span: isFinite(min) && isFinite(max) ? max - min : null, decimals: (String(step).split('.')[1] || '').length };
+}
+// Set a field the way a hand would: clamped to its bounds, snapped to its step, and
+// announced through 'input' (and 'change' when the gesture ends) so the existing wiring
+// — debounced posts, readouts, the fader page's holds — runs exactly as if it was typed.
+function applyField(input, v, b, final) {
+  v = clamp(Math.round(v / b.step) * b.step, b.min, b.max);
+  const s = b.decimals ? v.toFixed(b.decimals) : String(Math.round(v));
+  if (input.value !== s) { input.value = s; input.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (final) input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+// A slider with a label and a readout beside it: the whole row is the grab surface, and
+// the value goes through the input's own events so whatever it was wired to still fires.
+function scrubRange(host, input) {
+  if (!host || !input) return;
+  const b = fieldBounds(input);
+  scrub(host, {
+    get: () => +input.value || 0,
+    set: (v) => applyField(input, v, b, false),
+    done: () => applyField(input, +input.value, b, true),
+    min: b.min, max: b.max, step: b.step,
+  });
+}
+
+// The wheel on EVERY slider and number field on the desk — BPM, fade times, the limits —
+// without each builder having to ask for it: a tick nudges the field under the cursor and
+// goes through its own events, so whatever it is wired to fires as if it was typed.
+document.addEventListener('wheel', (e) => {
+  const t = e.target;
+  if (e.defaultPrevented || !(t && t.matches && t.matches('input[type=range], input[type=number]')) || t.disabled || t.readOnly) return;
+  // Not on the 512-channel bank: that page is scrolled with the pointer over a fader
+  // more often than not, and a tick that also moved a live channel would be a hazard.
+  if (t.closest('.mf')) return;
+  // Sideways is a scroll, not a value — see the same guard in scrub().
+  if (!e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  if (!wheelAllowed(t)) return;   // only the field you clicked; otherwise the pane scrolls
+  e.preventDefault();
+  const b = fieldBounds(t);
+  const n = e.shiftKey ? 1 : (e.ctrlKey || e.metaKey) ? 16 : (t.type === 'range' && b.span >= 100 ? 4 : 1);
+  applyField(t, (+t.value || 0) + (e.deltaY < 0 ? n : -n) * b.step, b, true);
+}, { passive: false });
+
 /* =============== attribute editor (CONTROL) =============== */
 
 function fader(role, value, profileName) {
   return `<div class="fader" data-role="${esc(role)}">
     <div class="fh"><i style="background:${ROLE_COLOR[role] || '#6f7478'}"></i>${esc(roleLabel(role, profileName))}</div>
     <div class="chip" style="background:${ROLE_COLOR[role] || '#6f7478'}"></div>
-    <div class="fv">0%</div>
+    <div class="fv" title="Double-click to type a percent">0%</div>
     <div class="vwrap"><input type="range" min="0" max="255" value="${value}"></div>
     <div class="quick"><button data-set="0">0</button><button data-set="128">50</button><button data-set="255">FL</button></div>
   </div>`;
@@ -1659,6 +1883,19 @@ function buildAttr() {
     $$('.quick button', el).forEach((b) => b.addEventListener('click', () => {
       input.value = b.dataset.set; setRole(role, +b.dataset.set); syncAttr(true);
     }));
+
+    // Drag anywhere on the tile — the name, the chip, the number — to change the value.
+    // The slider and the typed box still work; scrub() ignores presses on an input or a button.
+    scrub(el, {
+      get: () => +input.value,
+      set: (v) => { input.value = v; setRole(role, v); syncAttr(true); },
+    });
+    // Double-click the % to type a percent. dblEdit puts its field BESIDE the readout,
+    // because syncAttr repaints the readout's text at poll rate.
+    dblEdit(el.querySelector('.fv'),
+      () => +(+input.value / 255 * 100).toFixed(1),
+      (p) => { const v = pctToDmx(p); input.value = v; setRole(role, v); syncAttr(true); },
+      { min: 0, max: 100, step: 0.1, fmt: (p) => p.toFixed(1) + '%' });
   });
 
   const sq = $('#sqpick');
@@ -1883,6 +2120,14 @@ function buildFaders() {
       num.addEventListener('change', typed);
       num.addEventListener('keydown', (e) => { if (e.key === 'Enter') { typed(); num.blur(); } });
       el.querySelector('.mf-rel').addEventListener('click', () => { queueRaw(fUni, ch, null); syncFaders(); });
+      scrub(el, {
+        get: () => +input.value,
+        set: (v) => { input.value = v; queueRaw(fUni, ch, preMaster(v)); syncFaders(); },
+        // No wheel here: this bank is 512 cells you scroll through, and the pointer is
+        // always over one of them. Taking the wheel would trade scrolling the page for
+        // moving a live channel by accident.
+        wheel: false,
+      });
       return { el, ch, input, num, wireEl, shown: -1, shownWire: -1, held: false };
     });
   }
@@ -1983,6 +2228,15 @@ function wireLimits() {
   const stop = () => { dragging = null; };
   track.addEventListener('pointerup', stop);
   track.addEventListener('pointercancel', stop);
+  const setLimit = (which) => (v) => {
+    if (which === 'max') dimLimits.max = Math.max(v, dimLimits.min); else dimLimits.min = Math.min(v, dimLimits.max);
+    drawDimSlider();
+    sendLimits({ dimMin: dimLimits.min, dimMax: dimLimits.max });
+  };
+  const pctOpts = { min: 0, max: 100, step: 0.1, fmt: (p) => (+p).toFixed(1) + '%' };
+  const pct1 = (v) => +(v / 255 * 100).toFixed(1);
+  dblEdit($('#dimMaxVal'), () => pct1(dimLimits.max), (p) => setLimit('max')(pctToDmx(p)), pctOpts);
+  dblEdit($('#dimMinVal'), () => pct1(dimLimits.min), (p) => setLimit('min')(pctToDmx(p)), pctOpts);
 
   ['panMin', 'panMax', 'tiltMin', 'tiltMax'].forEach((k) => $('#' + k).addEventListener('input', () => {
     drawMoveBoxes(); sendLimits({ [k]: +$('#' + k).value });
@@ -3107,6 +3361,7 @@ function buildLfos() {
     }).join('') || '<p class="fxhint muted">No LFOs — press + Add LFO below.</p>';
 
     $$('.lforow', box).forEach((row) => {
+      $$('.lfoslider', row).forEach((h) => { scrubRange(h, h.querySelector('input')); dblEditRange(h.querySelector('output'), h.querySelector('input')); });
       // Resolve the LFO at EVENT time, not build time: the poll swaps S.lfos for fresh
       // objects without a rebuild when nothing changed, and a listener holding the old
       // array would mutate a copy the next POST never sends. The index stays valid
@@ -3751,6 +4006,7 @@ function buildLayers() {
     }).join('') || '<p class="fxhint muted">No layers. Press + Layer, or use a starter below — a starter builds the look and the layer together.</p>';
 
     $$('.layerrow', box).forEach((row) => {
+      $$('.lfoslider', row).forEach((h) => { scrubRange(h, h.querySelector('input')); dblEditRange(h.querySelector('output'), h.querySelector('input')); });
       // Resolve by id at EVENT time: the poll swaps S.layers for fresh objects without a
       // rebuild whenever nothing structural moved, and a listener holding the old object
       // would edit a copy the next POST never sends.
@@ -4315,6 +4571,7 @@ function buildTouchLayers() {
 
     $$('.tlay', box).forEach((row) => {
       const id = row.dataset.id;
+      $$('.ls-fader', row).forEach((h) => { scrubRange(h, h.querySelector('input[type=range]')); dblEditRange(h.querySelector('output'), h.querySelector('input[type=range]')); });
       row.querySelector('.tl-on').addEventListener('click', () => {
         const l = layerById(id); if (!l) return;
         l.on = !l.on; queueLayer(id, { on: l.on }); buildTouchLayers();
@@ -5466,6 +5723,15 @@ $('#tMaster').addEventListener('input', (e) => {
   $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
   post('api/master', { master: S.master });
 });
+// Value gestures on the static sliders: the whole row is the grab surface, the readout
+// takes a typed value. (The dynamic rows — LFOs, layers — do the same where they are built.)
+scrubRange($('#railMaster'), $('#master'));
+$$('.fxfader, .ls-fader').forEach((h) => scrubRange(h, h.querySelector('input[type=range]')));
+// Hold and Fade read in seconds, so they are left out of the typed readouts: the generic
+// field would take and show milliseconds.
+[['#masterOut', '#master'], ['#fMasterOut', '#fMaster'], ['#tMasterOut', '#tMaster'], ['#fxDepthOut', '#fxDepth'],
+  ['#tFxDepthOut', '#tFxDepth'], ['#tSpeedOut', '#tSpeed'], ['#audAmountOut', '#audAmount'], ['#tAudAmountOut', '#tAudAmount'], ['#audReleaseOut', '#audRelease']]
+  .forEach(([o, i]) => dblEditRange($(o), $(i)));
 // The panic button is the one control that must never claim to have worked. Everything
 // else here is optimistic on purpose — it feels better and a failed poll corrects it a
 // second later — but a Blackout that goes red on a request that never arrived is the desk

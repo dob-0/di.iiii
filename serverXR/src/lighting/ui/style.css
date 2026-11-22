@@ -486,7 +486,25 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .fader .fh { display: flex; align-items: center; gap: 5px; font-size: 11px; }
 .fader .fh i { width: 7px; height: 7px; border-radius: 0; flex: none; }
 .fader .chip { width: 26px; height: 26px; border-radius: 0; border: 1px solid var(--line); }
-.fader .fv { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.fader .fv { font-family: var(--mono); font-size: 11px; color: var(--muted); min-height: 16px; }
+.fader .inedit { width: 100%; box-sizing: border-box; }
+
+/* ---------------- value gestures ---------------- */
+/* The cursor says what a surface does: sideways on anything you can grab and push,
+   up/down on the fader itself, a pointer on the buttons inside. See scrub() in app.js. */
+/* The control the wheel will move: the one you last clicked. Without this the rule is
+   invisible — you would press a fader and have no way to know the wheel is now yours. */
+.wheelarmed { outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -1px; }
+.fader, .mf, .railmaster, .fxfader, .lfoslider, .ls-fader { cursor: ew-resize; }
+.fader input[type=range], .mf input[type=range] { cursor: ns-resize; }
+.fxfader input[type=range], .lfoslider input[type=range], .ls-fader input[type=range], .railmaster input[type=range] { cursor: default; }
+.fader .quick button, .mf button, .mf-num, .railmaster .blackout { cursor: pointer; }
+.scrubhost.scrubbing { outline: 1px solid var(--accent); outline-offset: -1px; }
+body.scrubbing, body.scrubbing * { cursor: ew-resize !important; user-select: none; -webkit-user-select: none; }
+/* a readout you can double-click into; the field it turns into is the readout's size */
+.editable { cursor: text; }
+.inedit { width: 52px; font-family: var(--mono); font-size: 11px; padding: 1px 3px; text-align: center; background: var(--field); border: 1px solid var(--accent); border-radius: 0; }
+.inedit::-webkit-inner-spin-button, .inedit::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .fader .quick { display: flex; gap: 3px; }
 .fader .quick button { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; font-size: 10px; padding: 2px 5px; color: var(--text); }
 
