@@ -104,9 +104,12 @@ const disconnectMachine = (userId, tag) => {
 // "Stays connected": a machine shows one of its live connect keys and gets keys for the spaces its person has
 // gained since — covered by the first consent, ended by Disconnect (which ends the key that is shown here).
 // Spaces the person lost are not touched here (their key stops working with the role).
+const EDIT_SCOPE = 'edit'
+const keyHasScope = (key, scope) => key.scope === scope
+
 const syncConnectedMachine = async ({ token, listSpaces, now = Date.now() }) => {
   const resolved = resolveSyncKey(token)
-  const parsed = resolved && resolved.scope === 'edit' ? parseLabel(resolved.label) : null
+  const parsed = resolved && keyHasScope(resolved, EDIT_SCOPE) ? parseLabel(resolved.label) : null
   if (!parsed || !resolved.ownerUserId) return null
   const have = new Set(getDb().prepare(
     `SELECT space_id FROM space_sync_keys WHERE owner_user_id = ? AND revoked = 0 AND label LIKE ?`
