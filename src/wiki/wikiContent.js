@@ -810,10 +810,11 @@ export const WIKI_ARTICLES = [
             ] },
             'A code works once, for ten minutes.',
             'A signed-in terminal acts as you in the spaces that are yours, and no further. It cannot open a space to the public, make an invite, delete a project or a space, change a space’s settings, or touch accounts and keys. Those stay in the browser, with you.',
-            'To end a terminal, run di logout in it, or open /device and press Revoke beside it under “Terminals signed in as you”. Signing out of the browser does not end it. A terminal nobody has used for 90 days ends by itself, and none lasts longer than a year.'
+            'To end a terminal, run di logout in it, or open /device and press Revoke beside it under “Terminals signed in as you”. Signing out of the browser does not end it. A terminal nobody has used for 90 days ends by itself, and none lasts longer than a year.',
+            'To bring ALL your spaces onto a machine, run di connect. It shows a code the same way; at /device you see the spaces you own or edit, all ticked, and press “Connect this machine”. The machine then follows each one. A space that is already on the machine with work the host does not have is skipped and named, never overwritten. The machine stays connected: spaces you get later are followed on its next check (di up, di connect --sync, or the autoupdate timer on Linux and Raspberry Pi). Your connected machines are listed at /device and in admin, each with Disconnect. di login ends by offering this with one Enter. di disconnect stops it all and deletes no work, and a machine with no login keeps working alone.'
         ],
-        tags: ['terminal', 'cli', 'login', 'di login', 'di logout', 'sign in', 'token', 'claude', 'revoke', 'device'],
-        updated: '2026-11-10'
+        tags: ['terminal', 'cli', 'login', 'di login', 'di logout', 'di connect', 'di disconnect', 'sign in', 'token', 'claude', 'revoke', 'device'],
+        updated: '2026-11-22'
     },
     {
         id: 'public-page-node',

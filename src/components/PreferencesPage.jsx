@@ -27,6 +27,7 @@ import AgentsSection from './preferences/AgentsSection.jsx'
 import MonitorSection from './preferences/MonitorSection.jsx'
 import EstateSection from './preferences/EstateSection.jsx'
 import AppVisitorsSection from './preferences/AppVisitorsSection.jsx'
+import ConnectedMachines from './ConnectedMachines.jsx'
 
 // Two groups: "admin" is real access-control (who can see/publish what),
 // "diagnostics" is live operator/debug telemetry — same nav, visually
@@ -564,7 +565,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </>
                     )}
 
-                    {activeSection === 'manage' && <AdminManageSection onStats={setManageStats} />}
+                    {activeSection === 'manage' && (<><AdminManageSection onStats={setManageStats} /><ModuleSection title="Connected machines" subtitle="made with di connect"><ConnectedMachines heading="Your machines" headingLevel={3} /></ModuleSection></>)}
 
                     {activeSection === 'opencall' && <OpenCallSection />}
 
