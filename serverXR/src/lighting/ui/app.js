@@ -1277,11 +1277,9 @@ function paintStage() {
     const body = node.querySelector('.fx-body');
     body.style.background = c.level < 0.03 ? '#1d1d20' : `rgb(${R},${G},${B})`;
     body.style.color = (R * 0.299 + G * 0.587 + B * 0.114) > 140 ? '#0c0c0d' : '#d8dadb';
-    // Lit-state that survives colourless fixtures: a beam or laser body barely changes
-    // colour between dark and full, so the LEVEL paints a glow — lit reads lit.
-    body.style.boxShadow = c.level > 0.05
-      ? `0 0 ${Math.round(4 + c.level * 18)}px rgba(${R},${G},${B},0.8)`
-      : 'none';
+    // Flat colour only — Emily's rule for the light imitation (studio desk, 2026-08-24): no
+    // glow. A colourless fixture still reads lit: liveColor paints it grey-to-white by level.
+    body.style.boxShadow = 'none';
   }
 }
 
@@ -3153,7 +3151,7 @@ function paintTouchStage() {
     el.style.left = (d.x * 100) + '%';
     el.style.top = (d.y * 100) + '%';
     el.style.background = d.lit ? d.css : '';
-    el.style.boxShadow = d.lit ? `0 0 ${Math.round(4 + d.level * 14)}px ${d.css}` : 'none';
+    el.style.boxShadow = 'none';   // flat colour, no glow (same rule as paintStage)
     el.classList.toggle('lit', d.lit);
   }
 }
