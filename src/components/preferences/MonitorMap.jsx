@@ -333,8 +333,10 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                 <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="in" aria-label="Zoom in" onClick={() => zoomAt(1 / 1.3)}>+</button>
                 <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
-            {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
-            <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen || (kinds && wide) ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
+            <div className="monitor-map-foot">
+                <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen || (kinds && wide) ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
+                {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
+            </div>
         </div>
     )
 }

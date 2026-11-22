@@ -2129,7 +2129,6 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
     max-width: calc(100% - 2 * var(--di-space-2)); padding: var(--di-space-1) var(--di-space-2); background: var(--di-black); border: 1px solid var(--pref-border);
     color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-3); pointer-events: none;
 }
-.monitor-map-stage.is-world .monitor-map-hint { bottom: 2.75rem; }
 .monitor-legend-item { display: inline-flex; align-items: center; gap: var(--di-space-1); white-space: nowrap; }
 .monitor-legend-mark { display: inline-block; flex: none; }
 .monitor-legend-mark.is-link { width: 18px; height: 2px; background: var(--ui-text-muted); }
@@ -2221,7 +2220,7 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-bar { flex-wrap: nowrap; }
 .monitor-bar-tabs { margin: 0; flex: 1 1 auto; min-width: 0; }
 .monitor-bar-actions { flex-wrap: nowrap; flex: none; }
-.monitor-page .monitor-map { position: relative; }
+.monitor-page .monitor-map:not(.is-fullscreen) { position: relative; } /* full screen stays fixed over the page */
 .monitor-page .monitor-map-views { position: absolute; top: var(--di-space-2); left: var(--di-space-2); z-index: 3; }
 .monitor-page .monitor-map[data-monitor-map-view="list"] .monitor-map-views { position: static; }
 @media (min-width: 601px) { .monitor-page.tab-map .monitor-map-key { display: none; } }
@@ -2297,3 +2296,22 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
 .monitor-this-machine { grid-column: 1 / -1; }
 /* titles in the Shared boxes wrap instead of being cut: the picture is for reading, not scanning */
 .monitor-shared .monitor-name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* Map overlays never collide (owner 2026-11-22, N6184): buttons keep one line; the camera tools wrap from the right;
+   hint + legend share one foot; the view bar sits over the stage only when the map is wide enough for both bars. */
+.monitor-map { container: monitor-map / inline-size; }
+/* the stage keeps its card labels (z up to 1000) inside it; the bars sit above them, never under a card */
+.monitor-map-stage { isolation: isolate; }
+.monitor-map-view, .monitor-map-tool { white-space: nowrap; }
+.monitor-map-tools { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 2 * var(--di-space-2)); z-index: 1100; }
+.monitor-map-foot { position: absolute; left: var(--di-space-2); right: var(--di-space-2); bottom: var(--di-space-2); z-index: 1100; display: flex; flex-direction: column; align-items: flex-start; gap: var(--di-space-1); pointer-events: none; }
+.monitor-map-foot .monitor-map-hint, .monitor-map-foot .monitor-legend { position: static; max-width: 100%; }
+.monitor-map-foot .monitor-map-hint { padding: var(--di-space-1) var(--di-space-2); background: var(--di-black); }
+@container monitor-map (max-width: 960px) {
+    .monitor-page .monitor-map-views { position: static; }
+}
+/* Map tab below 1200 px: the map takes the full width and "What changed" goes under it (a 425 px map beside an empty column, 11-22) */
+@media (max-width: 1200px) {
+    .monitor-page.tab-map .monitor-frame { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "strip" "main" "feed"; }
+    .monitor-page.tab-map .monitor-changes { position: static; max-height: 14rem; border-left: 0; padding-left: 0; }
+}
