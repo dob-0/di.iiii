@@ -10,7 +10,7 @@ vi.mock('../../services/apiClient.js', () => ({
 }))
 
 import { getMonitor, postMonitorAsk } from '../../services/apiClient.js'
-import MonitorSection, { formatBytes, nextBackoff, timeAgo } from './MonitorSection.jsx'
+import MonitorSection, { feedsSubtitle, formatBytes, nextBackoff, timeAgo } from './MonitorSection.jsx'
 import { tierState, heroState } from './MonitorOverview.jsx'
 
 const snapshot = (over = {}) => ({
@@ -981,5 +981,13 @@ describe('heroState', () => {
         expect(heroState({ tiers: { rows: [snap.tiers.rows[0], snap.tiers.rows[2]] }, panels: {} }).headline).toBe('All well')
         // a hosted tier (prod) with no commit is still an action
         expect(heroState({ tiers: { rows: [snap.tiers.rows[0], { id: 'prod', status: 'ok', commit: null }] }, panels: {} }).issues.length).toBe(1)
+    })
+})
+
+describe('feedsSubtitle: whose tasks and shows the box holds', () => {
+    it('names the machines rows were lent from, else the local feed file', () => {
+        expect(feedsSubtitle({ tasks: { lentFrom: ['aylmo'] }, shows: { lentFrom: ['aylmo', 'r-di'] } })).toBe("This machine's feeds and your account's from aylmo, r-di")
+        expect(feedsSubtitle({ tasks: { rows: [] } })).toBe('Your feeds from ~/.di/monitor.json')
+        expect(feedsSubtitle(undefined)).toBe('Your feeds from ~/.di/monitor.json')
     })
 })

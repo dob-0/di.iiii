@@ -657,6 +657,43 @@ function createHub({
     }
   }
 
+  // Tasks and shows belong to the account, not to one machine: a feed that only one machine can read (the owner's ledger,
+  // a show board, the brain) is shown on every machine's Monitor. The rows come from the shared picture dev already
+  // builds (`shared.data.tasks` / `.shows`, newest report first, each row tagged with the machine that read it); nothing
+  // is read or probed here. A row is lent only when it is whole and fresh: a plain object from another machine (never
+  // this one, under any spelling), not stale, ok, with a text id and title and a list of text lines. This machine's own
+  // rows always win: an id it has already is not lent again (so a per-machine feed such as the chat counts, which every
+  // machine has under the same id, stays this machine's own), and of two machines with the same id the newest report wins.
+  // Lent rows keep `machine`, so the page names where each was read; `lentFrom` lists those machines. The page only: the
+  // machine's own report to dev carries its own panel, so a lent row is never reported back as its own.
+  const FEED_LENT_MAX = 40
+  const feedFor = (base, shared, name) => {
+    const mine = base.panels?.[name]
+    const list = shared?.data?.[name]
+    if (!Array.isArray(list) || !list.length) return mine
+    const selfHost = machineName(String(base.host || os.hostname())).toLowerCase()
+    const ownRows = isPlainObject(mine) && Array.isArray(mine.rows) ? mine.rows : []
+    const seen = new Set(ownRows.filter(isPlainObject).map((r) => r.id))
+    const lent = []
+    for (const r of list) {
+      if (lent.length >= FEED_LENT_MAX) break
+      if (!isPlainObject(r) || typeof r.machine !== 'string' || !r.machine) continue
+      if (machineName(r.machine).toLowerCase() === selfHost) continue
+      if (r.stale === true || r.ok !== true || typeof r.id !== 'string' || !r.id || typeof r.title !== 'string') continue
+      if (!Array.isArray(r.lines) || !r.lines.every((l) => typeof l === 'string')) continue
+      if (seen.has(r.id)) continue
+      seen.add(r.id)
+      lent.push({ ...r, machine: machineName(r.machine) })
+    }
+    if (!lent.length) return mine
+    return {
+      ...(isPlainObject(mine) ? mine : { ms: 0, at: now() }),
+      ok: isPlainObject(mine) && typeof mine.ok === 'boolean' ? mine.ok : true,
+      rows: [...ownRows, ...lent],
+      lentFrom: [...new Set(lent.map((r) => r.machine))].sort()
+    }
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
   // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
@@ -680,7 +717,15 @@ function createHub({
     const prs = base.panels?.pullRequests?.ok !== true && sharedPrs?.ok === true
       ? { ok: true, ms: 0, at: Date.parse(sharedPrs.reportedAt) || now(), rows: sharedPrs.rows, open: sharedPrs.rows.length, drafts: sharedPrs.rows.filter((p) => p.draft).length, from: sharedPrs.from }
       : null
-    const lent = { ...(credits !== base.panels?.credits ? { credits } : {}), ...(agents !== base.panels?.agents ? { agents } : {}), ...(prs ? { pullRequests: prs } : {}) }
+    const tasks = feedFor(base, shared, 'tasks')
+    const shows = feedFor(base, shared, 'shows')
+    const lent = {
+      ...(credits !== base.panels?.credits ? { credits } : {}),
+      ...(agents !== base.panels?.agents ? { agents } : {}),
+      ...(prs ? { pullRequests: prs } : {}),
+      ...(tasks !== base.panels?.tasks ? { tasks } : {}),
+      ...(shows !== base.panels?.shows ? { shows } : {})
+    }
     return {
       ...base,
       ...(Object.keys(lent).length ? { panels: { ...base.panels, ...lent } } : {}),
