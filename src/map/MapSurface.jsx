@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapInspector from './MapInspector.jsx'
-import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from './MapDeskParts.jsx'
+import { MapMachinesList, MapWallView, nextCorners } from './MapDeskParts.jsx'
 import MapCueList from './MapCueList.jsx'
 import { cueForKey, isCueKey } from './cueFiring.js'
 import { useMapDocument } from './useMapDocument.js'
@@ -11,7 +11,6 @@ import { listProjects } from '../project/services/projectsApi.js'
 import { transportWarning } from './transportCeiling.js'
 import { lightingDeskPath, probeLightingDesk } from './lightingLink.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
-import { showFromValue, showOptions, showValue } from './mapMachines.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import DeskPerformSwitch from '../perform/DeskPerformSwitch.jsx'
@@ -19,6 +18,10 @@ import useLocalInstall from '../hooks/useLocalInstall.js'
 import useSpaceName from '../hooks/useSpaceName.js'
 import { isEmbedRequest, isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import { useLocalFileUrl } from './useLocalFileUrl.js'
+import { MapScreenInspector, MapScreenList, MapVisualBank, MapVisualInspector, useVisualUpload, visualForChoice } from './MapScreenParts.jsx'
+import MapAdvancedOutput from './MapAdvancedOutput.jsx'
+import { isScreenKind, presetScreens } from './wallScreens.js'
+import { generateId } from '../shared/projectSchema.js'
 import './mapSurface.css'
 
 // THE MAPPER'S DESK.
@@ -50,8 +53,9 @@ const GRID_CHOICES = [
 export default function MapSurface({ projectId, spaceId }) {
     const {
         store, document: doc, mapping, surfaces, syncState, applyOps,
-        addSurface, updateSurface, deleteSurface, reorderSurfaces, setOutput, upsertAsset,
+        addSurface, updateSurface, deleteSurface, setOutput, upsertAsset,
         addCue, updateCue, deleteCue, reorderCues, fireCue,
+        addVisual, updateVisual, deleteVisual, reorderVisuals, play,
         undo, redo, canUndo, canRedo
     } = useMapDocument(projectId, { role: 'desk' })
     // Every machine showing this space, and what each one has: the wall is usually another computer.
@@ -79,7 +83,14 @@ export default function MapSurface({ projectId, spaceId }) {
     const [selectedId, setSelectedId] = useState(null)
     const [soloId, setSoloId] = useState(null)
     const [maskMode, setMaskMode] = useState(false)
-    const [live, setLive] = useState(false)
+    // On from the start (2026-10-25): the desk is where you SEE what you are
+    // putting on the wall. Off, every page visual was a card of its own
+    // address — a data: URL became a screen of base64 — and that read as
+    // "the mapper can't show it".
+    const [live, setLive] = useState(true)
+    const [selectedVisualId, setSelectedVisualId] = useState(null)
+    // The mapping window (MapAdvancedOutput.jsx), Resolume's Advanced Output.
+    const [mappingOpen, setMappingOpen] = useState(false)
     const [snap, setSnap] = useState(true)
     const [liveCueId, setLiveCueId] = useState(null)
     const [clipboard, setClipboard] = useState(null)
@@ -97,6 +108,10 @@ export default function MapSurface({ projectId, spaceId }) {
 
     const output = useMemo(() => mapping?.output || { width: 1920, height: 1080 }, [mapping])
     const cues = useMemo(() => mapping?.cues || [], [mapping])
+    const visuals = useMemo(() => mapping?.visuals || [], [mapping])
+    const playing = mapping?.playing || ''
+    const selectedVisual = visuals.find((visual) => visual.id === selectedVisualId) || null
+    const upload = useVisualUpload({ projectId, onUpsertAsset: upsertAsset })
     const reference = mapping?.reference || { url: '', opacity: 0.5, visible: false }
     const selected = surfaces.find((surface) => surface.id === selectedId) || null
 
@@ -217,6 +232,8 @@ export default function MapSurface({ projectId, spaceId }) {
 
     useEffect(() => {
         const onKeyDown = (event) => {
+            // The mapping window has its own keys while it is open.
+            if (mappingOpen) return
             const target = event.target
             if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
             // Undo / redo, the keys every editor here answers to: Ctrl/Cmd+Z,
@@ -232,6 +249,16 @@ export default function MapSurface({ projectId, spaceId }) {
             // scene listens for the same keys on the same cues. A cue key with
             // nothing bound to it still returns here rather than falling
             // through — a digit is never a nudge or a mask.
+            // With a visuals bank, the digits play it: 1-9 the first nine
+            // tiles, 0 black. A project still mapped the old way (no visuals)
+            // keeps its cue keys exactly as they were.
+            if (visuals.length && /^[0-9]$/.test(event.key)) {
+                const index = Number(event.key) - 1
+                if (index < 0) play('')
+                else if (visuals[index]) play(visuals[index].id)
+                event.preventDefault()
+                return
+            }
             if (isCueKey(event.key)) {
                 const cue = cueForKey(cues, event.key)
                 if (cue) { onFireCue(cue); event.preventDefault() }
@@ -246,13 +273,55 @@ export default function MapSurface({ projectId, spaceId }) {
                 case 'ArrowDown': nudge(0, step); event.preventDefault(); break
                 case 'm': case 'M': setMaskMode((value) => !value); break
                 case 's': case 'S': setSnap((value) => !value); break
-                case 'Escape': setSelectedId(null); setMaskMode(false); break
+                case 'Escape': setSelectedId(null); setSelectedVisualId(null); setMaskMode(false); break
                 default: break
             }
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [nudge, cues, onFireCue, undo, redo])
+    }, [nudge, cues, onFireCue, undo, redo, visuals, play, mappingOpen])
+
+    // --- screens and visuals ---------------------------------------------
+
+    // A preset is ONE batch: five screens are one undo step, not five.
+    const onAddScreens = useCallback((preset) => {
+        const made = presetScreens(preset, output, surfaces.filter((surface) => isScreenKind(surface.source.kind)).length + 1)
+            .map((screen) => ({ ...screen, id: generateId('srf') }))
+        applyOps(made.map((surface) => ({ type: 'createMappingSurface', payload: { surface } })))
+        setSelectedVisualId(null)
+        setSelectedId(made[0]?.id || null)
+    }, [output, surfaces, applyOps])
+
+    const onAddVisual = useCallback((entry) => {
+        if (entry?.choice) {
+            const visual = visualForChoice(entry.choice, visuals.length)
+            if (!visual) return
+            const id = addVisual(visual)
+            setSelectedId(null)
+            setSelectedVisualId(id)
+            return
+        }
+        addVisual(entry)
+    }, [visuals.length, addVisual])
+
+    // Files dropped anywhere on the desk become visuals.
+    const onDeskDragOver = useCallback((event) => {
+        if (event.dataTransfer?.types?.includes('Files')) event.preventDefault()
+    }, [])
+    const onDeskDrop = useCallback(async (event) => {
+        if (!event.dataTransfer?.files?.length) return
+        event.preventDefault()
+        const made = await upload.bringIn(event.dataTransfer.files)
+        made.forEach((visual) => addVisual(visual))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [upload.bringIn, addVisual])
+
+    // A tile dropped on a screen plays there alone; dropped on bare wall it
+    // plays on the whole wall.
+    const onDropVisual = useCallback((surfaceId, visualId) => {
+        if (!surfaceId) { play(visualId); return }
+        updateSurface(surfaceId, { source: { kind: 'visual', ref: visualId } })
+    }, [play, updateSurface])
 
     // --- carrying a mapping between machines ----------------------------
 
@@ -274,6 +343,8 @@ export default function MapSurface({ projectId, spaceId }) {
         const ops = [
             ...surfaces.map((surface) => ({ type: 'deleteMappingSurface', payload: { surfaceId: surface.id } })),
             ...cues.map((cue) => ({ type: 'deleteMappingCue', payload: { cueId: cue.id } })),
+            ...visuals.map((visual) => ({ type: 'deleteMappingVisual', payload: { visualId: visual.id } })),
+            ...(Array.isArray(incoming.visuals) ? incoming.visuals : []).map((visual) => ({ type: 'createMappingVisual', payload: { visual } })),
             ...incoming.surfaces.map((surface) => ({ type: 'createMappingSurface', payload: { surface } })),
             ...(Array.isArray(incoming.cues) ? incoming.cues : []).map((cue) => ({ type: 'createMappingCue', payload: { cue } })),
             {
@@ -283,7 +354,9 @@ export default function MapSurface({ projectId, spaceId }) {
                         output: incoming.output,
                         background: incoming.background,
                         grid: incoming.grid,
-                        reference: incoming.reference
+                        reference: incoming.reference,
+                        fade: incoming.fade,
+                        playing: incoming.playing || ''
                     }
                 }
             }
@@ -293,25 +366,16 @@ export default function MapSurface({ projectId, spaceId }) {
         // wall when somebody walks in.
         applyOps(ops)
         return ''
-    }, [surfaces, cues, applyOps])
+    }, [surfaces, cues, visuals, applyOps])
 
     const openOutput = useCallback(() => {
         window.open(buildMapOutputPath(spaceId, projectId), `di-map-out-${projectId}`, 'noopener')
     }, [spaceId, projectId])
 
-    const moveSurface = useCallback((surfaceId, direction) => {
-        const index = surfaces.findIndex((surface) => surface.id === surfaceId)
-        const target = index + direction
-        if (index === -1 || target < 0 || target >= surfaces.length) return
-        const ids = surfaces.map((surface) => surface.id)
-        ids.splice(target, 0, ids.splice(index, 1)[0])
-        reorderSurfaces(ids)
-    }, [surfaces, reorderSurfaces])
-
     const referenceUrl = localReference || reference.url
 
     return (
-        <div className="map-desk">
+        <div className="map-desk" role="region" aria-label="Projection desk" onDragOver={onDeskDragOver} onDrop={onDeskDrop}>
             <SurfaceBar
                 here="map"
                 space={spaceId}
@@ -350,16 +414,8 @@ export default function MapSurface({ projectId, spaceId }) {
                         <input type="number" min="1" value={output.height}
                             onChange={(event) => setOutput({ output: { ...output, height: Number(event.target.value) || 1 } })} />
                     </label>
-                    <label className="map-field map-field-inline" title="Which machine and screen the stage box puts this mapping on. Any screen: the one kiosk a stage machine already runs.">
-                        <span>Show on</span>
-                        <select value={showValue(output.show)} onChange={(event) => {
-                            const show = showFromValue(event.target.value, machines)
-                            const { show: _dropped, ...rest } = output
-                            setOutput({ output: show ? { ...rest, show } : rest })
-                        }}>
-                            {showOptions(machines, output.show).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                        </select>
-                    </label>
+                    <button type="button" className="map-action map-action-mapping" onClick={() => setMappingOpen(true)}
+                        title="The mapping window: slices, input selection, transform, warp points, soft edge, the device the wall plays on">Mapping</button>
                     <label className="map-field map-field-inline">
                         <span>Grid</span>
                         <select value={mapping?.grid || 0} onChange={(event) => setOutput({ grid: Number(event.target.value) })}>
@@ -388,67 +444,77 @@ export default function MapSurface({ projectId, spaceId }) {
 
             <div className="map-body">
                 <aside className="map-panel map-panel-left">
-                    <MapSurfaceList
+                    <MapScreenList
                         surfaces={surfaces}
+                        visuals={visuals}
+                        output={output}
                         selectedId={selectedId}
                         soloId={soloId}
-                        onSelect={setSelectedId}
-                        onAdd={() => {
-                            const id = addSurface({ name: `Surface ${surfaces.length + 1}`, corners: nextCorners(surfaces.length) })
-                            setSelectedId(id)
-                        }}
+                        onSelect={(surfaceId) => { setSelectedId(surfaceId); setSelectedVisualId(null) }}
                         onToggle={(surface) => updateSurface(surface.id, { enabled: !surface.enabled })}
                         onSolo={setSoloId}
-                        onFront={(surfaceId) => moveSurface(surfaceId, 1)}
+                        onAddScreens={onAddScreens}
                     />
 
-                    <MapCueList
-                        cues={cues}
-                        surfaces={surfaces}
-                        liveCueId={liveCueId}
-                        onFire={onFireCue}
-                        onCapture={onCaptureCue}
-                        onAdd={() => addCue({ name: `Cue ${cues.length + 1}`, key: cues.length < 9 ? String(cues.length + 1) : '' })}
-                        onUpdate={updateCue}
-                        onDelete={deleteCue}
-                        onReorder={reorderCues}
-                    />
+                    {/* Cues are the old way of switching. A project that has
+                        some keeps them; a new one never sees the panel. */}
+                    {cues.length ? (
+                        <details className="map-fold">
+                            <summary>Cues</summary>
+                            <MapCueList
+                                cues={cues}
+                                surfaces={surfaces}
+                                liveCueId={liveCueId}
+                                onFire={onFireCue}
+                                onCapture={onCaptureCue}
+                                onAdd={() => addCue({ name: `Cue ${cues.length + 1}`, key: cues.length < 9 ? String(cues.length + 1) : '' })}
+                                onUpdate={updateCue}
+                                onDelete={deleteCue}
+                                onReorder={reorderCues}
+                            />
+                        </details>
+                    ) : null}
 
-                    <MapMachinesList machines={machines} ndiScan={ndiScan} surfaces={surfaces} />
+                    <details className="map-fold">
+                        <summary>Machines</summary>
+                        <MapMachinesList machines={machines} ndiScan={ndiScan} surfaces={surfaces} />
+                    </details>
 
-                    <div className="map-section">
-                        <div className="map-panel-head"><h2>Wall photo</h2></div>
-                        <p className="map-empty">A photo of the wall behind the surfaces, to trace paper edges over. Desk only — never projected.</p>
-                        <div className="map-row">
-                            <label className="map-mini" style={{ cursor: 'pointer' }}>
-                                Choose file
-                                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(event) => {
-                                    const file = event.target.files?.[0]
-                                    if (!file) return
-                                    // Held in this browser only: a blob URL means nothing to
-                                    // another machine, and a wall photo baked into the
-                                    // document as base64 would follow every edit forever.
-                                    setLocalReferenceFile(file)
-                                    setOutput({ reference: { ...reference, visible: true } })
-                                }} />
-                            </label>
-                            <button type="button" className={`map-mini${reference.visible ? ' is-on' : ''}`}
-                                onClick={() => setOutput({ reference: { ...reference, visible: !reference.visible } })}
-                                disabled={!referenceUrl}>Show</button>
+                    <details className="map-fold">
+                        <summary>Wall photo</summary>
+                        <div className="map-section">
+                            <p className="map-empty">A photo of the wall behind the screens, to trace edges over. Desk only — never on the output.</p>
+                            <div className="map-row">
+                                <label className="map-mini" style={{ cursor: 'pointer' }}>
+                                    Choose file
+                                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(event) => {
+                                        const file = event.target.files?.[0]
+                                        if (!file) return
+                                        // Held in this browser only: a blob URL means nothing to
+                                        // another machine, and a wall photo baked into the
+                                        // document as base64 would follow every edit forever.
+                                        setLocalReferenceFile(file)
+                                        setOutput({ reference: { ...reference, visible: true } })
+                                    }} />
+                                </label>
+                                <button type="button" className={`map-mini${reference.visible ? ' is-on' : ''}`}
+                                    onClick={() => setOutput({ reference: { ...reference, visible: !reference.visible } })}
+                                    disabled={!referenceUrl}>Show</button>
+                            </div>
+                            <MapReferenceOpacity value={reference.opacity} onChange={(opacity) => setOutput({ reference: { ...reference, opacity } })} />
                         </div>
-                        <MapReferenceOpacity value={reference.opacity} onChange={(opacity) => setOutput({ reference: { ...reference, opacity } })} />
-                    </div>
+                    </details>
 
-                    <div className="map-section">
-                        <div className="map-panel-head"><h2>Carry</h2></div>
+                    <details className="map-fold">
+                        <summary>Carry</summary>
                         <div className="map-row">
                             <button type="button" className="map-mini" onClick={exportMapping}>Export</button>
                             <button type="button" className="map-mini" onClick={() => setTransferText('')}>Import</button>
                         </div>
-                    </div>
+                    </details>
                 </aside>
 
-                <MapWallView
+                {mappingOpen ? <main className="map-frame" /> : <MapWallView
                     mapping={mapping}
                     spaceId={spaceId}
                     network={network}
@@ -461,34 +527,95 @@ export default function MapSurface({ projectId, spaceId }) {
                     snap={snap}
                     referenceUrl={referenceUrl}
                     reference={reference}
-                    onSelectSurface={setSelectedId}
+                    onSelectSurface={(surfaceId) => { setSelectedId(surfaceId); if (surfaceId) setSelectedVisualId(null) }}
                     onCornersChange={onCornersChange}
                     onMaskChange={onMaskChange}
-                />
+                    onDropVisual={onDropVisual}
+                />}
 
                 <aside className="map-panel map-panel-right">
-                    <MapInspector
-                        surface={selected}
-                        projectId={projectId}
-                        assets={doc?.assets}
-                        projectOptions={projectOptions}
-                        pictureOutOptions={pictureOutOptions}
-                        machines={machines}
-                        clipboard={clipboard}
-                        onUpdate={updateSurface}
-                        onUpsertAsset={upsertAsset}
-                        onDelete={(surfaceId) => { deleteSurface(surfaceId); setSelectedId(null) }}
-                        onDuplicate={onDuplicate}
-                        onCopy={(surfaceId) => setClipboard(surfaces.find((surface) => surface.id === surfaceId) || null)}
-                        onPasteShape={onPasteShape}
-                        onPasteLook={onPasteLook}
-                        onMaskFromOutline={onMaskFromOutline}
-                        onResetCorners={(surfaceId) => updateSurface(surfaceId, {
-                            corners: nextCorners(surfaces.findIndex((surface) => surface.id === surfaceId))
-                        })}
-                    />
+                    {selectedVisual ? (
+                        <MapVisualInspector
+                            visual={selectedVisual}
+                            playing={playing}
+                            projectOptions={projectOptions}
+                            upload={upload}
+                            onUpdate={updateVisual}
+                            onDelete={(visualId) => { deleteVisual(visualId); setSelectedVisualId(null) }}
+                            onPlay={play}
+                            onClose={() => setSelectedVisualId(null)}
+                        />
+                    ) : selected && isScreenKind(selected.source.kind) ? (
+                        <MapScreenInspector
+                            surface={selected}
+                            visuals={visuals}
+                            output={output}
+                            onUpdate={updateSurface}
+                            onDelete={(surfaceId) => { deleteSurface(surfaceId); setSelectedId(null) }}
+                            onDuplicate={onDuplicate}
+                            onUseDirectSource={(surfaceId) => updateSurface(surfaceId, { source: { kind: 'test', ref: 'card' } })}
+                        />
+                    ) : selected ? (
+                        <MapInspector
+                            surface={selected}
+                            projectId={projectId}
+                            assets={doc?.assets}
+                            projectOptions={projectOptions}
+                            pictureOutOptions={pictureOutOptions}
+                            machines={machines}
+                            clipboard={clipboard}
+                            onUpdate={updateSurface}
+                            onUpsertAsset={upsertAsset}
+                            onDelete={(surfaceId) => { deleteSurface(surfaceId); setSelectedId(null) }}
+                            onDuplicate={onDuplicate}
+                            onCopy={(surfaceId) => setClipboard(surfaces.find((surface) => surface.id === surfaceId) || null)}
+                            onPasteShape={onPasteShape}
+                            onPasteLook={onPasteLook}
+                            onMaskFromOutline={onMaskFromOutline}
+                            onResetCorners={(surfaceId) => updateSurface(surfaceId, {
+                                corners: nextCorners(surfaces.findIndex((surface) => surface.id === surfaceId))
+                            })}
+                        />
+                    ) : (
+                        <p className="map-empty">Click a screen to line it up, or ⋯ on a visual to change it.</p>
+                    )}
                 </aside>
             </div>
+
+            <MapVisualBank
+                visuals={visuals}
+                playing={playing}
+                selectedVisualId={selectedVisualId}
+                fade={mapping?.fade || 0}
+                upload={upload}
+                onPlay={play}
+                onSelect={(visualId) => { setSelectedVisualId(visualId); setSelectedId(null) }}
+                onAdd={onAddVisual}
+                onFade={(fade) => setOutput({ fade })}
+                onReorder={reorderVisuals}
+            />
+
+            {mappingOpen ? (
+                <MapAdvancedOutput
+                    mapping={mapping}
+                    surfaces={surfaces}
+                    visuals={visuals}
+                    output={output}
+                    machines={machines}
+                    spaceId={spaceId}
+                    projectId={projectId}
+                    network={network}
+                    assets={doc?.assets || null}
+                    applyOps={applyOps}
+                    setOutput={setOutput}
+                    undo={undo}
+                    redo={redo}
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    play={play}
+                    onClose={() => setMappingOpen(false)}
+                />
+            ) : null}
 
             {transferText !== null ? (
                 <MapTransfer
