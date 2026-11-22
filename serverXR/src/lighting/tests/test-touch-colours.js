@@ -108,9 +108,9 @@ check('the page wires it in: script tag, Touch stage and strip, painted from the
   const ui = (f) => fs.readFileSync(path.join(__dirname, '..', 'ui', f), 'utf8');
   const html = ui('index.html'), app = ui('app.js'), css = ui('style.css');
   assert.ok(html.indexOf('<script src="colour.js">') > 0 && html.indexOf('colour.js') < html.indexOf('<script src="app.js">'), 'colour.js loads before app.js');
-  assert.ok(html.includes('id="tStage"') && html.includes('id="tStageBox"'));
+  assert.ok(html.includes('id="touchStage"') && !html.includes('id="tStage"'), 'the Touch stage is the view-only .touchstage pane');
   assert.ok(app.includes('class="tstrip"') && /function paintDmx[\s\S]{0,120}paintTouchColours\(\)/.test(app), 'stream frames repaint the Touch colours');
-  assert.ok(css.includes('.tstrip') && css.includes('.tdot'));
+  assert.ok(css.includes('.tstrip') && css.includes('.touchstage') && !css.includes('.tdot'));
   assert.ok(!/(post|fetch)\([^)]*\)/.test(ui('colour.js')), 'colour.js is view only: it sends nothing');
 });
 

@@ -62,7 +62,7 @@ let snap = false;
 // spread across the whole WORLD bound, not just the old fixed room. Setup and Control share
 // one (views.desk), so those two stay the same picture. The Stage page (the big workspace,
 // stagepage.js) has its own too: designing there must not move the grid on Control.
-const views = { desk: { x: 0, y: 0, zoom: 1 }, stage: { x: 0, y: 0, zoom: 1 } };
+const views = { desk: { x: 0, y: 0, zoom: 1 }, touch: { x: 0, y: 0, zoom: 1 }, stage: { x: 0, y: 0, zoom: 1 } };
 // Matches desk.js's WORLD — how far a fixture can be dragged from the room. Wide enough
 // that arranging a real rig never hits an edge; the server clamps to the same bound
 // regardless of what this page sends, so this is a UX courtesy, not the actual limit.
@@ -71,7 +71,8 @@ let spaceHeld = false;   // Space + drag pans, like every canvas tool she uses
 // The stage modules from the studio desk (objects.js, markers.js, video.js) ask for the view
 // of the stage they draw on: viewOf(el) → {x, y, zoom}. Every stage helper resolves the view
 // for the stage element it was handed.
-const viewOf = (el) => (!el || !el.closest ? views.desk : el.closest('.stagepage') ? views.stage : views.desk);
+const viewOf = (el) => (!el || !el.closest ? views.desk
+  : el.closest('#touchStage') ? views.touch : el.closest('.stagepage') ? views.stage : views.desk);
 const slidersOf = (el) => $$('.zoom').filter((z) => viewOf(z) === viewOf(el));
 // The grid objects and labels snap to: the 1/40 fixtures snap to across.
 // eslint-disable-next-line no-unused-vars -- read by objects.js and markers.js
@@ -1219,6 +1220,7 @@ function placeStages() {
   panes.forEach((inner, paneIdx) => {
     const v = viewOf(inner);
     inner.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.zoom})`;
+    inner.style.setProperty('--zoom', v.zoom);   // the Touch stage keeps its lights one size whatever the zoom
     // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
     // tile forever — position and size just track the same pan/zoom the fixtures use, 40
     // world-px apart at zoom 1, same as the grid dragging snaps fixtures to.
@@ -1286,6 +1288,12 @@ function paintStage() {
 function wireStage(stage) {
   const v = viewOf(stage);
   let drag = null;
+  // A .viewonly stage (the Touch page) is a window onto the rig, not a plan editor: any
+  // press pans, two fingers pinch-zoom, and a light under the finger is left where it
+  // is — no move, no marquee, no selection. Nothing on a phone in a dark room should be
+  // able to re-plot the stage by accident.
+  const viewOnly = stage.classList.contains('viewonly');
+  const pts = new Map();   // viewOnly: the fingers that are down, for the pinch
   // Without this, a finger-drag on a touch screen scrolls the page instead of moving the
   // fixture — pointer events fire, but the browser's own pan gesture wins. Inline because
   // the stylesheet is owned elsewhere right now.
@@ -1301,6 +1309,19 @@ function wireStage(stage) {
   };
 
   stage.addEventListener('pointerdown', (e) => {
+    if (viewOnly) {
+      e.preventDefault();
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      stage.setPointerCapture(e.pointerId);
+      stage.classList.add('panning');
+      if (pts.size >= 2) {
+        const [a, b] = [...pts.values()];
+        drag = { mode: 'pinch', pointerId: e.pointerId, dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: v.zoom };
+        return;
+      }
+      drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: v.x, oy: v.y };
+      return;
+    }
     // One drag at a time: a second finger landing mid-drag used to replace the drag state
     // and re-capture, so the first finger's gesture ended somewhere it never was.
     if (drag) return;
@@ -1343,6 +1364,14 @@ function wireStage(stage) {
   });
 
   stage.addEventListener('pointermove', (e) => {
+    if (viewOnly && pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (drag && drag.mode === 'pinch') {
+      if (pts.size < 2) return;
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      zoomAt(stage, (a.x + b.x) / 2, (a.y + b.y) / 2, drag.z * d / drag.dist);
+      return;
+    }
     if (!drag || e.pointerId !== drag.pointerId) return;
     if (drag.mode === 'pan') {
       v.x = drag.ox + (e.clientX - drag.sx);
@@ -1380,6 +1409,20 @@ function wireStage(stage) {
   });
 
   const end = (e) => {
+    if (viewOnly) {
+      if (e && e.pointerId != null) pts.delete(e.pointerId);
+      // A pinch ends when either finger lifts; the one still down carries on as a pan
+      // from where it is, so the view never jumps.
+      if (drag && drag.mode === 'pinch') {
+        drag = null;
+        if (pts.size === 1) {
+          const [id, p] = [...pts][0];
+          drag = { mode: 'pan', pointerId: id, sx: p.x, sy: p.y, ox: v.x, oy: v.y };
+          return;
+        }
+      }
+      if (!pts.size) stage.classList.remove('panning');
+    }
     // A stray second finger lifting must not end the real drag mid-gesture.
     if (!drag || (e && e.pointerId != null && e.pointerId !== drag.pointerId)) return;
     if (drag && drag.mode === 'move' && !drag.moved) {
@@ -1420,7 +1463,7 @@ function wireStage(stage) {
 
   // drop a library profile onto the stage: patches it and drops it where you let go
   stage.addEventListener('dragover', (e) => {
-    if (!dragProfile) return;
+    if (!dragProfile || viewOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
     stage.classList.add('dropping');
@@ -1429,7 +1472,7 @@ function wireStage(stage) {
   stage.addEventListener('drop', (e) => {
     stage.classList.remove('dropping');
     const profile = dragProfile || e.dataTransfer.getData('text/plain');
-    if (!profile) return;
+    if (!profile || viewOnly) return;
     e.preventDefault();
     const p = xy(e);
     patchProfile(profile, { universe: gridUni, x: p.x, y: p.y });
@@ -3138,29 +3181,7 @@ function paintTouchStrips() {
   }
 }
 
-// The live stage on Touch: a dot per lamp at its stage place, coloured from the output frame. View only.
-function paintTouchStage() {
-  const sec = $('#tStage');
-  if (!S || !S.fixtures.length) { sec.hidden = true; return; }
-  sec.hidden = false;
-  const box = $('#tStageBox');
-  const sig = S.fixtures.map((f) => f.id + f.x + f.y).join('|');
-  if (box.dataset.sig !== sig) {
-    box.dataset.sig = sig;
-    box.innerHTML = S.fixtures.map((f) => `<i class="tdot" data-id="${esc(f.id)}" title="${esc(f.name)}"></i>`).join('');
-  }
-  const dots = new Map(window.deskColour.stageDots(S.fixtures, S.profiles, colourOfLamp, DMX).map((d) => [d.id, d]));
-  for (const el of $$('.tdot', box)) {
-    const d = dots.get(el.dataset.id);
-    if (!d) continue;
-    el.style.left = (d.x * 100) + '%';
-    el.style.top = (d.y * 100) + '%';
-    el.style.background = d.lit ? d.css : '';
-    el.style.boxShadow = 'none';   // flat colour, no glow (same rule as paintStage)
-    el.classList.toggle('lit', d.lit);
-  }
-}
-function paintTouchColours() { if (page === 'touch') { paintTouchStage(); paintTouchStrips(); } }
+function paintTouchColours() { if (page === 'touch') paintTouchStrips(); }   // the stage's lights are painted by paintStage
 
 function buildTouchLooks() {
   const sec = $('#tLooks');
@@ -5421,6 +5442,18 @@ function renderAll(busy) {
     $('#chaseCount').textContent = nsteps ? `${nsteps} scene${nsteps === 1 ? '' : 's'}` : 'no scenes yet';
   }
   if (page === 'touch') safeBuild('buildTouch', buildTouch);
+  // The Touch stage is a glance at the whole rig, so it opens framed. It has its own view
+  // (see `views`), so this fit never moves the Control or Stage page's picture. On a cold
+  // load (#touch on a phone) the page shows before the first state lands, so the fit waits
+  // for it: a few tries, a quarter second apart, then gives up quietly.
+  if (page === 'touch') {
+    const tryFit = (left) => {
+      const st = $('#touchStage .stage');
+      if (S && st && st.clientWidth) fitStage(st);
+      else if (left > 0) setTimeout(() => tryFit(left - 1), 250);
+    };
+    requestAnimationFrame(() => tryFit(20));
+  }
   if (page === 'stage' && window.stagePageRender) safeBuild('stagePageRender', window.stagePageRender);   // stagepage.js
   if (page === 'fader') safeBuild('buildFaders', buildFaders);
 
@@ -7100,6 +7133,26 @@ $$('.ls-tab').forEach((b) => b.addEventListener('click', () => {
   if (S) buildTouchStrip();
 }));
 $('#lsFold').addEventListener('click', () => { lsFolded = !lsFolded; saveStripPrefs(); applyStrip(); });
+
+// The Touch stage folds to its head row: on a phone the pads are the job and the stage is a
+// glance; the fold is remembered like the strip's. On a wide screen the folded pane
+// collapses to a thin tool column (.stage-folded on the head drives the grid).
+let tsFolded = false;
+try { tsFolded = localStorage.getItem('touchStage') === 'folded'; } catch (e) { /* private mode */ }
+function applyTouchStage() {
+  const pane = $('#touchStage');
+  pane.classList.toggle('folded', tsFolded);
+  pane.parentElement.classList.toggle('stage-folded', tsFolded);
+  $('#tsFold').textContent = tsFolded ? '▴' : '▾';
+  $('#tsFold').title = tsFolded ? 'Open the stage' : 'Collapse the stage';
+  if (!tsFolded && S) requestAnimationFrame(() => fitStage($('#touchStage .stage')));
+}
+$('#tsFold').addEventListener('click', () => {
+  tsFolded = !tsFolded;
+  try { localStorage.setItem('touchStage', tsFolded ? 'folded' : 'open'); } catch (e) { /* private mode */ }
+  applyTouchStage();
+});
+applyTouchStage();
 // the audio mode list is the Control rail's list — one source, no drift
 $('#tAudMode').innerHTML = $('#audMode').innerHTML;
 applyStrip();
