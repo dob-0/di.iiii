@@ -119,7 +119,14 @@ const installShim = async ({ home, names, versionDir }) => {
                 // macOS Terminal starts bash as a login shell, which reads
                 // .bash_profile and skips .bashrc.
                 ? [path.join(userHome, '.bash_profile'), path.join(userHome, '.bashrc')]
-                : [path.join(userHome, '.bashrc'), path.join(userHome, '.profile')])
+                // A login bash reads .bash_profile and then skips .profile; Arch
+                // ships a .bash_profile that sources .bashrc, whose first line
+                // returns for a non-interactive shell before our block. So a
+                // script or an agent's shell had no `di` (studio-mac 2026-11-22).
+                : [path.join(userHome, '.bashrc'),
+                    fs.existsSync(path.join(userHome, '.bash_profile'))
+                        ? path.join(userHome, '.bash_profile')
+                        : path.join(userHome, '.profile')])
             : [path.join(userHome, '.profile')]
 
     const block = [
