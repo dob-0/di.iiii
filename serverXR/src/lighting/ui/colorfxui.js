@@ -44,6 +44,27 @@
     send({ mode: next }, describe);
   }
 
+  // Beats / Pair / custom colours — one set per place that shows them, told apart by an id
+  // prefix ('cfx' on Control, 'spCfx' on the Stage page); paint() keeps every set in step.
+  const OPTS = [];
+  const optsHtml = (p) => `
+      <label title="How many beats one step (chase, swap) or one turn of the wheel (hue) takes">Beats <select id="${p}Beats">${BEATS.map((b) => `<option value="${b}">${b}</option>`).join('')}</select></label>
+      <label class="cfx-pairlab" title="The two colours the chase moves between">Pair <select id="${p}Pair">${pairOptions()}</select></label>
+      <span class="cfx-custom" id="${p}Custom" hidden><input type="color" id="${p}A" title="First colour"><input type="color" id="${p}B" title="Second colour"></span>`;
+  function pickPair(key, customBox) {
+    if (key === 'custom') { customBox.hidden = false; return; }
+    const p = PAIRS.find((x) => x[0] === key);
+    if (p) send({ a: p[2], b: p[3], ...(cfx().mode === 'chase' ? {} : { mode: 'chase' }) }, describe);
+  }
+  function wireOpts(p) {
+    OPTS.push(p);
+    $('#' + p + 'Beats').addEventListener('change', (e) => send({ beats: +e.target.value }, describe));
+    $('#' + p + 'Pair').addEventListener('change', (e) => pickPair(e.target.value, $('#' + p + 'Custom')));
+    for (const k of ['A', 'B']) {
+      $('#' + p + k).addEventListener('change', () => send({ a: $('#' + p + 'A').value, b: $('#' + p + 'B').value }, describe));
+    }
+  }
+
   // ---- Control rail: under the FX pads -------------------------------------------------
   const fxPads = $('#fxPads');
   const box = document.createElement('div');
@@ -51,22 +72,20 @@
   box.innerHTML = `
     <div class="cfx-head"><span class="muted">Colour</span><span class="cfx-state muted" id="cfxState">Off</span></div>
     <div class="fxpads cfxpads" id="cfxPads">${padsHtml()}</div>
-    <div class="inline pad cfx-opts">
-      <label title="How many beats one step (chase, swap) or one turn of the wheel (hue) takes">Beats <select id="cfxBeats">${BEATS.map((b) => `<option value="${b}">${b}</option>`).join('')}</select></label>
-      <label class="cfx-pairlab" title="The two colours the chase moves between">Pair <select id="cfxPair">${pairOptions()}</select></label>
-      <span class="cfx-custom" id="cfxCustom" hidden><input type="color" id="cfxA" title="First colour"><input type="color" id="cfxB" title="Second colour"></span>
+    <div class="inline pad cfx-opts">${optsHtml('cfx')}
     </div>`;
-  if (fxPads) fxPads.after(box);
-  $('#cfxPads').addEventListener('click', (e) => { const b = e.target.closest('.cfxpad'); if (b) press(b.dataset.cfx); });
-  $('#cfxBeats').addEventListener('change', (e) => send({ beats: +e.target.value }, describe));
-  function pickPair(key, customBox) {
-    if (key === 'custom') { customBox.hidden = false; return; }
-    const p = PAIRS.find((x) => x[0] === key);
-    if (p) send({ a: p[2], b: p[3], ...(cfx().mode === 'chase' ? {} : { mode: 'chase' }) }, describe);
+  if (fxPads) {
+    fxPads.after(box);
+    $('#cfxPads').addEventListener('click', (e) => { const b = e.target.closest('.cfxpad'); if (b) press(b.dataset.cfx); });
+    wireOpts('cfx');
   }
-  $('#cfxPair').addEventListener('change', (e) => pickPair(e.target.value, $('#cfxCustom')));
-  for (const id of ['cfxA', 'cfxB']) {
-    $('#' + id).addEventListener('change', () => send({ a: $('#cfxA').value, b: $('#cfxB').value }, describe));
+
+  // ---- Stage page: the inspector's Effects section (index.html #spCfx) --------------------
+  const spBox = $('#spCfx');
+  if (spBox) {
+    spBox.innerHTML = `<div class="fxpads cfxpads sp-cfxpads">${padsHtml()}</div><div class="inline cfx-opts sp-cfxopts">${optsHtml('spCfx')}</div>`;
+    spBox.addEventListener('click', (e) => { const b = e.target.closest('.cfxpad'); if (b) press(b.dataset.cfx); });
+    wireOpts('spCfx');
   }
 
   // ---- Touch: a row under the FX pads -----------------------------------------------------
@@ -95,19 +114,20 @@
     for (const b of $$('.cfxpad')) b.classList.toggle('is-active', b.dataset.cfx === c.mode && c.mode !== 'none');
     const st = $('#cfxState');
     if (st) st.textContent = c.mode === 'none' ? 'Off' : LABEL[c.mode];
-    const beats = $('#cfxBeats');
-    if (beats && document.activeElement !== beats) beats.value = String(BEATS.includes(c.beats) ? c.beats : 4);
     const pk = pairOf(c);
-    const pair = $('#cfxPair');
-    if (pair && document.activeElement !== pair) pair.value = pk;
+    for (const p of OPTS) {
+      const beats = $('#' + p + 'Beats');
+      if (beats && document.activeElement !== beats) beats.value = String(BEATS.includes(c.beats) ? c.beats : 4);
+      const pair = $('#' + p + 'Pair');
+      if (pair && document.activeElement !== pair) pair.value = pk;
+      const custom = $('#' + p + 'Custom');
+      if (custom && pk === 'custom') custom.hidden = false;
+      for (const [k, v] of [['A', c.a], ['B', c.b]]) { const el = $('#' + p + k); if (el && document.activeElement !== el) el.value = v; }
+    }
     const tp = $('.cfx-tpair');
     if (tp && document.activeElement !== tp && pk !== 'custom') tp.value = pk;
-    const custom = $('#cfxCustom');
-    if (custom && pk === 'custom') custom.hidden = false;
-    for (const [id, v] of [['cfxA', c.a], ['cfxB', c.b]]) { const el = $('#' + id); if (el && document.activeElement !== el) el.value = v; }
     // The pair only matters to the chase — say so rather than hide it.
-    const lab = $('.cfx-pairlab');
-    if (lab) lab.classList.toggle('dim', c.mode !== 'chase');
+    for (const lab of $$('.cfx-pairlab')) lab.classList.toggle('dim', c.mode !== 'chase');
     const txt = c.mode === 'none' ? '' : `Colour: ${LABEL[c.mode]}`;
     pill.hidden = !txt;
     if (pill.textContent !== txt) pill.textContent = txt;

@@ -1673,3 +1673,102 @@ body.dragscene .bankrow { cursor: grabbing; }
 /* the automatic Unfiled tab reads quieter than a real container */
 .bankrow-tabs .btab.unfiled { font-weight: 400; font-style: italic; }
 .bankrow-tabs .tabrename { width: 120px; font-size: 12px; font-weight: 600; padding: 2px 6px; background: var(--field); border: 1px solid var(--bc); border-radius: 0; color: var(--text); }
+/* ================ the Stage page (from the studio desk) ================
+   The stage as a whole page (stagepage.js): a tool rail on the left, the stage filling
+   the middle, an inspector on the right that follows the selection, and a strip along
+   the bottom to fire looks while designing. Flat, squared, no glow. */
+.stagepage .sp-body { flex: 1; min-height: 0; display: flex; position: relative; }
+.stagepage .bigstage { flex: 1 1 auto; flex-direction: row; border-width: 0; }
+.sp-rail {
+  flex-direction: column; flex-wrap: nowrap; align-items: center; width: 46px; flex: none;
+  padding: 6px 4px; gap: 3px; border-bottom: 0; border-right: 1px solid var(--line);
+  overflow-y: auto; overflow-x: hidden;
+}
+.sp-rail .tool { width: 36px; height: 30px; flex: none; }
+.sp-rail .sep { width: 26px; height: 1px; margin: 3px 0; flex: none; }
+.sp-rail .toolnote { font-size: 10px; padding: 2px 0 0; }
+.sp-rail .flex { flex: 1 1 4px; }
+.sp-rail input.zoom { writing-mode: vertical-lr; direction: rtl; width: 18px; height: 84px; flex: none; }
+.sp-rail .sp-slot:empty { display: none; }
+.stagepage .bigstage .stage { flex: 1 1 auto; }
+.sp-insp { width: 272px; flex: none; border-width: 0 0 0 1px; overflow-y: auto; }
+.stagepage.insp-closed .sp-insp { display: none; }
+.stagepage:not(.insp-closed) .objstrip { display: none !important; }   /* the inspector edits objects here */
+.sp-insp-open {
+  position: absolute; right: 8px; top: 8px; z-index: 6; background: var(--pane); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 0; padding: 4px 10px; font-size: 12px;
+}
+.sp-insp-open:hover { color: var(--text); border-color: var(--muted); }
+.sp-insp-body { padding: 0 0 8px; }
+.sp-sec { padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.sp-sec:last-child { border-bottom: 0; }
+.sp-sec h3 { margin: 0; font-size: 11px; font-weight: 600; color: var(--muted); }
+.sp-sub { font-size: 11px; line-height: 1.4; }
+.sp-row, .sp-sec.sp-row { display: flex; flex-direction: row; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sp-row .sq { padding: 4px 10px; }
+.sp-slider { display: grid; grid-template-columns: 44px 1fr 40px; align-items: center; gap: 6px; }
+.sp-slider input[type=range] { width: 100%; }
+.sp-lab { font-size: 11px; color: var(--muted); }
+.sp-v { font-family: var(--mono); font-size: 11px; font-weight: 400; text-align: right; color: var(--text); }
+.sp-swatches { display: flex; flex-wrap: wrap; gap: 4px; }
+.sp-sw { width: 22px; height: 22px; border: 1px solid #00000066; border-radius: 0; padding: 0; }
+.sp-sw:hover { outline: 1px solid var(--text); }
+.sp-pick { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 6px; }
+.sp-pick input[type=color] { width: 100%; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 0; background: var(--field); }
+.sp-fields label { display: grid; grid-template-columns: 52px 64px 1fr; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.sp-fields input[type=number] { width: 64px; }
+.sp-slot[hidden] { display: none; }
+/* Effects in the inspector: the Control rail's pads, three to a row in the 272px column. */
+.sp-fxhead { display: flex; align-items: baseline; gap: 6px; }
+.sp-fxstate, .sp-fxnote { font-size: 11px; }
+.sp-fxstate.running { color: var(--accent); }
+.sp-fxtarget { font-size: 11px; line-height: 1.4; }
+.sp-fxtarget .sq { padding: 2px 8px; margin-left: 4px; }
+.sp-fx .fxpads { padding: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sp-fx .cfxpads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.sp-fx .fxpad { padding: 6px 2px; }
+.sp-fx .cfx-opts { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; }
+.sp-msg { display: none; }
+.stagepage:fullscreen .sp-msg:not(:empty) {
+  display: block; position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 7;
+  background: var(--pane); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  padding: 4px 12px; font-size: 12px; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stagepage:fullscreen .sp-msg.bad { border-left-color: var(--danger); color: var(--danger); }
+.stagepage:fullscreen { background: var(--bg); }
+.sp-strip {
+  flex: none; display: flex; align-items: center; gap: 12px; padding: 6px 8px;
+  border-top: 1px solid var(--line); background: var(--bar); min-width: 0;
+}
+.sp-scenes { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.sp-tabs { display: flex; gap: 4px; overflow-x: auto; overflow-y: hidden; }
+.sp-tabs .btab.is-active { color: oklch(from var(--bc) max(l, 0.74) c h); border-color: var(--bc); background: color-mix(in srgb, var(--bc) 14%, transparent); }
+.sp-tiles { display: flex; gap: 4px; overflow-x: auto; overflow-y: hidden; min-height: 38px; align-items: stretch; }
+.sp-tile {
+  flex: none; width: 118px; display: flex; flex-direction: column; justify-content: space-between; gap: 3px;
+  background: var(--pane); border: 1px solid var(--line); border-left: 3px solid var(--bc, var(--line));
+  border-radius: 0; padding: 4px 6px; text-align: left; color: var(--text);
+}
+.sp-tile:hover { border-color: var(--muted); border-left-color: var(--bc, var(--muted)); }
+.sp-tile.is-active { background: var(--pane2); border-color: var(--accent); border-left-color: var(--bc, var(--accent)); }
+.sp-tile .nm { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-tile .bar { display: flex; height: 4px; gap: 1px; }
+.sp-tile .bar i { flex: 1; }
+.sp-none { font-size: 12px; align-self: center; }
+.sp-live { flex: none; display: flex; align-items: center; gap: 10px; }
+.sp-field { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.sp-field select { padding: 4px 6px; }
+.sp-field input[type=number] { width: 58px; padding: 4px 6px; }
+.sp-mfield input[type=range] { width: 110px; }
+.sp-mfield b { font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--text); width: 34px; }
+.sp-live .sq { padding: 5px 12px; }
+.sp-bo { width: auto; padding: 6px 14px; }
+@media (max-width: 1100px) {
+  .sp-insp { position: absolute; right: 0; top: 0; bottom: 0; z-index: 6; }
+  .sp-strip { flex-wrap: wrap; }
+  .sp-live { flex-wrap: wrap; }
+}
+.sp-sw { width: 24px; height: 24px; }
+/* The Stage page stays off phones. */
+@media (max-width: 700px) { .page-tab[data-page="stage"] { display: none; } }
+

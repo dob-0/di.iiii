@@ -50,8 +50,9 @@ check('every control in the markup is read by the interface', () => {
   // rather than absent. Ids used only as CSS or scroll targets are the exception.
   // phoneBox is the labelled wrapper around #phoneList/#phoneQr, which are both read.
   const DECORATIVE = new Set(['statusStrip', 'phoneBox']);
-  // The stage modules from the studio desk read their own controls (objects.js: #objPill).
-  const pageJs = js + ['objects.js', 'markers.js', 'video.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
+  // The stage modules from the studio desk read their own controls (objects.js: #objPill; the Stage
+  // page's strip, inspector and effects: stagepage.js and colorfxui.js's #spCfx).
+  const pageJs = js + ['objects.js', 'markers.js', 'video.js', 'stagepage.js', 'colorfxui.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
   const orphans = [...htmlIds].filter((id) =>
     !DECORATIVE.has(id) && !pageJs.includes(`'#${id}'`) && !pageJs.includes(`"#${id}"`)
     && !pageJs.includes(`'${id}'`) && !pageJs.includes(`getElementById('${id}')`));
@@ -386,7 +387,7 @@ check('objects.js + markers.js + video.js: loaded in order, every api call has a
   if (html.indexOf('src="objects.js"') > html.indexOf('src="cueui.js"')) throw new Error('cueui.js needs deskNow from objects.js: load objects.js first');
   for (const css of ['objects.css', 'markers.css', 'video.css']) if (!html.includes(`href="${css}"`)) throw new Error('index.html does not load ' + css);
   if (/['"`]\/api\//.test(ui)) throw new Error('an absolute /api/ URL — the desk is mounted under /light');
-  if ((html.match(/class="tool objBtn"/g) || []).length !== 8) throw new Error('the Line/Radar/Ring/Spot tools are not on both stages');
+  if ((html.match(/class="tool objBtn"/g) || []).length !== 12) throw new Error('the Line/Radar/Ring/Spot tools are not on all three stages (Setup, Control, Stage page)');
   // The NDI lane is the desk's sibling (…/light → …/ndi), and the product names NDI with its mark.
   const video = fs.readFileSync(path.join(ROOT, '../ui/video.js'), 'utf8');
   if (!/ndiBase\(\)\}api\/sources/.test(video) || !/'in\.mjpg\?name='/.test(video)) throw new Error('video.js no longer reads di.iiii\'s own NDI receiver');
@@ -395,6 +396,29 @@ check('objects.js + markers.js + video.js: loaded in order, every api call has a
     if (!new RegExp(`\\n(const|let) ${g}\\b`).test(js)) throw new Error('app.js no longer declares ' + g + ', which the stage modules read');
   }
   if (!js.includes('window.VideoMap.place()')) throw new Error('placeStages no longer places the video under the lights');
+});
+
+// The Stage page (from the studio desk, 2026-11-22): stagepage.js runs after app.js, objects.js and
+// colorfxui.js, every id it reaches is in the markup, and it keeps its own pan/zoom (views.stage).
+check('the Stage page: every id stagepage.js reaches exists, it loads after app.js, and it has its own view', () => {
+  const sp = fs.readFileSync(path.join(ROOT, '../ui/stagepage.js'), 'utf8');
+  const cfx = fs.readFileSync(path.join(ROOT, '../ui/colorfxui.js'), 'utf8');
+  const missing = [];
+  for (const m of sp.matchAll(/\$\(\s*'#([A-Za-z0-9_-]+)'/g)) if (!htmlIds.has(m[1])) missing.push('#' + m[1]);
+  for (const m of sp.matchAll(/querySelector\('(\.[A-Za-z]+)'\)|\$\('(\.[A-Za-z]+)'\)/g)) {
+    const c = (m[1] || m[2]).slice(1);
+    if (!new RegExp('class="[^"]*\\b' + c + '\\b').test(html)) missing.push('.' + c);
+  }
+  if (!/\$\('#spCfx'\)/.test(cfx) || !htmlIds.has('spCfx')) missing.push('#spCfx (colorfxui.js)');
+  if (missing.length) throw new Error('Stage-page ids missing from the markup: ' + [...new Set(missing)].join(', '));
+  if (!/<main class="page stagepage" data-page="stage">/.test(html)) throw new Error('the Stage page is not in the markup');
+  if (!/class="page-tab" data-page="stage"/.test(html)) throw new Error('there is no Stage tab');
+  const at = html.indexOf('src="app.js"'), b = html.indexOf('src="objects.js"'), c = html.indexOf('src="colorfxui.js"'), i = html.indexOf('src="stagepage.js"');
+  if (i < 0 || i < at || i < b || i < c) throw new Error('index.html must load stagepage.js after app.js, objects.js and colorfxui.js');
+  for (const g of ['views', 'slidersOf']) if (!new RegExp(`\\n(const|let) ${g}\\b`).test(js)) throw new Error('app.js no longer declares ' + g);
+  if (!/stage: \{ x: 0, y: 0, zoom: 1 \}/.test(js)) throw new Error('the Stage page has lost its own pan/zoom (views.stage)');
+  if (!/\['setup', 'control', 'stage',/.test(js)) throw new Error('showPage does not know the stage page');
+  if (/['"`]\/api\//.test(sp)) throw new Error('stagepage.js has an absolute /api/ URL');
 });
 
 // Review fixes (2026-09-24). A light may carry an effect of its own; a rig-wide FX pad,

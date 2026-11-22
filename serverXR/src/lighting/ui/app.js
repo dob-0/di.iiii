@@ -58,26 +58,21 @@ let sceneSel = new Set();      // scenes multi-selected in the open container (s
 let sceneAnchor = null;        // where a shift-click range starts
 let tool = 'select';
 let snap = false;
-let zoom = 1;
 // The stage viewport: pan in screen pixels, zoom 0.01-4 — wide enough to fit a rig
-// spread across the whole WORLD bound, not just the old fixed room. Shared by the Setup
-// and Control stages the way `zoom` always was, so the two views stay the same picture.
-const view = { x: 0, y: 0 };
+// spread across the whole WORLD bound, not just the old fixed room. Setup and Control share
+// one (views.desk), so those two stay the same picture. The Stage page (the big workspace,
+// stagepage.js) has its own too: designing there must not move the grid on Control.
+const views = { desk: { x: 0, y: 0, zoom: 1 }, stage: { x: 0, y: 0, zoom: 1 } };
 // Matches desk.js's WORLD — how far a fixture can be dragged from the room. Wide enough
 // that arranging a real rig never hits an edge; the server clamps to the same bound
 // regardless of what this page sends, so this is a UX courtesy, not the actual limit.
 const WORLD = 1000;
 let spaceHeld = false;   // Space + drag pans, like every canvas tool she uses
 // The stage modules from the studio desk (objects.js, markers.js, video.js) ask for the view
-// of the stage they draw on: viewOf(el) → {x, y, zoom}. This desk has ONE view for every
-// stage (`view` and `zoom` above), so every stage answers with the same live object.
-const deskView = {
-  get x() { return view.x; }, set x(v) { view.x = v; },
-  get y() { return view.y; }, set y(v) { view.y = v; },
-  get zoom() { return zoom; }, set zoom(v) { zoom = v; },
-};
-// eslint-disable-next-line no-unused-vars -- read by objects.js, markers.js and video.js
-const viewOf = (el) => deskView;
+// of the stage they draw on: viewOf(el) → {x, y, zoom}. Every stage helper resolves the view
+// for the stage element it was handed.
+const viewOf = (el) => (!el || !el.closest ? views.desk : el.closest('.stagepage') ? views.stage : views.desk);
+const slidersOf = (el) => $$('.zoom').filter((z) => viewOf(z) === viewOf(el));
 // The grid objects and labels snap to: the 1/40 fixtures snap to across.
 // eslint-disable-next-line no-unused-vars -- read by objects.js and markers.js
 const snapv = (v) => Math.round(v * 40) / 40;
@@ -1222,14 +1217,15 @@ function placeStages() {
   // write, and the reflow happens once at the end of the frame like any other style change.
   const sizes = panes.map((inner) => ({ W: inner.clientWidth || 0, H: inner.clientHeight || 0 }));
   panes.forEach((inner, paneIdx) => {
-    inner.style.transform = `translate(${view.x}px, ${view.y}px) scale(${zoom})`;
+    const v = viewOf(inner);
+    inner.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.zoom})`;
     // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
     // tile forever — position and size just track the same pan/zoom the fixtures use, 40
     // world-px apart at zoom 1, same as the grid dragging snaps fixtures to.
     const outer = inner.closest('.stage');
     if (outer) {
-      outer.style.backgroundPosition = `${view.x}px ${view.y}px`;
-      outer.style.backgroundSize = `${40 * zoom}px ${40 * zoom}px`;
+      outer.style.backgroundPosition = `${v.x}px ${v.y}px`;
+      outer.style.backgroundSize = `${40 * v.zoom}px ${40 * v.zoom}px`;
     }
     // Label crowding: labels scale with the zoom, and positions scale with (scale ×
     // zoom), so whether two labels collide depends only on the container size — a narrow
@@ -1248,7 +1244,7 @@ function placeStages() {
       node.style.width = Math.max(8, Math.hypot(dx, dy)) + 'px';
       node.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
     }
-    const tiny = zoom < 0.5 || W < 360;
+    const tiny = v.zoom < 0.5 || W < 360;
     const shown = [];                    // fixtures whose labels stay visible
     for (const node of $$('.fx-node', inner)) {
       const f = fxById(node.dataset.id);
@@ -1290,6 +1286,7 @@ function paintStage() {
 }
 
 function wireStage(stage) {
+  const v = viewOf(stage);
   let drag = null;
   // Without this, a finger-drag on a touch screen scrolls the page instead of moving the
   // fixture — pointer events fire, but the browser's own pan gesture wins. Inline because
@@ -1300,8 +1297,8 @@ function wireStage(stage) {
     const r = stage.getBoundingClientRect();
     const { sc, ox, oy } = stageMap(r.width, r.height);
     return {
-      x: clamp(((e.clientX - r.left - view.x) / zoom - ox) / sc, -WORLD, WORLD),
-      y: clamp(((e.clientY - r.top - view.y) / zoom - oy) / sc, -WORLD, WORLD),
+      x: clamp(((e.clientX - r.left - v.x) / v.zoom - ox) / sc, -WORLD, WORLD),
+      y: clamp(((e.clientY - r.top - v.y) / v.zoom - oy) / sc, -WORLD, WORLD),
     };
   };
 
@@ -1313,10 +1310,12 @@ function wireStage(stage) {
     // fixture labels are text, and a marquee across them was leaving half the stage's
     // captions highlighted blue.
     e.preventDefault();
-    // Middle button or Space + drag pans the view. This replaces the old Hand tool,
-    // which drew a grab cursor and grabbed nothing.
-    if (e.button === 1 || spaceHeld) {
-      drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y };
+    // Middle button or Space + drag pans the view from any tool; the hand tool pans with the
+    // left button on empty stage and still moves a light you drag, so it is the one tool for
+    // "get around the plan and put things where they go" — the marquee stays with Select.
+    const onNode = !!e.target.closest('.fx-node');
+    if (e.button === 1 || spaceHeld || (tool === 'hand' && e.button === 0 && !onNode)) {
+      drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: v.x, oy: v.y };
       stageDragging = true;
       stage.classList.add('panning');
       stage.setPointerCapture(e.pointerId);
@@ -1326,8 +1325,14 @@ function wireStage(stage) {
     const node = e.target.closest('.fx-node');
     if (node) {
       const id = node.dataset.id;
-      if (!sel.has(id)) { if (!e.shiftKey) sel.clear(); sel.add(id); paintSelection(); }
-      drag = { mode: 'move', pointerId: e.pointerId, start: xy(e), origin: new Map([...sel].map((i) => { const f = S.fixtures.find((x) => x.id === i); return [i, { x: f.x, y: f.y }]; })) };
+      const adding = e.shiftKey || e.ctrlKey || e.metaKey;
+      // Pressing a light that is already selected keeps the selection, so the group can be
+      // dragged together — but a plain CLICK on it (no drag) narrows to that one light, and
+      // Shift/Ctrl-click takes it out. With the whole rig selected there was no way to pick
+      // one light from the stage: every click kept all of them.
+      const clickSel = sel.has(id) ? (adding ? 'toggle' : 'narrow') : null;
+      if (!sel.has(id)) { if (!adding) sel.clear(); sel.add(id); paintSelection(); }
+      drag = { mode: 'move', pointerId: e.pointerId, anchor: id, clickSel, moved: false, cx: e.clientX, cy: e.clientY, start: xy(e), origin: new Map([...sel].map((i) => { const f = S.fixtures.find((x) => x.id === i); return [i, { x: f.x, y: f.y }]; })) };
       stageDragging = true;
       stage.setPointerCapture(e.pointerId);
       return;
@@ -1342,12 +1347,14 @@ function wireStage(stage) {
   stage.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.pointerId) return;
     if (drag.mode === 'pan') {
-      view.x = drag.ox + (e.clientX - drag.sx);
-      view.y = drag.oy + (e.clientY - drag.sy);
+      v.x = drag.ox + (e.clientX - drag.sx);
+      v.y = drag.oy + (e.clientY - drag.sy);
       placeStages();
       return;
     }
     if (drag.mode === 'move') {
+      if (!drag.moved && Math.hypot(e.clientX - drag.cx, e.clientY - drag.cy) < 4) return;   // still a click
+      drag.moved = true;
       const p = xy(e);
       const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
       for (const [id, o] of drag.origin) {
@@ -1377,7 +1384,11 @@ function wireStage(stage) {
   const end = (e) => {
     // A stray second finger lifting must not end the real drag mid-gesture.
     if (!drag || (e && e.pointerId != null && e.pointerId !== drag.pointerId)) return;
-    if (drag && drag.mode === 'move') {
+    if (drag && drag.mode === 'move' && !drag.moved) {
+      // A click, not a drag: narrow to the light (or take it out of the selection).
+      if (drag.clickSel === 'narrow') { sel = new Set([drag.anchor]); paintSelection(); }
+      else if (drag.clickSel === 'toggle') { sel.delete(drag.anchor); paintSelection(); }
+    } else if (drag && drag.mode === 'move') {
       // Read back the ids the gesture actually started on. `sel` can be repainted by
       // anything between pointerdown and pointerup; drag.origin is the gesture's own
       // record of what it picked up, so the save can never write a fixture nobody moved.
@@ -1406,7 +1417,7 @@ function wireStage(stage) {
   stage.addEventListener('wheel', (e) => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    zoomAt(stage, e.clientX, e.clientY, zoom * factor);
+    zoomAt(stage, e.clientX, e.clientY, v.zoom * factor);
   }, { passive: false });
 
   // drop a library profile onto the stage: patches it and drops it where you let go
@@ -1622,6 +1633,7 @@ const TRAVEL = 320;
 // Level readouts are percent, and a typed percent is turned back into the DMX value.
 const pctToDmx = (p) => clamp(Math.round(p / 100 * 255), 0, 255);
 const dmxToPct = (v) => Math.round(v / 255 * 100);
+const asPct = (v) => Math.round(v / 255 * 100) + '%';   // a 0-255 value as the percent the desk shows (the Stage page)
 const overControl = (e) => !!(e.target.closest && e.target.closest('input, button, select, a, textarea'));
 
 // The wheel edits ONLY the control you have clicked, so a wheel over an un-armed control
@@ -3811,7 +3823,7 @@ function fxPadSelected(mode, ids) {
   });
 }
 
-// An FX pad pressed on Control — and, later, the Stage page: one rule for both.
+// An FX pad pressed on Control or on the Stage page (stagepage.js): one rule for both.
 // Pressing the pad that is already lit turns the engine off, so a mode pad is its own
 // escape hatch — you never have to find the Off pad to stop what you started.
 function fxPadPress(mode) {
@@ -5406,6 +5418,7 @@ function renderAll(busy) {
     $('#chaseCount').textContent = nsteps ? `${nsteps} scene${nsteps === 1 ? '' : 's'}` : 'no scenes yet';
   }
   if (page === 'touch') safeBuild('buildTouch', buildTouch);
+  if (page === 'stage' && window.stagePageRender) safeBuild('stagePageRender', window.stagePageRender);   // stagepage.js
   if (page === 'fader') safeBuild('buildFaders', buildFaders);
 
   if (menuOpen) $('#statusStrip').textContent = menuText();
@@ -6172,13 +6185,14 @@ $('#showNoteBtn').addEventListener('click', async () => {
 /* =============== wiring =============== */
 
 function showPage(name) {
-  page = ['setup', 'control', 'touch', 'fader', 'midi'].includes(name) ? name : 'setup';
+  page = ['setup', 'control', 'stage', 'touch', 'fader', 'midi'].includes(name) ? name : 'setup';
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';
   // Opening MIDI re-reads the show's map, so a layout mapped on the laptop is already
   // there on the phone. Skipped mid-edit: a pending save is newer than the server.
   if (page === 'midi' && !midiSaveTimer) loadMidiMap();
+  if (window.stagePageShown) window.stagePageShown(page);   // stagepage.js
   if (S) renderAll(false);
 }
 $$('.page-tab').forEach((t) => t.addEventListener('click', () => {
@@ -6293,30 +6307,32 @@ $$('.circleBtn').forEach((b) => b.addEventListener('click', () => arrange('circl
 // Change the zoom while keeping one screen point fixed — the cursor for the wheel, the
 // viewport centre for the buttons. Without this, zooming in walks the rig off-screen.
 function zoomAt(stage, cx, cy, nz) {
+  const v = viewOf(stage);
   nz = clamp(nz, 0.01, 4);
   const r = stage.getBoundingClientRect();
   const mx = cx - r.left, my = cy - r.top;
-  view.x = mx - (mx - view.x) * (nz / zoom);
-  view.y = my - (my - view.y) * (nz / zoom);
-  zoom = nz;
-  $$('.zoom').forEach((o) => { o.value = Math.round(zoom * 100); });
+  v.x = mx - (mx - v.x) * (nz / v.zoom);
+  v.y = my - (my - v.y) * (nz / v.zoom);
+  v.zoom = nz;
+  slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });
   placeStages();
 }
 const stageFor = (el) => el.closest('.stagepane').querySelector('.stage');
 // Frame every fixture with some margin. This is also the rescue: whatever the pan and
 // zoom have done, one press brings the whole rig back on screen.
 function fitStage(stage) {
+  const v = viewOf(stage);
   const r = stage.getBoundingClientRect();
-  if (!S || !S.fixtures.length) { zoom = 1; view.x = 0; view.y = 0; placeStages(); return; }
+  if (!S || !S.fixtures.length) { v.zoom = 1; v.x = 0; v.y = 0; placeStages(); return; }
   const pts = [...S.fixtures, ...(S.markers || [])];   // the stage labels are framed too
   const xs = pts.map((f) => f.x), ys = pts.map((f) => f.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const { sc, ox, oy } = stageMap(r.width, r.height);
   const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;
-  zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, 4), 0.01, 4);
-  view.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * zoom;
-  view.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * zoom;
-  $$('.zoom').forEach((o) => { o.value = Math.round(zoom * 100); });
+  v.zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, 4), 0.01, 4);
+  v.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * v.zoom;
+  v.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * v.zoom;
+  slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });
   placeStages();
 }
 $$('.fitBtn').forEach((b) => b.addEventListener('click', () => fitStage(stageFor(b))));
@@ -6327,11 +6343,11 @@ $$('.zoom').forEach((z) => z.addEventListener('input', () => {
 }));
 $$('.zoomIn').forEach((b) => b.addEventListener('click', () => {
   const stage = stageFor(b); const r = stage.getBoundingClientRect();
-  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, zoom * 1.25);
+  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, viewOf(stage).zoom * 1.25);
 }));
 $$('.zoomOut').forEach((b) => b.addEventListener('click', () => {
   const stage = stageFor(b); const r = stage.getBoundingClientRect();
-  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, zoom / 1.25);
+  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, viewOf(stage).zoom / 1.25);
 }));
 
 // attribute editor buttons
@@ -6373,7 +6389,7 @@ $$('.fxfader, .ls-fader').forEach((h) => scrubRange(h, h.querySelector('input[ty
 // One place that paints the blackout buttons, so the label and the fill never disagree and
 // every copy (header, Touch strip, Fader, Control, the framed visualiser) says the same
 // thing: ON reads as a state to release, not just a different fill (MOXIR UI audit).
-const BLACKOUT_ALL = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout'];
+const BLACKOUT_ALL = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout', '#spBlackout'];
 const BLACKOUT_LABEL = { on: 'Blackout ON · tap to release', off: 'Blackout' };
 function paintBlackout(on, sels = BLACKOUT_ALL) {
   sels.forEach((s) => {
@@ -6885,14 +6901,15 @@ function handleStageResize() {
   let rescaled = false;
   for (const stage of $$('.stage')) {
     const w = stage.clientWidth, h = stage.clientHeight;
+    const v = viewOf(stage);
     const prev = stageSizes.get(stage);
     stageSizes.set(stage, { w, h });
-    // Only a stage that is actually on screen may steer the shared view — the hidden
+    // Only a stage that is actually on screen may steer its view — the hidden
     // page's stage reads 0×0, and 0-ratio maths would wipe the pan.
     if (!prev || !prev.w || !prev.h || !w || !h || rescaled) continue;
     if (prev.w === w && prev.h === h) continue;
-    view.x *= w / prev.w;
-    view.y *= h / prev.h;
+    v.x *= w / prev.w;
+    v.y *= h / prev.h;
     rescaled = true;   // one visible stage drives; never apply the ratio twice
   }
   placeStages();
