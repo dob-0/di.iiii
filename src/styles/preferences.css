@@ -2315,3 +2315,37 @@ button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1
     .monitor-page.tab-map .monitor-frame { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "strip" "main" "feed"; }
     .monitor-page.tab-map .monitor-changes { position: static; max-height: 14rem; border-left: 0; padding-left: 0; }
 }
+
+/* Slim header (owner 11-22, N6201: "so big and useless, there is no info almost"). ONE row: where you are (small eyebrow +
+   title + space), the counts as inline facts, small buttons at the end. It wraps only when the row truly does not fit. */
+.preferences-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-2) var(--di-space-3);
+    padding: var(--di-space-2) var(--di-space-3);
+}
+.preferences-topbar-main { display: flex; align-items: center; gap: var(--di-space-3); flex: 0 1 auto; }
+.preferences-topbar .preferences-eyebrow { margin: 0; font-size: var(--di-text-2); letter-spacing: 0.16em; white-space: nowrap; }
+.preferences-topbar h1 { font-size: var(--di-text-5); white-space: nowrap; }
+.preferences-topbar .preferences-inline-chip { padding: 0 var(--di-space-2); font-size: var(--di-text-2); white-space: nowrap; }
+.preferences-topbar .preferences-collapse-toggle { margin-left: 0; }
+.preferences-topbar-metrics,
+.preferences-topbar-metrics:has(> :nth-child(6)) {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    gap: var(--di-space-1);
+    min-width: 0;
+}
+/* Each count draws its own hairline, so a wrapped strip never paints its empty end. */
+.preferences-topbar .preferences-topbar-metrics { background: none; border: none; }
+.preferences-topbar .preferences-metric-card { flex: 0 1 auto; padding: var(--di-space-1) var(--di-space-3); border: 1px solid var(--pref-border-active); }
+.preferences-topbar .preferences-metric-value { font-size: var(--di-text-5); }
+.preferences-topbar-actions { flex: 0 0 auto; flex-wrap: nowrap; max-width: none; margin-left: auto; gap: var(--di-space-1); }
+.preferences-topbar-actions .toggle-button { min-height: 28px; padding: var(--di-space-1) var(--di-space-3); font-size: var(--di-text-3); }
+.preferences-topbar.is-collapsed .preferences-topbar-main { flex: 1 1 auto; }
+@media (max-width: 760px) {
+    .preferences-topbar-metrics { flex-basis: auto; }
+    .preferences-topbar-actions { margin-left: 0; flex-wrap: wrap; }
+}
