@@ -826,3 +826,59 @@ describe('the stylesheet keeps its promises to a phone', () => {
         }
     })
 })
+
+// ── di connect: the same screen, a different question ──────────────────────
+
+describe('a machine asking to connect (di connect)', () => {
+    const SPACES = [
+        { id: 'main', label: 'Main Space', role: 'owner' },
+        { id: 'hayfilm', label: 'Hayfilm', role: 'editor' },
+        { id: 'x', label: '<img src=x onerror=alert(1)>', role: 'owner' }
+    ]
+    const reachConnect = async (user) => {
+        route(LOOKUP, () => reply(200, lookupAnswer({ scope: 'connect', spaces: SPACES })))
+        render(<DeviceLoginPage />)
+        await submitCode(user)
+        return screen.findByRole('heading', { name: 'A machine asked to connect to your spaces' })
+    }
+
+    it('lists the person\'s spaces, all ticked, as text only', async () => {
+        const user = userEvent.setup()
+        await reachConnect(user)
+        const boxes = screen.getAllByRole('checkbox')
+        expect(boxes).toHaveLength(3)
+        for (const box of boxes) expect(box).toBeChecked()
+        expect(screen.getByText('Spaces it may follow and edit (3 of 3)')).toBeInTheDocument()
+        expect(document.querySelector('.device-space img')).toBeNull()
+        expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Connect this machine' })).toBeEnabled()
+        expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+    })
+
+    it('sends only the ticked spaces when "Connect this machine" is pressed', async () => {
+        const user = userEvent.setup()
+        await reachConnect(user)
+        await user.click(screen.getByRole('checkbox', { name: /Hayfilm/ }))
+        route(DECISION, () => reply(200, { approved: true }))
+        await user.click(screen.getByRole('button', { name: 'Connect this machine' }))
+        expect(await screen.findByText('Connected. You can close this tab and go back to the terminal.')).toBeInTheDocument()
+        expect(calls(DECISION)[0].json).toEqual({ userCode: 'BDFG-HJKL', approve: true, spaceIds: ['main', 'x'] })
+    })
+
+    it('cannot connect with nothing ticked, and Deny sends no spaces', async () => {
+        const user = userEvent.setup()
+        await reachConnect(user)
+        for (const box of screen.getAllByRole('checkbox')) await user.click(box)
+        expect(screen.getByRole('button', { name: 'Connect this machine' })).toBeDisabled()
+        route(DECISION, () => reply(200, { approved: false }))
+        await user.click(screen.getByRole('button', { name: 'Deny' }))
+        expect(await screen.findByText('Denied. Nothing was connected.')).toBeInTheDocument()
+        expect(calls(DECISION)[0].json).toEqual({ userCode: 'BDFG-HJKL', approve: false })
+    })
+
+    it('a plain login code still shows the old question', async () => {
+        const user = userEvent.setup()
+        await reachQuestion(user)
+        expect(screen.queryByRole('checkbox')).toBeNull()
+    })
+})

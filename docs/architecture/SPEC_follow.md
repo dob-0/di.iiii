@@ -344,6 +344,13 @@ Owner-approved sketches A + C (`/home/dob/Downloads/di-sync-ui/sketches.html`, 2
 - The sketch's "Edits made here wait and cross … Nothing is lost" is true while the host's op log still holds the
   gap; a follower offline past the retained window is resynced by the converge pass, and no warning says so yet.
 
+## Following every space with one sign-in (2026-11-22)
+
+`di connect` (docs/architecture/CLI_LOGIN.md, "Connecting a machine") gets one editor key per space the person owns or edits and
+follows each one from now on. A space of that name that exists here is followed only when the host holds every project this copy
+holds; otherwise it is skipped and reported, and the existing choices (`--take-host`, `--take-mine`) stay the way to decide. `di disconnect`
+stops those follows and ends those keys; it deletes no work.
+
 ## Resolving a name (2026-10-28)
 
 `di follow <space> --from <label> --key <key>`: a bare label (no scheme, no dot) is a network name; the zone

@@ -15,6 +15,7 @@
 const {
   startDeviceLogin, describePending, decide, exchangeDeviceCode, listCliTokens, revokeCliToken, normalizeUserCode
 } = require('../cliLoginStore')
+const { connectableSpaces, mintConnectKeys, revokeOwnConnectKey } = require('../connectStore')
 
 const VERIFICATION_PATH = '/device'
 const CLI_ACTOR = 'di.cli'
@@ -39,7 +40,8 @@ const registerCliLoginRoutes = (router, {
   isAvailable = () => true,
   startLimiter = (req, res, next) => next(),
   pollLimiter = (req, res, next) => next(),
-  answerLimiters = []
+  answerLimiters = [],
+  listSpaces = async () => []
 }) => {
   const unavailable = (res) => res.status(404).json({ error: 'login_not_available' })
 
@@ -63,7 +65,7 @@ const registerCliLoginRoutes = (router, {
     try {
       if (!isAvailable()) return unavailable(res)
       noStore(res)
-      const started = startDeviceLogin({ label: req.body?.label, from: shortAddress(clientKey(req)) })
+      const started = startDeviceLogin({ label: req.body?.label, from: shortAddress(clientKey(req)), scope: req.body?.scope === 'connect' ? 'connect' : 'login' })
       res.status(201).json({ ...started, verificationPath: VERIFICATION_PATH })
     } catch (error) {
       if (error?.code === 'busy') return res.status(503).json({ error: 'busy', message: error.message })
@@ -71,12 +73,23 @@ const registerCliLoginRoutes = (router, {
     }
   })
 
-  router.post('/api/auth/device/token', pollLimiter, (req, res, next) => {
+  router.post('/api/auth/device/token', pollLimiter, async (req, res, next) => {
     try {
       if (!isAvailable()) return unavailable(res)
       noStore(res)
       const deviceCode = typeof req.body?.deviceCode === 'string' ? req.body.deviceCode : ''
       const answer = exchangeDeviceCode({ deviceCode, canIssueFor: (userId) => Boolean(findUserById(userId)) })
+      if (answer.status === 'approved' && answer.scope === 'connect') {
+        // One editor key per ticked space, shown here once. Never logged: only how many.
+        const user = findUserById(answer.userId)
+        const keys = await mintConnectKeys({ userId: answer.userId, spaceIds: answer.spaceIds, machine: answer.label, listSpaces })
+        logger.info(`[connect] minted ${JSON.stringify({ subject: answer.userId, actor: CLI_ACTOR, keys: keys.length })}`)
+        return res.status(200).json({
+          scope: 'connect',
+          user: { id: answer.userId, name: nameOf(user) },
+          keys: keys.map(({ spaceId, name, key, expiresAt }) => ({ spaceId, name, key, expiresAt }))
+        })
+      }
       if (answer.status === 'approved') {
         const user = findUserById(answer.userId)
         logger.info(`[cli-token] minted ${JSON.stringify({ tokenId: answer.tokenId, subject: answer.userId, actor: CLI_ACTOR, expiresAt: answer.expiresAt })}`)
@@ -98,7 +111,7 @@ const registerCliLoginRoutes = (router, {
 
   // ── a person, in a browser ────────────────────────────────────────────────
 
-  router.post('/api/auth/device/lookup', ...answerLimiters, (req, res, next) => {
+  router.post('/api/auth/device/lookup', ...answerLimiters, async (req, res, next) => {
     try {
       if (!isAvailable()) return unavailable(res)
       noStore(res)
@@ -106,20 +119,31 @@ const registerCliLoginRoutes = (router, {
       if (!who) return
       const pending = describePending(req.body?.userCode)
       if (!pending) return res.status(404).json({ error: 'unknown_code' })
+      // A connect code also lists what the person may connect: their own spaces, never anyone else's.
+      if (pending.scope === 'connect') pending.spaces = await connectableSpaces(who.user.id, listSpaces)
       res.json(pending)
     } catch (error) { next(error) }
   })
 
-  router.post('/api/auth/device/decision', ...answerLimiters, (req, res, next) => {
+  router.post('/api/auth/device/decision', ...answerLimiters, async (req, res, next) => {
     try {
       if (!isAvailable()) return unavailable(res)
       noStore(res)
       const who = requireAccount(req, res)
       if (!who) return
       if (typeof req.body?.approve !== 'boolean') return res.status(400).json({ error: 'approve must be true or false' })
-      const answered = decide({ userCode: req.body?.userCode, userId: who.user.id, approve: req.body.approve })
+      const pending = describePending(req.body?.userCode)
+      let spaceIds = null
+      if (pending?.scope === 'connect' && req.body.approve) {
+        // The ticked list is cut down to what this person may connect; nothing else can be asked for by id.
+        if (!Array.isArray(req.body.spaceIds)) return res.status(400).json({ error: 'spaceIds must be a list' })
+        const allowed = new Set((await connectableSpaces(who.user.id, listSpaces)).map((space) => space.id))
+        spaceIds = [...new Set(req.body.spaceIds.map(String))].filter((id) => allowed.has(id))
+        if (!spaceIds.length) return res.status(400).json({ error: 'no_spaces' })
+      }
+      const answered = decide({ userCode: req.body?.userCode, userId: who.user.id, approve: req.body.approve, spaceIds })
       if (!answered) return res.status(404).json({ error: 'unknown_code' })
-      logger.info(`[cli-token] decision ${JSON.stringify({ subject: who.user.id, approved: answered.approved })}`)
+      logger.info(`[cli-token] decision ${JSON.stringify({ subject: who.user.id, approved: answered.approved, scope: pending?.scope || 'login', spaces: spaceIds ? spaceIds.length : undefined })}`)
       res.json({ approved: answered.approved })
     } catch (error) { next(error) }
   })
@@ -141,6 +165,20 @@ const registerCliLoginRoutes = (router, {
       const ended = revokeCliToken({ id: req.params.id, userId: who.user.id })
       if (!ended) return res.status(404).json({ error: 'not_found' })
       logger.info(`[cli-token] revoked ${JSON.stringify({ tokenId: String(req.params.id).slice(0, 32), subject: who.user.id, by: 'account' })}`)
+      res.json({ revoked: true })
+    } catch (error) { next(error) }
+  })
+
+  // ── a machine that was connected, ending its own keys (`di disconnect`) ────
+
+  // The key ends itself, one space per call. Only a key that `di connect` made may: the keys a person made by hand are theirs to end.
+  router.post('/api/auth/connect/revoke', (req, res, next) => {
+    try {
+      noStore(res)
+      const header = String(req.get('authorization') || '')
+      const token = /^Bearer\s+(\S+)$/i.exec(header)?.[1] || ''
+      if (!token || !revokeOwnConnectKey(token)) return res.status(404).json({ error: 'not_found' })
+      logger.info('[connect] a connect key ended itself')
       res.json({ revoked: true })
     } catch (error) { next(error) }
   })

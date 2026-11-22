@@ -183,6 +183,14 @@ module.exports = [
     note: "opens no access by itself: nothing is signed in until a person with an account approves the code at /device. 404 login_not_available where there are no accounts (a `di up` install). docs/architecture/CLI_LOGIN.md."
   },
   {
+    route: "POST /api/auth/connect/revoke",
+    summary: "a machine that `di connect` connected ends one of its own keys (di disconnect): the key in the bearer header ends itself",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "only an edit key whose label starts `connect ` may end itself here; any other key, or none, answers 404 not_found. Ends nothing but the caller's own key. docs/architecture/CLI_LOGIN.md, Connecting a machine."
+  },
+  {
     route: "POST /api/auth/device/token",
     summary: "the terminal's poll: authorization_pending until the person answers, then its login, once",
     reach: "private",

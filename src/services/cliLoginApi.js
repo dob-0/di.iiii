@@ -44,9 +44,11 @@ export const lookupDeviceCode = (userCode) => call('/api/auth/device/lookup', {
 })
 
 // The person's answer for that code: { approved }.
-export const decideDeviceCode = (userCode, approve) => call('/api/auth/device/decision', {
+// For a `di connect` code (lookup says scope: 'connect', with `spaces`) an approval also carries the ticked
+// space ids: `spaceIds`. The server cuts the list down to what this account owns or edits.
+export const decideDeviceCode = (userCode, approve, spaceIds = null) => call('/api/auth/device/decision', {
     method: 'POST',
-    body: { userCode, approve: Boolean(approve) }
+    body: { userCode, approve: Boolean(approve), ...(Array.isArray(spaceIds) ? { spaceIds } : {}) }
 })
 
 // This account's live terminal logins: { tokens: [{ id, label, createdAt, lastUsedAt, expiresAt }] }.

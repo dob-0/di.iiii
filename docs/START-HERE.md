@@ -54,11 +54,12 @@ Do door 1 first. Once per machine; no password is typed in the terminal.
 ```bash
 di login                                   # shows a short code and opens the browser — not walked on a new PC
 di whoami                                  # names you, this machine, and when the sign-in ends
+di connect                                 # same sign-in; tick your spaces in the browser, this machine follows them all
 ```
 
 In the browser, sign in as yourself (GitHub, Google or Telegram), open the page it shows, and type the code.
 The terminal can read and edit your spaces and projects. It cannot publish or delete a space, or change who owns or edits one: those stay in the browser.
-It lasts until you end it (`di logout`, or the list at /device), or 90 days unused (a year at most). It signs in to dev.diiii.xyz by default; add `--tier prod` or `--tier local` for another.
+`di connect` follows every space you own or edit with one approval (`di disconnect` undoes it; a local space with work the host lacks is skipped and named). It lasts until you end it (`di logout`, or the list at /device), or 90 days unused (a year at most). It signs in to dev.diiii.xyz by default; add `--tier prod` or `--tier local` for another.
 
 ### See all your machines in the Monitor (after door 4)
 

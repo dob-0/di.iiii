@@ -1421,7 +1421,8 @@ registerCliLoginRoutes(router, {
   isAvailable: () => Boolean(config.requireAuth) && !isLocalInstall(),
   startLimiter: cliStartLimiter,
   pollLimiter: cliPollLimiter,
-  answerLimiters: [cliAnswerByAddress, cliAnswerByAccount]
+  answerLimiters: [cliAnswerByAddress, cliAnswerByAccount],
+  listSpaces
 })
 
 router.get('/api/auth/session', async (req, res, next) => {

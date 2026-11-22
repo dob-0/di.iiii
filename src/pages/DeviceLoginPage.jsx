@@ -111,8 +111,16 @@ const NO_NAME = 'A terminal that gave no name'
 // drawing, so "2 minutes ago" does not change under the reader's eyes.
 const describeAsk = (answer, userCode) => {
     const askedAt = toMillis(answer?.requestedAt)
+    const connect = answer?.scope === 'connect'
     return {
         userCode,
+        connect,
+        // Spaces this account owns or edits, as text only (a space's name is a person's word, never markup).
+        spaces: connect && Array.isArray(answer?.spaces)
+            ? answer.spaces
+                .filter((space) => typeof space?.id === 'string' && space.id)
+                .map((space) => ({ id: space.id, name: plainText(space.label) || space.id, role: space.role === 'editor' ? 'editor' : 'owner' }))
+            : [],
         label: plainText(answer?.label),
         from: plainText(answer?.from),
         when: askedAt === null ? null : {
@@ -169,6 +177,8 @@ function Problem({ problem, doing, id }) {
 
 const APPROVED = 'Signed in. You can close this tab and go back to the terminal.'
 const DENIED = 'Denied. Nothing was signed in.'
+const CONNECTED = 'Connected. You can close this tab and go back to the terminal.'
+const NOT_CONNECTED = 'Denied. Nothing was connected.'
 
 function Flow({ onNeedsAccount }) {
     const inputId = useId()
@@ -186,6 +196,7 @@ function Flow({ onNeedsAccount }) {
     const [outcome, setOutcome] = useState(null)
     const [problem, setProblem] = useState(null)
     const [pending, setPending] = useState(false)
+    const [ticked, setTicked] = useState([])
 
     // Focus goes to the first useful thing each time the screen changes: the code
     // field, then the question (its heading, so the details are read before the
@@ -243,7 +254,10 @@ function Flow({ onNeedsAccount }) {
         setPending(true)
         setProblem(null)
         try {
-            setRequest(describeAsk(await lookupDeviceCode(userCode), userCode))
+            const asked = describeAsk(await lookupDeviceCode(userCode), userCode)
+            setRequest(asked)
+            // Everything is ticked to begin with: the person takes away what this machine should not have.
+            setTicked(asked.spaces.map((space) => space.id))
             setPhase('confirm')
         } catch (error) {
             const failure = fail(error, check)
@@ -264,7 +278,7 @@ function Flow({ onNeedsAccount }) {
         setPending(true)
         setProblem(null)
         try {
-            const answer = await decideDeviceCode(request.userCode, approve)
+            const answer = await decideDeviceCode(request.userCode, approve, request.connect && approve ? ticked : null)
             // The server's word wins over the button that was pressed.
             const approved = typeof answer?.approved === 'boolean' ? answer.approved : approve
             setOutcome(approved ? 'approved' : 'denied')
@@ -295,7 +309,7 @@ function Flow({ onNeedsAccount }) {
         <div className="device-flow">
             {/* Always in the page, so a screen reader hears the text arrive. */}
             <div className="device-status" role="status" aria-live="polite" aria-atomic="true">
-                {phase === 'done' ? (outcome === 'approved' ? APPROVED : DENIED) : null}
+                {phase === 'done' ? (outcome === 'approved' ? (request?.connect ? CONNECTED : APPROVED) : (request?.connect ? NOT_CONNECTED : DENIED)) : null}
             </div>
 
             {phase === 'form' && (
@@ -338,7 +352,7 @@ function Flow({ onNeedsAccount }) {
             {phase === 'confirm' && request && (
                 <section className="device-card" aria-labelledby={confirmId}>
                     <h2 id={confirmId} ref={confirmRef} tabIndex={-1} className="device-card-title">
-                        A terminal asked to sign in as you
+                        {request.connect ? 'A machine asked to connect to your spaces' : 'A terminal asked to sign in as you'}
                     </h2>
                     <dl className="device-facts">
                         <dt>What asked</dt>
@@ -355,10 +369,39 @@ function Flow({ onNeedsAccount }) {
                         <dt>Where from</dt>
                         <dd>{request.from || 'Unknown'}</dd>
                     </dl>
+                    {request.connect && (
+                        <fieldset className="device-spaces">
+                            <legend className="device-field-label">
+                                Spaces it may follow and edit ({ticked.length} of {request.spaces.length})
+                            </legend>
+                            {request.spaces.length === 0 && <p className="device-note">You own or edit no space on this server.</p>}
+                            <ul className="device-space-list">
+                                {request.spaces.map((space) => (
+                                    <li key={space.id} className="device-space">
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={ticked.includes(space.id)}
+                                                onChange={(event) => setTicked((now) => (event.target.checked ? [...now, space.id] : now.filter((id) => id !== space.id)))}
+                                            />
+                                            <span className="device-space-name"><bdi>{space.name}</bdi></span>
+                                            <span className="device-muted">{space.role}</span>
+                                        </label>
+                                    </li>
+                                ))}
+                            </ul>
+                        </fieldset>
+                    )}
                     <p className="device-warning">Only approve this if you just started it yourself.</p>
                     <div className="device-actions">
-                        <button type="button" className="device-btn device-btn-primary" aria-busy={pending} onClick={() => decide(true)}>
-                            Approve
+                        <button
+                            type="button"
+                            className="device-btn device-btn-primary"
+                            aria-busy={pending}
+                            disabled={request.connect && ticked.length === 0}
+                            onClick={() => decide(true)}
+                        >
+                            {request.connect ? 'Connect this machine' : 'Approve'}
                         </button>
                         <button type="button" className="device-btn" aria-busy={pending} onClick={() => decide(false)}>
                             Deny
@@ -371,7 +414,7 @@ function Flow({ onNeedsAccount }) {
             {phase === 'done' && (
                 <div className="device-actions">
                     <button type="button" ref={againRef} className="device-btn" onClick={startAgain}>
-                        Sign another terminal in
+                        {request?.connect ? 'Connect another machine' : 'Sign another terminal in'}
                     </button>
                 </div>
             )}

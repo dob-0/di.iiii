@@ -777,6 +777,9 @@ function initDb(dbPath) {
   ensureColumn(db, 'ai_chats', 'claude_session_id', 'TEXT')
   // A sync key's scope: 'edit' (every key before 2026-10-07) or 'manage' (SPEC_space_sync_keys.md §13).
   ensureColumn(db, 'space_sync_keys', 'scope', "TEXT NOT NULL DEFAULT 'edit'")
+  // `di connect` (docs/architecture/CLI_LOGIN.md, "Connecting a machine"): a device code asks for 'login' (a terminal token, as before) or 'connect' (one editor key per ticked space); `spaces` is the JSON list the person ticked.
+  ensureColumn(db, 'cli_device_codes', 'scope', "TEXT NOT NULL DEFAULT 'login'")
+  ensureColumn(db, 'cli_device_codes', 'spaces', 'TEXT')
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
   ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')

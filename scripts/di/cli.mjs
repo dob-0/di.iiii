@@ -65,6 +65,7 @@ import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
+import { cmdConnect, cmdDisconnect, hostProjects, localProjects } from './connect.mjs'
 import { runPost } from './post.mjs'
 import { runAgentMail } from './agentMail.mjs'
 import { runMonitor } from './monitorReport.mjs'
@@ -1427,6 +1428,37 @@ const cmdFollows = async () => {
     say(ui.followList(follows, live?.follows || [], live))
 }
 
+/** `di connect` — sign in once, follow every space the account owns or edits (scripts/di/connect.mjs). */
+const runConnect = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const port = resolvePort(home)
+    const selfBase = apiBase(home, port)
+    const running = await ownAlive(home, port)
+    const adminToken = readEnv(home).ADMIN_API_TOKEN || null
+    const controller = new AbortController()
+    const stop = () => controller.abort()
+    process.once('SIGINT', stop)
+    process.once('SIGTERM', stop)
+    try {
+        process.exitCode = await cmdConnect(args, {
+            home, version: installedVersion(home), signal: controller.signal, hostProjects,
+            local: { projects: (spaceId) => localProjects({ home, spaceId, port, selfBase, adminToken, running }) },
+            follow: ({ spaceId, key, from, into }) => followSpace({ home, spaceId, from, key, into, port, start: 'now' })
+        })
+    } finally {
+        process.off('SIGINT', stop)
+        process.off('SIGTERM', stop)
+    }
+}
+
+/** `di disconnect` — stop every follow `di connect` made and end its keys. No work is deleted. */
+const runDisconnect = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    process.exitCode = await cmdDisconnect(args, { home })
+}
+
 /** `di unfollow <space>` — stop carrying edits. Your copy of the space is not touched; the follower's saved place is dropped. */
 const cmdUnfollow = async (args) => {
     const home = HOME()
@@ -1876,6 +1908,8 @@ const COMMANDS = {
     mcp: cmdMcp,
     name: (args) => runName(args, { home: HOME() }),
     login: (args) => runLogin(args, { version: installedVersion(HOME()) }),
+    connect: (args) => runConnect(args),
+    disconnect: (args) => runDisconnect(args),
     logout: (args) => runLogout(args),
     whoami: (args) => runWhoami(args),
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())
