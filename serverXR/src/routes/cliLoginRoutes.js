@@ -15,7 +15,7 @@
 const {
   startDeviceLogin, describePending, decide, exchangeDeviceCode, listCliTokens, revokeCliToken, normalizeUserCode, isConnectScope
 } = require('../cliLoginStore')
-const { connectableSpaces, mintConnectKeys, revokeOwnConnectKey } = require('../connectStore')
+const { connectableSpaces, mintConnectKeys, revokeOwnConnectKey, listConnectedMachines, disconnectMachine, syncConnectedMachine } = require('../connectStore')
 
 const VERIFICATION_PATH = '/device'
 const CLI_ACTOR = 'di.cli'
@@ -180,6 +180,42 @@ const registerCliLoginRoutes = (router, {
       if (!token || !revokeOwnConnectKey(token)) return res.status(404).json({ error: 'not_found' })
       logger.info('[connect] a connect key ended itself')
       res.json({ revoked: true })
+    } catch (error) { next(error) }
+  })
+
+  // A machine that stays connected asks for keys to the spaces its person gained since (covered by the first consent).
+  router.post('/api/auth/connect/sync', async (req, res, next) => {
+    try {
+      noStore(res)
+      const header = String(req.get('authorization') || '')
+      const token = /^Bearer\s+(\S+)$/i.exec(header)?.[1] || ''
+      const out = token ? await syncConnectedMachine({ token, listSpaces }) : null
+      if (!out) return res.status(404).json({ error: 'not_found' })
+      logger.info(`[connect] sync ${JSON.stringify({ subject: out.userId, keys: out.keys.length })}`)
+      res.json({ scope: 'connect', keys: out.keys.map(({ spaceId, name, key, expiresAt }) => ({ spaceId, name, key, expiresAt })) })
+    } catch (error) { next(error) }
+  })
+
+  // ── the person's connected machines, in a browser ─────────────────────────
+
+  router.get('/api/auth/connect/machines', async (req, res, next) => {
+    try {
+      noStore(res)
+      const who = requireAccount(req, res)
+      if (!who) return
+      res.json({ machines: await listConnectedMachines(who.user.id, listSpaces) })
+    } catch (error) { next(error) }
+  })
+
+  router.delete('/api/auth/connect/machines/:id', (req, res, next) => {
+    try {
+      noStore(res)
+      const who = requireAccount(req, res)
+      if (!who) return
+      const ended = disconnectMachine(who.user.id, req.params.id)
+      if (!ended) return res.status(404).json({ error: 'not_found' })
+      logger.info(`[connect] machine disconnected ${JSON.stringify({ subject: who.user.id, keys: ended })}`)
+      res.json({ disconnected: true, keys: ended })
     } catch (error) { next(error) }
   })
 

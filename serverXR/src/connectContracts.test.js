@@ -150,7 +150,7 @@ describe('di connect — one login, every space of the person', () => {
         expect(await keyWorks(server, byId['ann-space'], 'ben-space')).toBeGreaterThanOrEqual(401)
         const stored = rows(server, 'SELECT space_id, scope, label, owner_user_id FROM space_sync_keys')
         expect(stored).toHaveLength(2)
-        for (const row of stored) { expect(row.scope).toBe('edit'); expect(row.label).toMatch(/^connect ann-laptop \(di 0\.4\.17\) \d{4}-\d{2}-\d{2}$/); expect(row.owner_user_id).toBe('ann') }
+        for (const row of stored) { expect(row.scope).toBe('edit'); expect(row.label).toMatch(/^connect ann-laptop \(di 0\.4\.17\) \d{4}-\d{2}-\d{2} ~[0-9a-f]{8}$/); expect(row.owner_user_id).toBe('ann') }
 
         // Given once; only hashes stored; never in the log.
         const again = await post(server, '/api/auth/device/token', { deviceCode: started.deviceCode })
@@ -223,6 +223,48 @@ describe('di connect — one login, every space of the person', () => {
         expect(await keyWorks(server, keys[0].key, 'ann-space')).toBe(401)
         expect((await post(server, '/api/auth/connect/revoke', {}, bearer(keys[0].key))).status).toBe(404)
         expect((await post(server, '/api/auth/connect/revoke', {})).status).toBe(404)
+    })
+
+    it('lists a person\'s connected machines, Disconnect ends one machine only, and a stranger cannot', async () => {
+        const { server, ann, ben } = await connectSetup()
+        const connect = async (label, ids) => {
+            const started = await startConnect(server, label)
+            await post(server, '/api/auth/device/decision', { userCode: started.userCode, approve: true, spaceIds: ids }, ann)
+            return (await (await post(server, '/api/auth/device/token', { deviceCode: started.deviceCode })).json()).keys
+        }
+        const laptop = await connect('laptop (di 0.4.17)', ['ann-space', 'ann-shared'])
+        const pi = await connect('pi (di 0.4.17)', ['ann-space'])
+        const listed = await (await fetch(`${server.baseUrl}/api/auth/connect/machines`, { headers: ann })).json()
+        expect(listed.machines.map((m) => [m.name, m.spaces.length]).sort()).toEqual([['laptop (di 0.4.17)', 2], ['pi (di 0.4.17)', 1]])
+        expect(JSON.stringify(listed)).not.toContain('dii_sync_')
+        expect((await fetch(`${server.baseUrl}/api/auth/connect/machines`)).status).toBe(401)
+        expect((await (await fetch(`${server.baseUrl}/api/auth/connect/machines`, { headers: ben })).json()).machines).toEqual([])
+
+        const laptopId = listed.machines.find((m) => m.name.startsWith('laptop')).id
+        expect((await fetch(`${server.baseUrl}/api/auth/connect/machines/${laptopId}`, { method: 'DELETE', headers: ben })).status).toBe(404)
+        expect(await keyWorks(server, laptop[0].key, laptop[0].spaceId)).toBe(200)
+        expect((await fetch(`${server.baseUrl}/api/auth/connect/machines/${laptopId}`, { method: 'DELETE', headers: ann })).status).toBe(200)
+        for (const k of laptop) expect(await keyWorks(server, k.key, k.spaceId)).toBe(401)
+        expect(await keyWorks(server, pi[0].key, 'ann-space')).toBe(200)
+    })
+
+    it('stays connected: a space gained later arrives on the next sync, nothing already held is minted twice, a stranger gets nothing', async () => {
+        const { server, ann } = await connectSetup()
+        const started = await startConnect(server)
+        await post(server, '/api/auth/device/decision', { userCode: started.userCode, approve: true, spaceIds: ['ann-space'] }, ann)
+        const { keys } = await (await post(server, '/api/auth/device/token', { deviceCode: started.deviceCode })).json()
+        // Ann gains Nobody's space as an editor after connecting.
+        own(server, 'nobody-space', 'ben', ['ann'])
+        const sync = await (await post(server, '/api/auth/connect/sync', {}, bearer(keys[0].key))).json()
+        expect(sync.keys.map((k) => k.spaceId).sort()).toEqual(['ann-shared', 'ben-space', 'nobody-space'])
+        expect(await keyWorks(server, sync.keys.find((k) => k.spaceId === 'nobody-space').key, 'nobody-space')).toBe(200)
+        expect((await (await post(server, '/api/auth/connect/sync', {}, bearer(keys[0].key))).json()).keys).toEqual([])
+        expect((await post(server, '/api/auth/connect/sync', {}, bearer(API_TOKEN))).status).toBe(404)
+        expect((await post(server, '/api/auth/connect/sync', {})).status).toBe(404)
+        // Disconnect ends the machine, so it can no longer ask.
+        const machines = await (await fetch(`${server.baseUrl}/api/auth/connect/machines`, { headers: ann })).json()
+        await fetch(`${server.baseUrl}/api/auth/connect/machines/${machines.machines[0].id}`, { method: 'DELETE', headers: ann })
+        expect((await post(server, '/api/auth/connect/sync', {}, bearer(keys[0].key))).status).toBe(404)
     })
 
     it('rate limits the answers: the eleventh in a minute is refused', async () => {

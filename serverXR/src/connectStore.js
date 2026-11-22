@@ -10,6 +10,8 @@
 // Only spaces the person OWNS or may EDIT (the owner, or a trusted editor) are offered or minted. An admin gets
 // no more than that here: this is "my spaces", not "every space".
 
+const crypto = require('node:crypto')
+const { getDb } = require('./db')
 const { mintSyncKey, resolveSyncKey, revokeSyncKey, TTL_MS } = require('./syncKeyStore')
 
 const CONNECT_LABEL_PREFIX = 'connect '
@@ -34,21 +36,29 @@ const connectableSpaces = async (userId, listSpaces) => {
 }
 
 // "connect <machine label> <date>" — what the person reads in the space's key list.
-const connectLabel = (machine, now = Date.now()) => {
+// The trailing `~<tag>` names the machine: every key one connect made carries the same tag, so a person's list of
+// machines is the keys grouped by it, and "Disconnect" on one machine ends exactly its keys.
+const TAG_MARK = ' ~'
+const newMachineTag = () => crypto.randomBytes(4).toString('hex')
+const connectLabel = (machine, now = Date.now(), tag = newMachineTag()) => {
   const date = new Date(now).toISOString().slice(0, 10)
-  const name = String(machine || 'a machine').replace(/\s+/g, ' ').trim().slice(0, 50) || 'a machine'
-  return `${CONNECT_LABEL_PREFIX}${name} ${date}`.slice(0, 80)
+  const name = String(machine || 'a machine').replace(/\s+/g, ' ').trim().slice(0, 40) || 'a machine'
+  return `${CONNECT_LABEL_PREFIX}${name} ${date}${TAG_MARK}${tag}`.slice(0, 80)
+}
+const parseLabel = (label) => {
+  const match = /^connect (.*) (\d{4}-\d{2}-\d{2}) ~([0-9a-f]{8})$/.exec(String(label || ''))
+  return match ? { name: match[1], date: match[2], tag: match[3] } : null
 }
 
 // Mints one edit key per space the person ticked AND may still use. Returns [{ spaceId, label, key, expiresAt }].
 // The plaintext leaves only in this return value: callers must not log it.
-const mintConnectKeys = async ({ userId, spaceIds, machine, listSpaces, now = Date.now() }) => {
+const mintConnectKeys = async ({ userId, spaceIds, machine, listSpaces, now = Date.now(), tag = newMachineTag(), label = connectLabel(machine, now, tag) }) => {
   const allowed = new Map((await connectableSpaces(userId, listSpaces)).map((space) => [space.id, space]))
   const out = []
   for (const id of new Set(spaceIds)) {
     const space = allowed.get(id)
     if (!space) continue
-    const { token, key } = mintSyncKey({ spaceId: id, ownerUserId: userId, label: connectLabel(machine, now), ttlMs: TTL_MS.edit, scope: 'edit' })
+    const { token, key } = mintSyncKey({ spaceId: id, ownerUserId: userId, label, ttlMs: TTL_MS.edit, scope: 'edit' })
     out.push({ spaceId: id, name: space.label, key: token, keyId: key.id, expiresAt: now + TTL_MS.edit })
   }
   return out
@@ -63,4 +73,47 @@ const revokeOwnConnectKey = (token) => {
   return true
 }
 
-module.exports = { connectableSpaces, mintConnectKeys, revokeOwnConnectKey, connectLabel, roleIn, CONNECT_LABEL_PREFIX }
+// The person's connected machines: their live connect keys grouped by the machine tag. [{ id, name, since, lastUsedAt, spaces:[{id,label}] }]
+const listConnectedMachines = async (userId, listSpaces, now = Date.now()) => {
+  if (!userId) return []
+  const rows = getDb().prepare(
+    `SELECT * FROM space_sync_keys WHERE owner_user_id = ? AND revoked = 0 AND label LIKE 'connect %' AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at`
+  ).all(userId, now)
+  const names = new Map((await listSpaces()).map((meta) => [meta.id, meta.label || meta.slug || meta.id]))
+  const machines = new Map()
+  for (const row of rows) {
+    const parsed = parseLabel(row.label)
+    if (!parsed) continue
+    const machine = machines.get(parsed.tag) || { id: parsed.tag, name: parsed.name, since: parsed.date, lastUsedAt: null, spaces: [] }
+    machine.spaces.push({ id: row.space_id, label: names.get(row.space_id) || row.space_id })
+    if (row.last_used_at && row.last_used_at > (machine.lastUsedAt || 0)) machine.lastUsedAt = row.last_used_at
+    machines.set(parsed.tag, machine)
+  }
+  return [...machines.values()].sort((a, b) => b.since.localeCompare(a.since))
+}
+
+// Ends every key of one of THIS person's machines. Returns how many ended (0 = not theirs / not there).
+const disconnectMachine = (userId, tag) => {
+  if (!userId || !/^[0-9a-f]{8}$/.test(String(tag || ''))) return 0
+  const res = getDb().prepare(
+    `UPDATE space_sync_keys SET revoked = 1 WHERE owner_user_id = ? AND revoked = 0 AND label LIKE 'connect %' AND label LIKE ?`
+  ).run(userId, `% ~${tag}`)
+  return res.changes
+}
+
+// "Stays connected": a machine shows one of its live connect keys and gets keys for the spaces its person has
+// gained since — covered by the first consent, ended by Disconnect (which ends the key that is shown here).
+// Spaces the person lost are not touched here (their key stops working with the role).
+const syncConnectedMachine = async ({ token, listSpaces, now = Date.now() }) => {
+  const resolved = resolveSyncKey(token)
+  const parsed = resolved && resolved.scope === 'edit' ? parseLabel(resolved.label) : null
+  if (!parsed || !resolved.ownerUserId) return null
+  const have = new Set(getDb().prepare(
+    `SELECT space_id FROM space_sync_keys WHERE owner_user_id = ? AND revoked = 0 AND label LIKE ?`
+  ).all(resolved.ownerUserId, `% ~${parsed.tag}`).map((row) => row.space_id))
+  const wanted = (await connectableSpaces(resolved.ownerUserId, listSpaces)).filter((space) => !have.has(space.id)).map((space) => space.id)
+  const keys = await mintConnectKeys({ userId: resolved.ownerUserId, spaceIds: wanted, listSpaces, now, label: resolved.label })
+  return { userId: resolved.ownerUserId, keys }
+}
+
+module.exports = { listConnectedMachines, disconnectMachine, syncConnectedMachine, parseLabel, connectableSpaces, mintConnectKeys, revokeOwnConnectKey, connectLabel, roleIn, CONNECT_LABEL_PREFIX }
