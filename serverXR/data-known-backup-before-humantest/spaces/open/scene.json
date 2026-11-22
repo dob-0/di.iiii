@@ -1,0 +1,76 @@
+{
+  "version": 4,
+  "objects": [],
+  "backgroundColor": "#0a1118",
+  "gridSize": 20,
+  "isGridVisible": true,
+  "isGizmoVisible": true,
+  "isPerfVisible": false,
+  "ambientLight": {
+    "color": "#ffffff",
+    "intensity": 0.8
+  },
+  "directionalLight": {
+    "color": "#ffffff",
+    "intensity": 1,
+    "position": [
+      10,
+      10,
+      5
+    ]
+  },
+  "transformSnaps": {
+    "translation": 0.1,
+    "rotation": 15,
+    "scale": 0.1
+  },
+  "presentation": {
+    "mode": "scene",
+    "sourceType": "html",
+    "url": "",
+    "html": "",
+    "fixedCamera": {
+      "projection": "perspective",
+      "position": [
+        0,
+        1.6,
+        4
+      ],
+      "target": [
+        0,
+        1,
+        0
+      ],
+      "fov": 60,
+      "zoom": 1,
+      "near": 0.1,
+      "far": 200,
+      "locked": true
+    }
+  },
+  "default3DView": {
+    "position": [
+      0,
+      1.6,
+      4
+    ],
+    "target": [
+      0,
+      1,
+      0
+    ]
+  },
+  "savedView": {
+    "viewMode": "3D",
+    "position": [
+      0,
+      1.6,
+      4
+    ],
+    "target": [
+      0,
+      1,
+      0
+    ]
+  }
+}

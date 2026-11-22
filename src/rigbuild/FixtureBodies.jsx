@@ -16,6 +16,7 @@ import strobeUrl from '../../scripts/place/fixtures/glb/strobe.glb?url'
 import blinderUrl from '../../scripts/place/fixtures/glb/blinder.glb?url'
 import hazerUrl from '../../scripts/place/fixtures/glb/hazer.glb?url'
 import cob200Url from '../../scripts/place/fixtures/glb/cob200.glb?url'
+import lasercubeUrl from '../../scripts/place/fixtures/glb/lasercube.glb?url'
 import beam380 from '../../scripts/place/fixtures/glb/beam380.json'
 import beeEye from '../../scripts/place/fixtures/glb/beeEye.json'
 import bsw250 from '../../scripts/place/fixtures/glb/bsw250.json'
@@ -28,6 +29,7 @@ import strobe from '../../scripts/place/fixtures/glb/strobe.json'
 import blinder from '../../scripts/place/fixtures/glb/blinder.json'
 import hazer from '../../scripts/place/fixtures/glb/hazer.json'
 import cob200 from '../../scripts/place/fixtures/glb/cob200.json'
+import lasercube from '../../scripts/place/fixtures/glb/lasercube.json'
 
 // THE LAMPS' BODIES in the room — one body per lamp entity, posed where its beam goes
 // (docs/architecture/RIG_BUILD.md §12; the owed item of §10.8 for view A).
@@ -50,6 +52,7 @@ const KINDS = {
     bsw250: { url: bsw250Url, geo: bsw250 },
     co2: { url: co2Url, geo: co2 },
     laser: { url: laserUrl, geo: laser },
+    lasercube: { url: lasercubeUrl, geo: lasercube },
     par: { url: parUrl, geo: par },
     smoke: { url: smokeUrl, geo: smoke },
     spark: { url: sparkUrl, geo: spark },
