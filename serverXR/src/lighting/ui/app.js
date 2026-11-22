@@ -1474,6 +1474,8 @@ function paintSelection() {
   // Skipped only while a marquee is being dragged — see deferAttr. The editor is rebuilt
   // once on release, so the selection it describes is always the finished one.
   if (!deferAttr) buildAttr();
+  // the FX pads say who they act on, which is the selection — repaint it now, not on the next poll
+  if (S && !deferAttr) safeBuild('buildFx', buildFx);
 }
 
 function paintSelList() {
@@ -3222,6 +3224,60 @@ function postRigFx(mode) {
   return post('api/fx', { mode: same ? 'none' : mode, all: true }).then(pullState);
 }
 
+// The FX pads act on the SELECTION when only part of the rig is selected, and on the whole
+// rig when all of it — or none — is (ported from the studio desk). fxPadPress, fxBackToRig
+// and fxLitModes are plain functions so another page (the Stage page) can reuse them.
+const fxSubset = () => (S && sel.size > 0 && sel.size < S.fixtures.length ? [...sel] : null);
+// What a fixture is actually running: its own mode, else the rig-wide one.
+const fxModeOf = (f) => (f.fx ? f.fx.mode : (fxRunning() ? S.fx.mode : 'none'));
+const fxNames = (list) => (list.length <= 3 ? list.map((f) => f.name).join(', ') : `${list.length} lights`);
+
+// A pad pressed with part of the rig selected: just those lights. Pressing the mode they
+// all already run turns them off (held still) — the same escape hatch as the rig pads.
+function fxPadSelected(mode, ids) {
+  const mine = S.fixtures.filter((f) => ids.includes(f.id));
+  const next = mine.every((f) => fxModeOf(f) === mode) ? 'none' : mode;
+  // Optimistic, as the server will have it: the post marks the page busy, and a busy poll
+  // keeps the page's own fixtures — so without this the pad and "Back to rig" lit up only
+  // on the poll after next, ~1.5 s after the press.
+  for (const f of mine) f.fx = { mode: next };
+  post('api/fx', { mode: next, ids }).then((r) => {
+    if (r && r.error) say(r.error, true);
+    else say(next === 'none' ? `FX off on ${fxNames(mine)} — the rest keep going` : `${fxLabel(next)} on ${fxNames(mine)} only`);
+    pullState();
+  });
+}
+
+// An FX pad pressed on Control — and, later, the Stage page: one rule for both.
+// Pressing the pad that is already lit turns the engine off, so a mode pad is its own
+// escape hatch — you never have to find the Off pad to stop what you started.
+function fxPadPress(mode) {
+  const ids = fxSubset();
+  if (ids) return fxPadSelected(mode, ids);
+  const same = fxRunning() && S.fx.mode === mode && !fxOwners().length;
+  const hadOwn = fxOwners().length;
+  for (const f of S.fixtures) delete f.fx;   // {all:true} clears them on the server too
+  return post('api/fx', same ? { mode: 'none', all: true } : { mode, all: true }).then(() => {
+    if (hadOwn) say(`${same ? 'FX off' : fxLabel(mode)} on the whole rig`);
+    pullState();
+  });
+}
+
+// "Back to rig": these lights drop their own effect and follow the rig-wide one again.
+function fxBackToRig(own) {
+  for (const f of own) delete f.fx;   // optimistic — see fxPadSelected
+  return post('api/fx', { mode: 'rig', ids: own.map((f) => f.id) }).then(() => {
+    say(`${fxNames(own)} follow the rig again`); pullState();
+  });
+}
+
+// The pads that should be lit: what the selected lights run when part of the rig is
+// selected, else the rig-wide mode.
+function fxLitModes() {
+  const ids = fxSubset();
+  return ids ? new Set(S.fixtures.filter((f) => sel.has(f.id)).map(fxModeOf)) : new Set([fxRunning() ? S.fx.mode : 'none']);
+}
+
 function buildFx() {
   const modes = (S && S.fxModes) || ['none'];
   const pads = $('#fxPads');
@@ -3230,11 +3286,22 @@ function buildFx() {
     pads.dataset.sig = sig;
     pads.innerHTML = modes.map((m) =>
       `<button class="fxpad${m === 'none' ? ' off' : ''}" data-fx="${m}">${fxLabel(m)}</button>`).join('');
-    $$('.fxpad', pads).forEach((b) => b.addEventListener('click', () => {
-      // Pressing the pad that is already lit turns the engine off, so a mode pad is its
-      // own escape hatch — you never have to find the Off pad to stop what you started.
-      postRigFx(b.dataset.fx);
-    }));
+    $$('.fxpad', pads).forEach((b) => b.addEventListener('click', () => fxPadPress(b.dataset.fx)));
+  }
+  // Who the pads act on, in words — without it "why did everything change" has no answer.
+  const tgt = $('#fxTarget');
+  const ids = fxSubset();
+  const mine = ids ? S.fixtures.filter((f) => sel.has(f.id)) : [];
+  const ownSel = mine.filter((f) => f.fx);
+  const tSig = (ids ? ids.join(',') : 'rig') + '#' + ownSel.map((f) => f.id + f.fx.mode).join(',') + '#' + fxOwners().length;
+  if (tgt.dataset.sig !== tSig) {
+    tgt.dataset.sig = tSig;
+    tgt.innerHTML = ids
+      ? `<span class="muted">Pads act on</span> <b>${esc(fxNames(mine))}</b> <span class="muted">only</span>` +
+        (ownSel.length ? ` <button class="sq" id="fxToRig" title="Drop their own effect and follow the rig's again">Back to rig</button>` : '')
+      : `<span class="muted">Pads act on the whole rig${fxOwners().length ? ' — lights with their own effect rejoin it' : ''}. Select lights to give them their own.</span>`;
+    const back = $('#fxToRig', tgt);
+    if (back) back.addEventListener('click', () => fxBackToRig(ownSel));
   }
   // Follow: what drives the effect across the rig — the patch order, or the stage
   // arrangement (left-right, top-bottom, out from the middle). Built from the server's
@@ -3269,8 +3336,8 @@ function buildFx() {
       post('api/fx', { exclude: [...ex] }).then(pullState);
     }));
   }
-  const live = fxRunning() ? S.fx.mode : 'none';
-  $$('.fxpad', pads).forEach((b) => b.classList.toggle('is-active', b.dataset.fx === live));
+  const liveSet = fxLitModes();
+  $$('.fxpad', pads).forEach((b) => b.classList.toggle('is-active', liveSet.has(b.dataset.fx)));
   $('#fxState').textContent = fxSummary();
   $('#fxState').classList.toggle('running', fxAnyRunning());
   if (document.activeElement !== $('#fxDepth')) $('#fxDepth').value = S.fx.depth;

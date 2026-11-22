@@ -374,7 +374,9 @@ check('every rig-wide FX mode change from the page is sent with all:true', () =>
   const calls = [...js.matchAll(/(?:post|midiSend)\(\s*'api\/fx',\s*([^;]*?)\)(?:\.then|;)/g)].map((m) => m[1]);
   const setsMode = calls.filter((c) => /\bmode\b/.test(c));
   if (setsMode.length < 3) throw new Error('fewer api/fx mode calls than expected — the pattern is stale: ' + calls.join(' | '));
-  const bare = setsMode.filter((c) => !/all:\s*true/.test(c));
+  // A call that names ids is the FX pads acting on the selection (fxPadSelected, fxBackToRig),
+  // deliberately not rig-wide. Only a call with neither all:true nor ids would leave lights running.
+  const bare = setsMode.filter((c) => !/all:\s*true/.test(c) && !/\bids\b/.test(c));
   if (bare.length) throw new Error('api/fx mode change without all:true: ' + bare.join(' | '));
   if (!/fxPill\.hidden = !fxAnyRunning\(\)/.test(js)) throw new Error('the FX pill must count lights running their own effect');
 });
