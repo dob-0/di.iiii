@@ -2071,3 +2071,10 @@ Guard:
 Guard:
 - `serverXR/src/monitorHub.test.js` "lends the other machines' own spaces; the map is the same whichever machine draws it": the same two machines drawn from each side give the same agent nodes.
 - `serverXR/src/monitorStore.test.js` spaces panel; `scripts/di/monitorReport.test.js` localBase.
+
+### 2026-11-24 — Same map data, different picture on aylmo and studio-mac
+
+**Symptom:** after the map fix both machines sent the same 71 nodes, yet the owner saw a different map on aylmo ("why still in aylmo the agent map is different").
+**Cause:** the nodes came in viewer order (the machine you look from first) and the page lays them out in list order; the own machine's line was "runs", the others' "reports"; the server's own scan of the new spaces panel failed (its address already ends in /serverXR), so the own machine turned yellow.
+**Fix:** nodes sorted by kind then name, lines sorted and one kind ("runs"), tiers dev, prod, then machines by name; the spaces panel only in `di monitor report`, read at the di command's API address.
+Guard: `serverXR/src/monitorHub.test.js` "the map is the same whichever machine draws it" compares node order, lines and tiers from both sides; `monitorStore.test.js` asserts the server scan has no spaces panel.

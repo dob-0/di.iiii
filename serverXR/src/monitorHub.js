@@ -37,6 +37,7 @@ const ACCOUNTS_MAX = 20
 // the map's safety limits: space names and agents drawn (the Spaces and Agents boxes list them all)
 const MAP_SPACES_MAX = 80
 const MAP_AGENTS_MAX = 40
+const MAP_KIND_ORDER = ['machine', 'repo', 'tier', 'space', 'show', 'agent']
 const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'spaces', 'pullRequests', 'tasks', 'shows', 'chats', 'credits']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
@@ -409,7 +410,7 @@ function createHub({
     if (typeof listSpaces === 'function') {
       try {
         for (const s of await listSpaces()) {
-          if (s.kind === 'sandbox') continue
+          if (s.kind === 'sandbox' || !(s.slug || s.id)) continue
           rows.push({ tier: self, slug: String(s.slug || s.id), visibility: s.isPublic ? 'public' : 'private' })
         }
       } catch { ok = false }
@@ -473,7 +474,7 @@ function createHub({
     if (nodes.has(`tier:${self}`)) edge(`machine:${selfHost}`, `tier:${self}`, 'runs')
     // a report reached THIS tier, so this is the tier that machine follows; a local build is nobody's tier
     for (const r of reportRows) {
-      edge(`machine:${r.host}`, `tier:local:${r.host}`, 'reports')
+      edge(`machine:${r.host}`, `tier:local:${r.host}`, 'runs')
       if (!self.startsWith('local:')) edge(`tier:${self}`, `machine:${r.host}`, 'serves')
     }
 
@@ -514,7 +515,13 @@ function createHub({
         edge(id, 'repo:di.iiii', 'works-on')
       }
     }
-    return { nodes: [...nodes.values()], edges }
+    // nodes and lines in one fixed order (kind, then name): the page lays them out in list order, and the machine it was
+    // opened on must not come first (11-24: same 71 nodes on aylmo and studio-mac, drawn in different places)
+    const kindRank = (k) => { const i = MAP_KIND_ORDER.indexOf(k); return i === -1 ? MAP_KIND_ORDER.length : i }
+    const sortedNodes = [...nodes.values()].sort((a, b) => kindRank(a.kind) - kindRank(b.kind) || a.id.localeCompare(b.id))
+    const edgeKey = (e) => `${e.from}\n${e.to}\n${e.kind}`
+    const sortedEdges = [...new Map(edges.map((e) => [edgeKey(e), e])).values()].sort((a, b) => edgeKey(a).localeCompare(edgeKey(b)))
+    return { nodes: sortedNodes, edges: sortedEdges }
   }
 
   // One row per part (serverXR/src/parts.json): live state from the rows the Connected panel already read
@@ -749,7 +756,10 @@ function createHub({
       if (rows.some((x) => x.id === id)) continue
       rows.push({ id, url: '', source: 'report', status: null, ms: null, state: m.stale ? 'warn' : 'ok', commit: m.commit || null, builtAt: m.builtAt || null, behindDev: null })
     }
-    return rows.length === tierBlock.rows.length ? tierBlock : { ...tierBlock, rows }
+    // dev and prod first, then every machine in name order: the Tiers box reads the same from any machine (11-24)
+    const rank = (id) => (id === 'dev' ? 0 : id === 'prod' ? 1 : 2)
+    rows.sort((a, b) => rank(a.id) - rank(b.id) || String(a.id).localeCompare(String(b.id)))
+    return { ...tierBlock, rows }
   }
 
   // the other machines' own spaces as rows of their local tier; a machine's report without the panel adds nothing

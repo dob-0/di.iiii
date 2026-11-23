@@ -319,6 +319,6 @@ describe('localBase (11-24)', () => {
         const home = tmpHome()
         expect(localBase({ home })).toBe(null)
         fs.writeFileSync(path.join(home, 'di.env'), 'PORT=4321\n')
-        expect(localBase({ home })).toBe('http://localhost:4321')
+        expect(localBase({ home })).toBe('http://localhost:4321/serverXR')
     })
 })

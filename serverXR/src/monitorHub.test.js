@@ -188,8 +188,10 @@ describe('hub snapshot', () => {
     const aylmo = { host: 'aylmo', panels: { spaces: { ok: true, rows: [{ slug: 'alpha', visibility: 'public' }, { slug: 'platina', visibility: 'private' }, { slug: '', visibility: 'x' }] }, agents: { ok: true, rows: agentRows(30, 'aylmo') } } }
     const draw = async (self, other) => {
       const viewStore = { getMonitor: async () => ({ generatedAt: 'now', host: self.host, configured: true, panels: { ...panels, ...self.panels } }) }
-      const { hub } = build({ store: viewStore, hostname: () => self.host, listSpaces: async () => [] })
-      return hub.getSnapshot({ account: { state: 'ok', reports: [{ ...other, reportedAt: Date.now() }] } })
+      // a local install: its own tier is local:<host>, its own spaces come from its server, the other machine's from its report
+      const own = self.panels.spaces.rows.filter((r) => r.slug).map((r) => ({ slug: r.slug, isPublic: r.visibility === 'public' }))
+      const { hub } = build({ store: viewStore, hostname: () => self.host, releaseInfo: () => ({ deployEnv: '', gitCommit: 'aaaaaaa1' }), listSpaces: async () => own })
+      return hub.getSnapshot({ account: { state: 'ok', reports: [{ ...other, panels: { ...panels, ...other.panels }, reportedAt: Date.now() }] } })
     }
     const onMac = await draw(mac, aylmo)
     const onAylmo = await draw(aylmo, mac)
@@ -209,6 +211,14 @@ describe('hub snapshot', () => {
     expect(agentNodes(onMac).filter((id) => id.startsWith('agent:aylmo:')).length).toBe(20)
     expect(agentNodes(onMac).filter((id) => id.startsWith('agent:studio:')).length).toBe(20)
     expect(agentNodes(onMac)).toEqual(agentNodes(onAylmo))
+    expect(onMac.tiers.rows.map((r) => r.id)).toEqual(['dev', 'prod', 'local:aylmo', 'local:studio'])
+    expect(onAylmo.tiers.rows.map((r) => r.id)).toEqual(onMac.tiers.rows.map((r) => r.id))
+    // the same order and the same lines from either side: the page draws in list order (11-24: same nodes, different picture)
+    const shape = (snap) => ({ nodes: snap.map.nodes.map((n) => `${n.kind} ${n.id}`), edges: snap.map.edges.map((e) => `${e.from} ${e.kind} ${e.to}`) })
+    expect(shape(onMac).nodes.filter((x) => !x.startsWith('machine'))).toEqual(shape(onAylmo).nodes.filter((x) => !x.startsWith('machine')))
+    expect(shape(onMac).nodes.filter((x) => x.startsWith('machine'))).toEqual(['machine machine:aylmo', 'machine machine:studio'])
+    expect(shape(onMac).nodes.filter((x) => x.startsWith('machine'))).toEqual(shape(onAylmo).nodes.filter((x) => x.startsWith('machine')))
+    expect(shape(onMac).edges.filter((x) => x.includes(' runs tier:local:'))).toEqual(['machine:aylmo runs tier:local:aylmo', 'machine:studio runs tier:local:studio'])
     for (const e of onMac.map.edges) { expect(onMac.map.nodes.some((n) => n.id === e.from) && onMac.map.nodes.some((n) => n.id === e.to)).toBe(true) }
   })
 
@@ -970,7 +980,7 @@ describe('hub snapshot', () => {
     expect(snap.map.nodes.find((n) => n.id === 'machine:aylmo').state).toBe('off')
     expect(snap.tiers.rows.find((r) => r.id === 'local:aylmo')).toMatchObject({ source: 'report', status: null, ms: null, state: 'warn' })
     expect(snap.map.nodes.find((n) => n.id === 'tier:local:aylmo').state).toBe('warn')
-    expect(snap.map.edges.some((e) => e.from === 'machine:aylmo' && e.to === 'tier:local:aylmo' && e.kind === 'runs')).toBe(false)
+    expect(snap.map.edges.some((e) => e.from === 'machine:aylmo' && e.to === 'tier:local:aylmo' && e.kind === 'runs')).toBe(true) // every machine "runs" its own local tier, seen from any machine (11-24)
   })
 
   it('a fresh report-only machine is state ok with no invented probe; probed rows say so', async () => {
