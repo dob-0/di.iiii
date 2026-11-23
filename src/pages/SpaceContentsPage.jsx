@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
-import SurfaceBar from '../components/SurfaceBar.jsx'
+import { Fragment, useEffect, useMemo, useState } from 'react'
+import SurfaceBar, { navigateInApp } from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import RouteSurfaceFallback from '../components/RouteSurfaceFallback.jsx'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { useAllTools } from '../studio/utils/jamMode.js'
 import { spaceAddressOf } from '../utils/spaceAddress.js'
 import { spaceTabTitle, spaceWordFor } from '../utils/oneNamePerSpace.js'
-import { listSpaceContents } from '../project/services/projectsApi.js'
+import { listCollections, listProjects, listSpaceContents } from '../project/services/projectsApi.js'
+import { doorsForListRow } from '../project/doors.js'
+import { groupByShelf } from '../project/shelves.js'
 import { getServerSpace } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildScanPath, buildVanityProjectPath } from '../utils/spaceRouting.js'
@@ -80,12 +83,60 @@ export const contentsHref = (spaceId, project) => (project.slug
     ? buildVanityProjectPath(spaceId, project.slug)
     : buildPublicProjectPath(spaceId, project.id))
 
+// A member's data (nav reach, 2026-11-12). The contents list a visitor is given
+// carries no shelf and no counts on its rows (serverXR/src/routes/projectRoutes.js,
+// GET /api/spaces/:id/contents), so a member's page also asks what the Studio
+// hub asks: the shelves, and the member list, whose rows say which shelf a
+// project is on and what it holds (`layers`, the counts that say which doors
+// it has). Never rejects: a failed request is a state the page says quietly,
+// not a blank page, not zero shelves, and not a list left without its doors.
+//
+// The two requests are settled separately: a failed shelves request must not
+// throw away the counts (a lamp project would lose its Light door), and a
+// failed member list leaves no shelf to file anything under. `status` is
+// 'none' until both have answered, then 'ready'; what failed is said by the
+// two flags.
+const NO_MEMBER_DATA = { status: 'none', collections: [], byId: new Map(), shelvesFailed: false, countsFailed: false }
+// An answer nobody can read (a row that is not a row): the page still settles,
+// flat, with the three sure doors, and says both things did not load.
+const LOST_MEMBER_DATA = { ...NO_MEMBER_DATA, status: 'ready', shelvesFailed: true, countsFailed: true }
+
+// Each read starts INSIDE its own promise, the reader's name included: a
+// reader that throws, or that is not there at all, becomes a failed request,
+// never an error in the effect that unmounts the page (a test's stand-in
+// server without `listCollections` did exactly that, 2026-11-12).
+const ask = (read) => new Promise((resolve) => { resolve(read()) })
+
+const askMemberData = (spaceId) => Promise.allSettled([
+    ask(() => listCollections(spaceId)),
+    ask(() => listProjects(spaceId))
+])
+    .then(([shelves, members]) => {
+        const collections = shelves.status === 'fulfilled' && Array.isArray(shelves.value) ? shelves.value : null
+        const rows = members.status === 'fulfilled' && Array.isArray(members.value) ? members.value : null
+        return {
+            status: 'ready',
+            // Without the member list no row says which shelf it is on.
+            collections: collections && rows ? collections : [],
+            byId: new Map((rows || []).map((row) => [row.id, { collectionId: row.collectionId || null, layers: row.layers || null }])),
+            // "The shelves did not load" is said only when there is, or may be,
+            // a shelf to miss: a space known to have none loses no grouping.
+            shelvesFailed: !collections || (!rows && collections.length > 0),
+            countsFailed: !rows
+        }
+    })
+    .catch(() => LOST_MEMBER_DATA)
+
 export default function SpaceContentsPage({ spaceId }) {
     const session = useAuthSession()
     const { role, requireAuth } = session
     const localInstall = useLocalInstall()
     const isEmbed = isEmbedRequest()
+    const allTools = useAllTools()
     const [state, setState] = useState({ status: 'loading', projects: [], space: null, error: null })
+    // Member-only data, in its own state so the contents load below stays as it
+    // was: a session that arrives late must not send the page back to loading.
+    const [memberData, setMemberData] = useState(NO_MEMBER_DATA)
 
     useEffect(() => {
         let alive = true
@@ -99,7 +150,10 @@ export default function SpaceContentsPage({ spaceId }) {
         ])
             .then(([projects, space]) => {
                 if (!alive) return
-                setState({ status: 'ready', projects, space, error: null })
+                // Which space this answer is for: the page is not remounted when the
+                // address moves to another space, and the member's requests below wait
+                // for THIS space's answer.
+                setState({ status: 'ready', projects, space, error: null, spaceId })
             })
             .catch((error) => {
                 if (!alive) return
@@ -168,6 +222,134 @@ export default function SpaceContentsPage({ spaceId }) {
         return Boolean(session.authenticated) && isSpaceInSessionScope(session, spaceId)
     }, [requireAuth, role, spaceId, session])
 
+    // The member's doors and shelves are for the page itself: an embed is the
+    // flat list as it was, and a space about to be handed on to its door asks
+    // for nothing it will not draw. And only once the session has answered:
+    // until its first answer, and after a failed one, useAuthSession says
+    // requireAuth false, which canEdit reads as "nobody needs to sign in", so on
+    // a server that does need it a visitor counted as a member for that moment
+    // (review, 2026-11-12). `loading` only goes from true to false, so a later
+    // refresh does not blink the doors; a failed one leaves a visitor's page.
+    const sessionAnswered = !session.loading && !session.error
+    const memberHere = canEdit && sessionAnswered && !isEmbed && !isOnlyTheDoor
+
+    // The member's own data is read in its own effect, which waits for BOTH
+    // facts: the session says canEdit, and the space has answered. On a hosted
+    // install canEdit flips to true when the session arrives; that must not
+    // send the contents above back to loading, so it is not a dependency there.
+    // The answer must be THIS space's: for one render after the address moves to
+    // another space the state still holds the last space's answer, and
+    // listProjects would go out for a space that has not answered yet.
+    const contentsReady = state.status === 'ready' && state.spaceId === spaceId
+    useEffect(() => {
+        let alive = true
+        // Nothing of a previous space or session is kept.
+        setMemberData(NO_MEMBER_DATA)
+        // listProjects creates a space that is missing (projectsApi.js,
+        // withAutoProvisionedSpace): so only for somebody who could already
+        // edit, and only once the space has answered, never for a visitor.
+        if (!memberHere || !contentsReady) return undefined
+        askMemberData(spaceId).then((answer) => {
+            if (alive) setMemberData(answer)
+        })
+        return () => { alive = false }
+    }, [memberHere, contentsReady, spaceId])
+
+    // The member's page: each row filed under its shelf and carrying what the
+    // project holds. A visitor's rows are the contents rows, untouched.
+    const memberReady = memberHere && memberData.status === 'ready'
+    const memberSettled = memberReady
+    const memberRows = useMemo(() => {
+        if (!memberReady) return projects
+        return projects.map((project) => {
+            const known = memberData.byId.get(project.id)
+            return known ? { ...project, collectionId: known.collectionId, layers: known.layers } : project
+        })
+    }, [memberReady, memberData, projects])
+
+    // For a member with at least one shelf, the list is grouped under shelf
+    // headings; with none, or for a visitor, it stays the one flat list.
+    const shelfGroups = memberReady && !memberData.shelvesFailed && memberData.collections.length > 0
+        ? groupByShelf(memberRows, memberData.collections)
+        : null
+    const shelvesFailed = memberReady && memberData.shelvesFailed
+    // With All tools on, Projection and Light are offered whatever the counts
+    // say, so nothing is missing and nothing is said.
+    const countsFailed = memberReady && memberData.countsFailed && !allTools
+    // One quiet line for what did not load; empty when all of it did.
+    const memberNote = [
+        shelvesFailed && 'The shelves did not load, so this list is not grouped.',
+        countsFailed && 'What each project holds did not load, so Projection and Light doors may be missing.'
+    ].filter(Boolean).join(' ')
+
+    // One scene row and, for a member, the doors of that project under it. The
+    // strip is a sibling of the row's link, never inside it. It is drawn only
+    // once the member's data has settled (answered or failed), so a strip never
+    // changes after it appears; a project the list knows nothing about gets the
+    // three sure doors, and a page gets none (doorsForListRow).
+    const renderRow = (project) => {
+        const kind = kindOf(project.mode)
+        const href = contentsHref(spaceId, project)
+        const doors = memberSettled
+            ? doorsForListRow(project, {
+                space: spaceId,
+                isLocalInstall: localInstall.isLocal,
+                from: 'studio',
+                allTools
+            })
+            : []
+        return (
+            <li key={project.id} className={doors.length ? 'sc-item--doors' : undefined}>
+                <a className="sc-row" href={href}>
+                    <span className="sc-row-name">
+                        {project.title}
+                        {project.id === doorId && (
+                            <span className="sc-row-door" title="What this space opens on">the way in</span>
+                        )}
+                        {/* Only a member is ever sent a private row, so the
+                            mark is for them: this one visitors do not see. */}
+                        {project.visibility === 'private' && (
+                            <span className="sc-row-door" title="Private — only members of this space see it">private</span>
+                        )}
+                    </span>
+                    <span className="sc-row-kind">
+                        {kind.label}
+                        <span className="sc-row-hint">{kind.hint}</span>
+                    </span>
+                    <span className="sc-row-when">{whenDone(project.updatedAt)}</span>
+                </a>
+                {doors.length > 0 && (
+                    <div className="sc-row-doors" role="group" aria-label={`Open ${project.title || project.id} in`}>
+                        {doors.map((door) => (
+                            <a
+                                key={door.key}
+                                className="sc-door"
+                                href={door.href}
+                                onClick={door.clientSide ? (event) => navigateInApp(event, door.href) : undefined}
+                            >{door.label}</a>
+                        ))}
+                    </div>
+                )}
+            </li>
+        )
+    }
+
+    const codeRow = codeSpace && (
+        <li key={`code-${codeSpace.spaceId}`}>
+            <a className="sc-row" href={codeSpace.path}>
+                <span className="sc-row-name">
+                    {codeSpace.title}
+                    <span className="sc-row-door" title="What this space opens on">the way in</span>
+                </span>
+                <span className="sc-row-kind">
+                    {kindOf(codeSpace.kind).label}
+                    <span className="sc-row-hint">{kindOf(codeSpace.kind).hint}</span>
+                </span>
+                <span className="sc-row-when" />
+            </a>
+        </li>
+    )
+
     if (state.status === 'loading' || isOnlyTheDoor) {
         return <RouteSurfaceFallback label="Loading" detail="" />
     }
@@ -180,6 +362,7 @@ export default function SpaceContentsPage({ spaceId }) {
                 spaceAddress={address}
                 isLocalInstall={localInstall.isLocal}
                 hidden={isEmbed}
+                knownProjects={contentsReady ? projects.map((p) => p.id) : null}
             />
 
             <div className="sc-page">
@@ -194,50 +377,32 @@ export default function SpaceContentsPage({ spaceId }) {
                     </p>
                 )}
 
-                {thingCount > 0 && (
+                {/* A member's shelves, or what each project holds, did not load:
+                    say so once, quietly, and keep the list. Not the same as a
+                    space with no shelves. */}
+                {thingCount > 0 && memberNote && (
+                    <p className="sc-shelf-note">{memberNote}</p>
+                )}
+
+                {thingCount > 0 && !shelfGroups && (
                     <ul className="sc-list">
-                        {codeSpace && (
-                            <li key={`code-${codeSpace.spaceId}`}>
-                                <a className="sc-row" href={codeSpace.path}>
-                                    <span className="sc-row-name">
-                                        {codeSpace.title}
-                                        <span className="sc-row-door" title="What this space opens on">the way in</span>
-                                    </span>
-                                    <span className="sc-row-kind">
-                                        {kindOf(codeSpace.kind).label}
-                                        <span className="sc-row-hint">{kindOf(codeSpace.kind).hint}</span>
-                                    </span>
-                                    <span className="sc-row-when" />
-                                </a>
-                            </li>
-                        )}
-                        {projects.map((project) => {
-                            const kind = kindOf(project.mode)
-                            const href = contentsHref(spaceId, project)
-                            return (
-                                <li key={project.id}>
-                                    <a className="sc-row" href={href}>
-                                        <span className="sc-row-name">
-                                            {project.title}
-                                            {project.id === doorId && (
-                                                <span className="sc-row-door" title="What this space opens on">the way in</span>
-                                            )}
-                                            {/* Only a member is ever sent a private row, so the
-                                                mark is for them: this one visitors do not see. */}
-                                            {project.visibility === 'private' && (
-                                                <span className="sc-row-door" title="Private — only members of this space see it">private</span>
-                                            )}
-                                        </span>
-                                        <span className="sc-row-kind">
-                                            {kind.label}
-                                            <span className="sc-row-hint">{kind.hint}</span>
-                                        </span>
-                                        <span className="sc-row-when">{whenDone(project.updatedAt)}</span>
-                                    </a>
-                                </li>
-                            )
-                        })}
+                        {codeRow}
+                        {memberRows.map(renderRow)}
                     </ul>
+                )}
+
+                {thingCount > 0 && shelfGroups && (
+                    <>
+                        {codeRow && <ul className="sc-list">{codeRow}</ul>}
+                        {shelfGroups.map((group) => (
+                            <Fragment key={group.id}>
+                                <h2 className="sc-shelf">{group.label}</h2>
+                                {group.items.length > 0
+                                    ? <ul className="sc-list">{group.items.map(renderRow)}</ul>
+                                    : <p className="sc-shelf-empty">Nothing on show on this shelf.</p>}
+                            </Fragment>
+                        ))}
+                    </>
                 )}
 
                 {canEdit && state.status !== 'error' && (

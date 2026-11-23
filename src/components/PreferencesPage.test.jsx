@@ -1,6 +1,6 @@
 /* global __APP_VERSION__ */
 import React from 'react'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import PreferencesPage from './PreferencesPage.jsx'
 import {
@@ -173,6 +173,57 @@ function renderPreferencesPage() {
 
 
 describe('PreferencesPage', () => {
+    it('the Monitor entry shows only after GET /api/monitor answered 200; a 404 hides it silently', async () => {
+        window.location.hash = ''
+        const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
+        const hidden = renderPreferencesPage()
+        await screen.findByRole('heading', { level: 1, name: 'Spaces and users' })
+        await new Promise((r) => setTimeout(r, 50))
+        expect(spy.mock.calls.filter(([url]) => String(url).includes('/api/monitor')).length).toBe(1)
+        expect(screen.queryByRole('button', { name: /^Monitor/ })).toBeNull()
+        hidden.unmount?.()
+        spy.mockResolvedValue({ ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' })
+        renderPreferencesPage()
+        expect(await screen.findByRole('button', { name: /^Monitor/ })).toBeTruthy()
+    })
+
+    it('#monitor/chat/<id> and #monitor-full/chat/<id> open the Monitor on first load, and on a hash change', async () => {
+        const ok = { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' }
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue(ok)
+        for (const hash of ['#monitor/chat/abc', '#monitor-full/chat/abc']) {
+            window.location.hash = hash
+            const view = renderPreferencesPage()
+            expect(await screen.findByRole('heading', { level: 1, name: 'Monitor' })).toBeTruthy()
+            view.unmount?.()
+        }
+        window.location.hash = ''
+        renderPreferencesPage()
+        await screen.findByRole('button', { name: /^Monitor/ })
+        act(() => { window.location.hash = '#monitor/chat/xyz'; window.dispatchEvent(new HashChangeEvent('hashchange')) })
+        expect(await screen.findByRole('heading', { level: 1, name: 'Monitor' })).toBeTruthy()
+    })
+
+    it('#monitor shows no Monitor text while the server has not answered, or on a 404; only a 200 mounts it', async () => {
+        const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, json: async () => ({}) })
+        window.location.hash = '#monitor-full'
+        const first = renderPreferencesPage()
+        // pending or refused: the default admin section, nothing of the Monitor
+        expect(screen.getByRole('heading', { level: 1, name: 'Spaces and users' })).toBeTruthy()
+        await new Promise((r) => setTimeout(r, 50))
+        expect(screen.queryByRole('heading', { level: 1, name: 'Monitor' })).toBeNull()
+        expect(screen.queryByText(/lists machines and session titles/)).toBeNull()
+        expect(screen.queryByText(/Only on the machine you are sitting at/)).toBeNull()
+        first.unmount?.()
+        spy.mockResolvedValue({ ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ panels: {} }), text: async () => '{}' })
+        renderPreferencesPage()
+        expect(await screen.findByRole('heading', { level: 1, name: 'Monitor' })).toBeTruthy()
+        window.location.hash = '#nonsense'
+        cleanup()
+        renderPreferencesPage()
+        expect(screen.getByRole('heading', { level: 1, name: 'Spaces and users' })).toBeTruthy()
+        window.location.hash = ''
+    })
+
     it('renders runtime build metadata and updates the node inspector when a node is selected', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue({
             ok: true,

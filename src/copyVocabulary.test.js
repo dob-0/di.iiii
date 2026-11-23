@@ -101,6 +101,10 @@ const BANNED = [
 //   *.test.js(x) — a test asserting old copy is a broken test, not copy.
 const COPY_FILES = [
     'public-README.md',
+    'desktop/README.md',
+    'desktop/src/main.js',
+    'desktop/src/menu.js',
+    'desktop/src/offline.html',
     'serverXR/src/routes/ogRoutes.js',
     'src/index.html',
     'src/Menu.jsx',
@@ -133,6 +137,9 @@ const COPY_FILES = [
     'src/landing/GuestAddressPanel.jsx',
     'src/pages/PrivacyPage.jsx',
     'src/pages/TermsPage.jsx',
+    'src/pages/SpaceContentsPage.jsx',
+    'src/project/doors.js',
+    'src/project/shelves.js',
     'src/project/components/JamSheet.jsx',
     'src/project/components/JamSurface.jsx',
     'src/project/components/PublicProjectViewer.jsx',

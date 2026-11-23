@@ -215,11 +215,13 @@
 .kit-actions { align-self: start; }
 .kit-facts { align-self: start; margin-top: var(--di-space-3); margin-bottom: var(--di-space-4); }
 
-.kit-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--di-space-3); }
+.kit-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--di-space-1) var(--di-space-3); min-width: 0; }
 .kit-name { margin: 0; font-size: var(--di-text-4); font-weight: 500; letter-spacing: -0.1px; }
 
 .kit-where {
-    flex-shrink: 0;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: 0.06em;
