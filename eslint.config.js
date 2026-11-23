@@ -30,10 +30,27 @@ export default [
     {
         ignores: [
             'dist/**',
+            'desktop/dist/**',
+            'desktop/node_modules/**',
             'node_modules/**',
             'serverXR/data/**',
             'serverXR/uploads/**'
         ]
+    },
+    {
+        files: ['desktop/**/*.js'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'commonjs',
+            globals: {
+                ...globals.node,
+                ...globals.browser
+            }
+        },
+        rules: {
+            'no-undef': 'error',
+            'no-unused-vars': ['error', { argsIgnorePattern: '^_|^event$|^item$' }]
+        }
     },
     {
         files: ['src/**/*.{js,jsx}'],

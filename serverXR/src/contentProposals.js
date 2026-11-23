@@ -54,7 +54,10 @@ const { diffDocumentLoss, describeLoss, lossGate } = loadSharedModule('documentL
 const execFileAsync = promisify(execFile)
 
 const BUNDLE_FORMAT = 'di.space-bundle'
-const BUNDLE_VERSION = 1
+// Version 2 is a file that carries the space's light show (space/lighting/show.json,
+// written by scripts/space-bundle.mjs). A version-1 file has none and leaves the
+// space's own show alone.
+const BUNDLE_VERSION = 2
 const KIND = 'content.apply'
 const SUMMARY_MAX = 3500 // a Telegram message is 4096; the bot adds its own frame
 const PROJECT_ID_RE = /^[A-Za-z0-9_-]{1,128}$/
@@ -108,6 +111,25 @@ const opIdsOf = (rows) => new Set(rows.map((row) => opOf(row)?.opId).filter(Bool
 const countDocumentItems = (document) => {
   const size = (value) => Array.isArray(value) ? value.length : (value && typeof value === 'object' ? Object.keys(value).length : 0)
   return size(document?.entities) + size(document?.nodes)
+}
+// The space's light show as a file carries it: JSON object, without the rig
+// (`output` is the machine's, never the space's — desk.js withoutRig).
+const parseLightShow = (text) => {
+  const show = JSON.parse(text)
+  if (!show || typeof show !== 'object' || Array.isArray(show)) throw new Error('not a show')
+  delete show.output
+  return show
+}
+// Same order of keys everywhere, so a show the desk saved and the same show a
+// file carried compare equal.
+const canonical = (value) => JSON.stringify(value, (key, v) => (
+  v && typeof v === 'object' && !Array.isArray(v)
+    ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]]))
+    : v
+))
+const describeLightShow = (show) => {
+  const n = (key) => (Array.isArray(show?.[key]) ? show[key].length : 0)
+  return `${plural(n('fixtures'), 'fixture')}, ${plural(n('scenes'), 'scene')}, ${plural(n('looks'), 'look')}`
 }
 const countSceneObjects = (scene) => Array.isArray(scene?.objects) ? scene.objects.length : 0
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -198,7 +220,19 @@ async function readBundle(file, { tmpRoot = os.tmpdir(), schemaVersion = null } 
       spaceAssets.push(name)
     }
 
-    return { dir, cleanup, manifest, space, scene, sceneOpIds, projects, blobs, spaceAssets }
+    // The light show, read before anything is written so a broken one refuses the
+    // whole file. Only a version-2 file carries one.
+    let lightShow = null
+    const showFile = path.join(dir, 'space', 'lighting', 'show.json')
+    if (Number(manifest.version) >= 2 && (await isRegularFile(showFile))) {
+      try {
+        lightShow = parseLightShow(await fsp.readFile(showFile, 'utf8'))
+      } catch (error) {
+        throw proposalError(400, `This file's light show cannot be read (${error.message}), so the whole file was refused.`)
+      }
+    }
+
+    return { dir, cleanup, manifest, space, scene, sceneOpIds, projects, blobs, spaceAssets, lightShow }
   } catch (error) {
     await cleanup()
     throw error
@@ -234,6 +268,10 @@ function createContentProposals({
   // apply without a proposal. Until the list exists nothing is passed and only
   // the built-in rule applies.
   isTrustedExtra = null,
+  // Called (spaceId) after an apply wrote a new show.json, so a lighting desk
+  // that has this space's show loaded reads it again instead of saving its old
+  // copy over it (index.js: lighting.adoptShowFile). Optional.
+  onLightShowWritten = null,
   logger = console,
   now = () => Date.now()
 }) {
@@ -256,6 +294,18 @@ function createContentProposals({
   }
 
   const blobPresent = (spaceId, id) => fs.existsSync(path.join(spacesDir, spaceId, 'blobs', id))
+
+  // The show this space has now, the way the desk reads it: the file, a finished
+  // temp file whose rename was interrupted, the previous save. Null = none.
+  const showDirOf = (spaceId) => path.join(spacesDir, spaceId, 'lighting')
+  const currentLightShow = async (spaceId) => {
+    const main = path.join(showDirOf(spaceId), 'show.json')
+    for (const file of [main, `${main}.tmp`, path.join(showDirOf(spaceId), 'show.prev.json')]) {
+      if (!(await isRegularFile(file))) continue
+      try { return parseLightShow(await fsp.readFile(file, 'utf8')) } catch { /* try the next, as the desk does */ }
+    }
+    return null
+  }
 
   // Everything a person needs to say yes or no, as data and as words.
   const inspect = async (spaceId, bundle, meta) => {
@@ -324,6 +374,15 @@ function createContentProposals({
       objectsAfter: nextScene ? countSceneObjects(nextScene) : countSceneObjects(currentScene)
     }
 
+    // The light show. A show here that the file does not carry stays untouched.
+    const currentShow = bundle.lightShow ? await currentLightShow(spaceId) : null
+    const lightShow = {
+      inFile: Boolean(bundle.lightShow),
+      changed: Boolean(bundle.lightShow) && (!currentShow || canonical(currentShow) !== canonical(bundle.lightShow)),
+      hadOne: Boolean(currentShow),
+      counts: bundle.lightShow ? describeLightShow(bundle.lightShow) : null
+    }
+
     const newFiles = new Set(bundle.blobs.filter((id) => !blobPresent(spaceId, id)))
     for (const entry of bundle.projects) {
       for (const id of entry.assetFiles) {
@@ -356,10 +415,11 @@ function createContentProposals({
       keptProjects: kept,
       collisions,
       scene,
+      lightShow,
       filesAdded: newFiles.size,
       newerHere: newer,
       mediaLost: projects.reduce((n, p) => n + p.mediaLost, 0) + scene.mediaLost,
-      nothingToApply: !scene.changed && projects.every((p) => p.status === 'unchanged')
+      nothingToApply: !scene.changed && !lightShow.changed && projects.every((p) => p.status === 'unchanged')
     }
   }
 
@@ -390,13 +450,18 @@ function createContentProposals({
     if (same) lines.push(`· ${plural(same, 'project')} in the file already match`)
     if (summary.keptProjects.length) lines.push(`· not in the file, stay as they are: ${summary.keptProjects.map((p) => p.title).join(', ')}`)
     if (summary.scene.changed) lines.push(`Scene: replaced, ${summary.scene.objectsBefore} → ${summary.scene.objectsAfter} objects`)
+    if (summary.lightShow.inFile) {
+      lines.push(summary.lightShow.changed
+        ? `Light show: ${summary.lightShow.hadOne ? 'replaced' : 'added'} (${summary.lightShow.counts}); the show it replaces is kept as show.prev.json`
+        : `Light show: the file's show already matches (${summary.lightShow.counts})`)
+    }
     if (summary.filesAdded) lines.push(`Files: +${plural(summary.filesAdded, 'new file')}`)
     if (summary.newerHere.length || summary.divergedParts.length) {
       lines.push('⚠ Newer here than the file — applying overwrites these:')
       for (const g of summary.newerHere.slice(0, 5)) lines.push(`· ${g.text}`)
       if (summary.divergedParts.length) lines.push(`· changed here after the file's author last pulled: ${summary.divergedParts.join(', ')}`)
     }
-    lines.push('A restore point is taken first; History → Restore puts it back.')
+    lines.push('A restore point is taken first; History → Restore puts it back (scene and projects; a replaced light show stays as show.prev.json).')
     const text = lines.join('\n')
     return text.length > SUMMARY_MAX ? `${text.slice(0, SUMMARY_MAX - 1)}…` : text
   }
@@ -470,9 +535,28 @@ function createContentProposals({
       ? await replaceSceneAndBroadcast(spaceId, remapSpaceUrls(bundle.scene, sourceId, spaceId), { actor, restoreReason: null })
       : null
 
+    // The light show, written the way the desk writes it (desk.js writeWhole): whole,
+    // to a temp file, the previous show copied aside as show.prev.json, then renamed
+    // into place. The restore point above covers scene and projects only, so the
+    // replaced show survives as show.prev.json — put it back by renaming it over show.json.
+    let lightShowWritten = false
+    if (summary.lightShow.changed) {
+      const dir = showDirOf(spaceId)
+      const file = path.join(dir, 'show.json')
+      await fsp.mkdir(dir, { recursive: true })
+      await fsp.writeFile(`${file}.tmp`, JSON.stringify(bundle.lightShow))
+      if (await isRegularFile(file)) await fsp.copyFile(file, path.join(dir, 'show.prev.json'))
+      await fsp.rename(`${file}.tmp`, file)
+      lightShowWritten = true
+      if (typeof onLightShowWritten === 'function') {
+        try { await onLightShowWritten(spaceId) } catch (error) { logger.warn?.(`[proposals] the desk did not reload ${spaceId}'s show: ${error?.message || error}`) }
+      }
+    }
+
     return {
       ok: true,
       spaceId,
+      lightShow: lightShowWritten,
       restorePoint: restorePoint?.id || null,
       projects: restored.map((r) => ({ id: r.projectId, version: r.version })),
       scene: sceneResult ? { newVersion: sceneResult.newVersion, objectsBefore: sceneResult.objectsBefore, objectsAfter: sceneResult.objectsAfter } : null

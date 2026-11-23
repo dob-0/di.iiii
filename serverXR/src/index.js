@@ -80,6 +80,10 @@ const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
 const { registerWifiDoorRoutes } = require('./routes/wifiDoorRoutes')
 const { createShareService } = require('./share/shareService')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
+const { registerMonitorRoutes } = require('./routes/monitorRoutes')
+const { createMonitorStore } = require('./monitorStore')
+const { createPrList: createMonitorPrList } = require('./monitorPrs')
+const { createHub: createMonitorHub, createAskStore: createMonitorAskStore } = require('./monitorHub')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
@@ -105,6 +109,7 @@ const { createActTokenGate } = require('./actTokenGate')
 const { resolveCliToken, pruneCliLogin, TOKEN_PREFIX: cliTokenPrefix } = require('./cliLoginStore')
 const { createCliTokenGate } = require('./cliTokenGate')
 const { registerCliLoginRoutes } = require('./routes/cliLoginRoutes')
+const { connectKeyHolds } = require('./connectStore')
 const { tierFor, capForTier } = require('./actTokenTier')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, otherLiveKeys, TTL_MS: SYNC_KEY_TTL_MS, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const syncKeyActions = require('./syncKeyActions')
@@ -127,6 +132,7 @@ const { registerAiContextRoutes } = require('./aiContext')
 const { registerAiPublicRoutes } = require('./aiPublic')
 const { registerPasswordAuthRoutes } = require('./routes/passwordAuthRoutes')
 const { registerDmRoutes } = require('./routes/dmRoutes')
+const { registerAgentMailRoutes } = require('./routes/agentMailRoutes')
 const { registerDomainRoutes } = require('./routes/domainRoutes')
 const domainStore = require('./domainStore')
 const { createCloudflareSaas } = require('./cloudflareSaas')
@@ -918,6 +924,7 @@ const resolveCliTokenState = (req, token) => {
           session: { subject: claim.userId, expiresAt: claim.expiresAt }
         }),
         actor: 'di.cli',
+        cliDbRole: fresh.dbRole,
         cliTokenId: claim.tokenId,
         cliTokenLabel: claim.label,
         cliTokenExpiresAt: claim.expiresAt
@@ -973,6 +980,8 @@ const getAuthState = (req, res = null) => {
   // Only consulted on a static-table miss, and only for the dii_sync_ prefix.
   if (token && token.startsWith(syncKeyPrefix)) {
     const sk = resolveSyncKey(token)
+    // A `di connect` key lives on its person's right to the space: when the role, the space or the account is gone, the key stops at once.
+    if (sk && sk.connect && !connectKeyHolds(sk)) return buildAuthState({ authenticated: false, type: 'sync-key', reason: 'connect-role-ended' })
     if (sk) {
       // A second key, for the one action that needs two spaces: moving a
       // project between them (SPEC_space_sync_keys.md §13.3, T11). Read only
@@ -1415,7 +1424,11 @@ registerCliLoginRoutes(router, {
   isAvailable: () => Boolean(config.requireAuth) && !isLocalInstall(),
   startLimiter: cliStartLimiter,
   pollLimiter: cliPollLimiter,
-  answerLimiters: [cliAnswerByAddress, cliAnswerByAccount]
+  answerLimiters: [cliAnswerByAddress, cliAnswerByAccount],
+  listSpaces,
+  // Approving a connect, or ending a machine, needs a person who signed in (a positive stamp) on a server whose cookie secret is its own,
+  // like minting a manage key (mayMintManageKey): a cookie made some other way cannot hand a machine the person's spaces.
+  isSignedInPerson: (state) => state?.session?.via === 'signin' && Boolean(config.auth.sessionSecretSeparate)
 })
 
 router.get('/api/auth/session', async (req, res, next) => {
@@ -1637,6 +1650,8 @@ registerAiContextRoutes(router, {
 // middleware above, because every handler reads `req.authState` — and the whole
 // access rule ("somebody you share a space with") is written in terms of it.
 registerDmRoutes(router, {})
+// Agent mail: chats of different people telling each other (routes/agentMailRoutes.js).
+registerAgentMailRoutes(router, {})
 registerChatRoutes(router, { deps: { listSpaces } })
 
 // Joining a space with four words (serverXR/src/routes/followRoutes.js). The
@@ -2134,7 +2149,11 @@ router.param('spaceId', createSpaceIdParam({ normalizeSpaceId, spaceExists, find
 // /api/spaces/bundle/scene (a space called "bundle") never matches. Not on
 // req.originalUrl, which also carries the query string.
 const isOpenAFile = (req) =>
-  req.method === 'POST' && req.params.spaceId === 'bundle' && (req.path === '/' || req.path === '')
+  req.params.spaceId === 'bundle' && (
+    (req.method === 'POST' && (req.path === '/' || req.path === '')) ||
+    // The same door in parts (routes/bundleParts.js): start, PUT a part, finish, cancel.
+    /^\/uploads(\/|$)/.test(req.path)
+  )
 router.use('/api/spaces/:spaceId', async (req, res, next) => {
   // POST /api/spaces/bundle is "open a file", which CREATES a space — it names
   // no existing one, exactly like POST /api/spaces. Read as a space id,
@@ -2558,6 +2577,18 @@ registerShareRoutes(router, {
 
 registerAgentBoardRoutes(router)
 
+const monitorRoutes = registerMonitorRoutes(router, {
+  deployEnv: () => releaseInfo.deployEnv,
+  prList: createMonitorPrList({ getInstallation: (owner, repo) => githubApp.getInstallationForRepo(owner, repo) }),
+  hub: createMonitorHub({
+    store: createMonitorStore(),
+    asks: createMonitorAskStore({ getDb }),
+    releaseInfo: () => releaseInfo,
+    provenFile: path.join(config.directories.dataDir, 'monitor-proven.json'),
+    listSpaces
+  })
+})
+
 registerAiChatRoutes(router)
 
 registerAppVisitorRoutes(router, {
@@ -2625,6 +2656,8 @@ registerDomainRoutes(router, {
 })
 
 const { replaceSceneAndBroadcast, restoreSnapshotAndBroadcast } = registerSpaceRoutes(router, {
+  // Lazy: contentProposals is built further down this file.
+  proposals: { precheck: (req) => proposalAccessRefusal(req), submit: (req, job) => submitProposalFile(req, job) },
   findPrimaryHostForSpace: domainStore.findPrimaryActiveHostForSpace,
   mapPrimaryHosts: domainStore.mapPrimaryActiveHosts,
   applySceneOps,
@@ -3301,10 +3334,53 @@ const contentProposals = createContentProposals({
   maxOpHistory: MAX_OP_HISTORY,
   maxOpAgeMs: MAX_OP_AGE_MS,
   schemaVersion: SCHEMA_VERSION,
+  onLightShowWritten: (spaceId) => lighting.adoptShowFile(spaceId),
   logger
 })
 contentProposals.register()
 
+// A proposal names a person. Guests have no name the owner could answer.
+// Shared by the one-POST route below and the parts route (a file too big for
+// one request, routes/bundleParts.js), so both refuse the same way.
+const proposalAccessRefusal = (req) => {
+  const state = req.authState || getPublicAuthState(req)
+  if (config.requireAuth && !state.isUnrestricted && (!state.authenticated || state.type === 'guest' || isGuestSubject(state.subject))) {
+    return { status: 403, body: { error: 'Sign in with an account to send a file for this space.', code: 'auth_required' } }
+  }
+  return null
+}
+
+// The one place a proposal file on disk becomes a proposal (or a dry run, or a
+// direct apply when the server says the sender is trusted). `fields` are the
+// form fields of the one POST, or the ones the parts route kept at its start.
+// Returns { status, body }; the caller removes `uploadPath`.
+const submitProposalFile = async (req, { spaceId, uploadPath, fields = {} }) => {
+  try {
+    const refusal = proposalAccessRefusal(req)
+    if (refusal) return refusal
+    if (!uploadPath) return { status: 400, body: { error: 'No file was sent (field "bundle").' } }
+    const flag = (value) => ['1', 'true', 'yes'].includes(String(value ?? '').toLowerCase())
+    const outcome = await contentProposals.submit({
+      spaceId: normalizeSpaceId(spaceId),
+      uploadPath,
+      authState: req.authState || getPublicAuthState(req),
+      mode: fields.mode === 'propose' ? 'propose' : 'auto',
+      from: fields.from || null,
+      overwriteNewer: flag(fields.overwriteNewer),
+      dryRun: flag(fields.dryRun),
+      // The exact count of media items the file removes (absent = none
+      // acknowledged; anything but a whole number never matches).
+      acceptLoss: fields.acceptLoss === undefined || fields.acceptLoss === null || fields.acceptLoss === '' ? null : (/^\d+$/.test(String(fields.acceptLoss)) ? Number(fields.acceptLoss) : NaN),
+      req
+    })
+    return { status: outcome.status === 'pending_approval' ? 202 : 200, body: outcome }
+  } catch (error) {
+    if ((error?.status && error.status < 500) || error?.status === 503) {
+      return { status: error.status, body: { error: error.message, ...(error.code ? { code: error.code } : {}), ...(error.body || {}) } }
+    }
+    throw error
+  }
+}
 router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.single('bundle')(req, res, (error) => {
   if (!error) return next()
   if (error.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'That file is larger than this di.iiii accepts.' })
@@ -3312,33 +3388,9 @@ router.post('/api/spaces/:spaceId/proposals', (req, res, next) => bundleUpload.s
 }), async (req, res, next) => {
   const uploaded = req.file?.path || null
   try {
-    const state = req.authState || getPublicAuthState(req)
-    // A proposal names a person. Guests have no name the owner could answer.
-    if (config.requireAuth && !state.isUnrestricted && (!state.authenticated || state.type === 'guest' || isGuestSubject(state.subject))) {
-      return res.status(403).json({ error: 'Sign in with an account to send a file for this space.', code: 'auth_required' })
-    }
-    if (!uploaded) return res.status(400).json({ error: 'No file was sent (field "bundle").' })
-    const spaceId = normalizeSpaceId(req.params.spaceId)
-    const flag = (value) => ['1', 'true', 'yes'].includes(String(value ?? '').toLowerCase())
-    const outcome = await contentProposals.submit({
-      spaceId,
-      uploadPath: uploaded,
-      authState: state,
-      mode: req.body?.mode === 'propose' ? 'propose' : 'auto',
-      from: req.body?.from || null,
-      overwriteNewer: flag(req.body?.overwriteNewer),
-      dryRun: flag(req.body?.dryRun),
-      // The exact count of media items the file removes (absent = none
-      // acknowledged; anything but a whole number never matches).
-      acceptLoss: req.body?.acceptLoss === undefined || req.body?.acceptLoss === '' ? null : (/^\d+$/.test(String(req.body.acceptLoss)) ? Number(req.body.acceptLoss) : NaN),
-      req
-    })
-    const status = outcome.status === 'pending_approval' ? 202 : 200
-    res.status(status).json(outcome)
+    const { status, body } = await submitProposalFile(req, { spaceId: req.params.spaceId, uploadPath: uploaded, fields: req.body || {} })
+    res.status(status).json(body)
   } catch (error) {
-    if ((error?.status && error.status < 500) || error?.status === 503) {
-      return res.status(error.status).json({ error: error.message, ...(error.code ? { code: error.code } : {}), ...(error.body || {}) })
-    }
     next(error)
   } finally {
     if (uploaded) await fs.promises.rm(uploaded, { force: true }).catch(() => {})
@@ -3838,7 +3890,8 @@ initStorage()
       logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
       installShutdown({
         server: httpServer,
-        before: stopLasers,
+        // open Monitor streams count as requests in flight: end them first, or every stop waits
+        before: async (signal) => { try { monitorRoutes?.closeAll?.() } catch { /* the stop goes on */ } await stopLasers(signal) },
         inflight,
         timers: shutdownTimers,
         checkpoint: () => getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)'),

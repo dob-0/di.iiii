@@ -73,6 +73,7 @@ beforeAll(async () => {
     window.DiLaserDraw = require('./drawRuns.js')
     window.DiLaserCalm = require('./drawCalm.js')
     window.DiLaser = { ...laserLook, lookPointsAt: (look, o) => { lookCalls[look.id] = (lookCalls[look.id] || 0) + 1; return laserLook.lookPointsAt(look, o) } }
+    new Function(fs.readFileSync(path.join(here, 'listen.js'), 'utf8'))() // desk.js reads window.DeskListen at load
     new Function(fs.readFileSync(path.join(here, 'desk.js'), 'utf8'))()
     await sleep(900)
 })
