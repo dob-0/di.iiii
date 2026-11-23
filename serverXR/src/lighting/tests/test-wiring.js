@@ -52,7 +52,7 @@ check('every control in the markup is read by the interface', () => {
   const DECORATIVE = new Set(['statusStrip', 'phoneBox']);
   // The stage modules from the studio desk read their own controls (objects.js: #objPill; the Stage
   // page's strip, inspector and effects: stagepage.js and colorfxui.js's #spCfx).
-  const pageJs = js + ['objects.js', 'markers.js', 'video.js', 'stagepage.js', 'colorfxui.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
+  const pageJs = js + ['objects.js', 'markers.js', 'video.js', 'stagepage.js', 'colorfxui.js', 'showfile.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
   const orphans = [...htmlIds].filter((id) =>
     !DECORATIVE.has(id) && !pageJs.includes(`'#${id}'`) && !pageJs.includes(`"#${id}"`)
     && !pageJs.includes(`'${id}'`) && !pageJs.includes(`getElementById('${id}')`));
@@ -64,7 +64,8 @@ check('every class a button in the markup carries is known to the code or the st
   // days as pure decoration — a <button> whose class no JavaScript ever queried — and
   // looked exactly like a working control. A button whose every class is unknown to both
   // app.js and the stylesheet is either dead or about to be.
-  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  // showfile.css: the Show file panel's own sheet (its buttons are wired by showfile.js).
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8') + fs.readFileSync(path.join(ROOT, '../ui/showfile.css'), 'utf8');
   const dead = [];
   for (const m of html.matchAll(/<button[^>]*class="([^"]+)"[^>]*>/g)) {
     const classes = m[1].split(/\s+/);

@@ -34,6 +34,7 @@ const library = require('./library');
 const { SACN, cidFor } = require('./sacn');
 const { busStatus } = require('./outputStatus');
 const { backupShowFile } = require('./showBackup');
+const { attachShowfile } = require('./showfile');
 const { DmxInput } = require('./dmxin-net');
 const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString, inputLevels } = require('./dmxin');
 const {
@@ -1857,6 +1858,13 @@ function createDesk(opts = {}) {
     // The video layer (pixelmap.js): POST /api/video (where the picture sits, persists) and
     // POST /api/pixels (the live colours, ~30 a second, never saved).
     ...videoRoutes({ getState: () => state, save, pushFrame, json }),
+    // The Show file (showfile.js): export, import, snapshots. `state` is read through, and a
+    // replaced show goes through replaceShow below. Left OUT of SHOW_ROUTES on purpose: a page
+    // opened for one space must never snapshot or import into another show.
+    ...attachShowfile({
+      getState: () => state, getShow: () => show, sanitizeScene, sanitizeBanks, replaceShow,
+      deskName: 'di.iiii light desk',
+    }).routes(json),
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
@@ -2803,6 +2811,30 @@ function createDesk(opts = {}) {
     pushFrame();
     cueRunner.resume();
     resumed = true;
+  }
+
+  // Replace the loaded show with `disk` (a whole show as plain data) through the way a show
+  // is loaded: written as the show's own file (a space's without the rig, like every save),
+  // then read back by switchShow -> loadState, which sanitises every field, registers custom
+  // profiles before fixtures, keeps the machine's output, cancels fades/chase/cues and bumps
+  // stateVersion. A file can therefore never carry the rig, input or network settings in:
+  // loadState is given the live rig. `keepChase`: carry the running chase across.
+  function replaceShow(disk, { keepChase = false } = {}) {
+    const rigNow = state.output;
+    const text = show.space ? JSON.stringify(withoutRig(disk)) : JSON.stringify({ ...disk, output: rigNow });
+    const chase = { ...engine.chase };
+    const origin = engine.chaseOrigin;
+    clearTimeout(saveTimer); saveTimer = null; dirty = false;
+    try {
+      fs.mkdirSync(show.dir, { recursive: true });
+      writeWhole(showFile(), text);
+      switchShow({ ...show });
+    } catch (e) {
+      // Nothing was loaded: what is on the desk is still unsaved as far as the file goes.
+      save();
+      throw e;
+    }
+    if (keepChase) { engine.chase = chase; engine.chaseOrigin = origin; }
   }
 
   async function handle(req, res, pathname) {

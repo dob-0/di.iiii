@@ -1138,6 +1138,123 @@
         },
         "text": "404 with a JSON body"
       }
+    },
+    {
+      "method": "GET",
+      "path": "api/show/export",
+      "class": "c",
+      "reply": {
+        "format": "string",
+        "show": "object",
+        "name": "string"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/show/import",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "summary": "string",
+        "undo": "object"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/snapshots",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "dir": "string",
+        "snapshots": "array"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/snapshots",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "snapshot": "object",
+        "snapshots": "array"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/snapshots/restore",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "summary": "string",
+        "undo": "object"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/snapshots/delete",
+      "class": "c",
+      "reply": {
+        "ok": "boolean",
+        "snapshots": "array"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/snapshots/download",
+      "class": "c",
+      "reply": {
+        "format": "string",
+        "show": "object"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
     }
   ],
   "node_routes": {

@@ -1732,7 +1732,7 @@ const spaceDesk = async (known = { lab: 'Lab', hosq: 'Hosq camp' }) => {
   };
   const spaceShow = (id) => path.join(spacesDir, id, 'lighting', 'show.json');
   return {
-    root, data, spacesDir, logs, desk, make, spaceShow,
+    root, data, spacesDir, logs, desk, make, spaceShow, base: at,
     get: (r) => call('GET', r), post: (r, b) => call('POST', r, b || {}),
     machineShow: path.join(data, 'show.json'),
     stop: () => new Promise((r) => { desk.close(); server.close(() => { fs.rmSync(root, { recursive: true, force: true }); r(); }); }),
@@ -1931,6 +1931,208 @@ check('the desk\'s own state is read through: a holder of the desk reaches the l
     assert.notStrictEqual(d.desk.state, before);
     d.desk.state.blackout = true;           // what the rig's blackout mirror does
     assert.strictEqual((await d.get('/api/state')).body.blackout, true);
+  } finally { await d.stop(); }
+});
+
+// ---- the show file: export, import, snapshots -------------------------------
+// showfile.js. A file never moves the machine's wiring; every import and restore snapshots
+// first; snapshots live in each show's own folder.
+
+const showFileDesk = async (extra) => {
+  const d = await spaceDesk();
+  await d.post('/api/fixtures/add', { profile: 'rgb', count: 2 });
+  await d.post('/api/scenes/save', { name: 'Warm' });
+  await d.post('/api/scenes/save', { name: 'Cold' });
+  if (extra) await extra(d);
+  return d;
+};
+const exportOf = async (d) => (await d.get('/api/show/export')).body;
+
+check('show file: export is the whole show, without the machine\'s wiring or any secret', async () => {
+  const d = await showFileDesk();
+  try {
+    const r = await d.get('/api/show/export');
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(r.body.format, 'studio-desk-show');
+    assert.strictEqual(r.body.show.fixtures.length, 2);
+    assert.strictEqual(r.body.show.scenes.length, 2);
+    for (const k of ['output', 'input', 'net']) assert.ok(!(k in r.body.show), k + ' is the machine\'s, not the show\'s');
+    assert.ok(!/"(pin|token|password|secret)"/i.test(r.text), 'no secret in the file');
+    assert.ok(/^light-show-\d{4}-\d{2}-\d{2}-\d{4}\.json$/.test(r.body.name), r.body.name);
+    const dl = await fetch(d.base + '/api/show/export?download=1');
+    assert.ok(/attachment; filename="light-show-/.test(dl.headers.get('content-disposition')));
+    await d.post('/api/show/open', { space: 'lab' });
+    assert.ok(/^lab-show-/.test((await exportOf(d)).name), 'a space\'s export is named for it');
+  } finally { await d.stop(); }
+});
+
+check('show file: a refused file says why and changes nothing', async () => {
+  const d = await showFileDesk();
+  try {
+    for (const bad of [null, [], { hello: 1 }, { format: 'other' }, { format: 'studio-desk-show', version: 9, show: {} },
+      { format: 'studio-desk-show', version: 1, show: { fixtures: [] } }]) {
+      const r = await d.post('/api/show/import', { mode: 'replace', show: bad });
+      assert.strictEqual(r.status, 400, JSON.stringify(bad));
+      assert.ok(typeof r.body.error === 'string' && r.body.error.length > 10);
+    }
+    assert.strictEqual((await d.post('/api/show/import', { mode: 'wrong', show: {} })).status, 400);
+    assert.strictEqual((await d.get('/api/snapshots')).body.snapshots.length, 0, 'a refusal takes no snapshot');
+    assert.strictEqual(d.desk.state.scenes.length, 2);
+  } finally { await d.stop(); }
+});
+
+check('show file: replace takes the file\'s show but never its output, input, network, master or blackout', async () => {
+  const d = await showFileDesk();
+  try {
+    const file = await exportOf(d);
+    await d.post('/api/master', { master: 111, blackout: false });
+    const rigBefore = JSON.stringify(d.desk.state.output);
+    // A file that tries everything: another rig, input, net, a master, a pin, a foreign key.
+    const show = {
+      ...file.show, master: 7, blackout: true, pin: '1234', evil: { a: 1 },
+      scenes: file.show.scenes.slice(0, 1),
+      output: { driver: 'enttec', serialPort: 'COM9', enabled: true, mode: 'unicast', targets: ['10.9.9.9'], input: { enabled: true } },
+      input: { enabled: true }, net: { osc: { enabled: true } },
+    };
+    const pre = await d.post('/api/show/import', { mode: 'preview', show: { ...file, show } });
+    assert.strictEqual(pre.status, 200, pre.text);
+    assert.ok(/belong to this machine/.test(pre.body.machine));
+    assert.strictEqual(pre.body.file.counts.scenes, 1);
+    assert.strictEqual(d.desk.state.scenes.length, 2, 'a preview changes nothing');
+    assert.strictEqual((await d.get('/api/snapshots')).body.snapshots.length, 0, 'a preview takes no snapshot');
+
+    const r = await d.post('/api/show/import', { mode: 'replace', show: { ...file, show } });
+    assert.strictEqual(r.status, 200, r.text);
+    const st = d.desk.state;
+    assert.strictEqual(st.scenes.length, 1);
+    assert.strictEqual(JSON.stringify(st.output), rigBefore, 'output, and the input inside it, are the machine\'s');
+    assert.strictEqual(st.master, 111);
+    assert.strictEqual(st.blackout, false);
+    assert.ok(!('pin' in st) && !('evil' in st) && !('net' in st) && !('input' in st), 'nothing foreign lands on the state');
+    d.desk.writeShow();
+    const disk = JSON.parse(fs.readFileSync(d.machineShow, 'utf8'));
+    assert.ok(!('pin' in disk) && !('evil' in disk));
+    assert.strictEqual(JSON.stringify(disk.output), rigBefore, 'the machine\'s file keeps its rig');
+
+    // The automatic snapshot taken first is the show as it was; Undo = restore it.
+    const snaps = (await d.get('/api/snapshots')).body.snapshots;
+    assert.strictEqual(snaps.length, 1);
+    assert.ok(snaps[0].auto && /Before import/.test(snaps[0].name));
+    assert.strictEqual(snaps[0].counts.scenes, 2);
+    assert.strictEqual(r.body.undo.id, snaps[0].id);
+    const undo = await d.post('/api/snapshots/restore', { id: r.body.undo.id });
+    assert.strictEqual(undo.status, 200, undo.text);
+    assert.strictEqual(d.desk.state.scenes.length, 2, 'Undo brings the scenes back');
+    assert.strictEqual(JSON.stringify(d.desk.state.output), rigBefore);
+    assert.strictEqual((await d.get('/api/snapshots')).body.snapshots.length, 2, 'the restore snapshotted first, too');
+  } finally { await d.stop(); }
+});
+
+check('show file: add joins scenes and containers, new ids on a clash, nothing of yours changes', async () => {
+  const d = await showFileDesk(async (x) => {
+    const ids = x.desk.state.scenes.map((s) => s.id);
+    await x.post('/api/banks', { banks: [{ id: 'b1', name: 'Night', sceneIds: ids }] });
+  });
+  try {
+    const file = await exportOf(d);
+    const before = d.desk.state.scenes.map((s) => s.id);
+    const r = await d.post('/api/show/import', { mode: 'add', show: file });
+    assert.strictEqual(r.status, 200, r.text);
+    const st = d.desk.state;
+    assert.strictEqual(st.scenes.length, 4);
+    assert.deepStrictEqual(st.scenes.slice(0, 2).map((s) => s.id), before, 'yours are untouched and first');
+    assert.strictEqual(new Set(st.scenes.map((s) => s.id)).size, 4, 'clashing ids got new ones');
+    assert.strictEqual(st.banks.length, 2);
+    assert.strictEqual(st.banks[1].name, 'Night (imported)');
+    assert.ok(st.banks[1].sceneIds.every((id) => st.scenes.some((s) => s.id === id) && !before.includes(id)), 'the new container holds the new scenes');
+    assert.strictEqual(st.fixtures.length, 2);
+    const snap = (await d.get('/api/snapshots')).body.snapshots[0];
+    assert.ok(snap.auto && snap.counts.scenes === 2, 'the snapshot is of the show before the import');
+  } finally { await d.stop(); }
+});
+
+check('show file: patch replaces the lights only, and warns about the ones that go', async () => {
+  const d = await showFileDesk();
+  try {
+    const file = await exportOf(d);
+    file.show.fixtures = file.show.fixtures.slice(0, 1);
+    const pre = await d.post('/api/show/import', { mode: 'preview', show: file });
+    assert.ok(pre.body.modes.patch.warnings.some((w) => /will be unpatched/.test(w)), pre.text);
+    assert.ok(pre.body.modes.replace.warnings.some((w) => /will be unpatched/.test(w)));
+    const r = await d.post('/api/show/import', { mode: 'patch', show: file });
+    assert.strictEqual(r.status, 200, r.text);
+    assert.strictEqual(d.desk.state.fixtures.length, 1);
+    assert.strictEqual(d.desk.state.scenes.length, 2, 'scenes stay');
+  } finally { await d.stop(); }
+});
+
+check('show file: a fixture type of the file is registered before its lights', async () => {
+  const d = await showFileDesk(async (x) => {
+    await x.post('/api/profiles/add', { name: 'Show Spot', channels: ['dimmer', 'pan', 'tilt'] });
+    await x.post('/api/fixtures/add', { profile: 'Show Spot', count: 1 });
+  });
+  try {
+    const file = await exportOf(d);
+    await d.post('/api/show/open', { space: 'lab' });          // another show, without that type
+    assert.ok(!d.desk.state.customProfiles.some((p) => p.name === 'Show Spot'));
+    const r = await d.post('/api/show/import', { mode: 'replace', show: file });
+    assert.strictEqual(r.status, 200, r.text);
+    assert.strictEqual(d.desk.state.fixtures.filter((f) => f.profile === 'Show Spot').length, 1);
+    assert.ok(d.desk.state.customProfiles.some((p) => p.name === 'Show Spot'));
+    const spot = (await d.get('/api/state')).body.profiles['Show Spot'];
+    assert.ok(spot && spot.channels.length === 3, 'still a 3-channel fixture, not an rgb fallback');
+  } finally { await d.stop(); }
+});
+
+check('show file: snapshots are kept per show, pruned automatic first, and can be listed, downloaded and deleted', async () => {
+  process.env.SNAPSHOT_MAX = '3';
+  const d = await showFileDesk();
+  delete process.env.SNAPSHOT_MAX;
+  try {
+    const mine = (await d.post('/api/snapshots', { name: 'before the gig' })).body.snapshot;
+    assert.strictEqual(mine.name, 'before the gig');
+    assert.ok(!mine.auto);
+    assert.ok(fs.existsSync(path.join(d.data, 'snapshots', mine.id + '.json')), 'the machine\'s show keeps them beside its show.json');
+    const file = await exportOf(d);
+    for (let i = 0; i < 3; i++) await d.post('/api/show/import', { mode: 'add', show: file });   // three automatic ones
+    const list = (await d.get('/api/snapshots')).body;
+    assert.strictEqual(list.max, 3);
+    assert.strictEqual(list.snapshots.length, 3, 'never more than the cap');
+    assert.ok(list.snapshots.some((s) => s.id === mine.id), 'the named one outlives the automatic ones');
+    assert.strictEqual(list.snapshots.filter((s) => s.auto).length, 2, 'the oldest automatic one went first');
+
+    // Another show has its own folder and its own list.
+    await d.post('/api/show/open', { space: 'lab' });
+    assert.strictEqual((await d.get('/api/snapshots')).body.snapshots.length, 0);
+    const lab = (await d.post('/api/snapshots', { name: 'lab one' })).body.snapshot;
+    assert.ok(fs.existsSync(path.join(d.spacesDir, 'lab', 'lighting', 'snapshots', lab.id + '.json')));
+    assert.strictEqual((await d.post('/api/snapshots/restore', { id: mine.id })).status, 404, 'a snapshot of another show is not reachable');
+    const dl = await d.get('/api/snapshots/download?id=' + lab.id);
+    assert.strictEqual(dl.status, 200);
+    assert.strictEqual(JSON.parse(dl.text).format, 'studio-desk-show');
+    assert.strictEqual((await d.get('/api/snapshots/download?id=../x')).status, 404);
+    assert.strictEqual((await d.post('/api/snapshots/delete', { id: lab.id })).body.snapshots.length, 0);
+    assert.strictEqual((await d.post('/api/snapshots/delete', { id: lab.id })).status, 404);
+    await d.post('/api/show/open', { space: null });
+    assert.strictEqual((await d.get('/api/snapshots')).body.snapshots.length, 3, 'the machine\'s are as they were');
+  } finally { await d.stop(); }
+});
+
+check('show file: replacing the show in a space keeps the rig out of that space\'s file, and a wrong-space page is refused', async () => {
+  const d = await showFileDesk();
+  try {
+    const file = await exportOf(d);
+    await d.post('/space/lab/api/show/open', {});
+    const rig = JSON.stringify(d.desk.state.output);
+    assert.strictEqual((await d.post('/space/lab/api/show/import', { mode: 'replace', show: file })).status, 200);
+    d.desk.writeShow();
+    const lab = JSON.parse(fs.readFileSync(d.spaceShow('lab'), 'utf8'));
+    assert.strictEqual(lab.fixtures.length, 2);
+    assert.ok(!('output' in lab), 'a space\'s show never carries the rig');
+    assert.strictEqual(JSON.stringify(d.desk.state.output), rig);
+    const wrong = await d.post('/space/hosq/api/snapshots', { name: 'x' });
+    assert.strictEqual(wrong.status, 409, 'a page for another space cannot snapshot or import into this show');
+    assert.strictEqual(wrong.body.code, 'other-show');
   } finally { await d.stop(); }
 });
 
