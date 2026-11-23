@@ -27,6 +27,6 @@
     "ws": "8.22.1"
   },
   "optionalDependencies": {
-    "koffi": "3.3.3"
+    "koffi": "3.3.6"
   }
 }
