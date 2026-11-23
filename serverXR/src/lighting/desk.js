@@ -34,6 +34,7 @@ const library = require('./library');
 const { SACN, cidFor } = require('./sacn');
 const { busStatus } = require('./outputStatus');
 const { backupShowFile } = require('./showBackup');
+const { attachShowfile } = require('./showfile');
 const { DmxInput } = require('./dmxin-net');
 const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString, inputLevels } = require('./dmxin');
 const {
@@ -165,6 +166,14 @@ function createDesk(opts = {}) {
     // page. They reference scenes by id and tolerate dead references — the player shows a
     // missing step rather than silently renumbering the operator's set list mid-show.
     sets: [],
+    // Scene containers (called banks in code; Daslight-style, from the studio desk): named,
+    // coloured lists of scenes filled by hand. A scene can sit in any number of them, and a
+    // container tolerates ids of scenes since deleted (the interface skips them).
+    banks: [],
+    // Colour palettes and favourites for the attribute editor's Color tab. The named
+    // palettes she picks FROM are built into the interface; only what she makes herself
+    // lives here, so the show file stays about the show. From the studio desk.
+    colors: { favorites: [], palettes: [] },
     // A project's cue list, played by the desk (cuerun.js): the list, where it is, and
     // whether it runs and loops — saved with the show, so a restart carries on.
     cues: sanitizeCues(null),
@@ -178,6 +187,47 @@ function createDesk(opts = {}) {
       sceneIds: (Array.isArray(s?.sceneIds) ? s.sceneIds : [])
         .filter((id) => typeof id === 'string' && id).slice(0, 1000),
     }));
+  }
+
+  // Every entry has to read as lettering on the near-black ground: #7a1fd6 was 2.7:1 there
+  // (layout audit, 2026-09-05) and became #9a5cff, 4.9:1. Existing containers keep whatever
+  // they were given — the interface lifts any colour toward white before using it as ink.
+  const BANK_COLORS = ['#f5c518', '#f0902f', '#f04ab0', '#a05fd6', '#9a5cff', '#2f9fe0', '#35d2dd', '#2fd93a', '#e0524a'];
+  function sanitizeBanks(list) {
+    if (!Array.isArray(list)) return [];
+    return list.slice(0, 24).map((b, i) => ({
+      id: typeof b?.id === 'string' && b.id ? b.id.slice(0, 40) : 'bank' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name: String(b?.name || ('Bank ' + (i + 1))).slice(0, 40),
+      color: sanitizeHex(b?.color) || BANK_COLORS[i % BANK_COLORS.length],
+      sceneIds: [...new Set((Array.isArray(b?.sceneIds) ? b.sceneIds : []).filter((id) => typeof id === 'string' && id))].slice(0, 1000),
+      // Optional chase timing for "▶ Chase" on this container (2026-09-19): a smooth wave
+      // wants fade = hold, a strobe sequence wants hard cuts. Absent = use the chase's own.
+      ...(Number.isFinite(+b?.holdMs) && b.holdMs != null ? { holdMs: Math.max(50, Math.min(600000, +b.holdMs | 0)) } : {}),
+      ...(Number.isFinite(+b?.fadeMs) && b.fadeMs != null ? { fadeMs: Math.max(0, Math.min(60000, +b.fadeMs | 0)) } : {}),
+    }));
+  }
+
+  // Hex only, and always the same shape: '#rrggbb' lowercase. The colour row is rendered
+  // straight into a style attribute, so anything that is not a hex triple never gets stored.
+  function sanitizeHex(v) {
+    if (typeof v !== 'string') return null;
+    const m = v.trim().toLowerCase().match(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/);
+    if (!m) return null;
+    const h = m[1];
+    return '#' + (h.length === 3 ? h[0] + h[0] + h[1] + h[1] + h[2] + h[2] : h);
+  }
+
+  function sanitizeColors(c) {
+    const hexes = (list, cap) => (Array.isArray(list) ? list : [])
+      .map(sanitizeHex).filter(Boolean).slice(0, cap);
+    return {
+      favorites: hexes(c?.favorites, 64),
+      palettes: (Array.isArray(c?.palettes) ? c.palettes : []).slice(0, 50).map((p) => ({
+        id: typeof p?.id === 'string' && p.id ? p.id.slice(0, 40) : 'pal' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        name: String(p?.name || 'Palette').slice(0, 40),
+        colors: hexes(p?.colors, 32),
+      })).filter((p) => p.colors.length),
+    };
   }
 
   // AUDIO_MODES and sanitizeAudioCfg live in engine.js now — recallScene applies the same
@@ -325,6 +375,8 @@ function createDesk(opts = {}) {
       s.lfos = sanitizeLfos(disk.lfos) || [];
       s.audioCfg = sanitizeAudioCfg({ ...DEFAULT_STATE.audioCfg, ...(disk.audioCfg || {}) });
       s.sets = sanitizeSets(disk.sets);
+      s.banks = sanitizeBanks(disk.banks);
+      s.colors = sanitizeColors(disk.colors);
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
       s.layers = sanitizeLayers(disk.layers) || [];
@@ -1324,6 +1376,7 @@ function createDesk(opts = {}) {
       // Same rule for the effects: the pads are built from this list, so an effect added to
       // fx.js appears on the page without anyone remembering to add it twice.
       fxModes: FX_MODES,
+      bankColors: BANK_COLORS,
       fxSpatial: FX_SPATIAL,
       fanStyles: FAN_STYLES,
       lfoWaves: LFO_WAVES,
@@ -1805,6 +1858,13 @@ function createDesk(opts = {}) {
     // The video layer (pixelmap.js): POST /api/video (where the picture sits, persists) and
     // POST /api/pixels (the live colours, ~30 a second, never saved).
     ...videoRoutes({ getState: () => state, save, pushFrame, json }),
+    // The Show file (showfile.js): export, import, snapshots. `state` is read through, and a
+    // replaced show goes through replaceShow below. Left OUT of SHOW_ROUTES on purpose: a page
+    // opened for one space must never snapshot or import into another show.
+    ...attachShowfile({
+      getState: () => state, getShow: () => show, sanitizeScene, sanitizeBanks, replaceShow,
+      deskName: 'di.iiii light desk',
+    }).routes(json),
 
     'POST /api/master': (req, res, body) => {
       if (body.master != null && Number.isFinite(+body.master)) state.master = Math.max(0, Math.min(255, Math.round(+body.master)));
@@ -2283,6 +2343,25 @@ function createDesk(opts = {}) {
       save(); json(res, { ok: true, scene });
     },
 
+    // Favourite colours and saved palettes. Replace-whole PER KEY like /api/sets: the Color
+    // tab posts favourites and palettes separately, so sending one must not wipe the other.
+    'POST /api/colors': (req, res, body) => {
+      state.colors = sanitizeColors({
+        favorites: body.favorites != null ? body.favorites : state.colors.favorites,
+        palettes: body.palettes != null ? body.palettes : state.colors.palettes,
+      });
+      save(); json(res, { ok: true, colors: state.colors });
+    },
+
+    // Scene containers: replace-whole, like /api/sets. The interface edits its copy (add,
+    // remove, rename, recolour, reorder) and posts the list; the server only decides what a
+    // container may contain. BANK_COLORS is published on /api/state so the two never disagree.
+    'POST /api/banks': (req, res, body) => {
+      if (!Array.isArray(body.banks)) return json(res, { error: 'banks must be an array' }, 400);
+      state.banks = sanitizeBanks(body.banks);
+      save(); json(res, { ok: true, banks: state.banks });
+    },
+
     // Live sets: replaced whole, like /api/lfos. Dead scene ids are kept on purpose — the
     // player marks them missing instead of silently shortening the operator's set.
     'POST /api/sets': (req, res, body) => {
@@ -2325,9 +2404,11 @@ function createDesk(opts = {}) {
       save(); json(res, { ok: true, count: clean.length });
     },
 
+    // {id} removes one; {ids:[...]} removes a selection in one call.
     'POST /api/scenes/remove': (req, res, body) => {
-      state.scenes = state.scenes.filter((s) => s.id !== body.id);
-      state.chase.sceneIds = state.chase.sceneIds.filter((id) => id !== body.id);
+      const gone = new Set(Array.isArray(body.ids) ? body.ids.filter((x) => typeof x === 'string') : [body.id]);
+      state.scenes = state.scenes.filter((s) => !gone.has(s.id));
+      state.chase.sceneIds = state.chase.sceneIds.filter((id) => !gone.has(id));
       // Removing the last step disarms the chase outright — see POST /api/chase.
       if (state.chase.sceneIds.length === 0 && state.chase.enabled) {
         state.chase.enabled = false;
@@ -2730,6 +2811,30 @@ function createDesk(opts = {}) {
     pushFrame();
     cueRunner.resume();
     resumed = true;
+  }
+
+  // Replace the loaded show with `disk` (a whole show as plain data) through the way a show
+  // is loaded: written as the show's own file (a space's without the rig, like every save),
+  // then read back by switchShow -> loadState, which sanitises every field, registers custom
+  // profiles before fixtures, keeps the machine's output, cancels fades/chase/cues and bumps
+  // stateVersion. A file can therefore never carry the rig, input or network settings in:
+  // loadState is given the live rig. `keepChase`: carry the running chase across.
+  function replaceShow(disk, { keepChase = false } = {}) {
+    const rigNow = state.output;
+    const text = show.space ? JSON.stringify(withoutRig(disk)) : JSON.stringify({ ...disk, output: rigNow });
+    const chase = { ...engine.chase };
+    const origin = engine.chaseOrigin;
+    clearTimeout(saveTimer); saveTimer = null; dirty = false;
+    try {
+      fs.mkdirSync(show.dir, { recursive: true });
+      writeWhole(showFile(), text);
+      switchShow({ ...show });
+    } catch (e) {
+      // Nothing was loaded: what is on the desk is still unsaved as far as the file goes.
+      save();
+      throw e;
+    }
+    if (keepChase) { engine.chase = chase; engine.chaseOrigin = origin; }
   }
 
   async function handle(req, res, pathname) {

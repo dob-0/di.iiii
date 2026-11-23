@@ -1,5 +1,5 @@
 // The light desk's scene list, Projector Room 2026-10-31 (the look at the final copy): the laser note ends in an ellipsis with its whole text as a title, and the
-// filter box keeps a usable width. jsdom has no layout engine, so the rules and the markup that makes them work are guarded here.
+// filter box keeps a usable width (now in the container bar, 2026-11-22). jsdom has no layout engine, so the rules and the markup that makes them work are guarded here.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -25,8 +25,9 @@ describe('the light desk scene list', () => {
     expect(app).toMatch(/const laserNoteOf = .*title="laser: \$\{esc\(n\)\}"/)
     expect(app).toMatch(/const laserTnoteOf = .*title="laser: \$\{esc\(n\)\}"/)
   })
-  it('the scene filter takes the first row and the buttons wrap under it (it was squeezed to 42 px in the 230 px column, with Follow off too)', () => {
-    expect(rules('#sceneFilter')).toMatch(/flex:\s*1 1 100%/)
-    expect(rules('.scenesearch')).toMatch(/flex-wrap:\s*wrap/)
+  it('the scene filter keeps a usable width in the container bar (the old 230 px column squeezed it to 42 px)', () => {
+    expect(rules('.bankbar .search')).toMatch(/flex:\s*1/)
+    expect(rules('.bankbar .search')).toMatch(/min-width:\s*\d+px/)
+    expect(rules('.bankbar')).toMatch(/flex-wrap:\s*wrap/)
   })
 })

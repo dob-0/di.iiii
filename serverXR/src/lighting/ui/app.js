@@ -45,32 +45,56 @@ let gridUni = 0;
 let activeGroup = 'all';
 let activeScene = null;        // scene shown in the CONTROL detail pane
 let sceneFilter = '';          // live filter over the scene bank — the library runs to hundreds
-let sceneKind = 'all';         // 'all' | 'anim' | 'static' — hide one kind wholesale
+// Scene containers (banks, from the studio desk). Declared up here, with the rest of the page
+// state, because showPage() can draw before the container code further down has run.
+const UNFILED = 'unfiled';
+let bankView = null;           // the open container on Control: a container id, 'unfiled', or null
+try { bankView = localStorage.getItem('bankView') || null; } catch (e) {}
+let touchBank = null;          // the open container on Touch — its own, so the phone cannot move the desk
+try { touchBank = localStorage.getItem('touchBank') || null; } catch (e) {}
+let pendingRename = null;      // a scene id whose tile opens in name-edit on its next render
+let banksPostedAt = 0;         // pullState ignores replies requested before this — see there
+let sceneSel = new Set();      // scenes multi-selected in the open container (shift/ctrl-click)
+let sceneAnchor = null;        // where a shift-click range starts
 let tool = 'select';
-let snap = false;
-let zoom = 1;
+// Snap to grid: ON unless she switched it off on this browser (the studio desk's default —
+// her lights, labels and objects then land on the lines the stage draws).
+let snap = true;
+try { snap = localStorage.getItem('lightdeskSnap') !== '0'; } catch (e) { /* private mode: on */ }
 // The stage viewport: pan in screen pixels, zoom 0.01-4 — wide enough to fit a rig
-// spread across the whole WORLD bound, not just the old fixed room. Shared by the Setup
-// and Control stages the way `zoom` always was, so the two views stay the same picture.
-const view = { x: 0, y: 0 };
+// spread across the whole WORLD bound, not just the old fixed room. Setup and Control share
+// one (views.desk), so those two stay the same picture. The Stage page (the big workspace,
+// stagepage.js) has its own too: designing there must not move the grid on Control.
+const views = { desk: { x: 0, y: 0, zoom: 1 }, touch: { x: 0, y: 0, zoom: 1 }, stage: { x: 0, y: 0, zoom: 1 } };
 // Matches desk.js's WORLD — how far a fixture can be dragged from the room. Wide enough
 // that arranging a real rig never hits an edge; the server clamps to the same bound
 // regardless of what this page sends, so this is a UX courtesy, not the actual limit.
 const WORLD = 1000;
 let spaceHeld = false;   // Space + drag pans, like every canvas tool she uses
 // The stage modules from the studio desk (objects.js, markers.js, video.js) ask for the view
-// of the stage they draw on: viewOf(el) → {x, y, zoom}. This desk has ONE view for every
-// stage (`view` and `zoom` above), so every stage answers with the same live object.
-const deskView = {
-  get x() { return view.x; }, set x(v) { view.x = v; },
-  get y() { return view.y; }, set y(v) { view.y = v; },
-  get zoom() { return zoom; }, set zoom(v) { zoom = v; },
-};
-// eslint-disable-next-line no-unused-vars -- read by objects.js, markers.js and video.js
-const viewOf = (el) => deskView;
-// The grid objects and labels snap to: the 1/40 fixtures snap to across.
+// of the stage they draw on: viewOf(el) → {x, y, zoom}. Every stage helper resolves the view
+// for the stage element it was handed.
+const viewOf = (el) => (!el || !el.closest ? views.desk
+  : el.closest('#touchStage') ? views.touch : el.closest('.stagepage') ? views.stage : views.desk);
+const slidersOf = (el) => $$('.zoom').filter((z) => viewOf(z) === viewOf(el));
+// ONE grid step, in world units, shared by the lines the stage draws, the drag snap, the
+// arrange tools and the objects and labels. It used to be three: lines every 40 screen px,
+// fixtures snapping to 1/40 across and 1/24 down, objects to 1/40 — so a snapped light
+// landed between the drawn lines. (The studio desk's GRID, 2026-09-03.)
+const GRID = 0.05;
 // eslint-disable-next-line no-unused-vars -- read by objects.js and markers.js
-const snapv = (v) => Math.round(v * 40) / 40;
+const snapv = (v) => Math.round(Math.round(v / GRID) * GRID * 1e6) / 1e6;
+// The stage view each stage element belongs to, by name — the key its light size is kept under.
+const viewName = (el) => (!el || !el.closest ? 'desk'
+  : el.closest('#touchStage') ? 'touch' : el.closest('.stagepage') ? 'stage' : 'desk');
+// Light size: how big the lights are drawn, per view, kept in THIS browser (never in the show —
+// the Touch box on a phone wants small lights, the Stage page on a monitor wants big ones).
+// 1 = the size the lights have always had (the studio desk's 34 x 30 px).
+const NODE_SIZES = [0.5, 0.65, 0.8, 1, 1.25, 1.6, 2, 2.5];
+const nodeSize = { desk: 1, stage: 1, touch: 1 };
+for (const k of Object.keys(nodeSize)) {
+  try { const n = parseFloat(localStorage.getItem('lightdeskNodeSize.' + k)); if (NODE_SIZES.includes(n)) nodeSize[k] = n; } catch (e) { /* private mode */ }
+}
 // When this page last posted the stage objects / the stage labels (set by objects.js and
 // markers.js): a poll asked for before that cannot know about it and must not put the old
 // list back — a drag posts the whole list many times a second.
@@ -136,7 +160,51 @@ const ROLE_COLOR = {
 // The library's internal category keys are not display text. They were being rendered
 // verbatim — block capitals with a leading underscore — in the first pane you look at.
 const CAT_LABEL = { _GENERIC: 'Generic', _MOVING: 'Moving heads', _CUSTOM: 'Your fixtures' };
-const HUES = ['#ff0000', '#ff7700', '#ffee00', '#00ff00', '#00ffcc', '#0044ff', '#8800ff', '#ff00aa', '#ffffff', '#000000'];
+
+// Built-in colour palettes (from the studio desk). These are the interface's, not the show's —
+// like the built-in fixture profiles, they are the same on every desk and are not written to
+// show.json. Only palettes she makes herself persist (state.colors.palettes).
+const PALETTES = [
+  ['Black and white', ['#000000', '#808080', '#ffffff']],
+  ['Basic', ['#ffffff', '#ff0000', '#ff8800', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff']],
+  ['Pastel', ['#ff6f61', '#ffb27f', '#ffe9a8', '#bfe3b4', '#a8c8e8', '#c3b7e8', '#f4bcd8']],
+  ['Temperature', ['#ff7a00', '#ff9d3d', '#ffbe7a', '#ffd6a8', '#ffe9cf', '#fff6ea']],
+  ['Autumn', ['#f0e2b6', '#f5a623', '#d99a5b', '#e2622a', '#d63a1e']],
+  ['Blue gradient', ['#7a1fd6', '#1b1b6e', '#1f5fd6', '#1f9fd6', '#22c9e8']],
+  ['Condition of possibility', ['#ff5fa2', '#d94fd0', '#6a2fd0', '#5fbf2f', '#f0c419']],
+  ['Fire', ['#f7e04a', '#f5a623', '#f07020', '#d93a1e', '#8e1508']],
+  ['From blue to white', ['#1b4f66', '#2f7f99', '#6fb3c4', '#b7dbe0']],
+  ['Grayscale', ['#111111', '#333333', '#555555', '#777777', '#999999', '#bbbbbb', '#dddddd', '#f2f2f2']],
+  ['Liquid shape', ['#3a2fd0', '#6a2fd0', '#a52fd0', '#e02fa5', '#ef7a2f']],
+  ['Magma', ['#1a0a12', '#4a1030', '#7a1a45', '#a83a6a', '#c95a9a', '#a06ad0', '#7a6ae0']],
+  ['Pink gradient', ['#e8407a', '#f06a9a', '#f79ac0', '#fbc4da', '#fde3ee']],
+  ['Retrowave', ['#f0245f', '#2a1030', '#7a1fd6', '#4a1a7a', '#f5c518']],
+  ['Tropical', ['#2fd93a', '#a52fd0', '#e02020', '#2fd6b0', '#f0902f']],
+  ['Vaporwave', ['#2a3ad6', '#f04ab0', '#a05fd6', '#2f9fe0', '#2fd6d0']],
+];
+
+let paletteName = 'Basic';   // which palette the swatch row is showing
+let lastColor = '#ffffff';   // the colour last sent to the rig, for "+ add to favourites"
+let favRemoveMode = false;   // ••• turns the favourites row into a remove row
+
+// Built-ins first, then hers. Custom ones carry an id so they can be deleted.
+function allPalettes() {
+  const custom = ((S && S.colors && S.colors.palettes) || []).map((p) => [p.name, p.colors, p.id]);
+  return [...PALETTES.map(([n, c]) => [n, c, null]), ...custom];
+}
+function activePalette() {
+  const all = allPalettes();
+  return all.find(([n]) => n === paletteName) || all[0];
+}
+function favorites() { return (S && S.colors && S.colors.favorites) || []; }
+
+// Both halves are replace-whole, and the server merges by key — so saving a palette
+// cannot drop the favourites and vice versa.
+function postColors(patch) {
+  if (!S.colors) S.colors = { favorites: [], palettes: [] };
+  Object.assign(S.colors, patch);
+  post('api/colors', patch);
+}
 
 // Which attribute tab each role belongs to. Anything not claimed here — including roles
 // added later, or a profile with a channel name nobody has seen — is placed by its kind,
@@ -256,6 +324,11 @@ async function pullState() {
     if (reply.status === 409 && next && next.show) { paintShow(next.show); return; }
     // stageDragging has no timeout on purpose: a careful placement takes longer than
     // the 700ms window, and the guard must last exactly as long as the finger is down.
+    // A reply that was REQUESTED before our last container save cannot know about it —
+    // the 700ms busy window below is shorter than the poll interval, so such a reply
+    // landed, put the old list back, and the next replace-whole save shipped the old
+    // list (a rename lost; once, a container vanished). Compare request times, not ages.
+    if (S && askedAt < banksPostedAt) next.banks = S.banks;
     if (S && askedAt < objectsPostedAt) next.objects = S.objects;
     if (S && askedAt < markersPostedAt) next.markers = S.markers;
     const busy = !!S && (stageDragging || Date.now() - touchedAt < 700);
@@ -271,6 +344,10 @@ async function pullState() {
       // throttled POST lands. Without this a poll arriving mid-gesture hands back the
       // desk's pre-drag level and the fader jumps out from under the finger.
       if (S.layers) next.layers = S.layers;
+      // Containers are replace-whole too: two drops a second apart, and a poll that left before
+      // the first save came back after it — the second save was then built on the stale copy.
+      if (S.banks) next.banks = S.banks;
+      if (S.colors) next.colors = S.colors;   // favourites and palettes are replace-whole edits too
       if (S.objects) next.objects = S.objects;   // stage objects and labels are edited the same way
       if (S.markers) next.markers = S.markers;
     }
@@ -387,6 +464,7 @@ function setRole(role, value) {
 // Set colour on the selection. With auto-white on, fixtures that have a white channel
 // get the common part of the colour moved onto it — the usual RGBW conversion.
 function applyColor(hexColor) {
+  lastColor = hexColor;   // what "+ add to favourites" will store
   const c = parseHex(hexColor);
   for (const f of selectedFixtures()) {
     const ch = profileOf(f).channels;
@@ -1158,14 +1236,23 @@ function placeStages() {
   // write, and the reflow happens once at the end of the frame like any other style change.
   const sizes = panes.map((inner) => ({ W: inner.clientWidth || 0, H: inner.clientHeight || 0 }));
   panes.forEach((inner, paneIdx) => {
-    inner.style.transform = `translate(${view.x}px, ${view.y}px) scale(${zoom})`;
+    const v = viewOf(inner);
+    inner.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.zoom})`;
+    inner.style.setProperty('--zoom', v.zoom);   // the Touch stage keeps its lights one size whatever the zoom
+    inner.style.setProperty('--ns', nodeSize[viewName(inner)]);   // light size, this view only
     // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
-    // tile forever — position and size just track the same pan/zoom the fixtures use, 40
-    // world-px apart at zoom 1, same as the grid dragging snaps fixtures to.
+    // tile forever. One line on every multiple of GRID in world units — the very grid the
+    // drag snap and the arrange tools use — so a snapped light sits ON a drawn line. A
+    // line is at inner x = ox + k*GRID*sc, so the tiling starts at ox*zoom + pan. Zoomed
+    // out far enough that the lines would crowd, every 5th (or 25th) is drawn instead:
+    // still on the same grid, just sparser.
     const outer = inner.closest('.stage');
     if (outer) {
-      outer.style.backgroundPosition = `${view.x}px ${view.y}px`;
-      outer.style.backgroundSize = `${40 * zoom}px ${40 * zoom}px`;
+      const g = stageMap(sizes[paneIdx].W, sizes[paneIdx].H);
+      let cell = GRID * g.sc * v.zoom;
+      while (cell < 7) cell *= 5;
+      outer.style.backgroundPosition = `${v.x + g.ox * v.zoom}px ${v.y + g.oy * v.zoom}px`;
+      outer.style.backgroundSize = `${cell}px ${cell}px`;
     }
     // Label crowding: labels scale with the zoom, and positions scale with (scale ×
     // zoom), so whether two labels collide depends only on the container size — a narrow
@@ -1184,7 +1271,8 @@ function placeStages() {
       node.style.width = Math.max(8, Math.hypot(dx, dy)) + 'px';
       node.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
     }
-    const tiny = zoom < 0.5 || W < 360;
+    const tiny = v.zoom < 0.5 || W < 360;
+    const ns = nodeSize[viewName(inner)];
     const shown = [];                    // fixtures whose labels stay visible
     for (const node of $$('.fx-node', inner)) {
       const f = fxById(node.dataset.id);
@@ -1196,7 +1284,7 @@ function placeStages() {
       let hide = tiny || !W;
       if (!hide) {
         for (const g of shown) {
-          if (Math.abs(f.x - g.x) * sc < 46 && Math.abs(f.y - g.y) * sc < 26) { hide = true; break; }
+          if (Math.abs(f.x - g.x) * sc < 46 * ns && Math.abs(f.y - g.y) * sc < 26 * ns) { hide = true; break; }
         }
         if (!hide) shown.push(f);
       }
@@ -1217,16 +1305,21 @@ function paintStage() {
     const body = node.querySelector('.fx-body');
     body.style.background = c.level < 0.03 ? '#1d1d20' : `rgb(${R},${G},${B})`;
     body.style.color = (R * 0.299 + G * 0.587 + B * 0.114) > 140 ? '#0c0c0d' : '#d8dadb';
-    // Lit-state that survives colourless fixtures: a beam or laser body barely changes
-    // colour between dark and full, so the LEVEL paints a glow — lit reads lit.
-    body.style.boxShadow = c.level > 0.05
-      ? `0 0 ${Math.round(4 + c.level * 18)}px rgba(${R},${G},${B},0.8)`
-      : 'none';
+    // Flat colour only — Emily's rule for the light imitation (studio desk, 2026-08-24): no
+    // glow. A colourless fixture still reads lit: liveColor paints it grey-to-white by level.
+    body.style.boxShadow = 'none';
   }
 }
 
 function wireStage(stage) {
+  const v = viewOf(stage);
   let drag = null;
+  // A .viewonly stage (the Touch page) is a window onto the rig, not a plan editor: any
+  // press pans, two fingers pinch-zoom, and a light under the finger is left where it
+  // is — no move, no marquee, no selection. Nothing on a phone in a dark room should be
+  // able to re-plot the stage by accident.
+  const viewOnly = stage.classList.contains('viewonly');
+  const pts = new Map();   // viewOnly: the fingers that are down, for the pinch
   // Without this, a finger-drag on a touch screen scrolls the page instead of moving the
   // fixture — pointer events fire, but the browser's own pan gesture wins. Inline because
   // the stylesheet is owned elsewhere right now.
@@ -1236,12 +1329,25 @@ function wireStage(stage) {
     const r = stage.getBoundingClientRect();
     const { sc, ox, oy } = stageMap(r.width, r.height);
     return {
-      x: clamp(((e.clientX - r.left - view.x) / zoom - ox) / sc, -WORLD, WORLD),
-      y: clamp(((e.clientY - r.top - view.y) / zoom - oy) / sc, -WORLD, WORLD),
+      x: clamp(((e.clientX - r.left - v.x) / v.zoom - ox) / sc, -WORLD, WORLD),
+      y: clamp(((e.clientY - r.top - v.y) / v.zoom - oy) / sc, -WORLD, WORLD),
     };
   };
 
   stage.addEventListener('pointerdown', (e) => {
+    if (viewOnly) {
+      e.preventDefault();
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      stage.setPointerCapture(e.pointerId);
+      stage.classList.add('panning');
+      if (pts.size >= 2) {
+        const [a, b] = [...pts.values()];
+        drag = { mode: 'pinch', pointerId: e.pointerId, dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: v.zoom };
+        return;
+      }
+      drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: v.x, oy: v.y };
+      return;
+    }
     // One drag at a time: a second finger landing mid-drag used to replace the drag state
     // and re-capture, so the first finger's gesture ended somewhere it never was.
     if (drag) return;
@@ -1249,10 +1355,12 @@ function wireStage(stage) {
     // fixture labels are text, and a marquee across them was leaving half the stage's
     // captions highlighted blue.
     e.preventDefault();
-    // Middle button or Space + drag pans the view. This replaces the old Hand tool,
-    // which drew a grab cursor and grabbed nothing.
-    if (e.button === 1 || spaceHeld) {
-      drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: view.x, oy: view.y };
+    // Middle button or Space + drag pans the view from any tool; the hand tool pans with the
+    // left button on empty stage and still moves a light you drag, so it is the one tool for
+    // "get around the plan and put things where they go" — the marquee stays with Select.
+    const onNode = !!e.target.closest('.fx-node');
+    if (e.button === 1 || spaceHeld || (tool === 'hand' && e.button === 0 && !onNode)) {
+      drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: v.x, oy: v.y };
       stageDragging = true;
       stage.classList.add('panning');
       stage.setPointerCapture(e.pointerId);
@@ -1262,8 +1370,14 @@ function wireStage(stage) {
     const node = e.target.closest('.fx-node');
     if (node) {
       const id = node.dataset.id;
-      if (!sel.has(id)) { if (!e.shiftKey) sel.clear(); sel.add(id); paintSelection(); }
-      drag = { mode: 'move', pointerId: e.pointerId, start: xy(e), origin: new Map([...sel].map((i) => { const f = S.fixtures.find((x) => x.id === i); return [i, { x: f.x, y: f.y }]; })) };
+      const adding = e.shiftKey || e.ctrlKey || e.metaKey;
+      // Pressing a light that is already selected keeps the selection, so the group can be
+      // dragged together — but a plain CLICK on it (no drag) narrows to that one light, and
+      // Shift/Ctrl-click takes it out. With the whole rig selected there was no way to pick
+      // one light from the stage: every click kept all of them.
+      const clickSel = sel.has(id) ? (adding ? 'toggle' : 'narrow') : null;
+      if (!sel.has(id)) { if (!adding) sel.clear(); sel.add(id); paintSelection(); }
+      drag = { mode: 'move', pointerId: e.pointerId, anchor: id, clickSel, moved: false, cx: e.clientX, cy: e.clientY, start: xy(e), origin: new Map([...sel].map((i) => { const f = S.fixtures.find((x) => x.id === i); return [i, { x: f.x, y: f.y }]; })) };
       stageDragging = true;
       stage.setPointerCapture(e.pointerId);
       return;
@@ -1276,21 +1390,44 @@ function wireStage(stage) {
   });
 
   stage.addEventListener('pointermove', (e) => {
+    if (viewOnly && pts.has(e.pointerId)) pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (drag && drag.mode === 'pinch') {
+      if (pts.size < 2) return;
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+      zoomAt(stage, (a.x + b.x) / 2, (a.y + b.y) / 2, drag.z * d / drag.dist);
+      return;
+    }
     if (!drag || e.pointerId !== drag.pointerId) return;
     if (drag.mode === 'pan') {
-      view.x = drag.ox + (e.clientX - drag.sx);
-      view.y = drag.oy + (e.clientY - drag.sy);
+      v.x = drag.ox + (e.clientX - drag.sx);
+      v.y = drag.oy + (e.clientY - drag.sy);
       placeStages();
       return;
     }
     if (drag.mode === 'move') {
+      if (!drag.moved && Math.hypot(e.clientX - drag.cx, e.clientY - drag.cy) < 4) return;   // still a click
+      drag.moved = true;
       const p = xy(e);
-      const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+      let dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+      // Snap the MOVEMENT, not each light: the one you grabbed lands on a grid crossing and
+      // the rest keep their offsets, so a row dragged as a group stays a row (rounding each
+      // light to its own nearest line made a tidy row arrive crooked).
+      if (snap) {
+        const a = drag.origin.get(drag.anchor) || drag.origin.values().next().value;
+        dx = snapv(a.x + dx) - a.x;
+        dy = snapv(a.y + dy) - a.y;
+      }
+      // Clamp the whole body once, so reaching the world edge slides the group instead of
+      // flattening it onto the boundary.
+      for (const [, o] of drag.origin) {
+        dx = clamp(dx, -WORLD - o.x, WORLD - o.x);
+        dy = clamp(dy, -WORLD - o.y, WORLD - o.y);
+      }
       for (const [id, o] of drag.origin) {
         const f = fxById(id);
         if (!f) continue;
-        f.x = clamp(o.x + dx, -WORLD, WORLD); f.y = clamp(o.y + dy, -WORLD, WORLD);
-        if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }
+        f.x = o.x + dx; f.y = o.y + dy;
       }
       placeStages();
     } else {
@@ -1311,9 +1448,27 @@ function wireStage(stage) {
   });
 
   const end = (e) => {
+    if (viewOnly) {
+      if (e && e.pointerId != null) pts.delete(e.pointerId);
+      // A pinch ends when either finger lifts; the one still down carries on as a pan
+      // from where it is, so the view never jumps.
+      if (drag && drag.mode === 'pinch') {
+        drag = null;
+        if (pts.size === 1) {
+          const [id, p] = [...pts][0];
+          drag = { mode: 'pan', pointerId: id, sx: p.x, sy: p.y, ox: v.x, oy: v.y };
+          return;
+        }
+      }
+      if (!pts.size) stage.classList.remove('panning');
+    }
     // A stray second finger lifting must not end the real drag mid-gesture.
     if (!drag || (e && e.pointerId != null && e.pointerId !== drag.pointerId)) return;
-    if (drag && drag.mode === 'move') {
+    if (drag && drag.mode === 'move' && !drag.moved) {
+      // A click, not a drag: narrow to the light (or take it out of the selection).
+      if (drag.clickSel === 'narrow') { sel = new Set([drag.anchor]); paintSelection(); }
+      else if (drag.clickSel === 'toggle') { sel.delete(drag.anchor); paintSelection(); }
+    } else if (drag && drag.mode === 'move') {
       // Read back the ids the gesture actually started on. `sel` can be repainted by
       // anything between pointerdown and pointerup; drag.origin is the gesture's own
       // record of what it picked up, so the save can never write a fixture nobody moved.
@@ -1342,12 +1497,12 @@ function wireStage(stage) {
   stage.addEventListener('wheel', (e) => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    zoomAt(stage, e.clientX, e.clientY, zoom * factor);
+    zoomAt(stage, e.clientX, e.clientY, v.zoom * factor);
   }, { passive: false });
 
   // drop a library profile onto the stage: patches it and drops it where you let go
   stage.addEventListener('dragover', (e) => {
-    if (!dragProfile) return;
+    if (!dragProfile || viewOnly) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
     stage.classList.add('dropping');
@@ -1356,10 +1511,10 @@ function wireStage(stage) {
   stage.addEventListener('drop', (e) => {
     stage.classList.remove('dropping');
     const profile = dragProfile || e.dataTransfer.getData('text/plain');
-    if (!profile) return;
+    if (!profile || viewOnly) return;
     e.preventDefault();
     const p = xy(e);
-    patchProfile(profile, { universe: gridUni, x: p.x, y: p.y });
+    patchProfile(profile, { universe: gridUni, x: snap ? snapv(p.x) : p.x, y: snap ? snapv(p.y) : p.y });
   });
 }
 
@@ -1457,7 +1612,7 @@ function arrange(kind) {
   });
   fs.forEach((f, i) => {
     f.x = clamp(pts[i].x, -WORLD, WORLD); f.y = clamp(pts[i].y, -WORLD, WORLD);
-    if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }   // same grid as dragging
+    if (snap) { f.x = snapv(f.x); f.y = snapv(f.y); }   // same grid as dragging and as the lines drawn
   });
   placeStages();
   post('api/fixtures/move', { moves: fs.map((f) => ({ id: f.id, x: f.x, y: f.y })) });
@@ -1474,6 +1629,8 @@ function paintSelection() {
   // Skipped only while a marquee is being dragged — see deferAttr. The editor is rebuilt
   // once on release, so the selection it describes is always the finished one.
   if (!deferAttr) buildAttr();
+  // the FX pads say who they act on, which is the selection — repaint it now, not on the next poll
+  if (S && !deferAttr) safeBuild('buildFx', buildFx);
 }
 
 function paintSelList() {
@@ -1538,16 +1695,374 @@ function paintSelList() {
   }
 }
 
+/* =============== value gestures =============== */
+
+// Daslight's mechanic, ported from the studio desk: you do not aim at a fader, you grab
+// the value and push it sideways. Right raises, left lowers (up and down work too), and the
+// travel is relative — where you grabbed does not matter, only how far you moved.
+//   · drag a fader tile (its name, chip or percentage), the master block, or the label
+//     beside a slider — anywhere that is not itself an input or a button
+//   · the wheel nudges ONLY the control you last clicked (outlined while armed): ±4 DMX a
+//     tick, ±1 on a number
+//   · Shift is fine (a percent takes real travel), Ctrl is coarse (top to bottom in a
+//     flick); double-click a readout to type it (see dblEdit below)
+//
+// No pointer lock on purpose: Chrome answers it with a "press Esc" bubble over the page.
+// ~320px of travel covers the full range instead.
+const TRAVEL = 320;
+// Level readouts are percent, and a typed percent is turned back into the DMX value.
+const pctToDmx = (p) => clamp(Math.round(p / 100 * 255), 0, 255);
+const dmxToPct = (v) => Math.round(v / 255 * 100);
+const asPct = (v) => Math.round(v / 255 * 100) + '%';   // a 0-255 value as the percent the desk shows (the Stage page)
+const overControl = (e) => !!(e.target.closest && e.target.closest('input, button, select, a, textarea'));
+
+// The wheel edits ONLY the control you have clicked, so a wheel over an un-armed control
+// does nothing and the pane scrolls, which is what a wheel means everywhere else.
+// Armed on pointerdown, in the capture phase so it is set before any control's own
+// handler runs; pressing anything that is not a value disarms. It is deliberately NOT
+// focus: a scrub host captures the pointer on its tile, so the input underneath never
+// takes focus.
+let wheelArmed = null;
+function armWheel(el) {
+  if (wheelArmed === el) return;
+  if (wheelArmed) wheelArmed.classList.remove('wheelarmed');
+  wheelArmed = el;
+  if (el) el.classList.add('wheelarmed');
+}
+// Does a wheel over `el` belong to the armed control? Either direction of containment
+// counts: the document handler sees the input, scrub() sees the tile around it.
+const wheelAllowed = (el) => !!(wheelArmed && el && (wheelArmed === el || wheelArmed.contains(el) || el.contains(wheelArmed)));
+document.addEventListener('pointerdown', (e) => {
+  const t = e.target;
+  armWheel((t.closest && t.closest('.scrubhost, input[type=range], input[type=number]')) || null);
+}, true);
+
+function scrub(el, { get, set, done, min = 0, max = 255, step = 1, wheel = true } = {}) {
+  const span = max - min;
+  const rate = (e) => (e.shiftKey ? span / (TRAVEL * 4.4) : (e.ctrlKey || e.metaKey) ? span / (TRAVEL / 3.5) : span / TRAVEL);
+  const quant = (v) => clamp(Math.round(v / step) * step, min, max);
+  // The drag is accumulated as a float and only rounded on the way out: at fine rate a
+  // pixel is worth less than one DMX step, and rounding per event would swallow every
+  // one of them and read as a control that has stuck.
+  //
+  // Deltas come from clientX/Y, not movementX (Chrome on Windows reports movementX in
+  // physical pixels). A drag only starts after a few pixels of travel (a click or a
+  // double-click never nudges the value), and the moves are applied once per animation
+  // frame.
+  const DEAD = 3;
+  let from = null, acc = 0, last = null, live = false, raf = 0, pendingV = null;
+  el.classList.add('scrubhost');
+  const flush = () => { raf = 0; if (pendingV != null) { const v = pendingV; pendingV = null; set(v); } };
+  el.addEventListener('pointerdown', (e) => {
+    // Mouse and pen only. On a phone the same gesture is a scroll, and a control that eats
+    // the scroll would make the Touch page unusable — the touch way to this value is the
+    // fader it sits on, which still works.
+    if (e.pointerType === 'touch') return;
+    if (e.button !== 0 || overControl(e)) return;
+    from = get(); acc = 0; live = false; pendingV = null;
+    last = { x: e.clientX, y: e.clientY };
+    // A pointer that is already gone (or a synthetic event from a harness) makes this
+    // throw, and an exception here would take the whole pointerdown handler down with it.
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* no capture: the drag still tracks */ }
+    e.preventDefault();          // a drag across a label must not start a text selection
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (from == null) return;
+    const dx = e.clientX - last.x, dy = e.clientY - last.y;
+    if (!live) {
+      if (Math.abs(dx) < DEAD && Math.abs(dy) < DEAD) return;   // still a click
+      live = true;
+      el.classList.add('scrubbing');
+      document.body.classList.add('scrubbing');
+    }
+    last = { x: e.clientX, y: e.clientY };
+    acc += (dx - dy) * rate(e);
+    pendingV = quant(from + acc);
+    if (!raf) raf = requestAnimationFrame(flush);
+  });
+  const end = () => {
+    if (from == null) return;
+    from = null;
+    if (raf) { cancelAnimationFrame(raf); flush(); }
+    el.classList.remove('scrubbing');
+    document.body.classList.remove('scrubbing');
+    if (live && done) done();
+    live = false;
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+  el.addEventListener('lostpointercapture', end);
+
+  if (wheel) el.addEventListener('wheel', (e) => {
+    // over a button or a number field the wheel is theirs; over the slider it is ours
+    if (overControl(e) && !e.target.matches('input[type=range]')) return;
+    // A sideways gesture is a SCROLL, never a value: the attribute faders are one row you
+    // scroll right through, and a two-finger swipe across a tile has to move the row, not
+    // the channel. deltaY 0 used to read as "down" and nudge it.
+    if (!e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    if (!wheelAllowed(el)) return;   // not the control you clicked: let the pane scroll
+    e.preventDefault();
+    const n = e.shiftKey ? 1 : (e.ctrlKey || e.metaKey) ? 16 : 4;
+    set(quant(get() + (e.deltaY < 0 ? n : -n) * step));
+    if (done) done();
+  }, { passive: false });
+}
+
+// Double-click a readout to type the number. The readout becomes a small number field
+// with the value selected; Enter or clicking away commits, Esc puts it back. What is
+// typed is what is shown: a percent on every level readout, milliseconds on a time.
+function dblEdit(el, get, set, { min = 0, max = 255, step = 1, fmt = String } = {}) {
+  if (!el) return;
+  el.title = (el.title ? el.title + ' — ' : '') + 'double-click to type a value';
+  el.classList.add('editable');
+  // Listen on the tile the readout sits in, not the readout: a scrub tile captures the
+  // pointer on press, and a captured pointer's click and double-click are retargeted to
+  // the capturing element, so a listener on the readout itself never hears them. On the
+  // tile, any double-click that is not on a button or the slider opens the field.
+  const host = el.closest('.scrubhost') || el;
+  host.addEventListener('dblclick', (e) => {
+    if (host !== el && overControl(e)) return;
+    if (el.hidden) return;
+    e.preventDefault(); e.stopPropagation();
+    const cur = get();
+    const input = document.createElement('input');
+    input.type = 'number'; input.className = 'inedit';
+    input.min = min; input.max = max; input.step = step; input.value = cur;
+    // The field sits BESIDE the readout, which is hidden meanwhile — not inside it. The
+    // readouts are repainted from the poll by writing textContent, and a field inside one
+    // would be wiped by the next repaint before a digit could be typed.
+    el.hidden = true;
+    el.insertAdjacentElement('afterend', input);
+    input.focus({ preventScroll: true }); input.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return; done = true;
+      const typed = input.value;
+      const v = clamp(Math.round((+typed || 0) / step) * step, min, max);
+      input.remove();
+      el.hidden = false;
+      if (commit && typed !== '' && !Number.isNaN(+typed)) set(v);
+      el.textContent = fmt(get());
+    };
+    input.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+      ev.stopPropagation();   // the desk's hotkeys must not fire while a number is typed
+    });
+    input.addEventListener('blur', () => finish(true));
+  });
+}
+// The readout beside a slider: typing goes through the slider's own events, like scrub.
+// A 0–255 slider and a 0–1 fraction (LFO spread) both show and take percent; anything
+// else — a time in ms — shows and takes its own unit.
+function dblEditRange(out, input) {
+  if (!out || !input) return;
+  const b = fieldBounds(input);
+  const frac = b.max === 1 && b.step < 1;
+  const dmx = b.min === 0 && b.max === 255;
+  const pct100 = b.min === 0 && b.max === 100;   // layer levels are 0–100 already
+  if (frac || dmx || pct100) {
+    dblEdit(out,
+      () => (frac ? Math.round(+input.value * 100) : dmx ? dmxToPct(+input.value) : +input.value),
+      (p) => applyField(input, frac ? p / 100 : dmx ? pctToDmx(p) : p, b, true),
+      { min: 0, max: 100, step: 1, fmt: (p) => p + '%' });
+  } else {
+    dblEdit(out, () => +input.value, (v) => applyField(input, v, b, true),
+      { min: b.min, max: b.max, step: b.step, fmt: (v) => (input.id === 'audRelease' ? v + 'ms' : String(v)) });
+  }
+}
+
+// What a field can hold, read off its own attributes.
+function fieldBounds(input) {
+  const range = input.type === 'range';
+  const step = parseFloat(input.step) || 1;
+  const min = input.min !== '' ? +input.min : (range ? 0 : -Infinity);
+  const max = input.max !== '' ? +input.max : (range ? 100 : Infinity);
+  return { step, min, max, span: isFinite(min) && isFinite(max) ? max - min : null, decimals: (String(step).split('.')[1] || '').length };
+}
+// Set a field the way a hand would: clamped to its bounds, snapped to its step, and
+// announced through 'input' (and 'change' when the gesture ends) so the existing wiring
+// — debounced posts, readouts, the fader page's holds — runs exactly as if it was typed.
+function applyField(input, v, b, final) {
+  v = clamp(Math.round(v / b.step) * b.step, b.min, b.max);
+  const s = b.decimals ? v.toFixed(b.decimals) : String(Math.round(v));
+  if (input.value !== s) { input.value = s; input.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (final) input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+// A slider with a label and a readout beside it: the whole row is the grab surface, and
+// the value goes through the input's own events so whatever it was wired to still fires.
+function scrubRange(host, input) {
+  if (!host || !input) return;
+  const b = fieldBounds(input);
+  scrub(host, {
+    get: () => +input.value || 0,
+    set: (v) => applyField(input, v, b, false),
+    done: () => applyField(input, +input.value, b, true),
+    min: b.min, max: b.max, step: b.step,
+  });
+}
+
+// The wheel on EVERY slider and number field on the desk — BPM, fade times, the limits —
+// without each builder having to ask for it: a tick nudges the field under the cursor and
+// goes through its own events, so whatever it is wired to fires as if it was typed.
+document.addEventListener('wheel', (e) => {
+  const t = e.target;
+  if (e.defaultPrevented || !(t && t.matches && t.matches('input[type=range], input[type=number]')) || t.disabled || t.readOnly) return;
+  // Not on the 512-channel bank: that page is scrolled with the pointer over a fader
+  // more often than not, and a tick that also moved a live channel would be a hazard.
+  if (t.closest('.mf')) return;
+  // Sideways is a scroll, not a value — see the same guard in scrub().
+  if (!e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  if (!wheelAllowed(t)) return;   // only the field you clicked; otherwise the pane scrolls
+  e.preventDefault();
+  const b = fieldBounds(t);
+  const n = e.shiftKey ? 1 : (e.ctrlKey || e.metaKey) ? 16 : (t.type === 'range' && b.span >= 100 ? 4 : 1);
+  applyField(t, (+t.value || 0) + (e.deltaY < 0 ? n : -n) * b.step, b, true);
+}, { passive: false });
+
 /* =============== attribute editor (CONTROL) =============== */
 
 function fader(role, value, profileName) {
   return `<div class="fader" data-role="${esc(role)}">
     <div class="fh"><i style="background:${ROLE_COLOR[role] || '#6f7478'}"></i>${esc(roleLabel(role, profileName))}</div>
     <div class="chip" style="background:${ROLE_COLOR[role] || '#6f7478'}"></div>
-    <div class="fv">0%</div>
+    <div class="fv" title="Double-click to type a percent">0%</div>
     <div class="vwrap"><input type="range" min="0" max="255" value="${value}"></div>
     <div class="quick"><button data-set="0">0</button><button data-set="128">50</button><button data-set="255">FL</button></div>
   </div>`;
+}
+
+/* ---- colour palettes + favourites (Color tab; from the studio desk) ---- */
+
+const swatch = (hex, extra) => `<button class="sw${extra || ''}" data-hex="${hex}" style="background:${hex}" title="${hex}"></button>`;
+const strip = (colors) => `<span class="palstrip">${colors.slice(0, 12).map((c) => `<i style="background:${c}"></i>`).join('')}</span>`;
+
+function paletteBlock() {
+  const [name, colors] = activePalette();
+  const favs = favorites();
+  return `<div class="palrow">
+      <button class="palbtn" id="palBtn" title="Choose a palette">${esc(name)}<i>▾</i></button>
+      <div class="palmenu" id="palMenu" hidden></div>
+    </div>
+    <div class="swatches" id="palSwatches">${colors.map((c) => swatch(c)).join('')}</div>
+    <div class="favhead">
+      <span>Favourites</span>
+      <button class="palmore${favRemoveMode ? ' is-active' : ''}" id="favMore"
+        title="${favRemoveMode ? 'Done removing' : 'Remove favourites'}">•••</button>
+    </div>
+    <div class="swatches favs" id="favSwatches">${
+      favs.length ? favs.map((c) => swatch(c, favRemoveMode ? ' rm' : '')).join('')
+        : '<span class="muted favempty">none yet — set a colour, then +</span>'
+    }<button class="sw add" id="favAdd" title="Add the current colour to favourites">+</button></div>`;
+}
+
+// The palette menu: built-ins, then hers, then the two things you can do to them.
+function paletteMenuHtml() {
+  const all = allPalettes();
+  const rows = all.map(([n, c, id]) => `<button class="palitem${n === paletteName ? ' is-active' : ''}" data-pal="${esc(n)}">
+      <span class="paln">${esc(n)}${id ? '<em>mine</em>' : ''}</span>${strip(c)}
+      ${id ? `<i class="paldel" data-del="${esc(id)}" title="Delete this palette">✕</i>` : ''}
+    </button>`).join('');
+  return `<div class="palmenu-list">${rows}</div>
+    <div class="palmenu-foot">
+      <div class="palsave">
+        <input type="text" id="palName" placeholder="name this palette" maxlength="40" autocomplete="off">
+        <button class="sq small" id="palSave">Save favourites</button>
+      </div>
+      <p class="muted">Collect colours in favourites, then save them here as a palette of your own.</p>
+    </div>`;
+}
+
+// One document-level listener for the whole page: the Color tab is rebuilt on every selection
+// change, and a listener added per build would pile up. It closes whichever menu is current.
+let closePaletteMenu = null;
+document.addEventListener('click', () => { if (closePaletteMenu) closePaletteMenu(); });
+
+function wirePalette() {
+  // A menu left on <body> by the previous build would still answer to #palMenu and the
+  // new button would drive a detached element. Clear strays before looking anything up.
+  $$('body > .palmenu').forEach((m) => m.remove());
+  const btn = $('#palBtn'); const menu = $('#palMenu');
+  if (!btn || !menu) return;
+
+  const close = () => {
+    menu.hidden = true;
+    if (menu.parentNode === document.body) $('.palrow').appendChild(menu);
+  };
+  closePaletteMenu = close;
+  // Placed by hand because the menu is fixed and lives on <body>: below the button when
+  // there is room, flipped above it when there is not, and never off either edge.
+  const place = () => {
+    const r = btn.getBoundingClientRect();
+    menu.style.width = Math.max(244, r.width) + 'px';
+    menu.style.left = Math.round(Math.min(r.left, innerWidth - Math.max(244, r.width) - 8)) + 'px';
+    const h = menu.offsetHeight;
+    menu.style.top = (r.bottom + 2 + h > innerHeight - 8 && r.top - h - 2 > 8)
+      ? Math.round(r.top - h - 2) + 'px'
+      : Math.round(Math.min(r.bottom + 2, innerHeight - h - 8)) + 'px';
+  };
+  const open = () => {
+    menu.innerHTML = paletteMenuHtml();
+    document.body.appendChild(menu);
+    menu.hidden = false;
+    place();
+    $$('.palitem', menu).forEach((it) => it.addEventListener('click', (e) => {
+      // The delete cross sits inside the row — it must not also select the palette.
+      const del = e.target.closest('.paldel');
+      if (del) {
+        e.stopPropagation();
+        const gone = (S.colors.palettes || []).find((p) => p.id === del.dataset.del);
+        postColors({ palettes: (S.colors.palettes || []).filter((p) => p.id !== del.dataset.del) });
+        if (gone && gone.name === paletteName) paletteName = 'Basic';
+        say('Deleted palette "' + (gone ? gone.name : '') + '"');
+        attrSig = ''; buildAttr();
+        return;
+      }
+      paletteName = it.dataset.pal;
+      close(); attrSig = ''; buildAttr();
+    }));
+
+    // Save what is in favourites as a named palette. No prompt() — a modal dialog blocks
+    // the browser harnesses this project tests the UI with.
+    $('#palSave').addEventListener('click', () => {
+      const nm = $('#palName').value.trim();
+      const favs = favorites();
+      if (!favs.length) return say('Favourites are empty — add some colours first', true);
+      if (!nm) { $('#palName').focus(); return say('Give the palette a name', true); }
+      const list = (S.colors.palettes || []).filter((p) => p.name !== nm);
+      list.push({ id: 'pal' + Date.now().toString(36), name: nm, colors: [...favs] });
+      postColors({ palettes: list });
+      paletteName = nm;
+      say(`Saved "${nm}" — ${favs.length} colour${favs.length === 1 ? '' : 's'}`);
+      close(); attrSig = ''; buildAttr();
+    });
+    $('#palName').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#palSave').click(); });
+  };
+
+  btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden ? open() : close(); });
+  menu.addEventListener('click', (e) => e.stopPropagation());
+  // Fixed to the viewport, so scrolling the pane would slide the button out from under it.
+  $('#attrPanels').addEventListener('scroll', close);
+
+  // Palette swatches apply the colour. Favourites either apply or remove, depending on •••.
+  $$('#palSwatches .sw').forEach((b) => b.addEventListener('click', () => applyColor(b.dataset.hex)));
+  $$('#favSwatches .sw:not(.add)').forEach((b) => b.addEventListener('click', () => {
+    if (!favRemoveMode) return applyColor(b.dataset.hex);
+    const i = favorites().indexOf(b.dataset.hex);
+    const next = favorites().slice();
+    if (i > -1) next.splice(i, 1);
+    postColors({ favorites: next });
+    attrSig = ''; buildAttr();
+  }));
+  $('#favAdd').addEventListener('click', () => {
+    const favs = favorites();
+    if (favs.includes(lastColor)) return say(lastColor + ' is already a favourite');
+    if (favs.length >= 64) return say('That is 64 favourites — remove one first', true);
+    postColors({ favorites: [...favs, lastColor] });
+    say('Added ' + lastColor + ' to favourites');
+    attrSig = ''; buildAttr();
+  });
+  $('#favMore').addEventListener('click', () => { favRemoveMode = !favRemoveMode; attrSig = ''; buildAttr(); });
 }
 
 function buildAttr() {
@@ -1582,6 +2097,7 @@ function buildAttr() {
 
   if (!tabs.length) {
     $('#attrTabs').innerHTML = '';
+    $('#autoWhiteWrap').hidden = true;
     $('#attrPanels').innerHTML = '<p class="muted">Select fixtures on the stage below, in the list, or with a group tab.</p>';
     return;
   }
@@ -1594,6 +2110,11 @@ function buildAttr() {
   }));
 
   const active = tabs.find(([n]) => n === attrTab)[1];
+  // Auto white sits in the header row, only on the Color tab; wired once.
+  const awWrap = $('#autoWhiteWrap'); const aw = $('#autoWhite');
+  awWrap.hidden = attrTab !== 'Color';
+  aw.checked = autoWhite;
+  if (!aw.dataset.wired) { aw.dataset.wired = '1'; aw.addEventListener('change', () => { autoWhite = aw.checked; }); }
   // Read each value from a fixture that actually HAS the role. With everything selected,
   // fixture one is a wash — so the pan/tilt pad recentred to 50/50 and the position faders
   // read 0 while the beams were really at 64/191. The editor was describing a position no
@@ -1604,11 +2125,15 @@ function buildAttr() {
   let html = '';
 
   if (attrTab === 'Color') {
-    html += `<div class="picker">
-      <div class="sqpick" id="sqpick"><div class="dot" style="left:50%;top:0"></div></div>
-      <div class="hues">${HUES.map((h) => `<button data-hex="${h}" style="background:${h}"></button>`).join('')}</div>
-      <label class="pickfoot"><input type="checkbox" id="autoWhite"${autoWhite ? ' checked' : ''}> Auto white
-        <span class="muted">move shared colour onto the W channel</span></label>
+    // Picker and palette share ONE column, with the faders beside them (the studio desk's
+    // layout). The palette's Basic row stands where the quick-hue strip used to be; Auto white,
+    // which the studio desk dropped but this desk keeps, lives in the attribute header (it
+    // cost the column a row, and the Color tab is budgeted to fit without scrolling).
+    html += `<div class="colorcol">
+      <div class="picker">
+        <div class="sqpick" id="sqpick"><div class="dot" style="left:50%;top:0"></div></div>
+      </div>
+      <div class="palettes">${paletteBlock()}</div>
     </div>`;
   }
   if (attrTab === 'Position') {
@@ -1659,6 +2184,19 @@ function buildAttr() {
     $$('.quick button', el).forEach((b) => b.addEventListener('click', () => {
       input.value = b.dataset.set; setRole(role, +b.dataset.set); syncAttr(true);
     }));
+
+    // Drag anywhere on the tile — the name, the chip, the number — to change the value.
+    // The slider and the typed box still work; scrub() ignores presses on an input or a button.
+    scrub(el, {
+      get: () => +input.value,
+      set: (v) => { input.value = v; setRole(role, v); syncAttr(true); },
+    });
+    // Double-click the % to type a percent. dblEdit puts its field BESIDE the readout,
+    // because syncAttr repaints the readout's text at poll rate.
+    dblEdit(el.querySelector('.fv'),
+      () => +(+input.value / 255 * 100).toFixed(1),
+      (p) => { const v = pctToDmx(p); input.value = v; setRole(role, v); syncAttr(true); },
+      { min: 0, max: 100, step: 0.1, fmt: (p) => p.toFixed(1) + '%' });
   });
 
   const sq = $('#sqpick');
@@ -1678,8 +2216,7 @@ function buildAttr() {
     sq.addEventListener('pointerdown', (e) => { down = true; sq.setPointerCapture(e.pointerId); pick(e); });
     sq.addEventListener('pointermove', (e) => down && pick(e));
     sq.addEventListener('pointerup', () => { down = false; });
-    $$('.hues button').forEach((b) => b.addEventListener('click', () => applyColor(b.dataset.hex)));
-    $('#autoWhite').addEventListener('change', (e) => { autoWhite = e.target.checked; });
+    wirePalette();
   }
 
   const pad = $('#xypad');
@@ -1883,6 +2420,14 @@ function buildFaders() {
       num.addEventListener('change', typed);
       num.addEventListener('keydown', (e) => { if (e.key === 'Enter') { typed(); num.blur(); } });
       el.querySelector('.mf-rel').addEventListener('click', () => { queueRaw(fUni, ch, null); syncFaders(); });
+      scrub(el, {
+        get: () => +input.value,
+        set: (v) => { input.value = v; queueRaw(fUni, ch, preMaster(v)); syncFaders(); },
+        // No wheel here: this bank is 512 cells you scroll through, and the pointer is
+        // always over one of them. Taking the wheel would trade scrolling the page for
+        // moving a live channel by accident.
+        wheel: false,
+      });
       return { el, ch, input, num, wireEl, shown: -1, shownWire: -1, held: false };
     });
   }
@@ -1983,6 +2528,15 @@ function wireLimits() {
   const stop = () => { dragging = null; };
   track.addEventListener('pointerup', stop);
   track.addEventListener('pointercancel', stop);
+  const setLimit = (which) => (v) => {
+    if (which === 'max') dimLimits.max = Math.max(v, dimLimits.min); else dimLimits.min = Math.min(v, dimLimits.max);
+    drawDimSlider();
+    sendLimits({ dimMin: dimLimits.min, dimMax: dimLimits.max });
+  };
+  const pctOpts = { min: 0, max: 100, step: 0.1, fmt: (p) => (+p).toFixed(1) + '%' };
+  const pct1 = (v) => +(v / 255 * 100).toFixed(1);
+  dblEdit($('#dimMaxVal'), () => pct1(dimLimits.max), (p) => setLimit('max')(pctToDmx(p)), pctOpts);
+  dblEdit($('#dimMinVal'), () => pct1(dimLimits.min), (p) => setLimit('min')(pctToDmx(p)), pctOpts);
 
   ['panMin', 'panMax', 'tiltMin', 'tiltMax'].forEach((k) => $('#' + k).addEventListener('input', () => {
     drawMoveBoxes(); sendLimits({ [k]: +$('#' + k).value });
@@ -2007,28 +2561,72 @@ function sceneHealth(sc) {
   return { live, missing, dead: live === 0 && missing > 0 };
 }
 
-// The scene list the eye is actually looking at: the bank filter applied. One state,
+// The scene list the eye is actually looking at: the text filter applied. One state,
 // shared by the Control bank, the Touch grid, the 1-9 digit row and Go/next/prev — a
 // digit must fire the Nth VISIBLE row, not the Nth row of a list that is not on screen.
-function visibleScenes() {
+function textFilteredScenes() {
   const q = sceneFilter.trim().toLowerCase();
-  let list = S.scenes;
-  // Kind toggle: hide statics or animations wholesale. Unmarked scenes (the operator's
-  // own saves) only show on All — a "just animations" view full of hand saves isn't one.
-  if (sceneKind === 'anim') list = list.filter((sc) => sc.name.includes('›'));
-  else if (sceneKind === 'static') list = list.filter((sc) => sc.name.includes('·'));
-  return q ? list.filter((sc) => sc.name.toLowerCase().includes(q)) : list;
+  return q ? S.scenes.filter((sc) => sc.name.toLowerCase().includes(q)) : S.scenes;
 }
 
-// Group headers, read straight off the naming convention — "Laser …" prefix, "›" marks
-// an animation, "·" a static look, and the unmarked hero scenes lead the list. No new
-// state: a header row is emitted whenever the group changes while iterating, so a
-// group the filter has emptied never shows its header. Shared by the bank and the
-// Touch grid, so the two views name the sections the same way.
-const sceneGroupOf = (name) => (name.startsWith('Laser') ? 'Laser'
-  : name.includes('›') ? 'Animations'
-  : name.includes('·') ? 'Static looks'
-  : 'Favorites');
+// The text filter only. The Control bank shows one container at a time behind its own
+// tabs; the Touch tab row narrows the Touch grid alone (see buildTouch) and deliberately
+// does not reach the digit row or Go/next/prev.
+function visibleScenes() { return textFilteredScenes(); }
+
+// Counts come from the TEXT-filtered list, not the whole container: typing in the filter
+// should show how many matches each container holds, so an empty one reads as empty
+// rather than as a tab that does nothing when you press it.
+function touchBankCount(b) {
+  const q = sceneFilter.trim().toLowerCase();
+  return b.sceneIds.filter((id) => {
+    const sc = S.scenes.find((s) => s.id === id);
+    return sc && (!q || sc.name.toLowerCase().includes(q));
+  }).length;
+}
+
+// The container the Touch grid is showing. Same resolution as currentContainer(),
+// virtual Unfiled included, but against touchBank — and it never writes bankView, so
+// the phone cannot move the desk. A stale id (container deleted elsewhere) falls back
+// to the first container rather than showing an empty grid with no explanation.
+function touchContainer() {
+  if (touchBank === UNFILED) {
+    const ids = unfiledIds();
+    if (ids.length) return { id: UNFILED, name: 'Unfiled', color: '#878d92', sceneIds: ids, virtual: true };
+  } else if (touchBank && bankById(touchBank)) return bankById(touchBank);
+  if (banks()[0]) return banks()[0];
+  const ids = unfiledIds();
+  if (ids.length) return { id: UNFILED, name: 'Unfiled', color: '#878d92', sceneIds: ids, virtual: true };
+  return null;
+}
+
+// One tab per container, in her own order, carrying her colour; Unfiled only while
+// something is unfiled, so nothing can vanish and there is nothing to manage when there is
+// nothing to file. No "All" tab and no "+": containers are made on Control.
+function bankTabsHtml() {
+  const cur = touchContainer();
+  const open = cur ? cur.id : null;
+  const tabs = banks().map((b) =>
+    `<button class="btab${open === b.id ? ' is-active' : ''}" data-tab="${esc(b.id)}" style="--bc:${esc(b.color)}">${esc(b.name)}<i>${touchBankCount(b)}</i></button>`).join('');
+  const un = unfiledIds().length;
+  return tabs + (un
+    ? `<button class="btab unfiled${open === UNFILED ? ' is-active' : ''}" data-tab="${UNFILED}" style="--bc: var(--muted)">Unfiled<i>${un}</i></button>`
+    : '');
+}
+
+function setBankTab(t) {
+  if (touchBank === t) return;
+  touchBank = t;
+  try { localStorage.setItem('touchBank', t); } catch (e) {}
+  delete $('#touchGrid').dataset.sig;
+  buildTouch();
+}
+
+function paintBankTabs() {
+  const html = bankTabsHtml();
+  const el = $('#tBankTabs');
+  if (el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
+}
 
 // Recall that reports failure. A recall whose POST died used to look exactly like a
 // recall that worked — same round-trip honesty rule as the blackout button.
@@ -2079,60 +2677,362 @@ const laserNoteOf = (sc) => { const n = laserLinkOf(sc); return n ? ` · <span c
 const laserTnoteOf = (sc) => { const n = laserLinkOf(sc); return n ? `<i class="tnote tlaser" title="laser: ${esc(n)}">laser: ${esc(n)}</i>` : ''; };
 pollLaserLinks();
 
+/* =============== scene containers (CONTROL) =============== */
+
+// Coloured containers she fills by hand (ported from the studio desk, Daslight-style), one
+// tab each across the top of the bank area, tiles in a grid inside. Containers only: every
+// scene shows inside one, and scenes that belong to no container appear under an automatic
+// "Unfiled" tab, which exists only while there are such scenes — so nothing can vanish, and
+// there is nothing to manage when there is nothing unfiled. Server-side these are
+// `state.banks` (the wire name stays): replace-whole via POST api/banks, like sets. Which
+// tab is open is a browser preference (bankView; the Touch page keeps its own, touchBank).
+function banks() { return (S && S.banks) || []; }
+function bankById(id) { return banks().find((b) => b.id === id); }
+function bankColors() { return (S && S.bankColors) || ['#f5c518', '#f0902f', '#f04ab0', '#a05fd6', '#2f9fe0', '#35d2dd', '#2fd93a', '#e0524a']; }
+
+function unfiledIds() {
+  const filed = new Set();
+  for (const b of banks()) for (const id of b.sceneIds) filed.add(id);
+  return S.scenes.filter((s) => !filed.has(s.id)).map((s) => s.id);
+}
+// The container the bank area is showing: a real one, the virtual Unfiled, or null.
+function currentContainer() {
+  if (bankView === UNFILED) {
+    const ids = unfiledIds();
+    if (ids.length) return { id: UNFILED, name: 'Unfiled', color: '#878d92', sceneIds: ids, virtual: true };
+    bankView = banks()[0] ? banks()[0].id : null;
+  }
+  if (bankView && bankById(bankView)) return bankById(bankView);
+  // stale or never set: first container, else Unfiled if there is anything unfiled
+  if (banks()[0]) { bankView = banks()[0].id; return banks()[0]; }
+  const ids = unfiledIds();
+  if (ids.length) { bankView = UNFILED; return { id: UNFILED, name: 'Unfiled', color: '#878d92', sceneIds: ids, virtual: true }; }
+  bankView = null;
+  return null;
+}
+
+function postBanks(list) {
+  S.banks = list;
+  touchedAt = Date.now();   // pullState keeps S.banks while this is in flight — see the busy guard
+  banksPostedAt = Date.now();
+  return post('api/banks', { banks: list }).then((r) => { if (r && r.error) say('containers not saved — ' + r.error, true); });
+}
+
+function setBankView(v) {
+  bankView = v;
+  try { if (v) localStorage.setItem('bankView', v); else localStorage.removeItem('bankView'); } catch (e) {}
+  delete $('#bankList').dataset.sig;
+  buildBank();
+}
+
+function addBank() {
+  const list = banks().slice();
+  const n = list.length + 1;
+  const b = { id: 'bank' + Date.now().toString(36), name: 'Container ' + n, color: bankColors()[(n - 1) % bankColors().length], sceneIds: [] };
+  list.push(b);
+  return postBanks(list).then(() => { setBankView(b.id); return b; });
+}
+
+// Scenes into a container: from a drop on its tab, or from a container's own + (which saves
+// the look first). Order is arrival order; duplicates are ignored, so dropping the same
+// scene twice cannot double it.
+function addToBank(bankId, ids) {
+  const b = bankById(bankId);
+  if (!b) return;
+  const have = new Set(b.sceneIds);
+  const fresh = ids.filter((id) => !have.has(id) && S.scenes.some((s) => s.id === id));
+  if (!fresh.length) return say(`Already in ${b.name}`);
+  b.sceneIds = [...b.sceneIds, ...fresh];
+  postBanks(banks().slice()).then(() => { delete $('#bankList').dataset.sig; buildBank(); });
+  say(`${fresh.length} scene${fresh.length === 1 ? '' : 's'} into ${b.name}`);
+}
+
+// The tab row. Rebuilt only when its content changes (names, colours, counts, which is
+// open), never on every poll — a drag-over highlight must not be wiped mid-drag.
+function ctlTabsHtml() {
+  const cur = currentContainer();
+  const open = cur ? cur.id : null;
+  const rest = banks().map((b) => `<button class="btab${open === b.id ? ' is-active' : ''}" data-bank="${esc(b.id)}" style="--bc:${esc(b.color)}" title="${esc(b.name)} — drop scenes here">${esc(b.name)}<i>${b.sceneIds.filter((id) => S.scenes.some((s) => s.id === id)).length}</i></button>`).join('');
+  const un = unfiledIds().length;
+  const unfiled = un ? `<button class="btab unfiled${open === UNFILED ? ' is-active' : ''}" data-bank="${UNFILED}" style="--bc: var(--muted)" title="Scenes that are in no container — drag them onto a container">Unfiled<i>${un}</i></button>` : '';
+  return rest + unfiled + `<button class="btab add" data-bank="+" title="New container">+</button>`;
+}
+
+function paintCtlTabs() {
+  const el = $('#bankTabs');
+  if (el.querySelector('.tabrename')) return;   // a name is being typed in a tab: hands off
+  const html = ctlTabsHtml();
+  if (el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
+}
+
+// What a scene says about itself, for the tile's tooltip: the things the old scene detail
+// pane showed (fade, how many fixtures, what is stored for fixtures no longer patched, the
+// manual channels it pins on recall), so nothing about a scene became unreachable.
+function sceneTip(sc) {
+  const h = sceneHealth(sc);
+  const pins = Object.keys(sc.raw || {}).length;
+  return `${sc.name} — fade ${(sc.fadeMs / 1000).toFixed(1)}s · ${h.live} fixture${h.live === 1 ? '' : 's'}`
+    + (h.dead ? ' · none of its fixtures are patched any more, so firing it does nothing' : h.missing ? ` · ${h.missing} stored for fixtures no longer patched` : '')
+    + (pins ? ` · pins ${pins} manual channel${pins === 1 ? '' : 's'} on recall` : '');
+}
+
+// The tile grid of one container. Tiles keep the .bankrow shape so the click, long-press,
+// context menu and shift/ctrl selection wiring for rows all work on them unchanged.
+function bankTilesHtml(b, keyOf) {
+  const q = sceneFilter.trim().toLowerCase();
+  const scenes = b.sceneIds.map((id) => S.scenes.find((s) => s.id === id)).filter(Boolean)
+    .filter((sc) => !q || sc.name.toLowerCase().includes(q));
+  const tiles = scenes.map((sc) => {
+    const h = sceneHealth(sc);
+    // Sentence case, like everything else on the desk — these were block capitals.
+    const kind = sc.name.includes('›') ? 'Animation' : sc.name.includes('·') ? 'Static' : sc.name.startsWith('Laser') ? 'Laser' : 'Scene';
+    const hk = keyOf[sc.name];
+    return `<div class="bankrow tile${h.dead ? ' dead' : ''}" data-id="${sc.id}" draggable="true" style="--bc:${esc(b.color)}" title="${esc(sceneTip(sc))}">
+      <div class="txt"><span class="nm">${esc(sc.name)}</span><span class="sub">${kind}${h.dead ? ' · nothing patched' : h.missing ? ` · ${h.missing} missing` : ''}${laserNoteOf(sc)}</span></div>
+      ${hk ? `<i class="hk" title="press ${esc(hotkeyLabel(hk))} to fire this scene">${esc(hotkeyLabel(hk))}</i>` : ''}
+      <div class="bar"></div></div>`;
+  }).join('');
+  const head = b.virtual
+    ? `<div class="bankhead-row" style="--bc:${esc(b.color)}">
+        <span class="nm">${esc(b.name)}</span><span class="cnt">${scenes.length}</span>
+        <button class="sq small bankchase" data-chasebank="${esc(b.id)}" title="Put these scenes (or the ones you selected) in the chase and start it">▶ Chase</button>
+        <span class="muted">drag these onto a container tab to file them</span>
+      </div>`
+    : `<div class="bankhead-row" style="--bc:${esc(b.color)}">
+        <span class="swatch" data-recolor="${esc(b.id)}" title="Change colour"></span>
+        <span class="nm" data-rename="${esc(b.id)}" title="Double-click to rename">${esc(b.name)}</span>
+        <span class="cnt">${scenes.length}</span>
+        <button class="sq small bankchase" data-chasebank="${esc(b.id)}" title="Put these scenes (or the ones you selected) in the chase and start it${b.holdMs != null ? ` — hold ${b.holdMs / 1000}s, fade ${(b.fadeMs || 0) / 1000}s` : ''}">▶ Chase</button>
+        <button class="sq small accent coladd" data-bank="${esc(b.id)}" title="Save the current look as a new scene here">+</button>
+        <button class="sq small bankdel" data-delbank="${esc(b.id)}" title="Delete this container — its scenes move to Unfiled">✕ Delete container</button>
+      </div>`;
+  return head + `<div class="tiles" data-bank="${esc(b.id)}">${tiles || `<p class="muted colempty">${q ? `no match for "${esc(q)}"` : 'Empty — press + to save the current look here, or drag scenes onto this tab'}</p>`}</div>`;
+}
+
+// Nothing to show at all: no containers, nothing unfiled.
+function bankEmptyHtml() {
+  return `<div class="bankhead-row" style="--bc: var(--muted)"><span class="nm">No containers yet</span></div>
+    <div class="tiles"><p class="muted colempty">${S.scenes.length ? '' : 'No scenes yet — set a look and press Save scene, or '}press the + tab to make a container.</p></div>`;
+}
+
+// A tile that opens with its name in edit, straight after "+" made it — like Daslight's
+// "New Scene" with the text selected. Enter commits, Esc keeps the default, blur commits.
+function startTileRename(id) {
+  const tile = $(`#bankList .bankrow[data-id="${id}"]`);
+  const sc = S.scenes.find((s) => s.id === id);
+  if (!tile || !sc) return;
+  const nm = tile.querySelector('.nm');
+  const input = document.createElement('input');
+  input.type = 'text'; input.value = sc.name; input.maxLength = 40; input.className = 'tilerename';
+  nm.replaceWith(input);
+  input.focus({ preventScroll: true }); input.select();
+  let done = false;
+  const finish = (commit) => {
+    if (done) return; done = true;
+    const v = input.value.trim();
+    input.replaceWith(nm);   // put the name back before the rebuild, or its guard waits forever
+    const cur = S.scenes.find((s) => s.id === id) || sc;
+    if (commit && v && v !== cur.name) {
+      const oldName = cur.name;
+      cur.name = v; nm.textContent = v;   // optimistic; the poll confirms
+      post('api/scenes/update', { id, name: v }).then((r) => {
+        if (r && r.error) say('rename did not reach the desk — ' + r.error, true);
+        else { const k = hotkeyOf(oldName); if (k) { sceneHotkeys[k] = v; saveHotkeys(); } }   // a key follows its scene through a rename
+        pullState();
+      });
+    }
+    delete $('#bankList').dataset.sig; buildBank();
+  };
+  input.addEventListener('keydown', (ev) => {
+    ev.stopPropagation();   // the desk's hotkeys must not fire while a name is typed
+    if (ev.key === 'Enter') finish(true); else if (ev.key === 'Escape') finish(false);
+  });
+  input.addEventListener('blur', () => finish(true));
+  // a click inside the field must not recall the scene or start a drag
+  input.addEventListener('click', (ev) => ev.stopPropagation());
+  input.addEventListener('pointerdown', (ev) => ev.stopPropagation());
+  tile.draggable = false;
+}
+
+// Drag a scene tile onto a container tab. HTML5 drag, not pointer events: the rows
+// already own pointerdown for the long-press key binding, and a native drag image is
+// what makes "you are carrying a scene" visible. Multi-select travels together.
+function wireBankDrag() {
+  const list = $('#bankList');
+  list.addEventListener('dragstart', (e) => {
+    const r = e.target.closest('.bankrow');
+    if (!r) return;
+    const ids = sceneSel.has(r.dataset.id) && sceneSel.size > 1 ? [...sceneSel] : [r.dataset.id];
+    e.dataTransfer.setData('text/plain', ids.join(','));
+    e.dataTransfer.effectAllowed = 'copy';
+    document.body.classList.add('dragscene');
+  });
+  list.addEventListener('dragend', () => document.body.classList.remove('dragscene'));
+  const tabs = $('#bankTabs');
+  const droppable = (t) => t && t.dataset.bank !== UNFILED && t.dataset.bank !== '+';
+  tabs.addEventListener('dragover', (e) => {
+    const t = e.target.closest('.btab');
+    if (!droppable(t)) return;
+    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    t.classList.add('dragover');
+  });
+  tabs.addEventListener('dragleave', (e) => { const t = e.target.closest('.btab'); if (t) t.classList.remove('dragover'); });
+  tabs.addEventListener('drop', (e) => {
+    const t = e.target.closest('.btab');
+    if (!t) return;
+    t.classList.remove('dragover');
+    const ids = (e.dataTransfer.getData('text/plain') || '').split(',').filter(Boolean);
+    if (!ids.length || !droppable(t)) return;
+    e.preventDefault();
+    addToBank(t.dataset.bank, ids);
+  });
+}
+
+function wireBankTabs() {
+  $('#bankTabs').addEventListener('click', (e) => {
+    const t = e.target.closest('.btab');
+    if (!t) return;
+    if (t.dataset.bank === '+') return addBank();
+    setBankView(t.dataset.bank);
+  });
+  // Double-click the TAB itself to rename — that is where she goes for it. The field
+  // lives inside the tab; paintCtlTabs stands down while it exists (see the guard there),
+  // so a poll cannot wipe the half-typed name before Enter.
+  $('#bankTabs').addEventListener('dblclick', (e) => {
+    const t = e.target.closest('.btab');
+    if (!t || !bankById(t.dataset.bank)) return;
+    const b = bankById(t.dataset.bank);
+    e.preventDefault();
+    const input = document.createElement('input');
+    input.type = 'text'; input.value = b.name; input.maxLength = 40; input.className = 'tabrename';
+    t.textContent = ''; t.appendChild(input);
+    input.focus(); input.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return; done = true;
+      const v = input.value.trim();
+      input.remove();   // the repaint guards stand down only once the field is gone
+      // Re-find by id: a poll may have replaced S.banks since the double-click, and a
+      // rename written onto the old object would post the unrenamed list.
+      const cur = bankById(b.id);
+      if (commit && cur && v && v !== cur.name) { cur.name = v; postBanks(banks().slice()).then(() => say(`Renamed to "${v}"`)); }
+      delete $('#bankTabs').dataset.sig; delete $('#bankList').dataset.sig; buildBank();
+    };
+    input.addEventListener('keydown', (ev) => { ev.stopPropagation(); if (ev.key === 'Enter') finish(true); else if (ev.key === 'Escape') finish(false); });
+    input.addEventListener('blur', () => finish(true));
+    input.addEventListener('click', (ev) => ev.stopPropagation());
+  });
+  // Rename (double-click the name), recolour (click the swatch: next palette colour),
+  // delete (✕). All on the container head, delegated, because the head is rebuilt with the grid.
+  $('#bankList').addEventListener('dblclick', (e) => {
+    const n = e.target.closest('[data-rename]');
+    if (!n) return;
+    const b = bankById(n.dataset.rename); if (!b) return;
+    const input = document.createElement('input');
+    input.type = 'text'; input.value = b.name; input.maxLength = 40; input.className = 'bankrename';
+    n.replaceWith(input); input.focus(); input.select();
+    let done = false;
+    const finish = (commit) => {
+      if (done) return; done = true;
+      const v = input.value.trim();
+      input.remove();   // or buildBank's guard keeps waiting for the field to go
+      const cur = bankById(b.id);   // re-find: S.banks may have been replaced by a poll
+      if (commit && cur && v && v !== cur.name) { cur.name = v; postBanks(banks().slice()).then(() => say(`Renamed to "${v}"`)); }
+      delete $('#bankList').dataset.sig; buildBank();
+    };
+    input.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') finish(true); else if (ev.key === 'Escape') finish(false); ev.stopPropagation(); });
+    input.addEventListener('blur', () => finish(true));
+  });
+  $('#bankList').addEventListener('click', (e) => {
+    const sw = e.target.closest('[data-recolor]');
+    if (sw) {
+      const b = bankById(sw.dataset.recolor); if (!b) return;
+      const cols = bankColors();
+      b.color = cols[(cols.indexOf(b.color) + 1) % cols.length];
+      postBanks(banks().slice()).then(() => { delete $('#bankList').dataset.sig; buildBank(); });
+      return;
+    }
+    // ▶ Chase: this container becomes the chase, in its own order, and starts. Two or
+    // more selected scenes in it = just those. Filling the chase used to be one right-click
+    // per scene, twice over to swap one sequence for another — eight clicks mid-set.
+    const ch = e.target.closest('[data-chasebank]');
+    if (ch) {
+      const b = ch.dataset.chasebank === UNFILED ? currentContainer() : bankById(ch.dataset.chasebank);
+      if (!b) return;
+      const live = b.sceneIds.filter((id) => S.scenes.some((s) => s.id === id));
+      const picked = live.filter((id) => sceneSel.has(id));
+      const ids = picked.length >= 2 ? picked : live;
+      if (!ids.length) return say(`"${b.name}" has no scenes to chase`, true);
+      const body = { sceneIds: ids, enabled: true };
+      if (b.holdMs != null) body.holdMs = b.holdMs;
+      if (b.fadeMs != null) body.fadeMs = b.fadeMs;
+      post('api/chase', body).then((r) => {
+        if (r && r.error) return say(r.error, true);
+        const c = (r && r.chase) || body;
+        say(`chasing ${ids.length} scene${ids.length === 1 ? '' : 's'} from ${b.name}${picked.length >= 2 ? ' (your selection)' : ''} · hold ${(c.holdMs / 1000).toFixed(1)}s · fade ${(c.fadeMs / 1000).toFixed(1)}s`);
+        pullState();
+      });
+      return;
+    }
+    const del = e.target.closest('[data-delbank]');
+    if (del) {
+      const b = bankById(del.dataset.delbank); if (!b) return;
+      const list = banks().filter((x) => x.id !== b.id);
+      postBanks(list).then(() => setBankView(list[0] ? list[0].id : UNFILED));
+      say(`Deleted container "${b.name}" — its ${b.sceneIds.length} scene${b.sceneIds.length === 1 ? '' : 's'} moved to Unfiled`);
+    }
+  }, true);
+}
+wireBankTabs();
+wireBankDrag();
+
 function buildBank() {
   // The library runs to hundreds of scenes, so: filter by substring, one delegated click
   // listener on the list (wired once, below) instead of one per row, and the scroll
   // position survives the rebuild — the poll must not yank the list out from under a
   // browse mid-set.
   const list = $('#bankList');
+  // A name being typed (container head or a fresh tile) lives inside this list; a rebuild
+  // would remove the field mid-word and nothing would ever commit. Stand down until Enter.
+  if (list.querySelector('.bankrename, .tilerename')) return;
   const q = sceneFilter.trim().toLowerCase();
   const scenes = visibleScenes();
+  // The container on show: a real one, the virtual Unfiled, or null (nothing yet).
+  const bank = currentContainer();
+  paintCtlTabs();
   // Reverse hotkey map once per rebuild, not a scan per row — this runs over 500 tiles.
   const keyOf = {};
   for (const k of Object.keys(sceneHotkeys)) keyOf[sceneHotkeys[k]] = k;
   // Structure only — active/sel are classes, toggled below, so a recall never rebuilds
   // 500 rows of innerHTML just to move the highlight one row.
   const sig = scenes.map((sc) => sc.id + sc.name + sc.fadeMs + sceneHealth(sc).missing + sceneHealth(sc).dead).join('|')
-    + '#' + q
+    + '#' + q + '#' + bankView + '#' + (bank ? bank.name + bank.color + bank.holdMs + bank.fadeMs + bank.sceneIds.join(',') : '') + '#' + banks().length + '#' + unfiledIds().length
     + '#' + Object.entries(sceneHotkeys).map(([k, n]) => k + n).join(',')
     + '#' + laserLinksSig();
   if (list.dataset.sig !== sig) {
   list.dataset.sig = sig;
-  const keepScroll = list.scrollTop;
-  // Group headers come from sceneGroupOf (shared with the Touch grid); the sig above
-  // (names + filter) already covers any change to the grouping. Headers are not
-  // .bankrow, so the delegated click, the long-press and the hotkeys all skip them
-  // by construction.
-  let lastGroup = null;
-  let html = '';
-  for (const sc of scenes) {
-    const g = sceneGroupOf(sc.name);
-    if (g !== lastGroup) { lastGroup = g; html += `<div class="bankhead">${esc(g)}</div>`; }
-    const h = sceneHealth(sc);
-    const note = h.dead ? ' · nothing patched' : h.missing ? ` · ${h.missing} missing` : '';
-    const hk = keyOf[sc.name];
-    html += `<div class="bankrow${h.dead ? ' dead' : ''}" data-id="${sc.id}">
-       <div class="txt"><span class="nm">${esc(sc.name)}</span><span class="sub">Fade ${(sc.fadeMs / 1000).toFixed(1)}s${note}${laserNoteOf(sc)}</span></div>
-       ${hk ? `<i class="hk" title="press ${esc(hotkeyLabel(hk))} to fire this scene">${esc(hotkeyLabel(hk))}</i>` : ''}
-       <div class="bar"></div></div>`;
-  }
-  list.innerHTML = html || (q
-    ? `<p class="muted" style="padding:10px">no scene matches "${esc(q)}"</p>`
-    : '<p class="muted" style="padding:10px">No scenes yet — set a look and press +</p>');
-  list.scrollTop = keepScroll;
+  list.classList.add('asbank');
+  // The tile grid scrolls on its own — remember where it was.
+  const keepScroll = {};
+  for (const col of $$('.tiles', list)) keepScroll[col.dataset.bank] = col.scrollTop;
+  // Containers only: the open one's tiles, or the empty prompt. Tiles are .bankrow, so
+  // the delegated click, long-press, context menu and selection wiring all apply.
+  list.innerHTML = bank ? bankTilesHtml(bank, keyOf) : bankEmptyHtml();
+  for (const col of $$('.tiles', list)) { const k = col.dataset.bank; if (keepScroll[k] != null) col.scrollTop = keepScroll[k]; }
   delete list.dataset.active; delete list.dataset.selid;   // force the class pass below
+  // A tile made by + opens with its name selected for typing, once it exists on screen.
+  if (pendingRename && $(`#bankList .bankrow[data-id="${pendingRename}"]`)) { const id = pendingRename; pendingRename = null; startTileRename(id); }
   }
   // Highlight moves are class toggles, not rebuilds.
-  const act = String(S.activeScene ?? ''), selId = String(activeScene ?? '');
+  const act = String(S.activeScene ?? ''), selId = [...sceneSel].sort().join(',');
   if (list.dataset.active !== act || list.dataset.selid !== selId) {
     list.dataset.active = act; list.dataset.selid = selId;
     for (const r of $$('.bankrow', list)) {
       r.classList.toggle('active', r.dataset.id === act);
-      r.classList.toggle('sel', r.dataset.id === selId);
+      r.classList.toggle('sel', sceneSel.has(r.dataset.id));
     }
     revealActiveRow(act);
   }
-  buildSceneDetail();
 }
 
 // A recall (hotkey, chase, Go, another client) must land the eye on the row that fired:
@@ -2143,10 +3043,11 @@ $('#bankList').addEventListener('wheel', () => { bankUserScrollAt = Date.now(); 
 $('#bankList').addEventListener('touchmove', () => { bankUserScrollAt = Date.now(); }, { passive: true });
 function revealActiveRow(act) {
   if (!act || Date.now() - bankUserScrollAt < 1500) return;
-  const list = $('#bankList');
-  const row = list.querySelector('.bankrow.active');
+  const row = $('#bankList .bankrow.active');
   if (!row) return;
-  const lr = list.getBoundingClientRect(), rr = row.getBoundingClientRect();
+  // The row scrolls inside its own tile grid, so that is the viewport that matters.
+  const col = row.closest('.tiles') || $('#bankList');
+  const lr = col.getBoundingClientRect(), rr = row.getBoundingClientRect();
   if (rr.top < lr.top || rr.bottom > lr.bottom) row.scrollIntoView({ block: 'nearest' });
 }
 
@@ -2157,9 +3058,44 @@ $('#bankList').addEventListener('click', (e) => {
   if (suppressBankClick) { suppressBankClick = false; return; }
   const r = e.target.closest('.bankrow');
   if (!r || !r.dataset.id) return;
-  activeScene = r.dataset.id;
-  recallScene(r.dataset.id);
+  const id = r.dataset.id;
+  if (e.shiftKey || e.ctrlKey || e.metaKey) {
+    // Selecting, not firing: a range or a toggle must not send scenes to the rig.
+    e.preventDefault();
+    if (e.shiftKey) {
+      // No anchor yet (first click of the session is a shift-click, or the anchor was
+      // deleted): range from the scene on stage, else this click becomes the anchor —
+      // shift-clicking twice must select the span, not add one row per click.
+      const from = sceneAnchor || activeScene || S.activeScene || id;
+      // Range over the rows ON SCREEN, in the order they are drawn: container order is
+      // her order, not the library's.
+      const order = $$('#bankList .bankrow').map((x) => x.dataset.id);
+      const a = order.indexOf(from), b = order.indexOf(id);
+      if (!e.ctrlKey && !e.metaKey) sceneSel.clear();
+      if (a > -1 && b > -1) for (let i = Math.min(a, b); i <= Math.max(a, b); i++) sceneSel.add(order[i]);
+      else sceneSel.add(id);
+      if (!sceneAnchor) sceneAnchor = from;
+    } else {
+      sceneSel.has(id) ? sceneSel.delete(id) : sceneSel.add(id);
+      sceneAnchor = id;
+    }
+    activeScene = id;
+    paintSceneSel();
+    return;
+  }
+  sceneSel = new Set([id]);
+  sceneAnchor = id;
+  activeScene = id;
+  recallScene(id);
 });
+
+function paintSceneSel() {
+  const list = $('#bankList');
+  delete list.dataset.selid;   // force buildBank's class pass
+  for (const r of $$('.bankrow', list)) r.classList.toggle('sel', sceneSel.has(r.dataset.id));
+  list.dataset.selid = [...sceneSel].sort().join(',');
+}
+
 // One filter state for the Control bank AND the Touch grid — typing in either box
 // filters both, and clearing one clears both.
 function setSceneFilter(v) {
@@ -2171,78 +3107,26 @@ function setSceneFilter(v) {
 }
 $('#sceneFilter').addEventListener('input', () => setSceneFilter($('#sceneFilter').value));
 $('#sceneFilterClear').addEventListener('click', () => setSceneFilter(''));
+
+// Delegated once — the tabs are rebuilt on every poll that changes the counts.
+$('#tBankTabs').addEventListener('click', (e) => {
+  const b = e.target.closest('.btab');
+  if (b) setBankTab(b.dataset.tab);
+});
 $('#tSceneFilter').addEventListener('input', () => setSceneFilter($('#tSceneFilter').value));
 $('#tSceneFilterClear').addEventListener('click', () => setSceneFilter(''));
-
-// Kind toggle (All / › animations / · statics) — one state, mirrored on both pages,
-// same rule as the text filter. The digit hotkeys and Go follow visibleScenes(), so
-// hiding a kind also takes it out of their reach — that is the point.
-function setSceneKind(v) {
-  sceneKind = v;
-  for (const b of $$('.kindbtn')) b.classList.toggle('is-active', b.dataset.kind === v);
-  if (S) { buildBank(); buildTouch(); }
-}
-$$('.kindbtn').forEach((b) => b.addEventListener('click', () => setSceneKind(b.dataset.kind)));
-
-function buildSceneDetail() {
-  const sc = S.scenes.find((s) => s.id === (activeScene || S.activeScene));
-  $('#sceneTitle').textContent = sc ? sc.name : 'No scene selected';
-  if (!sc) {
-    $('#sceneDetail').dataset.sig = 'empty';
-    $('#sceneDetail').innerHTML = '<p class="sd-empty">Pick a scene on the left, or set a look on the stage and press + to save one.</p>';
-    return;
-  }
-  const health = sceneHealth(sc);
-  // Guarded like the rest. This pane holds a number field and a checkbox, and rebuilding it
-  // on every poll took the focus out of the fade field mid-keystroke and swapped the chase
-  // checkbox out from under a click — the exact 'a poll overwriting a value she chose' bug
-  // this project has shipped before.
-  const sig = sc.id + sc.name + sc.fadeMs + health.dead + health.missing + health.live
-    + S.chase.sceneIds.includes(sc.id) + '#' + Object.keys(sc.raw || {}).length;
-  if ($('#sceneDetail').dataset.sig === sig) return;
-  $('#sceneDetail').dataset.sig = sig;
-  $('#sceneDetail').innerHTML = `${health.dead
-      ? `<div class="deadwarn">None of this scene's ${health.missing} fixtures are patched any more, so firing it does nothing.
-         Re-patch them, overwrite the scene with a current look, or delete it.</div>`
-      : health.missing
-        ? `<div class="deadwarn soft">${health.missing} of this scene's fixtures are no longer patched — the rest will still fire.</div>`
-        : ''}
-    <div class="strip">${sceneStrip(sc, 40)}</div>
-    <div class="sd-row">
-      <button class="sq accent" id="sdGo">Go</button>
-      <button class="sq" id="sdRestage">↻ Overwrite with current look</button>
-      <button class="sq danger" id="sdDel">✕ Delete</button>
-    </div>
-    <div class="sd-row">
-      <label class="muted">Fade <input type="number" id="sdFade" min="0" step="0.1" style="width:70px" value="${(sc.fadeMs / 1000).toFixed(1)}">s</label>
-      <label class="muted"><input type="checkbox" id="sdChase"${S.chase.sceneIds.includes(sc.id) ? ' checked' : ''}> include in chase</label>
-      <span class="muted">${sceneHealth(sc).live} fixtures${sceneHealth(sc).missing
-        ? ` · ${sceneHealth(sc).missing} stored for fixtures no longer patched` : ''}${Object.keys(sc.raw || {}).length
-        ? ` · pins ${Object.keys(sc.raw).length} manual channel${Object.keys(sc.raw).length === 1 ? '' : 's'} on recall`
-        : ''}</span>
-    </div>`;
-  $('#sdGo').addEventListener('click', () => post('api/scenes/recall', { id: sc.id }).then(pullState));
-  // Both of these destroy a saved look with one click and no undo, so both ask first, through
-  // deskAsk: a bar, not a native confirm() (which froze the poll, the stage repaint and the panic key).
-  $('#sdRestage').addEventListener('click', (e) => askThen(`Overwrite the scene "${sc.name}" with the current look?`, 'Overwrite', () => {
-    post('api/scenes/update', { id: sc.id, restage: true }).then(pullState);
-  }));
-  $('#sdDel').addEventListener('click', (e) => askThen(`Delete the scene "${sc.name}"? This cannot be undone.`, 'Delete', () => {
-    activeScene = null;
-    post('api/scenes/remove', { id: sc.id }).then(pullState);
-  }));
-  $('#sdFade').addEventListener('change', (e) => post('api/scenes/update', { id: sc.id, fadeMs: Math.round(+e.target.value * 1000) }).then(pullState));
-  $('#sdChase').addEventListener('change', (e) => {
-    const ids = new Set(S.chase.sceneIds);
-    e.target.checked ? ids.add(sc.id) : ids.delete(sc.id);
-    post('api/chase', { sceneIds: [...ids] }).then(pullState);
-  });
-}
 
 function buildTouch() {
   const wrap = $('#touchGrid');
   const q = sceneFilter.trim().toLowerCase();
-  const scenes = visibleScenes();
+  // One container at a time, in the order she filled it — on a phone that is the point.
+  // The container tab narrows this grid ONLY: the digit row and Go/next/prev still walk
+  // the whole text-filtered library (see visibleScenes).
+  const cur = touchContainer();
+  const scenes = cur
+    ? cur.sceneIds.map((id) => S.scenes.find((s) => s.id === id))
+        .filter((sc) => sc && (!q || sc.name.toLowerCase().includes(q)))
+    : [];
   // Structure only, like the bank: the active tile is a class toggle below, so a recall
   // never rebuilds a few hundred tiles of innerHTML — which also ate the tap that was
   // mid-flight when the poll landed.
@@ -2250,24 +3134,22 @@ function buildTouch() {
   // that is all looks and cues (MOXIR) has no scenes and does not need telling to save any.
   const hasLooks = looksOf().length > 0;
   const hasCues = !!(CUES && CUES.n);
-  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q + '#' + (hasLooks || hasCues ? 1 : 0) + '#' + laserLinksSig();
+  paintBankTabs();
+  const sig = scenes.map((sc) => sc.id + sc.name + sceneHealth(sc).dead + sceneHealth(sc).missing).join('|') + '#' + q + '#' + (cur ? cur.id + cur.color : '') + '#' + (hasLooks || hasCues ? 1 : 0) + '#' + laserLinksSig();
   if (wrap.dataset.sig !== sig) {
   wrap.dataset.sig = sig;
-  // Same group headers as the bank. Headers are not .tbtn, so the delegated click and
-  // the long-press skip them by construction.
-  let lastGroup = null;
   let html = '';
   for (const sc of scenes) {
-    const g = sceneGroupOf(sc.name);
-    if (g !== lastGroup) { lastGroup = g; html += `<div class="bankhead">${esc(g)}</div>`; }
     const h = sceneHealth(sc);
-    html += `<button class="tbtn${h.dead ? ' dead' : ''}" data-id="${sc.id}">
+    html += `<button class="tbtn${h.dead ? ' dead' : ''}" data-id="${sc.id}" style="--bc:${esc(cur.color)}">
        <div class="strip">${sceneStrip(sc)}</div><span>${esc(sc.name)}</span>
        ${h.dead ? '<i class="tnote">nothing patched</i>' : h.missing ? `<i class="tnote">${h.missing} missing</i>` : ''}${laserTnoteOf(sc)}</button>`;
   }
-  wrap.innerHTML = html || (q
-    ? `<p class="muted">no scene matches "${esc(q)}"</p>`
-    : hasLooks || hasCues ? '' : '<p class="muted">Save some scenes on the Control page.</p>');
+  wrap.innerHTML = html || (!cur
+    ? (hasLooks || hasCues ? '' : '<p class="muted">Save some scenes on the Control page.</p>')
+    : q
+      ? `<p class="muted">no scene matches "${esc(q)}" in ${esc(cur.name)}</p>`
+      : `<p class="muted">Nothing in ${esc(cur.name)} yet — put scenes in it on Control</p>`);
   delete wrap.dataset.active;   // force the class pass below
   }
   const act = String(S.activeScene ?? '');
@@ -2277,10 +3159,13 @@ function buildTouch() {
   }
   // The scene filter is for scenes: with none saved (a looks-and-cues show) it is a dead box.
   $('.touchsearch').hidden = !S.scenes.length && (hasLooks || hasCues);
+  $('#tBankTabs').hidden = !S.scenes.length && (hasLooks || hasCues);
   const tf = $('#tSceneFilter');
   if (tf && document.activeElement !== tf && tf.value !== sceneFilter) tf.value = sceneFilter;
   if (document.activeElement !== $('#tMaster')) $('#tMaster').value = S.master;
   $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+  if (document.activeElement !== $('#tFxMaster')) $('#tFxMaster').value = S.master;
+  $('#tFxMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
   paintBlackout(S.blackout, ['#tBlackout']);
   buildTouchLooks();
   paintTouchCues();
@@ -2337,29 +3222,7 @@ function paintTouchStrips() {
   }
 }
 
-// The live stage on Touch: a dot per lamp at its stage place, coloured from the output frame. View only.
-function paintTouchStage() {
-  const sec = $('#tStage');
-  if (!S || !S.fixtures.length) { sec.hidden = true; return; }
-  sec.hidden = false;
-  const box = $('#tStageBox');
-  const sig = S.fixtures.map((f) => f.id + f.x + f.y).join('|');
-  if (box.dataset.sig !== sig) {
-    box.dataset.sig = sig;
-    box.innerHTML = S.fixtures.map((f) => `<i class="tdot" data-id="${esc(f.id)}" title="${esc(f.name)}"></i>`).join('');
-  }
-  const dots = new Map(window.deskColour.stageDots(S.fixtures, S.profiles, colourOfLamp, DMX).map((d) => [d.id, d]));
-  for (const el of $$('.tdot', box)) {
-    const d = dots.get(el.dataset.id);
-    if (!d) continue;
-    el.style.left = (d.x * 100) + '%';
-    el.style.top = (d.y * 100) + '%';
-    el.style.background = d.lit ? d.css : '';
-    el.style.boxShadow = d.lit ? `0 0 ${Math.round(4 + d.level * 14)}px ${d.css}` : 'none';
-    el.classList.toggle('lit', d.lit);
-  }
-}
-function paintTouchColours() { if (page === 'touch') { paintTouchStage(); paintTouchStrips(); } }
+function paintTouchColours() { if (page === 'touch') paintTouchStrips(); }   // the stage's lights are painted by paintStage
 
 function buildTouchLooks() {
   const sec = $('#tLooks');
@@ -2537,6 +3400,8 @@ function openBindPop(name, x, y, id) {
   const sc = S && S.scenes.find((s) => (id != null ? s.id === id : s.name === name));
   bindSceneId = sc ? sc.id : (id != null ? id : null);
   $('#bindName').textContent = name;
+  $('#miChase').textContent = S && S.chase.sceneIds.includes(bindSceneId) ? 'Remove from chase' : 'Add to chase';
+  $('#miDelete').textContent = sceneSel.size > 1 && sceneSel.has(bindSceneId) ? `Delete ${sceneSel.size} scenes` : 'Delete scene';
   const cur = hotkeyOf(name);
   $('#bindRemove').hidden = !cur;
   if (cur) $('#bindRemove').textContent = `Remove key (${hotkeyLabel(cur)})`;
@@ -2616,6 +3481,322 @@ document.addEventListener('pointerdown', (e) => {
   touchSuppressUntil = Date.now() + 350;
   closeBindPop();
 });
+
+/* =============== keyboard mappings: any button, any key (ported from the studio desk) =============== */
+
+// Open the panel (the ⌨ in the top bar), click any button on the desk, press a key, and
+// that key IS that button from then on: FX pads, Next scene, Tap, a container tab, a page,
+// a group... Scenes keep going through sceneHotkeys (by NAME, so the tile badges and the
+// right-click "Bind key" stay one truth); everything else lands in deskKeymap as
+// {kind, id, label} and fires by clicking the very element it was learned from, so it
+// inherits that button's own wiring and its own messages. Bindings are this browser's,
+// like the scene keys; Export/Import carry both as one file.
+const KEYMAP_STORE = 'deskKeymap';
+let deskKeymap = {};                     // { key: { kind, id, label } }
+try {
+  const raw = JSON.parse(localStorage.getItem(KEYMAP_STORE));
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) deskKeymap = raw;
+} catch (e) { /* start empty */ }
+function saveKeymap() {
+  try { localStorage.setItem(KEYMAP_STORE, JSON.stringify(deskKeymap)); } catch (e) { /* session only */ }
+}
+let keyLearnTarget = null;               // {kind,id,label,el} while waiting for a key
+let keyPanelOpen = false;
+let keyFiring = false;                   // a mapping's own click must not be learned as a pick
+
+// An element's own words, without the key badge or the count it carries.
+const keyOwnText = (el) => [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\s+/g, ' ').trim();
+
+// What a press in learn mode resolves to. Order matters: a scene tile carries data-id and
+// sits inside nothing else mappable; an FX pad has data-fx (the library list uses data-fx
+// for fixture keys, hence .fxpad); a container tab has data-bank (Control) or data-tab (Touch).
+function keyTargetOf(el) {
+  const c = (sel) => el.closest && el.closest(sel);
+  let t;
+  if ((t = c('.bankrow[data-id], .tbtn[data-id]'))) { const sc = S && S.scenes.find((s) => s.id === t.dataset.id); return sc ? { kind: 'scene', id: sc.name, label: sc.name, el: t } : null; }
+  if ((t = c('.fxpad[data-fx]'))) return { kind: 'fx', id: t.dataset.fx, label: 'FX · ' + keyOwnText(t), el: t };
+  if ((t = c('.btab[data-bank]')) && t.dataset.bank !== '+') return { kind: 'bank', id: t.dataset.bank, label: 'Container · ' + keyOwnText(t), el: t };
+  if ((t = c('.btab[data-tab]'))) return { kind: 'tbank', id: t.dataset.tab, label: 'Container · ' + keyOwnText(t), el: t };
+  if ((t = c('.page-tab[data-page]'))) return { kind: 'page', id: t.dataset.page, label: 'Page · ' + keyOwnText(t), el: t };
+  if ((t = c('.gtab[data-g]'))) return { kind: 'group', id: t.dataset.g, label: 'Group · ' + keyOwnText(t), el: t };
+  if ((t = c('.fxspat'))) return { kind: 'css', id: '.fxspat:nth-of-type(' + ([...t.parentElement.querySelectorAll('.fxspat')].indexOf(t) + 1) + ')', label: 'FX follow · ' + keyOwnText(t), el: t };
+  if ((t = c('button[id]')) && !t.closest('#keyPanel') && !t.closest('#bindPop') && !t.closest('#deskAsk')) {
+    return { kind: 'btn', id: t.id, label: keyButtonLabel(t), el: t };
+  }
+  return null;
+}
+// A button's name for the list: its text, else its title, else its id.
+function keyButtonLabel(b) {
+  const txt = keyOwnText(b);
+  const title = (b.title || '').split(/ — |\(/)[0].trim();
+  return (txt && txt.length <= 24 && !/^[^\w]+$/.test(txt) ? txt : '') || title || b.id;
+}
+// Two things on this desk are deliberately NOT a key's to press: blackout is the one-way B
+// (panicKeys.js; a mapped key could release it, or repeat), and the output switch has its
+// own two-press arm. Said at the pick, so nobody learns it at the desk.
+function keyRefusal(t) {
+  if (t.kind !== 'btn' || !t.el) return null;
+  if (t.el.matches('.blackout')) return 'Blackout is the B key and only ever turns blackout on — pick something else';
+  if (t.id === 'outEnable') return 'The output switch stays a deliberate click — pick something else';
+  return null;
+}
+const KEY_CATEGORY = { scene: 'Scene', fx: 'FX', bank: 'Container', tbank: 'Container', page: 'Page', group: 'Group', css: 'FX', btn: 'Desk' };
+
+// Fire a mapping: find the element it was learned from and click it, hidden or not (a page
+// you are not on still has its buttons in the DOM, and click() does not care).
+function fireKeymap(m) {
+  keyFiring = true;
+  try { return fireKeymapInner(m); } finally { keyFiring = false; }
+}
+function fireKeymapInner(m) {
+  let el = null;
+  if (m.kind === 'fx') el = $(`.fxpad[data-fx="${CSS.escape(m.id)}"]`);
+  else if (m.kind === 'bank') { if (m.id === UNFILED || bankById(m.id)) { setBankView(m.id); return true; } return false; }
+  else if (m.kind === 'tbank') { if (m.id === UNFILED || bankById(m.id)) { setBankTab(m.id); return true; } return false; }
+  else if (m.kind === 'page') { location.hash = m.id; showPage(m.id); return true; }
+  else if (m.kind === 'group') el = $(`.gtab[data-g="${CSS.escape(m.id)}"]`);
+  else if (m.kind === 'css') el = $('#fxSpatial ' + m.id);
+  else if (m.kind === 'btn') el = document.getElementById(m.id);
+  if (!el) return false;
+  el.click();
+  return true;
+}
+
+// The key itself: one printable character or an F-key, no ctrl/alt/meta chords (those stay
+// the browser's). Space is the stage pan, Tab walks objects, Enter/Esc/Backspace/Delete
+// have their jobs, arrows and the like are not a single character.
+function keyFromEvent(e) {
+  if (e.ctrlKey || e.altKey || e.metaKey) return null;
+  const key = e.key.toLowerCase();
+  if (['shift', 'control', 'alt', 'meta', 'capslock', ' ', 'tab', 'enter', 'escape', 'backspace', 'delete'].includes(key)) return null;
+  if (!(key.length === 1 || /^f\d{1,2}$/.test(key))) return null;
+  return key;
+}
+// Keys this desk already spends on something that must not be shadowed: B (panic) and F2
+// (renames the selected stage label).
+const KEY_RESERVED = {
+  b: 'B is the blackout key everywhere — pick another key',
+  f2: 'F2 renames the selected label on the stage — pick another key',
+};
+
+function bindDeskKey(key, target) {
+  // One key, one thing: the key is taken from whatever held it, scene or desk, and a
+  // target keeps only its newest key.
+  const prevScene = sceneHotkeys[key];
+  const prevDesk = deskKeymap[key];
+  delete sceneHotkeys[key];
+  delete deskKeymap[key];
+  if (target.kind === 'scene') {
+    for (const k of Object.keys(sceneHotkeys)) if (sceneHotkeys[k] === target.id) delete sceneHotkeys[k];
+    sceneHotkeys[key] = target.id;
+  } else {
+    for (const k of Object.keys(deskKeymap)) if (deskKeymap[k].kind === target.kind && deskKeymap[k].id === target.id) delete deskKeymap[k];
+    deskKeymap[key] = { kind: target.kind, id: target.id, label: target.label };
+  }
+  saveHotkeys(); saveKeymap();
+  const taken = prevScene ? ` — taken from "${prevScene}"` : prevDesk ? ` — taken from ${prevDesk.label}` : '';
+  say(`${hotkeyLabel(key)} now fires ${target.kind === 'scene' ? `"${target.id}"` : target.label}${taken}`);
+  if (S) buildBank();
+  paintKeyPanel(); paintKeyBadges();
+}
+function unbindDeskKey(key) {
+  const was = sceneHotkeys[key] ? `"${sceneHotkeys[key]}"` : deskKeymap[key] ? deskKeymap[key].label : null;
+  delete sceneHotkeys[key]; delete deskKeymap[key];
+  saveHotkeys(); saveKeymap();
+  if (was) say(`removed ${hotkeyLabel(key)} from ${was}`);
+  if (S) buildBank();
+  paintKeyPanel(); paintKeyBadges();
+}
+
+// The list: every binding, scenes and desk together, sorted by key.
+function paintKeyPanel() {
+  if (!keyPanelOpen) return;
+  const rows = [
+    ...Object.entries(sceneHotkeys).map(([k, name]) => ({ key: k, cat: 'Scene', label: name })),
+    ...Object.entries(deskKeymap).map(([k, m]) => ({ key: k, cat: KEY_CATEGORY[m.kind] || 'Desk', label: m.label })),
+  ].sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+  $('#keyList').innerHTML = rows.length
+    ? `<table><thead><tr><th>Category</th><th>Target</th><th>Key</th><th></th></tr></thead><tbody>${rows.map((r) =>
+      `<tr><td class="cat">${esc(r.cat)}</td><td class="tgt" title="${esc(r.label)}">${esc(r.label)}</td><td class="key"><span class="kbd">${esc(hotkeyLabel(r.key))}</span></td><td class="rm"><button data-unbind="${esc(r.key)}" title="Remove this mapping">✕</button></td></tr>`).join('')}</tbody></table>`
+    : '<p class="muted">Nothing mapped yet. Click any button on the desk, then press a key.</p>';
+  $('#keyLearn').hidden = !keyLearnTarget;
+  if (keyLearnTarget) $('#keyLearn').textContent = `Press a key for ${keyLearnTarget.kind === 'scene' ? `"${keyLearnTarget.id}"` : keyLearnTarget.label} — Esc to cancel`;
+  $('#keyHint').textContent = keyLearnTarget
+    ? 'Press the key you want. Esc picks something else.'
+    : (rows.length ? 'Click any button on the desk, then press a key. Click a mapped one to change its key.' : 'Click any button on the desk, then press a key.');
+}
+// Mapped desk buttons wear their key, the way scene tiles wear theirs.
+function paintKeyBadges() {
+  for (const b of $$('.kbadge')) b.remove();
+  for (const h of $$('.kbadge-host')) h.classList.remove('kbadge-host');
+  if (!keyPanelOpen) return;   // badges only while the panel is open — the desk stays clean otherwise
+  for (const [k, m] of Object.entries(deskKeymap)) {
+    let el = null;
+    if (m.kind === 'fx') el = $(`.fxpad[data-fx="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'btn') el = document.getElementById(m.id);
+    else if (m.kind === 'group') el = $(`.gtab[data-g="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'bank') el = $(`#bankTabs .btab[data-bank="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'tbank') el = $(`#tBankTabs .btab[data-tab="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'page') el = $(`.page-tab[data-page="${CSS.escape(m.id)}"]`);
+    else if (m.kind === 'css') el = $('#fxSpatial ' + m.id);
+    if (!el) continue;
+    el.classList.add('kbadge-host');
+    el.insertAdjacentHTML('beforeend', `<kbd class="kbadge">${esc(hotkeyLabel(k))}</kbd>`);
+  }
+}
+function setKeyLearnTarget(t) {
+  if (keyLearnTarget && keyLearnTarget.el) keyLearnTarget.el.classList.remove('keypick');
+  keyLearnTarget = t;
+  if (t && t.el) t.el.classList.add('keypick');
+  paintKeyPanel();
+}
+function openKeyPanel() {
+  keyPanelOpen = true;
+  $('#keyPanel').hidden = false;
+  $('#keysBtn').classList.add('is-active');
+  document.body.classList.add('keylearn');
+  paintKeyPanel(); paintKeyBadges();
+}
+function closeKeyPanel() {
+  setKeyLearnTarget(null);
+  keyPanelOpen = false;
+  $('#keyPanel').hidden = true;
+  $('#keysBtn').classList.remove('is-active');
+  document.body.classList.remove('keylearn');
+  paintKeyBadges();
+}
+// Drag the head to move the panel off whatever it is covering; where it lands is kept.
+(() => {
+  const panel = $('#keyPanel'), head = panel.querySelector('.keyhead');
+  let drag = null;
+  try {
+    const p = JSON.parse(localStorage.getItem('keyPanelPos'));
+    if (p && isFinite(p.x) && isFinite(p.y)) { panel.classList.add('moved'); panel.style.left = p.x + 'px'; panel.style.top = p.y + 'px'; panel.style.height = (p.h || 600) + 'px'; }
+  } catch (e) { /* default dock */ }
+  head.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('button')) return;
+    const r = panel.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, h: r.height };
+    panel.classList.add('moved'); panel.style.height = r.height + 'px';
+    try { head.setPointerCapture(e.pointerId); } catch (err) { /* no capture: still tracks */ }
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const x = clamp(e.clientX - drag.dx, 0, Math.max(0, window.innerWidth - 120));
+    const y = clamp(e.clientY - drag.dy, 0, Math.max(0, window.innerHeight - 40));
+    panel.style.left = x + 'px'; panel.style.top = y + 'px';
+  });
+  const end = () => {
+    if (!drag) return;
+    drag = null;
+    try { localStorage.setItem('keyPanelPos', JSON.stringify({ x: parseFloat(panel.style.left) || 8, y: parseFloat(panel.style.top) || 54, h: parseFloat(panel.style.height) || 600 })); } catch (e) { /* this session only */ }
+  };
+  head.addEventListener('pointerup', end);
+  head.addEventListener('pointercancel', end);
+  head.addEventListener('dblclick', (e) => {   // back to the dock
+    if (e.target.closest('button')) return;
+    panel.classList.remove('moved'); panel.style.left = panel.style.top = panel.style.height = '';
+    try { localStorage.removeItem('keyPanelPos'); } catch (err) { /* nothing kept */ }
+  });
+})();
+$('#keysBtn').addEventListener('click', () => (keyPanelOpen ? closeKeyPanel() : openKeyPanel()));
+$('#keyClose').addEventListener('click', closeKeyPanel);
+$('#keyList').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-unbind]');
+  if (b) unbindDeskKey(b.dataset.unbind);
+});
+// New forgets every mapping, so it asks first, the way every destructive step on this desk does.
+$('#keyNew').addEventListener('click', () => {
+  askThen('Clear every keyboard mapping, scene keys included?', 'Clear all', () => {
+    sceneHotkeys = {}; deskKeymap = {}; saveHotkeys(); saveKeymap();
+    if (S) buildBank();
+    paintKeyPanel(); paintKeyBadges();
+    say('All keyboard mappings cleared');
+  });
+});
+// Export/Import: one JSON file carrying both stores. Import replaces (it is a preset, not
+// a merge) and refuses a file that is not ours.
+function keymapExportJson() {
+  return JSON.stringify({ desk: 'artnet-controller', version: 1, savedAt: new Date().toISOString(), scenes: sceneHotkeys, map: deskKeymap }, null, 2);
+}
+function keymapImportJson(text) {
+  const j = JSON.parse(text);
+  if (!j || j.desk !== 'artnet-controller' || !j.scenes || typeof j.scenes !== 'object' || !j.map || typeof j.map !== 'object') throw new Error('not a keyboard-mappings file from this desk');
+  const scenes = {}, map = {};
+  for (const [k, v] of Object.entries(j.scenes || {})) if (typeof v === 'string' && v) scenes[String(k).toLowerCase()] = v;
+  for (const [k, m] of Object.entries(j.map || {})) if (m && typeof m.kind === 'string' && typeof m.id === 'string') map[String(k).toLowerCase()] = { kind: m.kind, id: m.id, label: String(m.label || m.id) };
+  sceneHotkeys = scenes; deskKeymap = map;
+  saveHotkeys(); saveKeymap();
+  if (S) buildBank();
+  paintKeyPanel(); paintKeyBadges();
+  return Object.keys(scenes).length + Object.keys(map).length;
+}
+$('#keyExport').addEventListener('click', () => {
+  const blob = new Blob([keymapExportJson()], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `desk-keys-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  say(`Exported ${Object.keys(sceneHotkeys).length + Object.keys(deskKeymap).length} mappings`);
+});
+$('#keyImport').addEventListener('click', () => $('#keyImportFile').click());
+$('#keyImportFile').addEventListener('change', () => {
+  const f = $('#keyImportFile').files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try { say(`Imported ${keymapImportJson(String(rd.result))} mappings`); }
+    catch (err) { say('Import failed — ' + err.message, true); }
+    $('#keyImportFile').value = '';
+  };
+  rd.readAsText(f);
+});
+// Learn mode: with the panel open, the first press on any mappable control is CAUGHT here
+// (capture phase, before the control's own handler) and becomes the thing to bind. It has
+// to be the POINTERDOWN, not the click: the FX pads and the tiles act on press, and a pad
+// that rebuilds its row on press leaves the click with no pad under it.
+let keyLearnSwallowUntil = 0;
+const keyLearnIgnores = (e) => !keyPanelOpen || keyFiring || e.target.closest('#keyPanel') || e.target.closest('#keysBtn') || e.target.closest('#bindPop') || e.target.closest('#deskAsk');
+function keyLearnPick(t) {
+  const why = keyRefusal(t);
+  if (why) { say(why, true); return; }
+  setKeyLearnTarget(t);
+}
+document.addEventListener('pointerdown', (e) => {
+  if (keyLearnIgnores(e) || e.button !== 0) return;
+  const t = keyTargetOf(e.target);
+  if (!t) return;
+  e.preventDefault(); e.stopPropagation();
+  keyLearnSwallowUntil = Date.now() + 500;   // the click this press turns into must not fire the control
+  keyLearnPick(t);
+}, true);
+document.addEventListener('click', (e) => {
+  if (keyLearnIgnores(e)) return;
+  if (Date.now() < keyLearnSwallowUntil) { e.preventDefault(); e.stopPropagation(); return; }
+  const t = keyTargetOf(e.target);   // a click that arrived without a press (a synthetic one)
+  if (!t) return;
+  e.preventDefault(); e.stopPropagation();
+  keyLearnPick(t);
+}, true);
+// ...and the key that follows is the binding. Capture phase, ahead of every other keydown
+// handler; Esc steps back (first out of the pick, then out of the panel) and yields to the
+// ask bar and the scene popover, which own their own Esc.
+document.addEventListener('keydown', (e) => {
+  if (!keyPanelOpen || bindTarget != null || window.deskAsk.isOpen()) return;
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); if (keyLearnTarget) setKeyLearnTarget(null); else closeKeyPanel(); return; }
+  if (!keyLearnTarget) return;
+  if (isTypingTarget(e.target)) return;
+  e.preventDefault(); e.stopPropagation();
+  const key = keyFromEvent(e);
+  if (!key || e.repeat) return;
+  if (KEY_RESERVED[key]) { say(KEY_RESERVED[key], true); return; }
+  const t = keyLearnTarget;
+  setKeyLearnTarget(null);
+  bindDeskKey(key, t);
+}, true);
+
 
 // ---- the menu rows ----
 $('#miBind').addEventListener('click', () => {
@@ -2812,6 +3993,20 @@ $('#popOk').addEventListener('click', commitPopEdit);
 $('#popText').addEventListener('keydown', (e) => { if (e.key === 'Enter') commitPopEdit(); });
 $('#popNum').addEventListener('keydown', (e) => { if (e.key === 'Enter') commitPopEdit(); });
 
+// "Add to chase" / "Remove from chase" — the include-in-chase checkbox of the old scene detail pane.
+$('#miChase').addEventListener('click', () => {
+  const sc = popScene();
+  closeBindPop();
+  if (!sc) return;
+  const ids = new Set(S.chase.sceneIds);
+  const on = !ids.has(sc.id);
+  on ? ids.add(sc.id) : ids.delete(sc.id);
+  post('api/chase', { sceneIds: [...ids] }).then((r) => {
+    if (r && r.error) return say('chase not changed — ' + r.error, true);
+    say(on ? `"${sc.name}" added to the chase (${ids.size})` : `"${sc.name}" taken out of the chase (${ids.size})`);
+    pullState();
+  });
+});
 $('#miRestage').addEventListener('click', () => {
   // Read the scene NOW: the press on the ask bar is outside the popover and closes it.
   const sc = popScene();
@@ -2830,6 +4025,23 @@ $('#miDelete').addEventListener('click', () => {
   // Read the scene NOW: the press on the ask bar is outside the popover and closes it.
   const sc = popScene();
   if (!sc) { closeBindPop(); return; }
+  // The right-clicked scene is part of a multi-selection: the delete takes the whole selection.
+  const many = sceneSel.has(sc.id) ? [...sceneSel].filter((id) => S.scenes.some((x) => x.id === id)) : [];
+  if (many.length > 1) {
+    askThen(`Delete ${many.length} scenes? This cannot be undone.`, 'Delete', () => {
+      post('api/scenes/remove', { ids: many }).then((r) => {
+        if (r && r.error) { say(`delete did not reach the desk — ${r.error}`, true); pullState(); return; }
+        for (const id of many) { const nm = (S.scenes.find((x) => x.id === id) || {}).name; const k = nm && hotkeyOf(nm); if (k) delete sceneHotkeys[k]; }
+        saveHotkeys();
+        if (many.includes(activeScene)) activeScene = null;
+        sceneSel.clear(); sceneAnchor = null;
+        say(`deleted ${many.length} scenes`);
+        pullState();
+      });
+      closeBindPop();
+    });
+    return;
+  }
   askThen(`Delete the scene "${sc.name}"? This cannot be undone.`, 'Delete', () => {
   const who = sc.name, id = sc.id;
   post('api/scenes/remove', { id }).then((r) => {
@@ -2968,6 +4180,60 @@ function postRigFx(mode) {
   return post('api/fx', { mode: same ? 'none' : mode, all: true }).then(pullState);
 }
 
+// The FX pads act on the SELECTION when only part of the rig is selected, and on the whole
+// rig when all of it — or none — is (ported from the studio desk). fxPadPress, fxBackToRig
+// and fxLitModes are plain functions so another page (the Stage page) can reuse them.
+const fxSubset = () => (S && sel.size > 0 && sel.size < S.fixtures.length ? [...sel] : null);
+// What a fixture is actually running: its own mode, else the rig-wide one.
+const fxModeOf = (f) => (f.fx ? f.fx.mode : (fxRunning() ? S.fx.mode : 'none'));
+const fxNames = (list) => (list.length <= 3 ? list.map((f) => f.name).join(', ') : `${list.length} lights`);
+
+// A pad pressed with part of the rig selected: just those lights. Pressing the mode they
+// all already run turns them off (held still) — the same escape hatch as the rig pads.
+function fxPadSelected(mode, ids) {
+  const mine = S.fixtures.filter((f) => ids.includes(f.id));
+  const next = mine.every((f) => fxModeOf(f) === mode) ? 'none' : mode;
+  // Optimistic, as the server will have it: the post marks the page busy, and a busy poll
+  // keeps the page's own fixtures — so without this the pad and "Back to rig" lit up only
+  // on the poll after next, ~1.5 s after the press.
+  for (const f of mine) f.fx = { mode: next };
+  post('api/fx', { mode: next, ids }).then((r) => {
+    if (r && r.error) say(r.error, true);
+    else say(next === 'none' ? `FX off on ${fxNames(mine)} — the rest keep going` : `${fxLabel(next)} on ${fxNames(mine)} only`);
+    pullState();
+  });
+}
+
+// An FX pad pressed on Control or on the Stage page (stagepage.js): one rule for both.
+// Pressing the pad that is already lit turns the engine off, so a mode pad is its own
+// escape hatch — you never have to find the Off pad to stop what you started.
+function fxPadPress(mode) {
+  const ids = fxSubset();
+  if (ids) return fxPadSelected(mode, ids);
+  const same = fxRunning() && S.fx.mode === mode && !fxOwners().length;
+  const hadOwn = fxOwners().length;
+  for (const f of S.fixtures) delete f.fx;   // {all:true} clears them on the server too
+  return post('api/fx', same ? { mode: 'none', all: true } : { mode, all: true }).then(() => {
+    if (hadOwn) say(`${same ? 'FX off' : fxLabel(mode)} on the whole rig`);
+    pullState();
+  });
+}
+
+// "Back to rig": these lights drop their own effect and follow the rig-wide one again.
+function fxBackToRig(own) {
+  for (const f of own) delete f.fx;   // optimistic — see fxPadSelected
+  return post('api/fx', { mode: 'rig', ids: own.map((f) => f.id) }).then(() => {
+    say(`${fxNames(own)} follow the rig again`); pullState();
+  });
+}
+
+// The pads that should be lit: what the selected lights run when part of the rig is
+// selected, else the rig-wide mode.
+function fxLitModes() {
+  const ids = fxSubset();
+  return ids ? new Set(S.fixtures.filter((f) => sel.has(f.id)).map(fxModeOf)) : new Set([fxRunning() ? S.fx.mode : 'none']);
+}
+
 function buildFx() {
   const modes = (S && S.fxModes) || ['none'];
   const pads = $('#fxPads');
@@ -2976,11 +4242,22 @@ function buildFx() {
     pads.dataset.sig = sig;
     pads.innerHTML = modes.map((m) =>
       `<button class="fxpad${m === 'none' ? ' off' : ''}" data-fx="${m}">${fxLabel(m)}</button>`).join('');
-    $$('.fxpad', pads).forEach((b) => b.addEventListener('click', () => {
-      // Pressing the pad that is already lit turns the engine off, so a mode pad is its
-      // own escape hatch — you never have to find the Off pad to stop what you started.
-      postRigFx(b.dataset.fx);
-    }));
+    $$('.fxpad', pads).forEach((b) => b.addEventListener('click', () => fxPadPress(b.dataset.fx)));
+  }
+  // Who the pads act on, in words — without it "why did everything change" has no answer.
+  const tgt = $('#fxTarget');
+  const ids = fxSubset();
+  const mine = ids ? S.fixtures.filter((f) => sel.has(f.id)) : [];
+  const ownSel = mine.filter((f) => f.fx);
+  const tSig = (ids ? ids.join(',') : 'rig') + '#' + ownSel.map((f) => f.id + f.fx.mode).join(',') + '#' + fxOwners().length;
+  if (tgt.dataset.sig !== tSig) {
+    tgt.dataset.sig = tSig;
+    tgt.innerHTML = ids
+      ? `<span class="muted">Pads act on</span> <b>${esc(fxNames(mine))}</b> <span class="muted">only</span>` +
+        (ownSel.length ? ` <button class="sq" id="fxToRig" title="Drop their own effect and follow the rig's again">Back to rig</button>` : '')
+      : `<span class="muted">Pads act on the whole rig${fxOwners().length ? ' — lights with their own effect rejoin it' : ''}. Select lights to give them their own.</span>`;
+    const back = $('#fxToRig', tgt);
+    if (back) back.addEventListener('click', () => fxBackToRig(ownSel));
   }
   // Follow: what drives the effect across the rig — the patch order, or the stage
   // arrangement (left-right, top-bottom, out from the middle). Built from the server's
@@ -3015,8 +4292,8 @@ function buildFx() {
       post('api/fx', { exclude: [...ex] }).then(pullState);
     }));
   }
-  const live = fxRunning() ? S.fx.mode : 'none';
-  $$('.fxpad', pads).forEach((b) => b.classList.toggle('is-active', b.dataset.fx === live));
+  const liveSet = fxLitModes();
+  $$('.fxpad', pads).forEach((b) => b.classList.toggle('is-active', liveSet.has(b.dataset.fx)));
   $('#fxState').textContent = fxSummary();
   $('#fxState').classList.toggle('running', fxAnyRunning());
   if (document.activeElement !== $('#fxDepth')) $('#fxDepth').value = S.fx.depth;
@@ -3107,6 +4384,7 @@ function buildLfos() {
     }).join('') || '<p class="fxhint muted">No LFOs — press + Add LFO below.</p>';
 
     $$('.lforow', box).forEach((row) => {
+      $$('.lfoslider', row).forEach((h) => { scrubRange(h, h.querySelector('input')); dblEditRange(h.querySelector('output'), h.querySelector('input')); });
       // Resolve the LFO at EVENT time, not build time: the poll swaps S.lfos for fresh
       // objects without a rebuild when nothing changed, and a listener holding the old
       // array would mutate a copy the next POST never sends. The index stays valid
@@ -3751,6 +5029,7 @@ function buildLayers() {
     }).join('') || '<p class="fxhint muted">No layers. Press + Layer, or use a starter below — a starter builds the look and the layer together.</p>';
 
     $$('.layerrow', box).forEach((row) => {
+      $$('.lfoslider', row).forEach((h) => { scrubRange(h, h.querySelector('input')); dblEditRange(h.querySelector('output'), h.querySelector('input')); });
       // Resolve by id at EVENT time: the poll swaps S.layers for fresh objects without a
       // rebuild whenever nothing structural moved, and a listener holding the old object
       // would edit a copy the next POST never sends.
@@ -4315,6 +5594,7 @@ function buildTouchLayers() {
 
     $$('.tlay', box).forEach((row) => {
       const id = row.dataset.id;
+      $$('.ls-fader', row).forEach((h) => { scrubRange(h, h.querySelector('input[type=range]')); dblEditRange(h.querySelector('output'), h.querySelector('input[type=range]')); });
       row.querySelector('.tl-on').addEventListener('click', () => {
         const l = layerById(id); if (!l) return;
         l.on = !l.on; queueLayer(id, { on: l.on }); buildTouchLayers();
@@ -4513,9 +5793,25 @@ function renderAll(busy) {
     if (document.activeElement !== $('#chaseHold')) $('#chaseHold').value = (S.chase.holdMs / 1000).toFixed(1);
     if (document.activeElement !== $('#chaseFade')) $('#chaseFade').value = (S.chase.fadeMs / 1000).toFixed(1);
     $('#chaseToggle').textContent = S.chase.enabled ? 'Stop' : 'Start';
-    $('#chaseCount').textContent = `${S.chase.sceneIds.length} scene${S.chase.sceneIds.length === 1 ? '' : 's'}`;
+    const nsteps = S.chase.sceneIds.length;
+    $('#chaseToggle').classList.toggle('inert', !nsteps && !S.chase.enabled);
+    $('#chaseToggle').title = nsteps ? 'Run the chase' : 'Right-click a scene → Add to chase';
+    $('#chaseCount').textContent = nsteps ? `${nsteps} scene${nsteps === 1 ? '' : 's'}` : 'no scenes yet';
   }
   if (page === 'touch') safeBuild('buildTouch', buildTouch);
+  // The Touch stage is a glance at the whole rig, so it opens framed. It has its own view
+  // (see `views`), so this fit never moves the Control or Stage page's picture. On a cold
+  // load (#touch on a phone) the page shows before the first state lands, so the fit waits
+  // for it: a few tries, a quarter second apart, then gives up quietly.
+  if (page === 'touch') {
+    const tryFit = (left) => {
+      const st = $('#touchStage .stage');
+      if (S && st && st.clientWidth) fitStage(st);
+      else if (left > 0) setTimeout(() => tryFit(left - 1), 250);
+    };
+    requestAnimationFrame(() => tryFit(20));
+  }
+  if (page === 'stage' && window.stagePageRender) safeBuild('stagePageRender', window.stagePageRender);   // stagepage.js
   if (page === 'fader') safeBuild('buildFaders', buildFaders);
 
   if (menuOpen) $('#statusStrip').textContent = menuText();
@@ -5282,13 +6578,14 @@ $('#showNoteBtn').addEventListener('click', async () => {
 /* =============== wiring =============== */
 
 function showPage(name) {
-  page = ['setup', 'control', 'touch', 'fader', 'midi'].includes(name) ? name : 'setup';
+  page = ['setup', 'control', 'stage', 'touch', 'fader', 'midi'].includes(name) ? name : 'setup';
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';
   // Opening MIDI re-reads the show's map, so a layout mapped on the laptop is already
   // there on the phone. Skipped mid-edit: a pending save is newer than the server.
   if (page === 'midi' && !midiSaveTimer) loadMidiMap();
+  if (window.stagePageShown) window.stagePageShown(page);   // stagepage.js
   if (S) renderAll(false);
 }
 $$('.page-tab').forEach((t) => t.addEventListener('click', () => {
@@ -5393,8 +6690,40 @@ $$('.tool[data-tool]').forEach((b) => b.addEventListener('click', () => {
   $$('.tool[data-tool]').forEach((x) => x.classList.toggle('is-active', x.dataset.tool === tool));
   $$('.stage').forEach((s) => s.classList.toggle('hand', tool === 'hand'));
 }));
+// Snap to grid: one switch for every stage, remembered in this browser. Not an arrange tool —
+// it only decides where a light, label or object lands when it is dropped.
+function paintSnap() {
+  $$('.snapBtn').forEach((x) => {
+    x.classList.toggle('is-active', snap);
+    x.title = snap
+      ? 'Snap to grid is ON — lights, labels and objects land on the grid lines. Click to move them freely (not an arrange tool)'
+      : 'Snap to grid is OFF — things land exactly where you let go. Click to land on the grid lines (not an arrange tool)';
+  });
+}
+paintSnap();
 $$('.snapBtn').forEach((b) => b.addEventListener('click', () => {
-  snap = !snap; $$('.snapBtn').forEach((x) => x.classList.toggle('is-active', snap));
+  snap = !snap;
+  try { localStorage.setItem('lightdeskSnap', snap ? '1' : '0'); } catch (e) { /* this session only */ }
+  paintSnap();
+  say(snap ? 'Snap to grid on — lights, labels and objects land on the grid lines' : 'Snap to grid off — they land exactly where you let go');
+}));
+// Light size − / +: this stage's view only, remembered here, never saved in the show.
+function paintNodeSize() {
+  for (const b of $$('.nodeSmaller, .nodeBigger')) {
+    const name = viewName(b), i = NODE_SIZES.indexOf(nodeSize[name]), up = b.classList.contains('nodeBigger');
+    const pct = Math.round(nodeSize[name] * 100);
+    b.disabled = up ? i >= NODE_SIZES.length - 1 : i <= 0;
+    b.title = `Lights ${up ? 'bigger' : 'smaller'} on this view — now ${pct}% (kept in this browser, not in the show)`;
+  }
+}
+paintNodeSize();
+$$('.nodeSmaller, .nodeBigger').forEach((b) => b.addEventListener('click', () => {
+  const name = viewName(b), i = NODE_SIZES.indexOf(nodeSize[name]);
+  const j = clamp(i + (b.classList.contains('nodeBigger') ? 1 : -1), 0, NODE_SIZES.length - 1);
+  nodeSize[name] = NODE_SIZES[j];
+  try { localStorage.setItem('lightdeskNodeSize.' + name, String(nodeSize[name])); } catch (e) { /* this session only */ }
+  paintNodeSize(); placeStages();
+  say(`Lights ${Math.round(nodeSize[name] * 100)}% on this view`);
 }));
 $$('.rowBtn').forEach((b) => b.addEventListener('click', () => arrange('row')));
 $$('.colBtn').forEach((b) => b.addEventListener('click', () => arrange('column')));
@@ -5403,30 +6732,35 @@ $$('.circleBtn').forEach((b) => b.addEventListener('click', () => arrange('circl
 // Change the zoom while keeping one screen point fixed — the cursor for the wheel, the
 // viewport centre for the buttons. Without this, zooming in walks the rig off-screen.
 function zoomAt(stage, cx, cy, nz) {
-  nz = clamp(nz, 0.01, 4);
+  const v = viewOf(stage);
+  nz = clamp(nz, 0.01, stage.closest('#touchStage') ? 16 : 4);   // same ceiling as fitStage
   const r = stage.getBoundingClientRect();
   const mx = cx - r.left, my = cy - r.top;
-  view.x = mx - (mx - view.x) * (nz / zoom);
-  view.y = my - (my - view.y) * (nz / zoom);
-  zoom = nz;
-  $$('.zoom').forEach((o) => { o.value = Math.round(zoom * 100); });
+  v.x = mx - (mx - v.x) * (nz / v.zoom);
+  v.y = my - (my - v.y) * (nz / v.zoom);
+  v.zoom = nz;
+  slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });
   placeStages();
 }
 const stageFor = (el) => el.closest('.stagepane').querySelector('.stage');
 // Frame every fixture with some margin. This is also the rescue: whatever the pan and
 // zoom have done, one press brings the whole rig back on screen.
 function fitStage(stage) {
+  const v = viewOf(stage);
   const r = stage.getBoundingClientRect();
-  if (!S || !S.fixtures.length) { zoom = 1; view.x = 0; view.y = 0; placeStages(); return; }
+  if (!S || !S.fixtures.length) { v.zoom = 1; v.x = 0; v.y = 0; placeStages(); return; }
   const pts = [...S.fixtures, ...(S.markers || [])];   // the stage labels are framed too
   const xs = pts.map((f) => f.x), ys = pts.map((f) => f.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const { sc, ox, oy } = stageMap(r.width, r.height);
   const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;
-  zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, 4), 0.01, 4);
-  view.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * zoom;
-  view.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * zoom;
-  $$('.zoom').forEach((o) => { o.value = Math.round(zoom * 100); });
+  // The Touch pane has no zoom slider and is a small glance at the rig: a compact rig (her
+  // lights 0.1 apart) needs more than 4x there, or every light lands on one spot.
+  const maxZoom = stage.closest('#touchStage') ? 16 : 4;
+  v.zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, maxZoom), 0.01, maxZoom);
+  v.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * v.zoom;
+  v.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * v.zoom;
+  slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });
   placeStages();
 }
 $$('.fitBtn').forEach((b) => b.addEventListener('click', () => fitStage(stageFor(b))));
@@ -5437,11 +6771,11 @@ $$('.zoom').forEach((z) => z.addEventListener('input', () => {
 }));
 $$('.zoomIn').forEach((b) => b.addEventListener('click', () => {
   const stage = stageFor(b); const r = stage.getBoundingClientRect();
-  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, zoom * 1.25);
+  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, viewOf(stage).zoom * 1.25);
 }));
 $$('.zoomOut').forEach((b) => b.addEventListener('click', () => {
   const stage = stageFor(b); const r = stage.getBoundingClientRect();
-  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, zoom / 1.25);
+  zoomAt(stage, r.left + r.width / 2, r.top + r.height / 2, viewOf(stage).zoom / 1.25);
 }));
 
 // attribute editor buttons
@@ -5461,11 +6795,24 @@ $('#master').addEventListener('input', (e) => {
   $('#masterOut').textContent = Math.round(S.master / 255 * 100) + '%';
   post('api/master', { master: S.master });
 });
-$('#tMaster').addEventListener('input', (e) => {
+// The Touch page has the master twice — its Master tab and beside Speed on the FX tab —
+// and both move together.
+['#tMaster', '#tFxMaster'].forEach((id) => $(id).addEventListener('input', (e) => {
   S.master = +e.target.value;
-  $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+  const pct = Math.round(S.master / 255 * 100) + '%';
+  $('#tMasterOut').textContent = pct; $('#tFxMasterOut').textContent = pct;
+  if (id === '#tMaster') $('#tFxMaster').value = S.master; else $('#tMaster').value = S.master;
   post('api/master', { master: S.master });
-});
+}));
+// Value gestures on the static sliders: the whole row is the grab surface, the readout
+// takes a typed value. (The dynamic rows — LFOs, layers — do the same where they are built.)
+scrubRange($('#railMaster'), $('#master'));
+$$('.fxfader, .ls-fader').forEach((h) => scrubRange(h, h.querySelector('input[type=range]')));
+// Hold and Fade read in seconds, so they are left out of the typed readouts: the generic
+// field would take and show milliseconds.
+[['#masterOut', '#master'], ['#fMasterOut', '#fMaster'], ['#tMasterOut', '#tMaster'], ['#tFxMasterOut', '#tFxMaster'], ['#fxDepthOut', '#fxDepth'],
+  ['#tFxDepthOut', '#tFxDepth'], ['#tSpeedOut', '#tSpeed'], ['#audAmountOut', '#audAmount'], ['#tAudAmountOut', '#tAudAmount'], ['#audReleaseOut', '#audRelease']]
+  .forEach(([o, i]) => dblEditRange($(o), $(i)));
 // The panic button is the one control that must never claim to have worked. Everything
 // else here is optimistic on purpose — it feels better and a failed poll corrects it a
 // second later — but a Blackout that goes red on a request that never arrived is the desk
@@ -5474,7 +6821,7 @@ $('#tMaster').addEventListener('input', (e) => {
 // One place that paints the blackout buttons, so the label and the fill never disagree and
 // every copy (header, Touch strip, Fader, Control, the framed visualiser) says the same
 // thing: ON reads as a state to release, not just a different fill (MOXIR UI audit).
-const BLACKOUT_ALL = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout'];
+const BLACKOUT_ALL = ['#blackout', '#tBlackout', '#fBlackout', '#topBlackout', '#spBlackout'];
 const BLACKOUT_LABEL = { on: 'Blackout ON · tap to release', off: 'Blackout' };
 function paintBlackout(on, sels = BLACKOUT_ALL) {
   sels.forEach((s) => {
@@ -5516,13 +6863,33 @@ $('#wirePill').addEventListener('click', () => {
 $('#tBlackout').addEventListener('click', toggleBlackout);
 
 // scenes / chase
-$('#saveScene').addEventListener('click', () => {
-  post('api/scenes/save', { name: $('#sceneName').value.trim() }).then((r) => {
-    $('#sceneName').value = '';
-    if (r.scene) activeScene = r.scene.id;
+// "+" on a container saves into it; "Save scene" in the top bar saves the look wherever you are.
+// Either way the new tile opens with its name selected: type the name, Enter; Esc keeps "New Scene".
+function saveLookIntoBank(bankId) {
+  const typed = '';   // there is no name box: a new scene is "New Scene", renamed on its tile
+  const goOn = (b) => post('api/scenes/save', { name: typed || 'New Scene' }).then((r) => {
+    if (r && r.error) return say('scene was not saved — ' + r.error, true);
+    if (r.scene) {
+      activeScene = r.scene.id;
+      sceneSel = new Set([r.scene.id]); sceneAnchor = r.scene.id;
+      if (!S.scenes.some((s) => s.id === r.scene.id)) S.scenes.push(r.scene);   // addToBank checks the library
+      if (b) { if (bankView !== b.id) setBankView(b.id); addToBank(b.id, [r.scene.id]); }
+      else { delete $('#bankList').dataset.sig; buildBank(); }
+      if (!typed) pendingRename = r.scene.id;   // not named yet: let her, right on the tile
+      delete $('#bankList').dataset.sig; buildBank();
+    }
     pullState();
   });
-});
+  const b = bankId ? bankById(bankId) : (bankView !== UNFILED ? currentContainer() : null);
+  if (b && !b.virtual) return goOn(b);
+  if (bankView === UNFILED) return goOn(null);   // saving while looking at Unfiled: it lands there
+  if (!banks().length) return addBank().then(goOn);
+  goOn(banks()[0]);
+}
+$('#bankList').addEventListener('click', (e) => {
+  const b = e.target.closest('.coladd');
+  if (b) { e.stopPropagation(); saveLookIntoBank(b.dataset.bank); }
+}, true);   // capture: the row-recall listener must never see a + press
 const stepScene = (dir) => {
   // Steps walk the FILTERED list when the filter is active — Go/next/prev move through
   // what is on screen, same as the digit keys. Unfiltered, this is the whole library.
@@ -5584,10 +6951,9 @@ function setAllTyped() {
 // as the fixture values, so a manual look saves exactly as it sounds.
 $('#saveNow').addEventListener('click', async () => {
   const btn = $('#saveNow');
-  const typed = $('#sceneName').value.trim();
+  const typed = '';   // the name box is gone: a new scene is "New Scene", renamed on its tile
   const r = await post('api/scenes/save', { name: typed });
   if (r.scene) {
-    $('#sceneName').value = '';
     activeScene = r.scene.id;
     // confirm on the button itself; nothing else rewrites it
     btn.textContent = 'Saved · ' + r.scene.name;
@@ -5604,7 +6970,15 @@ $('#fMaster').addEventListener('input', (e) => {
 });
 $('#fBlackout').addEventListener('click', () => toggleBlackout());
 $('#chasePause').addEventListener('click', () => post('api/chase', { enabled: false }).then(pullState));
-$('#chaseToggle').addEventListener('click', () => post('api/chase', { enabled: !S.chase.enabled }).then(pullState));
+$('#chaseToggle').addEventListener('click', () => {
+  // Start on an EMPTY chase is refused by the server on purpose (an armed empty list is a
+  // landmine: the first scene added later would start a chase nobody asked for). Say so,
+  // rather than letting the button flip back to "Start" on the next poll with no word.
+  if (!S.chase.enabled && !S.chase.sceneIds.length) {
+    return say('nothing in the chase yet — right-click a scene and choose "Add to chase"', true);
+  }
+  post('api/chase', { enabled: !S.chase.enabled }).then(pullState);
+});
 $('#chaseHold').addEventListener('change', (e) => post('api/chase', { holdMs: Math.round(+e.target.value * 1000) }));
 $('#chaseFade').addEventListener('change', (e) => post('api/chase', { fadeMs: Math.round(+e.target.value * 1000) }));
 
@@ -5923,6 +7297,13 @@ document.addEventListener('keydown', (e) => {
     recallByName(sceneHotkeys[e.key.toLowerCase()]);
     return;
   }
+  // Desk mappings (the keyboard-mappings panel): a bound key clicks the very button it was
+  // learned from. Not on auto-repeat: a held key must not run Next scene through the show.
+  if (!e.ctrlKey && !e.altKey && !e.metaKey && deskKeymap[e.key.toLowerCase()]) {
+    e.preventDefault();
+    if (!e.repeat) fireKeymap(deskKeymap[e.key.toLowerCase()]);
+    return;
+  }
   // With the filter active, 1-9 fire the Nth VISIBLE row — the row the eye is counting —
   // not the Nth row of the unfiltered library. Unfiltered, nothing changes.
   if (/^[1-9]$/.test(e.key) && S) {
@@ -5959,14 +7340,15 @@ function handleStageResize() {
   let rescaled = false;
   for (const stage of $$('.stage')) {
     const w = stage.clientWidth, h = stage.clientHeight;
+    const v = viewOf(stage);
     const prev = stageSizes.get(stage);
     stageSizes.set(stage, { w, h });
-    // Only a stage that is actually on screen may steer the shared view — the hidden
+    // Only a stage that is actually on screen may steer its view — the hidden
     // page's stage reads 0×0, and 0-ratio maths would wipe the pan.
     if (!prev || !prev.w || !prev.h || !w || !h || rescaled) continue;
     if (prev.w === w && prev.h === h) continue;
-    view.x *= w / prev.w;
-    view.y *= h / prev.h;
+    v.x *= w / prev.w;
+    v.y *= h / prev.h;
     rescaled = true;   // one visible stage drives; never apply the ratio twice
   }
   placeStages();
@@ -6009,11 +7391,12 @@ const SPLIT_DEFS = {
   'setup-sel':  { axis: 'x', varName: '--sp-1', pane: 'next', flexSel: '.stagepane', min: 110, max: 420 },
   'setup-lim':  { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.stagepane', min: 280, max: 780 },
   'setup-rows': { axis: 'y', min: 22, max: 78 },
-  'ctl-bank':   { axis: 'x', varName: '--sp-1', pane: 'prev', flexSel: '.scenearea', min: 180, max: 560 },
   'ctl-stack':  { axis: 'x', varName: '--sp-3', pane: 'next', flexSel: '.scenearea', min: 230, max: 560 },
   'ctl-rail':   { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.scenearea', min: 220, max: 560 },
   'ctl-sel':    { axis: 'x', varName: '--sp-1', pane: 'next', flexSel: '.stagepane', min: 110, max: 420 },
   'ctl-attr':   { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.stagepane', min: 320, max: 960 },
+  // The Stage page: stage | inspector (Emily, 2026-11-23: "make the grid smaller and the inspector bigger").
+  'sp-insp':    { axis: 'x', varName: '--sp-insp', pane: 'next', flexSel: '.bigstage', min: 240, max: 900 },
   'ctl-rows':   { axis: 'y', min: 22, max: 78 },
 };
 
@@ -6111,6 +7494,9 @@ $$('.railpane > .pane-head').forEach((head) => {
       el && !el.classList.contains('pane-head') && el.tagName !== 'DETAILS';
       el = el.nextElementSibling) el.classList.toggle('railfold', fold);
   };
+  // FX, LFO and Audio start folded on a first run (the studio desk's budget: the rail fits
+  // without scrolling); a stored choice, either way, always wins.
+  if (!(key in railFold) && ['FX', 'LFO', 'Audio'].includes(key)) railFold[key] = true;
   if (railFold[key]) setFold(true);
   head.addEventListener('click', () => {
     const fold = !head.classList.contains('folded');
@@ -6152,6 +7538,26 @@ $$('.ls-tab').forEach((b) => b.addEventListener('click', () => {
   if (S) buildTouchStrip();
 }));
 $('#lsFold').addEventListener('click', () => { lsFolded = !lsFolded; saveStripPrefs(); applyStrip(); });
+
+// The Touch stage folds to its head row: on a phone the pads are the job and the stage is a
+// glance; the fold is remembered like the strip's. On a wide screen the folded pane
+// collapses to a thin tool column (.stage-folded on the head drives the grid).
+let tsFolded = false;
+try { tsFolded = localStorage.getItem('touchStage') === 'folded'; } catch (e) { /* private mode */ }
+function applyTouchStage() {
+  const pane = $('#touchStage');
+  pane.classList.toggle('folded', tsFolded);
+  pane.parentElement.classList.toggle('stage-folded', tsFolded);
+  $('#tsFold').textContent = tsFolded ? '▴' : '▾';
+  $('#tsFold').title = tsFolded ? 'Open the stage' : 'Collapse the stage';
+  if (!tsFolded && S) requestAnimationFrame(() => fitStage($('#touchStage .stage')));
+}
+$('#tsFold').addEventListener('click', () => {
+  tsFolded = !tsFolded;
+  try { localStorage.setItem('touchStage', tsFolded ? 'folded' : 'open'); } catch (e) { /* private mode */ }
+  applyTouchStage();
+});
+applyTouchStage();
 // the audio mode list is the Control rail's list — one source, no drift
 $('#tAudMode').innerHTML = $('#audMode').innerHTML;
 applyStrip();

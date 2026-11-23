@@ -1,5 +1,5 @@
 'use strict';
-/* global S, post, say, stageMap, viewOf, snap, snapv, clamp, isTypingTarget, spaceHeld, tool, touchedAt:writable, markersPostedAt:writable, objSel:writable, objPaintStrips -- defined by app.js and objects.js, loaded first */
+/* global S, post, say, stageMap, viewOf, snap, snapv, clamp, WORLD, isTypingTarget, spaceHeld, tool, touchedAt:writable, markersPostedAt:writable, objSel:writable, objPaintStrips -- defined by app.js and objects.js, loaded first */
 // [labels] Stage labels on the page (studio, 2026-09-24): names on the stage view — "DJ",
 // "Stage edge", "Door" — with no DMX. Emily's DJ place had been patched as a 1-channel
 // Dimmer fixture, so it counted as a light, "All" picked it, and it was drawn as the
@@ -12,9 +12,14 @@
 // Drawn on every stage — Setup, Control, the Stage page, and Touch (view-only) — as a flat
 // outlined tag in muted grey, UNDER the lights, one size on screen at any zoom. On an
 // editable stage: the Label tool adds one (and opens its name for typing), drag moves it,
-// double-click renames it, Delete removes it. Every change says so in the status strip.
+// double-click renames it, Delete / Backspace removes it. A selected label carries a small bar
+// beside it — size − / +, ✕ Delete — so neither is a hidden gesture (her ask, 2026-11-22:
+// "when we add a label we can't delete it and resize it"). Every change says so in the
+// status strip. A label stands ABOVE the lights: under them (the studio desk's order) a label
+// dropped on a light, like the DJ label on the Dimmer, could never be picked up again.
 (() => {
   const MAX = 16;
+  const SIZE_MIN = 0.6, SIZE_MAX = 3, SIZE_STEP = 0.2;   // the server clamps to the same range
   let markSel = null;           // id of the selected label
   let drag = null;              // {id, pointerId, el, stage, start, ox, oy, moved}
   let lastDown = { id: null, t: 0 };
@@ -50,15 +55,15 @@
     const v = viewOf(stage);
     const { sc, ox, oy } = stageMap(r.width, r.height);
     return {
-      x: clamp(((clientX - r.left - v.x) / v.zoom - ox) / sc, -1, 2),
-      y: clamp(((clientY - r.top - v.y) / v.zoom - oy) / sc, -1, 2),
+      x: clamp(((clientX - r.left - v.x) / v.zoom - ox) / sc, -WORLD, WORLD),
+      y: clamp(((clientY - r.top - v.y) / v.zoom - oy) / sc, -WORLD, WORLD),
     };
   }
 
   // ---- drawing ------------------------------------------------------------------------------
-  // One layer per stage, kept just before the first light so every light paints over it (the
-  // video picture and the objects' low layer stay under it). buildStages() empties the
-  // stage on every structural change, so a missing layer is simply made again.
+  // One layer per stage, kept after the lights and just under the objects' handle layer (the
+  // video picture and the objects' low layer stay under the lights). buildStages() empties
+  // the stage on every structural change, so a missing layer is simply made again.
   function layerFor(inner) {
     let layer = inner.querySelector(':scope > .mklayer');
     if (!layer) {
@@ -66,9 +71,8 @@
       layer.className = 'mklayer';
       layer._tags = new Map();
     }
-    const firstLight = inner.querySelector(':scope > .fx-node');
-    if (firstLight) { if (layer.nextElementSibling !== firstLight) inner.insertBefore(layer, firstLight); }
-    else if (layer.parentElement !== inner) inner.appendChild(layer);
+    const top = inner.querySelector(':scope > svg.objtop');
+    if (layer.parentElement !== inner || layer.nextElementSibling !== top) inner.insertBefore(layer, top);
     return layer;
   }
 
@@ -95,14 +99,69 @@
       el.classList.toggle('renaming', !!editing && editing.id === m.id);
       el.style.left = (ox + m.x * sc) + 'px';
       el.style.top = (oy + m.y * sc) + 'px';
+      el.style.setProperty('--mks', labelSize(m));
       const t = el.firstChild;
       if (t.textContent !== m.text) t.textContent = m.text;
-      el.title = editable ? `${m.text} — a label, not a light. Drag to move, double-click to rename, Delete removes it` : m.text;
+      el.title = editable ? `${m.text} — a label, not a light. Drag to move, double-click to rename, Delete removes it, the bar beside it sets its size` : m.text;
     }
     for (const [id, el] of layer._tags) {
       if (alive.has(id)) continue;
       el.remove(); layer._tags.delete(id);
     }
+  }
+
+  const labelSize = (m) => (Number.isFinite(+m.size) && +m.size > 0 ? +m.size : 1);
+
+  // ---- the bar beside the selected label: size − / +, ✕ Delete ---------------------------------
+  // One bar per editable stage, shown only for the label selected on that stage.
+  function barFor(stage) {
+    let bar = stage._mkBar;
+    if (bar) return bar;
+    bar = document.createElement('div');
+    bar.className = 'mk-bar';
+    bar.hidden = true;
+    bar.innerHTML = '<button class="sq" data-mk="smaller" title="Label smaller">A−</button><output class="mk-size" title="Label size"></output>'
+      + '<button class="sq" data-mk="bigger" title="Label bigger">A+</button>'
+      + '<button class="sq danger" data-mk="del" title="Delete this label (Delete or Backspace)">✕ Delete</button>';
+    stage.appendChild(bar);
+    stage._mkBar = bar;
+    bar.addEventListener('pointerdown', (e) => e.stopPropagation());   // not a marquee on the stage
+    bar.addEventListener('wheel', (e) => e.stopPropagation());
+    bar.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-mk]');
+      if (!b || !markSel) return;
+      if (b.dataset.mk === 'del') remove(markSel);
+      else resize(markSel, b.dataset.mk === 'bigger' ? SIZE_STEP : -SIZE_STEP);
+    });
+    return bar;
+  }
+  function placeBars() {
+    for (const stage of document.querySelectorAll('.stagepane .stage:not(.viewonly)')) {
+      const bar = barFor(stage);
+      const m = markSel && !editing ? byId(markSel) : null;
+      const tag = m && stage.offsetParent ? [...stage.querySelectorAll('.mk-tag')].find((el) => el.dataset.mid === markSel) : null;
+      bar.hidden = !tag;
+      if (!tag) continue;
+      const sr = stage.getBoundingClientRect(), tr = tag.getBoundingClientRect();
+      const out = bar.querySelector('.mk-size');
+      const pct = Math.round(labelSize(m) * 100) + '%';
+      if (out.textContent !== pct) out.textContent = pct;
+      bar.querySelector('[data-mk="smaller"]').disabled = labelSize(m) <= SIZE_MIN + 0.001;
+      bar.querySelector('[data-mk="bigger"]').disabled = labelSize(m) >= SIZE_MAX - 0.001;
+      // Above the label, centred; below it when there is no room above; kept inside the stage.
+      const bw = bar.offsetWidth, bh = bar.offsetHeight;
+      let top = tr.top - sr.top - bh - 6;
+      if (top < 4) top = tr.bottom - sr.top + 6;
+      bar.style.left = clamp(tr.left - sr.left + tr.width / 2 - bw / 2, 4, Math.max(4, sr.width - bw - 4)) + 'px';
+      bar.style.top = clamp(top, 4, Math.max(4, sr.height - bh - 4)) + 'px';
+    }
+  }
+  function resize(id, delta) {
+    const m = byId(id);
+    if (!m) return;
+    m.size = Math.round(clamp(labelSize(m) + delta, SIZE_MIN, SIZE_MAX) * 100) / 100;
+    send(true);
+    say(`Label "${m.text}" at ${Math.round(m.size * 100)}%`);
   }
 
   function frame() {
@@ -115,6 +174,7 @@
       if (!inner.offsetParent) continue;
       draw(inner);
     }
+    placeBars();
     if (editing) placeEditor();
   }
   const visibleTag = (id) => [...document.querySelectorAll(`.mk-tag[data-mid="${CSS.escape(id)}"]`)].find((el) => el.offsetParent);
@@ -179,7 +239,7 @@
     const c = worldAt(stage, r.left + r.width / 2, r.top + r.height / 2);
     const x = typeof snapv === 'function' && snap ? snapv(c.x) : c.x;
     const y = typeof snapv === 'function' && snap ? snapv(c.y) : c.y;
-    const m = { id: 'mk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), kind: 'label', text: 'Label', x, y };
+    const m = { id: 'mk' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), kind: 'label', text: 'Label', x, y, size: 1 };
     S.markers = [...S.markers, m];
     select(m.id);
     send(true);
@@ -194,7 +254,7 @@
     S.markers = list().filter((x) => x.id !== id);
     if (markSel === id) markSel = null;
     send(true);
-    say(`Label "${m.text}" removed — Ctrl+Z brings it back`);
+    say(`Label "${m.text}" deleted`);
   }
 
   // ---- pointer ----------------------------------------------------------------------------------
@@ -220,7 +280,7 @@
       tag.setPointerCapture(e.pointerId);
       stage.classList.add('mkdragging');
       touchedAt = Date.now();
-      say(`${m.text} — a label, not a light. Drag to move, double-click to rename, Delete removes it`);
+      say(`${m.text} — a label, not a light. Drag to move, double-click to rename, size and ✕ in the bar beside it, Delete removes it`);
     }, true);
 
     const move = (e) => {
@@ -231,7 +291,7 @@
       let x = drag.ox + (p.x - drag.start.x), y = drag.oy + (p.y - drag.start.y);
       if (!drag.moved && Math.hypot((x - drag.ox), (y - drag.oy)) < 0.002) return;
       if (typeof snapv === 'function' && snap) { x = snapv(x); y = snapv(y); }
-      m.x = clamp(x, -1, 2); m.y = clamp(y, -1, 2);
+      m.x = clamp(x, -WORLD, WORLD); m.y = clamp(y, -WORLD, WORLD);
       drag.moved = true;
       touchedAt = Date.now();
       send();
@@ -256,7 +316,7 @@
   // tile and pressing Delete must delete the scene, not the label.
   document.addEventListener('pointerdown', (e) => {
     if (!markSel || !e.target.closest) return;
-    if (e.target.closest('.mk-tag') || e.target.closest('.mk-rename')) return;
+    if (e.target.closest('.mk-tag') || e.target.closest('.mk-rename') || e.target.closest('.mk-bar')) return;
     markSel = null;
   }, true);
 
@@ -264,7 +324,7 @@
   // lights on Setup) and alongside objects.js.
   window.addEventListener('keydown', (e) => {
     if (!markSel || editing || isTypingTarget(e.target)) return;
-    if (e.key === 'Delete') {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault(); e.stopImmediatePropagation();
       remove(markSel);
     } else if (e.key === 'Escape') {
@@ -301,5 +361,5 @@
   requestAnimationFrame(frame);
 
   // For the harness and anything that needs to know.
-  window.StageLabels = { add, remove, rename, list, selected: () => markSel };
+  window.StageLabels = { add, remove, rename, resize, list, selected: () => markSel };
 })();

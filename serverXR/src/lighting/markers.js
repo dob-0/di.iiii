@@ -14,6 +14,9 @@ const WORLD = 1000;
 const MAX_MARKERS = 16;
 const MARKER_KINDS = ['label'];
 const MAX_TEXT = 40;
+// A label's size is a multiplier of its on-screen size: 1 is the size every label had before the
+// field existed (a show saved without it loads as 1).
+const SIZE_MIN = 0.6, SIZE_MAX = 3;
 
 const num = (v, lo, hi, dflt) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, +v)) : dflt);
 
@@ -38,9 +41,10 @@ function sanitizeMarkers(list) {
       text,
       x: num(m.x, -WORLD, WORLD, 0.5),
       y: num(m.y, -WORLD, WORLD, 0.5),
+      size: Math.round(num(m.size, SIZE_MIN, SIZE_MAX, 1) * 100) / 100,
     });
   }
   return out;
 }
 
-module.exports = { MAX_MARKERS, MARKER_KINDS, MAX_TEXT, sanitizeMarkers };
+module.exports = { MAX_MARKERS, MARKER_KINDS, MAX_TEXT, SIZE_MIN, SIZE_MAX, sanitizeMarkers };
