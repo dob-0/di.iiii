@@ -1,5 +1,5 @@
 'use strict';
-/* global S, post, say, stageMap, viewOf, snap, snapv, clamp, esc, isTypingTarget, spaceHeld, tool, touchedAt:writable, showPage, objectsPostedAt:writable, ObjCore -- defined by app.js and objcore.js, loaded first */
+/* global S, post, say, stageMap, viewOf, snap, snapv, GRID, WORLD, clamp, esc, isTypingTarget, spaceHeld, tool, touchedAt:writable, showPage, objectsPostedAt:writable, ObjCore -- defined by app.js and objcore.js, loaded first */
 // Stage objects on the page: the Line / Radar / Ring / Spot buttons, the shapes drawn on
 // every stage view, their handles, the list of objects, and the editor for the selected one.
 //
@@ -97,6 +97,15 @@ function objPatch(id, patch, { now = true, msg } = {}) {
   return objById(id);
 }
 
+// The part of the world a stage is showing right now, in world units, and its centre.
+function objViewFrame(stage) {
+  const r = stage.getBoundingClientRect();
+  const v = viewOf(stage);
+  const { sc, ox, oy } = stageMap(r.width, r.height);
+  const wx = (px) => ((px - v.x) / v.zoom - ox) / sc, wy = (py) => ((py - v.y) / v.zoom - oy) / sc;
+  return { x0: wx(0), x1: wx(r.width), y0: wy(0), y1: wy(r.height), cx: wx(r.width / 2), cy: wy(r.height / 2) };
+}
+
 // Where to put a new object: the middle of the lights the objects can reach (the Dimmer
 // and anything else the effects leave alone does not count), sized to them.
 function objRigFrame() {
@@ -110,21 +119,34 @@ function objRigFrame() {
   return { cx, cy, w: x1 - x0, h: y1 - y0, reach };
 }
 
-function objAdd(kind) {
+function objAdd(kind, stage) {
   if (!S) return;
   if (!Array.isArray(S.objects)) S.objects = [];
   if (S.objects.length >= ObjCore.MAX_OBJECTS) { say(`At most ${ObjCore.MAX_OBJECTS} objects on the stage — delete one first`, true); return; }
   const r = objRigFrame();
   const d = ObjCore.KIND_DEFAULTS[kind];
   const n = S.objects.filter((x) => x.kind === kind).length + 1;
+  // Born INSIDE what she is looking at, never off-screen or wider than the stage. It used to be
+  // sized to the whole rig (radar 1.15 x its reach, ring 1.1 x, line past both edges) — on a
+  // small stage at zoom 1 that is bigger than the pane, so its size handle was off-screen and
+  // the shape swallowed everything. Now: at the rig's middle when that is in view (else the
+  // middle of the view), and no bigger than the view allows; lands on the grid; and a second
+  // object does not stack on the first.
+  const vf = stage ? objViewFrame(stage) : null;
+  const rigInView = !vf || (r.cx >= vf.x0 && r.cx <= vf.x1 && r.cy >= vf.y0 && r.cy <= vf.y1);
+  const half = vf ? Math.min(vf.x1 - vf.x0, vf.y1 - vf.y0) / 2 : Infinity;
+  const reach = Math.min(r.reach, half * 0.85);
+  const grid = (v, min = GRID * 2) => Math.max(min, snapv(v));
+  let x = snapv(rigInView ? r.cx : vf.cx), y = snapv(rigInView ? r.cy : vf.cy);
+  while (S.objects.some((q) => Math.abs(q.x - x) < 0.01 && Math.abs(q.y - y) < 0.01)) { x += GRID * 2; y += GRID * 2; }
   const o = {
     id: 'ob' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
     kind, name: `${OBJ_LABEL[kind]} ${n}`,
-    x: r.cx, y: r.cy, angle: d.angle, width: d.width, beats: d.beats, depth: 255, on: true,
-    size: kind === 'line' ? Math.max(0.1, r.w / 2 + 0.06)
-      : kind === 'radar' ? r.reach * 1.15
-      : kind === 'ring' ? r.reach * 1.1
-      : d.size,
+    x, y, angle: d.angle, width: d.width, beats: d.beats, depth: 255, on: true,
+    size: kind === 'line' ? grid(Math.min(r.w / 2, half * 0.85))
+      : kind === 'radar' ? grid(reach * 0.8)
+      : kind === 'ring' ? grid(reach * 0.6)
+      : grid(d.size),
   };
   S.objects = ObjCore.sanitizeObjects([...S.objects, o]);
   objSelect(S.objects[S.objects.length - 1].id, { quiet: true });
@@ -142,7 +164,7 @@ function objRemove(id) {
   if (objSolo && objSolo.id === id) objSolo = null;
   objSend(true);
   objPaintStrips();
-  say(`${name} removed — Ctrl+Z brings it back`);
+  say(`${name} deleted`);
 }
 
 // Select an object. A moving one holds still on the preview while it is selected, so its
@@ -317,7 +339,7 @@ function objDrawStage(inner, now) {
   const { sc, ox, oy } = stageMap(W, H);
   const zoom = viewOf(inner).zoom || 1;
   const X = (x) => ox + x * sc, Y = (y) => oy + y * sc;
-  const hs = 11 / zoom;                         // handles keep one size on screen
+  const hs = 14 / zoom;                         // handles keep one size on screen (14 px: easy to catch on a small stage)
   const bpm = objBpm();
   const alive = new Set();
   for (const o of objList()) {
@@ -360,7 +382,8 @@ function objDrawStage(inner, now) {
         const rx = ax + pose.dx * R, ry = ay + pose.dy * R;
         setA(p.arm, { x1: ax, y1: ay, x2: rx, y2: ry });
         setA(p.hRot, { cx: rx, cy: ry, r: hs / 2 });
-        const sx = ax + pose.nx * o.size * sc, sy = ay + pose.ny * o.size * sc;
+        const hd = Math.max(o.size * sc, 26 / zoom);   // never closer to the hub than a hand can tell apart
+        const sx = ax + pose.nx * hd, sy = ay + pose.ny * hd;
         setA(p.hSize, { x: sx - hs / 2, y: sy - hs / 2, width: hs, height: hs, transform: `rotate(45 ${sx} ${sy})` });
       }
     } else if (o.kind === 'radar') {
@@ -381,7 +404,8 @@ function objDrawStage(inner, now) {
         const rx = ax + rr * Math.cos(a0), ry = ay + rr * Math.sin(a0);
         setA(p.arm, { x1: ax, y1: ay, x2: rx, y2: ry });
         setA(p.hRot, { cx: rx, cy: ry, r: hs / 2 });
-        setA(p.hSize, { x: ax + o.size * sc - hs / 2, y: ay - hs / 2, width: hs, height: hs, transform: `rotate(45 ${ax + o.size * sc} ${ay})` });
+        const hd = Math.max(o.size * sc, 44 / zoom);   // beyond the turn handle (26 px out on the same axis)
+        setA(p.hSize, { x: ax + hd - hs / 2, y: ay - hs / 2, width: hs, height: hs, transform: `rotate(45 ${ax + hd} ${ay})` });
       }
     } else if (o.kind === 'ring') {
       const r = pose.r * sc;
@@ -389,12 +413,12 @@ function objDrawStage(inner, now) {
       setA(p.band, { cx, cy, r, 'stroke-width': Math.max(1 / zoom, o.width * sc), 'stroke-opacity': (0.28 * pose.fade).toFixed(3) });
       setA(p.core, { cx, cy, r, 'stroke-opacity': pose.fade.toFixed(3) });
       if (p.hit) setA(p.hit, { cx, cy, r: pose.size * sc });
-      if (editable) setA(p.hSize, { x: ax + o.size * sc - hs / 2, y: ay - hs / 2, width: hs, height: hs, transform: `rotate(45 ${ax + o.size * sc} ${ay})` });
+      if (editable) { const hd = Math.max(o.size * sc, 26 / zoom); setA(p.hSize, { x: ax + hd - hs / 2, y: ay - hs / 2, width: hs, height: hs, transform: `rotate(45 ${ax + hd} ${ay})` }); }
     } else {
       setA(p.disc, { cx, cy, r: pose.r * sc });
       setA(p.soft, { cx, cy, r: (pose.r + o.width) * sc, visibility: o.width > 0 ? 'visible' : 'hidden' });
       if (p.hit) setA(p.hit, { cx, cy, r: pose.r * sc });
-      if (editable) setA(p.hSize, { x: ax + o.size * sc - hs / 2, y: ay - hs / 2, width: hs, height: hs, transform: `rotate(45 ${ax + o.size * sc} ${ay})` });
+      if (editable) { const hd = Math.max(o.size * sc, 26 / zoom); setA(p.hSize, { x: ax + hd - hs / 2, y: ay - hs / 2, width: hs, height: hs, transform: `rotate(45 ${ax + hd} ${ay})` }); }
     }
     if (editable) {
       // A: the anchor handle. For move A → B it moves A alone (the body moves both).
@@ -545,7 +569,7 @@ function objEditorWire(container) {
       if (v === 'move') {
         // First time: B a little to the right of A, and there-and-back is the natural way
         // to travel between two points.
-        if (Math.abs(o.bx - o.x) < 1e-6 && Math.abs(o.by - o.y) < 1e-6) { patch.bx = clamp(o.x + 0.3, -1, 2); patch.by = o.y; }
+        if (Math.abs(o.bx - o.x) < 1e-6 && Math.abs(o.by - o.y) < 1e-6) { patch.bx = clamp(o.x + 0.3, -WORLD, WORLD); patch.by = o.y; }
         if (o.dir === ObjCore.KIND_DIR[o.kind] && o.dir !== 'pingpong') patch.dir = 'pingpong';
         if (ObjCore.cycleMs(o, bpm) == null) patch.beats = 8;
         msg = `${objName(o)} moves between A and B — drag the B handle on the stage`;
@@ -593,13 +617,18 @@ function objEditorWire(container) {
 window.ObjEditor = { html: objEditorHtml, sync: objEditorSync, wire: objEditorWire };
 
 // ---- the strip for the selected object (small stages) ----------------------------------
+// On the small stages it is a row UNDER the stage (the stage gets shorter while an object is
+// selected) — as an overlay it covered the lights along the bottom edge, up to a third of a
+// Setup stage. On the Stage page (insp closed) it floats over the stage as before.
 function objStripFor(stage) {
-  let strip = stage.querySelector(':scope > .objstrip');
+  const host = stage.closest('.bigstage') ? stage : stage.parentElement;
+  let strip = host.querySelector(':scope > .objstrip');
   if (strip) return strip;
   strip = document.createElement('div');
   strip.className = 'objstrip';
   strip.hidden = true;
-  stage.appendChild(strip);
+  if (host === stage) stage.appendChild(strip); else stage.after(strip);
+
   let open = false;
   try { open = localStorage.getItem('objAnimOpen') === '1'; } catch (e) { /* private mode */ }
   strip.classList.toggle('anim-open', open);
@@ -724,8 +753,8 @@ function objWorld(stage, e) {
   const v = viewOf(stage);
   const { sc, ox, oy } = stageMap(r.width, r.height);
   return {
-    x: clamp(((e.clientX - r.left - v.x) / v.zoom - ox) / sc, -1, 2),
-    y: clamp(((e.clientY - r.top - v.y) / v.zoom - oy) / sc, -1, 2),
+    x: clamp(((e.clientX - r.left - v.x) / v.zoom - ox) / sc, -WORLD, WORLD),
+    y: clamp(((e.clientY - r.top - v.y) / v.zoom - oy) / sc, -WORLD, WORLD),
   };
 }
 
@@ -744,7 +773,7 @@ function objWireStage(stage) {
     }
     const part = e.target.closest && e.target.closest('[data-part]');
     const g = part && part.closest('g.obj');
-    if (!g || e.button !== 0 || spaceHeld || (typeof tool !== 'undefined' && tool === 'hand' && !part.classList.contains('ob-handle'))) {
+    if (!g || e.button !== 0 || spaceHeld || (typeof tool !== 'undefined' && tool === 'hand' && !part.classList.contains('ob-handle') && !part.classList.contains('ob-hubtop'))) {
       if (objSel && e.button === 0 && !spaceHeld) objSelect(null);
       return;
     }
@@ -753,7 +782,7 @@ function objWireStage(stage) {
     if (!o) return;
     objSelect(o.id);
     const p = objWorld(stage, e);
-    objDrag = { id: o.id, mode: part.dataset.part, stage, pointerId: e.pointerId, start: p, ox: o.x, oy: o.y, obx: o.bx, oby: o.by, moved: false };
+    objDrag = { id: o.id, mode: part.dataset.part, stage, pointerId: e.pointerId, start: p, ox: o.x, oy: o.y, obx: o.bx, oby: o.by, size0: o.size, moved: false };
     stage.setPointerCapture(e.pointerId);
     stage.classList.add('objdragging');
     touchedAt = Date.now();
@@ -771,23 +800,28 @@ function objWireStage(stage) {
     if (objDrag.mode === 'move') {
       // The whole object; for move A → B, A and B travel together (the path keeps its shape).
       const x = sn(objDrag.ox + dx), y = sn(objDrag.oy + dy);
-      o.x = clamp(x, -1, 2); o.y = clamp(y, -1, 2);
-      if (o.motion === 'move') { o.bx = clamp(objDrag.obx + (o.x - objDrag.ox), -1, 2); o.by = clamp(objDrag.oby + (o.y - objDrag.oy), -1, 2); }
+      o.x = clamp(x, -WORLD, WORLD); o.y = clamp(y, -WORLD, WORLD);
+      if (o.motion === 'move') { o.bx = clamp(objDrag.obx + (o.x - objDrag.ox), -WORLD, WORLD); o.by = clamp(objDrag.oby + (o.y - objDrag.oy), -WORLD, WORLD); }
     } else if (objDrag.mode === 'moveA') {
-      o.x = clamp(sn(objDrag.ox + dx), -1, 2); o.y = clamp(sn(objDrag.oy + dy), -1, 2);
+      o.x = clamp(sn(objDrag.ox + dx), -WORLD, WORLD); o.y = clamp(sn(objDrag.oy + dy), -WORLD, WORLD);
     } else if (objDrag.mode === 'moveB') {
-      o.bx = clamp(sn(objDrag.obx + dx), -1, 2); o.by = clamp(sn(objDrag.oby + dy), -1, 2);
+      o.bx = clamp(sn(objDrag.obx + dx), -WORLD, WORLD); o.by = clamp(sn(objDrag.oby + dy), -WORLD, WORLD);
     } else if (objDrag.mode === 'rotate') {
       let a = Math.atan2(p.y - o.y, p.x - o.x) * 180 / Math.PI;
       if (e.shiftKey) a = Math.round(a / 15) * 15;
       o.angle = ((a % 360) + 360) % 360;
     } else {
-      let s;
-      if (o.kind === 'line') {
+      // The size follows how far the hand has moved along the handle's own measure (the line:
+      // across its direction; the rest: out from the hub), added to the size it started with.
+      // The handle itself may sit further out than the size (a minimum distance from the hub),
+      // so using the hand's absolute distance made the size jump on the first move.
+      const dist = (q) => {
+        if (o.kind !== 'line') return Math.hypot(q.x - o.x, q.y - o.y);
         const t = o.angle * Math.PI / 180;
-        s = Math.abs((p.x - o.x) * -Math.sin(t) + (p.y - o.y) * Math.cos(t));
-      } else s = Math.hypot(p.x - o.x, p.y - o.y);
-      o.size = clamp(s, 0.02, 3);
+        return Math.abs((q.x - o.x) * -Math.sin(t) + (q.y - o.y) * Math.cos(t));
+      };
+      let s = objDrag.size0 + (dist(p) - dist(objDrag.start));
+      o.size = clamp(snap ? Math.max(GRID, snapv(s)) : s, 0.02, 3);   // snap on: a whole number of grid cells
     }
     objDrag.moved = true;
     objSend();
@@ -838,7 +872,7 @@ window.addEventListener('keydown', (e) => {
     }
   }
   if (!objSel || isTypingTarget(e.target)) return;
-  if (e.key === 'Delete') {
+  if (e.key === 'Delete' || e.key === 'Backspace') {
     e.preventDefault(); e.stopImmediatePropagation();
     objRemove(objSel);
   } else if (e.key === 'Escape') {
@@ -849,7 +883,7 @@ window.addEventListener('keydown', (e) => {
 // ---- start ----------------------------------------------------------------------------
 for (const b of document.querySelectorAll('.objBtn')) {
   b.title = OBJ_HINT[b.dataset.obj] || b.title;
-  b.addEventListener('click', () => objAdd(b.dataset.obj));
+  b.addEventListener('click', () => { const pane = b.closest('.stagepane'); objAdd(b.dataset.obj, pane && pane.querySelector('.stage')); });
 }
 for (const stage of document.querySelectorAll('.stagepane .stage')) objWireStage(stage);
 const objPill = document.getElementById('objPill');

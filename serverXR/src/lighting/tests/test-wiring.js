@@ -508,5 +508,22 @@ check('stage labels: size field on the server, size bar + Delete in the page, De
   if (!mcss.includes('var(--mks, 1)') || !mcss.includes('.mk-bar')) throw new Error('markers.css lacks the size multiplier or the bar');
 });
 
+// Stage objects (2026-11-23, her ask: "objects are not comfortable to use at all, bigger than the grid").
+// Each line is a defect that was found in the browser; this keeps it from coming back.
+check('stage objects: born in view on the grid, handles catchable, editor under the stage, one world bound', () => {
+  const ob = fs.readFileSync(path.join(ROOT, '../ui/objects.js'), 'utf8');
+  const ocss = fs.readFileSync(path.join(ROOT, '../ui/objects.css'), 'utf8');
+  if (/r\.reach \* 1\.15|r\.reach \* 1\.1\b/.test(ob)) throw new Error('objects are sized to the whole rig again (wider than a small stage)');
+  if (!ob.includes('objViewFrame(stage)') || !ob.includes('snapv(rigInView')) throw new Error('a new object is not placed in view and on the grid');
+  if (!ob.includes('objAdd(b.dataset.obj, pane')) throw new Error('the add buttons no longer tell objAdd which stage they are on');
+  if (!/\.obj:not\(\.moveab\) \.ob-hb \{ pointer-events: none; \}/.test(ocss)) throw new Error('the hidden B handle takes presses again (it sits on the hub)');
+  if (/clamp\([^)]*, -1, 2\)/.test(ob)) throw new Error('objects.js clamps to -1..2 again — a light may go to the WORLD bound, so may an object');
+  if (!ob.includes('Math.max(GRID, snapv(s))')) throw new Error('resizing an object no longer snaps to the grid');
+  if (!ob.includes("e.key === 'Delete' || e.key === 'Backspace'")) throw new Error('Backspace no longer deletes the selected object');
+  if (/Ctrl\+Z/.test(ob)) throw new Error('a delete must not promise an undo the desk does not have');
+  if (!/stagepane:not\(\.bigstage\) > \.objstrip \{\s*position: static/.test(ocss)) throw new Error('the object editor covers the small stage again');
+  if (!ob.includes('const hs = 14 / zoom')) throw new Error('the object handles shrank');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
