@@ -472,5 +472,41 @@ check('the keyboard-mappings panel is wired: ids, top-bar button, B refused, New
   if (!(scene > 0 && kd > scene && digits > kd)) throw new Error('desk mappings must fire between the scene keys and the digit row');
 });
 
+// The stage tools (2026-11-23, her ask: "too many stuff — we had that hand button, I want to move in grid"):
+// the hand and snap tools are on every editable stage, the light-size buttons on every stage,
+// and ONE grid (GRID, in world units) is what the lines are drawn on, what a drag snaps to, what the
+// arrange tools round to, and what objects and labels snap to.
+check('stage tools: hand + snap + light size on every editable stage, one GRID for lines, snap and arrange', () => {
+  const count = (re) => (html.match(re) || []).length;
+  if (count(/data-tool="hand"/g) !== 3) throw new Error('the hand tool is not on all three editable stages (Setup, Control, Stage page)');
+  if (count(/class="tool snapBtn"/g) !== 3) throw new Error('the snap tool is not on all three editable stages');
+  if (count(/class="tool nodeSmaller"/g) !== 4 || count(/class="tool nodeBigger"/g) !== 4) throw new Error('light size - / + is not on Setup, Control, the Stage page and Touch');
+  if (!/const GRID = 0\.05;/.test(js)) throw new Error('GRID is not 0.05');
+  if (!/const snapv = \(v\) => Math\.round\(Math\.round\(v \/ GRID\) \* GRID/.test(js)) throw new Error('snapv is not built on GRID');
+  if (/\* 40\) \/ 40|\* 24\) \/ 24/.test(js)) throw new Error('a 1/40 or 1/24 snap is back in app.js — one grid only');
+  if (!js.includes('GRID * g.sc * v.zoom')) throw new Error('the drawn grid is not driven by GRID');
+  if (!js.includes("localStorage.getItem('lightdeskSnap')") || !js.includes('let snap = true;')) throw new Error('snap is not on by default and remembered');
+  if (!js.includes("'lightdeskNodeSize.'")) throw new Error('light size is not remembered per view in this browser');
+  const post = js.slice(js.indexOf("lightdeskNodeSize.' + name"), js.indexOf("lightdeskNodeSize.' + name") + 200);
+  if (/post\(/.test(post)) throw new Error('light size must never be sent to the desk (it is a view preference, not part of the show)');
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  if (!css.includes('calc(34px * var(--ns, 1))')) throw new Error('.fx-body no longer follows --ns (light size)');
+  const dragAt = js.indexOf("drag.mode === 'move') {");
+  if (!js.slice(dragAt, dragAt + 1500).includes('dx = snapv(a.x + dx) - a.x')) throw new Error('a light drag no longer snaps by its anchor');
+});
+
+// Stage labels (2026-11-23): size, a bar with size and Delete, Backspace, the layer above the lights.
+check('stage labels: size field on the server, size bar + Delete in the page, Delete and Backspace keys', () => {
+  const mk = fs.readFileSync(path.join(ROOT, '../ui/markers.js'), 'utf8');
+  const srv = fs.readFileSync(path.join(ROOT, '../markers.js'), 'utf8');
+  if (!/size: Math\.round\(num\(m\.size, SIZE_MIN, SIZE_MAX, 1\)/.test(srv)) throw new Error('sanitizeMarkers does not clamp size');
+  for (const s of ['data-mk="smaller"', 'data-mk="bigger"', 'data-mk="del"', "e.key === 'Backspace'", 'e.key === \'Delete\'', '--mks']) {
+    if (!mk.includes(s)) throw new Error('markers.js is missing ' + s);
+  }
+  if (/Ctrl\+Z/.test(mk)) throw new Error('a delete must not promise an undo the desk does not have');
+  const mcss = fs.readFileSync(path.join(ROOT, '../ui/markers.css'), 'utf8');
+  if (!mcss.includes('var(--mks, 1)') || !mcss.includes('.mk-bar')) throw new Error('markers.css lacks the size multiplier or the bar');
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);

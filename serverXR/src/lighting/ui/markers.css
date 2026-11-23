@@ -4,7 +4,7 @@
    under the lights: a light dragged onto a label covers it. */
 .mklayer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
 .mk-tag {
-  position: absolute; transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1)));
+  position: absolute; transform: translate(-50%, -50%) scale(calc(var(--mks, 1) / var(--zoom, 1)));   /* --mks: this label's size */
   transform-origin: 50% 50%;
   padding: 2px 7px; border: 1px solid #ffffff38; border-radius: 0;
   background: #0b0b0ccc; color: var(--muted); font-size: 11px; line-height: 15px;
@@ -17,6 +17,15 @@
 .mk-tag.renaming { visibility: hidden; }
 .stage.hand .mk-tag.editable { cursor: grab; }
 .stage.mkdragging, .stage.mkdragging .mk-tag { cursor: grabbing; }
+/* The bar beside the selected label: size − / +, ✕ Delete. */
+.mk-bar {
+  position: absolute; z-index: 8; display: flex; align-items: center; gap: 4px; padding: 3px 4px;
+  background: var(--pane); border: 1px solid var(--line); border-left: 3px solid var(--accent); font-size: 12px;
+}
+.mk-bar[hidden] { display: none; }
+.mk-bar .sq { padding: 2px 8px; font-size: 11px; }
+.mk-bar .sq:disabled { opacity: .4; }
+.mk-bar .mk-size { min-width: 36px; text-align: center; color: var(--muted); font-variant-numeric: tabular-nums; }
 .mk-rename {
   position: absolute; z-index: 8; height: 26px; padding: 0 8px; font-size: 12px;
   background: var(--field); color: var(--text); border: 1px solid var(--accent); border-radius: 0;

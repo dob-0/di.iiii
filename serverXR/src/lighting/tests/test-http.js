@@ -2257,13 +2257,14 @@ check('a show file that cannot be written does not stop the desk, says so, keeps
 check('stage objects, labels, follow times and the colour effect: set, published, validated', async () => {
   let r = await POST('/api/objects', { objects: [{ kind: 'radar', x: 0.5, y: 0.5 }] });
   assert.strictEqual(r.status, 200, r.text);
-  r = await POST('/api/markers', { markers: [{ text: 'DJ', x: 0.46, y: 0.06 }] });
+  r = await POST('/api/markers', { markers: [{ text: 'DJ', x: 0.46, y: 0.06 }, { text: 'Bar', size: 1.6 }, { text: 'Tiny', size: 0 }] });
   assert.strictEqual(r.status, 200, r.text);
   r = await POST('/api/colorfx', { mode: 'chase', beats: 2 });
   assert.strictEqual(r.body.colorFx.mode, 'chase');
   const st = (await GET('/api/state')).body;
   assert.deepStrictEqual(st.objects.map((x) => x.kind), ['radar']);
-  assert.deepStrictEqual(st.markers.map((m) => m.text), ['DJ']);
+  assert.deepStrictEqual(st.markers.map((m) => m.text), ['DJ', 'Bar', 'Tiny']);
+  assert.deepStrictEqual(st.markers.map((m) => m.size), [1, 1.6, 0.6], 'label size: default 1, kept, clamped to the floor');
   assert.ok(!st.fixtures.some((f) => f.name === 'DJ'), 'a label is not a fixture');
   assert.ok(st.cue && st.cue.running === false, 'the follow status is published');
   assert.strictEqual((await POST('/api/objects', { objects: 'radar' })).status, 400);
