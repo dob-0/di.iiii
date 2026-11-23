@@ -1,0 +1,55 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>matte speed test</title>
+<style>html,body{margin:0;background:#000}canvas{width:960px;height:540px;display:block}</style></head>
+<body>
+<video id="v" src="clip1080.webm" muted loop playsinline crossorigin="anonymous" style="display:none"></video>
+<canvas id="out" width="1920" height="1080"></canvas>
+<script type="module">
+import { FilesetResolver, ImageSegmenter } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
+const R = window.__result = { status: "loading" };
+try {
+  const files = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+  const seg = await ImageSegmenter.createFromOptions(files, {
+    baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite", delegate: "GPU" },
+    runningMode: "VIDEO", outputConfidenceMasks: true, outputCategoryMask: false });
+  const v = document.getElementById("v"); await v.play();
+  const out = document.getElementById("out"), ctx = out.getContext("2d");
+  const m = document.createElement("canvas"), mctx = m.getContext("2d");
+  const p = document.createElement("canvas"); p.width = 1920; p.height = 1080; const pctx = p.getContext("2d");
+  const sm = document.createElement("canvas"); sm.width = 480; sm.height = 270; const smctx = sm.getContext("2d");
+  const cov = []; const vt0 = v.currentTime;
+  const segMs = [], frameT = []; let t0 = performance.now(), last = -1, maskW = 0, maskH = 0;
+  R.status = "running";
+  function loop(now) {
+    const s = performance.now();
+    smctx.drawImage(v, 0, 0, 480, 270);
+    const res = seg.segmentForVideo(sm, now);
+    const mask = res.confidenceMasks[0]; maskW = mask.width; maskH = mask.height;
+    const f = mask.getAsFloat32Array();
+    if (m.width !== maskW) { m.width = maskW; m.height = maskH; }
+    const img = mctx.createImageData(maskW, maskH);
+    for (let i = 0; i < f.length; i++) img.data[i * 4 + 3] = f[i] > 0.5 ? 255 : Math.round(f[i] * 255 * 0.5);
+    mctx.putImageData(img, 0, 0); res.close();
+    segMs.push(performance.now() - s);
+    let on = 0; for (let i = 0; i < f.length; i++) if (f[i] > 0.5) on++; cov.push(on / f.length);
+    // effect: silhouette over a changing colour background
+    const hue = (now / 20) % 360;
+    ctx.fillStyle = `hsl(${hue},90%,50%)`; ctx.fillRect(0, 0, 1920, 1080);
+    pctx.globalCompositeOperation = "copy"; pctx.drawImage(m, 0, 0, 1920, 1080);
+    pctx.globalCompositeOperation = "source-in"; pctx.fillStyle = "#000"; pctx.fillRect(0, 0, 1920, 1080);
+    ctx.drawImage(p, 0, 0);
+    if (frameT.length % 2) { ctx.globalAlpha = 0.35; ctx.drawImage(v, 0, 0, 1920, 1080); ctx.globalAlpha = 1; }
+    if (frameT.length === 120) { ctx.globalAlpha = 1; }
+    frameT.push(now);
+    if (now - t0 < 10000) requestAnimationFrame(loop);
+    else {
+      const n = frameT.length, secs = (frameT[n - 1] - frameT[0]) / 1000;
+      const sorted = [...segMs].sort((a, b) => a - b);
+      Object.assign(R, { status: "done", frames: n, seconds: +secs.toFixed(2), fps: +((n - 1) / secs).toFixed(1),
+        segMsMean: +(segMs.reduce((a, b) => a + b, 0) / n).toFixed(2), segMsP95: +sorted[Math.floor(n * 0.95)].toFixed(2),
+        personCoverMean: +(cov.reduce((a,b)=>a+b,0)/cov.length).toFixed(3), framesWithPerson: cov.filter(c=>c>0.01).length, videoAdvancedS: +(v.currentTime - vt0).toFixed(2), mask: `${maskW}x${maskH}`, output: "1920x1080", gl: (() => { const g = document.createElement("canvas").getContext("webgl2"); const d = g && g.getExtension("WEBGL_debug_renderer_info"); return d ? g.getParameter(d.UNMASKED_RENDERER_WEBGL) : "unknown"; })() });
+    }
+  }
+  requestAnimationFrame(loop);
+} catch (e) { R.status = "error"; R.error = String(e && e.stack || e); }
+</script></body></html>
