@@ -1,0 +1,12 @@
+{
+  "$schema": "https://diiii.xyz/schemas/di-space.schema.json",
+  "spaceId": "platina",
+  "projectId": "platina-facts",
+  "slug": "facts",
+  "label": "Platina — facts and brief",
+  "mode": "code",
+  "entry": "spaces/platina/pages/facts.html",
+  "include": [],
+  "assets": ["spaces/platina/assets/*.png"],
+  "publish": true
+}

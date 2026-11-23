@@ -280,6 +280,14 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .tool.is-active, .tool:hover { border-color: var(--line); color: var(--text); background: var(--pane2); }
 .stage-tools .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
 .stage-tools input[type=range] { width: 90px; }
+/* The small stages carry the full set (select, hand, snap, arrange, light size, label, objects,
+   video, zoom): tighter, and the zoom slider gives way, so it stays one row at 1500 px. */
+.stagepane:not(.bigstage):not(.touchstage) .stage-tools { gap: 2px; padding: 6px 6px; }
+.stagepane:not(.bigstage):not(.touchstage) .stage-tools .tool { width: 27px; }
+.stagepane:not(.bigstage):not(.touchstage) .stage-tools .sep { margin: 0 2px; }
+.stagepane:not(.bigstage):not(.touchstage) .stage-tools input[type=range] { flex: 0 1 90px; width: 90px; min-width: 36px; }
+.tool.snapBtn svg { stroke-width: 3.4; }   /* the grid dots: round caps of zero-length strokes */
+.tool:disabled { opacity: .35; pointer-events: none; }
 
 /* The grid used to live on the inner (transformed) layer, sized to the old -1..2 world —
    pan or zoom far enough past that and the backdrop ran out, so the "room" read as a
@@ -289,9 +297,11 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .stage {
   flex: 1; position: relative; overflow: hidden; cursor: crosshair;
   background-color: var(--stagebg);
+  /* One line per tile, at its top and left edge: placeStages sets the tile (GRID world units
+     wide) and where it starts, so every line is a snap target. */
   background-image:
-    repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 40px),
-    repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 40px);
+    linear-gradient(180deg, #ffffff0c 0 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff0c 0 1px, transparent 1px);
 }
 /* the visible rect at zoom 1 — the 'home' screen the Fit button frames back to */
 .stage-inner::after {
@@ -303,14 +313,14 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 
 .fx-node { position: absolute; transform: translate(-50%, -50%); }
 .fx-body {
-  position: relative; width: 34px; height: 30px; border-radius: 0;
+  position: relative; width: calc(34px * var(--ns, 1)); height: calc(30px * var(--ns, 1)); border-radius: 0;   /* --ns: the light size of this view */
   border: 1px solid #00000055; display: flex; align-items: center; justify-content: center;
-  font-size: 11px; color: var(--text); font-weight: 600; cursor: grab;
+  font-size: calc(11px * var(--ns, 1)); color: var(--text); font-weight: 600; cursor: grab;
   background: #1d1d20; transition: background .1s linear;   /* matches paintStage's unlit body */
 }
 .fx-node.sel .fx-body { outline: 2px solid #fff; outline-offset: 1px; }
 .fx-node.dragging .fx-body { cursor: grabbing; }
-.fx-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; font-size: 9px; color: var(--muted); white-space: nowrap; pointer-events: none; }
+.fx-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; font-size: calc(9px * var(--ns, 1)); color: var(--muted); white-space: nowrap; pointer-events: none; }
 
 .marquee { position: absolute; border: 1px solid var(--accent); background: #35d2dd22; pointer-events: none; }
 
@@ -363,7 +373,7 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 /* ---------------- control page ---------------- */
 /* The rail default was 240px — too narrow for the FX/LFO/Audio stacks on a wide screen —
    and both side columns are now draggable (.splitter): the vars are the knobs. */
-.ctl-top { --sp-1: 250px; --sp-3: 290px; --sp-2: 300px; display: grid; grid-template-columns: var(--sp-1) 6px minmax(0, 1fr) 6px var(--sp-3) 6px var(--sp-2); gap: 4px 0; padding: 4px; height: var(--sp-h, 50%); min-height: 260px; }
+.ctl-top { --sp-3: 290px; --sp-2: 300px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--sp-3) 6px var(--sp-2); gap: 4px 0; padding: 4px; height: var(--sp-h, 50%); min-height: 260px; }
 .ctl-bottom { --sp-1: 180px; --sp-2: 640px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--sp-1) 6px var(--sp-2); gap: 4px 0; padding: 4px; flex: 1; min-height: 0; }
 @media (max-width: 1400px) { .ctl-bottom { --sp-1: 150px; --sp-2: 520px; } }
 @media (max-width: 1250px) { .ctl-top { --sp-2: 260px; --sp-3: 250px; } .ctl-bottom { --sp-1: 140px; --sp-2: 440px; } }
@@ -374,9 +384,8 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .transport { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid var(--line); flex: none; }
 .transport .sq { flex: 1; }
 .banklist { flex: 1; overflow: auto; min-height: 60px; }
-/* group headers in the bank — derived from the scene naming convention in buildBank();
-   sticky so the section you are scrolled into stays named, and not .bankrow so every
-   click/long-press/hotkey path skips them by construction */
+/* section headers on the Touch page (Looks, Stage, Pixel strips) — sticky so the section you are
+   scrolled into stays named, and not .bankrow so every click/long-press/hotkey path skips them */
 .bankhead {
   position: sticky; top: 0; z-index: 1; background: var(--pane);
   padding: 5px 10px 3px; font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
@@ -385,7 +394,9 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 }
 .bankrow { display: grid; grid-template-columns: 1fr 16px; border-bottom: 1px solid #ffffff08; cursor: pointer; }
 .bankrow:hover { background: #ffffff08; }
-.bankrow.sel { background: var(--pane2); }   /* the scene open in the detail pane, as opposed to .active, the one on stage */
+/* .sel = in the multi-selection (shift/ctrl-click), as opposed to .active, the one on stage.
+   The accent edge is what makes a five-row range readable at a glance. */
+.bankrow.sel { background: var(--pane2); box-shadow: inset 3px 0 0 var(--accent); }
 .bankrow .txt { padding: 7px 10px; }
 .bankrow .nm { display: block; }
 .bankrow.active .nm { color: var(--accent); }
@@ -393,16 +404,8 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .bankrow .bar { background: var(--line); }
 .bankrow.active .bar { background: var(--accent); }
 
-.scenedetail { flex: 1; overflow: auto; padding: 14px; }
-.scenedetail .strip { display: flex; height: 26px; border-radius: 0; overflow: hidden; margin-bottom: 14px; border: 1px solid var(--line); }   /* a blackout scene is a black strip — keep its edge */
-.scenedetail .strip i { flex: 1; }
-.sd-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
-.sd-empty { color: var(--muted); }
-
-.railmaster { display: grid; justify-items: center; gap: 8px; padding: 12px; }
+.railmaster { display: grid; justify-items: center; gap: 4px; padding: 4px 12px; }
 .railmaster output { font-family: var(--mono); font-size: 15px; }
-.railchase { display: grid; gap: 6px; padding: 10px 12px; }
-.railchase label { display: flex; justify-content: space-between; align-items: center; color: var(--muted); }
 /* The rail stacks Master + FX + LFO + Audio + Output — far taller than the pane. Every
    child is flex:none so nothing gets crushed to make room; the pane itself scrolls.
    (Same fix .bankpane needed: shrinking flex children clip instead of scrolling.) */
@@ -454,12 +457,12 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 
 /* ---------------- vertical faders ---------------- */
 .vwrap { position: relative; width: 36px; height: 150px; flex: none; }
-.vwrap.tall { height: 190px; }
+.vwrap.tall { height: 120px; }   /* was 190: with FX/LFO/Audio folded the rail fits the pane */
 .vwrap input[type=range] {
   position: absolute; top: 50%; left: 50%; width: 150px;
   transform: translate(-50%, -50%) rotate(-90deg); transform-origin: center;
 }
-.vwrap.tall input[type=range] { width: 190px; }
+.vwrap.tall input[type=range] { width: 120px; }
 .vwrap input[type=range]::-webkit-slider-runnable-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
 .vwrap input[type=range]::-moz-range-track { height: 6px; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
 .vwrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 26px; margin-top: -10px; border-radius: 0; background: var(--cell2); border: 1px solid var(--muted); }
@@ -468,39 +471,132 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 /* ---------------- attribute editor ---------------- */
 .attr-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); flex: none; }
 .attr-head .who { flex: 1; color: var(--muted); font-size: 12px; }
+.attr-head .autowhite { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.attr-head .autowhite[hidden] { display: none; }
 .attr-body { flex: 1; display: grid; grid-template-columns: 118px minmax(0, 1fr); min-height: 0; }
 .attr-tabs { border-right: 1px solid var(--line); overflow: auto; }
 .atab { display: flex; align-items: center; gap: 7px; width: 100%; background: none; border: 0; text-align: left; padding: 11px 12px; color: var(--muted); font-size: 12px; }
 .atab.is-active { background: var(--pane2); color: var(--text); }
 .atab i { width: 6px; height: 6px; border-radius: 0; background: var(--muted); flex: none; }
 .atab.is-active i { background: var(--accent); }
-.attr-panels { overflow: auto; padding: 12px; }
+.attr-panels { overflow: auto; padding: 2px 12px; }   /* 2 vertical, not 12: the Color tab's height budget is exact */
 .apanel { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
-.faders { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+/* ONE row that scrolls sideways, never a wall you scroll down (her ask: "around 12, and
+   scroll right for more, not down"). A 32-channel fixture used to wrap into six rows. Columns
+   are a twelfth of the VISIBLE width (11 gaps taken off), never narrower than --fmin, so a
+   squeezed pane shows fewer at a usable size instead of threads. */
+.faders {
+  --fmin: 52px;
+  display: grid; grid-auto-flow: column; gap: 6px; align-items: start;
+  grid-auto-columns: minmax(var(--fmin), calc((100% - 11 * 6px) / 12));
+  overflow-x: auto; overflow-y: hidden; min-width: 0; flex: 1 1 0;   /* basis 0: it sits beside the Color column / pad instead of wrapping under it */
+  overscroll-behavior-x: contain;   /* the sideways scroll stops here, it does not walk the pane */
+}
+/* Up to twelve there is no wall to avoid, so the tile keeps its roomy width; only a chart
+   long enough to overflow packs down to a twelfth of the pane. */
+.faders:not(:has(> .fader:nth-child(13))) { grid-auto-columns: minmax(var(--fmin), 82px); }
 /* Fan, under the faders: the whole row is one gesture, so it reads as one line. */
 .fanrow { flex: 1 1 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; }
 .fanrow .fanlabel { color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
 .fanrow label { display: flex; align-items: center; gap: 4px; color: var(--muted); }
 .fanrow input[type=number] { width: 4.5em; }
-.fader { width: 82px; display: grid; justify-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 0; padding: 8px 4px; background: var(--bg); }
+.fader { width: auto; min-width: 0; display: grid; justify-items: center; gap: 3px; border: 1px solid var(--line); border-radius: 0; padding: 6px 3px; background: var(--bg); }
 .fader .fh { display: flex; align-items: center; gap: 5px; font-size: 11px; }
 .fader .fh i { width: 7px; height: 7px; border-radius: 0; flex: none; }
 .fader .chip { width: 26px; height: 26px; border-radius: 0; border: 1px solid var(--line); }
-.fader .fv { font-family: var(--mono); font-size: 11px; color: var(--muted); }
-.fader .quick { display: flex; gap: 3px; }
-.fader .quick button { background: var(--pane2); border: 1px solid var(--line); border-radius: 0; font-size: 10px; padding: 2px 5px; color: var(--text); }
+.fader .fv { font-family: var(--mono); font-size: 11px; color: var(--muted); min-height: 16px; }
+.fader .inedit { width: 100%; box-sizing: border-box; }   /* the typed-value field takes the tile, not a fixed 52px */
 
-.picker { display: grid; gap: 8px; }
+/* ---------------- value gestures ---------------- */
+/* The cursor says what a surface does: sideways on anything you can grab and push,
+   up/down on the fader itself, a pointer on the buttons inside. See scrub() in app.js. */
+/* The control the wheel will move: the one you last clicked. Without this the rule is
+   invisible — you would press a fader and have no way to know the wheel is now yours. */
+.wheelarmed { outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -1px; }
+.fader, .mf, .railmaster, .fxfader, .lfoslider, .ls-fader { cursor: ew-resize; }
+.fader input[type=range], .mf input[type=range] { cursor: ns-resize; }
+.fxfader input[type=range], .lfoslider input[type=range], .ls-fader input[type=range], .railmaster input[type=range] { cursor: default; }
+.fader .quick button, .mf button, .mf-num, .railmaster .blackout { cursor: pointer; }
+.scrubhost.scrubbing { outline: 1px solid var(--accent); outline-offset: -1px; }
+body.scrubbing, body.scrubbing * { cursor: ew-resize !important; user-select: none; -webkit-user-select: none; }
+/* a readout you can double-click into; the field it turns into is the readout's size */
+.editable { cursor: text; }
+.inedit { width: 52px; font-family: var(--mono); font-size: 11px; padding: 1px 3px; text-align: center; background: var(--field); border: 1px solid var(--accent); border-radius: 0; }
+.inedit::-webkit-inner-spin-button, .inedit::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.fader .quick { display: flex; gap: 3px; width: 100%; }
+.fader .quick button { flex: 1; min-width: 0; min-height: 24px; background: var(--pane2); border: 1px solid var(--line); border-radius: 0; font-size: 10px; padding: 2px 0; color: var(--text); }   /* flex:1, no side padding: a packed tile is ~13px per button */
+
+/* Width pinned to the swatch square. Left to size itself the column took its width from
+   the "move shared colour onto the W channel" note, which pushed the palettes column onto
+   a second row and the favourites off the bottom of the pane. */
+/* The Color tab's left column: picker on top, palette under it, faders alongside. Sized so
+   the whole column clears the pane without scrolling — see .colorcol's height budget. */
+.colorcol { display: grid; gap: 3px; align-content: start; width: 226px; }   /* 3, not 8: the column was 17px over the pane at the 900px stress height */
+.picker { display: grid; gap: 6px; width: 226px; max-width: 100%; }
 .sqpick {
-  width: 226px; max-width: 100%; height: 186px; position: relative; border: 1px solid var(--line); cursor: crosshair;
+  width: 226px; max-width: 100%; height: 156px; position: relative; border: 1px solid var(--line); cursor: crosshair;
   background: linear-gradient(to bottom, rgba(255,255,255,0), #fff),
               linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
 }
 .sqpick .dot { position: absolute; width: 12px; height: 12px; border: 2px solid #fff; border-radius: 0; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 4px #000; }
-.hues { display: flex; height: 14px; gap: 2px; }
-.hues button { flex: 1; border: 1px solid var(--line); padding: 0; border-radius: 0; }   /* the black swatch needs an edge on a near-black pane */
-.pickfoot { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--muted); }
+.pickfoot { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; color: var(--muted); }
 
+/* ---- colour palettes + favourites ----
+   A column of its own beside the picker, not stacked under it: stacked, the favourites
+   row fell below the fold of a 900px window and read as missing. */
+.palettes { display: grid; gap: 4px; align-content: start; width: 208px; }
+.palrow { position: relative; }
+.palbtn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: var(--field); border: 1px solid var(--line); border-radius: 0;
+  color: var(--text); font-size: 12px; padding: 5px 8px; text-align: left;
+}
+.palbtn:hover { border-color: var(--accent); }
+.palbtn i { color: var(--muted); font-style: normal; font-size: 9px; }
+/* Fixed, and parented to <body> rather than to the button: .attr-panels scrolls, and an
+   absolutely-positioned menu inside it gets clipped at the pane edge — the list ran off
+   the bottom of the window with half the palettes unreachable. Placed by wirePalette. */
+.palmenu {
+  position: fixed; z-index: 60; min-width: 244px;
+  background: var(--pane2); border: 1px solid var(--line);
+  box-shadow: 0 8px 24px #000000aa; max-height: 340px; display: flex; flex-direction: column;
+}
+.palmenu-list { overflow: auto; flex: 1; min-height: 0; }
+.palitem {
+  position: relative; width: 100%; display: grid; gap: 3px; padding: 6px 8px;
+  background: none; border: 0; border-bottom: 1px solid #ffffff08; border-radius: 0;
+  color: var(--text); font-size: 12px; text-align: left; cursor: pointer;
+}
+.palitem:hover { background: #ffffff0d; }
+.palitem.is-active .paln { color: var(--accent); }
+.palitem .paln { display: flex; align-items: center; gap: 6px; }
+.palitem .paln em { font-style: normal; font-size: 9px; color: var(--muted); border: 1px solid var(--line); padding: 0 3px; }
+.palstrip { display: flex; height: 12px; }
+.palstrip i { flex: 1; }
+.paldel { position: absolute; right: 6px; top: 6px; font-style: normal; font-size: 11px; color: var(--muted); padding: 0 3px; }
+.paldel:hover { color: var(--danger); }
+.palmenu-foot { border-top: 1px solid var(--line); padding: 8px; flex: none; }
+.palsave { display: flex; gap: 5px; }
+.palsave input { flex: 1; min-width: 0; }
+.palmenu-foot p { margin: 6px 0 0; font-size: 10px; line-height: 1.4; }
+
+.swatches { display: flex; flex-wrap: wrap; gap: 3px; }
+.swatches .sw { width: 20px; height: 20px; padding: 0; border: 1px solid var(--line); border-radius: 0; }
+.swatches .sw:hover { border-color: var(--accent); }
+.swatches .sw.rm { position: relative; border-color: var(--danger); }
+/* A remove-mode swatch says so on its face — a mode you cannot see is this desk's
+   oldest bug, so the cross is drawn on the colour rather than left to the cursor. */
+.swatches .sw.rm::after {
+  content: '✕'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff; text-shadow: 0 0 3px #000;
+}
+.swatches .sw.add { background: var(--field); color: var(--muted); font-size: 13px; line-height: 1; }
+.swatches .sw.add:hover { color: var(--accent); }
+.favhead { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--muted); }
+.favempty { font-size: 10px; align-self: center; }
+.palmore { background: none; border: 1px solid transparent; border-radius: 0; color: var(--muted); font-size: 11px; padding: 0 4px; letter-spacing: 1px; }
+.palmore:hover { color: var(--accent); }
+.palmore.is-active { color: var(--danger); border-color: var(--danger); }
 .xypad {
   width: 186px; max-width: 100%; height: 186px; position: relative; border: 1px solid var(--line); cursor: crosshair;
   background: repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 23px),
@@ -598,7 +694,7 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bord
   .stagepane { min-height: min(420px, 60vh); }
   .attrpane { min-height: 300px; }
   .library .tree { max-height: 200px; }
-  .banklist { max-height: 45vh; }
+  .bankcols { max-height: 60vh; min-height: 280px; }
   .title { display: none; }
   .pills { margin-left: auto; }
   /* .pills and .topright stay — they carry blackout and the safety warnings. */
@@ -635,17 +731,8 @@ input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; bord
 .gc.drop { outline: 2px solid var(--accent); background: #35d2dd22; }
 .stage.dropping { box-shadow: inset 0 0 0 2px var(--accent); }
 
-/* The scenes pane stacks head + transport + list + chase; on a short window the chase
-   block used to overflow the pane and land on top of the groups bar. */
-.bankpane { overflow: auto; }
-.bankpane .transport, .bankpane .railchase, .bankpane .inline.pad { flex: none; }
-.banklist { flex: 1 1 auto; }
-
-/* Chase controls: two rows instead of three, so the scenes pane fits on a short window. */
-.railchase { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.railchase label { justify-content: flex-start; }
-.railchase input[type=number] { width: 56px; }
-.railchase .sq { flex: 1 1 100%; }
+/* The scenes pane stacks cues + bar + container tabs + tile grid; the grid scrolls on its own. */
+.bankpane .transport { flex: none; }
 
 /* Drop feedback: where it can go, and what is in the way. */
 .gc.freehint { box-shadow: inset 0 0 0 1px var(--accent); }
@@ -1018,7 +1105,7 @@ body.space .stage { cursor: grab; }
 /* The badge marks a tile with its bound key; the popover captures the next keypress.
    Long-press is the finger's right-click, so neither the bank list nor the Touch
    page's tile grid may offer the OS callout. */
-.banklist, #touchGrid { -webkit-touch-callout: none; }
+.banklist, .bankcols, #touchGrid { -webkit-touch-callout: none; }
 /* On the rows/tiles themselves too: a long-press must never raise the OS text-selection
    or callout UI on the very elements whose long-press IS the context menu. */
 .bankrow, .tbtn { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -1118,14 +1205,13 @@ body.space .stage { cursor: grab; }
   .mf .vwrap { width: 44px; }
   .faderbank { grid-template-columns: repeat(auto-fill, minmax(min(76px, 100%), 1fr)); }
   .mf-rel { padding: 5px 10px; font-size: 14px; }
-  .fader { width: 92px; }
-  .fader .quick button { padding: 6px 9px; font-size: 11px; }
+  .faders { --fmin: 88px; }   /* a finger needs the width back; the row still scrolls sideways */
+  .fader .quick button { padding: 6px 0; font-size: 11px; }
   .atab { padding: 13px 12px; }
   .bankrow .txt { padding: 10px; }
   .selrow { padding: 9px 10px; }
   .tree .item { padding-top: 7px; padding-bottom: 7px; }
   .bmv { width: 34px; height: 32px; }
-  .hues { height: 24px; }
   .gtab { padding: 8px 14px; }
   .fxpad { padding: 10px 4px; }
   /* new controls: LFO rows, audio panel, FX-skip chips — same ≥40px rule */
@@ -1150,6 +1236,8 @@ body.space .stage { cursor: grab; }
   /* splitter bars: 14px grab zone around the 6px bar */
   .splitter.v::before { left: -4px; right: -4px; }
   .splitter.h::before { top: -4px; bottom: -4px; }
+  .swatches .sw { width: 34px; height: 34px; }
+  .palbtn, .palitem { padding-top: 10px; padding-bottom: 10px; }
 }
 
 /* ================ visual-audit fixes ================ */
@@ -1162,7 +1250,7 @@ body.space .stage { cursor: grab; }
 /* 1366×768 showed ONE scene row: the bank keeps real height (its pane scrolls), and the
    top half takes a little more of the page by default on short screens. */
 @media (max-height: 800px) and (min-width: 1101px) {
-  .banklist { min-height: 40vh; }
+  .bankcols { min-height: 40vh; }
   .ctl-top { height: var(--sp-h, 56%); }
 }
 
@@ -1316,14 +1404,6 @@ body.space .stage { cursor: grab; }
 .strow .sq { min-height: 36px; min-width: 40px; flex: none; }
 .sb-tools { display: flex; gap: 6px; flex-wrap: wrap; flex: none; }
 .sb-tools .sq { min-height: 44px; }
-
-/* Kind toggle beside the scene filter: All / animations / statics. Matches the search
-   row's height; the active one reads bright like an active page tab. */
-.kindbtn {
-  background: var(--pane2); color: var(--muted); border: 1px solid var(--line);
-  min-width: 40px; min-height: 44px; font-size: 15px; border-radius: 6px; cursor: pointer;
-}
-.kindbtn.is-active { color: #fff; border-color: #fff; }
 
 /* ================ MIDI page ================ */
 /* The control surface, in the same panes and the same buttons as every other page. It
@@ -1480,14 +1560,9 @@ button.ndrow:hover { outline: 1px solid var(--muted); }
 .nodegroup .sq.on { border-color: var(--accent); color: var(--accent); }
 @media (max-width: 700px) { .nodedetails .nodegrid { grid-template-columns: 1fr; max-height: none; } }
 
-/* Touch colours (colour.js): a strip on each look tile, and the live stage. Square corners: the house signature. */
+/* Touch colours (colour.js): a strip on each look tile (the live stage is the .touchstage pane at the end). Square corners: the house signature. */
 .tbtn.lookbtn { position: relative; }
 .tstrip { display: block; align-self: stretch; height: 6px; margin: 0 -10px -10px; background: var(--line); }
-.tstage { flex: none; }
-.tstage .bankhead { position: static; }
-.tstagebox { position: relative; margin-top: 10px; height: clamp(120px, 28vh, 240px); background: var(--pane2); border: 1px solid var(--line); border-radius: 0; }
-.tdot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; background: #1d1d20; border: 1px solid var(--line); border-radius: 0; }
-.tdot.lit { border-color: transparent; }
 
 /* Pixel strips: a line of dots on the stage (laid along the strip's own line), a tile on Touch. */
 .px-strip { position: absolute; transform-origin: 0 50%; pointer-events: none; }
@@ -1508,9 +1583,306 @@ button.ndrow:hover { outline: 1px solid var(--muted); }
 /* ---- The laser look a scene puts live (2026-10-31, the scene link): small, never the alarm colour of a .tnote */
 .tbtn .tnote.tlaser { color: var(--muted); font-size: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---- The scene list's filter keeps a usable width (2026-10-31, Projector Room). In the ~230 px list column the clear button and the three kind buttons left the box 42 px
-   ("filte"); this predates the scene link (the same 42 px with Follow off). The box now takes the whole first row and the buttons wrap under it. */
-.scenesearch { flex-wrap: wrap; }
-#sceneFilter { flex: 1 1 100%; }
-.scenesearch .kindbtn { order: 1; }
-#sceneFilterClear { order: 2; margin-left: auto; }
+/* ================ scene containers (from the studio desk) ================
+   Coloured tabs, one tile grid at a time, the same containers on Control and on Touch.
+   Every container colour that becomes lettering is lifted toward white (--bc-ink) so a
+   dark pick still reads on the near-black ground; the swatch and the underline keep the
+   true colour. */
+.banktabs { display: flex; gap: 2px; padding: 4px; flex: none; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; border-bottom: 1px solid var(--line); }   /* overflow-y explicit: `auto` there gave the tab row a 2px vertical scroll of its own */
+.banktabs::-webkit-scrollbar { display: none; }
+.btab {
+  display: flex; align-items: center; gap: 5px; flex: none;
+  background: var(--field); border: 1px solid var(--line); border-radius: 0;
+  color: var(--muted); font-size: 11px; padding: 4px 8px; white-space: nowrap;
+}
+.btab:hover { color: var(--text); border-color: var(--muted); }
+.btab.is-active { color: var(--accent); border-color: var(--accent); background: #35d2dd14; }
+.btab i { font-style: normal; font-size: 10px; color: var(--muted); }
+.btab.is-active i { color: var(--accent); }
+/* The phone is the performance surface: 44px targets. These tabs are her containers, so each
+   one wears the container's own colour — the same container reads the same on the desk and in the hand. */
+.touchtabs { padding: 6px 0; gap: 4px; border-bottom: 0; }
+.touchtabs .btab { min-height: 44px; font-size: 13px; padding: 6px 14px; border-color: color-mix(in srgb, var(--bc, var(--line)) 40%, var(--line)); }
+.touchtabs .btab i { font-size: 12px; }
+.touchtabs .btab.is-active { color: color-mix(in oklch, var(--bc) 78%, white); color: oklch(from var(--bc) max(l, 0.74) c h); border-color: var(--bc); background: color-mix(in srgb, var(--bc) 14%, transparent); }
+.touchtabs .btab.is-active i { color: color-mix(in oklch, var(--bc) 78%, white); color: oklch(from var(--bc) max(l, 0.74) c h); }
+.touchtabs .btab.unfiled { font-style: italic; }
+/* A Touch tile carries a thin edge in its container's colour. */
+.tbtn { border-left: 3px solid color-mix(in srgb, var(--bc, var(--line)) 60%, var(--line)); }
+
+.bankcols-pane { display: flex; flex-direction: column; }
+.ctlscenes { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.ctlscenes[hidden] { display: none; }
+/* Chase settings live in the bar beside the transport. */
+.chasebar { display: flex; align-items: center; gap: 6px; flex: none; padding: 0 8px; border-left: 1px solid var(--line); }
+.chasebar[hidden] { display: none; }
+.chasebar label { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.chasebar input[type=number] { width: 52px; padding: 3px 6px; }
+.chasebar .sq { padding: 4px 10px; }
+/* Start with nothing in the chase: still pressable — pressing it is how you find out why —
+   but it stops claiming it will do something. */
+.sq.accent.inert { background: none; color: var(--muted); border-color: var(--line); font-weight: 400; }
+.chasebar > .muted { font-size: 12px; }
+.bankbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.bankbar .transport { padding: 0; border: 0; flex: none; }
+.bankbar .transport .sq { flex: none; padding: 5px 10px; }
+.bankbar .search { flex: 1; min-width: 140px; border-bottom: 0; }
+.bankcols { flex: 1; min-height: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); overflow: hidden; }
+.colempty { padding: 10px; font-size: 11px; }
+
+/* Bank rows on one line: name left, fade (or the health note) right. */
+.bankrow .txt { display: flex; align-items: baseline; gap: 8px; padding: 5px 10px; }
+.bankrow .nm { flex: 1; min-width: 0; }
+.bankrow .sub { flex: none; max-width: 55%; }
+.bankrow:has(.hk) .nm { padding-right: 0; }
+.bankrow:has(.hk) .sub { padding-right: 30px; }
+@media (pointer: coarse) { .bankrow .txt { padding: 9px 10px; } }
+/* Tab row across the bank area. Each tab carries its container's colour in --bc: the text and
+   the underline of the open one, and a wash behind it while a scene is dragged over. */
+.banktabs.bankrow-tabs { padding: 0 6px; gap: 0; border-bottom: 2px solid var(--line); background: var(--pane); }
+.bankrow-tabs .btab {
+  --bc: var(--muted);
+  background: none; border: 0; border-bottom: 3px solid transparent; margin-bottom: -2px;
+  --bc-ink: color-mix(in oklch, var(--bc) 78%, white);
+  --bc-ink: oklch(from var(--bc) max(l, 0.74) c h);   /* lift ONLY a dark pick: yellow stays yellow */
+  color: var(--bc-ink); font-size: 12px; font-weight: 600; padding: 7px 12px; min-height: 34px; gap: 6px;
+}
+.bankrow-tabs .btab i { color: var(--muted); font-weight: 400; }
+.bankrow-tabs .btab:hover { background: #ffffff08; }
+.bankrow-tabs .btab.is-active { border-bottom-color: var(--bc); background: #ffffff0a; }
+.bankrow-tabs .btab.add { color: var(--muted); font-size: 16px; padding: 4px 12px; }
+.bankrow-tabs .btab.dragover { background: color-mix(in srgb, var(--bc) 25%, transparent); outline: 1px dashed var(--bc); outline-offset: -1px; }
+body.dragscene .bankrow-tabs .btab:not(.add):not(.unfiled) { outline: 1px dashed var(--line); outline-offset: -1px; }
+
+/* One container: a head row in its colour, then tiles filling the width. */
+.bankhead-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px 5px 10px; border-bottom: 1px solid var(--line); flex: none; }
+.bankhead-row .swatch { width: 14px; height: 14px; background: var(--bc); border: 1px solid #00000066; cursor: pointer; flex: none; }
+.bankhead-row .nm { font-size: 12px; font-weight: 600; color: color-mix(in oklch, var(--bc) 78%, white); color: oklch(from var(--bc) max(l, 0.74) c h); cursor: text; }
+.bankhead-row .cnt { flex: 1; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.bankhead-row .bankdel { color: var(--muted); padding: 2px 8px; }
+.bankhead-row .bankdel:hover { color: var(--danger); border-color: var(--danger); }
+.bankrename { font-size: 12px; padding: 2px 6px; width: 160px; }
+.tiles {
+  flex: 1; min-height: 0; overflow: auto; padding: 8px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); grid-auto-rows: 58px; gap: 8px; align-content: start;
+}
+.tiles > .colempty { grid-column: 1 / -1; }
+/* A tile is a .bankrow (same click / long-press / selection wiring) drawn as a card:
+   the container's colour on its left edge, name over the kind. */
+.bankrow.tile {
+  display: grid; grid-template-columns: 1fr 12px; background: var(--pane2); border: 1px solid var(--line);
+  border-left: 4px solid var(--bc); cursor: pointer; overflow: hidden; min-width: 0;
+}
+.bankrow.tile .txt { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 8px; min-width: 0; }
+.bankrow.tile .nm { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bankrow.tile .sub { font-size: 9px; color: var(--muted); max-width: 100%; margin-right: 0; }   /* a tile stacks, so .sub may use the width; the row rule's ellipsis still applies */
+.bankrow.tile .bar { background: var(--line); }
+.bankrow.tile.active { border-color: var(--bc); background: color-mix(in srgb, var(--bc) 22%, var(--pane2)); }
+.bankrow.tile.active .nm { color: var(--bc); }
+.bankrow.tile.active .bar { background: var(--bc); }
+.bankrow.tile.sel { box-shadow: inset 0 0 0 1px var(--accent); }
+.bankrow.tile:hover { border-color: var(--muted); }
+.bankrow.tile .hk { position: absolute; right: 16px; top: 4px; }
+/* dragging a tile: the browser draws the ghost; we only need the grab cursor */
+.bankrow[draggable="true"] { cursor: grab; }
+body.dragscene .bankrow { cursor: grabbing; }
+/* a container is a column (head + grid) */
+.bankcols.asbank { display: flex; flex-direction: column; }
+/* a tile's name in edit, straight after + made it (startTileRename) */
+.bankrow.tile .tilerename { width: 100%; min-width: 0; font-size: 12px; font-weight: 600; padding: 1px 4px; background: var(--field); border: 1px solid var(--accent); border-radius: 0; color: var(--text); }
+/* the automatic Unfiled tab reads quieter than a real container */
+.bankrow-tabs .btab.unfiled { font-weight: 400; font-style: italic; }
+.bankrow-tabs .tabrename { width: 120px; font-size: 12px; font-weight: 600; padding: 2px 6px; background: var(--field); border: 1px solid var(--bc); border-radius: 0; color: var(--text); }
+/* ================ the Stage page (from the studio desk) ================
+   The stage as a whole page (stagepage.js): a tool rail on the left, the stage filling
+   the middle, an inspector on the right that follows the selection, and a strip along
+   the bottom to fire looks while designing. Flat, squared, no glow. */
+.stagepage .sp-body { flex: 1; min-height: 0; display: flex; position: relative; }
+.stagepage .bigstage { flex: 1 1 auto; flex-direction: row; border-width: 0; }
+.sp-rail {
+  flex-direction: column; flex-wrap: nowrap; align-items: center; width: 46px; flex: none;
+  padding: 6px 4px; gap: 3px; border-bottom: 0; border-right: 1px solid var(--line);
+  overflow-y: auto; overflow-x: hidden;
+}
+.sp-rail .tool { width: 36px; height: 30px; flex: none; }
+.sp-rail .sep { width: 26px; height: 1px; margin: 3px 0; flex: none; }
+.sp-rail .toolnote { font-size: 10px; padding: 2px 0 0; }
+.sp-rail .flex { flex: 1 1 4px; }
+.sp-rail input.zoom { writing-mode: vertical-lr; direction: rtl; width: 18px; height: 84px; flex: none; }
+.sp-rail .sp-slot:empty { display: none; }
+.stagepage .bigstage .stage { flex: 1 1 auto; }
+.sp-insp { width: var(--sp-insp, 272px); flex: none; border-width: 0 0 0 1px; overflow-y: auto; }
+.stagepage.insp-closed .sp-insp { display: none; }
+/* The splitter between the stage and the inspector (--sp-insp on .sp-body is its knob). */
+.sp-body > .sp-split { flex: none; width: 6px; }
+.stagepage.insp-closed .sp-split { display: none; }
+.stagepage:not(.insp-closed) .objstrip { display: none !important; }   /* the inspector edits objects here */
+.sp-insp-open {
+  position: absolute; right: 8px; top: 8px; z-index: 6; background: var(--pane); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 0; padding: 4px 10px; font-size: 12px;
+}
+.sp-insp-open:hover { color: var(--text); border-color: var(--muted); }
+.sp-insp-body { padding: 0 0 8px; }
+/* Drag the inspector wide and its sections flow into columns (Emily, 2026-11-23: "with the
+   inspector bigger, more space and less scroll"): one column at the default 272px, two from
+   ~570px, three near the 900px maximum. A section never splits across two columns; the
+   body is not a section, so its sections (objects, names, dimmer, colour) spread out too.
+   The columns live on this inner box, not on the scrolling aside: a multi-column box with
+   a fixed height would push extra columns out sideways instead of scrolling. */
+.sp-insp-cols { columns: 270px; column-gap: 0; column-rule: 1px solid var(--line); }
+.sp-insp-cols .sp-sec { break-inside: avoid; }
+.sp-insp-cols .sp-insp-body { padding-bottom: 0; }
+.sp-sec { padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
+.sp-sec:last-child { border-bottom: 0; }
+.sp-sec h3 { margin: 0; font-size: 11px; font-weight: 600; color: var(--muted); }
+.sp-sub { font-size: 11px; line-height: 1.4; }
+.sp-row, .sp-sec.sp-row { display: flex; flex-direction: row; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sp-row .sq { padding: 4px 10px; }
+.sp-slider { display: grid; grid-template-columns: 44px 1fr 40px; align-items: center; gap: 6px; }
+.sp-slider input[type=range] { width: 100%; }
+.sp-lab { font-size: 11px; color: var(--muted); }
+.sp-v { font-family: var(--mono); font-size: 11px; font-weight: 400; text-align: right; color: var(--text); }
+.sp-swatches { display: flex; flex-wrap: wrap; gap: 4px; }
+.sp-sw { width: 22px; height: 22px; border: 1px solid #00000066; border-radius: 0; padding: 0; }
+.sp-sw:hover { outline: 1px solid var(--text); }
+.sp-pick { display: grid; grid-template-columns: 44px 1fr; align-items: center; gap: 6px; }
+.sp-pick input[type=color] { width: 100%; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 0; background: var(--field); }
+.sp-fields label { display: grid; grid-template-columns: 52px 64px 1fr; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.sp-fields input[type=number] { width: 64px; }
+.sp-slot[hidden] { display: none; }
+/* Effects in the inspector: the Control rail's pads, three to a row in the 272px column. */
+.sp-fxhead { display: flex; align-items: baseline; gap: 6px; }
+.sp-fxstate, .sp-fxnote { font-size: 11px; }
+.sp-fxstate.running { color: var(--accent); }
+.sp-fxtarget { font-size: 11px; line-height: 1.4; }
+.sp-fxtarget .sq { padding: 2px 8px; margin-left: 4px; }
+.sp-fx .fxpads { padding: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sp-fx .cfxpads { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.sp-fx .fxpad { padding: 6px 2px; }
+.sp-fx .cfx-opts { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; }
+.sp-msg { display: none; }
+.stagepage:fullscreen .sp-msg:not(:empty) {
+  display: block; position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 7;
+  background: var(--pane); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+  padding: 4px 12px; font-size: 12px; max-width: 60%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.stagepage:fullscreen .sp-msg.bad { border-left-color: var(--danger); color: var(--danger); }
+.stagepage:fullscreen { background: var(--bg); }
+.sp-strip {
+  flex: none; display: flex; align-items: center; gap: 12px; padding: 6px 8px;
+  border-top: 1px solid var(--line); background: var(--bar); min-width: 0;
+}
+.sp-scenes { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.sp-tabs { display: flex; gap: 4px; overflow-x: auto; overflow-y: hidden; }
+.sp-tabs .btab.is-active { color: oklch(from var(--bc) max(l, 0.74) c h); border-color: var(--bc); background: color-mix(in srgb, var(--bc) 14%, transparent); }
+.sp-tiles { display: flex; gap: 4px; overflow-x: auto; overflow-y: hidden; min-height: 38px; align-items: stretch; }
+.sp-tile {
+  flex: none; width: 118px; display: flex; flex-direction: column; justify-content: space-between; gap: 3px;
+  background: var(--pane); border: 1px solid var(--line); border-left: 3px solid var(--bc, var(--line));
+  border-radius: 0; padding: 4px 6px; text-align: left; color: var(--text);
+}
+.sp-tile:hover { border-color: var(--muted); border-left-color: var(--bc, var(--muted)); }
+.sp-tile.is-active { background: var(--pane2); border-color: var(--accent); border-left-color: var(--bc, var(--accent)); }
+.sp-tile .nm { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-tile .bar { display: flex; height: 4px; gap: 1px; }
+.sp-tile .bar i { flex: 1; }
+.sp-none { font-size: 12px; align-self: center; }
+.sp-live { flex: none; display: flex; align-items: center; gap: 10px; }
+.sp-field { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.sp-field select { padding: 4px 6px; }
+.sp-field input[type=number] { width: 58px; padding: 4px 6px; }
+.sp-mfield input[type=range] { width: 110px; }
+.sp-mfield b { font-family: var(--mono); font-size: 11px; font-weight: 400; color: var(--text); width: 34px; }
+.sp-live .sq { padding: 5px 12px; }
+.sp-bo { width: auto; padding: 6px 14px; }
+@media (max-width: 1100px) {
+  .sp-insp { position: absolute; right: 0; top: 0; bottom: 0; z-index: 6; }
+  .sp-body > .sp-split { display: none; }   /* the inspector floats over the stage here */
+  .sp-strip { flex-wrap: wrap; }
+  .sp-live { flex-wrap: wrap; }
+}
+.sp-sw { width: 24px; height: 24px; }
+/* The Stage page stays off phones. */
+@media (max-width: 700px) { .page-tab[data-page="stage"] { display: none; } }
+
+
+/* ================ TOUCH stage (the studio desk's) ================ */
+/* The light imitation on the Touch page: the same .stagepane as Setup and Control, in
+   view-only mode (a finger pans, two fingers zoom; see wireStage). Wide screen: a corner
+   box beside the filter and tabs. Phone: a band above the pads. Folded: the head row alone
+   (a thin tool column on the wide layout). */
+.stage.viewonly { cursor: grab; }
+.stage.viewonly .fx-node { cursor: grab; }
+.touchhead { display: grid; gap: 10px; min-width: 0; }
+.touchhead > .touchsearch[hidden] { display: none; }
+.touchwrap .touchstage { min-height: 0; }
+.ts-title { font-size: 11px; color: var(--muted); letter-spacing: .02em; margin-right: auto; padding: 0 4px; }
+.touchstage .stage-tools { padding: 4px 6px; }
+/* A glance box: the lights are squares with their number, no captions: the 34px squares of
+   the Setup plan pile on top of each other in a box this size. */
+.touchstage .fx-node { transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1))); }
+.touchstage .fx-body { width: calc(16px * var(--ns, 1)); height: calc(16px * var(--ns, 1)); font-size: calc(8px * var(--ns, 1)); font-weight: 500; cursor: grab; }
+.touchstage .fx-label { display: none; }
+/* A window onto the rig shows the lights, not the video box's words: the tag and grip sit
+   inside the zoomed layer, so at the Touch pane's zoom they were drawn huge over the lights. */
+.stage.viewonly .video-tag, .stage.viewonly .video-grip { display: none; }
+.touchstage .stage-empty { font-size: 11px; padding: 0 8px; text-align: center; }
+.touchstage.folded .stage { display: none; }
+@media (min-width: 1101px) {
+  /* "so small, just to see" — then "a little bigger, and the lights should be visible"
+     (2026-11-23): 340px wide and 200px tall, so the head is one row and the stage under
+     it is ~165px, not the 47px left when the head wrapped in a 220px box. The tabs row
+     stays at the top of its cell. */
+  .touchhead { grid-template-columns: 340px minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .touchstage { grid-column: 1; grid-row: 1 / 3; height: 200px; }
+  .touchtabs { align-self: start; }
+  .touchsearch, .touchtabs { grid-column: 2; }
+  .touchhead.stage-folded { grid-template-columns: auto minmax(0, 1fr); }
+  .touchhead.stage-folded .touchstage .stage-tools { flex-direction: column; border-bottom: 0; height: 100%; }
+  .touchhead.stage-folded .ts-title { display: none; }
+}
+@media (max-width: 1100px) {
+  .touchhead { grid-template-columns: minmax(0, 1fr); }
+  .touchstage { height: 18vh; min-height: 120px; }
+  .touchstage.folded { height: auto; min-height: 0; }
+}
+/* =============== keyboard mappings (ported from the studio desk) =============== */
+.keysbtn { background: none; border: 1px solid var(--line); border-radius: 0; color: var(--muted); font-size: 15px; padding: 0 10px; min-width: 40px; min-height: 32px; }
+.keysbtn:hover, .keysbtn.is-active { color: var(--accent); border-color: var(--accent); }
+.keypanel {
+  /* Docked bottom-left, over the stage: the right side of Control is the rail (FX pads,
+     master, LFO) and the top-left is the containers and their tiles, the very things you
+     open this to map. Drag the head to move it; double-click the head to dock it again. */
+  position: fixed; bottom: 8px; left: 8px; height: min(440px, calc(100vh - 70px)); width: 380px; max-width: calc(100vw - 16px); z-index: 65;
+  background: var(--pane); border: 1px solid var(--accent); box-shadow: 0 10px 30px #000c;
+  display: flex; flex-direction: column; min-height: 0;
+}
+.keyhead { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--line); flex: none; cursor: move; user-select: none; -webkit-user-select: none; touch-action: none; }
+.keypanel.moved { bottom: auto; }   /* once dragged, it keeps the height it had and follows the hand */
+.keyhead h2 { margin: 0; font-size: 13px; font-weight: 600; flex: 1; }
+.keyhead .sq { padding: 4px 9px; }
+.keytools { display: flex; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.keyhint { padding: 10px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); flex: none; line-height: 1.4; }
+.keylearn-line { padding: 10px 12px; font-size: 12px; color: var(--accent); border-bottom: 1px solid var(--accent); background: #35d2dd14; flex: none; }
+.keylist { flex: 1; overflow: auto; min-height: 0; }
+.keylist table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.keylist th { text-align: left; font-weight: 400; color: var(--muted); font-size: 11px; padding: 6px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--pane); }
+.keylist td { padding: 6px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.keylist td.cat { color: var(--muted); white-space: nowrap; width: 1%; }
+.keylist td.tgt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+.keylist td.key { width: 1%; }
+.keylist .kbd { display: inline-block; min-width: 26px; text-align: center; font-family: var(--mono); font-size: 11px; padding: 2px 6px; border: 1px solid var(--muted); color: var(--text); }
+.keylist td.rm { width: 1%; }
+.keylist .rm button { background: none; border: 0; color: var(--muted); font-size: 13px; padding: 2px 6px; cursor: pointer; }
+.keylist .rm button:hover { color: var(--danger); }
+.keylist p.muted { padding: 10px 12px; font-style: italic; }
+.keynote { margin: 0; padding: 8px 12px; font-size: 10px; line-height: 1.4; border-top: 1px solid var(--line); flex: none; }
+/* Learn mode: every button that can take a key wears a dashed edge, so what is mappable
+   is visible before anything is clicked; the one just picked wears the accent solid. */
+body.keylearn button:not(.keypanel *):not(.deskask *):not(.page-tab):not(.tool):not(.quick button):not(.splitter *):not(.sw):not(.swatch):not(.vhandle):not(.dots) { outline: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: 1px; cursor: crosshair; }
+body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent); outline-offset: -1px; cursor: crosshair; }
+.keypick { outline: 2px solid var(--accent) !important; outline-offset: 1px; }
+/* The key badge a mapped button wears (the scene tiles already have .hk) */
+.kbadge { position: absolute; top: -6px; right: -4px; font-family: var(--mono); font-size: 9px; font-style: normal; font-weight: 400; line-height: 1; padding: 2px 4px; background: var(--bar); border: 1px solid var(--accent); color: var(--accent); pointer-events: none; z-index: 2; }
+.kbadge-host { position: relative; }
+@media (max-width: 700px) { .keypanel { left: 8px; right: 8px; width: auto; } }

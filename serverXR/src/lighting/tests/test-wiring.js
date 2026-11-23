@@ -50,8 +50,9 @@ check('every control in the markup is read by the interface', () => {
   // rather than absent. Ids used only as CSS or scroll targets are the exception.
   // phoneBox is the labelled wrapper around #phoneList/#phoneQr, which are both read.
   const DECORATIVE = new Set(['statusStrip', 'phoneBox']);
-  // The stage modules from the studio desk read their own controls (objects.js: #objPill).
-  const pageJs = js + ['objects.js', 'markers.js', 'video.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
+  // The stage modules from the studio desk read their own controls (objects.js: #objPill; the Stage
+  // page's strip, inspector and effects: stagepage.js and colorfxui.js's #spCfx).
+  const pageJs = js + ['objects.js', 'markers.js', 'video.js', 'stagepage.js', 'colorfxui.js', 'showfile.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
   const orphans = [...htmlIds].filter((id) =>
     !DECORATIVE.has(id) && !pageJs.includes(`'#${id}'`) && !pageJs.includes(`"#${id}"`)
     && !pageJs.includes(`'${id}'`) && !pageJs.includes(`getElementById('${id}')`));
@@ -63,7 +64,8 @@ check('every class a button in the markup carries is known to the code or the st
   // days as pure decoration — a <button> whose class no JavaScript ever queried — and
   // looked exactly like a working control. A button whose every class is unknown to both
   // app.js and the stylesheet is either dead or about to be.
-  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  // showfile.css: the Show file panel's own sheet (its buttons are wired by showfile.js).
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8') + fs.readFileSync(path.join(ROOT, '../ui/showfile.css'), 'utf8');
   const dead = [];
   for (const m of html.matchAll(/<button[^>]*class="([^"]+)"[^>]*>/g)) {
     const classes = m[1].split(/\s+/);
@@ -235,6 +237,39 @@ check('a show with no desk scenes hides the Scenes and Chase panes and says wher
   if (!/paintControlScenes\(\)/.test(js.slice(js.indexOf('function paintCues')))) throw new Error('a cue list arriving does not repaint the Control panes');
 });
 
+// Scene containers (ported from the studio desk): the tab rows and the right-click chase item are in
+// the page, the routes they post to are on the desk, and the page asks the desk for its colours.
+check('scene containers: tab rows, tile grid and chase item are in the page and their routes are on the desk', () => {
+  for (const id of ['bankTabs', 'bankList', 'tBankTabs', 'miChase']) {
+    if (!html.includes(`id="${id}"`)) throw new Error(`#${id} is not in the page`);
+    if (!js.includes(`'#${id}'`)) throw new Error(`app.js never reaches #${id}`);
+  }
+  for (const r of ['api/banks', 'api/chase', 'api/scenes/save', 'api/scenes/update', 'api/scenes/remove']) {
+    if (!js.includes(`'${r}'`)) throw new Error(`app.js never posts to ${r}`);
+    if (!server.includes(`'POST /${r}'`)) throw new Error(`the desk has no POST /${r}`);
+  }
+  if (!/bankColors:\s*BANK_COLORS/.test(server)) throw new Error('publicState does not publish bankColors');
+  if (/^let touchBank/m.test(js) === false || /^let bankView/m.test(js) === false) throw new Error('bankView / touchBank are not declared with the page state');
+  if (!/askedAt < banksPostedAt\) next\.banks = S\.banks/.test(js)) throw new Error('pullState does not drop a poll older than the last container save');
+  if (/sceneGroupOf|buildSceneDetail/.test(js)) throw new Error('the flat list helpers are back');
+});
+
+// Colour palettes and favourites (ported from the studio desk): the Color tab builds them and posts
+// to a route the desk has; the built-in sixteen are the page's own and never saved.
+check('colour palettes: the Color tab posts to api/colors, the desk has the route, and the built-ins stay out of the show', () => {
+  if (!js.includes(`'api/colors'`)) throw new Error('app.js never posts to api/colors');
+  if (!server.includes(`'POST /api/colors'`)) throw new Error('the desk has no POST /api/colors');
+  if ((js.match(/^ {2}\['[^']+', \['#/gm) || []).length !== 16) throw new Error('PALETTES is not the sixteen built-in palettes');
+  if (!/s\.colors = sanitizeColors\(disk\.colors\)/.test(server)) throw new Error('colours are not sanitised on load');
+  for (const fn of ['paletteBlock', 'paletteMenuHtml', 'wirePalette']) if (!js.includes(`function ${fn}`)) throw new Error(`${fn} is missing`);
+  if (!/lastColor = hexColor/.test(js)) throw new Error('applyColor does not remember the last colour for "+"');
+  if (/\bHUES\b/.test(js)) throw new Error('the quick-hue strip is back beside the palette');
+  // Auto white moved out of the picker column into the attribute header (the Color tab is
+  // budgeted to fit without scrolling); it must still exist, and app.js must still wire it.
+  if (!/id="autoWhite"/.test(html)) throw new Error('Auto white left the desk');
+  if (!js.includes(`$('#autoWhite')`)) throw new Error('Auto white is not wired');
+});
+
 // Regression guard (2026-10-01, MOXIR UI audit): the Touch cue bar said "Nothing fired" while a
 // look fired by hand was on. Its headline now reads the desk's one NOW (state.now).
 check('the Touch cue bar headline reads state.now, never "Nothing fired"', () => {
@@ -356,7 +391,7 @@ check('objects.js + markers.js + video.js: loaded in order, every api call has a
   if (html.indexOf('src="objects.js"') > html.indexOf('src="cueui.js"')) throw new Error('cueui.js needs deskNow from objects.js: load objects.js first');
   for (const css of ['objects.css', 'markers.css', 'video.css']) if (!html.includes(`href="${css}"`)) throw new Error('index.html does not load ' + css);
   if (/['"`]\/api\//.test(ui)) throw new Error('an absolute /api/ URL — the desk is mounted under /light');
-  if ((html.match(/class="tool objBtn"/g) || []).length !== 8) throw new Error('the Line/Radar/Ring/Spot tools are not on both stages');
+  if ((html.match(/class="tool objBtn"/g) || []).length !== 12) throw new Error('the Line/Radar/Ring/Spot tools are not on all three stages (Setup, Control, Stage page)');
   // The NDI lane is the desk's sibling (…/light → …/ndi), and the product names NDI with its mark.
   const video = fs.readFileSync(path.join(ROOT, '../ui/video.js'), 'utf8');
   if (!/ndiBase\(\)\}api\/sources/.test(video) || !/'in\.mjpg\?name='/.test(video)) throw new Error('video.js no longer reads di.iiii\'s own NDI receiver');
@@ -367,6 +402,29 @@ check('objects.js + markers.js + video.js: loaded in order, every api call has a
   if (!js.includes('window.VideoMap.place()')) throw new Error('placeStages no longer places the video under the lights');
 });
 
+// The Stage page (from the studio desk, 2026-11-22): stagepage.js runs after app.js, objects.js and
+// colorfxui.js, every id it reaches is in the markup, and it keeps its own pan/zoom (views.stage).
+check('the Stage page: every id stagepage.js reaches exists, it loads after app.js, and it has its own view', () => {
+  const sp = fs.readFileSync(path.join(ROOT, '../ui/stagepage.js'), 'utf8');
+  const cfx = fs.readFileSync(path.join(ROOT, '../ui/colorfxui.js'), 'utf8');
+  const missing = [];
+  for (const m of sp.matchAll(/\$\(\s*'#([A-Za-z0-9_-]+)'/g)) if (!htmlIds.has(m[1])) missing.push('#' + m[1]);
+  for (const m of sp.matchAll(/querySelector\('(\.[A-Za-z]+)'\)|\$\('(\.[A-Za-z]+)'\)/g)) {
+    const c = (m[1] || m[2]).slice(1);
+    if (!new RegExp('class="[^"]*\\b' + c + '\\b').test(html)) missing.push('.' + c);
+  }
+  if (!/\$\('#spCfx'\)/.test(cfx) || !htmlIds.has('spCfx')) missing.push('#spCfx (colorfxui.js)');
+  if (missing.length) throw new Error('Stage-page ids missing from the markup: ' + [...new Set(missing)].join(', '));
+  if (!/<main class="page stagepage" data-page="stage">/.test(html)) throw new Error('the Stage page is not in the markup');
+  if (!/class="page-tab" data-page="stage"/.test(html)) throw new Error('there is no Stage tab');
+  const at = html.indexOf('src="app.js"'), b = html.indexOf('src="objects.js"'), c = html.indexOf('src="colorfxui.js"'), i = html.indexOf('src="stagepage.js"');
+  if (i < 0 || i < at || i < b || i < c) throw new Error('index.html must load stagepage.js after app.js, objects.js and colorfxui.js');
+  for (const g of ['views', 'slidersOf']) if (!new RegExp(`\\n(const|let) ${g}\\b`).test(js)) throw new Error('app.js no longer declares ' + g);
+  if (!/stage: \{ x: 0, y: 0, zoom: 1 \}/.test(js)) throw new Error('the Stage page has lost its own pan/zoom (views.stage)');
+  if (!/\['setup', 'control', 'stage',/.test(js)) throw new Error('showPage does not know the stage page');
+  if (/['"`]\/api\//.test(sp)) throw new Error('stagepage.js has an absolute /api/ URL');
+});
+
 // Review fixes (2026-09-24). A light may carry an effect of its own; a rig-wide FX pad,
 // Touch's FX Off and MIDI's FX mode step must send {all: true}, or those lights keep
 // running after "Off". Every api/fx call that sets a mode says it is for the whole rig.
@@ -374,7 +432,9 @@ check('every rig-wide FX mode change from the page is sent with all:true', () =>
   const calls = [...js.matchAll(/(?:post|midiSend)\(\s*'api\/fx',\s*([^;]*?)\)(?:\.then|;)/g)].map((m) => m[1]);
   const setsMode = calls.filter((c) => /\bmode\b/.test(c));
   if (setsMode.length < 3) throw new Error('fewer api/fx mode calls than expected — the pattern is stale: ' + calls.join(' | '));
-  const bare = setsMode.filter((c) => !/all:\s*true/.test(c));
+  // A call that names ids is the FX pads acting on the selection (fxPadSelected, fxBackToRig),
+  // deliberately not rig-wide. Only a call with neither all:true nor ids would leave lights running.
+  const bare = setsMode.filter((c) => !/all:\s*true/.test(c) && !/\bids\b/.test(c));
   if (bare.length) throw new Error('api/fx mode change without all:true: ' + bare.join(' | '));
   if (!/fxPill\.hidden = !fxAnyRunning\(\)/.test(js)) throw new Error('the FX pill must count lights running their own effect');
 });
@@ -391,6 +451,78 @@ check('cueui.js asks cuecore.js where a follow goes, and the page loads cuecore.
 check('the page shows a failing show save (status.save) in the top bar', () => {
   if (!/id="savePill"/.test(html)) throw new Error('index.html has no #savePill');
   if (!/\$\('#savePill'\)/.test(js) || !/\bst\.save\b/.test(js)) throw new Error('app.js does not paint #savePill from status.save');
+});
+
+// The keyboard-mappings panel (the studio desk's keys button): every id the block reaches is
+// in the markup, the button is in the top bar, and the safety rules are still in the code:
+// B is refused, the Blackout buttons are not mappable, New goes through the ask bar, and a
+// mapped key fires between the scene keys and the digit row.
+check('the keyboard-mappings panel is wired: ids, top-bar button, B refused, New asks', () => {
+  for (const id of ['keysBtn', 'keyPanel', 'keyClose', 'keyNew', 'keyImport', 'keyImportFile', 'keyExport', 'keyHint', 'keyLearn', 'keyList']) {
+    if (!new RegExp('id="' + id + '"').test(html)) throw new Error('index.html has no #' + id);
+  }
+  if (html.indexOf('id="keysBtn"') > html.indexOf('</header>')) throw new Error('#keysBtn is not in the top bar');
+  const block = js.slice(js.indexOf('keyboard mappings: any button'), js.indexOf('// ---- the menu rows ----'));
+  if (!block) throw new Error('the keyboard-mappings block moved — update this check');
+  if (!block.includes("b: 'B is the blackout key")) throw new Error('B is no longer refused as a mapping');
+  if (!block.includes("matches('.blackout')")) throw new Error('the Blackout buttons are mappable again');
+  if (!block.includes("askThen('Clear every keyboard mapping")) throw new Error('New no longer asks through the ask bar');
+  if (/\bconfirm\(/.test(block)) throw new Error('the keys block uses a native confirm');
+  const kd = js.indexOf('fireKeymap(deskKeymap['), scene = js.indexOf('recallByName(sceneHotkeys[e.key.toLowerCase()])'), digits = js.indexOf('/^[1-9]$/.test(e.key) && S');
+  if (!(scene > 0 && kd > scene && digits > kd)) throw new Error('desk mappings must fire between the scene keys and the digit row');
+});
+
+// The stage tools (2026-11-23, her ask: "too many stuff — we had that hand button, I want to move in grid"):
+// the hand and snap tools are on every editable stage, the light-size buttons on every stage,
+// and ONE grid (GRID, in world units) is what the lines are drawn on, what a drag snaps to, what the
+// arrange tools round to, and what objects and labels snap to.
+check('stage tools: hand + snap + light size on every editable stage, one GRID for lines, snap and arrange', () => {
+  const count = (re) => (html.match(re) || []).length;
+  if (count(/data-tool="hand"/g) !== 3) throw new Error('the hand tool is not on all three editable stages (Setup, Control, Stage page)');
+  if (count(/class="tool snapBtn"/g) !== 3) throw new Error('the snap tool is not on all three editable stages');
+  if (count(/class="tool nodeSmaller"/g) !== 4 || count(/class="tool nodeBigger"/g) !== 4) throw new Error('light size - / + is not on Setup, Control, the Stage page and Touch');
+  if (!/const GRID = 0\.05;/.test(js)) throw new Error('GRID is not 0.05');
+  if (!/const snapv = \(v\) => Math\.round\(Math\.round\(v \/ GRID\) \* GRID/.test(js)) throw new Error('snapv is not built on GRID');
+  if (/\* 40\) \/ 40|\* 24\) \/ 24/.test(js)) throw new Error('a 1/40 or 1/24 snap is back in app.js — one grid only');
+  if (!js.includes('GRID * g.sc * v.zoom')) throw new Error('the drawn grid is not driven by GRID');
+  if (!js.includes("localStorage.getItem('lightdeskSnap')") || !js.includes('let snap = true;')) throw new Error('snap is not on by default and remembered');
+  if (!js.includes("'lightdeskNodeSize.'")) throw new Error('light size is not remembered per view in this browser');
+  const post = js.slice(js.indexOf("lightdeskNodeSize.' + name"), js.indexOf("lightdeskNodeSize.' + name") + 200);
+  if (/post\(/.test(post)) throw new Error('light size must never be sent to the desk (it is a view preference, not part of the show)');
+  const css = fs.readFileSync(path.join(ROOT, '../ui/style.css'), 'utf8');
+  if (!css.includes('calc(34px * var(--ns, 1))')) throw new Error('.fx-body no longer follows --ns (light size)');
+  const dragAt = js.indexOf("drag.mode === 'move') {");
+  if (!js.slice(dragAt, dragAt + 1500).includes('dx = snapv(a.x + dx) - a.x')) throw new Error('a light drag no longer snaps by its anchor');
+});
+
+// Stage labels (2026-11-23): size, a bar with size and Delete, Backspace, the layer above the lights.
+check('stage labels: size field on the server, size bar + Delete in the page, Delete and Backspace keys', () => {
+  const mk = fs.readFileSync(path.join(ROOT, '../ui/markers.js'), 'utf8');
+  const srv = fs.readFileSync(path.join(ROOT, '../markers.js'), 'utf8');
+  if (!/size: Math\.round\(num\(m\.size, SIZE_MIN, SIZE_MAX, 1\)/.test(srv)) throw new Error('sanitizeMarkers does not clamp size');
+  for (const s of ['data-mk="smaller"', 'data-mk="bigger"', 'data-mk="del"', "e.key === 'Backspace'", 'e.key === \'Delete\'', '--mks']) {
+    if (!mk.includes(s)) throw new Error('markers.js is missing ' + s);
+  }
+  if (/Ctrl\+Z/.test(mk)) throw new Error('a delete must not promise an undo the desk does not have');
+  const mcss = fs.readFileSync(path.join(ROOT, '../ui/markers.css'), 'utf8');
+  if (!mcss.includes('var(--mks, 1)') || !mcss.includes('.mk-bar')) throw new Error('markers.css lacks the size multiplier or the bar');
+});
+
+// Stage objects (2026-11-23, her ask: "objects are not comfortable to use at all, bigger than the grid").
+// Each line is a defect that was found in the browser; this keeps it from coming back.
+check('stage objects: born in view on the grid, handles catchable, editor under the stage, one world bound', () => {
+  const ob = fs.readFileSync(path.join(ROOT, '../ui/objects.js'), 'utf8');
+  const ocss = fs.readFileSync(path.join(ROOT, '../ui/objects.css'), 'utf8');
+  if (/r\.reach \* 1\.15|r\.reach \* 1\.1\b/.test(ob)) throw new Error('objects are sized to the whole rig again (wider than a small stage)');
+  if (!ob.includes('objViewFrame(stage)') || !ob.includes('snapv(rigInView')) throw new Error('a new object is not placed in view and on the grid');
+  if (!ob.includes('objAdd(b.dataset.obj, pane')) throw new Error('the add buttons no longer tell objAdd which stage they are on');
+  if (!/\.obj:not\(\.moveab\) \.ob-hb \{ pointer-events: none; \}/.test(ocss)) throw new Error('the hidden B handle takes presses again (it sits on the hub)');
+  if (/clamp\([^)]*, -1, 2\)/.test(ob)) throw new Error('objects.js clamps to -1..2 again — a light may go to the WORLD bound, so may an object');
+  if (!ob.includes('Math.max(GRID, snapv(s))')) throw new Error('resizing an object no longer snaps to the grid');
+  if (!ob.includes("e.key === 'Delete' || e.key === 'Backspace'")) throw new Error('Backspace no longer deletes the selected object');
+  if (/Ctrl\+Z/.test(ob)) throw new Error('a delete must not promise an undo the desk does not have');
+  if (!/stagepane:not\(\.bigstage\) > \.objstrip \{\s*position: static/.test(ocss)) throw new Error('the object editor covers the small stage again');
+  if (!ob.includes('const hs = 14 / zoom')) throw new Error('the object handles shrank');
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');

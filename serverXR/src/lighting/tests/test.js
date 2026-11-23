@@ -1921,13 +1921,23 @@ check('labels: the validator clamps, names, dedupes ids and caps the list', () =
     ...Array.from({ length: 30 }, (_, i) => ({ text: 'L' + i })),
   ]);
   assert.strictEqual(list.length, MAX_MARKERS, 'at most ' + MAX_MARKERS);
-  assert.deepStrictEqual(list[0], { id: 'a', kind: 'label', text: 'DJ', x: 1000, y: -1000 });   // di.iiii: ±WORLD
+  assert.deepStrictEqual(list[0], { id: 'a', kind: 'label', text: 'DJ', x: 1000, y: -1000, size: 1 });   // di.iiii: ±WORLD; no size = 1
   assert.notStrictEqual(list[1].id, 'a', 'a repeated id is made unique');
   assert.strictEqual(list[1].text, 'Label', 'a blank label is still visible');
   assert.strictEqual(list[2].text.length, 40, 'long text is cut');
   assert.strictEqual(list[2].kind, 'label', 'unknown kinds become labels');
   assert.strictEqual(sanitizeMarkers('nope'), null);
   assert.deepStrictEqual(sanitizeMarkers([]), []);
+});
+
+check('labels: size is a multiplier clamped to 0.6-3, 1 when missing or not a number', () => {
+  const sz = (m) => sanitizeMarkers([{ text: 'x', ...m }])[0].size;
+  assert.strictEqual(sz({}), 1, 'a show saved before label sizes loads at 1');
+  assert.strictEqual(sz({ size: 1.4 }), 1.4);
+  assert.strictEqual(sz({ size: 0.01 }), 0.6, 'floor');
+  assert.strictEqual(sz({ size: 99 }), 3, 'ceiling');
+  assert.strictEqual(sz({ size: 'big' }), 1, 'not a number');
+  assert.strictEqual(sz({ size: 1.23456 }), 1.23, 'two decimals are plenty');
 });
 
 // ---- [cues] follow times ------------------------------------------------------------

@@ -63,12 +63,17 @@
 .obj .ob-path { stroke: var(--accent); stroke-opacity: .7; stroke-width: 1.5; stroke-dasharray: 6 5; fill: none; }
 .obj .ob-hb { fill: var(--stagebg); stroke: var(--accent); stroke-width: 1.5; pointer-events: all; cursor: move; }
 .obj.sel .ob-hb { stroke: #ffffff; }
+/* "pointer-events: all" catches the press even while the B handle is visibility:hidden — and B
+   sits exactly on A (the hub) until Move A → B is on, so it swallowed every press on the hub:
+   the object would not move, and the drag silently edited B instead. B only takes presses
+   while it is shown (the object is in move mode). */
+.obj:not(.moveab) .ob-hb { pointer-events: none; }
 .obj .ob-btext { fill: var(--accent); font-family: var(--mono); pointer-events: none; }
 
 /* ---- the list ---- */
 .objlist { font-size: 12px; }
 .stage > .objlist {
-  position: absolute; right: 8px; top: 8px; z-index: 5; width: 212px; max-height: 58%;
+  position: absolute; right: 6px; top: 6px; z-index: 5; width: 200px; max-height: 58%;
   display: flex; flex-direction: column; min-height: 0;
   background: var(--pane); border: 1px solid var(--line); border-left: 3px solid var(--accent);
 }
@@ -81,8 +86,8 @@
 .objlist .ol-rows { overflow-y: auto; min-height: 0; display: flex; flex-direction: column; }
 .objlist.folded .ol-rows { display: none; }
 .objlist .ol-row {
-  display: flex; align-items: center; gap: 4px; padding: 2px 4px 2px 6px; cursor: pointer;
-  border-top: 1px solid var(--line); min-height: 26px;
+  display: flex; align-items: center; gap: 4px; padding: 1px 4px 1px 6px; cursor: pointer;
+  border-top: 1px solid var(--line); min-height: 24px;
 }
 .objlist .ol-row:hover { background: var(--pane2); }
 .objlist .ol-row.sel { background: var(--pane2); box-shadow: inset 2px 0 0 var(--accent); }
@@ -122,6 +127,14 @@
 .objed .oe-hint:empty { display: none; }
 .objstrip:not(.anim-open) .oe-anim { display: none; }
 .objstrip { flex-direction: column; align-items: stretch; }
+/* On the small stages the editor is a row UNDER the stage, so it never covers the lights. */
+.stagepane:not(.bigstage) > .objstrip {
+  position: static; flex: none; max-width: none; z-index: auto; gap: 6px; padding: 4px 8px;
+  border-width: 1px 0 0 0; border-style: solid; border-color: var(--line); border-left: 3px solid var(--accent);
+}
+.stagepane:not(.bigstage) > .objstrip[hidden] { display: none; }
+.stagepane:not(.bigstage) > .objstrip .objed .oe-row { gap: 6px; }
+.stagepane:not(.bigstage) > .objstrip .objed .oe-name { width: 96px; }
 /* In the inspector: one field per line, like the rest of it. */
 .objed.full { padding: 8px 12px; }
 .objed.full .oe-row { flex-direction: column; align-items: stretch; gap: 6px; }
