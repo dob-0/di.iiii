@@ -5,3 +5,8 @@
 - Page: MonitorChats shows the bar, done/total, percent and open titles; left behind is red with its own filter chip.
 - Tests: monitorChats.test.js (rule + malformed lists), MonitorChats.test.jsx (card, filter).
 - Not done: other machines' chats show steps only after their tool is updated; no per-step drawer.
+
+## 2026-11-23 — rebased on dev (replaces #1332)
+
+- One wiki conflict: kept dev's updated date and added the missing comma after the ADMIN paragraph.
+- Tests: monitorChats 11 passed, MonitorChats.jsx 9 passed. The owner asked for real-time tracking of the current task (N6277/N6278).
