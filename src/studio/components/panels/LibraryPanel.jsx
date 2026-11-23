@@ -1,4 +1,4 @@
-import { LIGHTS, PRIMITIVES } from '../../../project/entityPalette.js'
+import { LIGHTS, PRIMITIVES, SCREEN_ENTRY } from '../../../project/entityPalette.js'
 import { ColorField } from './fields.jsx'
 
 export function LibraryPanel({ onCreateEntity, primitives = PRIMITIVES, lights = LIGHTS }) {
@@ -12,6 +12,16 @@ export function LibraryPanel({ onCreateEntity, primitives = PRIMITIVES, lights =
                             {label}
                         </button>
                     ))}
+                    {primitives.some(({ key }) => key === 'plane') && (
+                        <button
+                            key={SCREEN_ENTRY.key}
+                            className="scc-btn"
+                            title="A screen standing in the scene that shows the live deck"
+                            onClick={() => onCreateEntity(SCREEN_ENTRY.key)}
+                        >
+                            {SCREEN_ENTRY.label}
+                        </button>
+                    )}
                 </div>
             </div>
             {lights.length > 0 && (

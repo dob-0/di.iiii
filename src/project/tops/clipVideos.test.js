@@ -176,6 +176,29 @@ describe('a clip video', () => {
     })
 })
 
+describe('a clip file that fails', () => {
+    it('reports through onError and clears on the next loadeddata', () => {
+        const video = fakeVideo()
+        const onError = vi.fn()
+        createClipVideo({ asset: 'https://x.test/a.mp4' }, { document: { createElement: () => video }, requestFrame: () => 1, cancelFrame: () => {}, onError })
+        video.error = { code: 4, message: 'DEMUXER_ERROR_COULD_NOT_OPEN' }
+        video.emit('error')
+        expect(onError).toHaveBeenLastCalledWith('Clip file failed: DEMUXER_ERROR_COULD_NOT_OPEN')
+        video.emit('loadeddata')
+        expect(onError).toHaveBeenLastCalledWith(null)
+    })
+
+    it('taking the source away is not a failure, and a disposed clip says nothing', () => {
+        const video = fakeVideo()
+        const onError = vi.fn()
+        const clip = createClipVideo({ asset: '' }, { document: { createElement: () => video }, requestFrame: () => 1, cancelFrame: () => {}, onError })
+        video.emit('error')
+        expect(onError).not.toHaveBeenCalled()
+        clip.dispose()
+        expect(video.listeners.has('error')).toBe(false)
+    })
+})
+
 describe('where a clip plays from', () => {
     it('uses a URL as it is', () => {
         expect(resolveClipUrl('https://example.test/a.mp4', 'space')).toBe('https://example.test/a.mp4')

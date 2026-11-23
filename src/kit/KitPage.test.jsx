@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../components/SurfaceBar.jsx', () => ({ default: () => null }))
+const barProps = []
+vi.mock('../components/SurfaceBar.jsx', () => ({ default: (props) => { barProps.push(props); return null } }))
 const session = { sandboxSpaceId: null }
 vi.mock('../hooks/useAuthSession.js', () => ({ default: () => session }))
 vi.mock('./kitWeights.json', () => ({
@@ -106,3 +107,17 @@ describe('the Kit at /tools', () => {
         expect(stack.querySelectorAll('tbody tr').length).toBeGreaterThan(40)
     })
 })
+
+describe('the Kit page bar keeps the project', () => {
+    it('hands the last visited space and project to the bar, none when nothing was visited', () => {
+        window.sessionStorage.clear()
+        barProps.length = 0
+        render(<KitPage />)
+        expect(barProps.at(-1).project).toBe(null)
+        window.sessionStorage.setItem('dii.lastProject', JSON.stringify({ space: 'lab', project: 'show' }))
+        render(<KitPage />)
+        expect(barProps.at(-1)).toMatchObject({ space: 'lab', project: 'show' })
+        window.sessionStorage.clear()
+    })
+})
+

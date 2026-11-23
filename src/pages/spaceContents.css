@@ -135,6 +135,96 @@
     white-space: nowrap;
 }
 
+/* ── The doors of a scene, for a member (nav reach, 2026-11-12) ──────────────
+   A strip under the row, in the same list item: the row stays one link to the
+   viewer, and a link never sits inside a link. Perform, Studio, Nodes - three
+   words, the same three the bar and the project list use, and Projection and
+   Light when the project holds a wall or a lamp (five at most). Rendered only for
+   somebody who could already edit (canEdit), so a visitor's page is unchanged. */
+.sc-item--doors > .sc-row { border-bottom: 0; }
+
+.sc-row-doors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--di-space-2);
+    padding: 0 var(--di-space-3) var(--di-space-3);
+    border-bottom: 1px solid var(--sc-hairline);
+}
+
+.sc-door {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--di-target-min);
+    padding: var(--di-space-1) var(--di-space-3);
+    border: 1px solid var(--sc-hairline-strong);
+    border-radius: var(--di-radius);
+    color: var(--sc-text-2);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    line-height: 1;
+    letter-spacing: var(--di-label-tracking);
+    text-transform: var(--di-label-case);
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+        color var(--di-motion-base) ease,
+        background var(--di-motion-base) ease,
+        border-color var(--di-motion-base) ease;
+}
+
+.sc-door:hover { color: var(--di-cyan); background: var(--di-cyan-wash); border-color: var(--di-cyan-border); }
+.sc-door:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: -2px; }
+
+/* ── Shelves, for a member ───────────────────────────────────────────────────
+   A heading and a list, no box: the work is what is on screen, not the
+   furniture. Mono eyebrow in the quiet grey - a heading marks nothing live. */
+.sc-shelf {
+    margin: var(--di-space-7) 0 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    font-weight: 500;
+    letter-spacing: var(--di-label-tracking);
+    text-transform: var(--di-label-case);
+    color: var(--sc-text-2);
+}
+
+.sc-lede + .sc-shelf,
+.sc-shelf-note + .sc-shelf { margin-top: var(--di-space-6); }
+
+.sc-shelf + .sc-list { margin-top: var(--di-space-3); }
+
+.sc-shelf-empty {
+    margin: var(--di-space-3) 0 0;
+    padding-top: var(--di-space-3);
+    border-top: 1px solid var(--sc-hairline);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    color: var(--sc-text-3);
+}
+
+.sc-shelf-note {
+    margin: var(--di-space-3) 0 0;
+    font-size: var(--di-text-3);
+    line-height: 1.5;
+    color: var(--sc-text-3);
+}
+
+/* A finger: 44 px high, on any coarse pointer and on a phone-width screen. */
+@media (pointer: coarse), (max-width: 600px) {
+    .sc-door { min-height: var(--di-touch-target); }
+}
+
+@media (max-width: 600px) {
+    .sc-row-doors { padding: 0 var(--di-space-1) var(--di-space-3); }
+    /* A strip holds up to five doors (Perform, Studio, Nodes, Projection, Light).
+       Each asks for two touch targets of width (88 px; its own word is never
+       cut), so three fit on the 358 px between the gutters and the rest wrap to
+       a second line; the doors on a line share it equally, and none is wider
+       than its line. */
+    .sc-door { flex: 1 1 calc(var(--di-touch-target) * 2); padding: var(--di-space-1) var(--di-space-2); }
+}
+
 .sc-aside {
     margin: var(--di-space-6) 0 0;
     font-size: var(--di-text-3);
