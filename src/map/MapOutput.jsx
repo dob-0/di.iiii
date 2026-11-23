@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
+import useDeskClock from './useDeskClock.js'
 import { mapOutputReason } from './mapOutputReason.js'
 import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
@@ -24,6 +25,8 @@ const NO_NETWORK = { nodes: [], wires: [] }
 
 export default function MapOutput({ projectId, spaceId }) {
     const { store, mapping, document: doc } = useMapDocument(projectId, { role: 'out' })
+    // LFOs swing to the same beat as the desk, drawn a little ahead like the show's windows.
+    useDeskClock(mapping?.tempo, { out: true })
     // The project's picture operators, for a surface whose source is Pictures.
     const network = useMemo(() => toTopNetwork(doc), [doc])
     // This page is its machine on the desk: a kiosk with a camera and a

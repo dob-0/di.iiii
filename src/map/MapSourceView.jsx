@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
 import { startLiveAiRestyle } from './liveAiRestyle.js'
@@ -52,10 +52,22 @@ const requestSurfaceBoot = createPreviewBootQueue()
 // way; a slow page keeps loading, it just stops blocking its neighbours.
 const BOOT_SLOT_TIMEOUT_MS = 15000
 
-export default function MapSourceView({ surface, spaceId = '', live = true, network = null, assets = null, projectId = null, label = '' }) {
+// Kinds that take a moment before they have a picture. Everything else is
+// ready as soon as it mounts. `onReady` is how a crossfade (MapCrossfade.jsx)
+// knows when the next visual can start to come up over the last one.
+const LOADING_KINDS = new Set(['image', 'video', 'url', 'html', 'project'])
+
+export default function MapSourceView({ surface, spaceId = '', live = true, network = null, assets = null, projectId = null, label = '', onReady = null }) {
     const [width, height] = surface.resolution
     const kind = surface.source?.kind || 'test'
     const ref = surface.source?.ref || ''
+    const readyRef = useRef(onReady)
+    useEffect(() => { readyRef.current = onReady })
+    const ready = useCallback(() => readyRef.current?.(), [])
+    const waits = LOADING_KINDS.has(kind) && Boolean(ref) && (live || kind === 'image' || kind === 'video')
+    useEffect(() => {
+        if (!waits) readyRef.current?.()
+    }, [waits, kind, ref])
 
     if (kind === 'colour') {
         return <div className="map-source-fill" style={{ background: ref || '#ffffff' }} />
@@ -113,11 +125,32 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     }
 
     if (kind === 'image') {
-        return <MapImageSource fileRef={ref} />
+        return <MapImageSource fileRef={ref} onReady={ready} />
     }
 
     if (kind === 'video') {
-        return <MapVideoSource fileRef={ref} />
+        return <MapVideoSource fileRef={ref} onReady={ready} />
+    }
+
+    // A brought-in HTML page: one file, uploaded to the project, served by
+    // serverXR under its own `Content-Security-Policy: sandbox allow-scripts`
+    // (serverXR/src/spaceStore.js). The frame here is sandboxed the same way
+    // and WITHOUT allow-same-origin: the file lives on our own origin, and
+    // allow-same-origin would hand it our session. It runs as nobody, which is
+    // all a visual needs.
+    if (kind === 'html') {
+        if (!live) return <MapSourcePlaceholder label={label} detail="page — turn Live on to run it here" width={width} height={height} />
+        return (
+            <MapPageSource
+                src={resolveMapSourceRef(ref)}
+                isProject={false}
+                sandbox="allow-scripts allow-pointer-lock"
+                label={label}
+                width={width}
+                height={height}
+                onReady={ready}
+            />
+        )
     }
 
     if (kind === 'project' && !ref) {
@@ -141,6 +174,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
                 label={label}
                 width={width}
                 height={height}
+                onReady={ready}
             />
         )
     }
@@ -299,7 +333,7 @@ function MapNdiSource({ name, label, width, height }) {
 // ask again. Nothing else changes while it is failing — no placeholder, no
 // text — the element itself is what MapSourceView already shows for a source
 // that has not loaded yet, and a wall must never go white or gain new text.
-function MapImageSource({ fileRef }) {
+function MapImageSource({ fileRef, onReady = null }) {
     const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
     return (
         <img
@@ -309,7 +343,7 @@ function MapImageSource({ fileRef }) {
             alt=""
             draggable="false"
             onError={onError}
-            onLoad={onLoaded}
+            onLoad={() => { onLoaded(); onReady?.() }}
         />
     )
 }
@@ -317,7 +351,7 @@ function MapImageSource({ fileRef }) {
 // A brought-in video. Same retry as the image above. muted is not a style
 // choice: a wall plays several things at once and autoplay is refused
 // outright for anything with sound.
-function MapVideoSource({ fileRef }) {
+function MapVideoSource({ fileRef, onReady = null }) {
     const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
     return (
         <video
@@ -330,7 +364,7 @@ function MapVideoSource({ fileRef }) {
             playsInline
             disablePictureInPicture
             onError={onError}
-            onLoadedData={onLoaded}
+            onLoadedData={() => { onLoaded(); onReady?.() }}
         />
     )
 }
@@ -483,7 +517,7 @@ function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, labe
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.
-function MapPageSource({ src, isProject, label, width, height }) {
+function MapPageSource({ src, isProject, label, width, height, sandbox = 'allow-scripts allow-same-origin', onReady = null }) {
     const [booting, setBooting] = useState(true)
     const releaseRef = useRef(null)
     const frameRef = useRef(null)
@@ -499,10 +533,11 @@ function MapPageSource({ src, isProject, label, width, height }) {
             if (event.data?.type !== PREVIEW_READY_MESSAGE) return
             if (event.source !== frameRef.current?.contentWindow) return
             releaseRef.current?.()
+            onReady?.()
         }
         window.addEventListener('message', onMessage)
         return () => window.removeEventListener('message', onMessage)
-    }, [booting, isProject])
+    }, [booting, isProject, onReady])
 
     useEffect(() => {
         setBooting(true)
@@ -527,7 +562,7 @@ function MapPageSource({ src, isProject, label, width, height }) {
             ref={frameRef}
             src={src}
             title={label || 'Surface source'}
-            onLoad={isProject ? undefined : () => releaseRef.current?.()}
+            onLoad={isProject ? undefined : () => { releaseRef.current?.(); onReady?.() }}
                 // A PROJECT surface is our own page on our own origin, and it
                 // is not sandboxed. `allow-scripts allow-same-origin` on a
                 // same-origin frame is the combination the browser itself
@@ -540,7 +575,7 @@ function MapPageSource({ src, isProject, label, width, height }) {
                 // allow-same-origin there hands THAT page its own origin back,
                 // never ours, and without it a three.js page cannot read its
                 // own assets and projects black.
-            sandbox={isProject ? undefined : 'allow-scripts allow-same-origin'}
+            sandbox={isProject ? undefined : sandbox}
             referrerPolicy={isProject ? 'same-origin' : 'no-referrer'}
             allow="autoplay; fullscreen; xr-spatial-tracking"
             scrolling="no"
