@@ -20,7 +20,7 @@ describe('chats block', () => {
     expect(b.state).toBe('live')
     expect(b.rows.map((r) => r.group)).toEqual(['ask', 'working', 'idle', 'idle'])
     expect(b.rows[2].idleMinutes).toBe(0)
-    expect(b.counts).toEqual({ ask: 1, working: 1, idle: 2, total: 4 })
+    expect(b.counts).toEqual({ ask: 1, working: 1, idle: 2, left: 0, total: 4 })
   })
 
   it('never carries the owner message text or session paths', () => {
@@ -72,5 +72,33 @@ describe('chats block', () => {
     const b = chatsBlock(live([chat(1, { says: { first: `a${'x'.repeat(500)}${String.fromCharCode(7)}` } })]), { now: NOW })
     expect(b.rows[0].says.length).toBe(240)
     expect(b.rows[0].says.includes(String.fromCharCode(7))).toBe(false)
+  })
+
+  it('keeps a chat\'s step counts and open titles, and flags work left behind only when the chat is quiet for a day', () => {
+    const steps = { done: 2, total: 5, open: ['One', 'Two', 'Three', 'Four', 'Five', 'Six'] }
+    const block = chatsBlock(live([
+      chat(1, { idleMinutes: 2000, steps }),
+      chat(2, { idleMinutes: 2000, steps: { done: 5, total: 5, open: [] } }),
+      chat(3, { idleMinutes: 30, steps }),
+      chat(4, { status: 'busy', group: 'working', idleMinutes: 3000, steps }),
+      chat(5, { idleMinutes: 3000 })
+    ]), NOW)
+    const by = Object.fromEntries(block.rows.map((r) => [r.id, r]))
+    expect(by['sid-1'].steps).toEqual({ done: 2, total: 5, open: ['One', 'Two', 'Three', 'Four', 'Five'] })
+    expect(by['sid-1'].leftBehind).toBe(true)
+    expect(by['sid-2'].leftBehind).toBe(false) // all done
+    expect(by['sid-3'].leftBehind).toBe(false) // quiet for 30 minutes only
+    expect(by['sid-4'].leftBehind).toBe(false) // still working
+    expect(by['sid-5'].steps).toBe(null)
+    expect(by['sid-5'].leftBehind).toBe(false)
+    expect(block.counts.left).toBe(1)
+  })
+
+  it('drops a step list that is not in the expected shape', () => {
+    for (const steps of ['x', { done: 'a', total: 3 }, { done: 1, total: 0 }, { done: 1, total: 9999 }, [1, 2]]) {
+      const b = chatsBlock(live([chat(1, { idleMinutes: 2000, steps })]), NOW)
+      expect(b.rows[0].steps).toBe(null)
+      expect(b.rows[0].leftBehind).toBe(false)
+    }
   })
 })
