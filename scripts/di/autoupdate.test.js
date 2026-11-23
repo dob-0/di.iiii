@@ -8,8 +8,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {
-    HEAT_LIMIT_C, HUB_DOWN_LOUD_AFTER, isHubDown, enable, disable, logFile, parsePackageTemp, readPackageTemp, refreshTimer, runAutoUpdate, statusLines, statusOf, unitTexts
-} from './autoupdate.mjs'
+    HEAT_LIMIT_C, HUB_DOWN_LOUD_AFTER, isHubDown, enable, disable, logFile, parsePackageTemp, readPackageTemp, refreshTimer, runAutoUpdate, statusLines, statusOf, unitTexts, HEAT_WAIT_MAX_RUNS } from './autoupdate.mjs'
 import { readState, writeState } from './state.mjs'
 
 const homes = []
@@ -101,6 +100,22 @@ describe('the heat guard', () => {
     it('reads Package id from sensors output', () => {
         expect(parsePackageTemp('Package id 0:  +62.0°C  (high = +100.0°C, crit = +100.0°C)')).toBe(62)
         expect(parsePackageTemp('nothing here')).toBeNull()
+    })
+    it('a machine that stays hot updates anyway after the heat wait, and the count starts again (11-24)', async () => {
+        const home = await makeHome({ channel: 'dev' })
+        let runs = 0
+        const hot = () => runAutoUpdate({ home, now: () => at, temp: () => 95, update: async () => { runs += 1; return { code: 0, output: 'updated to 0.4.4-dev.abc' } } })
+        for (let i = 1; i < HEAT_WAIT_MAX_RUNS; i++) {
+            expect((await hot()).outcome).toBe('skipped-heat')
+            expect(readState(home).autoupdate.heatSkipRuns).toBe(i)
+        }
+        expect(runs).toBe(0)
+        const forced = await hot()
+        expect(runs).toBe(1)
+        expect(forced.outcome).toBe('updated')
+        expect(forced.detail).toContain('updating anyway')
+        expect(readState(home).autoupdate.heatSkipRuns).toBe(0)
+        expect((await hot()).outcome).toBe('skipped-heat')
     })
     it('falls back to the kernel thermal zone when sensors is missing', async () => {
         const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-therm-'))

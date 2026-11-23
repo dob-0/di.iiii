@@ -36,6 +36,14 @@ import { readState, writeState } from './state.mjs'
 // checksums.txt is a release download, not the 60/h GitHub API.
 export const EVERY_MINUTES = 5
 export const HEAT_LIMIT_C = 85
+// A machine that is ALWAYS hot (studio-mac sits at 91-105 C, aylmo at 91 C on 11-24) skipped every tick and never followed dev
+// (owner 11-24: "why it not update the aylmo why it not synced"). After this many heat skips in a row (6 x 5 min = 30 min)
+// the update runs anyway: an update is one download and a swap, and a machine that never updates is the bigger harm.
+export const HEAT_WAIT_MAX_RUNS = 6
+export const savedHeatSkipRuns = (state) => {
+    const n = state?.autoupdate?.heatSkipRuns
+    return Number.isInteger(n) && n > 0 ? n : 0
+}
 export const UNIT = 'di-autoupdate'
 // The hub (dev.diiii.xyz / the release host) answering 5xx or not at all is the hub's state, not a fault of this install
 // (measured on aylmo: 132 "failed" ticks in 7 days, all 502/503/fetch failed, in two outages 11-03 and 11-09). It is logged as
@@ -143,7 +151,8 @@ export const runAutoUpdate = async ({
     now = () => new Date(),
     temp = () => readPackageTemp(),
     update = async () => ({ code: 1, output: 'no update runner' }),
-    heatLimit = HEAT_LIMIT_C
+    heatLimit = HEAT_LIMIT_C,
+    heatWaitMaxRuns = HEAT_WAIT_MAX_RUNS
 }) => {
     const p = paths(home)
     const at = now()
@@ -154,14 +163,20 @@ export const runAutoUpdate = async ({
     let error = null
     let updated = null
     let hubDownRuns = 0
+    let heatSkipRuns = 0
+    let hotNote = ''
 
     try {
         const degrees = temp()
-        if (degrees !== null && degrees > heatLimit) {
+        const hot = degrees !== null && degrees > heatLimit
+        const waited = savedHeatSkipRuns(state)
+        if (hot && waited + 1 < heatWaitMaxRuns) {
+            heatSkipRuns = waited + 1
             outcome = 'skipped-heat'
             hubDownRuns = savedHubDownRuns(state) // a run that did not talk to the hub says nothing about it: keep the count
-            detail = `cpu package ${degrees} C > ${heatLimit} C — not updating while hot`
+            detail = `cpu package ${degrees} C > ${heatLimit} C — not updating while hot (${heatSkipRuns} of ${heatWaitMaxRuns})`
         } else {
+            if (hot) hotNote = ` (cpu package ${degrees} C, hot for ${waited + 1} runs: updating anyway)`
             const before = state.version || null
             const result = await update({ channel })
             // eslint-disable-next-line no-control-regex -- strips the colour codes `fail()` wraps a reason in
@@ -191,6 +206,7 @@ export const runAutoUpdate = async ({
                 detail = `channel=${channel} ${text}`
             }
             if (degrees === null) detail += ' (cpu temperature unreadable, heat guard not applied)'
+            detail += hotNote
         }
     } catch (caught) {
         outcome = 'failed'
@@ -205,6 +221,7 @@ export const runAutoUpdate = async ({
             lastCheck: at.toISOString(),
             lastOutcome: outcome,
             hubDownRuns,
+            heatSkipRuns,
             lastUpdate: updated ? updated.at : (state.autoupdate?.lastUpdate || null),
             lastError: error ? { at: at.toISOString(), message: error } : (state.autoupdate?.lastError || null)
         }
