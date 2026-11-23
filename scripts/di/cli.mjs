@@ -21,7 +21,7 @@ import { createSpace, reasonFromFlags, EXIT_CONTINUE } from './continueGuard.mjs
 import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
-import { isIP } from 'node:net'
+import { createServer, isIP } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
@@ -65,6 +65,7 @@ import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
+import { cmdConnect, cmdDisconnect, hostProjects, localProjects, readConnected, syncConnected } from './connect.mjs'
 import { runPost } from './post.mjs'
 import { runAgentMail } from './agentMail.mjs'
 import { runMonitor } from './monitorReport.mjs'
@@ -78,7 +79,7 @@ import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
 import { versionLabel } from './overlays.mjs'
-import { mcpArgs, moveToken, resolveTarget, runLogin, runLogout, runWhoami } from './login.mjs'
+import { mcpArgs, moveToken, resolveTarget, askEnter, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 import { withUserAgent } from './userAgent.mjs'
 
@@ -89,6 +90,14 @@ const HOME = () => {
 
 /** Which runner this install uses. Recorded once, at install time. */
 const runnerFor = (home) => (readState(home).mode === 'docker' ? docker : node)
+
+// Something answers on the port AND it is this install's own server. Another
+// program's healthy server (another install, a standby copy) answers the same
+// health check; acting on it said "Unauthorized" (Raspberry Pi, 2026-11-18).
+// Docker installs keep the old reading: only a node install can tell.
+const heldByStranger = async (home, port) => (await alive(home, port)) && runnerFor(home) === node && !node.ownsPort(home, port)
+const ownAlive = async (home, port) => (await alive(home, port)) && !(await heldByStranger(home, port))
+const sayNotRunning = async (home, port) => say(await heldByStranger(home, port) ? ui.portTaken(port, await freePortNear(port)) : ui.notRunning())
 
 const requireInstalled = (home) => {
     if (isInstalled(home)) return true
@@ -165,6 +174,39 @@ const probeReach = async (home, port) => {
     return (cert && await probeListen(port, cert.name, '/serverXR', 'https')) || probeListen(port)
 }
 
+// First free port from 4171 up, asked by binding it: the one `di up` then suggests.
+const freePortNear = async (taken) => {
+    for (let candidate = 4171; candidate < 4191; candidate++) {
+        if (candidate === taken) continue
+        const free = await new Promise((resolve) => {
+            const probe = createServer()
+            probe.once('error', () => resolve(false))
+            probe.listen(candidate, '127.0.0.1', () => probe.close(() => resolve(true)))
+        })
+        if (free) return candidate
+    }
+    return 4171
+}
+
+/** The deps `di connect` and its stay-connected sync share: this install's projects, the host's, and `followSpace` from now on. */
+const connectDeps = async (home) => {
+    const port = resolvePort(home)
+    const selfBase = apiBase(home, port)
+    const running = await ownAlive(home, port)
+    const adminToken = readEnv(home).ADMIN_API_TOKEN || null
+    return {
+        home, version: installedVersion(home), hostProjects,
+        local: { projects: (spaceId) => localProjects({ home, spaceId, port, selfBase, adminToken, running }) },
+        follow: ({ spaceId, key, from, into }) => followSpace({ home, spaceId, from, key, into, port, start: 'now' })
+    }
+}
+
+/** A machine that was connected stays connected: new spaces of the person are followed. Quiet when nothing is new; a refusal is said, never swallowed. */
+const syncConnectedHere = async (home) => {
+    if (!readConnected(home)) return
+    try { await syncConnected(await connectDeps(home), { quiet: true }) } catch (error) { warn(`connect sync failed: ${String(error?.message || error)}`) }
+}
+
 const cmdUp = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -187,8 +229,11 @@ const cmdUp = async (args) => {
     // would be told it is "on this network too".
     if (lan && runner.describe(home).mode === 'docker') { fail(ui.lanNotInDocker()); process.exitCode = 1; return }
     if (await alive(home, port)) {
+        // Something answers on this port. Ours? Only a node install can tell (supervisor, pid file, own versions dir); docker keeps its old reading.
+        if (runner === node && !node.ownsPort(home, port)) { fail(ui.portTaken(port, await freePortNear(port))); process.exitCode = 1; return }
         const address = await printedAddress(home, port)
         say(ui.alreadyRunning(address.url, await probeReach(home, port), lan, address))
+        await syncConnectedHere(home)
         return
     }
 
@@ -277,6 +322,7 @@ const cmdUp = async (args) => {
     if (!args.flags['no-open']) openBrowser(address.url)
     await noticeNewVersion(home)
     await noticeNameRenewal(home)
+    await syncConnectedHere(home)
 }
 
 /**
@@ -351,7 +397,8 @@ const cmdStatus = async () => {
     const port = resolvePort(home)
     const runner = runnerFor(home)
     const info = runner.describe(home)
-    const healthy = await alive(home, port)
+    const held = await heldByStranger(home, port)
+    const healthy = !held && await alive(home, port)
 
     // Asked of systemd when it keeps this install up: "not running" alone
     // hides the one case that will not fix itself — a unit systemd gave up on.
@@ -360,7 +407,8 @@ const cmdStatus = async () => {
     const autoLines = () => { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(style.dim(l)) }
 
     if (!healthy) {
-        say(`${ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
+        if (held) { say(ui.portTaken(port, await freePortNear(port))); process.exitCode = 1 }
+        say(`${held ? style.dim('this install is not the one answering') : ui.notRunning()}  ${style.dim(`${info.version || '?'} · ${info.dataDir}`)}`)
         if (svc) say(ui.supervisorLine(svc, unit))
         say(style.dim(nameStatusLine(home)))
         autoLines()
@@ -413,7 +461,7 @@ const cmdOpen = async (args) => {
     // either there or it is not.
     if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
-    if (!(await alive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
+    if (!(await ownAlive(home, port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
     // The one local address when it is this di.iiii (asked, see oneAddress);
     // else the address this install has always opened. printedAddress is the one
     // function that decides, here as in `di status` and `di up`.
@@ -607,7 +655,7 @@ const cmdOpenFile = async (args, file) => {
     if (!fs.existsSync(resolved)) { fail(`no such file: ${resolved}`); process.exitCode = 1; return }
 
     const port = resolvePort(home)
-    const wasRunning = await alive(home, port)
+    const wasRunning = await ownAlive(home, port)
     const named = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
 
     // A running server takes the file through its own API, the way the
@@ -673,7 +721,12 @@ const cmdNew = async (args) => {
     // what a legal space id is, which words are reserved, and what a new space
     // starts out containing. A second implementation here would drift from it.
     const port = resolvePort(home)
-    if (!(await alive(home, port))) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (!(await ownAlive(home, port))) {
+        await cmdUp({ _: [], flags: { 'no-open': true } })
+        // cmdUp said why and set the exit code (port held by another program): stop here
+        // instead of sending this install's request to a stranger's server.
+        if (process.exitCode || !(await ownAlive(home, port))) return
+    }
     try {
         // Continue, never recreate (N1880): the server answers space_exists_similar
         // when a space with the same stem is already here; only --new-anyway "<why>" goes on.
@@ -728,7 +781,7 @@ const cmdMove = async (args) => {
         const home = HOME()
         if (!requireInstalled(home)) return
         const port = resolvePort(home)
-        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        if (!(await ownAlive(home, port))) { await sayNotRunning(home, port); return }
         base = apiBase(home, port)
     }
     const dryRun = Boolean(args.flags['dry-run'])
@@ -764,7 +817,7 @@ const cmdPost = async (args) => {
         const home = HOME()
         if (!requireInstalled(home)) return
         const port = resolvePort(home)
-        if (!(await alive(home, port))) { say(ui.notRunning()); return }
+        if (!(await ownAlive(home, port))) { await sayNotRunning(home, port); return }
         base = apiBase(home, port)
     }
     process.exitCode = await runPost(args, { base, headers: withUserAgent(headers), say, fail })
@@ -774,7 +827,7 @@ const cmdSpaces = async () => {
     const home = HOME()
     if (!requireInstalled(home)) return
     const port = resolvePort(home)
-    if (!(await alive(home, port))) { say(ui.notRunning()); return }
+    if (!(await ownAlive(home, port))) { await sayNotRunning(home, port); return }
     try {
         const response = await fetch(`${apiBase(home, port)}/api/spaces`)
         const body = await response.json()
@@ -805,7 +858,7 @@ const cmdWhere = async () => {
     const port = resolvePort(home)
     // Asked of the running server, not read from a file — there is no file:
     // `--lan` is per start.
-    const running = await alive(home, port)
+    const running = await ownAlive(home, port)
     const reach = running ? await probeReach(home, port) : null
     say([
         `app    ${currentVersionDir(home) || style.dim('not installed')}`,
@@ -916,7 +969,8 @@ const cmdRestore = async (args) => {
     // Out of the way first, like the snapshot path above. A running lighting
     // desk holds its show in memory and writes it back on the next change, so
     // a show restored underneath it would last until the first fader move.
-    const wasRunning = await alive(home, resolvePort(home))
+    const wasRunning = await ownAlive(home, resolvePort(home))
+    if (!wasRunning && await heldByStranger(home, resolvePort(home))) say(ui.portTaken(resolvePort(home), await freePortNear(resolvePort(home))))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
@@ -1064,7 +1118,8 @@ const cmdUpdate = async (args) => {
     }
 
     const runner = runnerFor(home)
-    const wasRunning = await alive(home, resolvePort(home))
+    const wasRunning = await ownAlive(home, resolvePort(home))
+    if (!wasRunning && await heldByStranger(home, resolvePort(home))) say(ui.portTaken(resolvePort(home), await freePortNear(resolvePort(home))))
     const wasLan = wasRunning ? Boolean((await probeReach(home, resolvePort(home)))?.lan) : false
     try { await runner.stop({ home }) } catch { /* already down */ }
 
@@ -1149,7 +1204,7 @@ const cmdSync = async (args) => {
     if (!link) { say(ui.notLinked(spaceId)); process.exitCode = 1; return }
 
     const port = resolvePort(home, args.flags.port)
-    const local = (await alive(home, port))
+    const local = (await ownAlive(home, port))
         ? await gatherLocalSide({ port, spaceId, token: link.key })
         : { reachable: false }
     const remote = await gatherSide({ base: link.remote, spaceId, token: link.key })
@@ -1392,6 +1447,29 @@ const cmdFollows = async () => {
         .then(response => (response.ok ? response.json() : null))
         .catch(() => null)
     say(ui.followList(follows, live?.follows || [], live))
+}
+
+/** `di connect` — sign in once, follow every space the account owns or edits (scripts/di/connect.mjs). */
+const runConnect = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const controller = new AbortController()
+    const stop = () => controller.abort()
+    process.once('SIGINT', stop)
+    process.once('SIGTERM', stop)
+    try {
+        process.exitCode = await cmdConnect(args, { ...(await connectDeps(home)), signal: controller.signal })
+    } finally {
+        process.off('SIGINT', stop)
+        process.off('SIGTERM', stop)
+    }
+}
+
+/** `di disconnect` — stop every follow `di connect` made and end its keys. No work is deleted. */
+const runDisconnect = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    process.exitCode = await cmdDisconnect(args, { home })
 }
 
 /** `di unfollow <space>` — stop carrying edits. Your copy of the space is not touched; the follower's saved place is dropped. */
@@ -1692,7 +1770,7 @@ const cmdService = async (args) => {
         // of the running server, like update and restore do). Seconds down,
         // once, and from then on systemd holds it.
         const port = resolvePort(home)
-        const wasRunning = await alive(home, port)
+        const wasRunning = await ownAlive(home, port)
         const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
         if (wasRunning) { try { await node.stop({ home }) } catch { /* already down */ } }
 
@@ -1720,7 +1798,7 @@ const cmdService = async (args) => {
         // Asked before the unit goes: removing the supervisor is not a request
         // to stop di.iiii, so a running server comes back, unsupervised.
         const port = resolvePort(home)
-        const wasRunning = isInstalled(home) && await alive(home, port)
+        const wasRunning = isInstalled(home) && await ownAlive(home, port)
         const wasLan = wasRunning ? Boolean((await probeReach(home, port))?.lan) : false
         const svc = await removeService({ home })
         say(svc ? ui.serviceRemoved(svc) : ui.serviceNone())
@@ -1783,6 +1861,7 @@ const cmdAutoupdate = async (args) => {
             if (timer.changed) say(timer.ok ? `timer rewritten — now every ${autoupdate.EVERY_MINUTES} minutes` : `timer rewrite failed: ${timer.why}`)
         } catch { /* a timer that cannot be refreshed keeps its old interval; the tick itself is logged */ }
         await noticeNameRenewal(home)
+        await syncConnectedHere(home)
         return
     }
     if (action === 'status') { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(l); return }
@@ -1842,7 +1921,13 @@ const COMMANDS = {
     ndi: cmdNdi,
     mcp: cmdMcp,
     name: (args) => runName(args, { home: HOME() }),
-    login: (args) => runLogin(args, { version: installedVersion(HOME()) }),
+    login: (args) => runLogin(args, {
+        version: installedVersion(HOME()),
+        // A fresh machine is one command: after the sign-in, one Enter connects it (only on a terminal, only when di is installed here).
+        ...(process.stdin.isTTY && process.stdout.isTTY && isInstalled(HOME()) ? { confirm: askEnter, offerConnect: async (a) => { await runConnect(a); return process.exitCode || 0 } } : {})
+    }),
+    connect: (args) => runConnect(args),
+    disconnect: (args) => runDisconnect(args),
     logout: (args) => runLogout(args),
     whoami: (args) => runWhoami(args),
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())

@@ -4,12 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../services/apiClient.js', () => ({
     getMonitor: vi.fn(),
+    getMonitorPrs: vi.fn().mockResolvedValue({ ok: true, prs: [{ number: 9, title: 'a waiting change', branch: 'feat/x', base: 'dev', author: 'dob-0', draft: false, updatedAt: null, url: 'https://github.com/dob-0/di.iiii/pull/9' }] }),
     monitorStreamUrl: () => '/api/monitor/stream',
     postMonitorAsk: vi.fn()
 }))
 
 import { getMonitor, postMonitorAsk } from '../../services/apiClient.js'
-import MonitorSection, { formatBytes, nextBackoff, timeAgo } from './MonitorSection.jsx'
+import MonitorSection, { feedsSubtitle, machinesSubtitle, formatBytes, nextBackoff, timeAgo } from './MonitorSection.jsx'
 import { tierState, heroState } from './MonitorOverview.jsx'
 
 const snapshot = (over = {}) => ({
@@ -124,6 +125,77 @@ describe('MonitorSection', () => {
         expect(ids[0]).toBe('s:broken.service')
     })
 
+    it('the Shared tab shows the dev picture; the other tabs say they are this machine', async () => {
+        const data = contract({ host: 'studio-mac', shared: { state: 'ok', at: new Date().toISOString(), data: {
+            machines: [{ host: 'aylmo', reportedAt: new Date().toISOString(), stale: false, commit: 'abcdef1234' }],
+            pullRequests: { ok: true, from: 'aylmo', rows: [{ number: 5, title: 'Shared PR', draft: false }] },
+            spaces: { ok: true, rows: [] }, asks: { ok: true, rows: [] }, shows: [], tasks: []
+        } } })
+        getMonitor.mockResolvedValue(data)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        expect(document.querySelector('[data-this-machine]').textContent).toContain('This machine: studio-mac')
+        fireEvent.click(document.querySelector('[data-monitor-tab="shared"]'))
+        expect(document.querySelector('[data-shared-pr="5"]').textContent).toContain('Shared PR')
+        expect(document.querySelector('[data-shared-machine="aylmo"]')).toBeTruthy()
+        expect(document.querySelector('[data-this-machine]')).toBeNull()
+    })
+
+    it('a chat opens the one drawer with every field, a link to its machine, the raw record, and the link keeps it', async () => {
+        const data = contract({ chats: { ok: true, state: 'live', counts: { ask: 1, working: 0, idle: 0, total: 1 }, heardSecondsAgo: 3, rows: [
+            { id: 'chat-1', title: 'Cinema job', group: 'ask', status: 'idle', says: 'waiting', asks: ['plug it in', 'and this'], idleMinutes: 4, failed: false, host: 'aylmo' }
+        ] } })
+        getMonitor.mockResolvedValue(data)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        fireEvent.click(document.querySelector('[data-chat-id="chat-1"]'))
+        const drawer = document.querySelector('.monitor-drawer')
+        expect(drawer.getAttribute('data-drawer-kind')).toBe('chat')
+        const labels = [...drawer.querySelectorAll('.monitor-field dt')].map((n) => n.textContent)
+        expect(labels).toEqual(['Id', 'Title', 'Group', 'Status', 'Says', 'Asks', 'Idle minutes', 'Failed', 'Host'])
+        expect(within(drawer).getByText('plug it in, and this')).toBeTruthy()
+        expect(drawer.querySelector('[data-detail-raw]').textContent).toContain('"idleMinutes": 4')
+        expect(window.location.hash).toBe('#monitor/chat/chat-1')
+        // the link to its machine opens that machine in the same drawer
+        fireEvent.click(drawer.querySelector('[data-related^="machine:"]'))
+        expect(document.querySelector('.monitor-drawer').getAttribute('data-drawer-kind')).toBe('machine')
+        expect(window.location.hash).toBe('#monitor/machine/100.1.1.1')
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(document.querySelector('.monitor-drawer')).toBeNull()
+        expect(window.location.hash).toBe('#monitor')
+    })
+
+    it('the filter reaches chats and counts what matches', async () => {
+        getMonitor.mockResolvedValue(contract({ chats: { ok: true, state: 'live', counts: { ask: 0, working: 0, idle: 2, total: 2 }, heardSecondsAgo: 3, rows: [
+            { id: 'a', title: 'Alpha', group: 'idle', status: 'idle', says: '', asks: [], idleMinutes: 4, failed: false, host: 'aylmo' },
+            { id: 'b', title: 'Beta', group: 'idle', status: 'idle', says: '', asks: [], idleMinutes: 9, failed: false, host: 'studio' }
+        ] } }))
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        expect(document.querySelectorAll('[data-chat-id]').length).toBe(2)
+        fireEvent.change(screen.getByLabelText('Filter every panel'), { target: { value: 'studio' } })
+        expect([...document.querySelectorAll('[data-chat-id]')].map((n) => n.getAttribute('data-chat-id'))).toEqual(['b'])
+        expect(document.querySelector('[data-filter-count]').textContent).toMatch(/^\d+ of \d+ match$/)
+    })
+
+    it('every panel says live, turns late at twice its interval and old far past it', async () => {
+        vi.useFakeTimers()
+        try {
+            // the server goes quiet after the first answer: nothing refreshes the panels
+            getMonitor.mockResolvedValueOnce(contract()).mockRejectedValue(new Error('quiet'))
+            render(<MonitorSection />)
+            await act(async () => { await Promise.resolve() })
+            const state = (name) => document.querySelector(`[data-live-panel="${name}"]`)?.getAttribute('data-live-state')
+            expect(state('machines')).toBe('live')
+            await act(async () => { vi.advanceTimersByTime(11000) })
+            expect(state('machines')).toBe('late')
+            await act(async () => { vi.advanceTimersByTime(25000) })
+            expect(state('machines')).toBe('old')
+        } finally { vi.useRealTimers() }
+    })
+
     it('filters every panel and opens the inspector', async () => {
         getMonitor.mockResolvedValue(snapshot())
         render(<MonitorSection />)
@@ -133,6 +205,249 @@ describe('MonitorSection', () => {
         fireEvent.click(screen.getByText('Platina lights'))
         expect(screen.getByText('Account')).toBeTruthy()
         expect(screen.getByText('/w2')).toBeTruthy()
+    })
+
+    it('shows the Credits tile and box, and a credit row opens the drawer', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 1, total: 2, rows: [
+            { id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' },
+            { id: '1:api:studio', name: 'api:studio', available: false, meter: 'n/a', have: 'key SPENT', why: 'SPENT: credit balance is too low' }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(screen.getByText('Credits ready')).toBeTruthy()
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/2/)
+        const row = document.querySelector('[data-monitor-id="cr:1:api:studio"]')
+        expect(row.textContent).toMatch(/not ready/)
+        fireEvent.click(row)
+        expect(row.getAttribute('aria-pressed')).toBe('true')
+        expect(within(document.querySelector('.monitor-drawer')).getAllByText('Credit route').length).toBeGreaterThan(0)
+    })
+
+    // The credits command is slow once an hour (12 s measured 2026-11-20); the server then answers "checking" or shows the last list as old.
+    it('credits while the first list is still being read: says so, no 0/0, no "No credits reported"', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 0, total: 0, rows: [], checking: true }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits="checking"]').textContent).toMatch(/Checking now/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).not.toMatch(/0\/0/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/—/)
+        expect(screen.queryByText('No credits reported.')).toBeNull()
+    })
+
+    it('credits that were read a while ago: the list stays, the note says how old (on the server clock) and why', async () => {
+        const rows = [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }]
+        // the server's clock, a long way from this page's: the age is the server's `at` minus `checkedAt`, never this page's own now
+        const at = Date.parse('2026-01-01T12:00:00Z')
+        const readAt = new Date(at - 12 * 60 * 1000).toISOString()
+        const failed = snapshot()
+        failed.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, rows, at, stale: true, checkedAt: readAt, refreshError: 'Command failed: di-credits' }
+        getMonitor.mockResolvedValue(failed)
+        const first = render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const note = document.querySelector('[data-credits="stale"]')
+        expect(note.textContent).toBe('This list was read 12m ago; the latest check failed: Command failed: di-credits.')
+        expect(note.className).toBe('monitor-note is-down')
+        expect(document.querySelector('[data-monitor-id="cr:0:plan:dob"]').textContent).toMatch(/ready/)
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/1/)
+        first.unmount()
+
+        const slow = snapshot()
+        slow.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, rows, at, stale: true, checkedAt: readAt }
+        getMonitor.mockResolvedValue(slow)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const waiting = document.querySelector('[data-credits="stale"]')
+        expect(waiting.textContent).toBe('This list was read 12m ago; a new check is running.')
+        expect(waiting.className).toBe('monitor-note is-down')
+    })
+
+    it('a fresh credits list carries no note', async () => {
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 1, total: 1,
+            rows: [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits]')).toBeNull()
+    })
+
+    // Credits are the account's: a machine with no feed shows the list another machine reported, and says whose and how old (on the server's clock).
+    it('a credits list lent by another machine says whose it is and how old; the tile and rows read as an own list', async () => {
+        const at = Date.parse('2026-01-01T12:00:00Z')
+        const snap = snapshot()
+        snap.panels.credits = { ok: true, configured: 1, ready: 1, total: 2, at, from: 'aylmo', reportedAt: new Date(at - 20 * 1000).toISOString(), rows: [
+            { id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' },
+            { id: '1:api:studio', name: 'api:studio', available: false, meter: 'n/a', have: 'key', why: 'SPENT: credit balance is too low' }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        const first = render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const note = document.querySelector('[data-credits="from"]')
+        expect(note.textContent).toBe('From aylmo, reported 20s ago: this machine has no credits list of its own.')
+        expect(note.className).toBe('monitor-note')
+        expect(screen.getByText('Credits ready').parentElement.textContent).toMatch(/1\/2/)
+        expect(document.querySelector('[data-monitor-id="cr:1:api:studio"]').textContent).toMatch(/not ready/)
+        expect(screen.queryByText(/does not report credits/)).toBeNull()
+        first.unmount()
+
+        const undated = snapshot()
+        undated.panels.credits = { ok: true, configured: 1, ready: 1, total: 1, from: 'aylmo', reportedAt: null, rows: [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '', have: '', why: '' }] }
+        getMonitor.mockResolvedValue(undated)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        expect(document.querySelector('[data-credits="from"]').textContent).toBe('From aylmo: this machine has no credits list of its own.')
+    })
+
+    // Agents are the owner's: the list holds every machine's agents, each group says where it runs, and a machine whose agents are not in it says why (on the server's clock).
+    it('agents of every machine: groups name their machine, the subtitle counts machines, a machine that is not in the list says why', async () => {
+        const at = Date.parse('2026-01-01T12:00:00Z')
+        const row = (id, title, machine, status = 'idle') => ({ account: '.claude', machine, sessionId: id, title, status, kind: 'interactive', branch: null, cwd: '/w', model: 'm', lastActivity: new Date(at - 60 * 1000).toISOString() })
+        const snap = contract()
+        snap.panels.agents = { ok: true, at, live: 3, busy: 2, total: 20, accounts: ['.claude'], rows: [
+            row('aaaaaaaa-1', 'Build the monitor', 'aylmo', 'busy'), row('bbbbbbbb-2', 'Platina lights', 'aylmo'), row('cccccccc-3', 'Studio chat', 'studio-mac', 'busy')
+        ], machines: [
+            { host: 'aylmo', state: 'ok', live: 2, self: true },
+            { host: 'bad-pc', state: 'failed', error: 'no Claude homes found' },
+            { host: 'di-server', state: 'stale', reportedAt: new Date(at - 5 * 60 * 1000).toISOString() },
+            { host: 'new-pc', state: 'stale', reportedAt: null },
+            { host: 'old-pc', state: 'none' },
+            { host: 'r-di', state: 'ok', live: 0, shown: 0 },
+            { host: 'studio-mac', state: 'ok', live: 60, shown: 50, capped: true }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        const panel = document.querySelector('[data-panel="agents"]')
+        // 7 machines in the account, 3 of them (aylmo, r-di and the cut studio-mac) have their agents in the list
+        expect(panel.textContent).toMatch(/3 live of 20 sessions · 3 of 7 machines · accounts: \.claude/)
+        expect([...panel.querySelectorAll('.monitor-group-title')].map((n) => n.firstChild.textContent.trim())).toEqual(['aylmo / .claude', 'studio-mac / .claude'])
+        const notes = (kind) => [...panel.querySelectorAll(`[data-agents="${kind}"]`)]
+        expect(notes('stale').map((n) => n.textContent)).toEqual([
+            'di-server: last report 5m ago, so its agents are not in this list.',
+            'new-pc: no recent report, so its agents are not in this list.'
+        ])
+        expect(notes('none').map((n) => n.textContent)).toEqual(['old-pc: its report has no agents list.'])
+        expect(notes('failed').map((n) => n.textContent)).toEqual(['bad-pc: its agents list could not be read (no Claude homes found).'])
+        expect(notes('cut').map((n) => n.textContent)).toEqual(['studio-mac: 50 of 60 agents shown.'])
+        // only a machine that could not be read is red; a stale or cut one is a plain note
+        expect(notes('failed')[0].className).toBe('monitor-note is-down')
+        expect([...notes('stale'), ...notes('none'), ...notes('cut')].map((n) => n.className)).toEqual(['monitor-note', 'monitor-note', 'monitor-note', 'monitor-note'])
+        // this machine and a machine that answered with nothing to cut have no note
+        expect(panel.querySelectorAll('[data-agents]').length).toBe(5)
+        // the tile dots and the lanes name the machine too
+        expect([...document.querySelectorAll('[data-count-id="agents"] .monitor-dot')].map((d) => d.getAttribute('title'))).toEqual([
+            'Build the monitor · aylmo: busy', 'Platina lights · aylmo: idle', 'Studio chat · studio-mac: busy'
+        ])
+        expect(document.querySelector('[data-count-id="agents"]').textContent).toMatch(/Agents live · 2 busy/)
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        expect(document.querySelector('[data-lane-id="cccccccc-3"]').textContent).toMatch(/busy · studio-mac/)
+        expect(document.querySelector('[data-lane-id="aaaaaaaa-1"]').textContent).toMatch(/busy · aylmo/)
+    })
+
+    it('the subtitle counts every machine when all are in the list, "K of N" when some are not', async () => {
+        const snap = contract()
+        snap.panels.agents = { ...snap.panels.agents, machines: [
+            { host: 'aylmo', state: 'ok', live: 2, self: true }, { host: 'r-di', state: 'ok', live: 0, shown: 0 }, { host: 'studio-mac', state: 'ok', live: 60, shown: 50, capped: true }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        const { unmount } = render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        // all three answered (one of them cut): "3 machines", never "3 of 3"
+        expect(document.querySelector('[data-panel="agents"]').textContent).toMatch(/2 live of 9 sessions · 3 machines · accounts: /)
+        unmount()
+        const part = contract()
+        part.panels.agents = { ...part.panels.agents, machines: [{ host: 'aylmo', state: 'ok', live: 2, self: true }, { host: 'di-server', state: 'stale', reportedAt: null }] }
+        getMonitor.mockResolvedValue(part)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        expect(document.querySelector('[data-panel="agents"]').textContent).toMatch(/2 live of 9 sessions · 1 of 2 machines · accounts: /)
+    })
+
+    // the row's flash looks the agent up by its row id (`a:<session id>`): a signature that names the machine would never match it
+    it('flashes an agent row that names its machine', async () => {
+        vi.useFakeTimers({ shouldAdvanceTime: true })
+        const named = () => { const s = snapshot(); s.panels.agents.rows.forEach((r) => { r.machine = 'studio-mac' }); return s }
+        getMonitor.mockResolvedValueOnce(named())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByText('Build the monitor'))
+        const next = named()
+        next.panels.agents.rows[0].status = 'idle'
+        getMonitor.mockResolvedValue(next)
+        await act(async () => { await vi.advanceTimersByTimeAsync(5100) })
+        await waitFor(() => expect(document.querySelector('[data-monitor-id="a:aaaaaaaa-1"]').className).toMatch(/is-changed/))
+        // an agent that did not change does not flash
+        expect(document.querySelector('[data-monitor-id="a:bbbbbbbb-2"]').className).not.toMatch(/is-changed/)
+    })
+
+    it('this machine\'s own agents list that cannot be read is named like any other machine\'s, and the other machines\' agents are still listed', async () => {
+        const snap = contract()
+        snap.panels.agents = { ok: true, at: 1, live: 1, busy: 1, total: 12, accounts: ['.claude-di'], remotes: [], rows: [
+            { account: '.claude-di', machine: 'studio-mac', sessionId: 'cccccccc-3', title: 'Studio chat', status: 'busy', kind: 'interactive', branch: null, cwd: '/w', model: 'm', lastActivity: null }
+        ], machines: [
+            { host: 'aylmo', state: 'failed', error: 'timed out after 9000 ms', self: true },
+            { host: 'studio-mac', state: 'ok', live: 1, shown: 1 }
+        ] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        const panel = document.querySelector('[data-panel="agents"]')
+        expect(panel.textContent).toMatch(/1 live of 12 sessions · 1 of 2 machines · accounts: \.claude-di/)
+        expect([...panel.querySelectorAll('[data-agents]')].map((n) => [n.getAttribute('data-agents'), n.textContent, n.className])).toEqual([
+            ['failed', 'aylmo: its agents list could not be read (timed out after 9000 ms).', 'monitor-note is-down']
+        ])
+        expect([...panel.querySelectorAll('.monitor-group-title')].map((n) => n.firstChild.textContent.trim())).toEqual(['studio-mac / .claude-di'])
+    })
+
+    it('with one machine only there is no machines count and no note', async () => {
+        const snap = contract()
+        snap.panels.agents = { ...snap.panels.agents, machines: [{ host: 'aylmo', state: 'ok', live: 2, self: true }] }
+        getMonitor.mockResolvedValue(snap)
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        const panel = document.querySelector('[data-panel="agents"]')
+        expect(panel.textContent).toMatch(/2 live of 9 sessions · accounts: \.claude, \.claude-di/)
+        expect(panel.textContent).not.toMatch(/machines ·/)
+        expect(panel.querySelector('[data-agents]')).toBeNull()
+    })
+
+    it('the credits tile is grey while the first list is read, amber when the list is old, green when it is fresh', async () => {
+        const rows = [{ id: '0:plan:dob', name: 'plan:dob', available: true, meter: '7d 62%', have: 'login', why: '' }]
+        const at = Date.parse('2026-01-01T12:00:00Z')
+        const tileClass = async (credits) => {
+            const snap = snapshot()
+            snap.panels.credits = credits
+            getMonitor.mockResolvedValue(snap)
+            const view = render(<MonitorSection />)
+            await waitFor(() => screen.getByText('Build the monitor'))
+            const cls = document.querySelector('[data-count-id="credits"]').className
+            view.unmount()
+            return cls
+        }
+        expect(await tileClass({ ok: true, configured: 1, ready: 0, total: 0, rows: [], checking: true })).toMatch(/\btone-muted\b/)
+        expect(await tileClass({ ok: true, configured: 1, ready: 1, total: 1, rows, at, stale: true, checkedAt: new Date(at - 12 * 60 * 1000).toISOString() })).toMatch(/\btone-warning\b/)
+        expect(await tileClass({ ok: true, configured: 1, ready: 1, total: 1, rows })).toMatch(/\btone-success\b/)
+    })
+
+    it('says whose machines are listed: signed in, signed out, expired, offline', async () => {
+        const cases = [
+            [{ state: 'ok', name: 'Ada', machines: 2 }, /Signed in as Ada: this machine and 2 more/],
+            [{ state: 'signed-out', name: null, machines: 0 }, /Not signed in: this machine only\. Run di login/],
+            [{ state: 'expired', name: null, machines: 0 }, /sign-in ended/],
+            [{ state: 'offline', name: null, machines: 0 }, /could not be reached/]
+        ]
+        for (const [account, pattern] of cases) {
+            const snap = snapshot()
+            snap.account = account
+            getMonitor.mockResolvedValue(snap)
+            const { unmount } = render(<MonitorSection />)
+            await waitFor(() => screen.getByText('Build the monitor'))
+            expect(document.querySelector('[data-account]').textContent).toMatch(pattern)
+            unmount()
+        }
     })
 
     it('two machines with the same host name both show and select on their own', async () => {
@@ -147,7 +462,7 @@ describe('MonitorSection', () => {
         fireEvent.click(twins[1])
         expect(twins[1].getAttribute('aria-pressed')).toBe('true')
         expect(twins[0].getAttribute('aria-pressed')).toBe('false')
-        expect(screen.getByText('100.1.1.9')).toBeTruthy()
+        expect(within(document.querySelector('.monitor-drawer')).getAllByText('100.1.1.9').length).toBeGreaterThan(0)
         expect(spy.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
         spy.mockRestore()
     })
@@ -241,8 +556,8 @@ describe('MonitorSection overview, map, workspace and live', () => {
         expect(document.querySelectorAll('[data-map-node]').length).toBe(6)
         expect(document.querySelectorAll('.monitor-edge').length).toBe(4)
         fireEvent.click(document.querySelector('[data-map-node="space:platina"]'))
-        expect(screen.getByText('Inspector — platina')).toBeTruthy()
-        expect(screen.getByText('warn')).toBeTruthy()
+        expect(document.querySelector('.monitor-drawer-title').textContent).toBe('platina')
+        expect(within(document.querySelector('.monitor-drawer')).getAllByText('warn').length).toBeGreaterThan(0)
         expect(within(document.querySelector('.monitor-inspector')).getByText('MUTH')).toBeTruthy() // its neighbour, from the edges
     })
 
@@ -255,7 +570,7 @@ describe('MonitorSection overview, map, workspace and live', () => {
         expect(document.querySelector('[data-monitor-map="list"]')).toBeTruthy()
         expect(document.querySelector('svg')).toBeNull()
         fireEvent.click(document.querySelector('[data-map-node="machine:asuz"]'))
-        expect(screen.getByText('Inspector — asuz')).toBeTruthy()
+        expect(document.querySelector('.monitor-drawer-title').textContent).toBe('asuz')
     })
 
     it('workspace lists asks newest first, lanes and reports', async () => {
@@ -268,6 +583,15 @@ describe('MonitorSection overview, map, workspace and live', () => {
         const lanes = [...document.querySelectorAll('[data-lane-id]')].map((n) => n.getAttribute('data-lane-id'))
         expect(lanes[0]).toBe('aaaaaaaa-1') // busy first
         expect(document.querySelector('[data-report-host="asuz"]').textContent).toMatch(/stale/)
+    })
+
+    it('the Work tab lists the open pull requests, read-only', async () => {
+        getMonitor.mockResolvedValue(contract())
+        render(<MonitorSection />)
+        await waitFor(() => screen.getByLabelText('Tiers overview'))
+        fireEvent.click(document.querySelector('[data-monitor-tab="workspace"]'))
+        await waitFor(() => expect(document.querySelector('[data-pr="9"]')).not.toBeNull())
+        expect(document.querySelector('[data-pr="9"]').textContent).toMatch(/a waiting change/)
     })
 
     it('sending an ask shows it at once, then the stream carries it', async () => {
@@ -589,12 +913,12 @@ describe('MonitorSection look: full screen, status line, tiles, feed, drawer, ke
         fireEvent.click(document.querySelector('[data-tier-id="prod"]'))
         const drawer = document.querySelector('.monitor-drawer')
         expect(drawer).toBeTruthy()
-        expect(within(drawer).getByText('Inspector — prod')).toBeTruthy()
-        expect(within(drawer).getByText('12 behind dev')).toBeTruthy()
+        expect(within(drawer).getByText('prod', { selector: '.monitor-drawer-title' })).toBeTruthy()
+        expect(within(drawer).getByText('12', { selector: '.monitor-field-value' })).toBeTruthy()
         fireEvent.keyDown(window, { key: 'Escape' })
         expect(document.querySelector('.monitor-drawer')).toBeNull()
         fireEvent.click(document.querySelector('[data-tier-id="dev"]'))
-        fireEvent.click(screen.getByLabelText('Close inspector'))
+        fireEvent.click(screen.getByLabelText('Close details'))
         expect(document.querySelector('.monitor-drawer')).toBeNull()
     })
 
@@ -657,5 +981,21 @@ describe('heroState', () => {
         expect(heroState({ tiers: { rows: [snap.tiers.rows[0], snap.tiers.rows[2]] }, panels: {} }).headline).toBe('All well')
         // a hosted tier (prod) with no commit is still an action
         expect(heroState({ tiers: { rows: [snap.tiers.rows[0], { id: 'prod', status: 'ok', commit: null }] }, panels: {} }).issues.length).toBe(1)
+    })
+})
+
+describe('feedsSubtitle: whose tasks and shows the box holds', () => {
+    it('names the machines rows were lent from, else the local feed file', () => {
+        expect(feedsSubtitle({ tasks: { lentFrom: ['aylmo'] }, shows: { lentFrom: ['aylmo', 'r-di'] } })).toBe("This machine's feeds and your account's from aylmo, r-di")
+        expect(feedsSubtitle({ tasks: { rows: [] } })).toBe('Your feeds from ~/.di/monitor.json')
+        expect(feedsSubtitle(undefined)).toBe('Your feeds from ~/.di/monitor.json')
+    })
+})
+
+describe('machinesSubtitle', () => {
+    it('names the other machines when the list holds theirs, else keeps the text', () => {
+        expect(machinesSubtitle({ lentFrom: ['aylmo', 'r-di'] }, 'Tiers')).toBe('Tiers · this machine and aylmo, r-di')
+        expect(machinesSubtitle({ rows: [] }, 'Tiers')).toBe('Tiers')
+        expect(machinesSubtitle(undefined, 'Tiers')).toBe('Tiers')
     })
 })

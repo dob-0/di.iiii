@@ -1,0 +1,100 @@
+// @vitest-environment node
+//
+// `di up` on a port held by ANOTHER program's server (2026-11-18, a Raspberry Pi
+// whose standby di answered on :4000): it printed "already running" about a
+// server that is not this install, and `di new` then said Unauthorized. A
+// healthy answer on the port is not proof the server is ours: only the
+// supervisor, the pid file, or a process out of this install's versions
+// directory is.
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import fs from 'node:fs'
+import { spawn } from 'node:child_process'
+import http from 'node:http'
+import os from 'node:os'
+import path from 'node:path'
+
+import { main } from './cli.mjs'
+
+const dirs = []
+const servers = []
+afterEach(() => {
+    delete process.env.DI_HOME
+    process.exitCode = undefined
+    for (const s of servers.splice(0)) s.close()
+    for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true })
+})
+
+// eslint-disable-next-line no-control-regex
+const plain = (text) => String(text).replace(/\u001b\[[0-9;]*m/g, '')
+
+// a dot in the path, always (reference: the hidden-directory trap)
+const installedHome = () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'di-port.taken-'))
+    dirs.push(home)
+    fs.mkdirSync(path.join(home, 'versions', '1.0.0', 'serverXR', 'src'), { recursive: true })
+    fs.symlinkSync(path.join(home, 'versions', '1.0.0'), path.join(home, 'current'))
+    fs.writeFileSync(path.join(home, 'state.json'), JSON.stringify({ mode: 'node', version: '1.0.0' }))
+    return home
+}
+
+// somebody else's server: answers the health check on a free port
+const strangerOnAPort = async () => {
+    const server = http.createServer((req, res) => res.end(req.url === '/serverXR/api/health' ? '{"ok":true}' : '{}'))
+    servers.push(server)
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
+    return server.address().port
+}
+
+const run = async (home, ...argv) => {
+    process.env.DI_HOME = home
+    const before = process.argv
+    process.argv = ['node', 'di', ...argv]
+    const out = []
+    const spyOut = vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => { out.push(String(chunk)); return true })
+    const spyErr = vi.spyOn(process.stderr, 'write').mockImplementation((chunk) => { out.push(String(chunk)); return true })
+    try { await main() } finally { spyOut.mockRestore(); spyErr.mockRestore(); process.argv = before }
+    return plain(out.join(''))
+}
+
+describe('di up when something else answers on the port', () => {
+    it("says the port is held by another program, names a free port, and exits 1 — never 'already running'", async () => {
+        const port = await strangerOnAPort()
+        const text = await run(installedHome(), 'up', '--port', String(port), '--no-open')
+        expect(text).toMatch(new RegExp(`port ${port} is held by another program`))
+        expect(text).toMatch(/di up --port \d+/)
+        expect(text).not.toMatch(/already running/)
+        expect(process.exitCode).toBe(1)
+    })
+
+    it("still says 'already running' when the server is this install's (its pid file names a live process)", async () => {
+        const port = await strangerOnAPort()
+        const home = installedHome()
+        fs.mkdirSync(path.join(home, 'run'), { recursive: true })
+        fs.writeFileSync(path.join(home, 'run', 'server.pid'), String(process.pid))
+        const text = await run(home, 'up', '--port', String(port), '--no-open')
+        expect(text).toMatch(/already running/)
+        expect(text).not.toMatch(/held by another program/)
+    })
+
+    it("says 'held by another program' when this install runs elsewhere but a stranger holds THIS port", async () => {
+        const port = await strangerOnAPort()
+        const home = installedHome()
+        const own = spawn('sleep', ['30'], { stdio: 'ignore' })
+        try {
+            fs.mkdirSync(path.join(home, 'run'), { recursive: true })
+            fs.writeFileSync(path.join(home, 'run', 'server.pid'), String(own.pid))
+            const text = await run(home, 'up', '--port', String(port), '--no-open')
+            expect(text).toMatch(new RegExp(`port ${port} is held by another program`))
+            expect(text).not.toMatch(/already running/)
+            expect(process.exitCode).toBe(1)
+        } finally { own.kill() }
+    })
+
+    it('suggests a port that is free, not the one that is taken', async () => {
+        const port = await strangerOnAPort()
+        const text = await run(installedHome(), 'up', '--port', String(port), '--no-open')
+        const [, suggested] = text.match(/di up --port (\d+)/) || []
+        expect(Number(suggested)).not.toBe(port)
+        expect(Number(suggested)).toBeGreaterThanOrEqual(4171)
+    })
+})

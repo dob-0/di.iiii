@@ -27,6 +27,7 @@ import AgentsSection from './preferences/AgentsSection.jsx'
 import MonitorSection from './preferences/MonitorSection.jsx'
 import EstateSection from './preferences/EstateSection.jsx'
 import AppVisitorsSection from './preferences/AppVisitorsSection.jsx'
+import ConnectedMachines from './ConnectedMachines.jsx'
 
 // Two groups: "admin" is real access-control (who can see/publish what),
 // "diagnostics" is live operator/debug telemetry — same nav, visually
@@ -37,29 +38,32 @@ import AppVisitorsSection from './preferences/AppVisitorsSection.jsx'
 //
 // Plain words (UX audit 2026-10-28, F045/F109): the keys stay, the names a
 // person reads say what each screen is for; no Unicode glyphs as icons (they
-// meant nothing and fell back to the device font). Group labels are the two
-// jobs: the people side and the staff-only operator side.
+// meant nothing and fell back to the device font). Group labels are the four
+// jobs: watch, people, outreach, staff operator.
 const GROUP_LABELS = {
-    admin: 'Spaces and people',
-    diagnostics: 'Operator tools (staff)'
+    watch: 'Watch',
+    people: 'People and spaces',
+    outreach: 'Outreach',
+    operate: 'Operate (staff)'
 }
+// Grouped by what the owner does (2026-11-18): watch what is happening, look
+// after people and spaces, reach out, then the staff-only operator tools.
+// The keys (and so every /admin#<key> link) are unchanged; only the order and
+// group moved. Open call no longer sits under Spaces and users.
 const SECTIONS = [
-    { key: 'manage', label: 'Spaces and users', group: 'admin' },
-    { key: 'opencall', label: 'Open call', group: 'admin' },
-    // Everything that is going on, in one place: machines, network, agents,
-    // services, pull requests and the operator's task and show feeds.
-    { key: 'monitor', label: 'Monitor', group: 'admin' },
-    { key: 'agents', label: 'Agent sessions', group: 'admin' },
+    { key: 'monitor', label: 'Monitor', group: 'watch' },
+    { key: 'agents', label: 'Agent sessions', group: 'watch' },
     // The guest book: which apps, crawlers and scripts called, with a block
-    // toggle — admin, because blocking changes who gets in.
-    { key: 'visitors', label: 'Apps that visit', group: 'admin' },
-    { key: 'overview', label: 'Overview', group: 'diagnostics' },
-    { key: 'inspect', label: 'This scene', group: 'diagnostics' },
-    { key: 'system', label: 'Log and settings', group: 'diagnostics' },
-    // Diagnostics, not admin: the estate map only observes. It is the machines
-    // themselves rather than this app — read from the private atlas, admin-gated
-    // at the server because it is infrastructure topology.
-    { key: 'estate', label: 'Machines', group: 'diagnostics' }
+    // toggle (blocking changes who gets in).
+    { key: 'visitors', label: 'Visitors', group: 'watch' },
+    { key: 'manage', label: 'Spaces and users', group: 'people' },
+    { key: 'opencall', label: 'Open call', group: 'outreach' },
+    { key: 'overview', label: 'Overview', group: 'operate' },
+    { key: 'inspect', label: 'This scene', group: 'operate' },
+    { key: 'system', label: 'Log and settings', group: 'operate' },
+    // The estate map only observes: the machines themselves, read from the
+    // private atlas, admin-gated at the server (infrastructure topology).
+    { key: 'estate', label: 'Machines', group: 'operate' }
 ].map((section) => ({ ...section, groupLabel: GROUP_LABELS[section.group] }))
 
 // Sections where the person is administering, not debugging the scene — the
@@ -108,12 +112,15 @@ function ManagementButton({ button }) {
     )
 }
 
+// #monitor, #monitor-full and #monitor[-full]/<kind>/<id> (an open drawer) all name the Monitor section.
+const sectionKeyFromHash = (hash) => String(hash || '').replace(/^#/, '').replace(/^monitor(-full)?(\/.*)?$/, 'monitor')
+
 // /admin#monitor opens straight on a section — the link you hand someone
 // ("open the monitor") instead of "open admin, then click Monitor".
 const sectionFromHash = () => {
     try {
         // #monitor-full is the Monitor already in full screen (a link for the phone)
-        const key = String(window.location.hash || '').replace(/^#/, '').replace(/^monitor-full$/, 'monitor')
+        const key = sectionKeyFromHash(window.location.hash)
         return SECTIONS.some((section) => section.key === key) ? key : 'manage'
     } catch {
         return 'manage'
@@ -126,7 +133,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     useEffect(() => {
         const onHash = () => {
             // only a hash that names a section moves us; clearing it leaves the open section alone
-            const key = String(window.location.hash || '').replace(/^#/, '').replace(/^monitor-full$/, 'monitor')
+            const key = sectionKeyFromHash(window.location.hash)
             if (SECTIONS.some((section) => section.key === key)) setActiveSection(key)
         }
         window.addEventListener('hashchange', onHash)
@@ -236,21 +243,27 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     }
 
     const sections = SECTIONS.filter((section) => section.key !== 'monitor' || monitorAllowed).map((section) => {
-        if (section.key === 'agents' || section.key === 'monitor') return { ...section, badge: agentStats?.live || 0 }
-        if (section.key === 'inspect') return { ...section, badge: objects?.length || 0 }
-        if (section.key === 'system') return { ...section, badge: entries.length }
+        // A badge that says 0 is noise: show it only when there is something to count.
+        if (section.key === 'agents' || section.key === 'monitor') return { ...section, badge: agentStats?.live || undefined }
+        if (section.key === 'inspect') return { ...section, badge: objects?.length || undefined }
+        if (section.key === 'system') return { ...section, badge: entries.length || undefined }
         return section
     })
 
     const isAdminSection = ADMIN_SECTION_KEYS.has(activeSection)
+    // Scene counters and the copy-snapshot / XR-debug buttons describe the open scene; the Machines page is not about it.
+    const isSceneSection = activeSection !== 'estate'
+    // Pages that carry their own counts (or none) get no header cards. Agent sessions shows its counts here, in the one slim row
+    // (owner 11-22, N6201: the header was big with almost no information).
+    const hideHeaderCards = isAdminSection ? ['manage', 'opencall', 'visitors', 'monitor'].includes(activeSection) : !isSceneSection
 
     return (
         <div className="preferences-page">
             <header className={`preferences-topbar${headerCollapsed ? ' is-collapsed' : ''}`}>
                 <div className="preferences-topbar-main">
-                    <div className="preferences-eyebrow">Admin</div>
+                    <div className="preferences-eyebrow">{`Admin · ${SECTIONS.find((x) => x.key === activeSection)?.groupLabel || ""}`}</div>
                     <div className="preferences-topbar-title-row">
-                        <h1>{activeSection === 'monitor' ? 'Everything that is going on' : isAdminSection ? 'Spaces and who can see them' : 'Operator tools'}</h1>
+                        <h1>{SECTIONS.find((x) => x.key === activeSection)?.label}</h1>
                         <span className="preferences-inline-chip">Space: {sync?.spaceId || 'main'}</span>
                         <button
                             type="button"
@@ -269,7 +282,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 </div>
 
                 <div className="preferences-topbar-metrics">
-                    {isAdminSection ? (
+                    {hideHeaderCards ? null : isAdminSection ? (
                         // exactly three cards — the metrics grid is 3-up, and a
                         // partial row reads as a broken band of empty cells
                         <>
@@ -300,7 +313,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
 
                 <div className="preferences-topbar-actions">
                     <button type="button" className="toggle-button" onClick={() => onNavigateToEditor?.(sync?.spaceId)}>Back to the space</button>
-                    {!isAdminSection && (
+                    {!isAdminSection && isSceneSection && (
                         <>
                             <button type="button" className="toggle-button" onClick={copySnapshot}>Copy Snapshot</button>
                             <button type="button" className="toggle-button" onClick={copyRuntimeLog}>Copy Log</button>
@@ -552,7 +565,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </>
                     )}
 
-                    {activeSection === 'manage' && <AdminManageSection onStats={setManageStats} />}
+                    {activeSection === 'manage' && (<><AdminManageSection onStats={setManageStats} /><ModuleSection title="Connected machines" subtitle="made with di connect"><ConnectedMachines heading="Your machines" headingLevel={3} /></ModuleSection></>)}
 
                     {activeSection === 'opencall' && <OpenCallSection />}
 

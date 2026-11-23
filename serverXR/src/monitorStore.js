@@ -15,11 +15,32 @@ const os = require('node:os')
 const path = require('node:path')
 const { execFile } = require('node:child_process')
 const { createAgentBoardStore } = require('./agentBoardStore')
+const { sanitizeChats } = require('./monitorChats')
+const { sanitizeCredits } = require('./monitorCredits')
+const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
 const CACHE_TTL_MS = 5000
+// gh pr list stops at its --limit; 30 cut the count (57 open showed as 30, 11-23), so ask for all
+const PR_LIST_LIMIT = 300
 const PANEL_TIMEOUT_MS = 4000
+const PANEL_CAP_MS = 9000
 const FEED_MAX_LINES = 60
 const LINE_MAX_CHARS = 200
+
+// The credits command (`di-credits status --json`) is slow once an hour: it keeps each key's probe verdict for 3600 s and the
+// first run after that makes the real calls (12.1 s measured on 2026-11-20; 2-3 s otherwise). A panel that waits for it was killed
+// at 8 s every hour and held every snapshot back that long. So the last good list is kept and renewed in the background.
+const CREDITS_FRESH_MS = 60 * 1000 // a good answer is reused this long; then one background refresh runs (a failed one is retried this often)
+const CREDITS_STALE_MS = 5 * 60 * 1000 // a list older than this is marked stale: the renewal is slow or failing
+const CREDITS_DROP_MS = 30 * 60 * 1000 // a list older than this is not shown any more: the panel shows the failure, or "checking" while a new check runs
+const CREDITS_WAIT_MS = 3000 // with no list yet, a snapshot waits this long for the command, then says "checking"
+// The command's own limit. A cold probe (12.1 s measured) must end INSIDE it: di-credits writes each route's verdict when that
+// route's probe ends, so a probe still running when the command is killed (the old 8 s limit) never caches and every snapshot
+// starts that real model call again.
+// It must also stay short enough for the one-shot report (scripts/di/monitorReport.mjs), which waits for all of it, to end before its
+// timer unit's TimeoutStartSec=60: the credits read ends 0.5 s after the limit at the latest (30.5 s), then git 5 s + ledger 5 s
+// + send 15 s = 55.5 s < 60 s. A longer limit makes the timer unit kill the report; scripts/di/monitorCollect.test.js checks the sum.
+const CREDITS_COMMAND_MS = 30 * 1000
 
 const DEFAULT_PROBES = [
   { name: 'dev tier', url: 'https://dev.diiii.xyz' },
@@ -29,7 +50,7 @@ const DEFAULT_PROBES = [
 function run(command, args, { timeout = PANEL_TIMEOUT_MS, cwd } = {}) {
   return new Promise((resolve, reject) => {
     execFile(command, args, { timeout, cwd, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
-      if (error) reject(error)
+      if (error) { Object.defineProperty(error, 'stdout', { value: String(stdout || ''), enumerable: false }); reject(error) }
       else resolve(String(stdout))
     })
   })
@@ -45,6 +66,16 @@ async function withTimeout(promise, ms) {
       promise,
       new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms) })
     ])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+// Resolves when the promise settles or after `ms`, whichever is first; never rejects, never leaves a timer behind.
+async function settleWithin(promise, ms) {
+  let timer
+  try {
+    await Promise.race([promise.catch(() => {}), new Promise((resolve) => { timer = setTimeout(resolve, ms) })])
   } finally {
     clearTimeout(timer)
   }
@@ -124,7 +155,10 @@ function createMonitorStore({
   // who is connected right now: the realtime hub's own maps (space/project id -> socket id -> person)
   // (loaded lazily: the `di monitor report` CLI builds this store without a realtime hub)
   connections = null,
-  now = () => Date.now()
+  now = () => Date.now(),
+  // how long a snapshot waits for the credits command when no list is known yet; the one-shot `di monitor report`
+  // has no memory between runs and passes the command's whole limit, so a report always carries the real list or the command's error
+  creditsWaitMs = CREDITS_WAIT_MS
 } = {}) {
   const boardStores = new Map()
   const hub = () => connections || (() => {
@@ -132,6 +166,7 @@ function createMonitorStore({
     return { spaces: sh.spaceConnections, projects: sh.projectConnections }
   })()
   let cache = null
+  const probeTracker = createProbeTracker({ now })
 
   async function machines() {
     const raw = JSON.parse(await runCommand('tailscale', ['status', '--json']))
@@ -148,7 +183,10 @@ function createMonitorStore({
       rx: p.RxBytes || 0,
       self
     })
-    const rows = [toRow(raw.Self || {}, true), ...Object.values(raw.Peer || {}).map((p) => toRow(p, false))]
+    // Tailscale Funnel adds one placeholder peer per public hostname, tagged tag:ingress (no OS, no name of
+    // its own, never a device); they are not machines, so they are left out of the list and the counts.
+    const isIngress = (p) => (p.Tags || []).includes('tag:ingress') || (p.ShareeNode === true && !p.OS && !p.DNSName)
+    const rows = [toRow(raw.Self || {}, true), ...Object.values(raw.Peer || {}).filter((p) => !isIngress(p)).map((p) => toRow(p, false))]
     return { rows, online: rows.filter((r) => r.online).length, total: rows.length }
   }
 
@@ -156,12 +194,21 @@ function createMonitorStore({
     const probes = Array.isArray(config.probes) && config.probes.length ? config.probes : DEFAULT_PROBES
     if (!fetchImpl) throw new Error('no fetch available')
     const rows = await Promise.all(probes.slice(0, 12).map(async (probe) => {
-      const started = now()
-      try {
-        const res = await fetchImpl(probe.url, { method: 'GET', signal: AbortSignal.timeout(3000), redirect: 'manual' })
-        return { id: probe.url, name: probe.name || probe.url, url: probe.url, status: res.status, ms: now() - started, ok: res.status < 500 }
-      } catch (error) {
-        return { id: probe.url, name: probe.name || probe.url, url: probe.url, status: 0, ms: now() - started, ok: false, error: String(error.message || error) }
+      const check = async () => {
+        const started = now()
+        try {
+          const res = await fetchImpl(probe.url, { method: 'GET', signal: AbortSignal.timeout(3000), redirect: 'manual' })
+          return { ok: res.status < 500, status: res.status, ms: now() - started }
+        } catch (error) {
+          return { ok: false, status: 0, ms: now() - started, error: String(error.message || error) }
+        }
+      }
+      const got = await checkWithRetry(check)
+      const judged = probeTracker.judge(probe.url, got)
+      return {
+        id: probe.url, name: probe.name || probe.url, url: probe.url, status: judged.status, ms: got.ms, ok: judged.ok,
+        probe: judged.state, note: judged.note, misses: judged.misses, lastGoodAt: judged.lastGoodAt,
+        ...(got.error ? { error: got.error } : {})
       }
     }))
     return { rows, up: rows.filter((r) => r.ok).length, total: rows.length }
@@ -289,6 +336,12 @@ function createMonitorStore({
         ].filter(Boolean)
         return row('show', `Show machine · ${d.machine || 'this'}`, d.light?.seen || d.laser?.connected ? 'ok' : 'idle', bits.join(' · '))
       }),
+      // The light desk is asked ONLY for its clock: every other light route BUILDS the desk (40 Hz loop,
+      // Art-Net bind) on a machine that has no lights (serverXR/src/routes/lightingRoutes.js).
+      settle('light', 'Light desk', async () => {
+        const d = await get('/light/api/clock')
+        return row('light', 'Light desk', d.up ? 'ok' : 'idle', d.up ? 'desk started (not a check that lights work)' : 'not started on this machine')
+      }),
       settle('ndi', 'NDI video', async () => {
         const d = await get('/ndi/api/summary')
         return row('ndi', 'NDI video', d.available ? 'ok' : 'off', d.available ? `ready (${d.version || 'ok'})` : (d.reason || 'not available'))
@@ -320,8 +373,10 @@ function createMonitorStore({
     }
   }
 
-  async function pullRequests() {
-    const out = await runCommand('gh', ['pr', 'list', '--limit', '30', '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
+  async function pullRequests(config = {}) {
+    // config.repo ("owner/name") lets a server that does not run inside a checkout still list its pull requests
+    const repoArgs = typeof config.repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(config.repo) ? ['-R', config.repo] : []
+    const out = await runCommand('gh', ['pr', 'list', ...repoArgs, '--limit', String(PR_LIST_LIMIT), '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
     const rows = JSON.parse(out).map((p) => ({
       number: p.number,
       title: p.title,
@@ -364,13 +419,73 @@ function createMonitorStore({
     return { rows, configured: list.length }
   }
 
-  async function panel(name, fn) {
+  // The credits of this machine: a feed { panel: 'credits', kind: 'command' } in the config whose output is the
+  // JSON list `di-credits status --json` prints (route, available, meter, have, why). Only those fields are kept,
+  // text is clipped, an e-mail address is shown as "login-<4 hex>" and key-like text is masked (monitorCredits.js), so no address or key leaves the machine in a report.
+  async function readCredits(command) {
+    // the command is killed by runCommand's own timeout, so a hung probe never leaves a process behind
+    // di-credits exits 1 when no route is ready, and still prints the full list: that list is what this panel is for
+    const out = await withTimeout(runCommand('/bin/sh', ['-c', command], { timeout: CREDITS_COMMAND_MS }).catch((error) => {
+      if (error && typeof error.stdout === 'string' && error.stdout.trim().startsWith('[') && !error.killed) return error.stdout
+      throw error
+    }), CREDITS_COMMAND_MS + 500)
+    let parsed
+    try { parsed = JSON.parse(out) } catch { throw new Error('the credits command did not print JSON') }
+    const rows = sanitizeCredits(parsed)
+    if (!rows || rows.dropped) throw new Error('the credits list was not in the expected shape')
+    return { configured: 1, rows, ready: rows.filter((r) => r.available).length, total: rows.length }
+  }
+
+  // What the credits panel remembers between scans: the last good list and when it was read, when the command was last
+  // tried (good or not), why the last try failed, and the renewal in flight (one at a time, shared by every scan).
+  let creditsMemo = null
+  async function credits(config) {
+    const feed = (Array.isArray(config.feeds) ? config.feeds : []).find((f) => f.panel === 'credits' && f.kind === 'command' && f.command)
+    if (!feed) return { configured: 0, rows: [], ready: 0, total: 0 }
+    // a changed command is another feed: the list of the old one is forgotten
+    if (!creditsMemo || creditsMemo.command !== feed.command) creditsMemo = { command: feed.command, value: null, at: 0, triedAt: -Infinity, error: '', renewing: null }
+    const memo = creditsMemo
+    if (!memo.renewing && now() - memo.triedAt >= CREDITS_FRESH_MS) {
+      memo.renewing = readCredits(memo.command).then(
+        (value) => { memo.value = value; memo.at = now(); memo.error = '' },
+        (error) => { memo.error = String(error.message || error) }
+      ).then(() => { memo.triedAt = now(); memo.renewing = null })
+    }
+    // a list that is too old counts as no list. With none, wait a little for the answer; a usable list is shown at once while the renewal runs on
+    const usable = () => memo.value && now() - memo.at <= CREDITS_DROP_MS
+    if (!usable() && memo.renewing) await settleWithin(memo.renewing, creditsWaitMs)
+    if (usable()) {
+      const data = { ...memo.value }
+      // only an old list says when it was read (the page tells how old); a fresh list, a first check and a dropped list carry no date
+      if (now() - memo.at > CREDITS_STALE_MS) {
+        data.stale = true
+        data.checkedAt = new Date(memo.at).toISOString()
+        if (memo.error) data.refreshError = clip(memo.error.split('\n')[0])
+      }
+      return data
+    }
+    if (memo.renewing) return { configured: 1, rows: [], ready: 0, total: 0, checking: true }
+    throw new Error(memo.error || 'the credits command has not answered')
+  }
+
+  // The chat list of this machine: a feed { panel: 'chats', kind: 'command' } in the config whose output is
+  // the chat list as JSON. No such feed is "not configured", not an empty list. Only the shown fields are kept.
+  async function chats(config) {
+    const list = (Array.isArray(config.feeds) ? config.feeds : []).filter((f) => f.panel === 'chats' && f.kind === 'command' && f.command).slice(0, 1)
+    if (!list.length) return { configured: 0, source: null }
+    const out = await withTimeout(runCommand('/bin/sh', ['-c', list[0].command]), 6000)
+    const source = sanitizeChats(JSON.parse(out), os.hostname().split('.')[0])
+    if (!source) throw new Error('the chat list was not in the expected shape')
+    return { configured: 1, source }
+  }
+
+  async function panel(name, fn, capMs = PANEL_CAP_MS) {
     const started = now()
     try {
-      const data = await withTimeout(fn(), 9000)
-      return [name, { ok: true, ms: now() - started, ...data }]
+      const data = await withTimeout(fn(), capMs)
+      return [name, { ok: true, ms: now() - started, ...data, at: now() }]
     } catch (error) {
-      return [name, { ok: false, ms: now() - started, error: String(error.message || error), rows: [] }]
+      return [name, { ok: false, ms: now() - started, error: String(error.message || error), rows: [], at: now() }]
     }
   }
 
@@ -394,9 +509,11 @@ function createMonitorStore({
       panel('presence', presence),
       panel('connected', () => connected(selfBase)),
       panel('services', services),
-      panel('pullRequests', pullRequests),
+      panel('pullRequests', () => pullRequests(config)),
       panel('tasks', () => feeds(config, 'tasks')),
-      panel('shows', () => feeds(config, 'shows'))
+      panel('shows', () => feeds(config, 'shows')),
+      panel('chats', () => chats(config)),
+      panel('credits', () => credits(config), Math.max(PANEL_CAP_MS, creditsWaitMs + 1000))
     ])
     const value = {
       generatedAt: new Date(now()).toISOString(),
@@ -411,4 +528,4 @@ function createMonitorStore({
   return { getMonitor }
 }
 
-module.exports = { createMonitorStore, REMOTE_SESSIONS_COMMAND, findClaudeHomes, DEFAULT_PROBES }
+module.exports = { createMonitorStore, REMOTE_SESSIONS_COMMAND, findClaudeHomes, DEFAULT_PROBES, CREDITS_COMMAND_MS }

@@ -1,4 +1,5 @@
 import { ago } from './monitorFormat.js'
+import { chatIssues } from './MonitorChats.jsx'
 
 // The strip on top of the Monitor: one tile per tier (prod, dev, each local di)
 // with commit, age, how far behind dev, health and the spaces it holds.
@@ -20,6 +21,8 @@ export const tierLabel = (id) => (id.startsWith('local:') ? `local · ${id.slice
 // 'down' | 'drift' | 'ok' and the reason in words
 export const tierState = (row, devCommit) => {
     if (!isHealthy(row)) return { tone: 'danger', note: `not answering${row.status ? ` (${row.status})` : ''}` }
+    // a slow answer is slow, not down; one missed check keeps the last good answer and says so
+    if (row.probe === 'slow' && row.note) return { tone: 'warning', note: row.note }
     if (typeof row.behindDev === 'number' && row.behindDev > 0) {
         return { tone: 'warning', note: `${row.behindDev} behind dev` }
     }
@@ -47,14 +50,17 @@ export const heroState = (snap) => {
     }
     const failed = snap?.panels?.services?.failed || 0
     if (failed) issues.push({ tone: 'danger', text: `${failed} service${failed === 1 ? '' : 's'} failed`, tier: null })
+    issues.push(...chatIssues(snap?.chats))
     issues.sort((a, b) => (a.tone === 'danger' ? 0 : 1) - (b.tone === 'danger' ? 0 : 1))
     if (!issues.length) return { tone: 'success', headline: 'All well', issues }
     const tone = issues.some((i) => i.tone === 'danger') ? 'danger' : 'warning'
     const lead = issues[0].text
     // a lone problem is its own sentence; several are counted, the worst one named
+    // a row can stand for several things ("3 more chats ask you")
+    const total = issues.reduce((n, i) => n + (i.count || 1), 0)
     const headline = issues.length === 1 && issues[0].tone === 'danger' && !/^\d/.test(lead)
         ? lead
-        : `${issues.length} thing${issues.length === 1 ? '' : 's'} need${issues.length === 1 ? 's' : ''} you: ${lead}`
+        : `${total} thing${total === 1 ? '' : 's'} need${total === 1 ? 's' : ''} you: ${lead}`
     return { tone, headline, issues }
 }
 
@@ -85,16 +91,17 @@ export default function MonitorOverview({ tiers, spaces, history, flashing, sele
         <div className="monitor-overview" aria-label="Tiers overview">
             {rows.map((row) => {
                 const state = tierState(row, dev?.commit)
+                const metaLines = [`built ${row.builtAt ? ago(row.builtAt) : 'n/a'}`, row.probe === 'doubt' ? `one check missed${row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}` : `${row.status ?? '—'}${typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}${row.probe === 'down' && row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}`, spaces?.ok === false ? 'spaces n/a' : `${counts[row.id] || 0} ${row.source === 'self' ? '' : 'public '}space${counts[row.id] === 1 ? '' : 's'}`]
                 const cls = ['monitor-tier', `tone-${state.tone}`, flashing?.has(`t:${row.id}`) ? 'is-changed' : '', selectedId === row.id ? 'is-selected' : ''].filter(Boolean).join(' ')
                 return (
-                    <button key={row.id} type="button" className={cls} data-tier-id={row.id} data-tier-tone={state.tone}
+                    <button key={row.id} type="button" className={cls} data-tier-id={row.id} data-tier-tone={state.tone} title={`${tierLabel(row.id)} · ${metaLines.join(' · ')}`}
                         aria-pressed={selectedId === row.id} onClick={() => onPick?.(row)}>
                         <span className="monitor-tier-name">{tierLabel(row.id)}</span>
                         <span className="monitor-tier-commit">{shortCommit(row.commit)}</span>
                         <span className="monitor-tier-note">{state.note}</span>
                         <Sparkline values={history?.[row.id]} />
                         <span className="monitor-meta">built {row.builtAt ? ago(row.builtAt) : 'n/a'}</span>
-                        <span className="monitor-meta">{row.status ?? '—'}{typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}</span>
+                        <span className="monitor-meta">{row.probe === 'doubt' ? `one check missed${row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}` : `${row.status ?? '—'}${typeof row.ms === 'number' ? ` · ${row.ms} ms` : ''}${row.probe === 'down' && row.lastGoodAt ? ` · last answered ${ago(row.lastGoodAt)}` : ''}`}</span>
                         <span className="monitor-meta">{spaces?.ok === false ? 'spaces n/a' : `${counts[row.id] || 0} ${row.source === 'self' ? '' : 'public '}space${counts[row.id] === 1 ? '' : 's'}`}</span>
                     </button>
                 )

@@ -87,6 +87,7 @@ const boot = async (query, { ids = ['a', 'b', 'c', 'live'], liveId = 'live', uns
     desk.unsaved = unsaved
     if (names) desk.looks.forEach((l, i) => { l.name = names[i] ?? l.name })
     document.body.innerHTML = indexHtml.match(/<body[^>]*>([\s\S]*)<\/body>/)[1].replace(/<script[\s\S]*?<\/script>/g, '')
+    new Function(fs.readFileSync(path.join(here, 'listen.js'), 'utf8'))() // desk.js reads window.DeskListen at load
     new Function(deskJs)()
     await sleep(120)
 }

@@ -1,0 +1,15 @@
+/* Connected machines: the list shared by /device and /admin. Tokens only, square corners (di signature). */
+.cm { display: grid; gap: var(--di-space-3); min-width: 0; }
+.cm-title { margin: 0; font-size: var(--di-text-5); color: var(--di-text); }
+.cm-note { margin: 0; min-height: 1.25em; color: var(--di-text); font-size: var(--di-text-3); }
+.cm-empty { margin: 0; color: var(--di-text-muted); }
+.cm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--di-space-3); }
+.cm-row { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-3); padding: var(--di-space-3); border: 1px solid rgba(var(--di-cyan-rgb), 0.25); border-radius: 0; min-width: 0; flex-wrap: wrap; }
+.cm-main { display: grid; gap: var(--di-space-1); min-width: 0; flex: 1 1 14rem; }
+.cm-name { font-weight: 600; overflow-wrap: anywhere; }
+.cm-meta { font-size: var(--di-text-3); opacity: 0.8; overflow-wrap: anywhere; }
+.cm-confirm { display: flex; align-items: center; gap: var(--di-space-2); flex-wrap: wrap; }
+.cm-btn { min-height: var(--di-touch-target); padding: 0 var(--di-space-4); background: transparent; color: var(--di-text); border: 1px solid rgba(var(--di-cyan-rgb), 0.5); border-radius: 0; font: inherit; cursor: pointer; }
+.cm-btn:hover { border-color: var(--di-cyan); }
+.cm-btn:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px; }
+.cm-danger { border-color: var(--di-danger); }

@@ -201,7 +201,7 @@ export default function OpenCallSection() {
                 <MetricCard label="Accepted" value={counts.accepted || 0} tone="success" />
                 <MetricCard label="Declined" value={counts.declined || 0} />
             </div>
-            <div className="preferences-command-grid">
+            <div className="preferences-filter-row" role="group" aria-label="Filter the list">
                 <button type="button" className={`toggle-button${filter === '' ? ' active' : ''}`} onClick={() => setFilter('')}>
                     All
                 </button>

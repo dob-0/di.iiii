@@ -1,0 +1,701 @@
+/* THE DESK (MapDeskDock.jsx, 2026-11-10, second pass).
+   Left: what you SEE — Output over Preview, as big as the height allows.
+   One docked desk: the lines between the parts are dragged (MapSplit.jsx).
+   Right: what you DO — the clips on top, the open clip's effects under them
+   with the effect list beside the cards. Same quiet greys as the rest of the
+   mapper; cyan only for what is on the wall and for the open tab. */
+
+.map-room {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: var(--map-split-left, 42%) 6px minmax(0, 1fr);
+}
+
+/* --- monitors (left) --------------------------------------------------- */
+
+.map-monitors {
+    display: grid;
+    grid-template-rows: var(--map-split-monitors, 55%) 6px minmax(0, 1fr);
+    min-height: 0;
+    min-width: 0;
+}
+
+.map-monitor { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--di-surface); }
+.map-monitor-head {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    flex: 0 0 auto;
+    padding: 5px var(--di-space-2);
+    border-bottom: 1px solid var(--ui-divider);
+    background: var(--ui-surface);
+}
+.map-monitor-head h2 { margin: 0; font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ui-text-muted); font-weight: 500; }
+.map-monitor-name { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; color: var(--ui-text-primary); font-size: var(--di-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-monitor-body {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--di-space-2);
+}
+/* ModeMark's tier chip sits at the bottom-left, under the Output monitor. */
+.map-monitor:last-child .map-monitor-body { padding-bottom: calc(var(--di-space-6) + env(safe-area-inset-bottom, 0px)); }
+.map-monitor-holder { position: relative; flex: 0 0 auto; outline: 1px solid var(--ui-divider); overflow: hidden; }
+.map-monitor.is-over .map-monitor-holder { outline: 2px dashed var(--ui-accent); }
+.map-monitor-holder .map-reference { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+.map-live-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--ui-accent); }
+
+/* --- the work column (right) --------------------------------------------- */
+
+.map-work {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--map-split-work, 45%) 6px minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+}
+
+/* --- clips --------------------------------------------------------------- */
+
+.map-deck {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    min-height: 0;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--ui-surface);
+}
+.map-deck-head { display: flex; align-items: center; gap: var(--di-space-3); min-width: 0; flex: 0 0 auto; }
+.map-deck-head h2 { margin: 0; font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ui-text-muted); font-weight: 500; }
+.map-deck-add { width: auto; max-width: 180px; }
+.map-deck-notice { flex: 1 1 auto; min-width: 0; color: var(--ui-text-muted); font-size: var(--di-text-2); line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
+.map-deck-notice.is-error { color: var(--ui-warning); }
+
+.map-deck-tiles {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    align-content: start;
+    gap: var(--di-space-2);
+    min-height: 0;
+    overflow-y: auto;
+    padding: 2px;
+}
+
+.map-clip {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border: 1px solid var(--ui-divider);
+    background: var(--ui-surface-raised);
+    color: var(--ui-text-primary);
+}
+.map-clip:hover { border-color: var(--ui-border-strong); }
+.map-clip.is-selected { border-color: var(--ui-text-primary); }
+.map-clip.is-selected .map-clip-name { background: var(--ui-surface-highlight); }
+.map-clip.is-playing { border-color: var(--ui-accent); box-shadow: 0 0 0 1px var(--ui-accent); }
+.map-clip.is-dragging { opacity: 0.4; }
+.map-clip.is-effect-target { outline: 2px dashed var(--ui-accent); outline-offset: 2px; }
+.map-clip-add { border-style: dashed; }
+
+.map-clip-play { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
+.map-clip-play:disabled { cursor: default; opacity: 0.5; }
+.map-clip-thumb { position: relative; display: flex; align-items: center; justify-content: center; width: 100%; aspect-ratio: 16 / 9; background: var(--di-black); overflow: hidden; }
+.map-clip-media { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+.map-clip-fill { position: absolute; inset: 0; }
+.map-clip-kind { color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.1em; text-transform: uppercase; }
+.map-clip-fx,
+.map-clip-badge {
+    position: absolute;
+    top: 3px;
+    padding: 0 4px;
+    background: rgba(0, 0, 0, 0.72);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.06em;
+}
+.map-clip-fx { left: 3px; color: var(--ui-accent); }
+.map-clip-badge { right: 3px; color: var(--ui-text-primary); }
+.map-clip-badge.is-live { background: var(--ui-accent); color: var(--di-black); }
+
+.map-clip-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 4px 6px;
+    border: 0;
+    border-top: 1px solid var(--ui-divider);
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: var(--di-text-2);
+    text-align: left;
+    cursor: pointer;
+}
+.map-clip-name:hover { background: var(--ui-surface-highlight); }
+.map-clip-name.is-static { cursor: default; }
+.map-clip-name.is-static:hover { background: none; }
+.map-clip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-clip-name kbd { flex: 0 0 auto; font-family: var(--di-mono); font-size: var(--di-text-1); color: var(--ui-text-muted); border: 1px solid var(--ui-divider); padding: 0 4px; }
+.map-clip.is-playing .map-clip-name kbd { color: var(--ui-accent); border-color: var(--ui-accent); }
+
+/* --- tabs (shared) --------------------------------------------------------- */
+
+.map-tabs { display: flex; flex: 0 1 auto; min-width: 0; overflow-x: auto; }
+.map-tab {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 8px 12px 6px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--ui-text-muted);
+    font: inherit;
+    font-size: var(--di-text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.map-tab b { margin-left: 8px; color: var(--ui-text-primary); font-weight: 500; text-transform: none; letter-spacing: 0; }
+.map-tab:hover { color: var(--ui-text-primary); }
+.map-tab.is-on { color: var(--ui-text-primary); border-bottom-color: var(--ui-accent); }
+
+/* --- the effect panel (under the clips) ------------------------------------- */
+
+.map-fx-panel { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--ui-surface); }
+
+/* --- the dividers ----------------------------------------------------------
+   A 6px track with a hairline down its middle; it lights up under the
+   pointer and while dragged. */
+.map-split { position: relative; z-index: 1; background: var(--ui-surface); touch-action: none; }
+.map-split::after { content: ''; position: absolute; background: var(--ui-divider); }
+.map-split-x { cursor: col-resize; }
+.map-split-x::after { top: 0; bottom: 0; left: 50%; width: 1px; transform: translateX(-50%); }
+.map-split-y { cursor: row-resize; }
+.map-split-y::after { left: 0; right: 0; top: 50%; height: 1px; transform: translateY(-50%); }
+.map-split:hover::after,
+.map-split:focus-visible::after,
+.map-split.is-dragging::after { background: var(--ui-accent); }
+.map-split-x:hover::after,
+.map-split-x.is-dragging::after { width: 2px; }
+.map-split-y:hover::after,
+.map-split-y.is-dragging::after { height: 2px; }
+.map-split:focus-visible { outline: none; }
+.map-fx-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0 var(--di-space-3);
+    flex: 0 0 auto;
+    padding-right: var(--di-space-2);
+    border-bottom: 1px solid var(--ui-divider);
+}
+.map-fx-clipbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-1) var(--di-space-3); min-width: 0; }
+.map-fx-clipbar button { white-space: nowrap; }
+.map-fx-state { color: var(--ui-text-muted); font-size: var(--di-text-2); white-space: nowrap; }
+.map-fx-state.is-live { color: var(--ui-accent); }
+.map-fx-opacity { display: flex; align-items: center; gap: 6px; color: var(--ui-text-muted); font-size: var(--di-text-2); }
+.map-fx-opacity input[type='range'] { width: 110px; margin: 0; accent-color: var(--ui-accent); }
+.map-fx-opacity output { width: 36px; color: var(--ui-text-primary); font-family: var(--di-mono); font-size: var(--di-text-1); text-align: right; }
+
+.map-fx-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 220px; }
+.map-fx-main { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--di-space-2); padding: var(--di-space-2); }
+.map-fx-side { min-height: 0; overflow-y: auto; padding: var(--di-space-2); border-left: 1px solid var(--ui-divider); }
+.map-fx-source { padding: var(--di-space-2); border: 1px solid var(--ui-divider); background: var(--ui-surface-raised); }
+.map-fx-source .map-visual-inspector > .map-panel-head { display: none; }
+
+/* --- the chain: cards one under another, in the order they run ---------------
+   Emily, 2026-11-10: "effect parametres under each other and more
+   coordinated". One column of full-width cards; inside each, every setting
+   is the same three-column row (ParamRow), so names line up under names and
+   bars under bars across the whole panel. */
+.map-fx-main { position: relative; }
+.map-fx-main.is-over { outline: 2px dashed var(--ui-accent); outline-offset: -3px; }
+.map-fx-main-drop { position: sticky; top: 0; z-index: 3; height: 0; margin-bottom: calc(-1 * var(--di-space-2)); pointer-events: none; }
+.map-fx-main-drop > span { position: absolute; top: 0; right: 0; padding: 4px 10px; background: var(--ui-accent); color: var(--di-black); font-size: var(--di-text-2); font-weight: 500; white-space: nowrap; }
+
+.map-fx-stack { display: flex; flex-direction: column; gap: 6px; }
+.map-fx-drop { margin: 0; padding: 10px var(--di-space-2); border: 1px dashed var(--ui-divider); color: var(--ui-text-muted); font-size: var(--di-text-2); text-align: center; }
+.map-fx-drop.is-over { border-color: var(--ui-accent); border-style: solid; color: var(--ui-accent); background: rgba(var(--di-cyan-rgb), 0.08); }
+
+.map-fx-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.map-fx-card { position: relative; border: 1px solid var(--ui-divider); background: var(--ui-surface-raised); }
+.map-fx-card.is-skipped { border-style: dashed; }
+.map-fx-card.is-dragging { opacity: 0.4; }
+/* Where a dragged card or a new effect will land: a line in the gap. */
+.map-fx-card.is-drop-before::before,
+.map-fx-card.is-drop-after::after { content: ''; position: absolute; left: -1px; right: -1px; height: 2px; background: var(--ui-accent); pointer-events: none; }
+.map-fx-card.is-drop-before::before { top: -5px; }
+.map-fx-card.is-drop-after::after { bottom: -5px; }
+.map-fx-card-head { display: flex; align-items: center; gap: 2px; height: 28px; padding: 0 4px 0 0; background: rgba(255, 255, 255, 0.03); }
+.map-fx-grip { flex: 0 0 auto; width: 18px; color: var(--ui-text-muted); font-size: 12px; line-height: 28px; text-align: center; cursor: grab; user-select: none; }
+.map-fx-grip:hover { color: var(--ui-text-primary); }
+.map-fx-grip:active { cursor: grabbing; }
+.map-fx-fold { flex: 0 0 auto; width: 16px; height: 22px; padding: 0; border: 0; background: none; color: var(--ui-text-muted); font: inherit; font-size: 10px; cursor: pointer; }
+.map-fx-card-name { flex: 1 1 auto; min-width: 0; height: 22px; padding: 0 4px; border: 0; background: none; color: var(--ui-text-primary); font: inherit; font-size: var(--di-text-3); font-weight: 500; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-fx-card.is-bypassed .map-fx-card-name,
+.map-fx-card.is-bypassed .map-fx-params { opacity: 0.45; }
+.map-fx-icon { flex: 0 0 auto; width: 22px; height: 22px; padding: 0; border: 1px solid transparent; background: none; color: var(--ui-text-muted); font: inherit; line-height: 1; cursor: pointer; }
+.map-fx-icon:hover:not(:disabled) { color: var(--ui-text-primary); border-color: var(--ui-divider); }
+.map-fx-icon:disabled { opacity: 0.3; cursor: default; }
+.map-fx-bypass { flex: 0 0 auto; min-width: 34px; height: 20px; margin: 0 2px; padding: 0 6px; border: 1px solid var(--ui-divider); background: none; color: var(--ui-text-muted); font-family: var(--di-mono); font-size: 0.68rem; cursor: pointer; }
+.map-fx-bypass.is-on { border-color: rgba(var(--di-cyan-rgb), 0.6); background: rgba(var(--di-cyan-rgb), 0.16); color: var(--ui-accent); }
+.map-fx-note { margin: 0; padding: 4px var(--di-space-2); color: var(--ui-warning); font-size: var(--di-text-1); }
+.map-fx-params { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 8px; border-top: 1px solid var(--ui-divider); }
+
+.map-fx-row { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--ui-text-muted); font-size: var(--di-text-2); }
+.map-fx-label { flex: 0 0 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-fx-row input[type='range'] { flex: 1 1 auto; min-width: 40px; margin: 0; accent-color: var(--ui-accent); }
+.map-fx-row select,
+.map-fx-row input[type='color'] { flex: 1 1 auto; min-width: 0; }
+.map-fx-row select,
+.map-fx-number,
+.map-fx-search {
+    height: 24px;
+    padding: 2px 4px;
+    border: 1px solid var(--ui-divider);
+    background: var(--di-black);
+    color: var(--ui-text-primary);
+    font: inherit;
+    font-size: var(--di-text-2);
+}
+.map-fx-number { flex: 0 0 54px; width: 54px; font-family: var(--di-mono); }
+.map-fx-row input[type='color'] { height: 24px; padding: 0 2px; border: 1px solid var(--ui-divider); background: var(--di-black); }
+.map-fx-unit { flex: 0 0 24px; color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-1); }
+
+/* --- the effect list (right of the cards) --------------------------------- */
+
+/* Groups fold (remembered per browser); a row is name + a + that adds it. */
+.map-fx-browser { display: flex; flex-direction: column; gap: 4px; }
+.map-fx-search { box-sizing: border-box; width: 100%; height: 28px; }
+.map-fx-hint { margin: 0 0 2px; color: var(--ui-text-muted); font-size: var(--di-text-2); line-height: 1.35; }
+.map-fx-group { display: flex; flex-direction: column; }
+.map-fx-group-head { display: flex; align-items: center; gap: 6px; width: 100%; height: 24px; padding: 0 4px; border: 0; border-top: 1px solid var(--ui-divider); background: none; color: var(--ui-text-muted); font: inherit; font-size: var(--di-text-2); text-align: left; text-transform: uppercase; letter-spacing: 0.1em; cursor: pointer; }
+.map-fx-group-head:hover { color: var(--ui-text-primary); }
+.map-fx-group-head > span:first-child { width: 10px; font-size: 10px; letter-spacing: 0; }
+.map-fx-group-count { margin-left: auto; font-family: var(--di-mono); font-size: var(--di-text-1); letter-spacing: 0; }
+.map-fx-group ul { list-style: none; margin: 0 0 4px; padding: 0; display: flex; flex-direction: column; }
+.map-fx-item { display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 2px 0 2px; color: var(--ui-text-primary); font-size: var(--di-text-3); cursor: grab; user-select: none; outline: none; }
+.map-fx-item:hover,
+.map-fx-item:focus-visible { background: var(--ui-surface-highlight); }
+.map-fx-item:active { cursor: grabbing; }
+.map-fx-item.is-dim { color: var(--ui-text-muted); opacity: 0.55; }
+.map-fx-item-grip { flex: 0 0 auto; width: 12px; color: var(--ui-text-muted); font-size: 11px; text-align: center; opacity: 0.35; }
+.map-fx-item:hover .map-fx-item-grip { opacity: 1; }
+.map-fx-item-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.map-fx-item-add { flex: 0 0 auto; width: 22px; height: 20px; padding: 0; border: 1px solid transparent; background: none; color: var(--ui-text-muted); font: inherit; font-size: 14px; line-height: 1; cursor: pointer; opacity: 0.5; }
+.map-fx-item:hover .map-fx-item-add,
+.map-fx-item:focus-visible .map-fx-item-add { opacity: 1; color: var(--ui-accent); border-color: var(--ui-divider); }
+.map-fx-item-add:hover { background: rgba(var(--di-cyan-rgb), 0.16); }
+
+/* An effect held over a monitor: where it will go, said in words. */
+.map-drop-zones { position: absolute; inset: 0; z-index: 4; display: flex; pointer-events: none; }
+.map-drop-zone {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin: 6px;
+    padding: 0 8px;
+    border: 2px dashed rgba(255, 255, 255, 0.35);
+    background: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: var(--di-text-3);
+    text-align: center;
+}
+.map-drop-zone small { color: var(--ui-text-muted); font-size: var(--di-text-1); text-transform: uppercase; letter-spacing: 0.08em; }
+.map-drop-zone.is-on { border-color: var(--ui-accent); border-style: solid; background: rgba(var(--di-cyan-rgb), 0.24); color: #ffffff; }
+
+/* --- More: screens, machines, wall photo, carry ----------------------------- */
+
+.map-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    width: min(380px, 100%);
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid var(--ui-border-strong);
+    background: var(--ui-surface);
+    box-shadow: -12px 0 32px rgba(0, 0, 0, 0.5);
+}
+.map-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2); padding-right: var(--di-space-2); border-bottom: 1px solid var(--ui-divider); }
+.map-dock-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: var(--di-space-2); padding: var(--di-space-2); }
+.map-drawer .map-surface-list { max-height: none; }
+
+/* --- narrow screens: one column, the desk scrolls ---------------------------- */
+
+@media (max-width: 1100px) {
+    .map-fx-body { grid-template-columns: minmax(0, 1fr) 180px; }
+    .map-fx-clipbar .map-fx-opacity input[type='range'] { width: 70px; }
+}
+
+@media (max-width: 900px) {
+    .map-desk-dock { overflow-y: auto; }
+    .map-room { display: flex; flex-direction: column; flex: 0 0 auto; }
+    .map-split { display: none; }
+    .map-monitors { display: flex; flex-direction: column; border-right: 0; border-bottom: 1px solid var(--ui-divider); }
+    /* On a phone the wall comes first. */
+    .map-monitors > [aria-label='Output'] { order: 1; }
+    .map-monitors > [aria-label='Preview'] { order: 2; border-top: 1px solid var(--ui-divider); }
+    .map-fx-panel { border-top: 1px solid var(--ui-divider); }
+    .map-monitor-body { flex: 0 0 auto; height: calc((100vw - 2 * var(--di-space-2)) * 0.5625 + 2 * var(--di-space-2)); }
+    .map-monitor:last-child .map-monitor-body { padding-bottom: var(--di-space-2); }
+    .map-work { display: flex; flex-direction: column; }
+    .map-deck-head { flex-wrap: wrap; gap: var(--di-space-2); }
+    .map-deck-notice { flex-basis: 100%; white-space: normal; }
+    .map-deck-tiles { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); overflow: visible; }
+    .map-fx-head { flex-direction: column; align-items: stretch; padding-right: 0; }
+    .map-fx-clipbar { flex-wrap: wrap; padding: var(--di-space-2); }
+    .map-fx-body { display: flex; flex-direction: column; }
+    .map-fx-main,
+    .map-fx-side { overflow: visible; }
+    .map-fx-side { border-left: 0; border-top: 1px solid var(--ui-divider); padding-bottom: calc(var(--di-space-7) + env(safe-area-inset-bottom, 0px)); }
+    .map-drawer { position: fixed; top: 0; width: 100%; }
+}
+
+/* --- the clip's own settings (visualParams.js) -------------------------------- */
+.map-fx-settings { border: 1px solid var(--ui-divider); background: var(--ui-surface-raised); }
+.map-fx-settings-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 10px; border-bottom: 1px solid var(--ui-divider); }
+.map-fx-settings-head h3 { margin: 0; color: var(--ui-text-muted); font-size: var(--di-text-2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; }
+.map-fx-settings-grid { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 8px; }
+.map-fx-settings-none { margin: 0; color: var(--ui-text-muted); font-size: var(--di-text-2); }
+.map-fx-row-toggle input[type='checkbox'] { margin: 0; accent-color: var(--ui-accent); }
+
+/* --- Preview is red, the wall is cyan ------------------------------------------
+   Emily, 2026-11-10: "when it's preview let's make red outline, not white".
+   The clip open in Preview, its badge and the Preview monitor's frame share
+   one red; what is LIVE on the wall keeps the cyan. */
+.map-desk-dock { --map-preview: var(--di-danger); --map-preview-rgb: var(--di-danger-rgb); }
+.map-clip.is-selected { border-color: var(--map-preview); box-shadow: 0 0 0 1px var(--map-preview); }
+.map-clip.is-selected .map-clip-name { background: rgba(var(--map-preview-rgb), 0.16); }
+.map-clip.is-selected.is-playing { border-color: var(--ui-accent); box-shadow: 0 0 0 1px var(--ui-accent), 0 0 0 3px rgba(var(--map-preview-rgb), 0.7); }
+.map-clip-badge:not(.is-live) { background: var(--map-preview); color: #ffffff; }
+.map-monitor[aria-label='Preview'] .map-monitor-holder { outline-color: rgba(var(--map-preview-rgb), 0.75); }
+.map-monitor[aria-label='Preview'] .map-monitor-name { color: var(--map-preview); }
+
+
+.map-fx-opacity { display: flex; align-items: center; gap: 6px; }
+
+/* A row of choice buttons gets the whole width, so its words fit. */
+
+/* The effect list and the tabs at the same readable size. */
+.map-tab { font-size: var(--di-text-3); }
+.map-fx-state { font-size: var(--di-text-3); }
+
+/* --- one setting (ParamRow / FillBar in MapDeskDock.jsx) -----------------------
+   Emily, 2026-11-11, picked "Thin slider + number box" out of five working
+   styles, after the fill bars made the name look smaller than its control.
+   The name at 13px, a thin line no longer than 320px with a small thumb, then
+   a box with the number in it (12px mono) that takes typing. Every row has
+   the same columns (name, control, reset) and every card uses them, so the
+   panel reads as one aligned list ("under each other and more coordinated",
+   11-10). The .map-param prefix on buttons and the input outranks the
+   Mapping window's ".map-mo button, .map-mo input { font: inherit }". */
+.map-desk-dock { --map-param-label: 116px; }
+.map-param,
+.map-param-num {
+    --map-param-line: rgba(var(--di-cyan-rgb), 0.16);
+    --map-param-line-hi: rgba(var(--di-cyan-rgb), 0.34);
+}
+.map-param { position: relative; display: grid; grid-template-columns: var(--map-param-label) minmax(0, 1fr) 16px; align-items: center; gap: 10px; min-width: 0; min-height: 28px; }
+.map-param-label {
+    min-width: 0;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.8125rem;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    cursor: default;
+    user-select: none;
+}
+.map-param.is-changed .map-param-label { color: #ffffff; }
+
+/* A number: the thin line, then the box. */
+.map-param-num { display: grid; grid-template-columns: minmax(0, 320px) 64px; align-items: center; gap: 12px; min-width: 0; }
+.map-param-num.is-compact { grid-template-columns: 96px 52px; gap: 8px; }
+.map-param-track { position: relative; height: 24px; min-width: 0; cursor: ew-resize; touch-action: none; outline: none; user-select: none; }
+.map-param-line,
+.map-param-fill { position: absolute; top: 50%; height: 2px; margin-top: -1px; pointer-events: none; }
+.map-param-line { left: 0; right: 0; background: var(--map-param-line); }
+.map-param-fill { background: var(--ui-accent); }
+.map-param-thumb { position: absolute; top: 50%; width: 4px; height: 16px; margin: -8px 0 0 -2px; background: var(--ui-accent); pointer-events: none; }
+.map-param-track:hover .map-param-line { background: var(--map-param-line-hi); }
+.map-param-track:focus-visible .map-param-thumb { outline: 1px solid var(--ui-accent); outline-offset: 2px; }
+.map-param-numbox {
+    display: flex;
+    align-items: center;
+    height: 24px;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid var(--map-param-line);
+    background: var(--di-black);
+    cursor: text;
+}
+.map-param-numbox:hover { border-color: var(--map-param-line-hi); }
+.map-param-numbox:focus-within { border-color: var(--ui-accent); }
+.map-param-numbox .map-param-input {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 0 6px;
+    border: 0;
+    background: none;
+    color: var(--ui-text-primary);
+    font-family: var(--di-mono);
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    outline: none;
+}
+.map-param-numbox small { flex: 0 0 auto; margin-left: -3px; padding-right: 6px; color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-2); }
+.map-param.is-changed .map-param-numbox .map-param-input { color: var(--ui-accent); }
+
+/* The reset arrow shows only where it can do something: on a changed setting, on hover. */
+.map-param-reset { width: 16px; height: 16px; padding: 0; border: 0; background: none; color: var(--ui-text-muted); font: inherit; font-size: 12px; line-height: 1; cursor: pointer; opacity: 0; }
+.map-param:hover .map-param-reset:not(:disabled),
+.map-param-reset:focus-visible { opacity: 1; }
+.map-param-reset:hover { color: var(--ui-text-primary); }
+.map-param-reset:disabled { visibility: hidden; }
+
+/* On/off: a small switch; the square slides right and turns cyan. */
+.map-param-switch {
+    justify-self: start;
+    display: flex;
+    width: 34px;
+    height: 18px;
+    padding: 2px;
+    box-sizing: border-box;
+    border: 1px solid var(--map-param-line-hi);
+    background: none;
+    cursor: pointer;
+}
+.map-param-switch:hover { border-color: rgba(var(--di-cyan-rgb), 0.6); }
+.map-param-switch:focus-visible { outline: 1px solid var(--ui-accent); outline-offset: 2px; }
+.map-param-knob { flex: 0 0 auto; width: 12px; height: 12px; background: rgba(255, 255, 255, 0.36); }
+.map-param-switch.is-on { justify-content: flex-end; background: rgba(var(--di-cyan-rgb), 0.22); border-color: var(--ui-accent); }
+.map-param-switch.is-on .map-param-knob { background: var(--ui-accent); }
+
+/* A short choice: tabs, the picked one underlined. A long one: a menu. */
+.map-param-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; min-width: 0; min-height: 24px; }
+.map-param .map-param-tabs button {
+    min-width: 18px;
+    padding: 3px 1px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--ui-text-muted);
+    font: inherit;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.map-param .map-param-tabs button:hover { color: var(--ui-text-primary); }
+.map-param .map-param-tabs button.is-on { color: var(--ui-text-primary); border-bottom-color: var(--ui-accent); }
+.map-param .map-param-tabs button:focus-visible { outline: 1px solid var(--ui-accent); outline-offset: 1px; }
+.map-param-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 24px;
+    min-width: 0;
+    max-width: 396px;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid var(--map-param-line);
+    background: var(--di-black);
+    color: var(--ui-text-primary);
+    font: inherit;
+    user-select: none;
+}
+.map-param-box:hover { border-color: var(--map-param-line-hi); }
+.map-param .map-param-select { flex: 1 1 auto; width: 100%; height: 100%; min-width: 0; padding: 0 6px; border: 0; background: none; color: var(--ui-text-primary); font: inherit; font-size: 0.75rem; }
+.map-param-colour { justify-self: start; width: 120px; gap: 6px; padding: 0 6px; cursor: pointer; }
+.map-param-hex { flex: 0 0 auto; color: var(--ui-text-muted); font-family: var(--di-mono); font-size: 0.75rem; }
+.map-param-swatch { flex: 0 0 auto; width: 22px; height: 14px; border: 1px solid var(--ui-border-strong); }
+.map-param-colour input[type='color'] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+/* A phone: a narrower name column, the line takes what is left. */
+@media (max-width: 560px) {
+    .map-desk-dock { --map-param-label: 96px; }
+    .map-param-num:not(.is-compact) { grid-template-columns: minmax(0, 1fr) 56px; gap: 8px; }
+}
+
+/* --- LFO on a setting, and the desk's tempo (2026-11-11) --------------------
+   Emily: "can we add lfo option for each parametres". "~" after a setting
+   opens a strip under it; amber is the LFO's colour (cyan = where the slider
+   is, amber = where the beat has swung it), the same amber as the mapping
+   window's bend points. */
+.map-desk-dock { --map-lfo: var(--di-warning, #ffb347); --map-lfo-rgb: var(--di-warning-rgb, 255, 179, 71); }
+.map-param.has-lfo { grid-template-columns: var(--map-param-label) minmax(0, 1fr) 18px 16px; }
+.map-param .map-param-lfo {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid transparent;
+    background: none;
+    color: var(--ui-text-muted);
+    font: inherit;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.55;
+}
+.map-param:hover .map-param-lfo,
+.map-param .map-param-lfo:focus-visible { opacity: 1; }
+.map-param .map-param-lfo:hover { color: var(--ui-text-primary); }
+.map-param .map-param-lfo.is-open { border-color: rgba(var(--map-lfo-rgb), 0.5); opacity: 1; }
+.map-param .map-param-lfo.is-on,
+.map-fx-opacity .map-param-lfo.is-on { color: var(--map-lfo); opacity: 1; }
+.map-fx-opacity .map-param-lfo { width: 18px; height: 18px; padding: 0; border: 1px solid transparent; background: none; color: var(--ui-text-muted); font: inherit; font-size: 15px; line-height: 1; cursor: pointer; }
+.map-fx-opacity .map-param-lfo.is-open { border-color: rgba(var(--map-lfo-rgb), 0.5); }
+.map-param-lfo-none { width: 18px; }
+.map-param.is-swinging .map-param-label { color: var(--map-lfo); }
+.map-param-swing { position: absolute; top: 50%; height: 10px; margin-top: -5px; background: rgba(var(--map-lfo-rgb), 0.14); pointer-events: none; }
+.map-param-lfo-mark { position: absolute; top: 50%; width: 2px; height: 14px; margin: -7px 0 0 -1px; background: var(--map-lfo); pointer-events: none; }
+
+.map-lfo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    margin: -2px 0 4px calc(var(--map-param-label) + 10px);
+    padding: 4px 0 4px 10px;
+    border-left: 2px solid rgba(var(--map-lfo-rgb), 0.35);
+    color: var(--ui-text-muted);
+    font-size: var(--di-text-2);
+}
+.map-lfo.is-on { border-left-color: var(--map-lfo); }
+.map-lfo button { font: inherit; }
+.map-lfo .map-lfo-on {
+    min-width: 38px;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid var(--map-param-line-hi, rgba(255, 255, 255, 0.2));
+    background: none;
+    color: var(--ui-text-muted);
+    cursor: pointer;
+}
+.map-lfo .map-lfo-on.is-on { border-color: var(--map-lfo); background: rgba(var(--map-lfo-rgb), 0.16); color: var(--map-lfo); }
+.map-lfo-waves { display: flex; gap: 2px; }
+.map-lfo .map-lfo-waves button {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: none;
+    color: var(--ui-text-muted);
+    cursor: pointer;
+}
+.map-lfo .map-lfo-waves button:hover { color: var(--ui-text-primary); }
+.map-lfo .map-lfo-waves button.is-on { color: var(--map-lfo); border-bottom-color: var(--map-lfo); }
+.map-lfo-every,
+.map-lfo-depth { display: flex; align-items: center; gap: 6px; }
+.map-lfo .map-lfo-every select {
+    height: 20px;
+    padding: 0 4px;
+    border: 1px solid var(--map-param-line-hi, rgba(255, 255, 255, 0.2));
+    background: var(--ui-surface, #111);
+    color: var(--ui-text-primary);
+    font: inherit;
+}
+.map-lfo-depth .map-param-num.is-compact { grid-template-columns: 80px 52px; }
+.map-fx-swinging { color: var(--map-lfo); font-size: 14px; line-height: 1; }
+.map-fx-opacity-lfo { display: grid; grid-template-columns: var(--map-param-label) minmax(0, 1fr); align-items: start; gap: 10px; padding: 2px 0 6px; }
+.map-fx-opacity-lfo .map-param-label { padding-top: 6px; color: var(--map-lfo); }
+.map-fx-opacity-lfo .map-lfo { margin: 0; }
+
+.map-tempo { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; color: var(--ui-text-muted); font-size: var(--di-text-2); }
+.map-tempo-lights { display: flex; gap: 3px; }
+.map-tempo-light { width: 7px; height: 7px; background: rgba(255, 255, 255, 0.12); }
+.map-tempo-light.is-one { outline: 1px solid rgba(255, 255, 255, 0.18); }
+.map-tempo-light.is-now { background: rgba(var(--map-lfo-rgb), 0.45); }
+.map-tempo-light.is-hit { background: var(--map-lfo); }
+.map-tempo-bpm { display: flex; align-items: center; height: 22px; border: 1px solid var(--map-param-line-hi, rgba(255, 255, 255, 0.2)); }
+.map-tempo-bpm:focus-within { border-color: var(--ui-accent); }
+.map-tempo .map-tempo-bpm input { width: 46px; height: 100%; padding: 0 2px 0 6px; border: 0; background: none; color: var(--ui-text-primary); font-family: var(--di-mono); font-size: 0.75rem; text-align: right; outline: none; }
+.map-tempo .map-tempo-bpm input:disabled { color: var(--map-lfo); }
+.map-tempo-bpm small { padding: 0 6px 0 3px; font-size: 10px; letter-spacing: 0.06em; }
+.map-tempo-from { color: var(--map-lfo); text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; }
+@media (max-width: 900px) {
+    /* The head stacks here (see above): the tempo gets the clip bar's inset. */
+    .map-tempo { padding: 0 var(--di-space-2) var(--di-space-2); }
+}
+@media (max-width: 560px) {
+    .map-lfo { margin-left: 0; }
+    .map-fx-opacity-lfo { grid-template-columns: 1fr; }
+}
+
+/* --- clip tiles: sized by the deck's Size slider; remove; move ---------------
+   Emily, 2026-11-10: "delete patterns here or change their places, and make
+   their default size smaller, like 13 in a line". */
+.map-deck-tiles { grid-template-columns: repeat(auto-fill, minmax(var(--map-clip-size, 68px), 1fr)); gap: 6px; }
+.map-deck-size { display: flex; align-items: center; gap: 6px; color: var(--ui-text-muted); font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.08em; }
+.map-deck-size input { width: 90px; margin: 0; accent-color: var(--ui-accent); }
+
+.map-clip-delete {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    z-index: 2;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.78);
+    color: var(--ui-text-primary);
+    font: inherit;
+    font-size: 13px;
+    line-height: 18px;
+    cursor: pointer;
+    opacity: 0;
+}
+.map-clip:hover .map-clip-delete,
+.map-clip-delete:focus-visible { opacity: 1; }
+.map-clip-delete:hover { background: var(--ui-danger); color: #ffffff; }
+
+/* Where a dragged clip will land: a bright line on that side of the tile. */
+.map-clip.is-drop-before::before,
+.map-clip.is-drop-after::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    z-index: 3;
+    width: 3px;
+    background: var(--ui-accent);
+    box-shadow: 0 0 6px var(--ui-accent);
+    pointer-events: none;
+}
+.map-clip.is-drop-before::before { left: -5px; }
+.map-clip.is-drop-after::after { right: -5px; }
+.map-clip.is-dragging { opacity: 0.35; }
+
+/* Small tiles: badges move to the bottom and shrink, the name gets tighter. */
+.map-deck-tiles.is-small .map-clip-badge { top: auto; bottom: 2px; right: 2px; padding: 0 3px; font-size: 7px; letter-spacing: 0.04em; }
+.map-deck-tiles.is-small .map-clip-fx { padding: 0 3px; font-size: 7px; }
+.map-deck-tiles.is-small .map-clip-name { gap: 3px; padding: 2px 4px; font-size: var(--di-text-1); }
+.map-deck-tiles.is-small .map-clip-name kbd { padding: 0 2px; font-size: 7px; }
+.map-deck-tiles.is-small .map-clip-kind { font-size: var(--di-text-1); }

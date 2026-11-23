@@ -16,9 +16,12 @@
 
 const { createMonitorStore } = require('../monitorStore')
 const { createHub, createAskStore, fingerprint, tierOfDeployEnv, REPORT_MAX_BYTES } = require('../monitorHub')
+const { createLedger } = require('../monitorLedger')
+const { createAccountFeed } = require('../monitorAccount')
 const { config } = require('../config')
 const { isLocalOperatorRequest, isAdminCaller } = require('./agentBoardRoutes')
 
+const TASK_WRITES_PER_MIN = 30
 const STREAM_MIN_MS = 2000
 const HEARTBEAT_MS = 15000
 const STREAM_MAX_MS = 15 * 60 * 1000
@@ -38,9 +41,14 @@ function registerMonitorRoutes(router, {
   requireAuth = () => config.requireAuth,
   deployEnv = () => null,
   ownerIds = () => config.monitorOwnerUserIds,
+  prList = null,
+  ledger = null,
+  accountFeed = null,
   now = () => Date.now()
 } = {}) {
   const overview = hub || createHub({ store })
+  const tasks = ledger || createLedger()
+  const account = accountFeed || createAccountFeed()
   const selfBase = () => `http://127.0.0.1:${config.port}${config.basePath || ''}`
   // A refusal says nothing of its own: the request falls through to whatever answers a path
   // that does not exist, so the page's existence is not shown (spec: "404, not 403").
@@ -58,6 +66,27 @@ function registerMonitorRoutes(router, {
     if (state.actor === 'di.cli' ? !(terminal && state.cliDbRole === 'admin') : Boolean(state.actor)) return false
     const list = (ownerIds() || []).map((id) => String(id).trim()).filter(Boolean)
     return list.includes(String(state.subject))
+  }
+
+  // dev lists only the owners' machines; the local tier adds the signed-in account's machines from dev
+  const snapshot = async () => {
+    const tier = tierOfDeployEnv(deployEnv())
+    if (tier === 'dev') return overview.getSnapshot({ selfBase: selfBase(), subjects: (ownerIds() || []).map((id) => String(id).trim()).filter(Boolean) })
+    if (tier === 'local') {
+      const [mine, shared] = await Promise.all([account.mine(), account.shared ? account.shared() : null])
+      return overview.getSnapshot({ selfBase: selfBase(), account: mine, shared })
+    }
+    return overview.getSnapshot({ selfBase: selfBase() })
+  }
+
+  // dev tier, any signed-in person (not only an owner): may send and read ONLY their own machines.
+  // A terminal login (`di login`) reads /mine and sends reports; a browser session may read neither. Never an API token, di.bo's act token or a sync key.
+  const isAccount = (req) => {
+    const state = req.authState || {}
+    if (!requireAuth() || !state.authenticated || !state.subject) return false
+    if (state.type !== 'session' && state.type !== 'cli-token') return false
+    if (state.session?.via === 'token') return false
+    return !state.actor || state.actor === 'di.cli'
   }
 
   const refuse = (req, res, opts) => {
@@ -84,7 +113,7 @@ function registerMonitorRoutes(router, {
     if (state.actor === 'di.cli' && state.authenticated) {
       const tier = tierOfDeployEnv(deployEnv())
       if (tier === 'prod') { next('route'); return }
-      if (tier === 'dev') { if (isOwner(req, { terminal: true })) next(); else next('route'); return }
+      if (tier === 'dev') { if (isOwner(req, { terminal: true }) || isAccount(req)) next(); else next('route'); return }
       if (!isLocalOperatorRequest(req)) { next('route'); return }
       if (state.cliDbRole === 'admin') { next(); return }
       res.status(403).json({ error: 'admins only' })
@@ -95,19 +124,94 @@ function registerMonitorRoutes(router, {
 
   router.get('/api/monitor', gate, async (req, res) => {
     try {
-      res.json(await overview.getSnapshot({ selfBase: selfBase() }))
+      res.json(await snapshot())
     } catch (error) {
       res.status(500).json({ error: error.message || 'monitor scan failed' })
+    }
+  })
+
+  // Open pull requests (read-only). Same gate as the page; without a source it answers "not set up".
+  router.get('/api/monitor/prs', gate, async (req, res) => {
+    try {
+      res.json(prList ? await prList.list() : { ok: false, repo: null, reason: 'no-source', message: 'No pull request source on this server.' })
+    } catch (error) {
+      res.status(500).json({ error: error.message || 'pull request list failed' })
+    }
+  })
+
+  // Tasks lane: the owner's open asks (read) and ONE owner-only write that goes through ledger-add.
+  router.get('/api/monitor/tasks', gate, async (req, res) => {
+    try {
+      const id = req.query?.id
+      res.json(id ? await tasks.detail(String(id)) : await tasks.list({ days: req.query?.days }))
+    } catch (error) {
+      res.status(500).json({ error: error.message || 'tasks failed' })
+    }
+  })
+
+  // The one write here changes the owner's ledger: a browser may only send it from this same origin
+  // (Sec-Fetch-Site / Origin), and no more than TASK_WRITES_PER_MIN per minute per caller (429).
+  const taskWrites = new Map()
+  const sameOrigin = (req) => {
+    const h = req.headers || {}
+    const site = h['sec-fetch-site']
+    if (site) return site === 'same-origin'
+    if (h.origin) { try { return new URL(h.origin).host === h.host } catch { return false } }
+    return true // no browser headers: a terminal tool, still behind the owner gate
+  }
+  const taskGuard = (req, res, next) => {
+    if (!sameOrigin(req)) { res.status(403).json({ error: 'cross_origin' }); return }
+    const key = String(req.authState?.subject || 'local')
+    const t = now()
+    const recent = (taskWrites.get(key) || []).filter((x) => t - x < 60000)
+    if (recent.length >= TASK_WRITES_PER_MIN) { taskWrites.set(key, recent); res.status(429).json({ error: 'too_many' }); return }
+    recent.push(t)
+    taskWrites.set(key, recent)
+    next()
+  }
+
+  router.post('/api/monitor/tasks', gate, taskGuard, async (req, res) => {
+    try {
+      const b = req.body || {}
+      const out = await tasks.change({ id: b.id, action: b.action, text: b.text, evidence: b.evidence, next: b.next, by: req.authState?.subject || 'local' })
+      if (out.error) { res.status(out.status || 400).json({ error: out.error, ...(out.message ? { message: out.message } : {}) }); return }
+      res.json(out)
+    } catch (error) {
+      res.status(500).json({ error: error.message || 'task change failed' })
     }
   })
 
   router.post('/api/monitor/report', reportGate, (req, res) => {
     const length = Number(req.headers?.['content-length'] || 0)
     if (length > REPORT_MAX_BYTES * 2) { res.status(413).json({ error: 'too_large', max: REPORT_MAX_BYTES }); return }
-    // past the gate the sender is the owner (dev) or this machine's admin (local): ledger asks are theirs
-    const result = overview.reports.put(req.body, { subject: req.authState?.subject || 'local', ledger: true })
+    // ledger asks only from the owner (dev) or this machine's admin (local); any other signed-in person sends telemetry only
+    const tier = tierOfDeployEnv(deployEnv())
+    const ledgerOk = tier !== 'dev' || isOwner(req, { terminal: true })
+    const result = overview.reports.put(req.body, { subject: req.authState?.subject || 'local', ledger: ledgerOk })
     if (result.error) { res.status(result.status).json({ error: result.error, ...(result.max ? { max: result.max } : {}) }); return }
     res.json({ ok: true, host: result.host })
+  })
+
+  // The signed-in person's own machines, nothing else: this is what their local Monitor pulls.
+  router.get('/api/monitor/mine', (req, res, next) => {
+    if (tierOfDeployEnv(deployEnv()) !== 'dev' || !isAccount(req)) { next('route'); return }
+    // the terminal login only (the local Monitor's feed): a browser session never reads other machines' chats
+    if (req.authState.actor !== 'di.cli') { next('route'); return }
+    // a page on another site cannot read it with the visitor's cookie
+    if (String(req.headers?.['sec-fetch-site'] || '') === 'cross-site') { next('route'); return }
+    res.json({ ok: true, reports: overview.reports.list({ subjects: [String(req.authState.subject)], chats: true }) })
+  })
+
+  // The shared picture for every machine's local Monitor: the OWNER's terminal login only (the same 404 as everything here
+  // for anyone else), never a browser session, never cross-site. Built from the owners' reports, so it is the same for all.
+  router.get('/api/monitor/shared', async (req, res, next) => {
+    if (tierOfDeployEnv(deployEnv()) !== 'dev' || !isOwner(req, { terminal: true }) || req.authState.actor !== 'di.cli') { next('route'); return }
+    if (String(req.headers?.['sec-fetch-site'] || '') === 'cross-site') { next('route'); return }
+    try {
+      res.json({ ok: true, shared: await overview.getShared({ subjects: (ownerIds() || []).map((id) => String(id).trim()).filter(Boolean) }) })
+    } catch (error) {
+      res.status(500).json({ error: error.message || 'shared picture failed' })
+    }
   })
 
   router.post('/api/monitor/ask', gate, (req, res) => {
@@ -132,6 +236,16 @@ function registerMonitorRoutes(router, {
   let busy = false
   let lastPrint = null
   let lastPayload = null
+  // When each panel was last read (server clock). Clients get AGES (how many ms ago), computed at send time,
+  // so a browser clock that is wrong never makes a panel look old or fresh.
+  let lastPanelAt = null
+  const panelAt = (snap) => ({
+    ...Object.fromEntries(Object.entries(snap?.panels || {}).filter(([, p]) => p && typeof p.at === 'number').map(([k, p]) => [k, p.at])),
+    tiers: typeof snap?.tiers?.at === 'number' ? snap.tiers.at : null,
+    chats: snap?.chats?.heardSecondsAgo != null ? now() - snap.chats.heardSecondsAgo * 1000 : null
+  })
+  const ages = () => Object.fromEntries(Object.entries(lastPanelAt || {}).filter(([, at]) => typeof at === 'number').map(([k, at]) => [k, Math.max(0, now() - at)]))
+  const heartbeat = () => `event: heartbeat\ndata: ${JSON.stringify({ at: new Date(now()).toISOString(), ages: ages() })}\n\n`
 
   const send = (client, text) => {
     if (client.closed) return
@@ -142,13 +256,16 @@ function registerMonitorRoutes(router, {
     if (busy || !clients.size) return
     busy = true
     try {
-      const snapshot = await overview.getSnapshot({ selfBase: selfBase() })
-      const print = fingerprint(snapshot)
+      const snap = await snapshot()
+      lastPanelAt = panelAt(snap)
+      const print = fingerprint(snap)
       if (print !== lastPrint && clients.size) {
         lastPrint = print
-        lastPayload = `event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`
+        lastPayload = `event: snapshot\ndata: ${JSON.stringify(snap)}\n\n`
         for (const client of [...clients]) send(client, lastPayload)
       }
+      // every tick says how old each panel is; a tick with changes carries the snapshot first
+      if (clients.size) { const text = heartbeat(); for (const client of [...clients]) send(client, text) }
     } catch {
       // a failed scan is skipped; the next tick tries again
     } finally {
@@ -159,7 +276,7 @@ function registerMonitorRoutes(router, {
     lastPrint = null
     lastPayload = null
     poll = setInterval(tick, STREAM_MIN_MS)
-    beat = setInterval(() => { for (const client of [...clients]) send(client, `event: heartbeat\ndata: ${JSON.stringify({ at: new Date(now()).toISOString() })}\n\n`) }, HEARTBEAT_MS)
+    beat = setInterval(() => { for (const client of [...clients]) send(client, heartbeat()) }, HEARTBEAT_MS)
     poll.unref?.()
     beat.unref?.()
   }

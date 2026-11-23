@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { postMonitorAsk } from '../../services/apiClient.js'
 import { ago } from './monitorFormat.js'
+import MonitorChats from './MonitorChats.jsx'
+import PanelLive from './MonitorLive.jsx'
+import { rowMatches } from './monitorDetail.js'
 
 // Work: one big ask bar on top, the open asks (newest first), what each agent is
 // doing (a live square when busy), and which machines reported lately, each with
@@ -24,7 +27,7 @@ export const dropSeen = (pending, serverRows) => {
     return left.length === pending.length ? pending : left
 }
 
-export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
+export default function MonitorWorkspace({ chats, asks, agents, reports, onPick, selected = null, query = '', ages = null, paused = false }) {
     const [text, setText] = useState('')
     const [pending, setPending] = useState([])
     const [problem, setProblem] = useState('')
@@ -43,16 +46,18 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
     useEffect(() => {
         setPending((p) => dropSeen(p, serverRows))
     }, [serverRows])
-    const shown = useMemo(() => {
+    const shownAll = useMemo(() => {
         const ids = new Set(serverRows.map((a) => String(a.id)))
         const mine = pending.filter((p) => !ids.has(String(p.id)))
         return [...mine, ...serverRows].sort((a, b) => touchedMs(b) - touchedMs(a))
     }, [serverRows, pending])
+    const shown = useMemo(() => shownAll.filter((a) => rowMatches(query, a)), [shownAll, query])
 
-    const lanes = useMemo(() => [...(agents?.rows || [])].sort(
+    const lanes = useMemo(() => [...(agents?.rows || [])].filter((a) => rowMatches(query, a)).sort(
         (a, b) => (LANE_ORDER[a.status] ?? 9) - (LANE_ORDER[b.status] ?? 9)
             || new Date(b.lastActivity || 0) - new Date(a.lastActivity || 0)
-    ), [agents])
+    ), [agents, query])
+    const shownReports = useMemo(() => (reports || []).filter((r) => rowMatches(query, r)), [reports, query])
 
     const send = async (ev) => {
         ev.preventDefault()
@@ -88,15 +93,20 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
                 {problem ? <span className="monitor-note is-down">{problem}</span> : null}
             </form>
 
+            <div className="monitor-group-title">Chats <span className="preferences-tree-tag">{chats?.counts?.total ?? 0}</span></div>
+            <PanelLive name="chats" ages={ages} nowMs={now} paused={paused} />
+            <MonitorChats chats={chats} query={query} selectedId={selected?.kind === 'chat' ? selected.id : null} onPick={(c) => onPick('chat', c)} />
+
             <div className="monitor-group-title">Open asks <span className="preferences-tree-tag">{shown.length}</span></div>
             {asks && asks.ok === false ? <div className="monitor-note is-down">Asks unavailable here{asks.error ? `: ${asks.error}` : ''}</div> : null}
             {!shown.length && asks?.ok !== false ? <div className="monitor-note">No open asks.</div> : null}
             <div className="monitor-asks">
                 {shown.map((a) => (
-                    <div key={a.id} className={`monitor-ask tone-${ASK_TONE[a.state] || 'accent'}${a.state === 'sending' ? ' is-sending' : ''}`} data-ask-id={a.id}>
+                    <button type="button" key={a.id} className={`monitor-ask tone-${ASK_TONE[a.state] || 'accent'}${a.state === 'sending' ? ' is-sending' : ''}`} data-ask-id={a.id}
+                        aria-pressed={selected?.kind === 'ask' && selected.id === a.id} onClick={() => onPick('ask', a)}>
                         <div className="monitor-ask-text-line">{a.text}</div>
                         <div className="monitor-meta">{a.state} · {a.source === 'ledger' ? 'ledger' : 'sent here'} · {ago(a.touched)}</div>
-                    </div>
+                    </button>
                 ))}
             </div>
 
@@ -105,7 +115,7 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
             <div className="monitor-agent-grid">
                 {lanes.map((a) => (
                     <button key={a.sessionId} type="button" data-lane-id={a.sessionId}
-                        className={`monitor-agent tone-${LANE_TONE[a.status] || 'accent'}`} onClick={() => onPick('agent', a)}>
+                        className={`monitor-agent tone-${LANE_TONE[a.status] || 'accent'}`} aria-pressed={selected?.kind === 'agent' && selected.id === a.sessionId} onClick={() => onPick('agent', a)}>
                         <span className="monitor-agent-head">
                             {a.status === 'busy' ? <i className="monitor-live-square" aria-label="busy" /> : <i className="monitor-live-square is-off" aria-hidden="true" />}
                             <span className="monitor-name">{a.title}</span>
@@ -116,16 +126,17 @@ export default function MonitorWorkspace({ asks, agents, reports, onPick }) {
                 ))}
             </div>
 
-            <div className="monitor-group-title">Reports from machines <span className="preferences-tree-tag">{(reports || []).length}</span></div>
+            <div className="monitor-group-title">Reports from machines <span className="preferences-tree-tag">{shownReports.length}</span></div>
             {!(reports || []).length ? <div className="monitor-note">No other machine has reported yet.</div> : null}
             <div className="monitor-grid">
-                {(reports || []).map((r) => (
-                    <div key={r.host} className={`monitor-row monitor-report tone-${r.stale ? 'warning' : 'success'}`} data-report-host={r.host}>
+                {shownReports.map((r) => (
+                    <button type="button" key={r.host} className={`monitor-row monitor-report tone-${r.stale ? 'warning' : 'success'}`} data-report-host={r.host}
+                        aria-pressed={selected?.kind === 'report' && selected.id === r.host} onClick={() => onPick('report', r)}>
                         <span className="monitor-name">{r.host}</span>
                         <span className="monitor-meta">{r.stale ? 'stale' : 'reporting'} · {ago(r.reportedAt)}</span>
                         <span className="monitor-meta">{r.panels?.agents?.live ?? 0} agents live</span>
                         <span className="monitor-fresh" aria-hidden="true"><i style={{ width: `${Math.round(freshness(r.reportedAt, now) * 100)}%` }} /></span>
-                    </div>
+                    </button>
                 ))}
             </div>
         </div>

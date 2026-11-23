@@ -34,12 +34,52 @@ module.exports = [
     note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server."
   },
   {
+    route: "GET /api/monitor/prs",
+    summary: "the open pull requests of the project repo (up to 50: number, title, author, draft, link) for Monitor → Work → Waiting to merge, read through the GitHub App and cached 60 s",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server. Answers ok:false with a plain reason when the App is not set up or lacks Pull requests: read."
+  },
+  {
+    route: "GET /api/monitor/tasks",
+    summary: "the owner's open asks from the ledger (state, age, who has it) and one ask's history, for Monitor → Tasks",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "same gate as GET /api/monitor: on the dev tier only an account in MONITOR_OWNER_USER_IDS (others 404), 404 on prod, loopback + admin on a local server. Reads only the configured ledger file."
+  },
+  {
+    route: "POST /api/monitor/tasks",
+    summary: "the owner marks one ask done, blocked, reopened or adds a note; written to the ledger through its own tool and logged",
+    reach: "private",
+    role: "guest",
+    agent: false,
+    note: "the owner only (others 404), a browser session on the same origin; fixed argument list, no shell, state and id allow-lists, text capped, Done needs evidence; 30 per minute (429); 404 on prod."
+  },
+  {
     route: "POST /api/monitor/report",
     summary: "a machine sends its own monitor panels (and, from aylmo, the open ledger asks); kept in memory, stale after 120 s",
     reach: "private",
     role: "guest",
     agent: false,
-    note: "the owner's browser session, or a terminal login (di login) whose account is in MONITOR_OWNER_USER_IDS on the dev tier (an admin on a local server); others 404; 256 KB cap; 404 on prod. Telemetry only: it changes nothing else."
+    note: "a terminal login (di login) of any signed-in account on the dev tier (ledger asks only from the owners in MONITOR_OWNER_USER_IDS), an admin on a local server; others 404; 256 KB cap; 404 on prod. Telemetry only: it changes nothing else."
+  },
+  {
+    route: "GET /api/monitor/mine",
+    summary: "the signed-in account's own machines (their reports, chats included); this is what the local Monitor pulls after di login",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "a terminal login or browser session on the dev tier returns only that account's machines, never another person's; 404 elsewhere and on prod."
+  },
+  {
+    route: "GET /api/monitor/shared",
+    summary: "the shared picture every machine's Monitor shows from dev: machines with versions, tiers, the freshest pull request list, spaces, asks, shows and tasks, built from the owners' machine reports (no chats or credits)",
+    reach: "read",
+    role: "guest",
+    agent: false,
+    note: "the owner's terminal login (di login) on the dev tier only; any other account, a browser session, a cross-site request, an API token, the local tier and prod get the unknown-route 404."
   },
   {
     route: "POST /api/monitor/ask",
