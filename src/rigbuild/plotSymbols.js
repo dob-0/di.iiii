@@ -25,6 +25,9 @@ const BY_TYPE = { 'up-b380f': 'circle', 'up-250bsw': 'square', 'up-hk1915': 'hex
 
 // Effects share the triangle and are told apart by a letter inside it.
 const LETTER = { 'co2-jet': 'C', 'spark-machine': 'S', 'smoke-machine': 'Z', hazer: 'H', 'fog-machine': 'F', effect: 'E', laser: 'L' }
+// A second type in a lettered category needs its own letter, or the key reads two as one:
+// the LaserCube Ultra MK2 (2026-10-04) is a laser beside the UP-LA40WF — K, for the cube.
+const LETTER_BY_TYPE = { 'ext-lc-ultra-mk2': 'K' }
 
 // A box on the floor with no beam: an effect. One list for the plot, the hand (hotbar)
 // and a new lamp (plotEdits): the hazer (RIG_BUILD.md §13) joined the first three.
@@ -43,7 +46,7 @@ export const symbolTable = (types = []) => {
     for (const t of types) if (BY_TYPE[t.id]) claim(t.id, BY_TYPE[t.id])
     for (const t of types) {
         if (table.has(t.id)) continue
-        if (LETTER[t.category]) { claim(t.id, BY_CATEGORY[t.category], LETTER[t.category]); continue }
+        if (LETTER[t.category]) { claim(t.id, BY_CATEGORY[t.category], LETTER_BY_TYPE[t.id] || LETTER[t.category]); continue }
         const wanted = BY_CATEGORY[t.category]
         const shape = wanted && !used.has(wanted) ? wanted : SHAPES.find((s) => !used.has(s) && s !== 'triangle') || 'circle'
         claim(t.id, shape)

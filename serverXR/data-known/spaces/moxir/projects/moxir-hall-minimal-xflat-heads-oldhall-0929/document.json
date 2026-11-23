@@ -1,0 +1,6463 @@
+{
+  "version": 4,
+  "projectMeta": {
+    "id": "moxir-hall-minimal-xflat-heads-oldhall-0929",
+    "spaceId": "moxir",
+    "title": "MOXIR 17.10 — Minimal · X lying down · heads · old hall 09-29",
+    "createdAt": 1790716463456,
+    "updatedAt": 1790803711533,
+    "source": "project"
+  },
+  "nodes": [],
+  "edges": [],
+  "templates": [],
+  "workspaceState": {
+    "selectedNodeId": null,
+    "liveWorldNodeIdByScope": {},
+    "activeNodeIdByTypeScope": {}
+  },
+  "entities": [
+    {
+      "id": "place-hall",
+      "type": "model",
+      "name": "MOXIR — the hall",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#5fa8ff",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "6966958de587401f58b39ccb3589fc415eb72631a6ff93f6be9c7eac6c35b890",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": false,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "venuePlan": {
+          "name": "MOXIR · Charentsavan factory hall",
+          "source": "scripts/place/rigs/hall.json (hall.py v2, 2026-09-28T19:36)",
+          "warning": "ESTIMATED from photographs, not taped: see dimsOrigin for each value, its range and confidence.",
+          "outline": [
+            [
+              -36.4,
+              -54.5
+            ],
+            [
+              60.4,
+              -54.5
+            ],
+            [
+              60.4,
+              54.5
+            ],
+            [
+              -36.4,
+              54.5
+            ]
+          ],
+          "columns": [
+            [
+              -36,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -54,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -54,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -54,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -54,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -54,
+              0.8,
+              0.5
+            ]
+          ],
+          "grid": {
+            "x": [
+              {
+                "at": -36,
+                "label": "A"
+              },
+              {
+                "at": -12,
+                "label": "B"
+              },
+              {
+                "at": 12,
+                "label": "C"
+              },
+              {
+                "at": 36,
+                "label": "D"
+              },
+              {
+                "at": 60,
+                "label": "E"
+              }
+            ],
+            "z": [
+              {
+                "at": 54,
+                "label": "1"
+              },
+              {
+                "at": 48,
+                "label": "2"
+              },
+              {
+                "at": 42,
+                "label": "3"
+              },
+              {
+                "at": 36,
+                "label": "4"
+              },
+              {
+                "at": 30,
+                "label": "5"
+              },
+              {
+                "at": 24,
+                "label": "6"
+              },
+              {
+                "at": 18,
+                "label": "7"
+              },
+              {
+                "at": 12,
+                "label": "8"
+              },
+              {
+                "at": 6,
+                "label": "9"
+              },
+              {
+                "at": 0.5,
+                "label": "10"
+              },
+              {
+                "at": -0.5,
+                "label": "10′"
+              },
+              {
+                "at": -6,
+                "label": "11"
+              },
+              {
+                "at": -12,
+                "label": "12"
+              },
+              {
+                "at": -18,
+                "label": "13"
+              },
+              {
+                "at": -24,
+                "label": "14"
+              },
+              {
+                "at": -30,
+                "label": "15"
+              },
+              {
+                "at": -36,
+                "label": "16"
+              },
+              {
+                "at": -42,
+                "label": "17"
+              },
+              {
+                "at": -48,
+                "label": "18"
+              },
+              {
+                "at": -54,
+                "label": "19"
+              }
+            ]
+          },
+          "zones": [
+            {
+              "id": "dance",
+              "label": "dance floor",
+              "rects": [
+                [
+                  -5.35,
+                  7.5,
+                  5.35,
+                  48
+                ]
+              ],
+              "note": "to be cleared for the centred floor: the white bulk bags (x -0.8..2.2, z 22..26.5) and the loose machinery that reaches inside x < 5.35 between the press and the bags (photo 004: drums, frames, pipe stacks at x 3..10; the hopper at x ~5.7 s"
+            },
+            {
+              "id": "stage",
+              "label": "DJ place",
+              "rects": [
+                [
+                  -3.8,
+                  3.6,
+                  3.8,
+                  7.5
+                ]
+              ],
+              "note": ""
+            },
+            {
+              "id": "backstage",
+              "label": "backstage",
+              "rects": [
+                [
+                  -6,
+                  -10,
+                  6,
+                  -1
+                ]
+              ],
+              "note": ""
+            }
+          ],
+          "solids": [
+            {
+              "id": "press",
+              "label": "forging press (frame, bed, ram)",
+              "rect": [
+                0.25,
+                0.2,
+                3.05,
+                3.2
+              ],
+              "top": 4.2
+            },
+            {
+              "id": "press-crown",
+              "label": "press crown, motor and flywheel",
+              "rect": [
+                0.1,
+                0.8,
+                3.7,
+                2.6
+              ],
+              "top": 5.6
+            },
+            {
+              "id": "machine-line",
+              "label": "machine line beside the press (brick plinth, steel body, drilled beam)",
+              "rect": [
+                3.05,
+                -0.5,
+                12,
+                2.5
+              ],
+              "top": 2.4
+            },
+            {
+              "id": "machine-pipe",
+              "label": "pipe over the machine line, rising at the press end",
+              "rect": [
+                3.05,
+                1,
+                13,
+                1.6
+              ],
+              "top": 3.3
+            }
+          ],
+          "overhead": [
+            {
+              "id": "lantern-1",
+              "label": "roof lantern",
+              "rect": [
+                -6,
+                7.25,
+                6,
+                45.75
+              ],
+              "bottom": 13.55
+            },
+            {
+              "id": "lantern-2",
+              "label": "roof lantern",
+              "rect": [
+                -6,
+                -45.75,
+                6,
+                -7.25
+              ],
+              "bottom": 13.55
+            },
+            {
+              "id": "lantern-3",
+              "label": "roof lantern",
+              "rect": [
+                18,
+                7.25,
+                30,
+                45.75
+              ],
+              "bottom": 13.55
+            },
+            {
+              "id": "lantern-4",
+              "label": "roof lantern",
+              "rect": [
+                18,
+                -45.75,
+                30,
+                -7.25
+              ],
+              "bottom": 13.55
+            },
+            {
+              "id": "crane-1",
+              "label": "crane bridge",
+              "line": [
+                [
+                  -11.35,
+                  4.8
+                ],
+                [
+                  11.35,
+                  4.8
+                ]
+              ],
+              "bottom": 8.15
+            },
+            {
+              "id": "crane-2",
+              "label": "crane bridge",
+              "line": [
+                [
+                  -11.35,
+                  -41
+                ],
+                [
+                  11.35,
+                  -41
+                ]
+              ],
+              "bottom": 8.15
+            },
+            {
+              "id": "runway-l",
+              "label": "crane runway",
+              "line": [
+                [
+                  -11.35,
+                  -54.5
+                ],
+                [
+                  -11.35,
+                  54.5
+                ]
+              ],
+              "bottom": 6.56
+            },
+            {
+              "id": "runway-r",
+              "label": "crane runway",
+              "line": [
+                [
+                  11.35,
+                  -54.5
+                ],
+                [
+                  11.35,
+                  54.5
+                ]
+              ],
+              "bottom": 6.56
+            }
+          ],
+          "openings": [
+            {
+              "id": "door",
+              "label": "door 6 m",
+              "from": [
+                -3,
+                54.5
+              ],
+              "to": [
+                3,
+                54.5
+              ]
+            },
+            {
+              "id": "far-gate",
+              "label": "gate 4.8 m",
+              "from": [
+                -2.4,
+                -54.5
+              ],
+              "to": [
+                2.4,
+                -54.5
+              ]
+            }
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-x-1",
+      "type": "model",
+      "name": "X arm, x-left half (hung from the crane bridge)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.5,
+            6.295,
+            4.8
+          ],
+          "rotation": [
+            0,
+            -3.141592654,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "c1d06915a9c78d711d58899c03e9b1e5690b8ee06117cc8b98cb35ff5d1447dd",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-2m"
+        }
+      }
+    },
+    {
+      "id": "rig-x-2",
+      "type": "model",
+      "name": "X arm, x-right half (hung from the crane bridge)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.5,
+            6.295,
+            4.8
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "c1d06915a9c78d711d58899c03e9b1e5690b8ee06117cc8b98cb35ff5d1447dd",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-2m"
+        }
+      }
+    },
+    {
+      "id": "rig-x-3",
+      "type": "model",
+      "name": "X arm, z-back half (hung from the crane bridge)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.295,
+            3.3
+          ],
+          "rotation": [
+            0,
+            1.570796327,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "c1d06915a9c78d711d58899c03e9b1e5690b8ee06117cc8b98cb35ff5d1447dd",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-2m"
+        }
+      }
+    },
+    {
+      "id": "rig-x-4",
+      "type": "model",
+      "name": "X arm, z-crowd half (hung from the crane bridge)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.295,
+            6.3
+          ],
+          "rotation": [
+            0,
+            -1.570796327,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "c1d06915a9c78d711d58899c03e9b1e5690b8ee06117cc8b98cb35ff5d1447dd",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-2m"
+        }
+      }
+    },
+    {
+      "id": "rig-deck-1",
+      "type": "model",
+      "name": "DJ riser",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1,
+            0,
+            5.2
+          ],
+          "rotation": [
+            0,
+            1.571,
+            0
+          ],
+          "scale": [
+            1,
+            1.2,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "deck-2x1"
+        }
+      }
+    },
+    {
+      "id": "rig-deck-2",
+      "type": "model",
+      "name": "DJ riser",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            5.2
+          ],
+          "rotation": [
+            0,
+            1.571,
+            0
+          ],
+          "scale": [
+            1,
+            1.2,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "deck-2x1"
+        }
+      }
+    },
+    {
+      "id": "rig-deck-3",
+      "type": "model",
+      "name": "DJ riser",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1,
+            0,
+            5.2
+          ],
+          "rotation": [
+            0,
+            1.571,
+            0
+          ],
+          "scale": [
+            1,
+            1.2,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "deck-2x1"
+        }
+      }
+    },
+    {
+      "id": "rig-dj-table",
+      "type": "box",
+      "name": "DJ table 1.8 x 0.8 m, 0.95 m high",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            1.2,
+            5.6
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1.8,
+            0.95,
+            0.8
+          ]
+        },
+        "appearance": {
+          "color": "#1d1d20",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.7,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-1",
+      "type": "box",
+      "name": "Booth stair tread 1/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            5.825
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.2,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-2",
+      "type": "box",
+      "name": "Booth stair tread 2/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            5.575
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.4,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-3",
+      "type": "box",
+      "name": "Booth stair tread 3/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            5.325
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.6,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-4",
+      "type": "box",
+      "name": "Booth stair tread 4/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            5.075
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.8,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-5",
+      "type": "box",
+      "name": "Booth stair tread 5/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            4.825
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-6",
+      "type": "box",
+      "name": "Booth stair tread 6/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            4.575
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1.2,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-crowd-barrier",
+      "type": "box",
+      "name": "Crowd barrier 9 m, 1.3 m pit",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            7.5
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            9,
+            1.1,
+            0.08
+          ]
+        },
+        "appearance": {
+          "color": "#6f7378",
+          "opacity": 0.35,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.6,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-truss-junction",
+      "type": "box",
+      "name": "4-way flat cross junction Global Truss F34 SQ-4133 '4-way cross junction' (1 m across)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.145,
+            4.8
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.3,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#80868c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.45,
+          "metalness": 0.8,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-1-clamp-1",
+      "type": "box",
+      "name": "Beam clamp on the girder flange, pick 1/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.5,
+            8.07,
+            3.7
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.18,
+            0.08,
+            0.18
+          ]
+        },
+        "appearance": {
+          "color": "#2a2b2e",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.7,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-1-leg-1",
+      "type": "box",
+      "name": "Bridle leg 1/2 (steel wire rope, 90° between the legs), pick 1/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.5,
+            7.05,
+            4.8
+          ],
+          "rotation": [
+            -0.785398,
+            0,
+            0
+          ],
+          "scale": [
+            0.016,
+            1.556,
+            0.016
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-1-clamp-2",
+      "type": "box",
+      "name": "Beam clamp on the girder flange, pick 1/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.5,
+            8.07,
+            5.9
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.18,
+            0.08,
+            0.18
+          ]
+        },
+        "appearance": {
+          "color": "#2a2b2e",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.7,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-1-leg-2",
+      "type": "box",
+      "name": "Bridle leg 2/2 (steel wire rope, 90° between the legs), pick 1/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.5,
+            7.05,
+            4.8
+          ],
+          "rotation": [
+            0.785398,
+            0,
+            0
+          ],
+          "scale": [
+            0.016,
+            1.556,
+            0.016
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-1-hoist",
+      "type": "box",
+      "name": "Climbing chain hoist climbing chain hoist 500 kg, D8Plus (e.g. Chainmaster D8Plus 500 kg 4 m/min, SK030/76U), pick 1/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.5,
+            6.52,
+            4.8
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.2,
+            0.34,
+            0.2
+          ]
+        },
+        "appearance": {
+          "color": "#1b1c1f",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.6,
+          "metalness": 0.4,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-1-chain",
+      "type": "box",
+      "name": "Hoist chain to the bridle, pick 1/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.5,
+            6.86,
+            4.8
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.03,
+            0.19,
+            0.03
+          ]
+        },
+        "appearance": {
+          "color": "#4a4c50",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-1-steel",
+      "type": "box",
+      "name": "Safety steel, pick 1/4 (rigging: secondary, truss to the girder)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.4,
+            6.44,
+            4.9
+          ],
+          "rotation": [
+            -0.571633,
+            0,
+            0
+          ],
+          "scale": [
+            0.012,
+            2.033,
+            0.012
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-2-clamp-1",
+      "type": "box",
+      "name": "Beam clamp on the girder flange, pick 2/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.5,
+            8.07,
+            3.7
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.18,
+            0.08,
+            0.18
+          ]
+        },
+        "appearance": {
+          "color": "#2a2b2e",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.7,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-2-leg-1",
+      "type": "box",
+      "name": "Bridle leg 1/2 (steel wire rope, 90° between the legs), pick 2/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.5,
+            7.05,
+            4.8
+          ],
+          "rotation": [
+            -0.785398,
+            0,
+            0
+          ],
+          "scale": [
+            0.016,
+            1.556,
+            0.016
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-2-clamp-2",
+      "type": "box",
+      "name": "Beam clamp on the girder flange, pick 2/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.5,
+            8.07,
+            5.9
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.18,
+            0.08,
+            0.18
+          ]
+        },
+        "appearance": {
+          "color": "#2a2b2e",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.7,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-2-leg-2",
+      "type": "box",
+      "name": "Bridle leg 2/2 (steel wire rope, 90° between the legs), pick 2/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.5,
+            7.05,
+            4.8
+          ],
+          "rotation": [
+            0.785398,
+            0,
+            0
+          ],
+          "scale": [
+            0.016,
+            1.556,
+            0.016
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-2-hoist",
+      "type": "box",
+      "name": "Climbing chain hoist climbing chain hoist 500 kg, D8Plus (e.g. Chainmaster D8Plus 500 kg 4 m/min, SK030/76U), pick 2/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.5,
+            6.52,
+            4.8
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.2,
+            0.34,
+            0.2
+          ]
+        },
+        "appearance": {
+          "color": "#1b1c1f",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.6,
+          "metalness": 0.4,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-2-chain",
+      "type": "box",
+      "name": "Hoist chain to the bridle, pick 2/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.5,
+            6.86,
+            4.8
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.03,
+            0.19,
+            0.03
+          ]
+        },
+        "appearance": {
+          "color": "#4a4c50",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-2-steel",
+      "type": "box",
+      "name": "Safety steel, pick 2/4 (rigging: secondary, truss to the girder)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.6,
+            6.44,
+            4.9
+          ],
+          "rotation": [
+            -0.571633,
+            0,
+            0
+          ],
+          "scale": [
+            0.012,
+            2.033,
+            0.012
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-3-clamp-1",
+      "type": "box",
+      "name": "Beam clamp on the girder flange, pick 3/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -0.75,
+            8.07,
+            3.7
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.18,
+            0.08,
+            0.18
+          ]
+        },
+        "appearance": {
+          "color": "#2a2b2e",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.7,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-3-leg-1",
+      "type": "box",
+      "name": "Bridle leg 1/2 (steel wire rope, 90° between the legs), pick 3/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            7.4,
+            3.7
+          ],
+          "rotation": [
+            0,
+            0,
+            0.785398
+          ],
+          "scale": [
+            0.016,
+            1.061,
+            0.016
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-3-clamp-2",
+      "type": "box",
+      "name": "Beam clamp on the girder flange, pick 3/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.75,
+            8.07,
+            3.7
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.18,
+            0.08,
+            0.18
+          ]
+        },
+        "appearance": {
+          "color": "#2a2b2e",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.7,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-3-leg-2",
+      "type": "box",
+      "name": "Bridle leg 2/2 (steel wire rope, 90° between the legs), pick 3/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            7.4,
+            3.7
+          ],
+          "rotation": [
+            0,
+            0,
+            -0.785398
+          ],
+          "scale": [
+            0.016,
+            1.061,
+            0.016
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-3-hoist",
+      "type": "box",
+      "name": "Climbing chain hoist climbing chain hoist 500 kg, D8Plus (e.g. Chainmaster D8Plus 500 kg 4 m/min, SK030/76U), pick 3/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.52,
+            3.7
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.2,
+            0.34,
+            0.2
+          ]
+        },
+        "appearance": {
+          "color": "#1b1c1f",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.6,
+          "metalness": 0.4,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-3-chain",
+      "type": "box",
+      "name": "Hoist chain to the bridle, pick 3/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.86,
+            3.7
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.03,
+            0.54,
+            0.03
+          ]
+        },
+        "appearance": {
+          "color": "#4a4c50",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-3-steel",
+      "type": "box",
+      "name": "Safety steel, pick 3/4 (rigging: secondary, truss to the girder)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.1,
+            6.44,
+            3.8
+          ],
+          "rotation": [
+            0,
+            0,
+            0.41333
+          ],
+          "scale": [
+            0.012,
+            1.867,
+            0.012
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-4-clamp-1",
+      "type": "box",
+      "name": "Beam clamp on the girder flange, pick 4/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -0.75,
+            8.07,
+            5.9
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.18,
+            0.08,
+            0.18
+          ]
+        },
+        "appearance": {
+          "color": "#2a2b2e",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.7,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-4-leg-1",
+      "type": "box",
+      "name": "Bridle leg 1/2 (steel wire rope, 90° between the legs), pick 4/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            7.4,
+            5.9
+          ],
+          "rotation": [
+            0,
+            0,
+            0.785398
+          ],
+          "scale": [
+            0.016,
+            1.061,
+            0.016
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-4-clamp-2",
+      "type": "box",
+      "name": "Beam clamp on the girder flange, pick 4/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.75,
+            8.07,
+            5.9
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.18,
+            0.08,
+            0.18
+          ]
+        },
+        "appearance": {
+          "color": "#2a2b2e",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.7,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-4-leg-2",
+      "type": "box",
+      "name": "Bridle leg 2/2 (steel wire rope, 90° between the legs), pick 4/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            7.4,
+            5.9
+          ],
+          "rotation": [
+            0,
+            0,
+            -0.785398
+          ],
+          "scale": [
+            0.016,
+            1.061,
+            0.016
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-4-hoist",
+      "type": "box",
+      "name": "Climbing chain hoist climbing chain hoist 500 kg, D8Plus (e.g. Chainmaster D8Plus 500 kg 4 m/min, SK030/76U), pick 4/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.52,
+            5.9
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.2,
+            0.34,
+            0.2
+          ]
+        },
+        "appearance": {
+          "color": "#1b1c1f",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.6,
+          "metalness": 0.4,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-4-chain",
+      "type": "box",
+      "name": "Hoist chain to the bridle, pick 4/4 (rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.86,
+            5.9
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.03,
+            0.54,
+            0.03
+          ]
+        },
+        "appearance": {
+          "color": "#4a4c50",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xpick-4-steel",
+      "type": "box",
+      "name": "Safety steel, pick 4/4 (rigging: secondary, truss to the girder)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.1,
+            6.44,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0.41333
+          ],
+          "scale": [
+            0.012,
+            1.867,
+            0.012
+          ]
+        },
+        "appearance": {
+          "color": "#8a8d92",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xtie-1-1",
+      "type": "box",
+      "name": "Restraint steel 1/2 at the left end, to the crane girder (against sway and turning; rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2.4,
+            6.44,
+            4.8
+          ],
+          "rotation": [
+            -0.571633,
+            0,
+            0
+          ],
+          "scale": [
+            0.01,
+            2.033,
+            0.01
+          ]
+        },
+        "appearance": {
+          "color": "#b8bcc2",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xtie-1-2",
+      "type": "box",
+      "name": "Restraint steel 2/2 at the left end, to the crane girder (against sway and turning; rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2.4,
+            6.44,
+            4.8
+          ],
+          "rotation": [
+            0.571633,
+            0,
+            0
+          ],
+          "scale": [
+            0.01,
+            2.033,
+            0.01
+          ]
+        },
+        "appearance": {
+          "color": "#b8bcc2",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xtie-2-1",
+      "type": "box",
+      "name": "Restraint steel 1/2 at the right end, to the crane girder (against sway and turning; rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.4,
+            6.44,
+            4.8
+          ],
+          "rotation": [
+            -0.571633,
+            0,
+            0
+          ],
+          "scale": [
+            0.01,
+            2.033,
+            0.01
+          ]
+        },
+        "appearance": {
+          "color": "#b8bcc2",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xtie-2-2",
+      "type": "box",
+      "name": "Restraint steel 2/2 at the right end, to the crane girder (against sway and turning; rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.4,
+            6.44,
+            4.8
+          ],
+          "rotation": [
+            0.571633,
+            0,
+            0
+          ],
+          "scale": [
+            0.01,
+            2.033,
+            0.01
+          ]
+        },
+        "appearance": {
+          "color": "#b8bcc2",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xtie-3-1",
+      "type": "box",
+      "name": "Restraint steel 1/2 at the back end, to the crane girder (against sway and turning; rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.44,
+            2.4
+          ],
+          "rotation": [
+            0.650019,
+            0,
+            0.60959
+          ],
+          "scale": [
+            0.01,
+            2.62,
+            0.01
+          ]
+        },
+        "appearance": {
+          "color": "#b8bcc2",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xtie-3-2",
+      "type": "box",
+      "name": "Restraint steel 2/2 at the back end, to the crane girder (against sway and turning; rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.44,
+            2.4
+          ],
+          "rotation": [
+            0.650019,
+            0,
+            -0.60959
+          ],
+          "scale": [
+            0.01,
+            2.62,
+            0.01
+          ]
+        },
+        "appearance": {
+          "color": "#b8bcc2",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xtie-4-1",
+      "type": "box",
+      "name": "Restraint steel 1/2 at the crowd end, to the crane girder (against sway and turning; rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.44,
+            7.2
+          ],
+          "rotation": [
+            -0.650019,
+            0,
+            0.60959
+          ],
+          "scale": [
+            0.01,
+            2.62,
+            0.01
+          ]
+        },
+        "appearance": {
+          "color": "#b8bcc2",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-xtie-4-2",
+      "type": "box",
+      "name": "Restraint steel 2/2 at the crowd end, to the crane girder (against sway and turning; rigging)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            6.44,
+            7.2
+          ],
+          "rotation": [
+            -0.650019,
+            0,
+            -0.60959
+          ],
+          "scale": [
+            0.01,
+            2.62,
+            0.01
+          ]
+        },
+        "appearance": {
+          "color": "#b8bcc2",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.35,
+          "metalness": 0.9,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-x-01",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-x 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2.501,
+            7.021,
+            4.8
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.872664626
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 10.2,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 1,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 1,
+          "unit": 1,
+          "circuit": "C10",
+          "position": "x top"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-x-02",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-x 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.25,
+            7.138,
+            4.8
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 0,
+          "distance": 6.5,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 2,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 17,
+          "unit": 2,
+          "circuit": "C10",
+          "position": "x top"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-x-03",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-x 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            7.021,
+            2.299
+          ],
+          "rotation": [
+            2.268928028,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 10.2,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 3,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 33,
+          "unit": 3,
+          "circuit": "C10",
+          "position": "x top"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-x-04",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-x 4",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            7.138,
+            6.55
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 0,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 4,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 49,
+          "unit": 4,
+          "circuit": "C10",
+          "position": "x top"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-x-05",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-x 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            7.021,
+            7.301
+          ],
+          "rotation": [
+            -2.268928028,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 15.4,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 5,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 65,
+          "unit": 5,
+          "circuit": "C10",
+          "position": "x top"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-x-06",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-x 6 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.25,
+            7.138,
+            4.8
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 0,
+          "distance": 6.5,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 6,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 81,
+          "unit": 6,
+          "circuit": "C11",
+          "position": "x top"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-x-07",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-x 7 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.501,
+            7.021,
+            4.8
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.872664626
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 10.2,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 7,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 97,
+          "unit": 7,
+          "circuit": "C11",
+          "position": "x top"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-6-01",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns-6 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.877,
+            0.697,
+            12
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.06981317
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 12.9,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 8,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 113,
+          "unit": 1,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-6-02",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns-6 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.877,
+            0.697,
+            12
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.06981317
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 12.9,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 9,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 129,
+          "unit": 2,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-6-03",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns-6 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.877,
+            0.697,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.06981317
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 12.9,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 10,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 145,
+          "unit": 3,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-6-04",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns-6 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.877,
+            0.697,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.06981317
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 12.9,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 11,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 161,
+          "unit": 4,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-6-05",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns-6 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.877,
+            0.697,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.06981317
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 12.9,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 12,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 177,
+          "unit": 5,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-6-06",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns-6 6 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.877,
+            0.697,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.06981317
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 12.9,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 13,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 193,
+          "unit": 6,
+          "circuit": "C6",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-8-01",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns-8 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            6
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 24,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 1,
+          "circuit": "C7",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-8-02",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns-8 2",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            6
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 24,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 2,
+          "circuit": "C7",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-8-03",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns-8 3",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            18
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 24,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 3,
+          "circuit": "C7",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-8-04",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns-8 4",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            18
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 24,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 4,
+          "circuit": "C7",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-8-05",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns-8 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 5,
+          "circuit": "C7",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-8-06",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns-8 6 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 6,
+          "circuit": "C7",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-8-07",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns-8 7 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 7,
+          "circuit": "C7",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-8-08",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns-8 8 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 8,
+          "circuit": "C7",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-x-bridge-01",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-x-bridge 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.85,
+            6.67,
+            4.818
+          ],
+          "rotation": [
+            -2.510427961,
+            0,
+            -1.269560592
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 12.36,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 1,
+          "circuit": "C9",
+          "position": "truss top"
+        }
+      }
+    },
+    {
+      "id": "rig-par-x-bridge-02",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-x-bridge 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -0.85,
+            6.67,
+            4.818
+          ],
+          "rotation": [
+            -2.510427961,
+            0,
+            -1.269560592
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 6.18,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 2,
+          "circuit": "C9",
+          "position": "truss top"
+        }
+      }
+    },
+    {
+      "id": "rig-par-x-bridge-03",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-x-bridge 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.85,
+            6.67,
+            4.818
+          ],
+          "rotation": [
+            -2.510427961,
+            0,
+            1.269560592
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 6.18,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 3,
+          "circuit": "C9",
+          "position": "truss top"
+        }
+      }
+    },
+    {
+      "id": "rig-par-x-bridge-04",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-x-bridge 4",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.85,
+            6.67,
+            4.818
+          ],
+          "rotation": [
+            -2.510427961,
+            0,
+            1.269560592
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 12.36,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 4,
+          "circuit": "C9",
+          "position": "truss top"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-3-01",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press-3 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.55,
+            0.309,
+            3.534
+          ],
+          "rotation": [
+            2.991541462,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 2.3,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 1,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-3-02",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press-3 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.65,
+            0.309,
+            3.534
+          ],
+          "rotation": [
+            2.991541462,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 2.3,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 2,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-3-03",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press-3 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.75,
+            0.309,
+            3.534
+          ],
+          "rotation": [
+            2.991541462,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ff8a2a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ff8a2a",
+          "intensity": 609.56,
+          "distance": 2.3,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.258,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 3,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-strobe-x-01",
+      "type": "spotLight",
+      "name": "EXT-STROBE strobe-x 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2.237,
+            5.985,
+            4.88
+          ],
+          "rotation": [
+            -1.266381768,
+            0,
+            0.158840105
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#f4f7ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#f4f7ff",
+          "intensity": 4276.62,
+          "distance": 20.3,
+          "angle": 0.5236,
+          "penumbra": 0.6,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.808,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 14,
+          "type": "ext-strobe",
+          "mode": "4ch",
+          "universe": 1,
+          "address": 209,
+          "unit": 1,
+          "circuit": "C8",
+          "position": "truss header",
+          "hung": true
+        }
+      }
+    },
+    {
+      "id": "rig-strobe-x-02",
+      "type": "spotLight",
+      "name": "EXT-STROBE strobe-x 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.237,
+            5.985,
+            4.88
+          ],
+          "rotation": [
+            -1.266381768,
+            0,
+            -0.158840105
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#f4f7ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#f4f7ff",
+          "intensity": 4276.62,
+          "distance": 20.3,
+          "angle": 0.5236,
+          "penumbra": 0.6,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.808,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 15,
+          "type": "ext-strobe",
+          "mode": "4ch",
+          "universe": 1,
+          "address": 213,
+          "unit": 2,
+          "circuit": "C8",
+          "position": "truss header",
+          "hung": true
+        }
+      }
+    },
+    {
+      "id": "rig-strobe-pit-01",
+      "type": "spotLight",
+      "name": "EXT-STROBE strobe-pit 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -3,
+            0.169,
+            6.98
+          ],
+          "rotation": [
+            -1.919862177,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#f4f7ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#f4f7ff",
+          "intensity": 4276.62,
+          "distance": 22,
+          "angle": 0.5236,
+          "penumbra": 0.6,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.808,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 16,
+          "type": "ext-strobe",
+          "mode": "4ch",
+          "universe": 1,
+          "address": 217,
+          "unit": 1,
+          "circuit": "C3",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-strobe-pit-02",
+      "type": "spotLight",
+      "name": "EXT-STROBE strobe-pit 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1,
+            0.169,
+            6.98
+          ],
+          "rotation": [
+            -1.919862177,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#f4f7ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#f4f7ff",
+          "intensity": 4276.62,
+          "distance": 22,
+          "angle": 0.5236,
+          "penumbra": 0.6,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.808,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 17,
+          "type": "ext-strobe",
+          "mode": "4ch",
+          "universe": 1,
+          "address": 221,
+          "unit": 2,
+          "circuit": "C3",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-strobe-pit-03",
+      "type": "spotLight",
+      "name": "EXT-STROBE strobe-pit 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1,
+            0.169,
+            6.98
+          ],
+          "rotation": [
+            -1.919862177,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#f4f7ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#f4f7ff",
+          "intensity": 4276.62,
+          "distance": 22,
+          "angle": 0.5236,
+          "penumbra": 0.6,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.808,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 18,
+          "type": "ext-strobe",
+          "mode": "4ch",
+          "universe": 1,
+          "address": 225,
+          "unit": 3,
+          "circuit": "C3",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-strobe-pit-04",
+      "type": "spotLight",
+      "name": "EXT-STROBE strobe-pit 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3,
+            0.169,
+            6.98
+          ],
+          "rotation": [
+            -1.919862177,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#f4f7ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#f4f7ff",
+          "intensity": 4276.62,
+          "distance": 22,
+          "angle": 0.5236,
+          "penumbra": 0.6,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.808,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 19,
+          "type": "ext-strobe",
+          "mode": "4ch",
+          "universe": 1,
+          "address": 229,
+          "unit": 4,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-hazer-back-01",
+      "type": "group",
+      "name": "EXT-HAZER hazer 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -4.5,
+            0.235,
+            3.95
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 20,
+          "type": "ext-hazer",
+          "mode": "2ch",
+          "universe": 1,
+          "address": 233,
+          "unit": 1,
+          "circuit": "C2",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-hazer-back-02",
+      "type": "group",
+      "name": "EXT-HAZER hazer 2",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            4.5,
+            0.235,
+            3.95
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 21,
+          "type": "ext-hazer",
+          "mode": "2ch",
+          "universe": 1,
+          "address": 235,
+          "unit": 2,
+          "circuit": "C2",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-show",
+      "type": "group",
+      "name": "the show — equipment list, looks, version",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "rentalList": {
+          "name": "MOXIR 17.10 — Minimal · X lying down · heads",
+          "source": "scripts/rigbuild/rentals/moxir-2026-10-17.json (the rental house's price list, imported by rental.mjs) · lines: scripts/place/rigs/moxir-versions-2026-10-17.json, version \"minimal-xflat-heads\"",
+          "writtenAt": "2026-09-28",
+          "currency": "AMD",
+          "items": [
+            {
+              "code": "UP-B380F",
+              "type": "up-b380f",
+              "ordered": 13,
+              "stock": 18,
+              "rate": 20000,
+              "label": "380W beam moving head (outdoor)",
+              "source": "Price list!A6:E6 · version \"minimal-xflat-heads\" of scripts/place/rigs/moxir-versions-2026-10-17.json",
+              "note": "the quote calculator's hidden \"Price data\" sheet says 19000/day"
+            },
+            {
+              "code": "UP-PL5403",
+              "type": "up-pl5403",
+              "ordered": 15,
+              "stock": 50,
+              "rate": 5000,
+              "label": "54x3W LED PAR (outdoor)",
+              "source": "Price list!A13:E13 · version \"minimal-xflat-heads\" of scripts/place/rigs/moxir-versions-2026-10-17.json"
+            },
+            {
+              "code": "EXT-STROBE",
+              "type": "ext-strobe",
+              "ordered": 6,
+              "label": "LED strobe (other supplier)",
+              "source": "scripts/place/rigs/moxir-versions-2026-10-17.json otherSuppliers.EXT-STROBE",
+              "note": "options: Martin Atomic 3000 LED · GLP JDC2 IP · SGM PALCO Z-FX; rate owed",
+              "from": "other",
+              "supplier": "to choose — see the note"
+            },
+            {
+              "code": "EXT-HAZER",
+              "type": "ext-hazer",
+              "ordered": 2,
+              "label": "Hazer (other supplier)",
+              "source": "scripts/place/rigs/moxir-versions-2026-10-17.json otherSuppliers.EXT-HAZER",
+              "note": "options: Antari HZ-1000 · Look Solutions Unique 2.1 · Smoke Factory Tour-Hazer II; rate owed",
+              "from": "other",
+              "supplier": "to choose — see the note"
+            }
+          ],
+          "days": 1,
+          "dates": {
+            "from": "2026-10-17",
+            "to": "2026-10-17"
+          },
+          "rule": {
+            "extraDay": 0.5,
+            "source": "Price list!A2 \"Day 1 full rate; each additional day 50%.\" · \"Price data\"!H2 = 0.5"
+          },
+          "catalogue": [
+            {
+              "code": "UP-B380F",
+              "label": "380W beam moving head (outdoor)",
+              "details": "High-output beam, IP-rated",
+              "category": "Moving heads",
+              "cells": "Price list!A6:E6",
+              "stock": 18,
+              "rate": 20000
+            },
+            {
+              "code": "UP-250BSW",
+              "label": "250W beam / spot / wash",
+              "details": "LED 3-in-1 pattern beam",
+              "category": "Moving heads",
+              "cells": "Price list!A7:E7",
+              "stock": 12,
+              "rate": 15000
+            },
+            {
+              "code": "UP-HK1915",
+              "label": "19x15W bee-eye",
+              "details": "19-lens matrix with zoom",
+              "category": "Moving heads",
+              "cells": "Price list!A8:E8",
+              "stock": 14,
+              "rate": 13500
+            },
+            {
+              "code": "UP-HK615",
+              "label": "6x15W bee-eye with laser",
+              "details": "6-lens with laser",
+              "category": "Moving heads",
+              "cells": "Price list!A9:E9",
+              "stock": 6,
+              "rate": 6500
+            },
+            {
+              "code": "UP-MH100S",
+              "label": "100W moving head (pattern)",
+              "details": "Gobo / pattern, compact",
+              "category": "Moving heads",
+              "cells": "Price list!A10:E10",
+              "stock": 8,
+              "rate": 7000
+            },
+            {
+              "code": "UP-MH8060S",
+              "label": "80W moving head (pattern)",
+              "details": "Gobo / pattern, compact",
+              "category": "Moving heads",
+              "cells": "Price list!A11:E11",
+              "stock": 6,
+              "rate": 6500
+            },
+            {
+              "code": "UP-PL5403",
+              "label": "54x3W LED PAR (outdoor)",
+              "details": "RGBW wash, IP-rated cast aluminium",
+              "category": "PAR & wash",
+              "cells": "Price list!A13:E13",
+              "stock": 50,
+              "rate": 5000
+            },
+            {
+              "code": "UP-COB200",
+              "label": "200W COB PAR (indoor)",
+              "details": "COB wash",
+              "category": "PAR & wash",
+              "cells": "Price list!A14:E14",
+              "stock": 8,
+              "rate": 6000
+            },
+            {
+              "code": "UP-LA40WF",
+              "label": "40W full-colour laser",
+              "details": "Waterproof, high power",
+              "category": "Lasers",
+              "cells": "Price list!A16:E16",
+              "stock": 2,
+              "rate": 83000
+            },
+            {
+              "code": "UP-BY06",
+              "label": "6-eye swing laser (red)",
+              "details": "Swing laser effect",
+              "category": "Lasers",
+              "cells": "Price list!A17:E17",
+              "stock": 4,
+              "rate": 11500
+            },
+            {
+              "code": "UP-JG400",
+              "label": "400 mW full-colour laser",
+              "details": "Compact full-colour",
+              "category": "Lasers",
+              "cells": "Price list!A18:E18",
+              "stock": 2,
+              "rate": 6000
+            },
+            {
+              "code": "UP-Q108S",
+              "label": "CO2 gas column gun",
+              "details": "8-10 m spray, DMX",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A20:E20",
+              "stock": 6,
+              "rate": 7500
+            },
+            {
+              "code": "UP-YH600F",
+              "label": "Cold-spark firework machine",
+              "details": "Waterproof, DMX",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A21:E21",
+              "stock": 4,
+              "rate": 19500
+            },
+            {
+              "code": "UP-YZ31P",
+              "label": "Smoke machine (multi-angle)",
+              "details": "Waterproof",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A22:E22",
+              "stock": 4,
+              "rate": 15500
+            },
+            {
+              "code": "UP-SW3000B",
+              "label": "Low-fog machine 3000W",
+              "details": "Double-head ground fog",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A23:E23",
+              "stock": 1,
+              "rate": 19000
+            },
+            {
+              "code": "UP-236",
+              "label": "Mist machine 800W",
+              "details": "Double-head",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A24:E24",
+              "stock": 2,
+              "rate": 14000
+            },
+            {
+              "code": "UP-HD210",
+              "label": "3-in-1 butterfly effect",
+              "details": "Multi-effect",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A25:E25",
+              "stock": 2,
+              "rate": 5000
+            },
+            {
+              "code": "UP-Q3L",
+              "label": "MA lighting console",
+              "details": "Linux OS, full-size control",
+              "category": "Control & power",
+              "cells": "Price list!A27:E27",
+              "stock": 1,
+              "rate": 80000
+            },
+            {
+              "code": "UP-1024",
+              "label": "1024 DMX control desk",
+              "details": "1024-channel",
+              "category": "Control & power",
+              "cells": "Price list!A28:E28",
+              "stock": 1,
+              "rate": 20000
+            },
+            {
+              "code": "UP-9800",
+              "label": "FRX-9800 central controller",
+              "details": "Central control",
+              "category": "Control & power",
+              "cells": "Price list!A29:E29",
+              "stock": 1,
+              "rate": 7000
+            },
+            {
+              "code": "UP-B01",
+              "label": "Light control / broadcast unit",
+              "details": "Control unit",
+              "category": "Control & power",
+              "cells": "Price list!A30:E30",
+              "stock": 1,
+              "rate": 6500
+            },
+            {
+              "code": "UP-PDU60B",
+              "label": "DMX signal amplifier (outdoor)",
+              "details": "IP-rated distribution",
+              "category": "Control & power",
+              "cells": "Price list!A31:E31",
+              "stock": 2,
+              "rate": 5500
+            },
+            {
+              "code": "UP-PDU60A",
+              "label": "DMX signal amplifier",
+              "details": "1-way DMX512 distribution",
+              "category": "Control & power",
+              "cells": "Price list!A32:E32",
+              "stock": 1,
+              "rate": 6500
+            },
+            {
+              "code": "UP-2303",
+              "label": "DMX decoder 2303",
+              "details": "Decoder",
+              "category": "Control & power",
+              "cells": "Price list!A33:E33",
+              "stock": 1,
+              "rate": 2500
+            },
+            {
+              "code": "UP-POWER12",
+              "label": "12-way dimmer / power cabinet",
+              "details": "12-channel distro",
+              "category": "Control & power",
+              "cells": "Price list!A34:E34",
+              "stock": 1,
+              "rate": 11500
+            }
+          ],
+          "terms": [
+            {
+              "text": "All rates AMD, per unit, per day, excluding VAT. Day 1 full rate; each additional day 50%.",
+              "cell": "Price list!A2"
+            },
+            {
+              "text": "Delivery, rigging & de-rig: Quoted by location — Yerevan, regions, or venue-specific access — On request",
+              "cell": "Price list!A36:E36"
+            },
+            {
+              "text": "Consumables (haze and low-fog fluid, CO2, cold-spark powder) are charged at cost.",
+              "cell": "Price list!A38"
+            },
+            {
+              "text": "Truss, clamps, safety chains and cabling are included with the fixtures they serve.",
+              "cell": "Price list!A39"
+            },
+            {
+              "text": "Prices exclude VAT. A refundable damage deposit is required.",
+              "cell": "Price list!A40"
+            },
+            {
+              "text": "the quote calculator's delivery, rigging & de-rig default: 150000 (Set by location. One-off, not multiplied by days.)",
+              "cell": "Quote 2!G38"
+            }
+          ]
+        },
+        "rigLooks": {
+          "source": "moxir-2026-10-17-minimal-xflat-heads.json (MOXIR 17.10 — Minimal · X lying down · heads, 2026-09-28) · groups renamed to position/type by scripts/rigbuild/looks.mjs",
+          "writtenAt": "2026-09-28",
+          "defaultLook": "white-cathedral",
+          "looks": [
+            {
+              "id": "white-cathedral",
+              "title": "Four rays",
+              "intent": "The four arm ends fire out along their arms, rising 40° — in haze, four rays leaving the DJ in four directions, the crowd ray coming at you; the column beams stand as the nave in cold white. The three inner beams out.",
+              "aims": {
+                "column-bases/up-b380f": {
+                  "rule": "vertical",
+                  "in_deg": 4
+                },
+                "truss-top/up-b380f": {
+                  "rule": "along-arm",
+                  "rise_deg": 40,
+                  "solo_mask": 85,
+                  "rest_up": 1
+                },
+                "truss-top/up-pl5403": {
+                  "rule": "bridge-underside",
+                  "out": 6
+                },
+                "truss/ext-strobe": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 1.8,
+                  "a": 12
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.6
+                },
+                "pit/ext-strobe": {
+                  "rule": "parallel",
+                  "lean_deg": 70
+                }
+              },
+              "colours": {
+                "column-bases/up-b380f": "#eef3ff",
+                "truss-top/up-b380f": "#eef3ff"
+              },
+              "levels": {
+                "column-faces/up-pl5403": 0,
+                "backdrop/up-pl5403": 0,
+                "pit/ext-strobe": 0,
+                "truss-top/up-pl5403": 0,
+                "truss/ext-strobe": 0
+              }
+            },
+            {
+              "id": "red-room",
+              "title": "Red room",
+              "intent": "Deep red only, and low: the columns and the press glow from their feet, the seven beams on the X stand still and dim in red, the DJ a dark shape against the red press.",
+              "aims": {
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.6
+                },
+                "truss-top/up-b380f": {
+                  "rule": "vertical"
+                },
+                "truss-top/up-pl5403": {
+                  "rule": "bridge-underside",
+                  "out": 6
+                },
+                "truss/ext-strobe": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 1.8,
+                  "a": 12
+                },
+                "column-bases/up-b380f": {
+                  "rule": "vertical"
+                },
+                "pit/ext-strobe": {
+                  "rule": "parallel",
+                  "lean_deg": 70
+                }
+              },
+              "colours": {
+                "column-faces/up-pl5403": "#ff1408",
+                "backdrop/up-pl5403": "#ff1408",
+                "truss-top/up-b380f": "#ff1408",
+                "truss-top/up-pl5403": "#ff1408"
+              },
+              "levels": {
+                "column-bases/up-b380f": 0,
+                "pit/ext-strobe": 0,
+                "truss-top/up-b380f": 0.45,
+                "truss/ext-strobe": 0
+              }
+            },
+            {
+              "id": "strobe-hit",
+              "title": "Strobe hit",
+              "intent": "The peak: the pit strobes rake up over the crowd from the floor, the two under the X hit the front of the floor; every beam and PAR out.",
+              "aims": {
+                "pit/ext-strobe": {
+                  "rule": "parallel",
+                  "lean_deg": 35
+                },
+                "truss-top/up-b380f": {
+                  "rule": "vertical"
+                },
+                "truss-top/up-pl5403": {
+                  "rule": "bridge-underside",
+                  "out": 6
+                },
+                "truss/ext-strobe": {
+                  "rule": "parallel",
+                  "lean_deg": 55
+                },
+                "column-bases/up-b380f": {
+                  "rule": "vertical"
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.6
+                }
+              },
+              "colours": {
+                "pit/ext-strobe": "#f4f7ff",
+                "truss/ext-strobe": "#f4f7ff"
+              },
+              "levels": {
+                "column-bases/up-b380f": 0,
+                "column-faces/up-pl5403": 0,
+                "backdrop/up-pl5403": 0,
+                "truss-top/up-b380f": 0,
+                "truss-top/up-pl5403": 0
+              }
+            },
+            {
+              "id": "one-beam",
+              "title": "Blackout + the cross",
+              "intent": "Everything out but the bridge arm's two end beams, crossing in an X 1.6 m over the DJ's head and landing in the pit either side: the DJ framed by the cross, no beam through him.",
+              "aims": {
+                "truss-top/up-b380f": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 4.8,
+                  "a": -1,
+                  "solo_mask": 65,
+                  "rest_up": 1
+                },
+                "truss-top/up-pl5403": {
+                  "rule": "bridge-underside",
+                  "out": 6
+                },
+                "truss/ext-strobe": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 1.8,
+                  "a": 12
+                },
+                "column-bases/up-b380f": {
+                  "rule": "vertical"
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.6
+                },
+                "pit/ext-strobe": {
+                  "rule": "parallel",
+                  "lean_deg": 70
+                }
+              },
+              "colours": {
+                "truss-top/up-b380f": "#eef3ff"
+              },
+              "levels": {
+                "column-bases/up-b380f": 0,
+                "column-faces/up-pl5403": 0,
+                "backdrop/up-pl5403": 0,
+                "pit/ext-strobe": 0,
+                "truss-top/up-pl5403": 0,
+                "truss/ext-strobe": 0
+              }
+            },
+            {
+              "id": "slow-sweep",
+              "title": "The sign",
+              "intent": "All seven beams lie down along the arms: the bridge arm's four just under the horizon (under the crane's cab and trolley), the crowd arm's rising 8° over the heads, the back one over the press — in haze the X is drawn in the air, out past the truss toward the walls; the column beams out, the columns a low red, the bridge a dim red frame. Held, not swept (the X is hung: no fast or periodic head moves).",
+              "aims": {
+                "column-bases/up-b380f": {
+                  "rule": "vertical",
+                  "in_deg": -22
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "truss-top/up-b380f": {
+                  "rule": "along-arm",
+                  "rise_deg": 8,
+                  "inner_rise_deg": 8,
+                  "x_rise_deg": -10
+                },
+                "truss-top/up-pl5403": {
+                  "rule": "bridge-underside",
+                  "out": 6
+                },
+                "truss/ext-strobe": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 1.8,
+                  "a": 12
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.6
+                },
+                "pit/ext-strobe": {
+                  "rule": "parallel",
+                  "lean_deg": 70
+                }
+              },
+              "colours": {
+                "column-bases/up-b380f": "#eef3ff",
+                "column-faces/up-pl5403": "#ff1408",
+                "truss-top/up-b380f": "#eef3ff",
+                "truss-top/up-pl5403": "#ff1408"
+              },
+              "levels": {
+                "column-faces/up-pl5403": 0.3,
+                "backdrop/up-pl5403": 0,
+                "pit/ext-strobe": 0,
+                "column-bases/up-b380f": 0,
+                "truss-top/up-pl5403": 0.4,
+                "truss/ext-strobe": 0
+              }
+            }
+          ]
+        },
+        "rigVariant": {
+          "set": "moxir-2026-10-17",
+          "id": "minimal-xflat-heads-oldhall-0929",
+          "title": "Minimal · X lying down · heads · old hall 09-29",
+          "summary": "Minimal's floor and columns as they are; over the DJ, instead of the line, two 5 m arms of truss cross FLAT at 6.15 m under the crane bridge, one arm out over t",
+          "source": "scripts/place/rigs/moxir-versions-2026-10-17.json — scripts/rigbuild/load-version.mjs",
+          "siblings": [
+            {
+              "id": "minimal",
+              "projectId": "moxir-hall-minimal",
+              "title": "Minimal — the cut, simple: fixed lights only",
+              "summary": "No stage, no towers: the DJ stand alone, the crane parked over it. THE CUT — one straight 12 m line sloped 15° under the bridge, low house left, high over the p"
+            },
+            {
+              "id": "minimal-oldhall-0929",
+              "projectId": "moxir-hall-minimal-oldhall-0929",
+              "title": "Minimal · old hall 09-29 — the cut, simple: fixed lights onl",
+              "summary": "the version as it hung in the 09-29 hall (crane girder assumed 8.15 m), kept for comparison. No stage, no towers: the DJ stand alone, the crane parked over it."
+            },
+            {
+              "id": "minimal-cut-movers",
+              "projectId": "moxir-hall-minimal-cut-movers",
+              "title": "The cut, full: moving heads on the line",
+              "summary": "The same cut (12 m, 15°, 3 bridled hoists, tie-offs) carrying moving heads: 5 UP-B380F standing on it fanning into the roof, 2 hung under the ends crossing in a"
+            },
+            {
+              "id": "minimal-cut-movers-oldhall-0929",
+              "projectId": "moxir-hall-minimal-cut-movers-oldhall-0929",
+              "title": "The cut, full: moving heads on the line · old hall 09-29",
+              "summary": "the version as it hung in the 09-29 hall (crane girder assumed 8.15 m), kept for comparison. The same cut (12 m, 15°, 3 bridled hoists, tie-offs) carrying movin"
+            },
+            {
+              "id": "minimal-halo",
+              "projectId": "moxir-hall-minimal-halo",
+              "title": "Minimal · halo",
+              "summary": "Simple: NO moving heads, the rental house's fixed lights only (UP-PL5403 PARs, UP-COB200 COB PARs). Minimal's hall; a flat triangle of 3 x 4 m truss at 6 m unde"
+            },
+            {
+              "id": "minimal-halo-oldhall-0929",
+              "projectId": "moxir-hall-minimal-halo-oldhall-0929",
+              "title": "Minimal · halo · old hall 09-29",
+              "summary": "the version as it hung in the 09-29 hall (crane girder assumed 8.15 m), kept for comparison. Simple: NO moving heads, the rental house's fixed lights only (UP-P"
+            },
+            {
+              "id": "minimal-halo-heads",
+              "projectId": "moxir-hall-minimal-halo-heads",
+              "title": "Minimal · halo · heads",
+              "summary": "The halo with MOVING heads (the second study): Minimal's hall and floor, the line replaced by a HALO: a flat triangle of 3 x 4 m truss at 6 m, centred under the"
+            },
+            {
+              "id": "minimal-halo-heads-oldhall-0929",
+              "projectId": "moxir-hall-minimal-halo-heads-oldhall-0929",
+              "title": "Minimal · halo · heads · old hall 09-29",
+              "summary": "the version as it hung in the 09-29 hall (crane girder assumed 8.15 m), kept for comparison. The halo with MOVING heads (the second study): Minimal's hall and f"
+            },
+            {
+              "id": "minimal-xflat-heads-oldhall-0929",
+              "projectId": "moxir-hall-minimal-xflat-heads-oldhall-0929",
+              "title": "Minimal · X lying down · heads · old hall 09-29",
+              "summary": "Minimal's floor and columns as they are; over the DJ, instead of the line, two 5 m arms of truss cross FLAT at 6.15 m under the crane bridge, one arm out over t"
+            }
+          ],
+          "copyOf": {
+            "projectId": "moxir-hall-minimal-xflat-heads",
+            "id": "minimal-xflat-heads",
+            "label": "old hall 09-29"
+          }
+        }
+      }
+    }
+  ],
+  "worldState": {
+    "backgroundColor": "#030304",
+    "environmentAssetId": null,
+    "environmentIntensity": 1,
+    "atmosphereBlend": false,
+    "hubDecor": false,
+    "spawn": {
+      "x": 0,
+      "z": 20.2,
+      "yaw": 3.142,
+      "pitch": 0,
+      "altY": 1.6
+    },
+    "fog": {
+      "near": 60,
+      "far": 250,
+      "color": null,
+      "enabled": true
+    },
+    "walkableAreas": [
+      {
+        "minX": -36,
+        "maxX": 60,
+        "minZ": -54.1,
+        "maxZ": 55.5
+      }
+    ],
+    "placement": null,
+    "gridVisible": false,
+    "gridSize": 24,
+    "gridCellSize": 0.75,
+    "gridCellThickness": 0.3,
+    "gridCellColor": "#2a6e73",
+    "gridSectionSize": 6,
+    "gridSectionThickness": 0.65,
+    "gridSectionColor": "#4df9ff",
+    "gridFadeDistance": 80,
+    "gridFadeStrength": 1,
+    "gridOffset": 0.015,
+    "ambientLight": {
+      "color": "#a39c92",
+      "intensity": 1.4
+    },
+    "directionalLight": {
+      "color": "#8fa6d8",
+      "intensity": 0.22,
+      "position": [
+        -20,
+        30,
+        10
+      ]
+    },
+    "savedView": {
+      "mode": "perspective",
+      "position": [
+        0,
+        1.6,
+        20.2
+      ],
+      "target": [
+        0,
+        5.2,
+        3.2
+      ],
+      "fov": 55,
+      "zoom": 1,
+      "near": 0.05,
+      "far": 400
+    }
+  },
+  "renderSettings": {
+    "shadows": true,
+    "shadowCasting": {
+      "enabled": false,
+      "mapSize": 1024
+    },
+    "antialias": true,
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 1,
+    "dprMin": 1,
+    "dprMax": 2
+  },
+  "xrState": {
+    "mode": "none",
+    "debugVisible": false,
+    "vrSupported": false,
+    "arSupported": false
+  },
+  "presentationState": {
+    "mode": "fixed-camera",
+    "fixedCamera": {
+      "projection": "perspective",
+      "position": [
+        0,
+        1.6,
+        20.2
+      ],
+      "target": [
+        0,
+        5.2,
+        3.2
+      ],
+      "fov": 55,
+      "zoom": 1,
+      "near": 0.05,
+      "far": 400,
+      "locked": false
+    },
+    "codeHtml": "",
+    "codeSourceType": "html",
+    "codeUrl": "",
+    "codeFiles": [],
+    "entryView": "fixed-camera",
+    "deviceAccess": false
+  },
+  "publishState": {
+    "shareEnabled": false,
+    "xrDefaultMode": "none",
+    "lastExportAt": 0
+  },
+  "showState": {
+    "clockEpoch": 0
+  },
+  "performState": {
+    "presets": []
+  },
+  "mappingState": {
+    "output": {
+      "width": 1920,
+      "height": 1080
+    },
+    "background": "#000000",
+    "surfaces": [
+      {
+        "id": "ce1b3489-833d-4c59-9cad-c4962703646e",
+        "name": "Surface 1",
+        "enabled": true,
+        "corners": [
+          [
+            0.15835147777726843,
+            0.16544462519502146
+          ],
+          [
+            0.41835147777726844,
+            0.16544462519502146
+          ],
+          [
+            0.41835147777726844,
+            0.5454446251950215
+          ],
+          [
+            0.15835147777726843,
+            0.5454446251950215
+          ]
+        ],
+        "mask": [
+          [
+            0.4263762630802326,
+            0.509137971605616
+          ]
+        ],
+        "source": {
+          "kind": "ndi",
+          "ref": "PONYO (TouchDesigner)"
+        },
+        "resolution": [
+          1280,
+          720
+        ],
+        "opacity": 1,
+        "brightness": 1.69,
+        "contrast": 1.34,
+        "saturation": 0.42,
+        "hue": 92,
+        "blend": "screen",
+        "effect": {
+          "kind": "none",
+          "threshold": 0.08,
+          "trail": 0.88,
+          "gain": 4,
+          "prompt": "",
+          "strength": 0.5
+        }
+      }
+    ],
+    "cues": [
+      {
+        "id": "show-01-one-beam",
+        "name": "Blackout + the cross",
+        "key": "",
+        "fade": 4,
+        "hold": 12,
+        "lightLook": "rig-one-beam",
+        "surfaces": {}
+      },
+      {
+        "id": "show-02-slow-sweep",
+        "name": "The sign",
+        "key": "",
+        "fade": 6,
+        "hold": 16,
+        "lightLook": "rig-slow-sweep",
+        "surfaces": {}
+      },
+      {
+        "id": "show-03-red-room",
+        "name": "Red room",
+        "key": "",
+        "fade": 5,
+        "hold": 16,
+        "lightLook": "rig-red-room",
+        "surfaces": {}
+      },
+      {
+        "id": "show-04-white-cathedral",
+        "name": "Four rays",
+        "key": "",
+        "fade": 4,
+        "hold": 12,
+        "lightLook": "rig-white-cathedral",
+        "surfaces": {}
+      },
+      {
+        "id": "show-05-strobe-hit",
+        "name": "Strobe hit",
+        "key": "",
+        "fade": 0,
+        "hold": 4,
+        "lightLook": "rig-strobe-hit",
+        "surfaces": {}
+      }
+    ],
+    "reference": {
+      "url": "",
+      "opacity": 0.5,
+      "visible": false
+    },
+    "grid": 0,
+    "fade": 0,
+    "loop": true,
+    "showEpoch": 1790698337965
+  },
+  "windowLayout": {
+    "activeWindowId": "viewport",
+    "windows": {
+      "viewport": {
+        "id": "viewport",
+        "title": "Viewport",
+        "visible": true,
+        "minimized": false,
+        "pinned": true,
+        "x": 24,
+        "y": 176,
+        "width": 860,
+        "height": 580,
+        "zIndex": 3
+      },
+      "assets": {
+        "id": "assets",
+        "title": "Assets",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 910,
+        "y": 176,
+        "width": 360,
+        "height": 360,
+        "zIndex": 4
+      },
+      "inspector": {
+        "id": "inspector",
+        "title": "Inspector",
+        "visible": true,
+        "minimized": false,
+        "pinned": false,
+        "x": 910,
+        "y": 552,
+        "width": 360,
+        "height": 420,
+        "zIndex": 5
+      },
+      "outliner": {
+        "id": "outliner",
+        "title": "Outliner",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 24,
+        "y": 620,
+        "width": 280,
+        "height": 260,
+        "zIndex": 2
+      },
+      "activity": {
+        "id": "activity",
+        "title": "Activity",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 320,
+        "y": 620,
+        "width": 340,
+        "height": 260,
+        "zIndex": 1
+      },
+      "project": {
+        "id": "project",
+        "title": "Project",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 680,
+        "y": 620,
+        "width": 320,
+        "height": 260,
+        "zIndex": 1
+      }
+    }
+  },
+  "assets": [
+    {
+      "id": "267ecd341686f363ea1b72121ed7f94bfd2f2f551be24174154057c753c40ddd",
+      "name": "hall.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 3215660,
+      "createdAt": 1790716463491,
+      "url": "/serverXR/api/projects/moxir-hall-minimal-xflat-heads-oldhall-0929/assets/267ecd341686f363ea1b72121ed7f94bfd2f2f551be24174154057c753c40ddd",
+      "source": "server"
+    },
+    {
+      "id": "c1d06915a9c78d711d58899c03e9b1e5690b8ee06117cc8b98cb35ff5d1447dd",
+      "name": "rigbuild-truss-2m.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 15432,
+      "createdAt": 1790716463501,
+      "url": "/serverXR/api/projects/moxir-hall-minimal-xflat-heads-oldhall-0929/assets/c1d06915a9c78d711d58899c03e9b1e5690b8ee06117cc8b98cb35ff5d1447dd",
+      "source": "server"
+    },
+    {
+      "id": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+      "name": "rigbuild-deck-2x1.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 4524,
+      "createdAt": 1790716463510,
+      "url": "/serverXR/api/projects/moxir-hall-minimal-xflat-heads-oldhall-0929/assets/3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+      "source": "server"
+    },
+    {
+      "id": "6966958de587401f58b39ccb3589fc415eb72631a6ff93f6be9c7eac6c35b890",
+      "name": "hall-show.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 3205404,
+      "createdAt": 1790716463535,
+      "url": "/serverXR/api/projects/moxir-hall-minimal-xflat-heads-oldhall-0929/assets/6966958de587401f58b39ccb3589fc415eb72631a6ff93f6be9c7eac6c35b890",
+      "source": "server"
+    }
+  ]
+}

@@ -1,0 +1,8506 @@
+{
+  "version": 4,
+  "projectMeta": {
+    "id": "moxir-hall",
+    "spaceId": "moxir",
+    "title": "MOXIR — the hall",
+    "createdAt": 1790026926854,
+    "updatedAt": 1790699014725,
+    "source": "project"
+  },
+  "nodes": [],
+  "edges": [],
+  "templates": [],
+  "workspaceState": {
+    "selectedNodeId": null,
+    "liveWorldNodeIdByScope": {},
+    "activeNodeIdByTypeScope": {}
+  },
+  "entities": [
+    {
+      "id": "place-hall",
+      "type": "model",
+      "name": "MOXIR — the hall",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#5fa8ff",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "267ecd341686f363ea1b72121ed7f94bfd2f2f551be24174154057c753c40ddd",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": false,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "venuePlan": {
+          "name": "MOXIR · Charentsavan factory hall",
+          "source": "scripts/place/rigs/hall.json (hall.py v2, 2026-09-28T15:25)",
+          "warning": "ESTIMATED from photographs, not taped: see dimsOrigin for each value, its range and confidence.",
+          "outline": [
+            [
+              -36.4,
+              -54.5
+            ],
+            [
+              60.4,
+              -54.5
+            ],
+            [
+              60.4,
+              54.5
+            ],
+            [
+              -36.4,
+              54.5
+            ]
+          ],
+          "columns": [
+            [
+              -36,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              -36,
+              -54,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              -12,
+              -54,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              12,
+              -54,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              36,
+              -54,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              54,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              48,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              42,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              36,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              30,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              24,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              18,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              12,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              6,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              0.5,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -0.5,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -6,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -12,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -18,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -24,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -30,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -36,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -42,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -48,
+              0.8,
+              0.5
+            ],
+            [
+              60,
+              -54,
+              0.8,
+              0.5
+            ]
+          ],
+          "grid": {
+            "x": [
+              {
+                "at": -36,
+                "label": "A"
+              },
+              {
+                "at": -12,
+                "label": "B"
+              },
+              {
+                "at": 12,
+                "label": "C"
+              },
+              {
+                "at": 36,
+                "label": "D"
+              },
+              {
+                "at": 60,
+                "label": "E"
+              }
+            ],
+            "z": [
+              {
+                "at": 54,
+                "label": "1"
+              },
+              {
+                "at": 48,
+                "label": "2"
+              },
+              {
+                "at": 42,
+                "label": "3"
+              },
+              {
+                "at": 36,
+                "label": "4"
+              },
+              {
+                "at": 30,
+                "label": "5"
+              },
+              {
+                "at": 24,
+                "label": "6"
+              },
+              {
+                "at": 18,
+                "label": "7"
+              },
+              {
+                "at": 12,
+                "label": "8"
+              },
+              {
+                "at": 6,
+                "label": "9"
+              },
+              {
+                "at": 0.5,
+                "label": "10"
+              },
+              {
+                "at": -0.5,
+                "label": "10′"
+              },
+              {
+                "at": -6,
+                "label": "11"
+              },
+              {
+                "at": -12,
+                "label": "12"
+              },
+              {
+                "at": -18,
+                "label": "13"
+              },
+              {
+                "at": -24,
+                "label": "14"
+              },
+              {
+                "at": -30,
+                "label": "15"
+              },
+              {
+                "at": -36,
+                "label": "16"
+              },
+              {
+                "at": -42,
+                "label": "17"
+              },
+              {
+                "at": -48,
+                "label": "18"
+              },
+              {
+                "at": -54,
+                "label": "19"
+              }
+            ]
+          },
+          "zones": [
+            {
+              "id": "dance",
+              "label": "dance floor",
+              "rects": [
+                [
+                  -5.35,
+                  7.5,
+                  5.35,
+                  48
+                ]
+              ],
+              "note": "to be cleared for the centred floor: the white bulk bags (x -0.8..2.2, z 22..26.5) and the loose machinery that reaches inside x < 5.35 between the press and the bags (photo 004: drums, frames, pipe stacks at x 3..10; the hopper at x ~5.7 s"
+            },
+            {
+              "id": "stage",
+              "label": "DJ place",
+              "rects": [
+                [
+                  -3.8,
+                  3.6,
+                  3.8,
+                  7.5
+                ]
+              ],
+              "note": ""
+            },
+            {
+              "id": "backstage",
+              "label": "backstage",
+              "rects": [
+                [
+                  -6,
+                  -10,
+                  6,
+                  -1
+                ]
+              ],
+              "note": ""
+            }
+          ],
+          "solids": [
+            {
+              "id": "press",
+              "label": "forging press (frame, bed, ram)",
+              "rect": [
+                0.25,
+                0.2,
+                3.05,
+                3.2
+              ],
+              "top": 4.2
+            },
+            {
+              "id": "press-crown",
+              "label": "press crown, motor and flywheel",
+              "rect": [
+                0.1,
+                0.8,
+                3.7,
+                2.6
+              ],
+              "top": 5.6
+            },
+            {
+              "id": "machine-line",
+              "label": "machine line beside the press (brick plinth, steel body, drilled beam)",
+              "rect": [
+                3.05,
+                -0.5,
+                12,
+                2.5
+              ],
+              "top": 2.4
+            },
+            {
+              "id": "machine-pipe",
+              "label": "pipe over the machine line, rising at the press end",
+              "rect": [
+                3.05,
+                1,
+                13,
+                1.6
+              ],
+              "top": 3.3
+            }
+          ],
+          "overhead": [
+            {
+              "id": "lantern-1",
+              "label": "roof lantern",
+              "rect": [
+                -6,
+                7.25,
+                6,
+                45.75
+              ],
+              "bottom": 13.55
+            },
+            {
+              "id": "lantern-2",
+              "label": "roof lantern",
+              "rect": [
+                -6,
+                -45.75,
+                6,
+                -7.25
+              ],
+              "bottom": 13.55
+            },
+            {
+              "id": "lantern-3",
+              "label": "roof lantern",
+              "rect": [
+                18,
+                7.25,
+                30,
+                45.75
+              ],
+              "bottom": 13.55
+            },
+            {
+              "id": "lantern-4",
+              "label": "roof lantern",
+              "rect": [
+                18,
+                -45.75,
+                30,
+                -7.25
+              ],
+              "bottom": 13.55
+            },
+            {
+              "id": "crane-1",
+              "label": "crane bridge",
+              "line": [
+                [
+                  -11.35,
+                  50
+                ],
+                [
+                  11.35,
+                  50
+                ]
+              ],
+              "bottom": 8.15
+            },
+            {
+              "id": "crane-2",
+              "label": "crane bridge",
+              "line": [
+                [
+                  -11.35,
+                  -41
+                ],
+                [
+                  11.35,
+                  -41
+                ]
+              ],
+              "bottom": 8.15
+            },
+            {
+              "id": "runway-l",
+              "label": "crane runway",
+              "line": [
+                [
+                  -11.35,
+                  -54.5
+                ],
+                [
+                  -11.35,
+                  54.5
+                ]
+              ],
+              "bottom": 6.56
+            },
+            {
+              "id": "runway-r",
+              "label": "crane runway",
+              "line": [
+                [
+                  11.35,
+                  -54.5
+                ],
+                [
+                  11.35,
+                  54.5
+                ]
+              ],
+              "bottom": 6.56
+            }
+          ],
+          "openings": [
+            {
+              "id": "door",
+              "label": "door 6 m",
+              "from": [
+                -3,
+                54.5
+              ],
+              "to": [
+                3,
+                54.5
+              ]
+            },
+            {
+              "id": "far-gate",
+              "label": "gate 4.8 m",
+              "from": [
+                -2.4,
+                -54.5
+              ],
+              "to": [
+                2.4,
+                -54.5
+              ]
+            }
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-table",
+      "type": "box",
+      "name": "DJ table 1.8 x 0.8 m, 0.95 m high",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            1.2,
+            5.6
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1.8,
+            0.95,
+            0.8
+          ]
+        },
+        "appearance": {
+          "color": "#1d1d20",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.7,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-1",
+      "type": "box",
+      "name": "Booth stair tread 1/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            5.825
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.2,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-2",
+      "type": "box",
+      "name": "Booth stair tread 2/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            5.575
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.4,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-3",
+      "type": "box",
+      "name": "Booth stair tread 3/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            5.325
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.6,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-4",
+      "type": "box",
+      "name": "Booth stair tread 4/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            5.075
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            0.8,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-5",
+      "type": "box",
+      "name": "Booth stair tread 5/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            4.825
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-dj-stair-6",
+      "type": "box",
+      "name": "Booth stair tread 6/6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            0,
+            4.575
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1.2,
+            0.25
+          ]
+        },
+        "appearance": {
+          "color": "#1a1a1c",
+          "opacity": 1,
+          "textureAssetId": null,
+          "roughness": 0.9,
+          "metalness": 0,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-crowd-barrier",
+      "type": "box",
+      "name": "Crowd barrier 9 m, 1.3 m pit",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            7.5
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            9,
+            1.1,
+            0.08
+          ]
+        },
+        "appearance": {
+          "color": "#6f7378",
+          "opacity": 0.35,
+          "textureAssetId": null,
+          "roughness": 0.5,
+          "metalness": 0.6,
+          "emissive": "#000000",
+          "emissiveIntensity": 1
+        },
+        "primitive": {
+          "shape": "box",
+          "size": [
+            1,
+            1,
+            1
+          ]
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-stage-01",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-stage 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.928,
+            0.69,
+            1.522
+          ],
+          "rotation": [
+            -3.071779722,
+            0,
+            -0.209439044
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13.2,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 1,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 1,
+          "unit": 1,
+          "circuit": "C2",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-stage-02",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-stage 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.023,
+            0.696,
+            1.523
+          ],
+          "rotation": [
+            -3.071778959,
+            0,
+            -0.069813765
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 2,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 17,
+          "unit": 2,
+          "circuit": "C2",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-stage-03",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-stage 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -0.117,
+            0.696,
+            1.523
+          ],
+          "rotation": [
+            -3.071778959,
+            0,
+            0.069813765
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 3,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 33,
+          "unit": 3,
+          "circuit": "C2",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-stage-04",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-stage 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.788,
+            0.69,
+            1.522
+          ],
+          "rotation": [
+            -3.071779722,
+            0,
+            0.209439044
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13.2,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 4,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 49,
+          "unit": 4,
+          "circuit": "C3",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-flank-01",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-flank 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -3.734,
+            0.653,
+            1.53
+          ],
+          "rotation": [
+            -3.036872297,
+            0,
+            -0.523599463
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 15,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 5,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 65,
+          "unit": 1,
+          "circuit": "C2",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-flank-02",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-flank 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2.827,
+            0.691,
+            1.534
+          ],
+          "rotation": [
+            -3.036872697,
+            0,
+            -0.174533266
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13.2,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 6,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 81,
+          "unit": 2,
+          "circuit": "C2",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-flank-03",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-flank 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.687,
+            0.691,
+            1.534
+          ],
+          "rotation": [
+            -3.036872697,
+            0,
+            0.174533266
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13.2,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 7,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 97,
+          "unit": 3,
+          "circuit": "C3",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-flank-04",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-flank 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.594,
+            0.653,
+            1.53
+          ],
+          "rotation": [
+            -3.036872297,
+            0,
+            0.523599463
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 15,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 8,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 113,
+          "unit": 4,
+          "circuit": "C3",
+          "position": "booth back"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-01",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.854,
+            0.695,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 9,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 129,
+          "unit": 1,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-02",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.854,
+            0.695,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 10,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 145,
+          "unit": 2,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-03",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.854,
+            0.695,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 11,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 161,
+          "unit": 3,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-04",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.854,
+            0.695,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 12,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 177,
+          "unit": 4,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-05",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.854,
+            0.695,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 13,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 193,
+          "unit": 5,
+          "circuit": "C6",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-06",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 6 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.854,
+            0.695,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 14,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 209,
+          "unit": 6,
+          "circuit": "C6",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-07",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 7 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.854,
+            0.695,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 15,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 225,
+          "unit": 7,
+          "circuit": "C6",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-08",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 8 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.854,
+            0.695,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 16,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 241,
+          "unit": 8,
+          "circuit": "C6",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-09",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 9 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.854,
+            0.695,
+            48
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 17,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 257,
+          "unit": 9,
+          "circuit": "C7",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beam380-columns-10",
+      "type": "spotLight",
+      "name": "UP-B380F beam380-columns 10 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.854,
+            0.695,
+            48
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.13962634
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#eef3ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#eef3ff",
+          "intensity": 1004000,
+          "distance": 13,
+          "angle": 0.0157,
+          "penumbra": 0.1,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.9,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 18,
+          "type": "up-b380f",
+          "mode": "16ch",
+          "universe": 1,
+          "address": 273,
+          "unit": 10,
+          "circuit": "C7",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-truss-01",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-truss 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2.473,
+            6.309,
+            5.078
+          ],
+          "rotation": [
+            0.101688504,
+            0,
+            0.126216724
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 12.8,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 19,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 1,
+          "address": 289,
+          "unit": 1,
+          "circuit": "C16",
+          "position": "truss header",
+          "hung": true
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-truss-02",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-truss 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1.508,
+            6.332,
+            4.998
+          ],
+          "rotation": [
+            0.494956779,
+            0,
+            -0.03748203
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 7.3,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 20,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 1,
+          "address": 313,
+          "unit": 2,
+          "circuit": "C16",
+          "position": "truss header",
+          "hung": true
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-truss-03",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-truss 3",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -0.495,
+            6.307,
+            5.078
+          ],
+          "rotation": [
+            0.101689547,
+            0,
+            0.025372691
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 12.8,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 21,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 1,
+          "address": 337,
+          "unit": 3,
+          "circuit": "C16",
+          "position": "truss header",
+          "hung": true
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-truss-04",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-truss 4",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.495,
+            6.307,
+            5.078
+          ],
+          "rotation": [
+            0.101689547,
+            0,
+            -0.025372691
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 12.8,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 22,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 1,
+          "address": 361,
+          "unit": 4,
+          "circuit": "C16",
+          "position": "truss header",
+          "hung": true
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-truss-05",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-truss 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.508,
+            6.332,
+            4.998
+          ],
+          "rotation": [
+            0.494956779,
+            0,
+            0.03748203
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 3.8,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 23,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 1,
+          "address": 385,
+          "unit": 5,
+          "circuit": "C16",
+          "position": "truss header",
+          "hung": true
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-truss-06",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-truss 6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.473,
+            6.309,
+            5.078
+          ],
+          "rotation": [
+            0.101688504,
+            0,
+            -0.126216724
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 12.8,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 24,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 1,
+          "address": 409,
+          "unit": 6,
+          "circuit": "C16",
+          "position": "truss header",
+          "hung": true
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-booms-01",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-booms 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.692,
+            0.377,
+            5.985
+          ],
+          "rotation": [
+            2.828366414,
+            0,
+            1.336958294
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 50,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 25,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 2,
+          "address": 1,
+          "unit": 1,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-booms-02",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-booms 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.692,
+            0.377,
+            5.985
+          ],
+          "rotation": [
+            2.828366414,
+            0,
+            -1.336958294
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 25,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 26,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 2,
+          "address": 25,
+          "unit": 2,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-booms-03",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-booms 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.722,
+            0.37,
+            11.889
+          ],
+          "rotation": [
+            1.919213199,
+            0,
+            0.984826894
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 25,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 27,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 2,
+          "address": 49,
+          "unit": 3,
+          "circuit": "C5",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-booms-04",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-booms 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.722,
+            0.37,
+            11.889
+          ],
+          "rotation": [
+            1.919213199,
+            0,
+            -0.984826894
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 25,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 28,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 2,
+          "address": 73,
+          "unit": 4,
+          "circuit": "C6",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-booms-05",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-booms 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.763,
+            0.361,
+            17.839
+          ],
+          "rotation": [
+            1.761421202,
+            0,
+            0.696391328
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 19.5,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 29,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 2,
+          "address": 97,
+          "unit": 5,
+          "circuit": "C6",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-bsw250-booms-06",
+      "type": "spotLight",
+      "name": "UP-250BSW bsw250-booms 6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.763,
+            0.361,
+            17.839
+          ],
+          "rotation": [
+            1.761421202,
+            0,
+            -0.696391328
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#9fb4ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#9fb4ff",
+          "intensity": 5468.91,
+          "distance": 50,
+          "angle": 0.1309,
+          "penumbra": 0.35,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.322
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 30,
+          "type": "up-250bsw",
+          "mode": "24ch",
+          "universe": 2,
+          "address": 121,
+          "unit": 6,
+          "circuit": "C6",
+          "position": "column bases"
+        }
+      }
+    },
+    {
+      "id": "rig-beeeye-towers-01",
+      "type": "spotLight",
+      "name": "UP-HK1915 beeeye-towers 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -3.528,
+            2.223,
+            5.668
+          ],
+          "rotation": [
+            -2.059488556,
+            0,
+            -0.209440191
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb347",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb347",
+          "intensity": 7000,
+          "distance": 24.7,
+          "angle": 0.0349,
+          "penumbra": 0.2,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.224,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 31,
+          "type": "up-hk1915",
+          "mode": "21ch",
+          "universe": 2,
+          "address": 145,
+          "unit": 1,
+          "circuit": "C15",
+          "position": "tower ladder"
+        }
+      }
+    },
+    {
+      "id": "rig-beeeye-towers-02",
+      "type": "spotLight",
+      "name": "UP-HK1915 beeeye-towers 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -3.528,
+            3.623,
+            5.668
+          ],
+          "rotation": [
+            -2.059488556,
+            0,
+            -0.209440191
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb347",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb347",
+          "intensity": 7000,
+          "distance": 21.7,
+          "angle": 0.0349,
+          "penumbra": 0.2,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.224,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 32,
+          "type": "up-hk1915",
+          "mode": "21ch",
+          "universe": 2,
+          "address": 166,
+          "unit": 2,
+          "circuit": "C15",
+          "position": "tower ladder"
+        }
+      }
+    },
+    {
+      "id": "rig-beeeye-towers-03",
+      "type": "spotLight",
+      "name": "UP-HK1915 beeeye-towers 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -3.528,
+            5.023,
+            5.668
+          ],
+          "rotation": [
+            -2.059488556,
+            0,
+            -0.209440191
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb347",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb347",
+          "intensity": 7000,
+          "distance": 18.6,
+          "angle": 0.0349,
+          "penumbra": 0.2,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.224,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 33,
+          "type": "up-hk1915",
+          "mode": "21ch",
+          "universe": 2,
+          "address": 187,
+          "unit": 3,
+          "circuit": "C15",
+          "position": "tower ladder"
+        }
+      }
+    },
+    {
+      "id": "rig-beeeye-towers-04",
+      "type": "spotLight",
+      "name": "UP-HK1915 beeeye-towers 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -3.528,
+            6.423,
+            5.668
+          ],
+          "rotation": [
+            -2.059488556,
+            0,
+            -0.209440191
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb347",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb347",
+          "intensity": 7000,
+          "distance": 15.6,
+          "angle": 0.0349,
+          "penumbra": 0.2,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.224,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 34,
+          "type": "up-hk1915",
+          "mode": "21ch",
+          "universe": 2,
+          "address": 208,
+          "unit": 4,
+          "circuit": "C15",
+          "position": "tower ladder"
+        }
+      }
+    },
+    {
+      "id": "rig-beeeye-towers-05",
+      "type": "spotLight",
+      "name": "UP-HK1915 beeeye-towers 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3.528,
+            2.223,
+            5.668
+          ],
+          "rotation": [
+            -2.059488556,
+            0,
+            0.209440191
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb347",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb347",
+          "intensity": 7000,
+          "distance": 24.7,
+          "angle": 0.0349,
+          "penumbra": 0.2,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.224,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 35,
+          "type": "up-hk1915",
+          "mode": "21ch",
+          "universe": 2,
+          "address": 229,
+          "unit": 5,
+          "circuit": "C15",
+          "position": "tower ladder"
+        }
+      }
+    },
+    {
+      "id": "rig-beeeye-towers-06",
+      "type": "spotLight",
+      "name": "UP-HK1915 beeeye-towers 6 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3.528,
+            3.623,
+            5.668
+          ],
+          "rotation": [
+            -2.059488556,
+            0,
+            0.209440191
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb347",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb347",
+          "intensity": 7000,
+          "distance": 21.7,
+          "angle": 0.0349,
+          "penumbra": 0.2,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.224,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 36,
+          "type": "up-hk1915",
+          "mode": "21ch",
+          "universe": 2,
+          "address": 250,
+          "unit": 6,
+          "circuit": "C15",
+          "position": "tower ladder"
+        }
+      }
+    },
+    {
+      "id": "rig-beeeye-towers-07",
+      "type": "spotLight",
+      "name": "UP-HK1915 beeeye-towers 7 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3.528,
+            5.023,
+            5.668
+          ],
+          "rotation": [
+            -2.059488556,
+            0,
+            0.209440191
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb347",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb347",
+          "intensity": 7000,
+          "distance": 18.6,
+          "angle": 0.0349,
+          "penumbra": 0.2,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.224,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 37,
+          "type": "up-hk1915",
+          "mode": "21ch",
+          "universe": 2,
+          "address": 271,
+          "unit": 7,
+          "circuit": "C15",
+          "position": "tower ladder"
+        }
+      }
+    },
+    {
+      "id": "rig-beeeye-towers-08",
+      "type": "spotLight",
+      "name": "UP-HK1915 beeeye-towers 8 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3.528,
+            6.423,
+            5.668
+          ],
+          "rotation": [
+            -2.059488556,
+            0,
+            0.209440191
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb347",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb347",
+          "intensity": 7000,
+          "distance": 15.6,
+          "angle": 0.0349,
+          "penumbra": 0.2,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.224,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "index": 38,
+          "type": "up-hk1915",
+          "mode": "21ch",
+          "universe": 2,
+          "address": 292,
+          "unit": 8,
+          "circuit": "C15",
+          "position": "tower ladder"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-01",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            6
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 24,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 1,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-02",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 2",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -12.843,
+            0.31,
+            6
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 24,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 2,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-03",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            6
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 3,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-04",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            12.843,
+            0.31,
+            6
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 4,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-05",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            12
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 5,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-06",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 6 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -12.843,
+            0.31,
+            12
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 6,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-07",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 7 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            12
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 7,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-08",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 8 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            12.843,
+            0.31,
+            12
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 8,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-09",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 9 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            18
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 9,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-10",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 10 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -12.843,
+            0.31,
+            18
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 10,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-11",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 11 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            18
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 11,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-12",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 12 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            12.843,
+            0.31,
+            18
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 12,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-13",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 13 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 13,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-14",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 14 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -12.843,
+            0.31,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 14,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-15",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 15 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 15,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-16",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 16 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            12.843,
+            0.31,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 16,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-17",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 17 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 17,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-18",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 18 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -12.843,
+            0.31,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 18,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-19",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 19 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 19,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-20",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 20 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            12.843,
+            0.31,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 20,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-21",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 21 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 21,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-22",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 22 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -12.843,
+            0.31,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 22,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-23",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 23 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 23,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-24",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 24 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            12.843,
+            0.31,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 24,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-25",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 25 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 25,
+          "circuit": "C10",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-26",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 26 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -12.843,
+            0.31,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 26,
+          "circuit": "C10",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-27",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 27 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 27,
+          "circuit": "C10",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-28",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 28 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            12.843,
+            0.31,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 28,
+          "circuit": "C10",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-29",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 29 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -11.157,
+            0.31,
+            48
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 29,
+          "circuit": "C10",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-30",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 30 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -12.843,
+            0.31,
+            48
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 30,
+          "circuit": "C10",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-31",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 31 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            11.157,
+            0.31,
+            48
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 31,
+          "circuit": "C10",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-columns-32",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-columns 32 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            12.843,
+            0.31,
+            48
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 32,
+          "circuit": "C10",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-01",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -35.157,
+            0.31,
+            12
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 1,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-02",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            35.157,
+            0.31,
+            12
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 2,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-03",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -35.157,
+            0.31,
+            18
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 3,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-04",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            35.157,
+            0.31,
+            18
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 4,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-05",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -35.157,
+            0.31,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 5,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-06",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 6 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            35.157,
+            0.31,
+            24
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 6,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-07",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 7 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -35.157,
+            0.31,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 7,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-08",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 8 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            35.157,
+            0.31,
+            30
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 8,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-09",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 9 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -35.157,
+            0.31,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 9,
+          "circuit": "C8",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-10",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 10 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            35.157,
+            0.31,
+            36
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 10,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-11",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 11 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -35.157,
+            0.31,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            -0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 11,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-outer-12",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-outer 12 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            35.157,
+            0.31,
+            42
+          ],
+          "rotation": [
+            3.141592654,
+            0,
+            0.070692816
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#2437ff",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#2437ff",
+          "intensity": 609.56,
+          "distance": 12,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 12,
+          "circuit": "C9",
+          "position": "column uplight"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-01",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -0.02,
+            0.309,
+            1.333
+          ],
+          "rotation": [
+            2.979060612,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb060",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb060",
+          "intensity": 609.56,
+          "distance": 3.7,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 1,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-02",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1.08,
+            0.309,
+            1.333
+          ],
+          "rotation": [
+            2.979060612,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb060",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb060",
+          "intensity": 609.56,
+          "distance": 3.7,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 2,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-03",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press 3 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.18,
+            0.309,
+            1.333
+          ],
+          "rotation": [
+            2.979060612,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb060",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb060",
+          "intensity": 609.56,
+          "distance": 3.7,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 3,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-04",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press 4 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            4.6,
+            0.293,
+            3.743
+          ],
+          "rotation": [
+            2.565902781,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb060",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb060",
+          "intensity": 609.56,
+          "distance": 2.3,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 4,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-05",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press 5 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            6.3,
+            0.293,
+            3.743
+          ],
+          "rotation": [
+            2.565902781,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb060",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb060",
+          "intensity": 609.56,
+          "distance": 2.3,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 5,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-par-press-06",
+      "type": "spotLight",
+      "name": "UP-PL5403 par-press 6 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            8,
+            0.293,
+            3.743
+          ],
+          "rotation": [
+            2.565902781,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#ffb060",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#ffb060",
+          "intensity": 609.56,
+          "distance": 2.3,
+          "angle": 0.1309,
+          "penumbra": 0.5,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 0.155,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-pl5403",
+          "unit": 6,
+          "circuit": "C1",
+          "position": "backdrop floor"
+        }
+      }
+    },
+    {
+      "id": "rig-laser-stage-01",
+      "type": "spotLight",
+      "name": "UP-LA40WF laser-stage 1 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -3.447,
+            7.553,
+            5.424
+          ],
+          "rotation": [
+            -1.950160586,
+            0,
+            0.149589363
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#27ff4a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#27ff4a",
+          "intensity": 20,
+          "distance": 25.6,
+          "angle": 0.0105,
+          "penumbra": 0,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-la40wf",
+          "unit": 1,
+          "circuit": "C17",
+          "position": "truss towers"
+        }
+      }
+    },
+    {
+      "id": "rig-laser-stage-02",
+      "type": "spotLight",
+      "name": "UP-LA40WF laser-stage 2 (beam only)",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3.448,
+            7.553,
+            5.424
+          ],
+          "rotation": [
+            -1.950160586,
+            0,
+            -0.149589363
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#27ff4a",
+          "opacity": 1
+        },
+        "light": {
+          "color": "#27ff4a",
+          "intensity": 20,
+          "distance": 25.6,
+          "angle": 0.0105,
+          "penumbra": 0,
+          "decay": 2
+        },
+        "beam": {
+          "visible": true,
+          "haze": 1,
+          "only": true
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        },
+        "fixture": {
+          "type": "up-la40wf",
+          "unit": 2,
+          "circuit": "C17",
+          "position": "truss towers"
+        }
+      }
+    },
+    {
+      "id": "rig-tower-l",
+      "type": "model",
+      "name": "goalpost tower L",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -4,
+            0,
+            5
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1.143,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "359213154d18e17e992f899db1bd70494de91edafb469e371228ea06f7b7955a",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "tower"
+        }
+      }
+    },
+    {
+      "id": "rig-tower-r",
+      "type": "model",
+      "name": "goalpost tower R",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3.5,
+            0,
+            5.1
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1.143,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "359213154d18e17e992f899db1bd70494de91edafb469e371228ea06f7b7955a",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "tower"
+        }
+      }
+    },
+    {
+      "id": "rig-header-1",
+      "type": "model",
+      "name": "truss header",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2,
+            7,
+            5.1
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "8e7bc6605635895ee808369a42b44ee0f33c82bf1d66812d55712ed3f9ff40e7",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-3m"
+        }
+      }
+    },
+    {
+      "id": "rig-header-2",
+      "type": "model",
+      "name": "truss header",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1,
+            7,
+            5.1
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "8e7bc6605635895ee808369a42b44ee0f33c82bf1d66812d55712ed3f9ff40e7",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-3m"
+        }
+      }
+    },
+    {
+      "id": "rig-header-3",
+      "type": "model",
+      "name": "truss header",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3,
+            7,
+            5.1
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "be16b10a8c2b15f4ba872bd4b0341e8962846a7b6222e287a4f8d90f6ac8ef81",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-1m"
+        }
+      }
+    },
+    {
+      "id": "rig-deck-1",
+      "type": "model",
+      "name": "DJ riser",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1,
+            0,
+            5.2
+          ],
+          "rotation": [
+            0,
+            1.571,
+            0
+          ],
+          "scale": [
+            1,
+            1.2,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "deck-2x1"
+        }
+      }
+    },
+    {
+      "id": "rig-deck-2",
+      "type": "model",
+      "name": "DJ riser",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            5.2
+          ],
+          "rotation": [
+            0,
+            1.571,
+            0
+          ],
+          "scale": [
+            1,
+            1.2,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "deck-2x1"
+        }
+      }
+    },
+    {
+      "id": "rig-deck-3",
+      "type": "model",
+      "name": "DJ riser",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            1,
+            0,
+            5.2
+          ],
+          "rotation": [
+            0,
+            1.571,
+            0
+          ],
+          "scale": [
+            1,
+            1.2,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "deck-2x1"
+        }
+      }
+    },
+    {
+      "id": "rig-co2-01",
+      "type": "group",
+      "name": "UP-Q108S CO2 jet 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -4,
+            0.349,
+            7.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "type": "up-q108s",
+          "unit": 1,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-co2-02",
+      "type": "group",
+      "name": "UP-Q108S CO2 jet 2",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2.4,
+            0.349,
+            7.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "type": "up-q108s",
+          "unit": 2,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-co2-03",
+      "type": "group",
+      "name": "UP-Q108S CO2 jet 3",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -0.8,
+            0.349,
+            7.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "type": "up-q108s",
+          "unit": 3,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-co2-04",
+      "type": "group",
+      "name": "UP-Q108S CO2 jet 4",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.8,
+            0.349,
+            7.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "type": "up-q108s",
+          "unit": 4,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-co2-05",
+      "type": "group",
+      "name": "UP-Q108S CO2 jet 5",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.4,
+            0.349,
+            7.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "type": "up-q108s",
+          "unit": 5,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-co2-06",
+      "type": "group",
+      "name": "UP-Q108S CO2 jet 6",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            4,
+            0.349,
+            7.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "type": "up-q108s",
+          "unit": 6,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-spark-01",
+      "type": "group",
+      "name": "UP-YH600F cold spark machine 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -2.4,
+            0.314,
+            6.6
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 39,
+          "type": "up-yh600f",
+          "mode": "2ch",
+          "universe": 1,
+          "address": 433,
+          "unit": 1,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-spark-02",
+      "type": "group",
+      "name": "UP-YH600F cold spark machine 2",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -0.8,
+            0.314,
+            6.6
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 40,
+          "type": "up-yh600f",
+          "mode": "2ch",
+          "universe": 1,
+          "address": 435,
+          "unit": 2,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-spark-03",
+      "type": "group",
+      "name": "UP-YH600F cold spark machine 3",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0.8,
+            0.314,
+            6.6
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 41,
+          "type": "up-yh600f",
+          "mode": "2ch",
+          "universe": 1,
+          "address": 437,
+          "unit": 3,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-spark-04",
+      "type": "group",
+      "name": "UP-YH600F cold spark machine 4",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            2.4,
+            0.314,
+            6.6
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 42,
+          "type": "up-yh600f",
+          "mode": "2ch",
+          "universe": 1,
+          "address": 439,
+          "unit": 4,
+          "circuit": "C4",
+          "position": "booth pit"
+        }
+      }
+    },
+    {
+      "id": "rig-smoke-01",
+      "type": "group",
+      "name": "UP-YZ31P smoke / haze machine 1",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.6,
+            0.1,
+            7.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 43,
+          "type": "up-yz31p",
+          "mode": "1ch",
+          "universe": 1,
+          "address": 441,
+          "unit": 1,
+          "circuit": "C11",
+          "position": "nave columns"
+        }
+      }
+    },
+    {
+      "id": "rig-smoke-02",
+      "type": "group",
+      "name": "UP-YZ31P smoke / haze machine 2",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -10.6,
+            0.1,
+            25.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 44,
+          "type": "up-yz31p",
+          "mode": "1ch",
+          "universe": 1,
+          "address": 442,
+          "unit": 2,
+          "circuit": "C12",
+          "position": "nave columns"
+        }
+      }
+    },
+    {
+      "id": "rig-smoke-03",
+      "type": "group",
+      "name": "UP-YZ31P smoke / haze machine 3",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.6,
+            0.1,
+            37.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 45,
+          "type": "up-yz31p",
+          "mode": "1ch",
+          "universe": 1,
+          "address": 443,
+          "unit": 3,
+          "circuit": "C13",
+          "position": "nave columns"
+        }
+      }
+    },
+    {
+      "id": "rig-smoke-04",
+      "type": "group",
+      "name": "UP-YZ31P smoke / haze machine 4",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            10.6,
+            0.1,
+            55.2
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "fixture": {
+          "index": 46,
+          "type": "up-yz31p",
+          "mode": "1ch",
+          "universe": 1,
+          "address": 444,
+          "unit": 4,
+          "circuit": "C14",
+          "position": "nave columns"
+        }
+      }
+    },
+    {
+      "id": "rig-show",
+      "type": "group",
+      "name": "the show — rental list, looks",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "rentalList": {
+          "name": "MOXIR 17.10 — rental order",
+          "source": "lights_rental_quote_calculator.xlsx (sha256 797fa436926e…, sheet \"Price list\": stock and rate/day) · order: The show's order as the owner passed it to Claude on 2026-09-27, recorded in scripts/place/rigs/moxir-2026-10-17.json (feat/moxir-hall) provenance.fixtureList: \"18x UP-B380F, 12x UP-250BSW, 8x UP-HK1915, 50x UP-PL5403, 2x UP-LA40WF, CO2 x6, cold spark x4, smoke x4\".",
+          "writtenAt": "2026-09-28",
+          "currency": "AMD",
+          "items": [
+            {
+              "code": "UP-B380F",
+              "type": "up-b380f",
+              "ordered": 18,
+              "stock": 18,
+              "rate": 20000,
+              "label": "380W beam moving head (outdoor)",
+              "source": "Price list!A6:E6 · ordered as \"18x UP-B380F\"",
+              "note": "the quote calculator's hidden \"Price data\" sheet says 19000/day"
+            },
+            {
+              "code": "UP-250BSW",
+              "type": "up-250bsw",
+              "ordered": 12,
+              "stock": 12,
+              "rate": 15000,
+              "label": "250W beam / spot / wash",
+              "source": "Price list!A7:E7 · ordered as \"12x UP-250BSW\""
+            },
+            {
+              "code": "UP-HK1915",
+              "type": "up-hk1915",
+              "ordered": 8,
+              "stock": 14,
+              "rate": 13500,
+              "label": "19x15W bee-eye",
+              "source": "Price list!A8:E8 · ordered as \"8x UP-HK1915\""
+            },
+            {
+              "code": "UP-PL5403",
+              "type": "up-pl5403",
+              "ordered": 50,
+              "stock": 50,
+              "rate": 5000,
+              "label": "54x3W LED PAR (outdoor)",
+              "source": "Price list!A13:E13 · ordered as \"50x UP-PL5403\""
+            },
+            {
+              "code": "UP-LA40WF",
+              "type": "up-la40wf",
+              "ordered": 2,
+              "stock": 2,
+              "rate": 83000,
+              "label": "40W full-colour laser",
+              "source": "Price list!A16:E16 · ordered as \"2x UP-LA40WF\""
+            },
+            {
+              "code": "UP-Q108S",
+              "type": "up-q108s",
+              "ordered": 6,
+              "stock": 6,
+              "rate": 7500,
+              "label": "CO2 gas column gun",
+              "source": "Price list!A20:E20 · ordered as \"CO2 x6\""
+            },
+            {
+              "code": "UP-YH600F",
+              "type": "up-yh600f",
+              "ordered": 4,
+              "stock": 4,
+              "rate": 19500,
+              "label": "Cold-spark firework machine",
+              "source": "Price list!A21:E21 · ordered as \"cold spark x4\""
+            },
+            {
+              "code": "UP-YZ31P",
+              "type": "up-yz31p",
+              "ordered": 4,
+              "stock": 4,
+              "rate": 15500,
+              "label": "Smoke machine (multi-angle)",
+              "source": "Price list!A22:E22 · ordered as \"smoke x4\""
+            }
+          ],
+          "rule": {
+            "extraDay": 0.5,
+            "source": "Price list!A2 \"Day 1 full rate; each additional day 50%.\" · \"Price data\"!H2 = 0.5"
+          },
+          "catalogue": [
+            {
+              "code": "UP-B380F",
+              "label": "380W beam moving head (outdoor)",
+              "details": "High-output beam, IP-rated",
+              "category": "Moving heads",
+              "cells": "Price list!A6:E6",
+              "stock": 18,
+              "rate": 20000
+            },
+            {
+              "code": "UP-250BSW",
+              "label": "250W beam / spot / wash",
+              "details": "LED 3-in-1 pattern beam",
+              "category": "Moving heads",
+              "cells": "Price list!A7:E7",
+              "stock": 12,
+              "rate": 15000
+            },
+            {
+              "code": "UP-HK1915",
+              "label": "19x15W bee-eye",
+              "details": "19-lens matrix with zoom",
+              "category": "Moving heads",
+              "cells": "Price list!A8:E8",
+              "stock": 14,
+              "rate": 13500
+            },
+            {
+              "code": "UP-HK615",
+              "label": "6x15W bee-eye with laser",
+              "details": "6-lens with laser",
+              "category": "Moving heads",
+              "cells": "Price list!A9:E9",
+              "stock": 6,
+              "rate": 6500
+            },
+            {
+              "code": "UP-MH100S",
+              "label": "100W moving head (pattern)",
+              "details": "Gobo / pattern, compact",
+              "category": "Moving heads",
+              "cells": "Price list!A10:E10",
+              "stock": 8,
+              "rate": 7000
+            },
+            {
+              "code": "UP-MH8060S",
+              "label": "80W moving head (pattern)",
+              "details": "Gobo / pattern, compact",
+              "category": "Moving heads",
+              "cells": "Price list!A11:E11",
+              "stock": 6,
+              "rate": 6500
+            },
+            {
+              "code": "UP-PL5403",
+              "label": "54x3W LED PAR (outdoor)",
+              "details": "RGBW wash, IP-rated cast aluminium",
+              "category": "PAR & wash",
+              "cells": "Price list!A13:E13",
+              "stock": 50,
+              "rate": 5000
+            },
+            {
+              "code": "UP-COB200",
+              "label": "200W COB PAR (indoor)",
+              "details": "COB wash",
+              "category": "PAR & wash",
+              "cells": "Price list!A14:E14",
+              "stock": 8,
+              "rate": 6000
+            },
+            {
+              "code": "UP-LA40WF",
+              "label": "40W full-colour laser",
+              "details": "Waterproof, high power",
+              "category": "Lasers",
+              "cells": "Price list!A16:E16",
+              "stock": 2,
+              "rate": 83000
+            },
+            {
+              "code": "UP-BY06",
+              "label": "6-eye swing laser (red)",
+              "details": "Swing laser effect",
+              "category": "Lasers",
+              "cells": "Price list!A17:E17",
+              "stock": 4,
+              "rate": 11500
+            },
+            {
+              "code": "UP-JG400",
+              "label": "400 mW full-colour laser",
+              "details": "Compact full-colour",
+              "category": "Lasers",
+              "cells": "Price list!A18:E18",
+              "stock": 2,
+              "rate": 6000
+            },
+            {
+              "code": "UP-Q108S",
+              "label": "CO2 gas column gun",
+              "details": "8-10 m spray, DMX",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A20:E20",
+              "stock": 6,
+              "rate": 7500
+            },
+            {
+              "code": "UP-YH600F",
+              "label": "Cold-spark firework machine",
+              "details": "Waterproof, DMX",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A21:E21",
+              "stock": 4,
+              "rate": 19500
+            },
+            {
+              "code": "UP-YZ31P",
+              "label": "Smoke machine (multi-angle)",
+              "details": "Waterproof",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A22:E22",
+              "stock": 4,
+              "rate": 15500
+            },
+            {
+              "code": "UP-SW3000B",
+              "label": "Low-fog machine 3000W",
+              "details": "Double-head ground fog",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A23:E23",
+              "stock": 1,
+              "rate": 19000
+            },
+            {
+              "code": "UP-236",
+              "label": "Mist machine 800W",
+              "details": "Double-head",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A24:E24",
+              "stock": 2,
+              "rate": 14000
+            },
+            {
+              "code": "UP-HD210",
+              "label": "3-in-1 butterfly effect",
+              "details": "Multi-effect",
+              "category": "Atmosphere & FX",
+              "cells": "Price list!A25:E25",
+              "stock": 2,
+              "rate": 5000
+            },
+            {
+              "code": "UP-Q3L",
+              "label": "MA lighting console",
+              "details": "Linux OS, full-size control",
+              "category": "Control & power",
+              "cells": "Price list!A27:E27",
+              "stock": 1,
+              "rate": 80000
+            },
+            {
+              "code": "UP-1024",
+              "label": "1024 DMX control desk",
+              "details": "1024-channel",
+              "category": "Control & power",
+              "cells": "Price list!A28:E28",
+              "stock": 1,
+              "rate": 20000
+            },
+            {
+              "code": "UP-9800",
+              "label": "FRX-9800 central controller",
+              "details": "Central control",
+              "category": "Control & power",
+              "cells": "Price list!A29:E29",
+              "stock": 1,
+              "rate": 7000
+            },
+            {
+              "code": "UP-B01",
+              "label": "Light control / broadcast unit",
+              "details": "Control unit",
+              "category": "Control & power",
+              "cells": "Price list!A30:E30",
+              "stock": 1,
+              "rate": 6500
+            },
+            {
+              "code": "UP-PDU60B",
+              "label": "DMX signal amplifier (outdoor)",
+              "details": "IP-rated distribution",
+              "category": "Control & power",
+              "cells": "Price list!A31:E31",
+              "stock": 2,
+              "rate": 5500
+            },
+            {
+              "code": "UP-PDU60A",
+              "label": "DMX signal amplifier",
+              "details": "1-way DMX512 distribution",
+              "category": "Control & power",
+              "cells": "Price list!A32:E32",
+              "stock": 1,
+              "rate": 6500
+            },
+            {
+              "code": "UP-2303",
+              "label": "DMX decoder 2303",
+              "details": "Decoder",
+              "category": "Control & power",
+              "cells": "Price list!A33:E33",
+              "stock": 1,
+              "rate": 2500
+            },
+            {
+              "code": "UP-POWER12",
+              "label": "12-way dimmer / power cabinet",
+              "details": "12-channel distro",
+              "category": "Control & power",
+              "cells": "Price list!A34:E34",
+              "stock": 1,
+              "rate": 11500
+            }
+          ],
+          "terms": [
+            {
+              "text": "All rates AMD, per unit, per day, excluding VAT. Day 1 full rate; each additional day 50%.",
+              "cell": "Price list!A2"
+            },
+            {
+              "text": "Delivery, rigging & de-rig: Quoted by location — Yerevan, regions, or venue-specific access — On request",
+              "cell": "Price list!A36:E36"
+            },
+            {
+              "text": "Consumables (haze and low-fog fluid, CO2, cold-spark powder) are charged at cost.",
+              "cell": "Price list!A38"
+            },
+            {
+              "text": "Truss, clamps, safety chains and cabling are included with the fixtures they serve.",
+              "cell": "Price list!A39"
+            },
+            {
+              "text": "Prices exclude VAT. A refundable damage deposit is required.",
+              "cell": "Price list!A40"
+            },
+            {
+              "text": "the quote calculator's delivery, rigging & de-rig default: 150000 (Set by location. One-off, not multiplied by days.)",
+              "cell": "Quote 2!G38"
+            }
+          ]
+        },
+        "rigLooks": {
+          "source": "moxir-2026-10-17.json (MOXIR 17.10 — the proposed rig, 2026-09-28) · groups renamed to position/type by scripts/rigbuild/looks.mjs",
+          "writtenAt": "2026-09-28",
+          "defaultLook": "roof-cathedral",
+          "looks": [
+            {
+              "id": "roof-cathedral",
+              "title": "Roof cathedral",
+              "intent": "The hall's own architecture lit as a nave: every column-base beam rises straight up into the space frame in mirrored pairs, a slight lean in toward the centre line; the booth's beams open as an apse fan into the lantern above the press; the tower bee-eyes lift low over the house; the DJ keyed from both sides.",
+              "aims": {
+                "truss/up-250bsw": {
+                  "rule": "stage-wash",
+                  "deck_h": 1.4
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "tower-tops/up-la40wf": {
+                  "rule": "laser-into-roof",
+                  "a": 14
+                },
+                "column-bases/up-b380f": {
+                  "rule": "vertical",
+                  "in_deg": 8
+                },
+                "stage-back/up-b380f": {
+                  "rule": "fan",
+                  "spread_deg": 24,
+                  "lean_deg": 4
+                },
+                "outer-columns/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.92
+                },
+                "tower-ladders/up-hk1915": {
+                  "rule": "vertical",
+                  "lean_deg": 62,
+                  "in_deg": -12
+                },
+                "column-bases/up-250bsw": {
+                  "rule": "booth-key",
+                  "h": 1.6
+                },
+                "stage-flanks/up-b380f": {
+                  "rule": "fan",
+                  "spread_deg": 60,
+                  "lean_deg": 6
+                }
+              },
+              "colours": {
+                "column-bases/up-b380f": "#eef3ff",
+                "stage-back/up-b380f": "#eef3ff",
+                "column-faces/up-pl5403": "#2437ff",
+                "truss/up-250bsw": "#9fb4ff",
+                "outer-columns/up-pl5403": "#2437ff",
+                "backdrop/up-pl5403": "#ffb060",
+                "tower-ladders/up-hk1915": "#ffb347",
+                "column-bases/up-250bsw": "#9fb4ff",
+                "stage-flanks/up-b380f": "#eef3ff"
+              }
+            },
+            {
+              "id": "fan-out",
+              "title": "Fan out",
+              "intent": "The booth's beams open in one symmetric fan over the house from behind the DJ; the column rows lean back toward the booth so every beam in the room reads from the machinery outward; the tower bee-eyes fan wide and low.",
+              "aims": {
+                "truss/up-250bsw": {
+                  "rule": "stage-wash",
+                  "deck_h": 1.4
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "tower-tops/up-la40wf": {
+                  "rule": "laser-into-roof",
+                  "a": 14
+                },
+                "stage-back/up-b380f": {
+                  "rule": "fan",
+                  "spread_deg": 40,
+                  "lean_deg": 6
+                },
+                "column-bases/up-b380f": {
+                  "rule": "parallel",
+                  "lean_deg": -18
+                },
+                "outer-columns/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.92
+                },
+                "tower-ladders/up-hk1915": {
+                  "rule": "vertical",
+                  "lean_deg": 55,
+                  "in_deg": -30
+                },
+                "column-bases/up-250bsw": {
+                  "rule": "booth-key",
+                  "h": 1.6
+                },
+                "stage-flanks/up-b380f": {
+                  "rule": "fan",
+                  "spread_deg": 110,
+                  "lean_deg": 22
+                }
+              },
+              "colours": {
+                "column-bases/up-b380f": "#7fe7ff",
+                "stage-back/up-b380f": "#ffffff",
+                "column-faces/up-pl5403": "#00a0ff",
+                "truss/up-250bsw": "#7fe7ff",
+                "outer-columns/up-pl5403": "#00a0ff",
+                "backdrop/up-pl5403": "#ffffff",
+                "tower-ladders/up-hk1915": "#ffffff",
+                "column-bases/up-250bsw": "#7fe7ff",
+                "stage-flanks/up-b380f": "#ffffff"
+              }
+            },
+            {
+              "id": "crossfire",
+              "title": "Crossfire",
+              "intent": "The two column rows fire across the dance floor at each other and cross over the nave's centre line at 9 m; the four beams behind the DJ X-cross 12 m over the booth, the flank beams over the front of the crowd; the tower bee-eyes cross just in front of the barrier.",
+              "aims": {
+                "truss/up-250bsw": {
+                  "rule": "stage-wash",
+                  "deck_h": 1.4
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "tower-tops/up-la40wf": {
+                  "rule": "laser-into-roof",
+                  "a": 14
+                },
+                "column-bases/up-b380f": {
+                  "rule": "cross",
+                  "x": 8,
+                  "y": 9
+                },
+                "stage-back/up-b380f": {
+                  "rule": "x-cross",
+                  "x": 2.5,
+                  "y": 12,
+                  "a": -1.2
+                },
+                "outer-columns/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.92
+                },
+                "tower-ladders/up-hk1915": {
+                  "rule": "x-cross",
+                  "x": 4,
+                  "y": 6,
+                  "a": 8
+                },
+                "column-bases/up-250bsw": {
+                  "rule": "booth-key",
+                  "h": 1.6
+                },
+                "stage-flanks/up-b380f": {
+                  "rule": "x-cross",
+                  "x": 5,
+                  "y": 13,
+                  "a": 12
+                }
+              },
+              "colours": {
+                "column-bases/up-b380f": "#ff2448",
+                "stage-back/up-b380f": "#ffffff",
+                "column-faces/up-pl5403": "#ff2448",
+                "truss/up-250bsw": "#ff5a70",
+                "outer-columns/up-pl5403": "#ff2448",
+                "backdrop/up-pl5403": "#ff6a3a",
+                "tower-ladders/up-hk1915": "#ffffff",
+                "column-bases/up-250bsw": "#ff5a70",
+                "stage-flanks/up-b380f": "#ffffff"
+              }
+            },
+            {
+              "id": "all-to-centre",
+              "title": "All to centre",
+              "intent": "The ballyhoo focus, 16 m out from the booth, 9 m up: the flank beams, the bee-eyes and the column rows meet there (the booth's lamps over the booth's axis, the column rows over the nave's, 1.65 m apart — the booth is centred on the press, not on the hall); the four beams behind the DJ meet higher, 13 m straight over the booth, so none crosses the DJ.",
+              "aims": {
+                "truss/up-250bsw": {
+                  "rule": "stage-wash",
+                  "deck_h": 1.4
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "tower-tops/up-la40wf": {
+                  "rule": "laser-into-roof",
+                  "a": 14
+                },
+                "column-bases/up-b380f": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 9,
+                  "a": 16
+                },
+                "stage-back/up-b380f": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 13,
+                  "a": -1.5
+                },
+                "outer-columns/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.92
+                },
+                "tower-ladders/up-hk1915": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 9,
+                  "a": 16
+                },
+                "column-bases/up-250bsw": {
+                  "rule": "booth-key",
+                  "h": 1.6
+                },
+                "stage-flanks/up-b380f": {
+                  "rule": "point",
+                  "x": 0,
+                  "y": 9,
+                  "a": 16
+                }
+              },
+              "colours": {
+                "column-bases/up-b380f": "#ffffff",
+                "stage-back/up-b380f": "#ffffff",
+                "column-faces/up-pl5403": "#ff7a1a",
+                "truss/up-250bsw": "#ffd08a",
+                "outer-columns/up-pl5403": "#ff7a1a",
+                "backdrop/up-pl5403": "#ffc070",
+                "tower-ladders/up-hk1915": "#ffffff",
+                "column-bases/up-250bsw": "#ffd08a",
+                "stage-flanks/up-b380f": "#ffffff"
+              }
+            },
+            {
+              "id": "curtain",
+              "title": "Curtain",
+              "intent": "A wall of light behind the DJ: the booth's beams stand straight up in front of the machinery, the tower bee-eyes straight up either side, the header spots straight down onto the booth; the column rows lean back to the booth.",
+              "aims": {
+                "truss/up-250bsw": {
+                  "rule": "vertical"
+                },
+                "column-faces/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "tower-tops/up-la40wf": {
+                  "rule": "laser-into-roof",
+                  "a": 14
+                },
+                "stage-back/up-b380f": {
+                  "rule": "vertical"
+                },
+                "column-bases/up-b380f": {
+                  "rule": "parallel",
+                  "lean_deg": -25
+                },
+                "outer-columns/up-pl5403": {
+                  "rule": "up-the-column"
+                },
+                "backdrop/up-pl5403": {
+                  "rule": "backdrop",
+                  "h": 0.92
+                },
+                "tower-ladders/up-hk1915": {
+                  "rule": "vertical"
+                },
+                "column-bases/up-250bsw": {
+                  "rule": "booth-key",
+                  "h": 1.6
+                },
+                "stage-flanks/up-b380f": {
+                  "rule": "vertical"
+                }
+              },
+              "colours": {
+                "column-bases/up-b380f": "#b388ff",
+                "stage-back/up-b380f": "#ffffff",
+                "column-faces/up-pl5403": "#6a1bff",
+                "truss/up-250bsw": "#ffffff",
+                "outer-columns/up-pl5403": "#6a1bff",
+                "backdrop/up-pl5403": "#b388ff",
+                "tower-ladders/up-hk1915": "#ffffff",
+                "column-bases/up-250bsw": "#ffffff",
+                "stage-flanks/up-b380f": "#ffffff"
+              }
+            }
+          ]
+        },
+        "rigVariant": {
+          "set": "moxir-2026-10-17",
+          "id": "ordered",
+          "title": "As ordered — the rig of the 27.09 order",
+          "summary": "The base rig in the hall's own project: every head on the order, the CO2, sparks and smoke included — kept as it is, to compare.",
+          "source": "scripts/place/rigs/moxir-versions-2026-10-17.json — scripts/rigbuild/load-version.mjs",
+          "siblings": [
+            {
+              "id": "ordered",
+              "projectId": "moxir-hall",
+              "title": "As ordered — the rig of the 27.09 order",
+              "summary": "The base rig in the hall's own project: every head on the order, the CO2, sparks and smoke included — kept as it is, to compare."
+            },
+            {
+              "id": "minimal",
+              "projectId": "moxir-hall-minimal",
+              "title": "Minimal — the cut, simple: fixed lights only",
+              "summary": "No stage, no towers: the DJ stand alone, the crane parked over it. THE CUT — one straight 12 m line sloped 15° under the bridge, low house left, high over the p"
+            },
+            {
+              "id": "minimal-cut-movers",
+              "projectId": "moxir-hall-minimal-cut-movers",
+              "title": "The cut, full: moving heads on the line",
+              "summary": "The same cut (12 m, 15°, 3 bridled hoists, tie-offs) carrying moving heads: 5 UP-B380F standing on it fanning into the roof, 2 hung under the ends crossing in a"
+            },
+            {
+              "id": "middle",
+              "projectId": "moxir-hall-middle",
+              "title": "Middle — the line, the roof, one laser",
+              "summary": "The line of 7 plus 10 column-base beams in the roof, the 12 x 250 W heads (header and side booms), 1 laser in one colour, 38 PARs on the nave columns and the pr"
+            },
+            {
+              "id": "full",
+              "projectId": "moxir-hall-full",
+              "title": "Full — the whole list, used darkly",
+              "summary": "Every rental head: 17 beams hung (+1 spare), 12 x 250 W, 8 bee-eyes, 50 PARs, 2 lasers in single colours; 6 strobes and 8 blinders; 6 hazers. Still no CO2, no s"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rig-wash",
+      "type": "model",
+      "name": "48 PAR washes, baked (no light) — re-run rig.mjs --wash-only to change",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#5fa8ff",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "636392bb013f5fb51b68fd90556d7f6bf7b6442b846eb2630482f6ed42ed83e3",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": false,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "animation": {
+          "mode": "static",
+          "speed": 1,
+          "amplitude": 1
+        }
+      }
+    },
+    {
+      "id": "efa52f93-c8ef-4105-8813-a786fdb5fd8d",
+      "type": "model",
+      "name": "truss",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            4,
+            6,
+            6
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "8e7bc6605635895ee808369a42b44ee0f33c82bf1d66812d55712ed3f9ff40e7",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-3m"
+        }
+      }
+    },
+    {
+      "id": "7d74ecd8-d1ec-4df1-a43f-83be650e8e49",
+      "type": "model",
+      "name": "truss",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            3.5,
+            6,
+            7.5
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "8e7bc6605635895ee808369a42b44ee0f33c82bf1d66812d55712ed3f9ff40e7",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "truss-3m"
+        }
+      }
+    },
+    {
+      "id": "3993bb82-1153-4367-bed0-71b3bc1c39ad",
+      "type": "model",
+      "name": "deck",
+      "parentId": null,
+      "createdBy": null,
+      "components": {
+        "transform": {
+          "position": [
+            -1,
+            0,
+            14.5
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "appearance": {
+          "color": "#8a8f98",
+          "opacity": 1
+        },
+        "media": {
+          "assetId": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+          "materialsAssetId": null,
+          "autoplay": false,
+          "loop": false,
+          "muted": false,
+          "playAnimations": true,
+          "animationSpeed": 1,
+          "clip": ""
+        },
+        "piece": {
+          "kind": "deck-2x1"
+        }
+      }
+    }
+  ],
+  "worldState": {
+    "backgroundColor": "#040507",
+    "environmentAssetId": null,
+    "environmentIntensity": 1,
+    "atmosphereBlend": false,
+    "hubDecor": false,
+    "spawn": {
+      "x": 0,
+      "z": 24.2,
+      "yaw": 3.142,
+      "pitch": 0,
+      "altY": 1.6
+    },
+    "fog": {
+      "near": 60,
+      "far": 250,
+      "color": null,
+      "enabled": true
+    },
+    "walkableAreas": [
+      {
+        "minX": -36,
+        "maxX": 60,
+        "minZ": -54.1,
+        "maxZ": 55.5
+      }
+    ],
+    "placement": null,
+    "gridVisible": false,
+    "gridSize": 24,
+    "gridCellSize": 0.75,
+    "gridCellThickness": 0.3,
+    "gridCellColor": "#2a6e73",
+    "gridSectionSize": 6,
+    "gridSectionThickness": 0.65,
+    "gridSectionColor": "#4df9ff",
+    "gridFadeDistance": 80,
+    "gridFadeStrength": 1,
+    "gridOffset": 0.015,
+    "ambientLight": {
+      "color": "#a39c92",
+      "intensity": 0.8
+    },
+    "directionalLight": {
+      "color": "#b7bcc6",
+      "intensity": 0.35,
+      "position": [
+        -20,
+        30,
+        10
+      ]
+    },
+    "savedView": {
+      "mode": "perspective",
+      "position": [
+        0,
+        1.6,
+        24.2
+      ],
+      "target": [
+        0,
+        3.5,
+        3.2
+      ],
+      "fov": 60,
+      "zoom": 1,
+      "near": 0.05,
+      "far": 400
+    }
+  },
+  "renderSettings": {
+    "shadows": true,
+    "shadowCasting": {
+      "enabled": false,
+      "mapSize": 1024
+    },
+    "antialias": true,
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 1,
+    "dprMin": 1,
+    "dprMax": 2
+  },
+  "xrState": {
+    "mode": "none",
+    "debugVisible": false,
+    "vrSupported": false,
+    "arSupported": false
+  },
+  "presentationState": {
+    "mode": "fixed-camera",
+    "fixedCamera": {
+      "projection": "perspective",
+      "position": [
+        0,
+        1.6,
+        24.2
+      ],
+      "target": [
+        0,
+        3.5,
+        3.2
+      ],
+      "fov": 60,
+      "zoom": 1,
+      "near": 0.05,
+      "far": 400,
+      "locked": false
+    },
+    "codeHtml": "",
+    "codeSourceType": "html",
+    "codeUrl": "",
+    "codeFiles": [],
+    "entryView": "fixed-camera",
+    "deviceAccess": false
+  },
+  "publishState": {
+    "shareEnabled": false,
+    "xrDefaultMode": "none",
+    "lastExportAt": 0
+  },
+  "showState": {
+    "clockEpoch": 0
+  },
+  "performState": {
+    "presets": []
+  },
+  "mappingState": {
+    "output": {
+      "width": 1920,
+      "height": 1080
+    },
+    "background": "#000000",
+    "surfaces": [
+      {
+        "id": "ce1b3489-833d-4c59-9cad-c4962703646e",
+        "name": "Surface 1",
+        "enabled": true,
+        "corners": [
+          [
+            0.15835147777726843,
+            0.16544462519502146
+          ],
+          [
+            0.41835147777726844,
+            0.16544462519502146
+          ],
+          [
+            0.41835147777726844,
+            0.5454446251950215
+          ],
+          [
+            0.15835147777726843,
+            0.5454446251950215
+          ]
+        ],
+        "mask": [
+          [
+            0.4263762630802326,
+            0.509137971605616
+          ]
+        ],
+        "source": {
+          "kind": "ndi",
+          "ref": "PONYO (TouchDesigner)"
+        },
+        "resolution": [
+          1280,
+          720
+        ],
+        "opacity": 1,
+        "brightness": 1.69,
+        "contrast": 1.34,
+        "saturation": 0.42,
+        "hue": 92,
+        "blend": "screen",
+        "effect": {
+          "kind": "none",
+          "threshold": 0.08,
+          "trail": 0.88,
+          "gain": 4,
+          "prompt": "",
+          "strength": 0.5
+        }
+      }
+    ],
+    "cues": [
+      {
+        "id": "cue-rig-roof-cathedral",
+        "name": "Roof cathedral",
+        "key": "",
+        "fade": 2,
+        "hold": 0,
+        "lightLook": "rig-roof-cathedral",
+        "surfaces": {}
+      },
+      {
+        "id": "cue-rig-fan-out",
+        "name": "Fan out",
+        "key": "",
+        "fade": 2,
+        "hold": 0,
+        "lightLook": "rig-fan-out",
+        "surfaces": {}
+      },
+      {
+        "id": "cue-rig-crossfire",
+        "name": "Crossfire",
+        "key": "",
+        "fade": 2,
+        "hold": 0,
+        "lightLook": "rig-crossfire",
+        "surfaces": {}
+      },
+      {
+        "id": "cue-rig-all-to-centre",
+        "name": "All to centre",
+        "key": "",
+        "fade": 2,
+        "hold": 0,
+        "lightLook": "rig-all-to-centre",
+        "surfaces": {}
+      },
+      {
+        "id": "cue-rig-curtain",
+        "name": "Curtain",
+        "key": "",
+        "fade": 2,
+        "hold": 0,
+        "lightLook": "rig-curtain",
+        "surfaces": {}
+      }
+    ],
+    "reference": {
+      "url": "",
+      "opacity": 0.5,
+      "visible": false
+    },
+    "grid": 0,
+    "fade": 0
+  },
+  "windowLayout": {
+    "activeWindowId": "viewport",
+    "windows": {
+      "viewport": {
+        "id": "viewport",
+        "title": "Viewport",
+        "visible": true,
+        "minimized": false,
+        "pinned": true,
+        "x": 24,
+        "y": 176,
+        "width": 860,
+        "height": 580,
+        "zIndex": 3
+      },
+      "assets": {
+        "id": "assets",
+        "title": "Assets",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 910,
+        "y": 176,
+        "width": 360,
+        "height": 360,
+        "zIndex": 4
+      },
+      "inspector": {
+        "id": "inspector",
+        "title": "Inspector",
+        "visible": true,
+        "minimized": false,
+        "pinned": false,
+        "x": 910,
+        "y": 552,
+        "width": 360,
+        "height": 420,
+        "zIndex": 5
+      },
+      "outliner": {
+        "id": "outliner",
+        "title": "Outliner",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 24,
+        "y": 620,
+        "width": 280,
+        "height": 260,
+        "zIndex": 2
+      },
+      "activity": {
+        "id": "activity",
+        "title": "Activity",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 320,
+        "y": 620,
+        "width": 340,
+        "height": 260,
+        "zIndex": 1
+      },
+      "project": {
+        "id": "project",
+        "title": "Project",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 680,
+        "y": 620,
+        "width": 320,
+        "height": 260,
+        "zIndex": 1
+      }
+    }
+  },
+  "assets": [
+    {
+      "id": "b5bf4d0450f8cf65ce667d4eee342460aa7d6dd36b84ecc151d3cde6998c34dd",
+      "name": "rig-fixtures.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 231124,
+      "createdAt": 1790584590998,
+      "url": "/serverXR/api/projects/moxir-hall/assets/b5bf4d0450f8cf65ce667d4eee342460aa7d6dd36b84ecc151d3cde6998c34dd",
+      "source": "server"
+    },
+    {
+      "id": "267ecd341686f363ea1b72121ed7f94bfd2f2f551be24174154057c753c40ddd",
+      "name": "hall.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 3215660,
+      "createdAt": 1790606758071,
+      "url": "/serverXR/api/projects/moxir-hall/assets/267ecd341686f363ea1b72121ed7f94bfd2f2f551be24174154057c753c40ddd",
+      "source": "server"
+    },
+    {
+      "id": "11139418c6c873f36a730e984eb49385ff7e25cd2cf75668c674ec822034fc69",
+      "name": "rig-fixtures.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 231124,
+      "createdAt": 1790612436776,
+      "url": "/serverXR/api/projects/moxir-hall/assets/11139418c6c873f36a730e984eb49385ff7e25cd2cf75668c674ec822034fc69",
+      "source": "server"
+    },
+    {
+      "id": "359213154d18e17e992f899db1bd70494de91edafb469e371228ea06f7b7955a",
+      "name": "rigbuild-tower.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 39164,
+      "createdAt": 1790612439489,
+      "url": "/serverXR/api/projects/moxir-hall/assets/359213154d18e17e992f899db1bd70494de91edafb469e371228ea06f7b7955a",
+      "source": "server"
+    },
+    {
+      "id": "8e7bc6605635895ee808369a42b44ee0f33c82bf1d66812d55712ed3f9ff40e7",
+      "name": "rigbuild-truss-3m.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 21192,
+      "createdAt": 1790612439495,
+      "url": "/serverXR/api/projects/moxir-hall/assets/8e7bc6605635895ee808369a42b44ee0f33c82bf1d66812d55712ed3f9ff40e7",
+      "source": "server"
+    },
+    {
+      "id": "be16b10a8c2b15f4ba872bd4b0341e8962846a7b6222e287a4f8d90f6ac8ef81",
+      "name": "rigbuild-truss-1m.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 9668,
+      "createdAt": 1790612439500,
+      "url": "/serverXR/api/projects/moxir-hall/assets/be16b10a8c2b15f4ba872bd4b0341e8962846a7b6222e287a4f8d90f6ac8ef81",
+      "source": "server"
+    },
+    {
+      "id": "3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+      "name": "rigbuild-deck-2x1.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 4524,
+      "createdAt": 1790612439505,
+      "url": "/serverXR/api/projects/moxir-hall/assets/3c369f6f51af126a0ce75f7032cf5c630473855ec3b21442a77353238586b948",
+      "source": "server"
+    },
+    {
+      "id": "636392bb013f5fb51b68fd90556d7f6bf7b6442b846eb2630482f6ed42ed83e3",
+      "name": "rig-wash.glb",
+      "mimeType": "model/gltf-binary",
+      "size": 345336,
+      "createdAt": 1790612454461,
+      "url": "/serverXR/api/projects/moxir-hall/assets/636392bb013f5fb51b68fd90556d7f6bf7b6442b846eb2630482f6ed42ed83e3",
+      "source": "server"
+    }
+  ]
+}
