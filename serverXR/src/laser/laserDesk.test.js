@@ -712,3 +712,429 @@ describe('Displace, Wobble and Strobe (2026-11-01, the owner: "add more parametr
         expect(normaliseLook({ displace: 5, wobble: -1, wobbleBeats: 0, strobe: 9 })).toMatchObject({ displace: 1, wobble: 0, wobbleBeats: 0.25, strobe: 2 })
     })
 })
+
+describe('Speed, Split and Flicker (2026-11-06 evening, from the owner\'s laser.html: "red + green beams slightly misaligned")', () => {
+    const g = require('./laserGuards')
+    const { applyZone, normaliseZone, stillBeams } = require('./laserEngine')
+    const { flattenLaserPaths } = require('../../../shared/laserFrame.cjs')
+    const full = { xMin: -1, xMax: 1, yMin: -1, yMax: 1 }
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const hex = (p) => '#' + [p[2], p[3], p[4]].map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
+
+    it('a look keeps them in range, and one saved before them reads as off', () => {
+        expect(normaliseLook({})).toMatchObject({ speed: 1, split: 0, colour2: '#14ff28', flicker: 0 })
+        expect(normaliseLook({ speed: 9, split: 2, flicker: -1, colour2: 'green' })).toMatchObject({ speed: 4, split: 1, flicker: 0, colour2: '#14ff28' })
+        expect(normaliseLook({ speed: 0, colour2: '#0f0' })).toMatchObject({ speed: 0.25, colour2: '#00ff00' })
+        expect(LOOK_DEFAULTS).toMatchObject({ speed: 1, split: 0, colour2: '#14ff28', flicker: 0 })
+    })
+
+    it('Split draws the picture again in the split colour, a little apart, sharing the look\'s points', () => {
+        const look = normaliseLook({ shape: 'circle', size: 0.5, height: 0, points: 400, colour: '#ff0000', colour2: '#00ff00' })
+        const at = (l) => lookPointsAt(l, { t: 0, clock: clock(120, 0) })
+        const plain = strokes(at(look))
+        const split = strokes(at({ ...look, split: 0.5 }))
+        expect(plain).toHaveLength(1)
+        expect(split).toHaveLength(2)
+        expect(hex(split[0][0])).toBe('#ff0000')
+        expect(hex(split[1][0])).toBe('#00ff00')
+        expect(split[0].length + split[1].length).toBe(plain[0].length)
+        // The second beam is the first moved 0.02 of the field (Split 0.5 of SPLIT_REACH 0.04), the same way for every point.
+        const moves = split[1].map((p, i) => [p[0] - split[0][i][0], p[1] - split[0][i][1]])
+        for (const m of moves) {
+            expect(Math.hypot(m[0], m[1])).toBeCloseTo(0.02, 6)
+            expect(m[0]).toBeCloseTo(moves[0][0], 9)
+        }
+        expect(at({ ...look, split: 0 })).toEqual(at(look))
+    })
+
+    it('Flicker dips the brightness by up to half, new every frame, each beam and cube its own; the same moment draws the same', () => {
+        const look = normaliseLook({ shape: 'circle', size: 0.5, height: 0, colour: '#ff0000', flicker: 1 })
+        const red = (t, index = 0) => lookPointsAt(look, { t, clock: clock(120, 0), index }).find(isLit)[2]
+        const reds = Array.from({ length: 40 }, (_, k) => red(k * 50))
+        for (const r of reds) { expect(r).toBeGreaterThanOrEqual(0.5 - 1e-9); expect(r).toBeLessThanOrEqual(1) }
+        expect(new Set(reds.map((r) => r.toFixed(4))).size).toBeGreaterThan(30)
+        expect(red(1234)).toBe(red(1234))
+        expect(red(1210)).toBe(red(1240))
+        expect(red(1234, 1)).not.toBe(red(1234, 0))
+        expect(lookPointsAt({ ...look, flicker: 0 }, { t: 0, clock: clock(120, 0) }).find(isLit)[2]).toBe(1)
+    })
+
+    it('Speed runs the shape\'s own beat; Strobe keeps the desk\'s', () => {
+        const look = normaliseLook({ shape: 'volcano', size: 0.5, height: 0, points: 300 })
+        const at = (l, beat) => lookPointsAt(l, { t: beat * 500, clock: clock(120, 0) })
+        for (const beat of [0.3, 2.6, 5.2, 9.1]) expect(at({ ...look, speed: 2 }, beat)).toEqual(at(look, beat * 2))
+        expect(at({ ...look, speed: 0.5 }, 9.1)).toEqual(at(look, 4.55))
+        const lit = (beat) => at({ ...look, speed: 2, strobe: 1 }, beat).some(isLit)
+        expect([0.1, 0.4, 0.6, 0.9, 1.1].map(lit)).toEqual([true, true, false, false, true])
+    })
+
+    it('at Split 1, with Speed 4 or with Displace and Wobble in full, every seed look still fits the real cube (2333 points at 35 kpps) and is never still', () => {
+        const plan = g.pathPlan(g.DEFAULT_GUARDS, 35000)
+        const budget = g.frameBudget(35000, 6000)
+        for (const seed of SEED_LOOKS) {
+            for (const more of [{ speed: 4 }, { displace: 1, wobble: 1, wobbleBeats: 1 }]) {
+                const look = normaliseLook({ ...seed, size: 0.99, height: 0, x: 0, split: 1, ...more })
+                for (let beat = 0; beat < 16; beat += 0.5) {
+                    const raw = lookPointsAt(look, { t: beat * 500, clock: clock(120, 0) })
+                    if (!raw.some(isLit)) continue
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(raw, { budget: null }).points, normaliseZone(full)).points, plan).points
+                    const label = `${seed.id} ${JSON.stringify(more)} beat ${beat}`
+                    expect(frame.length, label).toBeLessThanOrEqual(budget)
+                    expect(stillBeams(frame), label).toEqual([])
+                }
+            }
+        }
+    })
+
+    it('a picture too busy to draw twice in one pass stays one beam with all its points; Strands always gets both', () => {
+        const at = (l, beat = 0) => lookPointsAt(l, { t: beat * 500, clock: clock(120, 0) })
+        const galaxy = normaliseLook({ ...SEED_LOOKS.find((l) => l.id === 'galaxy'), size: 0.99, height: 0, x: 0 })
+        expect(at({ ...galaxy, split: 1 })).toEqual(at(galaxy))
+        const strands = normaliseLook({ ...SEED_LOOKS.find((l) => l.id === 'strands'), size: 1, height: 0, x: 0 })
+        expect(strands).toMatchObject({ shape: 'strands', colour: '#ff190a', colour2: '#14ff28', split: 0.25, flicker: 0.4 })
+        for (let beat = 0; beat < 16; beat += 1 / 8) expect(strokes(at(strands, beat)), `beat ${beat}`).toHaveLength(2)
+    })
+})
+
+describe('Distance: how far the split beam is below the first (2026-11-07, the owner: "second line … make lines far and near option", "distance should be y not x side")', () => {
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const base = normaliseLook({ shape: 'circle', size: 0.5, height: 0, points: 400, colour: '#ff0000', colour2: '#00ff00', split: 1 })
+    // How far the second beam is from the first, point by point: [across, up].
+    const apart = (look, more = {}) => {
+        const [first, second] = strokes(lookPointsAt({ ...look, ...more }, { t: 0, clock: clock(120, 0) }))
+        return second.map((p, i) => [p[0] - first[i][0], p[1] - first[i][1]])
+    }
+    it('is 0…1, a look saved before it reads as 0 (near), and the old looks are drawn as they were', () => {
+        expect(normaliseLook({})).toMatchObject({ splitFar: 0 })
+        expect(normaliseLook({ splitFar: 9 }).splitFar).toBe(1)
+        expect(normaliseLook({ splitFar: -1 }).splitFar).toBe(0)
+        expect(LOOK_DEFAULTS.splitFar).toBe(0)
+        const at = (l) => lookPointsAt(l, { t: 0, clock: clock(120, 0) })
+        expect(at({ ...base, splitFar: 0 })).toEqual(at(base))
+        expect(at({ ...base, splitFar: 1, split: 0 })).toEqual(at({ ...base, split: 0 }))
+    })
+    it('at Split 1, Distance 0 is the old 0.04 of the field and Distance 1 is 0.6, each step growing by the same factor', () => {
+        const offset = (far, split = 1) => Math.hypot(...apart(base, { splitFar: far, split })[0])
+        expect(offset(0)).toBeCloseTo(0.04, 6)
+        expect(offset(1)).toBeCloseTo(0.6, 6)
+        expect(offset(0.5)).toBeCloseTo(Math.sqrt(0.04 * 0.6), 6)
+        expect(offset(0.5) / offset(0)).toBeCloseTo(offset(1) / offset(0.5), 6)
+        // Split sets how much of that reach: half of it at Split 0.5.
+        expect(offset(1, 0.5)).toBeCloseTo(0.3, 6)
+        expect(offset(0, 0.5)).toBeCloseTo(0.02, 6)
+    })
+    it('the second beam is straight below the first, the same x, whatever the Distance, turn or spin', () => {
+        for (const more of [{ splitFar: 0 }, { splitFar: 0.5 }, { splitFar: 1 }, { splitFar: 1, rotation: 0.125 }, { splitFar: 1, spin: 0.25 }]) {
+            const moves = apart(base, more)
+            const down = Math.hypot(...moves[0])
+            expect(down, JSON.stringify(more)).toBeGreaterThan(0.03)
+            for (const m of moves) {
+                expect(m[0], JSON.stringify(more)).toBeCloseTo(0, 9)
+                expect(m[1], JSON.stringify(more)).toBeCloseTo(-down, 9)
+            }
+        }
+    })
+    it('the picture a look can reach grows with its Distance, so a picture framed on it keeps the far beam inside', () => {
+        const { lookBox } = require('../../../shared/laserLook.cjs')
+        const near = lookBox({ ...base, split: 1, splitFar: 0 })
+        const far = lookBox({ ...base, split: 1, splitFar: 1 })
+        expect(far[3] - far[2]).toBeGreaterThan(near[3] - near[2])
+        expect(lookBox({ ...base, split: 0, splitFar: 1 })).toEqual(lookBox({ ...base, split: 0, splitFar: 0 }))
+    })
+})
+
+describe('Reset: a look back to how its scene started (2026-11-07, the owner: "reset parameters option so we will come back to 0 point for each scene how it was from the beginning")', () => {
+    const lookOf = (desk, id) => desk.state().looks.find((l) => l.id === id)
+    // What the page's Reset button sends (serverXR/src/laser/ui/desk.js): the look's seed (its own id's, else the seed of its
+    // first shape) over the desk's defaults, only the settings that differ, as one edit that is a step of its own.
+    // Name, size, height, x and cubes stay.
+    const KEEP = ['id', 'name', 'size', 'height', 'x', 'cubes']
+    const resetLook = (desk, id) => {
+        const { seeds, defaults } = desk.state()
+        const look = lookOf(desk, id)
+        const first = (shape) => String(shape || '').split(',')[0]
+        const seed = seeds.find((s) => s.id === look.id) || seeds.find((s) => first(s.shape) === first(look.shape)) || { shape: look.shape }
+        const changes = {}
+        for (const [k, v] of Object.entries({ ...defaults, ...seed })) {
+            if (!KEEP.includes(k) && JSON.stringify(look[k]) !== JSON.stringify(v)) changes[k] = v
+        }
+        return desk.editLook(id, { ...changes, step: true })
+    }
+    const EDITS = { name: 'Mine', size: 0.4, height: 0.2, x: 0.3, cubes: ['cube-1'], colour: '#ffffff', spin: 0.9, split: 0.7, splitFar: 0.8, speed: 3, flicker: 0.5, pulse: 0.8, copies: 4 }
+
+    it('the desk state carries the seed looks and the defaults for it', () => {
+        const { desk } = deskWith(fakeEngine())
+        expect(desk.state().seeds.map((l) => l.id)).toEqual(SEED_LOOKS.map((l) => l.id))
+        expect(desk.state().seeds.find((l) => l.id === 'star')).toMatchObject({ shape: 'star', colour: '#20d8ff', spin: 0.125 })
+        expect(desk.state().defaults).toEqual(LOOK_DEFAULTS)
+    })
+
+    it('an edited look goes back to its seed over the defaults, and keeps its name, size, height, x and cubes', () => {
+        const { desk } = deskWith(fakeEngine())
+        desk.editLook('star', EDITS)
+        expect(lookOf(desk, 'star')).toMatchObject({ colour: '#ffffff', spin: 0.9, split: 0.7, splitFar: 0.8, speed: 3 })
+        expect(resetLook(desk, 'star')).toMatchObject({ ok: true })
+        const seed = normaliseLook(SEED_LOOKS.find((l) => l.id === 'star'))
+        const now = lookOf(desk, 'star')
+        for (const k of Object.keys(seed)) if (!KEEP.includes(k)) expect(now[k], k).toEqual(seed[k])
+        expect(now).toMatchObject({ colour: '#20d8ff', spin: 0.125, split: 0, splitFar: 0, speed: 1, flicker: 0, pulse: 0, copies: 0 })
+        expect(now).toMatchObject({ name: 'Mine', size: 0.4, height: 0.2, x: 0.3, cubes: ['cube-1'] })
+        expect(now.id).toBe('star')
+    })
+
+    it('a saved copy goes back to the seed of its first shape', () => {
+        const { desk } = deskWith(fakeEngine())
+        const { id } = desk.copyLook('star')
+        expect(lookOf(desk, id).name).toBe('Star 2')
+        desk.editLook(id, { colour: '#ffffff', spin: -1, splitFar: 1, shape: 'star,circle' })
+        resetLook(desk, id)
+        expect(lookOf(desk, id)).toMatchObject({ id, name: 'Star 2', shape: 'star', colour: '#20d8ff', spin: 0.125, splitFar: 0 })
+    })
+
+    it('is its own undo step: one undo brings the edited look back, a second the look as it was', () => {
+        const { desk, t } = deskWith(fakeEngine())
+        const original = lookOf(desk, 'star')
+        desk.editLook('star', { colour: '#ffffff' }); t.now += 100
+        desk.editLook('star', EDITS)
+        const edited = lookOf(desk, 'star')
+        resetLook(desk, 'star')
+        expect(lookOf(desk, 'star')).not.toEqual(edited)
+        expect(desk.undo()).toMatchObject({ ok: true, undone: true })
+        expect(lookOf(desk, 'star')).toEqual(edited)
+        expect(desk.redo()).toMatchObject({ ok: true, redone: true })
+        expect(lookOf(desk, 'star').colour).toBe('#20d8ff')
+        desk.undo()
+        desk.undo()
+        expect(lookOf(desk, 'star')).toEqual(original)
+    })
+
+    it('without its own step, a Reset right after a slider is joined to it (what `step: true` is for)', () => {
+        const { desk } = deskWith(fakeEngine())
+        const original = lookOf(desk, 'star')
+        desk.editLook('star', { spin: 0.9 })
+        desk.editLook('star', { spin: 0.125 })
+        expect(desk.undo().undone).toBe(true)
+        expect(lookOf(desk, 'star')).toEqual(original)
+        desk.redo()
+        desk.editLook('star', { colour: '#ffffff' })
+        desk.editLook('star', { colour: '#20d8ff', step: true })
+        desk.undo()
+        expect(lookOf(desk, 'star').colour).toBe('#ffffff')
+    })
+
+    it('a look on the laser follows it, and an undo', () => {
+        const engine = fakeEngine(['cube-1'])
+        const { desk } = deskWith(engine)
+        desk.go('star')
+        desk.editLook('star', { colour: '#ffffff', splitFar: 1 })
+        expect(desk.state().live).toMatchObject({ colour: '#ffffff', splitFar: 1 })
+        resetLook(desk, 'star')
+        expect(desk.state().live).toMatchObject({ colour: '#20d8ff', splitFar: 0 })
+        desk.undo()
+        expect(desk.state().live).toMatchObject({ colour: '#ffffff', splitFar: 1 })
+    })
+
+    it('a look already as it started has nothing to change', () => {
+        const { desk } = deskWith(fakeEngine())
+        const before = lookOf(desk, 'ring')
+        const { seeds, defaults } = desk.state()
+        const seed = seeds.find((s) => s.id === 'ring')
+        const differs = Object.entries({ ...defaults, ...seed }).filter(([k, v]) => !KEEP.includes(k) && JSON.stringify(before[k]) !== JSON.stringify(v))
+        expect(differs).toEqual([])
+    })
+})
+
+describe('Send to: a look on some of the lasers (2026-11-07, the owner\'s laser desk: a look to one laser, others keep theirs)', () => {
+    const hexOf = (p) => '#' + [p[2], p[3], p[4]].map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
+    // The colour a cube's last frame was drawn in; null where the desk sent it nothing.
+    const colourOn = (engine, cube) => {
+        const frame = engine.frames().byCube[cube]
+        const p = frame?.find(isLit)
+        return p ? hexOf(p) : null
+    }
+    const colours = (engine) => ['cube-1', 'cube-2', 'cube-3', 'cube-4'].map((c) => colourOn(engine, c))
+    const RING = '#ff2030'
+    const STAR = '#20d8ff'
+    const WAVE = '#3050ff'
+    const four = () => {
+        const engine = fakeEngine(['cube-1', 'cube-2', 'cube-3', 'cube-4'])
+        return { engine, ...deskWith(engine) }
+    }
+
+    it('look A to laser 1 and look B to lasers 3 and 4: each cube draws only its own look, laser 2 is left alone', () => {
+        const { engine, desk } = four()
+        expect(desk.go('ring', ['cube-1'])).toMatchObject({ ok: true, liveBy: { 'cube-1': { id: 'ring', name: 'Ring' } } })
+        expect(colours(engine)).toEqual([RING, null, null, null])
+        expect(desk.go('star', ['cube-3', 'cube-4'])).toMatchObject({ ok: true })
+        expect(colours(engine)).toEqual([RING, null, STAR, STAR])
+        expect(desk.state().liveBy).toEqual({ 'cube-1': { id: 'ring', name: 'Ring' }, 'cube-3': { id: 'star', name: 'Star' }, 'cube-4': { id: 'star', name: 'Star' } })
+        expect(desk.state()).toMatchObject({ live: null, liveId: null })
+        // Each cube's frame is its own look's picture, nothing of the other's.
+        const lit = (cube) => engine.frames().byCube[cube].filter(isLit)
+        expect(lit('cube-1').every((p) => hexOf(p) === RING)).toBe(true)
+        expect(lit('cube-3').every((p) => hexOf(p) === STAR)).toBe(true)
+        expect(engine.frames().byCube['cube-3']).toEqual(engine.frames().byCube['cube-4'])
+    })
+
+    it('a look sent to some lasers plays over the look sent to all; the other lasers keep that', () => {
+        const { engine, desk } = four()
+        desk.go('wave')
+        expect(colours(engine)).toEqual([WAVE, WAVE, WAVE, WAVE])
+        desk.go('ring', ['cube-1'])
+        desk.go('star', ['cube-3', 'cube-4'])
+        expect(colours(engine)).toEqual([RING, WAVE, STAR, STAR])
+        expect(desk.state()).toMatchObject({ liveId: 'wave' })
+        // A laser sent to again takes the new look.
+        desk.go('star', ['cube-1'])
+        expect(colours(engine)).toEqual([STAR, WAVE, STAR, STAR])
+    })
+
+    it('editing a look changes every laser playing it, and only them', () => {
+        const { engine, desk } = four()
+        desk.go('ring', ['cube-1', 'cube-2'])
+        desk.go('star', ['cube-3'])
+        const before = { one: engine.frames().byCube['cube-1'], three: engine.frames().byCube['cube-3'] }
+        expect(desk.editLook('ring', { colour: '#ffffff' })).toMatchObject({ ok: true })
+        expect(colours(engine)).toEqual(['#ffffff', '#ffffff', STAR, null])
+        expect(engine.frames().byCube['cube-1']).not.toEqual(before.one)
+        expect(engine.frames().byCube['cube-3']).toEqual(before.three)
+        expect(desk.state().liveBy['cube-2']).toEqual({ id: 'ring', name: 'Ring' })
+        // Size changes the drawing itself, on both lasers.
+        desk.editLook('ring', { size: 0.2 })
+        const reach = (cube) => Math.max(...engine.frames().byCube[cube].filter(isLit).map((p) => Math.abs(p[0])))
+        expect(reach('cube-1')).toBeLessThan(0.25)
+        expect(reach('cube-2')).toBeLessThan(0.25)
+        // Undo follows too.
+        desk.undo()
+        expect(reach('cube-1')).toBeGreaterThan(0.25)
+        expect(reach('cube-2')).toBeGreaterThan(0.25)
+    })
+
+    it('sending to All puts every laser back on one look', () => {
+        const { engine, desk } = four()
+        desk.go('ring', ['cube-1'])
+        desk.go('star', ['cube-3', 'cube-4'])
+        expect(Object.keys(desk.state().liveBy)).toHaveLength(3)
+        expect(desk.go('wave')).toMatchObject({ ok: true, live: 'wave', liveBy: {} })
+        expect(colours(engine)).toEqual([WAVE, WAVE, WAVE, WAVE])
+        expect(desk.state()).toMatchObject({ liveId: 'wave', liveBy: {} })
+        // And editing the look sent to all reaches them all again.
+        desk.editLook('wave', { colour: '#ffffff' })
+        expect(colours(engine)).toEqual(['#ffffff', '#ffffff', '#ffffff', '#ffffff'])
+    })
+
+    it('answers for lasers that are not on the desk, and Release lets every laser go', () => {
+        const { engine, desk } = four()
+        expect(desk.go('ring', ['cube-9'])).toMatchObject({ ok: false, status: 400 })
+        expect(desk.go('nothing', ['cube-1'])).toMatchObject({ ok: false, status: 404 })
+        expect(desk.go('ring', ['cube-9', 'cube-2'])).toMatchObject({ ok: true, liveBy: { 'cube-2': { id: 'ring' } } })
+        expect(colours(engine)).toEqual([null, RING, null, null])
+        desk.release()
+        expect(desk.state().liveBy).toEqual({})
+        expect(colours(engine)).toEqual([null, null, null, null])
+    })
+})
+
+describe('a look\'s Cubes are where it plays (2026-11-07, the owner, showing the editor\'s Cubes: "choose each liser and then going anorher pattern choosing laser")', () => {
+    const hexOf = (p) => '#' + [p[2], p[3], p[4]].map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
+    const colours = (engine) => ['cube-1', 'cube-2', 'cube-3', 'cube-4'].map((c) => {
+        const p = engine.frames().byCube[c]?.find(isLit)
+        return p ? hexOf(p) : null
+    })
+    const RING = '#ff2030'
+    const STAR = '#20d8ff'
+    const WAVE = '#3050ff'
+    const four = () => {
+        const engine = fakeEngine(['cube-1', 'cube-2', 'cube-3', 'cube-4'])
+        return { engine, ...deskWith(engine) }
+    }
+
+    it('pick lasers in one look, send it; pick others in the next, send it: both play, each on its own lasers', () => {
+        const { engine, desk } = four()
+        desk.editLook('ring', { cubes: ['cube-1', 'cube-2'] })
+        expect(colours(engine)).toEqual([null, null, null, null]) // an edit sends nothing
+        desk.go('ring')
+        expect(colours(engine)).toEqual([RING, RING, null, null])
+        desk.editLook('star', { cubes: ['cube-3', 'cube-4'] })
+        desk.go('star')
+        expect(colours(engine)).toEqual([RING, RING, STAR, STAR])
+        expect(desk.state().liveBy).toMatchObject({ 'cube-1': { id: 'ring' }, 'cube-2': { id: 'ring' }, 'cube-3': { id: 'star' }, 'cube-4': { id: 'star' } })
+        // A laser dropped from a playing look, with no look on all: dark, not its last picture held.
+        desk.editLook('star', { cubes: ['cube-3'] })
+        expect(colours(engine)).toEqual([RING, RING, STAR, null])
+    })
+
+    it('a look on All still takes every laser; one with picked Cubes then plays over it there, the rest keep it', () => {
+        const { engine, desk } = four()
+        desk.go('wave')
+        desk.editLook('ring', { cubes: ['cube-2'] })
+        desk.go('ring')
+        expect(colours(engine)).toEqual([WAVE, RING, WAVE, WAVE])
+        desk.go('wave')
+        expect(colours(engine)).toEqual([WAVE, WAVE, WAVE, WAVE])
+    })
+
+    it('changing the Cubes of a look that plays moves it: onto the lasers picked, off the ones dropped', () => {
+        const { engine, desk } = four()
+        desk.go('wave')
+        desk.editLook('ring', { cubes: ['cube-1'] })
+        desk.go('ring')
+        expect(colours(engine)).toEqual([RING, WAVE, WAVE, WAVE])
+        desk.editLook('ring', { cubes: ['cube-1', 'cube-3'] })
+        expect(colours(engine)).toEqual([RING, WAVE, RING, WAVE])
+        // Dropped: laser 1 goes back to the look on all.
+        desk.editLook('ring', { cubes: ['cube-3'] })
+        expect(colours(engine)).toEqual([WAVE, WAVE, RING, WAVE])
+        // All: the look on every laser.
+        desk.editLook('ring', { cubes: 'all' })
+        expect(colours(engine)).toEqual([RING, RING, RING, RING])
+        expect(desk.state()).toMatchObject({ liveId: 'ring', liveBy: {} })
+    })
+
+    it('the look on all, given Cubes while it plays, goes dark on the lasers it drops and takes back one just picked', () => {
+        const { engine, desk } = four()
+        desk.go('wave')
+        desk.go('star', ['cube-4'])
+        expect(colours(engine)).toEqual([WAVE, WAVE, WAVE, STAR])
+        desk.editLook('wave', { cubes: ['cube-1', 'cube-2'] })
+        expect(colours(engine)).toEqual([WAVE, WAVE, null, STAR])
+        desk.editLook('wave', { cubes: ['cube-1', 'cube-2', 'cube-4'] })
+        expect(colours(engine)).toEqual([WAVE, WAVE, null, WAVE])
+    })
+
+    it('an edit that leaves the Cubes alone moves nothing; an undo of a Cubes change moves the look back', () => {
+        const { engine, desk, t } = four()
+        desk.go('wave')
+        desk.editLook('ring', { cubes: ['cube-1'] })
+        desk.go('ring')
+        desk.editLook('ring', { size: 0.4 })
+        expect(colours(engine)).toEqual([RING, WAVE, WAVE, WAVE])
+        t.now += 60_000
+        desk.editLook('ring', { cubes: ['cube-1', 'cube-2'] })
+        expect(colours(engine)).toEqual([RING, RING, WAVE, WAVE])
+        desk.undo()
+        expect(colours(engine)).toEqual([RING, WAVE, WAVE, WAVE])
+        // The look on all, one laser picked by mistake, undone: on all again.
+        t.now += 60_000
+        desk.go('wave')
+        desk.editLook('wave', { cubes: ['cube-1'] })
+        expect(colours(engine)).toEqual([WAVE, null, null, null])
+        desk.undo()
+        expect(colours(engine)).toEqual([WAVE, WAVE, WAVE, WAVE])
+    })
+
+    it('Cubes naming no laser on this desk play the look on all, drawn only where it picks, as before', () => {
+        const { engine, desk } = four()
+        desk.editLook('ring', { cubes: ['cube-9'] })
+        expect(desk.go('ring')).toMatchObject({ ok: true, live: 'ring' })
+        expect(colours(engine)).toEqual([null, null, null, null])
+    })
+})
