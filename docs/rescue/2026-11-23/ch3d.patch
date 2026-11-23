@@ -1,0 +1,564 @@
+From e2660a82e7cdb6e1116e0fba0af32b6b5dd9a0be Mon Sep 17 00:00:00 2001
+From: dob-0 <info@thedi.studio>
+Date: Sun, 22 Nov 2026 16:25:12 +0400
+Subject: [PATCH] wip: rescue of unsaved work in ch3d (2026-11-22, folder left
+ as it was)
+
+---
+ ...unyuan3D-2.1 (RESEARCH-COMPARISON ONLY).sh |  39 ++++--
+ scripts/place/gen3d/runners/Step1X-3D.sh      |  47 ++++----
+ scripts/place/gen3d/runners/TripoSG.sh        |  16 +--
+ .../place/model-hall/compare/dense/ingest.py  |  75 ++++++++++++
+ .../model-hall/compare/dense/openings.py      |  47 ++++++++
+ .../model-hall/compare/dense/prefilter.py     |  33 +++++
+ .../model-hall/compare/dense/walls_dense.py   | 114 ++++++++++++++++++
+ 7 files changed, 332 insertions(+), 39 deletions(-)
+ create mode 100644 scripts/place/model-hall/compare/dense/ingest.py
+ create mode 100644 scripts/place/model-hall/compare/dense/openings.py
+ create mode 100644 scripts/place/model-hall/compare/dense/prefilter.py
+ create mode 100644 scripts/place/model-hall/compare/dense/walls_dense.py
+
+diff --git a/scripts/place/gen3d/runners/Hunyuan3D-2.1 (RESEARCH-COMPARISON ONLY).sh b/scripts/place/gen3d/runners/Hunyuan3D-2.1 (RESEARCH-COMPARISON ONLY).sh
+index cddf63eff..9d7b6cd19 100755
+--- a/scripts/place/gen3d/runners/Hunyuan3D-2.1 (RESEARCH-COMPARISON ONLY).sh	
++++ b/scripts/place/gen3d/runners/Hunyuan3D-2.1 (RESEARCH-COMPARISON ONLY).sh	
+@@ -5,7 +5,7 @@
+ #   5.b no use of Output to improve any other AI model; >1M MAU needs a Tencent licence.
+ # Do not show outputs in EU/UK/KR, do not train on them. (The file name uses "-" because "/" cannot be in a file name.)
+ #
+-# usage: runner.sh [INPUT_DIR] [OUT_DIR]      env: GPU=A100 (default; L4 24 GB < 29 GB needed for shape+paint)
++# usage: runner.sh [INPUT_DIR] [OUT_DIR]      env: GPU=A100, REUSE=<session> (re-run on a live session; setup is skipped), COLLECT_ONLY=1 (with REUSE: no upload/start, only wait+download) (default; L4 24 GB < 29 GB needed for shape+paint)
+ # needs: colab-pinned.sh (CLI 0.7.5), gevorg login state at ~/.local/state/colab/gevorg, blender, ffmpeg.
+ # Always terminates its session (trap). Never pkill.
+ set -uo pipefail
+@@ -27,6 +27,7 @@ log() { echo "[$(date +%T)] $*" | tee -a "$OUT/colab.log"; }
+ cat >"$TMP/job.sh" <<JOB
+ set -euxo pipefail
+ cd /content
++if [ ! -f /content/SETUP_OK ]; then
+ pip -q install uv; export UV_PYTHON_PREFERENCE=only-managed
+ git clone https://github.com/Tencent-Hunyuan/Hunyuan3D-2.1 h21 && git -C h21 checkout $COMMIT
+ uv venv --python 3.10 /content/venv && /content/venv/bin/python -V
+@@ -36,34 +37,47 @@ uv pip install --python /content/venv/bin/python torch==2.5.1 torchvision==0.20.
+ # dropped: gradio fastapi uvicorn pythreejs deepspeed tb_nightly (demo/training only); bpy==4.0 (not on PyPI: stubbed,
+ # GLB is built with the repo's own bpy-free create_glb_with_pbr_materials, same as its gradio_app.py)
+ grep -v -i -E '^(--extra-index|gradio|fastapi|uvicorn|pythreejs|deepspeed|tb_nightly|bpy)' requirements.txt > /content/req.txt
+-uv pip install --python /content/venv/bin/python --index-strategy unsafe-best-match -r /content/req.txt setuptools wheel
++uv pip install --python /content/venv/bin/python --index-strategy unsafe-best-match -r /content/req.txt "setuptools<81" wheel  # pkg_resources is gone in setuptools>=81 (pytorch-lightning 1.9.5 needs it)
++# Colab ships nvcc 13.0, torch 2.5.1 is cu124: torch refuses the mismatch -> side-by-side CUDA 12.4.1 toolkit (no driver)
++wget -q https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_550.54.15_linux.run -O /content/cuda.run
++sh /content/cuda.run --silent --toolkit --toolkitpath=/content/cuda-12.4 --no-opengl-libs --no-man-page --override
++export CUDA_HOME=/content/cuda-12.4 PATH=/content/cuda-12.4/bin:\$PATH
++nvcc --version
+ export TORCH_CUDA_ARCH_LIST="8.0"
+ (cd hy3dpaint/custom_rasterizer && python setup.py install)
+-(cd hy3dpaint/DifferentiableRenderer && bash compile_mesh_painter.sh)
+ mkdir -p hy3dpaint/ckpt && wget -q https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -P hy3dpaint/ckpt
+ uv pip freeze --python /content/venv/bin/python > /content/pip_freeze.txt
+ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv > /content/gpu.txt
++touch /content/SETUP_OK
++fi
+ echo SETUP_DONE
++cd /content/h21
++export VIRTUAL_ENV=/content/venv PATH=/content/cuda-12.4/bin:/content/venv/bin:\$PATH CUDA_HOME=/content/cuda-12.4
++# the repo's compile_mesh_painter.sh asks the SYSTEM python3-config for the suffix (Colab python != venv 3.10): use the venv's
++uv pip install --python /content/venv/bin/python "setuptools<81" -q
++ls hy3dpaint/DifferentiableRenderer/mesh_inpaint_processor*.so >/dev/null 2>&1 || (cd hy3dpaint/DifferentiableRenderer && rm -f mesh_inpaint_processor && c++ -O3 -Wall -shared -std=c++11 -fPIC \$(python -m pybind11 --includes) mesh_inpaint_processor.cpp -o mesh_inpaint_processor\$(python -c "import sysconfig;print(sysconfig.get_config_var('EXT_SUFFIX'))"))
++export VIRTUAL_ENV=/content/venv PATH=/content/cuda-12.4/bin:/content/venv/bin:\$PATH CUDA_HOME=/content/cuda-12.4
+ python /content/run.py
+ echo ALL_DONE
+ JOB
+ cat >"$TMP/run.py" <<'PY'
+ import sys, os, time, json, glob, shutil
+ os.chdir('/content/h21')
+-sys.path[:0] = ['./hy3dshape', './hy3dpaint']
++sys.path[:0] = ['/content/h21', './hy3dshape', './hy3dpaint']
+ import torch, types
+ sys.modules['bpy']=types.ModuleType('bpy')
+ from PIL import Image
+ try:
+     from torchvision_fix import apply_fix; apply_fix()
+-except Exception as e: print('fix', e)
++except Exception as e: print('torchvision_fix FAILED', e); raise
+ from hy3dshape.rembg import BackgroundRemover
+ from hy3dshape.pipelines import Hunyuan3DDiTFlowMatchingPipeline
+ t=time.time()
+ shape = Hunyuan3DDiTFlowMatchingPipeline.from_pretrained('tencent/Hunyuan3D-2.1')
+ rm = BackgroundRemover()
+ load_shape = time.time()-t
+-os.chdir('/content/h21/hy3dpaint')
++os.chdir('/content/h21')
++if not os.path.exists('ckpt'): os.symlink('hy3dpaint/ckpt','ckpt')  # configs use repo-root-relative paths
+ from textureGenPipeline import Hunyuan3DPaintPipeline, Hunyuan3DPaintConfig
+ t=time.time()
+ paint = Hunyuan3DPaintPipeline(Hunyuan3DPaintConfig(max_num_view=6, resolution=512))
+@@ -83,7 +97,6 @@ for f in sorted(glob.glob('/content/inputs/*.png')):
+         mesh.export(f'{d}/shape.glb'); r['shape_peak_gb']=torch.cuda.max_memory_allocated()/2**30
+         torch.cuda.empty_cache(); torch.cuda.reset_peak_memory_stats()
+         t=time.time()
+-        os.chdir('/content/h21/hy3dpaint')
+         out = paint(mesh_path=f'{d}/shape.glb', image_path=f'{d}/input_rgba.png', output_mesh_path=f'{d}/textured.obj', save_glb=False)
+         from convert_utils import create_glb_with_pbr_materials
+         b=f'{d}/textured'; os.chdir(d)
+@@ -100,7 +113,7 @@ printf "import subprocess\nprint(subprocess.run(\"nvidia-smi -L;mkdir -p /conten
+ printf "import os\nprint(\" \".join(os.listdir(\"/content/out\")))\n" >"$TMP/ls.py"
+ cat >"$TMP/start.py" <<'PY'
+ import subprocess
+-subprocess.Popen('bash /content/job.sh > /content/job.log 2>&1', shell=True, start_new_session=True)
++subprocess.Popen(['bash','-c','bash /content/job.sh > /content/job.log 2>&1'], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+ print('started')
+ PY
+ cat >"$TMP/poll.py" <<'PY'
+@@ -132,11 +145,15 @@ PY
+ # ---- run ---------------------------------------------------------------------------------------
+ T0=$(date +%s)
+ log "new session $SES gpu=$GPU"; $W usage 2>&1 | head -2 | tee -a "$OUT/colab.log"
+-$W new -s "$SES" --gpu "$GPU" >>"$OUT/colab.log" 2>&1 || { log "session create failed"; exit 2; }
++if [ -n "${REUSE:-}" ]; then SES="$REUSE"; log "reusing session $SES (setup already done there)"; else
++$W new -s "$SES" --gpu "$GPU" >>"$OUT/colab.log" 2>&1 || { log "session create failed"; exit 2; }; fi
++if [ -z "${COLLECT_ONLY:-}" ]; then
+ $W exec -s "$SES" -f "$TMP/init.py" >>"$OUT/colab.log" 2>&1 || true
+-for f in "$IN"/*.png; do $W upload -s "$SES" "$f" "/content/inputs/$(basename "$f")" >>"$OUT/colab.log" 2>&1; done
+-for f in job.sh run.py; do $W upload -s "$SES" "$TMP/$f" "/content/$f" >>"$OUT/colab.log" 2>&1; done
++up() { for t in 1 2 3 4; do $W upload -s "$SES" "$1" "$2" >>"$OUT/colab.log" 2>&1 && return 0; sleep 10; done; log "UPLOAD FAILED $1"; return 1; }
++for f in "$IN"/*.png; do up "$f" "/content/inputs/$(basename "$f")"; done
++for f in job.sh run.py; do up "$TMP/$f" "/content/$f"; done
+ $W exec -s "$SES" -f "$TMP/start.py" 2>&1 | tee -a "$OUT/colab.log"
++fi
+ while :; do
+   sleep 60
+   P=$($W exec -s "$SES" --timeout 60 -f "$TMP/poll.py" 2>&1); echo "$P" | tail -4 >"$OUT/last_poll.txt"
+diff --git a/scripts/place/gen3d/runners/Step1X-3D.sh b/scripts/place/gen3d/runners/Step1X-3D.sh
+index e2400bb79..dca26f61f 100755
+--- a/scripts/place/gen3d/runners/Step1X-3D.sh
++++ b/scripts/place/gen3d/runners/Step1X-3D.sh
+@@ -14,19 +14,20 @@ set -euo pipefail
+ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ COLAB="bash $HERE/../../colab-pinned.sh"
+ export HOME_REAL="$HOME"
+-GPU=L4; SESSION=s1x3d; KEEP=0
++GPU=L4; SESSION=s1x3d; KEEP=0; REUSE=0
+ BASE=/mnt/data/footage/place-cinema-house-2026-10-30/modelled/gen3d
+ IN="$BASE/inputs"; OUT="$BASE/out/Step1X-3D"
+ CODE_SHA=cb5ac944709c6c913109070c7b90c3447f57f3d4
+ while [ $# -gt 0 ]; do case "$1" in
+   --gpu) GPU="$2"; shift 2;; --inputs) IN="$2"; shift 2;; --out) OUT="$2"; shift 2;;
+-  --session) SESSION="$2"; shift 2;; --keep) KEEP=1; shift;; -h|--help) sed -n 2,12p "$0"; exit 0;;
++  --session) SESSION="$2"; shift 2;; --keep) KEEP=1; shift;; --reuse) REUSE=1; shift;;   # reuse = session exists and setup already ran (resume after a client hang)
++   -h|--help) sed -n 2,12p "$0"; exit 0;;
+   *) echo "unknown $1" >&2; exit 2;; esac; done
+-export HOME="$HOME/.local/state/colab/gevorg"   # the Pro+ login's CLI state
++export HOME="$(getent passwd "$(id -un)" | cut -d: -f6)/.local/state/colab/gevorg"   # the Pro+ login's CLI state
+ mkdir -p "$OUT"; W="$(mktemp -d)"
+ cleanup(){ if [ "$KEEP" = 0 ]; then $COLAB stop -s "$SESSION" >/dev/null 2>&1 || true; fi; rm -rf "$W"; }
+ trap cleanup EXIT
+-px(){ printf "%s\n" "$1" > "$W/c.py"; $COLAB exec -s "$SESSION" -f "$W/c.py" 2>&1; }
++px(){ printf "%s\n" "$1" > "$W/c.py"; timeout 100 $COLAB exec -s "$SESSION" -f "$W/c.py" 2>&1; }   # the exec client can hang on a busy kernel; poll again
+ log(){ echo "[$(date +%T)] $*" | tee -a "$OUT/run.log"; }
+ $COLAB usage 2>&1 | grep -i balance | sed 's/^/before: /' | tee "$OUT/units_before.txt"
+ 
+@@ -37,20 +38,20 @@ T0=\$(date +%s)
+ cd /content
+ [ -d Step1X-3D ] || git clone -q https://github.com/stepfun-ai/Step1X-3D.git
+ cd Step1X-3D && git checkout -q $CODE_SHA && git log -1 --format=%H
+-uv venv --python 3.10 /content/venv -q
++uv venv --python 3.10 /content/venv
+ . /content/venv/bin/activate
+ if [ ! -x /usr/local/cuda-12.4/bin/nvcc ]; then
+   wget -q https://developer.download.nvidia.com/compute/cuda/12.4.1/local_installers/cuda_12.4.1_550.54.15_linux.run
+   sh cuda_12.4.1_550.54.15_linux.run --silent --toolkit --toolkitpath=/usr/local/cuda-12.4 --no-opengl-libs --no-drm --no-man-page
+ fi
+ export CUDA_HOME=/usr/local/cuda-12.4 PATH=/usr/local/cuda-12.4/bin:\$PATH TORCH_CUDA_ARCH_LIST="8.0;8.9"
+-uv pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124
++uv pip install --python /content/venv/bin/python torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124
+ grep -viE 'pytorch3d|^git\+.*nvdiffrast|wandb|gradio|^spaces|mosaicml|deepspeed|prodigyopt|tensorboard|sageattention|open3d|cupy|^bs4' requirements.txt > /content/req.min.txt
+-uv pip install -r /content/req.min.txt setuptools wheel ninja pybind11
+-uv pip install --no-build-isolation "git+https://github.com/NVlabs/nvdiffrast.git"
+-(cd step1x3d_texture/custom_rasterizer && python setup.py install)
+-(cd step1x3d_texture/differentiable_renderer && python setup.py install)
+-uv pip freeze > /content/pip_freeze.txt
++uv pip install --python /content/venv/bin/python -r /content/req.min.txt "setuptools==75.8.0" wheel ninja pybind11
++uv pip install --python /content/venv/bin/python --no-build-isolation "git+https://github.com/NVlabs/nvdiffrast.git"
++(cd step1x3d_texture/custom_rasterizer && /content/venv/bin/python setup.py install)
++(cd step1x3d_texture/differentiable_renderer && /content/venv/bin/python setup.py install)
++uv pip freeze --python /content/venv/bin/python > /content/pip_freeze.txt
+ echo SETUP_SECONDS=\$((\$(date +%s)-T0))
+ EOS
+ 
+@@ -95,22 +96,26 @@ EOP
+ 
+ log "new session $SESSION gpu=$GPU"
+ T0=$(date +%s)
+-for try in 1 2 3 4 5 6; do   # capacity / too-many-sessions refusals are transient
+-  if $COLAB new -s "$SESSION" --gpu "$GPU" 2>&1 | tee -a "$OUT/run.log" | grep -q "READY"; then break; fi
+-  [ $try = 6 ] && { log "no GPU allocated after 6 tries"; exit 1; }; sleep 120; done
+-px "import os;os.makedirs('/content/in',exist_ok=True)" >/dev/null 2>&1 || true
+-for f in "$IN"/*.png; do $COLAB upload -s "$SESSION" "$f" /content/in/$(basename "$f") 2>&1 | tail -1; done
+-$COLAB upload -s "$SESSION" "$W/setup.sh" /content/setup.sh | tail -1
++if [ "$REUSE" = 0 ]; then
++  for try in 1 2 3 4 5 6; do   # capacity / too-many-sessions refusals are transient
++    if $COLAB new -s "$SESSION" --gpu "$GPU" 2>&1 | tee -a "$OUT/run.log" | grep -q "READY"; then break; fi
++    [ $try = 6 ] && { log "no GPU allocated after 6 tries"; exit 1; }; sleep 120; done
++  px "import os;os.makedirs('/content/in',exist_ok=True)" >/dev/null 2>&1 || true
++  for f in "$IN"/*.png; do $COLAB upload -s "$SESSION" "$f" /content/in/$(basename "$f") 2>&1 | tail -1; done
++  $COLAB upload -s "$SESSION" "$W/setup.sh" /content/setup.sh | tail -1
++  log "setup (detached; log /content/setup.log)"
++  px "import subprocess;subprocess.Popen('bash /content/setup.sh > /content/setup.log 2>&1; echo EXIT=\$? >> /content/setup.log',shell=True,start_new_session=True)" >/dev/null
++  until [[ "$(px "print(open('/content/setup.log').read()[-300:])")" == *EXIT=* ]]; do sleep 20; done
++  px "print(open('/content/setup.log').read()[-600:])" 2>&1 | tail -8 | tee -a "$OUT/run.log"
++fi
+ $COLAB upload -s "$SESSION" "$W/infer.py" /content/infer.py | tail -1
+-log "setup (detached; log /content/setup.log)"
+-px "import subprocess;subprocess.Popen('bash /content/setup.sh > /content/setup.log 2>&1; echo EXIT=\$? >> /content/setup.log',shell=True,start_new_session=True)" >/dev/null
+-until [[ "$(px "print(open('/content/setup.log').read()[-300:])")" == *EXIT=* ]]; do sleep 20; done
+-px "print(open('/content/setup.log').read()[-600:])" 2>&1 | tail -8 | tee -a "$OUT/run.log"
+ log "inference (detached; log /content/infer.log)"
+ px "import subprocess;subprocess.Popen('/content/venv/bin/python /content/infer.py > /content/infer.log 2>&1; echo EXIT=\$? >> /content/infer.log',shell=True,start_new_session=True)" >/dev/null
+ until [[ "$(px "print(open('/content/infer.log').read()[-300:])")" == *EXIT=* ]]; do sleep 20; done
+ px "print(open('/content/infer.log').read()[-1500:])" 2>&1 | tail -30 | tee -a "$OUT/run.log"
+ T1=$(date +%s)
++$COLAB download -s "$SESSION" /content/infer.log "$OUT/infer.log" 2>&1 | tail -1
++grep -q "EXIT=0" "$OUT/infer.log" || { log "INFERENCE FAILED, see $OUT/infer.log (session kept if --keep)"; tail -15 "$OUT/infer.log"; exit 1; }
+ for f in /content/out/timings.json /content/pip_freeze.txt /content/setup.log /content/infer.log; do $COLAB download -s "$SESSION" "$f" "$OUT/$(basename "$f")" 2>&1 | tail -1; done
+ for f in "$IN"/*.png; do n=$(basename "$f" .png); $COLAB download -s "$SESSION" "/content/out/$n.glb" "$OUT/$n.glb" 2>&1 | tail -1; $COLAB download -s "$SESSION" "/content/out/$n.untextured.glb" "$OUT/$n.untextured.glb" 2>&1 | tail -1; done
+ log "wall seconds new->downloaded: $((T1-T0))"
+diff --git a/scripts/place/gen3d/runners/TripoSG.sh b/scripts/place/gen3d/runners/TripoSG.sh
+index 9ce62dd74..cc14aaaf1 100755
+--- a/scripts/place/gen3d/runners/TripoSG.sh
++++ b/scripts/place/gen3d/runners/TripoSG.sh
+@@ -20,6 +20,7 @@ usage_bal() { cb usage 2>&1 | awk '/balance/{print $3}'; }
+ stop() { cb stop -s "$SESS" >/dev/null 2>&1 || true; cb sessions 2>&1 | tail -3; }
+ trap stop EXIT
+ 
++if [ -z "${SKIP_COLAB:-}" ]; then   # SKIP_COLAB=1 redoes only the Blender step
+ BAL0=$(usage_bal); T0=$(date +%s)
+ cb new -s "$SESS" --gpu "$GPU"
+ for f in "$IN"/*.png; do cb upload -s "$SESS" "$f" "/content/in_$(basename "$f")"; done
+@@ -58,6 +59,8 @@ cb stop -s "$SESS" || true
+ T1=$(date +%s); BAL1=$(usage_bal)
+ echo "{\"gpu\":\"$GPU\",\"commit\":\"$COMMIT\",\"wall_sec\":$((T1-T0)),\"units_before\":$BAL0,\"units_after\":$BAL1}" > "$OUT/cost.json"; cat "$OUT/cost.json"
+ 
++fi
++trap - EXIT
+ # Turntable (Blender workbench, 24 frames, 360 deg) per GLB -> mp4 + contact sheet png
+ TT="$(mktemp --suffix=.py)"
+ cat > "$TT" <<'BPY'
+@@ -77,16 +80,15 @@ sc=bpy.context.scene; sc.camera=co; sc.render.engine='BLENDER_WORKBENCH'
+ sc.display.shading.light='STUDIO'; sc.display.shading.color_type='MATERIAL'
+ sc.render.resolution_x=sc.render.resolution_y=384; sc.frame_start=1; sc.frame_end=24
+ sc.world=bpy.data.worlds.new("w"); sc.world.color=(0.12,0.12,0.14)
+-pivot.rotation_euler=(0,0,0); pivot.keyframe_insert('rotation_euler',frame=1)
+-pivot.rotation_euler=(0,0,2*math.pi*23/24); pivot.keyframe_insert('rotation_euler',frame=24)
+-for fc in pivot.animation_data.action.fcurves:
+-    for k in fc.keyframe_points: k.interpolation='LINEAR'
+-sc.render.filepath=outdir+"/f_"; sc.render.image_settings.file_format='PNG'
+-bpy.ops.render.render(animation=True)
++sc.render.image_settings.file_format='PNG'
++for i in range(24):   # explicit per-frame stills: Blender 5 slotted actions have no .fcurves
++    pivot.rotation_euler=(0,0,2*math.pi*i/24)
++    sc.render.filepath=outdir+"/f_%04d.png"%(i+1)
++    bpy.ops.render.render(write_still=True)
+ BPY
+ shopt -s nullglob
+ for g in "$OUT"/*.glb; do n=$(basename "$g" .glb); d="$OUT/turntable_$n"; mkdir -p "$d"
+   blender -b -P "$TT" -- "$g" "$d" >"$d/blender.log" 2>&1 || echo "blender failed $n"
+   ffmpeg -loglevel error -y -framerate 12 -i "$d/f_%04d.png" -pix_fmt yuv420p "$OUT/turntable_$n.mp4"
+-  ffmpeg -loglevel error -y -pattern_type glob -i "$d/f_00[0-2][0-9].png" -vf "select='not(mod(n\,4))',tile=6x1" -frames:v 1 "$OUT/sheet_$n.png"
++  ffmpeg -loglevel error -y -i "$d/f_%04d.png" -vf "select='not(mod(n\,4))',tile=6x1" -frames:v 1 "$OUT/sheet_$n.png"
+ done
+diff --git a/scripts/place/model-hall/compare/dense/ingest.py b/scripts/place/model-hall/compare/dense/ingest.py
+new file mode 100644
+index 000000000..f745f4840
+--- /dev/null
++++ b/scripts/place/model-hall/compare/dense/ingest.py
+@@ -0,0 +1,75 @@
++"""ingest.py - dense frame extraction (round 5 walls, ledger N1834).
++ffmpeg NVDEC decode (hevc, autorotate -> portrait) -> scale 1080x1920 -> rawvideo pipe -> person detection (torchvision Faster R-CNN
++ResNet50-FPN v2, COCO 'person', Ren et al. 2015 / Li et al. 2021) -> every person box (+20 %) gaussian-blurred BEFORE anything is written
++(no unblurred frame touches the disk) -> JPEG q90 + 720x1280 copy for depth -> sharpness (Laplacian variance at 540x960, same as survey
++index.json) -> LSD (von Gioi et al. 2010) line statistics for the pre-filter. Index line per frame in index_<v>.jsonl.
++usage: ingest.py <v1|v2>   (selection = SEG below: step 1 = every frame 30 fps, step 3 = 10 fps)"""
++import sys, os, json, subprocess, numpy as np, cv2, torch, torchvision, math
++D = '/mnt/data/footage/place-cinema-house-2026-10-30'; O = D + '/modelled/dense'
++VID = {'v1': ('20261030_154922.mp4', 2618, [(0, 3, 1), (3, 56, 3), (56, 88, 1)]),
++       'v2': ('20261030_155205.mp4', 8749, [(0, 27, 1), (27, 31, 3), (31, 36, 1), (36, 68, 3), (68, 293, 1)])}
++v = sys.argv[1]; fn, NF, SEG = VID[v]; FPS = 30.0
++sel = []
++for a, b, st in SEG:
++    sel += [n for n in range(int(a * FPS), min(NF, int(b * FPS))) if n % st == 0]
++sel = sorted(set(sel)); S = set(sel)
++expr = '+'.join(f"(between(n,{a*30},{min(NF,b*30)-1})*eq(mod(n,{st}),0))" for a, b, st in SEG)
++open(f'{O}/_work/sel_{v}.txt', 'w').write(f"select='gt({expr},0)',scale=1080:1920")
++W0, H0 = 1080, 1920
++cmd = ['ffmpeg', '-v', 'error', '-hwaccel', 'cuda', '-i', f'{D}/../cinema-house-2026-10-30/{fn}', '-vf', open(f'{O}/_work/sel_{v}.txt').read(),
++       '-fps_mode', 'passthrough', '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-']
++det = torchvision.models.detection.fasterrcnn_resnet50_fpn_v2(weights='DEFAULT', min_size=540, max_size=960).cuda().eval()
++lsd = cv2.createLineSegmentDetector(cv2.LSD_REFINE_STD)
++pr = subprocess.Popen(cmd, stdout=subprocess.PIPE, bufsize=W0 * H0 * 3 * 4)
++out = open(f'{O}/index_{v}.jsonl', 'w'); i = 0; B = 2
++
++def stats(g):
++    segs = lsd.detect(g)[0]
++    if segs is None: return dict(Lh=0, Lc=0, nv=0, corner=False, opening=False, F=0)
++    s = segs.reshape(-1, 4); dx = s[:, 2] - s[:, 0]; dy = s[:, 3] - s[:, 1]; L = np.hypot(dx, dy)
++    th = np.degrees(np.arctan2(dy, dx)); th = (th + 90) % 180 - 90          # -90..90, 0 = horizontal
++    ok = L >= 35; Lh = float(L[ok & (np.abs(th) <= 8)].sum()); Lc = float(L[ok & (np.abs(th) > 8) & (np.abs(th) < 60)].sum())
++    vert = ok & (np.abs(th) >= 84) & (L >= 300)
++    xv = np.sort(((s[vert, 0] + s[vert, 2]) / 2)) if vert.any() else np.array([])
++    F = Lh / (Lh + Lc + 1e-6)
++    corner = False
++    for x in xv[:6]:
++        lo = ok & (np.abs(th) > 8) & (np.abs(th) < 60) & (L >= 80) & (np.minimum(s[:, 1], s[:, 3]) > 400)
++        left = lo & (np.maximum(s[:, 0], s[:, 2]) < x + 15); right = lo & (np.minimum(s[:, 0], s[:, 2]) > x - 15)
++        if left.sum() and right.sum() and L[left].sum() > 150 and L[right].sum() > 150:
++            ml = np.sign(np.average(np.tan(np.radians(th[left])), weights=L[left])); mr = np.sign(np.average(np.tan(np.radians(th[right])), weights=L[right]))
++            if ml * mr < 0: corner = True; break
++    opening = False
++    if len(xv) >= 2:
++        gaps = np.diff(xv); jj = np.where((gaps > 60) & (gaps < 700))[0]
++        for j in jj:
++            a, b = xv[j], xv[j + 1]
++            top = ok & (np.abs(th) <= 8) & (np.maximum(s[:, 0], s[:, 2]) <= b + 30) & (np.minimum(s[:, 0], s[:, 2]) >= a - 30) & (L >= 0.5 * (b - a))
++            if top.any(): opening = True; break
++    return dict(Lh=round(Lh), Lc=round(Lc), nv=int(len(xv)), corner=bool(corner), opening=bool(opening), F=round(float(F), 3))
++
++def flush(buf, ns):
++    global i
++    small = [cv2.resize(f, (540, 960), interpolation=cv2.INTER_AREA) for f in buf]
++    t = torch.from_numpy(np.stack([s[:, :, ::-1] for s in small])).permute(0, 3, 1, 2).float().div(255).cuda()
++    with torch.no_grad(), torch.autocast('cuda', dtype=torch.float16): res = det(list(t))
++    for f, n, r in zip(buf, ns, res):
++        keep = (r['labels'] == 1) & (r['scores'] >= 0.3); bx = r['boxes'][keep].cpu().numpy() * 2.0   # to 1080x1920
++        for x0, y0, x1, y1 in bx:
++            w, h = x1 - x0, y1 - y0; x0 = int(max(0, x0 - .2 * w)); x1 = int(min(W0, x1 + .2 * w)); y0 = int(max(0, y0 - .2 * h)); y1 = int(min(H0, y1 + .2 * h))
++            k = max(15, (min(x1 - x0, y1 - y0) // 3) | 1)
++            f[y0:y1, x0:x1] = cv2.GaussianBlur(f[y0:y1, x0:x1], (k, k), 0); f[y0:y1, x0:x1] = cv2.GaussianBlur(f[y0:y1, x0:x1], (k, k), 0)
++        g = cv2.cvtColor(cv2.resize(f, (540, 960), interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2GRAY)
++        sh = float(cv2.Laplacian(g, cv2.CV_64F).var()); st = stats(g)
++        name = f'{v}_f{n:05d}'
++        cv2.imwrite(f'{O}/frames/{name}.jpg', f, [cv2.IMWRITE_JPEG_QUALITY, 90])
++        cv2.imwrite(f'{O}/small/{name}.jpg', cv2.resize(f, (720, 1280), interpolation=cv2.INTER_AREA), [cv2.IMWRITE_JPEG_QUALITY, 92])
++        out.write(json.dumps(dict(name=name, video=fn, n=n, t_s=round(n / FPS, 3), sharp=round(sh, 1), persons=int(len(bx)), **st)) + '\n')
++buf, ns = [], []
++while True:
++    raw = pr.stdout.read(W0 * H0 * 3)
++    if len(raw) < W0 * H0 * 3: break
++    buf.append(np.frombuffer(raw, np.uint8).reshape(H0, W0, 3).copy()); ns.append(sel[i]); i += 1
++    if len(buf) == B: flush(buf, ns); buf, ns = [], []
++if buf: flush(buf, ns)
++out.close(); print('DONE', v, 'selected', len(sel), 'written', i, flush=True)
+diff --git a/scripts/place/model-hall/compare/dense/openings.py b/scripts/place/model-hall/compare/dense/openings.py
+new file mode 100644
+index 000000000..cc028b00b
+--- /dev/null
++++ b/scripts/place/model-hall/compare/dense/openings.py
+@@ -0,0 +1,47 @@
++"""openings.py - width/height of door/arch openings from MoGe-2 point maps of frontal dense frames (round 5 dense pass, ledger N1834).
++Method: single-view metrology (Criminisi/Reid/Zisserman 2000). Per frame: floor plane -> leveled points (x right, y forward, z up, camera at origin, height h);
++frontal wall = the wall line (walls_dense_lines.json) whose normal faces the camera (|phi+90|<12 deg) at distance d (>=2 m); the opening = connected region of
++pixels inside the wall's lateral span whose leveled y exceeds d+0.45 m (points seen THROUGH the wall) and that sits between wall pixels left and right.
++Edges are taken from the viewing rays at the wall plane: x = d*rx/ry, height = h + d*rz/ry (a hole seen through a plane is bounded by the plane's rays, not by far points).
++usage: openings.py -> openings/openings_frames.json"""
++import sys, json, math, numpy as np, cv2
++sys.path.insert(0, '/mnt/data/footage/place-cinema-house-2026-10-30/modelled/compare'); import lib
++O = lib.M + '/dense'; KEPT = json.load(open(O + '/kept.json')); FR = KEPT['frames']
++LN = json.load(open(O + '/walls_dense_lines.json'))
++out = {}
++for name in KEPT['depth']:
++    f = FR[name]
++    if not (f.get('frontal') or f.get('opening')) or name not in LN: continue
++    z = np.load(f'{O}/depth/{name}.npz'); P = z['points'].astype(np.float32); Mk = z['mask']
++    L = np.array(LN[name]['L']); h = LN[name]['h']
++    fr = [l for l in LN[name]['lines'] if abs(((l['phi'] + 90 + 180) % 360) - 180) < 12 and l['d'] > 2.0 and l['n'] >= 600]
++    if not fr: continue
++    w = max(fr, key=lambda l: l['n']); d = w['d']
++    ok = Mk & np.isfinite(P).all(2) & (P[..., 2] > 0.3)
++    U = P @ L.T                              # leveled
++    far = ok & (U[..., 1] > d + 0.45) & (U[..., 1] < 12)
++    ray = U / np.maximum(np.abs(U[..., 1:2]), 1e-3)          # (rx/ry, 1, rz/ry)
++    X = d * ray[..., 0]; Zh = h + d * ray[..., 2]
++    on = ok & (np.abs(U[..., 1] - d) < 0.12)                  # wall pixels
++    # wall lateral span from the line itself (leveled x of wall points)
++    xs = X[on]
++    if len(xs) < 300: continue
++    lo, hi = np.percentile(xs, 2), np.percentile(xs, 98)
++    cand = far & (X > lo) & (X < hi) & (Zh > 0.0) & (Zh < 3.6)
++    cand = cv2.morphologyEx(cand.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
++    n, lab, st, _ = cv2.connectedComponentsWithStats(cand)
++    best = None
++    for i in range(1, n):
++        a = st[i, 4]
++        if a < 120: continue
++        m = lab == i; x = X[m]; zz = Zh[m]
++        x0, x1 = np.percentile(x, 2), np.percentile(x, 98); z1 = np.percentile(zz, 98); z0 = np.percentile(zz, 2)
++        # wall pixels on both sides within 0.6 m of the hole
++        left = (on & (X > x0 - 0.6) & (X < x0)).sum(); right = (on & (X < x1 + 0.6) & (X > x1)).sum()
++        if left < 40 or right < 40: continue            # not framed by wall: a view past the wall edge, not an opening
++        if (x1 - x0) < 0.8 or z1 < 1.6: continue
++        c = dict(width=float(x1 - x0), x0=float(x0), x1=float(x1), top=float(z1), bottom=float(z0), area=int(a), d=float(d), nwall=int(on.sum()))
++        if best is None or a > best['area']: best = c
++    if best: best.update(room=f['room'], t=f['t_s'], video=f['video'][9:15] if False else f['video'], opening_flag=bool(f.get('opening'))); out[name] = best
++json.dump(out, open(O + '/openings/openings_frames.json', 'w'))
++print(len(out), 'frames with an opening candidate')
+diff --git a/scripts/place/model-hall/compare/dense/prefilter.py b/scripts/place/model-hall/compare/dense/prefilter.py
+new file mode 100644
+index 000000000..33f2db703
+--- /dev/null
++++ b/scripts/place/model-hall/compare/dense/prefilter.py
+@@ -0,0 +1,33 @@
++"""prefilter.py - keep frames that face a wall end, a corner or an opening (LSD line statistics from ingest.py; heuristic, UNVALIDATED:
++frontal = >=50 % of non-vertical line length within 8 deg of image-horizontal and >=600 px of it; corner = long vertical edge with floor/wall
++lines of opposite slope either side; opening = two long verticals 60-700 px apart bridged by a horizontal lintel). Sharpness is recorded,
++never used to drop. Room = room of the nearest survey frame (same video) in time. depth set = kept (min gap 3 frames) U chain skeleton
++(every 3rd frame = 10 fps, so consecutive frames are <=0.1 s apart for visual odometry). out: kept.json"""
++import json, os, bisect
++D = '/mnt/data/footage/place-cinema-house-2026-10-30'; M = D + '/modelled'
++R = [json.loads(l) for v in ('v1', 'v2') for l in open(f'{M}/dense/index_{v}.jsonl')]
++idx = {f['name']: f for f in json.load(open(M + '/survey/index.json'))['frames']}
++sv = {}
++for r in os.listdir(M + '/survey/rooms'):
++    for f in os.listdir(f'{M}/survey/rooms/{r}'):
++        if f in idx: sv.setdefault(idx[f]['video'], []).append((idx[f]['t_s'], r))
++for k in sv: sv[k].sort()
++def room(vid, t):
++    L = sv[vid]; ts = [x[0] for x in L]; i = bisect.bisect(ts, t); c = [L[j] for j in (i - 1, i) if 0 <= j < len(L)]
++    return min(c, key=lambda x: abs(x[0] - t))[1]
++for r in R:
++    r['room'] = room(r['video'], r['t_s']); r['frontal'] = bool(r['F'] >= 0.5 and r['Lh'] >= 600)
++    r['facing'] = r['frontal'] or r['corner'] or r['opening']
++kept = []; last = {}
++for r in sorted(R, key=lambda r: (r['video'], r['n'])):
++    if r['facing'] and r['n'] - last.get(r['video'], -99) >= 3: kept.append(r['name']); last[r['video']] = r['n']
++skel = [r['name'] for r in R if r['n'] % 3 == 0 and r['room'] in ('main_hall', 'marble_hall', 'cafe')]
++depth = sorted(set(kept) | set(skel))
++by = {}
++for r in R:
++    d = by.setdefault(r['room'], dict(extracted=0, facing=0, frontal=0, corner=0, opening=0, soft_kept=0, persons=0)); d['extracted'] += 1
++    d['facing'] += r['facing']; d['frontal'] += r['frontal']; d['corner'] += r['corner']; d['opening'] += r['opening']; d['persons'] += r['persons'] > 0
++    d['soft_kept'] += bool(r['facing'] and r['sharp'] < 5)
++json.dump(dict(frames={r['name']: r for r in R}, kept=kept, skeleton=skel, depth=depth), open(M + '/dense/kept.json', 'w'))
++print('extracted', len(R), 'facing', sum(r['facing'] for r in R), 'kept(min gap 3)', len(kept), 'skeleton', len(skel), 'depth set', len(depth))
++for k, d in sorted(by.items()): print(k, d)
+diff --git a/scripts/place/model-hall/compare/dense/walls_dense.py b/scripts/place/model-hall/compare/dense/walls_dense.py
+new file mode 100644
+index 000000000..046cac343
+--- /dev/null
++++ b/scripts/place/model-hall/compare/dense/walls_dense.py
+@@ -0,0 +1,114 @@
++"""walls_dense.py - wall lines per dense frame + short-baseline visual-odometry chain (10 fps) -> wall coordinates in ONE frame per walk segment.
++Methods: single-view metrology on MoGe-2 metric points (Criminisi/Reid/Zisserman 2000; same line RANSAC as compare/walls_single2.py), frame-to-frame pose by SIFT
++(Lowe 2004) matches + MoGe depth of the earlier frame -> PnP RANSAC (Lepetit 2009 EPnP / OpenCV solvePnPRansac), chained; the chain frame is the leveled
++frame of the segment's first frame. Wall coordinate along a room axis = n.x of the wall line (n towards the camera). Chain drift is NOT modelled: a length counts
++only with >=3 frames per end wall and is MEASURED only if >=2 separate chain segments agree (see analyse step).
++usage: walls_dense.py lines|chain|analyse"""
++import sys, os, json, math, numpy as np, cv2, collections
++sys.path.insert(0, '/mnt/data/footage/place-cinema-house-2026-10-30/modelled/compare'); import lib
++O = lib.M + '/dense'; DEP = O + '/depth'; K = lib.K
++KEPT = json.load(open(O + '/kept.json')); FR = KEPT['frames']
++rng = np.random.default_rng(3)
++TAG = os.environ.get('DENSE_TAG', '')                      # '' = round-5 hall/marble/cafe run; 'coat' = coat-corridor run
++NAMES = [l.strip() for l in open(os.environ['DENSE_NAMES'])] if os.environ.get('DENSE_NAMES') else None
++def pts(name):
++    z = np.load(f'{DEP}/{name}.npz'); return z['points'].astype(np.float32), z['mask']
++def lines_xy(Q, zs, n_lines=6):
++    out = []; idx = np.arange(len(Q))
++    for _ in range(n_lines):
++        if len(idx) < 250: break
++        best = (0, None, None)
++        for _ in range(250):
++            a, b = Q[rng.choice(idx, 2, replace=False), :2]; v = b - a; L = np.hypot(*v)
++            if L < 0.3: continue
++            nrm = np.array([-v[1], v[0]]) / L; c = (np.abs(Q[idx, :2] @ nrm - a @ nrm) < 0.05).sum()
++            if c > best[0]: best = (c, nrm, a @ nrm)
++        if best[0] < 250: break
++        nrm, d0 = best[1], best[2]; inl = idx[np.abs(Q[idx, :2] @ nrm - d0) < 0.05]
++        A = Q[inl, :2]; c = A.mean(0); u, s, vt = np.linalg.svd(A - c, full_matrices=False); t = vt[0]; nrm = np.array([-t[1], t[0]]); d0 = c @ nrm
++        inl = idx[np.abs(Q[idx, :2] @ nrm - d0) < 0.05]; s_ = Q[inl, :2] @ t; z = zs[inl]
++        if len(inl) >= 250 and np.percentile(z, 95) - np.percentile(z, 5) >= 1.0 and np.percentile(s_, 97) - np.percentile(s_, 3) >= 0.8:
++            if nrm @ (-c) < 0: nrm = -nrm; d0 = c @ nrm
++            ts = np.array([-nrm[1], nrm[0]]); s2 = Q[inl, :2] @ ts
++            out.append(dict(phi=math.degrees(math.atan2(nrm[1], nrm[0])), d=float(abs(d0)), s0=float(np.percentile(s2, 3)), s1=float(np.percentile(s2, 97)), n=int(len(inl)), c=[float(c[0]), float(c[1])]))
++        idx = np.setdiff1d(idx, inl)
++    return out
++def frame_lines(name):
++    P, Mk = pts(name); up = lib.floor_up(P, Mk)
++    if up is None: return None
++    L = lib.level_rot(up[0]); h = up[1]
++    Pc = P[Mk].reshape(-1, 3); Pc = Pc[np.isfinite(Pc).all(1) & (Pc[:, 2] < 9)]
++    U = Pc @ L.T; z = U[:, 2] + h; sel = (z > 0.4) & (z < 2.2)
++    ls = lines_xy(U[sel][::2], z[sel][::2]) if sel.sum() > 1000 else []
++    return dict(h=float(h), L=L.tolist(), lines=ls)
++if sys.argv[1] == 'lines':
++    res = {}
++    for nm in (NAMES or sorted(KEPT['depth'])):
++        if os.path.exists(f'{DEP}/{nm}.npz'):
++            r = frame_lines(nm)
++            if r: r.update(room=FR[nm]['room'], t=FR[nm]['t_s'], n=FR[nm]['n'], video=FR[nm]['video']); res[nm] = r
++    json.dump(res, open(O + '/walls_dense_lines' + TAG + '.json', 'w')); print('frames with lines', len(res), 'with >=1 line', sum(bool(v['lines']) for v in res.values()))
++elif sys.argv[1] == 'chain':
++    sift = cv2.SIFT_create(1500); bf = cv2.BFMatcher(); skel = sorted(NAMES or KEPT['skeleton'], key=lambda s: (FR[s]['video'], FR[s]['n']))
++    skel = [s for s in skel if os.path.exists(f'{DEP}/{s}.npz')]
++    def feat(nm):
++        g = cv2.imread(f'{O}/small/{nm}.jpg', 0); return sift.detectAndCompute(g, None)
++    segs = []; cur = []; prev = None; Tw = np.eye(4); T = {}
++    for nm in skel:
++        r = FR[nm]; kp, ds = feat(nm); ok = False
++        if prev is not None and r['video'] == FR[prev[0]]['video'] and r['n'] - FR[prev[0]]['n'] <= 3 and ds is not None and prev[2] is not None:
++            m = [p[0] for p in bf.knnMatch(prev[2], ds, k=2) if len(p) == 2 and p[0].distance < 0.75 * p[1].distance]
++            P, Mk = pts(prev[0]); uv = np.float32([prev[1][a.queryIdx].pt for a in m]).reshape(-1, 2); xyz = lib.point_at(P, Mk, uv); good = np.isfinite(xyz).all(1)
++            if good.sum() >= 30:
++                ip = np.float32([kp[a.trainIdx].pt for a in m])[good]
++                okp, rv, tv, inl = cv2.solvePnPRansac(xyz[good].astype(np.float64), ip.astype(np.float64), K, None, reprojectionError=3.0, iterationsCount=300)
++                if okp and inl is not None and len(inl) >= 25 and np.linalg.norm(tv) < 1.0:
++                    Rm = cv2.Rodrigues(rv)[0]; Tr = np.eye(4); Tr[:3, :3] = Rm; Tr[:3, 3] = tv[:, 0]      # x_cur = Tr x_prev
++                    Tw = Tw @ np.linalg.inv(Tr); ok = True; cur.append((nm, Tw.copy(), int(len(inl))))
++        if not ok:
++            if len(cur) >= 3: segs.append(cur)
++            Tw = np.eye(4); cur = [(nm, Tw.copy(), 0)]
++        prev = (nm, kp, ds)
++    if len(cur) >= 3: segs.append(cur)
++    json.dump([[dict(name=a, T=b.tolist(), inl=c) for a, b, c in s] for s in segs], open(O + '/chain_segments' + TAG + '.json', 'w'))
++    print('segments', len(segs), 'frames', sum(len(s) for s in segs), [(FR[s[0][0]]['room'], FR[s[0][0]]['video'][-10:-4], FR[s[0][0]]['t_s'], FR[s[-1][0]]['t_s'], len(s)) for s in segs][:60])
++elif sys.argv[1] == 'analyse':
++    LN = json.load(open(O + '/walls_dense_lines' + TAG + '.json')); SEG = json.load(open(O + '/chain_segments' + TAG + '.json')); out = []
++    for si, seg in enumerate(SEG):
++        names = [s['name'] for s in seg if s['name'] in LN]
++        if len(names) < 5: continue
++        L0 = np.array(LN[seg[0]['name']]['L']) if seg[0]['name'] in LN else None
++        if L0 is None: continue
++        W = []                                                     # (name, t, theta, s, n, room)
++        for s in seg:
++            v = LN.get(s['name'])
++            if not v: continue
++            T = np.array(s['T']); Li = np.array(v['L'])
++            for l in v['lines']:
++                if l['n'] < 900: continue
++                a = math.radians(l['phi']); nl = Li.T @ np.array([math.cos(a), math.sin(a), 0]); pl = Li.T @ np.array([l['c'][0], l['c'][1], 0])
++                nw = L0 @ (T[:3, :3] @ nl); pw = L0 @ (T[:3, :3] @ pl + T[:3, 3])
++                W.append((s['name'], v['t'], math.atan2(nw[1], nw[0]), float(nw[:2] @ pw[:2]) / max(1e-6, np.hypot(*nw[:2])), l['n'], v['room']))
++        if len(W) < 8: continue
++        th = np.array([w[2] for w in W]); wt = np.array([w[4] for w in W], float)
++        z = (wt * np.exp(4j * th)).sum(); th0 = np.angle(z) / 4        # dominant axis mod 90 deg
++        cl = collections.defaultdict(list)
++        for w in W:
++            a = w[2] - th0; k = int(round(a / (math.pi / 2))) % 4; r = a - round(a / (math.pi / 2)) * math.pi / 2
++            if abs(r) > math.radians(12): continue
++            cl[(k % 2, +1 if k < 2 else -1)].append((-w[3] if k >= 2 else w[3], w[1], w[0], w[4], w[5]))
++        res = dict(seg=si, video=FR[seg[0]['name']]['video'][-10:-4], t0=FR[seg[0]['name']]['t_s'], t1=FR[seg[-1]['name']]['t_s'], frames=len(seg), theta0_deg=math.degrees(th0), walls=[])
++        for key, L in cl.items():
++            L.sort(); g = [[L[0]]]
++            for x in L[1:]:
++                (g[-1].append(x) if x[0] - g[-1][-1][0] < 0.15 else g.append([x]))
++            for G in g:
++                ts = sorted(set(round(x[1], 1) for x in G))
++                if len(G) >= 3 and ts[-1] - ts[0] >= 0.3:
++                    c = np.array([x[0] for x in G]); rm = collections.Counter(x[4] for x in G).most_common(1)[0][0]
++                    res['walls'].append(dict(axis=key[0], sign=key[1], coord=round(float(np.median(c)), 3), spread=round(float(c.max() - c.min()), 3), nframes=len(G), t0=ts[0], t1=ts[-1], room=rm, frames=[x[2] for x in G][:8]))
++        res['walls'].sort(key=lambda w: (w['axis'], w['coord'])); out.append(res)
++    json.dump(out, open(O + '/walls_dense_axes' + TAG + '.json', 'w'), indent=1)
++    for r in out:
++        print(f"seg{r['seg']} v{r['video']} {r['t0']}-{r['t1']}s frames {r['frames']} th0 {r['theta0_deg']:.0f}")
++        for w in r['walls']: print(f"   ax{w['axis']} {'+' if w['sign']>0 else '-'} coord {w['coord']:8.2f} spread {w['spread']:.2f} n {w['nframes']:3d} t {w['t0']}-{w['t1']} {w['room']}")
+-- 
+2.56.0
+

@@ -1,0 +1,2150 @@
+From c144edfddb67caeac46f02978789b0844f2b31dd Mon Sep 17 00:00:00 2001
+From: dob-0 <info@thedi.studio>
+Date: Sun, 22 Nov 2026 16:25:18 +0400
+Subject: [PATCH] wip: rescue of unsaved work in projvis (2026-11-22, folder
+ left as it was)
+
+---
+ serverXR/data-vis/di.db                       | Bin 0 -> 344064 bytes
+ serverXR/data-vis/di.db-shm                   | Bin 0 -> 32768 bytes
+ serverXR/data-vis/di.db-wal                   | Bin 0 -> 210152 bytes
+ serverXR/data-vis/machine.json                |   5 +
+ serverXR/data-vis/rig/machine.json            |   4 +
+ .../open/2026-09-29T10-18-26-645Z.json        | 330 ++++++++++++++++++
+ .../open/2026-09-29T10-19-13-539Z.json        | 330 ++++++++++++++++++
+ .../open/projects/open-jam/document.json      | 222 ++++++++++++
+ serverXR/data-vis/spaces/open/scene.json      |  76 ++++
+ .../showtest/projects/hall-test/document.json | 222 ++++++++++++
+ .../projects/notes-test/document.json         | 222 ++++++++++++
+ .../projects/sources-test/document.json       | 222 ++++++++++++
+ serverXR/data-vis/spaces/showtest/scene.json  |  76 ++++
+ 13 files changed, 1709 insertions(+)
+ create mode 100644 serverXR/data-vis/di.db
+ create mode 100644 serverXR/data-vis/di.db-shm
+ create mode 100644 serverXR/data-vis/di.db-wal
+ create mode 100644 serverXR/data-vis/machine.json
+ create mode 100644 serverXR/data-vis/rig/machine.json
+ create mode 100644 serverXR/data-vis/snapshots/open/2026-09-29T10-18-26-645Z.json
+ create mode 100644 serverXR/data-vis/snapshots/open/2026-09-29T10-19-13-539Z.json
+ create mode 100644 serverXR/data-vis/spaces/open/projects/open-jam/document.json
+ create mode 100644 serverXR/data-vis/spaces/open/scene.json
+ create mode 100644 serverXR/data-vis/spaces/showtest/projects/hall-test/document.json
+ create mode 100644 serverXR/data-vis/spaces/showtest/projects/notes-test/document.json
+ create mode 100644 serverXR/data-vis/spaces/showtest/projects/sources-test/document.json
+ create mode 100644 serverXR/data-vis/spaces/showtest/scene.json
+
+diff --git a/serverXR/data-vis/di.db b/serverXR/data-vis/di.db
+new file mode 100644
+index 0000000000000000000000000000000000000000..f651dfa64b840a0863ed67b46f5b1a2a15899930
+GIT binary patch
+literal 344064
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/serverXR/data-vis/di.db-shm b/serverXR/data-vis/di.db-shm
+new file mode 100644
+index 0000000000000000000000000000000000000000..c7af5a744074cf71519d51e0338eba0791953c5d
+GIT binary patch
+literal 32768
+zcmb1mq{{#T!VC-yj0_9{#taM$Aq)%*nx@XZyWYgFW)Pm5wo-9hv02IFO*33KY$8=X
+z$ZQY>nfo6JfW(k769WSSGXnzyI|Bm)2Ll5GCj$dR01<qUK0yWs1|bFp29O^>Y>=1(
+z0|SF20|SE-0|Nsq0|SE{0|SFSg=}KX1gSyx*C=~51V%$(Gz3ONU^E0qLtr!nMnhmU
+z1V%$(Gz3ONU^E0qLtr!nMnhmU1V%$(Gz3ONU^E0qLtr!nMnhmU1V%$(Gz3ONU^E0q
+zLtr!nMnhmU1V%$(Gz3ONU^E0qLtr!nMnhmU1V%$(Gz3ONU^E0qLtr!nMnhmU1V%$(
+zGz3ONU^E0qLtr!nMnhmU1V%$(Gz3ONU^E0qLtr!n26qUEF=!8N2adXKGz4fC0^$rh
+zG&7qRgBcn48AOOtII3ne1cqG*fKCY-cAgsb&}ayZhQMeDjD`T-5RhPyW{_i0WKdyH
+zXV7IZz^istax?@+Ltr!nMnhnDga9)GI|KLd@XDw!Mniza5MW{8VBjH9&#3az5EvdI
+zz{<eMz&kv=GU|)b5Eu=C(GVC7fzc2c4S~@R7!85Z5Eu=C(GVC7fzc2c4S~@R7!85Z
+z5Eu=C0S^H-1}+A^0e8iy14ct&B!++h_)f@?=<`uOkA?u~F4WOb7!84u83Ldifrp0A
+zB^hKG<QbG0R2eiF^cW0>hNDMaIT`{~2>~evSq23LWd=0{O$L1iBdVA=YRG5^42=*F
+MWzb?U9zdr803Px(asU7T
+
+literal 0
+HcmV?d00001
+
+diff --git a/serverXR/data-vis/di.db-wal b/serverXR/data-vis/di.db-wal
+new file mode 100644
+index 0000000000000000000000000000000000000000..02b43131ad1530712b81b58258073d1ddaf48ec9
+GIT binary patch
+literal 210152
+zcmXr7XKP~6eI&uaAiw|y!c)^$DsC&bt`QSXm*P)kU|?WE7Jue`>8-?T@h7|t3=GWt
+zJ`DUv`Mdaiz$!+G(GVC7fzc2c4S~@R7!85Z5Eu=C(GVC7fzc2c4S~@R7!3hDAz;HS
+zEGy5!$-%(E%E~Iqz`()4z`#+QkzZbtT3iyGkzcM5l3HBCxZurNwJu~bFTW@^F~^cg
+zSX7adlM_XEenD!Ue?e-VLU2K1aw_A3H><8BA(QDj`ALa6mW*Jns21lYX6E@OW+H2i
+z18aqn5L-dre+CAI5C-UYfj{FVi$7W|*<2tA{znY_KltDCKf>ebQK``o7!85Z5Eu=C
+z(GVC7fzc2c4S~@R7!85Z5Eu=C(GVC7fk7MsJj}9;u)zst4rWnC&{zW#JF_S!Xykx_
+zfq@<Dc<8u*%N$p=$x}86g4PQ#@#iw|Z{yDe%a0PHAut*OqaiRF0;3@?8UmvsFd71*
+zAut*OqaiRF0;3@?8UmDsfIAbvysRjPG%G7B0|SSsBtu4GPL3{UH36*S?va?2Q&5zj
+zm6{A$S1=X4t^i8rWR|5ClqTh5CVMdQ%Zkc!$ioc+_4ReL5_3T`czuCaVs3FsX-a0k
+zZkaK7l|V8wi7*MYqyg+H=(xazz`SdVx3mj`)(bH4KV#s3#{UH@KT3>-z-S1JhQMeD
+zjE2By2#kinXb6mkz-S1JhQMeDjE2By2n^8>;ANI)gpWZmaWl(uf(8&k0|^Wa44hz3
+z!Nvvt&Yuyi*vJnV7kCZYNAMafKT3>-z-S1JhQMeDjE2By2#kinXb6mkz-S1JhQMeD
+zjE2By2n^*AK;BRQ-bVl$8(?5y2tYnxVEO-hUkhHQ6+p%XzB2It=KngBJw597(GVC7
+zfzc2c4S~@R7!85Z5Eu=C(GVC7fzc2c4S~@R7!3im5MX6t;9z88VPW6^trb8yUw|R~
+zi^RdhFW-R97hvWW2cIv%FOH^vlsg&%qaiRF0;3@?8UmvsFd71*Aut*OqaiRF0;3@?
+z8Un*R1VWhkRb|!TCjm$^6z7)~C8rjn90m}Unpc{t5Dbw)J{4dd_*4KW3Es<Jlv$Qo
+zk~##=7ig&9FRQw~))=&2fSLa)_<RBWtHV38M}0RM0;3@?8UmvsFd71*Aut*OqaiRF
+z0;3@?8UmvsFd72GDg*?WRT+^7GMI@!U*OwS-@*naFB8bPz&-H!0{r)eRp^X*W;6sw
+zLtr!nMnhmU1V%$(Gz3ONU^E0qLtr!nMnhmU1V%^*ARj5fjLgA#z5wT`tJm6=-FO2T
+z7kCdoUx5Gp2nnuHZ;pn*Xb6mkz-S1JhQMeDjE2By2#kinXb6mkz-S1JhQRO+0r1HJ
+z%wQ7x`2xQMc3%zPeZB^Cz5ol~8R+=}d}oGtu#Ea{Gz3ONU^E0qLtr!nMnhmU1V%$(
+zGz3ONU^E0qLtr?BfF}#TqO3UlPyk7Wy!;ZhBLVzCBFIMpECnA0042dk0hA`?WG0W;
+z^94RU*VxFQ?>7&$UVw%F80dU~WBgx6PZ$^u`D4@%qaiRF0;3@?8UmvsFd71*Aut*O
+zqaiRF0;3@?8Un*L1o)U084-gZEEJqCa6oeMsh7(%rbEUBE<(>2;J-LrLvGYxqaiRF
+z0;3@?8UmvsFd71*Aut*OqaiRF0;3@?8UmvsFswoV`4j;bWDarX3+!Q!Oj)9DdKNM+
+z@Dh5y0RPKj6-J|;84ZEa5Eu=C(GVC7fzc2c4S~@R7!85Z5Eu=C(GVC7fsqyh;4=kS
+zz$DuF0!$1H3?U4{Q`1%|ZYz!xG!xr->_8&ud;w;DX9oVG{9XLcBQ3B-{W}^0qaiRF
+z0;3@?8UmvsFd71*Aut*OqaiRF0;3@?8UjRzfGe}GtUL!Nr#uHME2|^}0|x^G14nU2
+zetAi1aY=ASez`(OYH>+MVor`ONCbSKK^K@@10nPBi*gflESZEw6*)OM8IX<1FG$Vv
+zFG$T(2rfuWPGwy1X4RD>WHLP`KPfTCk`b(x14V0YVrHIiVkWZIIIvbI39*%dfk6=L
+zQ|P$BqvtiH-)Bceg2n|H`Gpwxg}}0-#ApbNhQMeDjE2By2#kinXb6mkz-S1JhQMeD
+zjE2By2#gTWn9V2{Dl5w%%OEMp%F4mfB*-9ZoRXSsW^9tCYi?<rtZQO!VX13rkd&&M
+zVw7x_W?*5EWMODlkXT$?o?nzwmRX!%o|jq#qf=8dOY)1NV?kp84mTlWadJ^*L5Yf)
+zsj0D<iiL`yieXNro2Pqtnqj$iYKc#|zq5yBSwXt3t%`QBqmQR{x^ZfzV`-_jdA`4k
+zMX;+=S*3SXn1OkYSz)M&k9k>0m|>=Vp+~l<nO|V0cbUIqerc$$Te5{muy0nlldory
+zOQL65ZgO}|a+G&)VTo_Ktu4%T3=9mAo<DS4;G3OCps-GL6=)v;BmWHs{u?7C+DE-P
+z8UmvsFd71*Aut*OqaiRF0;3@?8UmvsFd71*Aut*O!zcvQnL{~=8O>l|U=T*$M=)>S
+z9xd$>D+kE9z-tEn*TX1KM!hl`0;3@?8UmvsFd71*Aut*OqaiRF0;3@?8UmvsFd70Q
+zHv~jjWMw(gS2aNQ5x~zE_&x2y1iyfm4#++N4hDYEu85HvW}`kI4S~@R7!85Z5Eu=C
+z(GVC7fzc2c4S~@R7!85Z5EvmL&{zuJJ)la(-2+Ona|V<K?>+*Qa|d(TpNWbq$uon-
+z1(^BeA?FUtkB~$#>dny*7!85Z5Eu=C(GVC7fzc2c4S~@R7!85Z5Eu=C(GWllflQP$
+z1w)BHQ!v6Abdo@XGvstXVpjAI*tvraU@t?@7cgnMc6o8x?_kil03-ip2L8)n*->IN
+z1V%$(Gz3ONU^E0qLtr!nMnhmU1V%$(Gz3ONU^E0qLttoxfHotCqNqG411qbMfsvW6
+zfu*jIWpZgzPGVkuUS)26X)$QT!mb2DGB7YWg1rSD7npwS?Db9ja}Gkz7kJFT{}?Pg
+zN{oiUXb6mkz-S1JhQMeDjE2By2#kinXb6mkz-S1JhQMeD49yUbVFe8n;20xdU|?`U
+zK6fxDD3`gfx$ng2xWLei>`_;bhQMeDjE2By2#kinXb6mkz-S1JhQMeDjE2By2#kgR
+zS_sInipnc;qO2G|3=%LfFtCEvL)Qy1T`;Z=Ea2#a>?8QV!2ba(J4%d(z-S1JhQMeD
+zjE2By2#kinXb6mkz-S1JhQMeDjDpb+7zQE0$H=VAS&*2X8lPI0npaZHz`$S!_7-$p
+zfWh(PDPh?^C6IA}7YzI_z_O#nXb6mkz-S1JhQMeDjE2By2#kinXb6mkz-S1JhQMeD
+zjE2Av4goPnHU?2i2G+97)N=it{PfH`#szOSX;(2YFxVsSBhbt;PRPG;(+skY;3EV7
+z$06+LQKyfFz-S1JhQMeDjE2By2#kinXb6mkz-S1JhQMeDjE2By2%v@lAB!j}Cunp4
+zJ}!W=kKoeRZ0XIu>&qbP1>Q68zem+R${P)V(GVC7fzc2c4S~@R7!85Z5Eu=C(GVC7
+zfzc2c4S~@R7_uS2&&aIIh_sD>34I@ddD6?8#1-}XK;r^T{KpvhU+^Crvc4U4_-F`>
+zhQMeDjE2By2#kinXb6mkz-S1JhQMeDjE2By2#kmjP+($X5Y>h55-85dFE2?gF3~S8
+zDNV`D2dxXxKS}I9f}1NPY^+|jse<+qF!4WR;Qz?~a6|;*s3%85U^E0qLtr!nMnhmU
+z1V%$(Gz3ONU^E0qLtr!nMnhmYh5$c{C@Uju-+=x}CIb5iUKB>_Uwc^-2wE?|$UnM|
+zU^pg;Q9q4_z-S1JhQMeDjE2By2#kinXb6mkz-S1JhQMeDjMxxB-$%fVzK<Y(b>+RH
+z6x+9;aRFxjMc{n|{EJ3xc#V2|Gz3ONU^E0qLtr!nMnhmU1V%$(Gz3ONU^E0qLtr!n
+z1~>$inAsRa4bk@q6cpuWr6!jYgLVlxrcrMnfr9a4_5+sf4xoJm%={O@`v~|i4sZ~R
+zT0a^BqaiRF0;3@?8UmvsFd71*Aut*OqaiRF0;6Cw1V%%ExDY_uH{h7YjKU|pk3jr~
+zWZ9+4fCA8Zfzf>g#0B}Ns?iV_4S~@R7!85Z5Eu=C(GVC7fzc2c4S~@R7!85Z5EvpM
+zfWD7_1$`fZ#IuO5r>lNU1&s@^@K-?h5%5<G5&w-kb2J1-Ltr!nMnhmU1V%$(Gz3ON
+zU^E0qLtr!nMnhmU1cpQiXt1y`h}vT84$v>oFD*(=E!G8HC;-|c5ITdt`v?Tsbh%hH
+z_U;AkBVge_2;E1(e{e_y>Zl_}Ltr!nMnhmU1V%$(Gz3ONU^E0qLtr!nMnhmU1V%$(
+zq=f*=K7r5~EGT@^_Yp8H(l{E{o;nk>USM<|!AMI?qy8NYfzc2c4S~@R7!85Z5Eu=C
+z(GVC7fzc2c4S~@R80H~>zK?(veILR4h{v72OhOMq;{vSw3GjUc{0YN6WJbL=8Umvs
+zFd71*Aut*OqaiRF0;3@?8UmvsFd71*Aut*OGzbAPRyGDvN$7rooc#36Jkaidths}A
+zA3;%W@RZhs*z2Hu1g!iU;rj^qH_{+*MvWW|fzc2c4S~@R7!85Z5Eu=C(GVC7fzc2c
+z4S~@R7!85Z5FjlCQ1%IA&1FU5Q@)SD`apPij{COPp!EWb{O=j~-;?INQPra%Fd71*
+zAut*OqaiRF0;3@?8UmvsFd71*Aut*OqaiRF0)sXL(DxCrq3<Ku6(h};Xq5K{G%mo#
+zZ-=yxfZuM=`fAi+qaiRF0;3@?8UmvsFd71*Aut*OqaiRF0;6Cw1V%$(Kte!)jg3K6
+z7rINJI3vFtbd7+1aY<=PW<F@YKyKnt+efhWfT-#GO$YKo`v}<h7b5K=;9oc(K|E^d
+zXb6mkz-S1JhQMeDjE2By2#kinXb6mkz-S1JhQMeDjN}kN*(Z>j$cDnF%02=IaPSIG
+zO<SqBt+?;Q)yG?pp0xw57hvMwz`%c*e*;*4lo$<x(GVC7fzc2c4S~@R7!85Z5Eu=C
+z(GVC7fzc2c4S~@R81N8KWa3bimS$vNU@$T;GSfA%)HSk9D#|Y}PA!5`721p(ilXwI
+z46LjOCCQ~lIf;4sd6l{OrNxX3-mJANfshOg431z=LB|F5&I|B7;c>Yiv|fOT{|E#B
+z5&p+u`B7pt1V%$(Gz3ONU^E0qLtr!nMnhmU1V%$(Gz3ONU^E0qLts#bfE+7mr~okt
+z039HJQcN<epkV@pG|CtO0|SE-0|P?{19V(K{jBu){%Y0S(Q$!68P%hX8V!Nb5Eu=C
+z(GVC7fzc2c4S~@R7!85Z5Eu=C(GVC70gMokW0jUxWP}a_Kq<s90Fw->sJtR4%4h&W
+zmVtqR6>K1MT)@x&-L#FC$p=CE2uANC0Ef&dF&YA+Aut*OqaiRF0;3@?8UmvsFd71*
+zAut*OqaiRF0>dQ)(C;H)N579iSbEa8&wdBHK;r`J{8A|Q5%5b5mtYw6$7l$QhQMeD
+zjE2By2#kinXb6mkz-S1JhQMeDjE2By2oMSZC3ZFjQA6~*1`3Muvr>~wKzsBz)vX<V
+z_Yr8^-gn?q=;t4xeFW_M6H)FX;Gak+%tqx$Ltr!nMnhmU1V%$(Gz3ONU^E0qLtr!n
+zMnhmU1V%$(Gz2IL0hId&>ejNO@M&@%0m?pt@8@h+?>N6&0kmFVbRPjlF*&MvGz3ON
+zU^E0qLtr!nMnhmU1V%$(Gz3P$Xb6mkz-R~zwh%zyN5Fx;k04Ay%>0e}vQp5v00-X(
+zw0#789|oI;M%^<S0;3@?8UmvsFd71*Aut*OqaiRF0;3@?8UmvsFd71+gn$MI8-u7V
+z#_j<9;{4L0<kVu_lGI|*4St&@ogSI{2+X21o4tLesDbtoaPT*x?IYlCBqgjz)sBY1
+zXb6mkz-S1JhQMeDjE2By2#kinXb6mkz-S1JhQMeD5C{R3eFBqCbD;3)vX8(4`JTdF
+zXH(79@o#p4)(bH4uV>)D%)g$14@RX&Ltr!nMnhmU1V%$(Gz3ONU^E0qLtr!nMnhmU
+z1V%$(Gz91q0!mCAiqg_d3=9m2s|KMr6GAD5S=x*oilXwI46LjOH7K_fGA?+t)(*5P
+IVy#^X04P9{1poj5
+
+literal 0
+HcmV?d00001
+
+diff --git a/serverXR/data-vis/machine.json b/serverXR/data-vis/machine.json
+new file mode 100644
+index 000000000..de6598089
+--- /dev/null
++++ b/serverXR/data-vis/machine.json
+@@ -0,0 +1,5 @@
++{
++  "format": "di.machine",
++  "version": 1,
++  "id": "882322b9-6155-435d-ad49-bcf3c83f0198"
++}
+diff --git a/serverXR/data-vis/rig/machine.json b/serverXR/data-vis/rig/machine.json
+new file mode 100644
+index 000000000..320e0c0b8
+--- /dev/null
++++ b/serverXR/data-vis/rig/machine.json
+@@ -0,0 +1,4 @@
++{
++  "id": "7bd6c208-683c-4925-a375-473167dda4b8",
++  "name": "aylmo"
++}
+diff --git a/serverXR/data-vis/snapshots/open/2026-09-29T10-18-26-645Z.json b/serverXR/data-vis/snapshots/open/2026-09-29T10-18-26-645Z.json
+new file mode 100644
+index 000000000..4a185e313
+--- /dev/null
++++ b/serverXR/data-vis/snapshots/open/2026-09-29T10-18-26-645Z.json
+@@ -0,0 +1,330 @@
++{
++  "snapshotVersion": 2,
++  "id": "2026-09-29T10-18-26-645Z",
++  "takenAt": "2026-09-29T10-18-26-645Z",
++  "reason": "daily",
++  "actor": {
++    "subject": "server:daily",
++    "type": "server",
++    "label": "di.iiii (daily)"
++  },
++  "scene": {
++    "version": 4,
++    "objects": [],
++    "backgroundColor": "#0a1118",
++    "gridSize": 20,
++    "isGridVisible": true,
++    "isGizmoVisible": true,
++    "isPerfVisible": false,
++    "ambientLight": {
++      "color": "#ffffff",
++      "intensity": 0.8
++    },
++    "directionalLight": {
++      "color": "#ffffff",
++      "intensity": 1,
++      "position": [
++        10,
++        10,
++        5
++      ]
++    },
++    "transformSnaps": {
++      "translation": 0.1,
++      "rotation": 15,
++      "scale": 0.1
++    },
++    "presentation": {
++      "mode": "scene",
++      "sourceType": "html",
++      "url": "",
++      "html": "",
++      "fixedCamera": {
++        "projection": "perspective",
++        "position": [
++          0,
++          1.6,
++          4
++        ],
++        "target": [
++          0,
++          1,
++          0
++        ],
++        "fov": 60,
++        "zoom": 1,
++        "near": 0.1,
++        "far": 200,
++        "locked": true
++      }
++    },
++    "default3DView": {
++      "position": [
++        0,
++        1.6,
++        4
++      ],
++      "target": [
++        0,
++        1,
++        0
++      ]
++    },
++    "savedView": {
++      "viewMode": "3D",
++      "position": [
++        0,
++        1.6,
++        4
++      ],
++      "target": [
++        0,
++        1,
++        0
++      ]
++    }
++  },
++  "projects": [
++    {
++      "id": "open-jam",
++      "meta": {
++        "id": "open-jam",
++        "spaceId": "open",
++        "slug": null,
++        "title": "Open Jam",
++        "createdAt": 1790677013603,
++        "updatedAt": 1790677013603,
++        "lastTouchedAt": 1790677013603,
++        "documentVersion": 0,
++        "source": "studio-v3",
++        "collectionId": null,
++        "position": 0,
++        "state": "live",
++        "visibility": "public",
++        "deletedAt": null
++      },
++      "document": {
++        "version": 4,
++        "projectMeta": {
++          "id": "open-jam",
++          "spaceId": "open",
++          "title": "Open Jam",
++          "createdAt": 1790677013603,
++          "updatedAt": 1790677013603,
++          "source": "studio-v3"
++        },
++        "nodes": [],
++        "edges": [],
++        "templates": [],
++        "workspaceState": {
++          "selectedNodeId": null,
++          "liveWorldNodeIdByScope": {},
++          "activeNodeIdByTypeScope": {}
++        },
++        "entities": [],
++        "worldState": {
++          "backgroundColor": "#0a1118",
++          "environmentAssetId": null,
++          "environmentIntensity": 1,
++          "atmosphereBlend": false,
++          "hubDecor": false,
++          "spawn": null,
++          "fog": null,
++          "walkableAreas": null,
++          "placement": null,
++          "gridVisible": true,
++          "gridSize": 24,
++          "gridCellSize": 0.75,
++          "gridCellThickness": 0.3,
++          "gridCellColor": "#2a6e73",
++          "gridSectionSize": 6,
++          "gridSectionThickness": 0.65,
++          "gridSectionColor": "#4df9ff",
++          "gridFadeDistance": 80,
++          "gridFadeStrength": 1,
++          "gridOffset": 0.015,
++          "ambientLight": {
++            "color": "#ffffff",
++            "intensity": 0.85
++          },
++          "directionalLight": {
++            "color": "#fff7ea",
++            "intensity": 1.15,
++            "position": [
++              8,
++              12,
++              4
++            ]
++          },
++          "savedView": {
++            "mode": "perspective",
++            "position": [
++              0,
++              2.4,
++              6.5
++            ],
++            "target": [
++              0,
++              0.75,
++              0
++            ],
++            "fov": 50,
++            "zoom": 1,
++            "near": 0.1,
++            "far": 1000
++          }
++        },
++        "renderSettings": {
++          "shadows": true,
++          "shadowCasting": {
++            "enabled": false,
++            "mapSize": 1024
++          },
++          "antialias": true,
++          "toneMapping": "ACESFilmic",
++          "toneMappingExposure": 1,
++          "dprMin": 1,
++          "dprMax": 2
++        },
++        "xrState": {
++          "mode": "none",
++          "debugVisible": false,
++          "vrSupported": false,
++          "arSupported": false
++        },
++        "presentationState": {
++          "mode": "scene",
++          "fixedCamera": {
++            "projection": "perspective",
++            "position": [
++              0,
++              2.4,
++              6.5
++            ],
++            "target": [
++              0,
++              0.75,
++              0
++            ],
++            "fov": 50,
++            "zoom": 1,
++            "near": 0.1,
++            "far": 200,
++            "locked": false
++          },
++          "codeHtml": "",
++          "codeSourceType": "html",
++          "codeUrl": "",
++          "codeFiles": [],
++          "entryView": "scene",
++          "deviceAccess": false
++        },
++        "publishState": {
++          "shareEnabled": false,
++          "xrDefaultMode": "none",
++          "lastExportAt": 0
++        },
++        "showState": {
++          "clockEpoch": 0
++        },
++        "performState": {
++          "presets": []
++        },
++        "mappingState": {
++          "output": {
++            "width": 1920,
++            "height": 1080
++          },
++          "background": "#000000",
++          "surfaces": [],
++          "cues": [],
++          "reference": {
++            "url": "",
++            "opacity": 0.5,
++            "visible": false
++          },
++          "grid": 0,
++          "fade": 0
++        },
++        "windowLayout": {
++          "activeWindowId": "viewport",
++          "windows": {
++            "viewport": {
++              "id": "viewport",
++              "title": "Viewport",
++              "visible": true,
++              "minimized": false,
++              "pinned": true,
++              "x": 24,
++              "y": 176,
++              "width": 860,
++              "height": 580,
++              "zIndex": 3
++            },
++            "assets": {
++              "id": "assets",
++              "title": "Assets",
++              "visible": false,
++              "minimized": false,
++              "pinned": false,
++              "x": 910,
++              "y": 176,
++              "width": 360,
++              "height": 360,
++              "zIndex": 4
++            },
++            "inspector": {
++              "id": "inspector",
++              "title": "Inspector",
++              "visible": true,
++              "minimized": false,
++              "pinned": false,
++              "x": 910,
++              "y": 552,
++              "width": 360,
++              "height": 420,
++              "zIndex": 5
++            },
++            "outliner": {
++              "id": "outliner",
++              "title": "Outliner",
++              "visible": false,
++              "minimized": false,
++              "pinned": false,
++              "x": 24,
++              "y": 620,
++              "width": 280,
++              "height": 260,
++              "zIndex": 2
++            },
++            "activity": {
++              "id": "activity",
++              "title": "Activity",
++              "visible": false,
++              "minimized": false,
++              "pinned": false,
++              "x": 320,
++              "y": 620,
++              "width": 340,
++              "height": 260,
++              "zIndex": 1
++            },
++            "project": {
++              "id": "project",
++              "title": "Project",
++              "visible": false,
++              "minimized": false,
++              "pinned": false,
++              "x": 680,
++              "y": 620,
++              "width": 320,
++              "height": 260,
++              "zIndex": 1
++            }
++          }
++        },
++        "assets": []
++      }
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/serverXR/data-vis/snapshots/open/2026-09-29T10-19-13-539Z.json b/serverXR/data-vis/snapshots/open/2026-09-29T10-19-13-539Z.json
+new file mode 100644
+index 000000000..fc987e180
+--- /dev/null
++++ b/serverXR/data-vis/snapshots/open/2026-09-29T10-19-13-539Z.json
+@@ -0,0 +1,330 @@
++{
++  "snapshotVersion": 2,
++  "id": "2026-09-29T10-19-13-539Z",
++  "takenAt": "2026-09-29T10-19-13-539Z",
++  "reason": "daily",
++  "actor": {
++    "subject": "server:daily",
++    "type": "server",
++    "label": "di.iiii (daily)"
++  },
++  "scene": {
++    "version": 4,
++    "objects": [],
++    "backgroundColor": "#0a1118",
++    "gridSize": 20,
++    "isGridVisible": true,
++    "isGizmoVisible": true,
++    "isPerfVisible": false,
++    "ambientLight": {
++      "color": "#ffffff",
++      "intensity": 0.8
++    },
++    "directionalLight": {
++      "color": "#ffffff",
++      "intensity": 1,
++      "position": [
++        10,
++        10,
++        5
++      ]
++    },
++    "transformSnaps": {
++      "translation": 0.1,
++      "rotation": 15,
++      "scale": 0.1
++    },
++    "presentation": {
++      "mode": "scene",
++      "sourceType": "html",
++      "url": "",
++      "html": "",
++      "fixedCamera": {
++        "projection": "perspective",
++        "position": [
++          0,
++          1.6,
++          4
++        ],
++        "target": [
++          0,
++          1,
++          0
++        ],
++        "fov": 60,
++        "zoom": 1,
++        "near": 0.1,
++        "far": 200,
++        "locked": true
++      }
++    },
++    "default3DView": {
++      "position": [
++        0,
++        1.6,
++        4
++      ],
++      "target": [
++        0,
++        1,
++        0
++      ]
++    },
++    "savedView": {
++      "viewMode": "3D",
++      "position": [
++        0,
++        1.6,
++        4
++      ],
++      "target": [
++        0,
++        1,
++        0
++      ]
++    }
++  },
++  "projects": [
++    {
++      "id": "open-jam",
++      "meta": {
++        "id": "open-jam",
++        "spaceId": "open",
++        "slug": null,
++        "title": "Open Jam",
++        "createdAt": 1790677013603,
++        "updatedAt": 1790677013603,
++        "lastTouchedAt": 1790677013603,
++        "documentVersion": 0,
++        "source": "studio-v3",
++        "collectionId": null,
++        "position": 0,
++        "state": "live",
++        "visibility": "public",
++        "deletedAt": null
++      },
++      "document": {
++        "version": 4,
++        "projectMeta": {
++          "id": "open-jam",
++          "spaceId": "open",
++          "title": "Open Jam",
++          "createdAt": 1790677013603,
++          "updatedAt": 1790677013603,
++          "source": "studio-v3"
++        },
++        "nodes": [],
++        "edges": [],
++        "templates": [],
++        "workspaceState": {
++          "selectedNodeId": null,
++          "liveWorldNodeIdByScope": {},
++          "activeNodeIdByTypeScope": {}
++        },
++        "entities": [],
++        "worldState": {
++          "backgroundColor": "#0a1118",
++          "environmentAssetId": null,
++          "environmentIntensity": 1,
++          "atmosphereBlend": false,
++          "hubDecor": false,
++          "spawn": null,
++          "fog": null,
++          "walkableAreas": null,
++          "placement": null,
++          "gridVisible": true,
++          "gridSize": 24,
++          "gridCellSize": 0.75,
++          "gridCellThickness": 0.3,
++          "gridCellColor": "#2a6e73",
++          "gridSectionSize": 6,
++          "gridSectionThickness": 0.65,
++          "gridSectionColor": "#4df9ff",
++          "gridFadeDistance": 80,
++          "gridFadeStrength": 1,
++          "gridOffset": 0.015,
++          "ambientLight": {
++            "color": "#ffffff",
++            "intensity": 0.85
++          },
++          "directionalLight": {
++            "color": "#fff7ea",
++            "intensity": 1.15,
++            "position": [
++              8,
++              12,
++              4
++            ]
++          },
++          "savedView": {
++            "mode": "perspective",
++            "position": [
++              0,
++              2.4,
++              6.5
++            ],
++            "target": [
++              0,
++              0.75,
++              0
++            ],
++            "fov": 50,
++            "zoom": 1,
++            "near": 0.1,
++            "far": 1000
++          }
++        },
++        "renderSettings": {
++          "shadows": true,
++          "shadowCasting": {
++            "enabled": false,
++            "mapSize": 1024
++          },
++          "antialias": true,
++          "toneMapping": "ACESFilmic",
++          "toneMappingExposure": 1,
++          "dprMin": 1,
++          "dprMax": 2
++        },
++        "xrState": {
++          "mode": "none",
++          "debugVisible": false,
++          "vrSupported": false,
++          "arSupported": false
++        },
++        "presentationState": {
++          "mode": "scene",
++          "fixedCamera": {
++            "projection": "perspective",
++            "position": [
++              0,
++              2.4,
++              6.5
++            ],
++            "target": [
++              0,
++              0.75,
++              0
++            ],
++            "fov": 50,
++            "zoom": 1,
++            "near": 0.1,
++            "far": 200,
++            "locked": false
++          },
++          "codeHtml": "",
++          "codeSourceType": "html",
++          "codeUrl": "",
++          "codeFiles": [],
++          "entryView": "scene",
++          "deviceAccess": false
++        },
++        "publishState": {
++          "shareEnabled": false,
++          "xrDefaultMode": "none",
++          "lastExportAt": 0
++        },
++        "showState": {
++          "clockEpoch": 0
++        },
++        "performState": {
++          "presets": []
++        },
++        "mappingState": {
++          "output": {
++            "width": 1920,
++            "height": 1080
++          },
++          "background": "#000000",
++          "surfaces": [],
++          "cues": [],
++          "reference": {
++            "url": "",
++            "opacity": 0.5,
++            "visible": false
++          },
++          "grid": 0,
++          "fade": 0
++        },
++        "windowLayout": {
++          "activeWindowId": "viewport",
++          "windows": {
++            "viewport": {
++              "id": "viewport",
++              "title": "Viewport",
++              "visible": true,
++              "minimized": false,
++              "pinned": true,
++              "x": 24,
++              "y": 176,
++              "width": 860,
++              "height": 580,
++              "zIndex": 3
++            },
++            "assets": {
++              "id": "assets",
++              "title": "Assets",
++              "visible": false,
++              "minimized": false,
++              "pinned": false,
++              "x": 910,
++              "y": 176,
++              "width": 360,
++              "height": 360,
++              "zIndex": 4
++            },
++            "inspector": {
++              "id": "inspector",
++              "title": "Inspector",
++              "visible": true,
++              "minimized": false,
++              "pinned": false,
++              "x": 910,
++              "y": 552,
++              "width": 360,
++              "height": 420,
++              "zIndex": 5
++            },
++            "outliner": {
++              "id": "outliner",
++              "title": "Outliner",
++              "visible": false,
++              "minimized": false,
++              "pinned": false,
++              "x": 24,
++              "y": 620,
++              "width": 280,
++              "height": 260,
++              "zIndex": 2
++            },
++            "activity": {
++              "id": "activity",
++              "title": "Activity",
++              "visible": false,
++              "minimized": false,
++              "pinned": false,
++              "x": 320,
++              "y": 620,
++              "width": 340,
++              "height": 260,
++              "zIndex": 1
++            },
++            "project": {
++              "id": "project",
++              "title": "Project",
++              "visible": false,
++              "minimized": false,
++              "pinned": false,
++              "x": 680,
++              "y": 620,
++              "width": 320,
++              "height": 260,
++              "zIndex": 1
++            }
++          }
++        },
++        "assets": []
++      }
++    }
++  ]
++}
+\ No newline at end of file
+diff --git a/serverXR/data-vis/spaces/open/projects/open-jam/document.json b/serverXR/data-vis/spaces/open/projects/open-jam/document.json
+new file mode 100644
+index 000000000..8aa7b69e3
+--- /dev/null
++++ b/serverXR/data-vis/spaces/open/projects/open-jam/document.json
+@@ -0,0 +1,222 @@
++{
++  "version": 4,
++  "projectMeta": {
++    "id": "open-jam",
++    "spaceId": "open",
++    "title": "Open Jam",
++    "createdAt": 1790677013603,
++    "updatedAt": 1790677013603,
++    "source": "studio-v3"
++  },
++  "nodes": [],
++  "edges": [],
++  "templates": [],
++  "workspaceState": {
++    "selectedNodeId": null,
++    "liveWorldNodeIdByScope": {},
++    "activeNodeIdByTypeScope": {}
++  },
++  "entities": [],
++  "worldState": {
++    "backgroundColor": "#0a1118",
++    "environmentAssetId": null,
++    "environmentIntensity": 1,
++    "atmosphereBlend": false,
++    "hubDecor": false,
++    "spawn": null,
++    "fog": null,
++    "walkableAreas": null,
++    "placement": null,
++    "gridVisible": true,
++    "gridSize": 24,
++    "gridCellSize": 0.75,
++    "gridCellThickness": 0.3,
++    "gridCellColor": "#2a6e73",
++    "gridSectionSize": 6,
++    "gridSectionThickness": 0.65,
++    "gridSectionColor": "#4df9ff",
++    "gridFadeDistance": 80,
++    "gridFadeStrength": 1,
++    "gridOffset": 0.015,
++    "ambientLight": {
++      "color": "#ffffff",
++      "intensity": 0.85
++    },
++    "directionalLight": {
++      "color": "#fff7ea",
++      "intensity": 1.15,
++      "position": [
++        8,
++        12,
++        4
++      ]
++    },
++    "savedView": {
++      "mode": "perspective",
++      "position": [
++        0,
++        2.4,
++        6.5
++      ],
++      "target": [
++        0,
++        0.75,
++        0
++      ],
++      "fov": 50,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 1000
++    }
++  },
++  "renderSettings": {
++    "shadows": true,
++    "shadowCasting": {
++      "enabled": false,
++      "mapSize": 1024
++    },
++    "antialias": true,
++    "toneMapping": "ACESFilmic",
++    "toneMappingExposure": 1,
++    "dprMin": 1,
++    "dprMax": 2
++  },
++  "xrState": {
++    "mode": "none",
++    "debugVisible": false,
++    "vrSupported": false,
++    "arSupported": false
++  },
++  "presentationState": {
++    "mode": "scene",
++    "fixedCamera": {
++      "projection": "perspective",
++      "position": [
++        0,
++        2.4,
++        6.5
++      ],
++      "target": [
++        0,
++        0.75,
++        0
++      ],
++      "fov": 50,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 200,
++      "locked": false
++    },
++    "codeHtml": "",
++    "codeSourceType": "html",
++    "codeUrl": "",
++    "codeFiles": [],
++    "entryView": "scene",
++    "deviceAccess": false
++  },
++  "publishState": {
++    "shareEnabled": false,
++    "xrDefaultMode": "none",
++    "lastExportAt": 0
++  },
++  "showState": {
++    "clockEpoch": 0
++  },
++  "performState": {
++    "presets": []
++  },
++  "mappingState": {
++    "output": {
++      "width": 1920,
++      "height": 1080
++    },
++    "background": "#000000",
++    "surfaces": [],
++    "cues": [],
++    "reference": {
++      "url": "",
++      "opacity": 0.5,
++      "visible": false
++    },
++    "grid": 0,
++    "fade": 0
++  },
++  "windowLayout": {
++    "activeWindowId": "viewport",
++    "windows": {
++      "viewport": {
++        "id": "viewport",
++        "title": "Viewport",
++        "visible": true,
++        "minimized": false,
++        "pinned": true,
++        "x": 24,
++        "y": 176,
++        "width": 860,
++        "height": 580,
++        "zIndex": 3
++      },
++      "assets": {
++        "id": "assets",
++        "title": "Assets",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 910,
++        "y": 176,
++        "width": 360,
++        "height": 360,
++        "zIndex": 4
++      },
++      "inspector": {
++        "id": "inspector",
++        "title": "Inspector",
++        "visible": true,
++        "minimized": false,
++        "pinned": false,
++        "x": 910,
++        "y": 552,
++        "width": 360,
++        "height": 420,
++        "zIndex": 5
++      },
++      "outliner": {
++        "id": "outliner",
++        "title": "Outliner",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 24,
++        "y": 620,
++        "width": 280,
++        "height": 260,
++        "zIndex": 2
++      },
++      "activity": {
++        "id": "activity",
++        "title": "Activity",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 320,
++        "y": 620,
++        "width": 340,
++        "height": 260,
++        "zIndex": 1
++      },
++      "project": {
++        "id": "project",
++        "title": "Project",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 680,
++        "y": 620,
++        "width": 320,
++        "height": 260,
++        "zIndex": 1
++      }
++    }
++  },
++  "assets": []
++}
+\ No newline at end of file
+diff --git a/serverXR/data-vis/spaces/open/scene.json b/serverXR/data-vis/spaces/open/scene.json
+new file mode 100644
+index 000000000..236436e08
+--- /dev/null
++++ b/serverXR/data-vis/spaces/open/scene.json
+@@ -0,0 +1,76 @@
++{
++  "version": 4,
++  "objects": [],
++  "backgroundColor": "#0a1118",
++  "gridSize": 20,
++  "isGridVisible": true,
++  "isGizmoVisible": true,
++  "isPerfVisible": false,
++  "ambientLight": {
++    "color": "#ffffff",
++    "intensity": 0.8
++  },
++  "directionalLight": {
++    "color": "#ffffff",
++    "intensity": 1,
++    "position": [
++      10,
++      10,
++      5
++    ]
++  },
++  "transformSnaps": {
++    "translation": 0.1,
++    "rotation": 15,
++    "scale": 0.1
++  },
++  "presentation": {
++    "mode": "scene",
++    "sourceType": "html",
++    "url": "",
++    "html": "",
++    "fixedCamera": {
++      "projection": "perspective",
++      "position": [
++        0,
++        1.6,
++        4
++      ],
++      "target": [
++        0,
++        1,
++        0
++      ],
++      "fov": 60,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 200,
++      "locked": true
++    }
++  },
++  "default3DView": {
++    "position": [
++      0,
++      1.6,
++      4
++    ],
++    "target": [
++      0,
++      1,
++      0
++    ]
++  },
++  "savedView": {
++    "viewMode": "3D",
++    "position": [
++      0,
++      1.6,
++      4
++    ],
++    "target": [
++      0,
++      1,
++      0
++    ]
++  }
++}
+\ No newline at end of file
+diff --git a/serverXR/data-vis/spaces/showtest/projects/hall-test/document.json b/serverXR/data-vis/spaces/showtest/projects/hall-test/document.json
+new file mode 100644
+index 000000000..0dabc4572
+--- /dev/null
++++ b/serverXR/data-vis/spaces/showtest/projects/hall-test/document.json
+@@ -0,0 +1,222 @@
++{
++  "version": 4,
++  "projectMeta": {
++    "id": "hall-test",
++    "spaceId": "showtest",
++    "title": "Hall",
++    "createdAt": 1790677165717,
++    "updatedAt": 1790677165717,
++    "source": "project"
++  },
++  "nodes": [],
++  "edges": [],
++  "templates": [],
++  "workspaceState": {
++    "selectedNodeId": null,
++    "liveWorldNodeIdByScope": {},
++    "activeNodeIdByTypeScope": {}
++  },
++  "entities": [],
++  "worldState": {
++    "backgroundColor": "#0a1118",
++    "environmentAssetId": null,
++    "environmentIntensity": 1,
++    "atmosphereBlend": false,
++    "hubDecor": false,
++    "spawn": null,
++    "fog": null,
++    "walkableAreas": null,
++    "placement": null,
++    "gridVisible": true,
++    "gridSize": 24,
++    "gridCellSize": 0.75,
++    "gridCellThickness": 0.3,
++    "gridCellColor": "#2a6e73",
++    "gridSectionSize": 6,
++    "gridSectionThickness": 0.65,
++    "gridSectionColor": "#4df9ff",
++    "gridFadeDistance": 80,
++    "gridFadeStrength": 1,
++    "gridOffset": 0.015,
++    "ambientLight": {
++      "color": "#ffffff",
++      "intensity": 0.85
++    },
++    "directionalLight": {
++      "color": "#fff7ea",
++      "intensity": 1.15,
++      "position": [
++        8,
++        12,
++        4
++      ]
++    },
++    "savedView": {
++      "mode": "perspective",
++      "position": [
++        0,
++        2.4,
++        6.5
++      ],
++      "target": [
++        0,
++        0.75,
++        0
++      ],
++      "fov": 50,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 1000
++    }
++  },
++  "renderSettings": {
++    "shadows": true,
++    "shadowCasting": {
++      "enabled": false,
++      "mapSize": 1024
++    },
++    "antialias": true,
++    "toneMapping": "ACESFilmic",
++    "toneMappingExposure": 1,
++    "dprMin": 1,
++    "dprMax": 2
++  },
++  "xrState": {
++    "mode": "none",
++    "debugVisible": false,
++    "vrSupported": false,
++    "arSupported": false
++  },
++  "presentationState": {
++    "mode": "scene",
++    "fixedCamera": {
++      "projection": "perspective",
++      "position": [
++        0,
++        2.4,
++        6.5
++      ],
++      "target": [
++        0,
++        0.75,
++        0
++      ],
++      "fov": 50,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 200,
++      "locked": false
++    },
++    "codeHtml": "",
++    "codeSourceType": "html",
++    "codeUrl": "",
++    "codeFiles": [],
++    "entryView": "scene",
++    "deviceAccess": false
++  },
++  "publishState": {
++    "shareEnabled": false,
++    "xrDefaultMode": "none",
++    "lastExportAt": 0
++  },
++  "showState": {
++    "clockEpoch": 0
++  },
++  "performState": {
++    "presets": []
++  },
++  "mappingState": {
++    "output": {
++      "width": 1920,
++      "height": 1080
++    },
++    "background": "#000000",
++    "surfaces": [],
++    "cues": [],
++    "reference": {
++      "url": "",
++      "opacity": 0.5,
++      "visible": false
++    },
++    "grid": 0,
++    "fade": 0
++  },
++  "windowLayout": {
++    "activeWindowId": "viewport",
++    "windows": {
++      "viewport": {
++        "id": "viewport",
++        "title": "Viewport",
++        "visible": true,
++        "minimized": false,
++        "pinned": true,
++        "x": 24,
++        "y": 176,
++        "width": 860,
++        "height": 580,
++        "zIndex": 3
++      },
++      "assets": {
++        "id": "assets",
++        "title": "Assets",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 910,
++        "y": 176,
++        "width": 360,
++        "height": 360,
++        "zIndex": 4
++      },
++      "inspector": {
++        "id": "inspector",
++        "title": "Inspector",
++        "visible": true,
++        "minimized": false,
++        "pinned": false,
++        "x": 910,
++        "y": 552,
++        "width": 360,
++        "height": 420,
++        "zIndex": 5
++      },
++      "outliner": {
++        "id": "outliner",
++        "title": "Outliner",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 24,
++        "y": 620,
++        "width": 280,
++        "height": 260,
++        "zIndex": 2
++      },
++      "activity": {
++        "id": "activity",
++        "title": "Activity",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 320,
++        "y": 620,
++        "width": 340,
++        "height": 260,
++        "zIndex": 1
++      },
++      "project": {
++        "id": "project",
++        "title": "Project",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 680,
++        "y": 620,
++        "width": 320,
++        "height": 260,
++        "zIndex": 1
++      }
++    }
++  },
++  "assets": []
++}
+\ No newline at end of file
+diff --git a/serverXR/data-vis/spaces/showtest/projects/notes-test/document.json b/serverXR/data-vis/spaces/showtest/projects/notes-test/document.json
+new file mode 100644
+index 000000000..0fb94a736
+--- /dev/null
++++ b/serverXR/data-vis/spaces/showtest/projects/notes-test/document.json
+@@ -0,0 +1,222 @@
++{
++  "version": 4,
++  "projectMeta": {
++    "id": "notes-test",
++    "spaceId": "showtest",
++    "title": "Notes",
++    "createdAt": 1790677165733,
++    "updatedAt": 1790677165733,
++    "source": "project"
++  },
++  "nodes": [],
++  "edges": [],
++  "templates": [],
++  "workspaceState": {
++    "selectedNodeId": null,
++    "liveWorldNodeIdByScope": {},
++    "activeNodeIdByTypeScope": {}
++  },
++  "entities": [],
++  "worldState": {
++    "backgroundColor": "#0a1118",
++    "environmentAssetId": null,
++    "environmentIntensity": 1,
++    "atmosphereBlend": false,
++    "hubDecor": false,
++    "spawn": null,
++    "fog": null,
++    "walkableAreas": null,
++    "placement": null,
++    "gridVisible": true,
++    "gridSize": 24,
++    "gridCellSize": 0.75,
++    "gridCellThickness": 0.3,
++    "gridCellColor": "#2a6e73",
++    "gridSectionSize": 6,
++    "gridSectionThickness": 0.65,
++    "gridSectionColor": "#4df9ff",
++    "gridFadeDistance": 80,
++    "gridFadeStrength": 1,
++    "gridOffset": 0.015,
++    "ambientLight": {
++      "color": "#ffffff",
++      "intensity": 0.85
++    },
++    "directionalLight": {
++      "color": "#fff7ea",
++      "intensity": 1.15,
++      "position": [
++        8,
++        12,
++        4
++      ]
++    },
++    "savedView": {
++      "mode": "perspective",
++      "position": [
++        0,
++        2.4,
++        6.5
++      ],
++      "target": [
++        0,
++        0.75,
++        0
++      ],
++      "fov": 50,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 1000
++    }
++  },
++  "renderSettings": {
++    "shadows": true,
++    "shadowCasting": {
++      "enabled": false,
++      "mapSize": 1024
++    },
++    "antialias": true,
++    "toneMapping": "ACESFilmic",
++    "toneMappingExposure": 1,
++    "dprMin": 1,
++    "dprMax": 2
++  },
++  "xrState": {
++    "mode": "none",
++    "debugVisible": false,
++    "vrSupported": false,
++    "arSupported": false
++  },
++  "presentationState": {
++    "mode": "scene",
++    "fixedCamera": {
++      "projection": "perspective",
++      "position": [
++        0,
++        2.4,
++        6.5
++      ],
++      "target": [
++        0,
++        0.75,
++        0
++      ],
++      "fov": 50,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 200,
++      "locked": false
++    },
++    "codeHtml": "",
++    "codeSourceType": "html",
++    "codeUrl": "",
++    "codeFiles": [],
++    "entryView": "scene",
++    "deviceAccess": false
++  },
++  "publishState": {
++    "shareEnabled": false,
++    "xrDefaultMode": "none",
++    "lastExportAt": 0
++  },
++  "showState": {
++    "clockEpoch": 0
++  },
++  "performState": {
++    "presets": []
++  },
++  "mappingState": {
++    "output": {
++      "width": 1920,
++      "height": 1080
++    },
++    "background": "#000000",
++    "surfaces": [],
++    "cues": [],
++    "reference": {
++      "url": "",
++      "opacity": 0.5,
++      "visible": false
++    },
++    "grid": 0,
++    "fade": 0
++  },
++  "windowLayout": {
++    "activeWindowId": "viewport",
++    "windows": {
++      "viewport": {
++        "id": "viewport",
++        "title": "Viewport",
++        "visible": true,
++        "minimized": false,
++        "pinned": true,
++        "x": 24,
++        "y": 176,
++        "width": 860,
++        "height": 580,
++        "zIndex": 3
++      },
++      "assets": {
++        "id": "assets",
++        "title": "Assets",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 910,
++        "y": 176,
++        "width": 360,
++        "height": 360,
++        "zIndex": 4
++      },
++      "inspector": {
++        "id": "inspector",
++        "title": "Inspector",
++        "visible": true,
++        "minimized": false,
++        "pinned": false,
++        "x": 910,
++        "y": 552,
++        "width": 360,
++        "height": 420,
++        "zIndex": 5
++      },
++      "outliner": {
++        "id": "outliner",
++        "title": "Outliner",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 24,
++        "y": 620,
++        "width": 280,
++        "height": 260,
++        "zIndex": 2
++      },
++      "activity": {
++        "id": "activity",
++        "title": "Activity",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 320,
++        "y": 620,
++        "width": 340,
++        "height": 260,
++        "zIndex": 1
++      },
++      "project": {
++        "id": "project",
++        "title": "Project",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 680,
++        "y": 620,
++        "width": 320,
++        "height": 260,
++        "zIndex": 1
++      }
++    }
++  },
++  "assets": []
++}
+\ No newline at end of file
+diff --git a/serverXR/data-vis/spaces/showtest/projects/sources-test/document.json b/serverXR/data-vis/spaces/showtest/projects/sources-test/document.json
+new file mode 100644
+index 000000000..5d0fd6ac3
+--- /dev/null
++++ b/serverXR/data-vis/spaces/showtest/projects/sources-test/document.json
+@@ -0,0 +1,222 @@
++{
++  "version": 4,
++  "projectMeta": {
++    "id": "sources-test",
++    "spaceId": "showtest",
++    "title": "Venue Sources",
++    "createdAt": 1790677165726,
++    "updatedAt": 1790677165726,
++    "source": "project"
++  },
++  "nodes": [],
++  "edges": [],
++  "templates": [],
++  "workspaceState": {
++    "selectedNodeId": null,
++    "liveWorldNodeIdByScope": {},
++    "activeNodeIdByTypeScope": {}
++  },
++  "entities": [],
++  "worldState": {
++    "backgroundColor": "#0a1118",
++    "environmentAssetId": null,
++    "environmentIntensity": 1,
++    "atmosphereBlend": false,
++    "hubDecor": false,
++    "spawn": null,
++    "fog": null,
++    "walkableAreas": null,
++    "placement": null,
++    "gridVisible": true,
++    "gridSize": 24,
++    "gridCellSize": 0.75,
++    "gridCellThickness": 0.3,
++    "gridCellColor": "#2a6e73",
++    "gridSectionSize": 6,
++    "gridSectionThickness": 0.65,
++    "gridSectionColor": "#4df9ff",
++    "gridFadeDistance": 80,
++    "gridFadeStrength": 1,
++    "gridOffset": 0.015,
++    "ambientLight": {
++      "color": "#ffffff",
++      "intensity": 0.85
++    },
++    "directionalLight": {
++      "color": "#fff7ea",
++      "intensity": 1.15,
++      "position": [
++        8,
++        12,
++        4
++      ]
++    },
++    "savedView": {
++      "mode": "perspective",
++      "position": [
++        0,
++        2.4,
++        6.5
++      ],
++      "target": [
++        0,
++        0.75,
++        0
++      ],
++      "fov": 50,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 1000
++    }
++  },
++  "renderSettings": {
++    "shadows": true,
++    "shadowCasting": {
++      "enabled": false,
++      "mapSize": 1024
++    },
++    "antialias": true,
++    "toneMapping": "ACESFilmic",
++    "toneMappingExposure": 1,
++    "dprMin": 1,
++    "dprMax": 2
++  },
++  "xrState": {
++    "mode": "none",
++    "debugVisible": false,
++    "vrSupported": false,
++    "arSupported": false
++  },
++  "presentationState": {
++    "mode": "scene",
++    "fixedCamera": {
++      "projection": "perspective",
++      "position": [
++        0,
++        2.4,
++        6.5
++      ],
++      "target": [
++        0,
++        0.75,
++        0
++      ],
++      "fov": 50,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 200,
++      "locked": false
++    },
++    "codeHtml": "",
++    "codeSourceType": "html",
++    "codeUrl": "",
++    "codeFiles": [],
++    "entryView": "scene",
++    "deviceAccess": false
++  },
++  "publishState": {
++    "shareEnabled": false,
++    "xrDefaultMode": "none",
++    "lastExportAt": 0
++  },
++  "showState": {
++    "clockEpoch": 0
++  },
++  "performState": {
++    "presets": []
++  },
++  "mappingState": {
++    "output": {
++      "width": 1920,
++      "height": 1080
++    },
++    "background": "#000000",
++    "surfaces": [],
++    "cues": [],
++    "reference": {
++      "url": "",
++      "opacity": 0.5,
++      "visible": false
++    },
++    "grid": 0,
++    "fade": 0
++  },
++  "windowLayout": {
++    "activeWindowId": "viewport",
++    "windows": {
++      "viewport": {
++        "id": "viewport",
++        "title": "Viewport",
++        "visible": true,
++        "minimized": false,
++        "pinned": true,
++        "x": 24,
++        "y": 176,
++        "width": 860,
++        "height": 580,
++        "zIndex": 3
++      },
++      "assets": {
++        "id": "assets",
++        "title": "Assets",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 910,
++        "y": 176,
++        "width": 360,
++        "height": 360,
++        "zIndex": 4
++      },
++      "inspector": {
++        "id": "inspector",
++        "title": "Inspector",
++        "visible": true,
++        "minimized": false,
++        "pinned": false,
++        "x": 910,
++        "y": 552,
++        "width": 360,
++        "height": 420,
++        "zIndex": 5
++      },
++      "outliner": {
++        "id": "outliner",
++        "title": "Outliner",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 24,
++        "y": 620,
++        "width": 280,
++        "height": 260,
++        "zIndex": 2
++      },
++      "activity": {
++        "id": "activity",
++        "title": "Activity",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 320,
++        "y": 620,
++        "width": 340,
++        "height": 260,
++        "zIndex": 1
++      },
++      "project": {
++        "id": "project",
++        "title": "Project",
++        "visible": false,
++        "minimized": false,
++        "pinned": false,
++        "x": 680,
++        "y": 620,
++        "width": 320,
++        "height": 260,
++        "zIndex": 1
++      }
++    }
++  },
++  "assets": []
++}
+\ No newline at end of file
+diff --git a/serverXR/data-vis/spaces/showtest/scene.json b/serverXR/data-vis/spaces/showtest/scene.json
+new file mode 100644
+index 000000000..236436e08
+--- /dev/null
++++ b/serverXR/data-vis/spaces/showtest/scene.json
+@@ -0,0 +1,76 @@
++{
++  "version": 4,
++  "objects": [],
++  "backgroundColor": "#0a1118",
++  "gridSize": 20,
++  "isGridVisible": true,
++  "isGizmoVisible": true,
++  "isPerfVisible": false,
++  "ambientLight": {
++    "color": "#ffffff",
++    "intensity": 0.8
++  },
++  "directionalLight": {
++    "color": "#ffffff",
++    "intensity": 1,
++    "position": [
++      10,
++      10,
++      5
++    ]
++  },
++  "transformSnaps": {
++    "translation": 0.1,
++    "rotation": 15,
++    "scale": 0.1
++  },
++  "presentation": {
++    "mode": "scene",
++    "sourceType": "html",
++    "url": "",
++    "html": "",
++    "fixedCamera": {
++      "projection": "perspective",
++      "position": [
++        0,
++        1.6,
++        4
++      ],
++      "target": [
++        0,
++        1,
++        0
++      ],
++      "fov": 60,
++      "zoom": 1,
++      "near": 0.1,
++      "far": 200,
++      "locked": true
++    }
++  },
++  "default3DView": {
++    "position": [
++      0,
++      1.6,
++      4
++    ],
++    "target": [
++      0,
++      1,
++      0
++    ]
++  },
++  "savedView": {
++    "viewMode": "3D",
++    "position": [
++      0,
++      1.6,
++      4
++    ],
++    "target": [
++      0,
++      1,
++      0
++    ]
++  }
++}
+\ No newline at end of file
+-- 
+2.56.0
+

@@ -1,0 +1,22 @@
+From 8e01f5b104744da52012d892acd612ca6487ec2c Mon Sep 17 00:00:00 2001
+From: dob-0 <info@thedi.studio>
+Date: Sun, 22 Nov 2026 16:25:18 +0400
+Subject: [PATCH] wip: rescue of unsaved work in monitor (2026-11-22, folder
+ left as it was)
+
+---
+ scripts/tmp-sweep.mjs | 2 ++
+ 1 file changed, 2 insertions(+)
+ create mode 100644 scripts/tmp-sweep.mjs
+
+diff --git a/scripts/tmp-sweep.mjs b/scripts/tmp-sweep.mjs
+new file mode 100644
+index 000000000..e6f086edd
+--- /dev/null
++++ b/scripts/tmp-sweep.mjs
+@@ -0,0 +1,2 @@
++process.argv.push('--base','http://monitor.diiii.localhost','--routes','/,/wiki,/studio,/main,/raw,/admin','--widths','1440,700,390')
++await import('./check-box-escape.mjs')
+-- 
+2.56.0
+

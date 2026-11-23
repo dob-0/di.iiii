@@ -1,0 +1,336 @@
+From 033a0af2dd8b2bc17abf7c232b53dcf6d93db728 Mon Sep 17 00:00:00 2001
+From: dob-0 <info@thedi.studio>
+Date: Sun, 22 Nov 2026 16:25:21 +0400
+Subject: [PATCH] wip: rescue of unsaved work in home-load-speed (2026-11-22,
+ folder left as it was)
+
+---
+ docs/ai/known-fixes.md                  |  1 +
+ docs/ai/sessions/fix-home-load-speed.md |  9 ++++
+ src/landing/LandingPage.jsx             | 38 ++++++++++++++---
+ src/landing/enterFlight.js              | 15 +++----
+ src/landing/landingEntryWeight.test.js  | 57 +++++++++++++++++++++++++
+ src/landing/landingPageLeaves.test.jsx  | 17 ++++++--
+ src/landing/landingViewMode.test.jsx    | 10 ++++-
+ src/landing/restPose.js                 |  9 ++++
+ vite.config.js                          | 16 +++++++
+ 9 files changed, 154 insertions(+), 18 deletions(-)
+ create mode 100644 docs/ai/sessions/fix-home-load-speed.md
+ create mode 100644 src/landing/landingEntryWeight.test.js
+ create mode 100644 src/landing/restPose.js
+
+diff --git a/docs/ai/known-fixes.md b/docs/ai/known-fixes.md
+index b0017fc3c..deeedf68a 100644
+--- a/docs/ai/known-fixes.md
++++ b/docs/ai/known-fixes.md
+@@ -1066,6 +1066,7 @@ If you add a wildcard route, add that check with it.
+ | **A standby deploy hung for 10+ minutes with nothing said: the release build's `git fetch` stalled at 38 MB on a dropped link** (2026-09-28) — the first deploy the standby host pulled by itself | Neither git nor curl has a timeout of its own. `build-runtime.sh` fetched the release commit with a bare `git fetch`; the link died mid-transfer, the TCP connection stayed open, and git waited forever at 0.4% CPU while holding the deploy lock. Measured against a server that accepts and goes silent: a bare fetch was still hanging when killed at 25 s; with `-c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10` it ended itself at 10 s ("Operation too slow") | The source fetch runs with `http.lowSpeedLimit=1000` / `http.lowSpeedTime=60` and three attempts 15 s apart, then fails the build with a reason; the node download gets `--retry 3 --connect-timeout 20 --max-time 900`. Rule: every network command in an unattended script carries a bound. Guard: `scripts/standby/build-runtime.test.js` (3 of 3 red on the old script) | `scripts/standby/build-runtime.sh` `scripts/standby/build-runtime.test.js` |
+ | **In a room with build zones on, a moved or dropped photo stood where the hand left it, then jumped to its wall slot when the server's rewrite came back** (audit 2026-09-23 "shell": the client's placement twin was never called; measured 2026-09-28 in Studio: X read 9 for 76ms on localhost, then 6.2) | The server rewrites every hangable create/move to a slot (`shared/placement.cjs` `placeOps`) and sends NEW ops back; the client had applied its own unplaced op, so it showed the wrong position until the echo arrived. `src/shared/placement.js` — the client twin, proven equal in `placement.test.js` — had no caller | `useProjectDocumentSync.applyLocalOps` runs `placeOps` over every local batch against the latest document before showing or sending it — every editor (Studio, Nodes, phones) at once; a drag, one op per frame, snaps slot to slot as it goes. Measured under 300ms emulated latency: fixed, X reads the slot (6.2) from the first frame; old, 9 then 6.2. Three moves (-6, 9, 0): screen at 150ms = server after 3s, three distinct slots. Guard: `useProjectDocumentSync.test.jsx` "places a move in a build-zone room before showing it, exactly as the server will" (red on the old hook). Full suite 6304/6304 | `src/project/hooks/useProjectDocumentSync.js` |
+ | **Every page fetched three.js — /tools, /wiki, /login, /terms, pages with no 3D on them — 452 KB gzip on a phone before a word was read** (found 2026-09-28 measuring the Kit's first load with `scripts/kit-first-load.mjs`: /tools 872 KB on the wire, desk and phone alike, `three-vendor` in the list) | One helper file, `@babel/runtime/helpers/esm/extends.js`, is shared by drei (in `three-vendor`) and MUI (in `vendor`). `manualChunks` had no rule for `@babel/runtime`, so rolldown seated the helper inside `three-vendor`, and the generic `vendor` chunk (MUI, needed by the eager `ReservedAddressCard`) imported `three-vendor` to reach it. The chunk graph, not any page, decided that every route needs the 3D engine. The 2026-07-17 audit had removed the entry chunk's own import of three-vendor and filtered it out of the HTML preload list; this import was one hop further and invisible to both | `@babel/runtime` gets its own chunk in `vite.config.js` (`babel-runtime`, 0.38 KB gzip). Measured after: /tools 516 KB desk / 448 KB phone with three.js NOT loaded (the rest is posters and MUI); a live preview fetches three.js only when a card is asked for it. Guard: `src/kit/kitCatalogue.test.js` "carries measured weights" reads `kitWeights.threeOnFirstLoad`, which `scripts/kit-weights.mjs` writes from a real Firefox load — red when three.js rides along | `vite.config.js` `scripts/kit-first-load.mjs` `scripts/kit-weights.mjs` |
++| **The front page (`/`) took 6.9 s to show its wordmark on a throttled phone, and 512 KB (gzip) of three.js came with it though a phone never draws the room** (found 2026-11-10 by Lighthouse 12.8.2 mobile on a BUILT tree, median of 3: performance 65, LCP 6,923 ms (the `lp-wordmark` h1, 93% render delay), TBT 349 ms, 974 KiB; desktop LCP 1,395 ms) | `LandingPage.jsx` imported `PageDebris.jsx` (react-three-fiber) and `enterFlight.js` (which imports `pagePieces.js`, which imports three) statically, so the landing chunk imported `three-vendor` and the browser fetched and parsed it before the page could render, on every device. The 2026-09 lazy `GridFloorBackground` had already taken three out of the mount, but not out of the chunk graph. Second, the catch-all `vendor` chunk (which the entry imports) also held pdf.js (430 KB raw, imported only by a dynamic `import()` in a Studio PDF drop), the socket.io client, the Ask-di search index and the QR encoder | The door's flight (`enterFlight.js`) and `PageDebris` are fetched by `import()` when the room is wanted (an effect on `showBackground`, and the door press); `REST_POSE` moved to `restPose.js` (re-exported from `enterFlight.js`) so the page reads it without loading three. `vite.config.js` gives `pdfjs-dist` (`pdfjs-vendor`), the realtime client (`realtime-vendor`), `minisearch` (`search-vendor`) and `uqr` (`qr-vendor`) their own chunks. Measured after, same method: performance 86, LCP 3,518 ms, TBT 187 ms, 314 KiB; desktop LCP 833 ms, perf 99. Not reached: LCP 2.5 s needs the MUI vendor (95 KB gz) and the render-blocking CSS off the first-paint path (a product decision). Guard: `src/landing/landingEntryWeight.test.js` walks the page's static import graph and goes red on three, the flight or PageDebris; it also pins the `pdfjs-vendor` rule | `src/landing/LandingPage.jsx` `src/landing/restPose.js` `src/landing/enterFlight.js` `vite.config.js` `src/landing/landingEntryWeight.test.js` |
+ | **Projection's "Machines" panel printed the serving machine's own chosen name to a signed-out stranger on a public space** (audit "the kit", 2026-09-28, dev.diiii.xyz) | A visitor with no account is auto-issued a guest session with editor rights on a public/open space (`type: 'guest'`, or a `session` whose subject carries the `guest:` prefix) — that grant is by design, it is how a stranger reaches Nodes/Raw at all. `POST /api/spaces/:id/machines/hello`, `GET /api/spaces/:id/machines` and `POST /api/spaces/:id/machines/sync` answer any actor who clears the existing editor-on-the-space gate, guest included, with the real `machine.name` (and every peer's `machineName`) — the name a person chose for their own box, not something a public visitor should read | The three routes now redact `machine.name` and each peer's `machineName` to `null` when the caller is a guest (`isGuestActor` — the same `type === 'guest' \|\| isGuestSubject(subject)` test used everywhere else in this server, not invented here); the client already falls back to the honest neutral "this machine" / an id fragment for a name it was never given, so no client change was needed there. `describeMachine` (`src/map/mapMachines.js`) got one polish so a redacted self doesn't print "this machine · this machine". A real account (owner or any other non-guest editor), and a local install with auth off, are unaffected — they still see the names, on the dev/prod tier same as on their own box. Guard: `serverXR/src/machines/routes.test.js` "hides the machine name from a guest, and shows it to everyone else"; `src/map/mapMachines.test.js` "names itself plainly when it has no chosen name to show" | `serverXR/src/machines/routes.js` `serverXR/src/machines/routes.test.js` `src/map/mapMachines.js` `src/map/mapMachines.test.js` |
+ | **The projection desk had no undo — Ctrl/Cmd+Z was ignored outright, so a mistaken drag or delete during a rig session could only be redone by hand** (capability audit 2026-09-23; re-checked 2026-09-28: `MapSurface.jsx` returned on any Ctrl/Cmd chord) | Studio and Nodes share `useOpHistory` (invert each batch against the document, replay through the op layer); the mapper never wired it in, though every mapping op already had an inverse in `shared/projectSchema.cjs` | `useMapDocument` layers `useOpHistory` OVER the courier, so an undo reaches the output window exactly like an edit; firing a cue goes to the courier directly and is never recorded (a performance, not an edit). `useOpHistory` coalesces `setMappingState/Surface/Cue` by surfaceId/cueId (a corner drag is one step) and names the mapping steps. Desk: Ctrl/Cmd+Z, Shift+Ctrl/Cmd+Z and Ctrl+Y, plus Undo/Redo buttons. Walked signed in with a real output window: add → nudge ×2 → Ctrl+Z restores the corner in one step → Ctrl+Z removes the surface on server AND output → redo brings it back; add cue, fire it, Ctrl+Z undoes the add, not the fire. Guards: `useOpHistory.test.jsx` "the projection desk" (2) and `src/map/useMapActions.test.jsx` — all red on the old code | `src/map/useMapDocument.js` `src/map/MapSurface.jsx` `src/project/hooks/useOpHistory.js` |
+ | **The Open Jam's `floor` layout could never lay a mosaic once the room had been a wall — every photo stayed hanging at 1.15 m** (audit 2026-09-23; reproduced 2026-09-28 on a local stack: compose `wall` then `floor`, photo heights stayed [1.15 ×4], placement still on) | `spaces/open/tools/compose-open-jam.mjs` sent the floor moves in ONE batch without turning build zones off; `setWorldState` merges, so `placement.enabled: true` from the wall run stayed, and the server's `placeOps` — which reads placement from the room as it stood BEFORE the batch — snapped every move back onto the wall | When placement is on, the script sends `placement: {enabled: false}` alone first, then the moves on the returned version; the floor world patch also says `enabled: false`. Measured: wall → floor → wall → floor ×2, heights [0.02 ×4] after each floor, hung after each wall; the second floor run needs no off-batch. Guard: `spaces/open/tools/compose-open-jam.test.mjs` runs the real script against a recording HTTP server (red on the old script) | `spaces/open/tools/compose-open-jam.mjs` |
+diff --git a/docs/ai/sessions/fix-home-load-speed.md b/docs/ai/sessions/fix-home-load-speed.md
+new file mode 100644
+index 000000000..e96986a84
+--- /dev/null
++++ b/docs/ai/sessions/fix-home-load-speed.md
+@@ -0,0 +1,9 @@
++## Front page load speed: three.js and pdf.js off the first-paint path
++
++Branch `fix/home-load-speed` (fix 3 of the 2026-11-10 global check). Measured with Lighthouse
++12.8.2 mobile on a built tree (`di-dev up --prod --api scratch`), median of 3, before then after:
++LCP 6.9 s then 3.5 s, TBT 349 then 187 ms, performance 65 then 86, 974 then 314 KiB on the wire.
++The door flight and the falling page load by `import()` when the room is wanted; pdf.js, the
++realtime client, search and QR get their own chunks. The front page chunk no longer imports
++`three-vendor`. Guard: `src/landing/landingEntryWeight.test.js`. LCP 2.5 s is not reached; the
++remainder is the MUI vendor chunk and render-blocking CSS (a product decision). No look or wording change.
+diff --git a/src/landing/LandingPage.jsx b/src/landing/LandingPage.jsx
+index 0872553cb..73d82817f 100644
+--- a/src/landing/LandingPage.jsx
++++ b/src/landing/LandingPage.jsx
+@@ -6,8 +6,7 @@ import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
+ import { buildWikiPath } from '../utils/spaceRouting.js'
+ import { getServerConfig } from '../services/serverSpaces.js'
+ import { buildSpacesPath } from '../studio/utils/studioRouting.js'
+-import { flyInside, REST_POSE } from './enterFlight.js'
+-import PageDebris from './PageDebris.jsx'
++import { REST_POSE } from './restPose.js'
+ import { enterFromElement } from '../components/entryTransition/entryTransition.js'
+ import { buildJamPublicPath } from '../project/routing/jamRouting.js'
+ import { WORK_IDS } from '../works/works.js'
+@@ -20,6 +19,16 @@ import { landingBackdropOn } from '../utils/decorative3d.js'
+ // after to confirm.
+ const GridFloorBackground = lazy(() => import('../components/GridFloorBackground.jsx'))
+ 
++// The same rule for the door's flight. enterFlight.js reaches three.js through
++// pagePieces.js, and PageDebris is a react-three-fiber component: as static
++// imports they shipped the 512 KB (gzip) three-vendor chunk with the landing
++// chunk on every visit, a phone's included, in front of the first paint of the
++// wordmark. They are fetched only once the room is wanted (see the effect that
++// calls loadFlightModules) and the flight starts when they have arrived.
++const loadEnterFlight = () => import('./enterFlight.js')
++const loadPageDebris = () => import('./PageDebris.jsx')
++const PageDebris = lazy(loadPageDebris)
++
+ // The room's own words, kept quiet while the page is saying them. Frozen so
+ // the prop identity is stable and the scene is not re-rendered every frame.
+ const HERO_ECHO_TYPES = Object.freeze(['text'])
+@@ -331,7 +340,7 @@ function LandingPageInner() {
+         if (cancelFlightRef.current) return
+         setRoomSpeaks(true)
+         setFlightArmed(true)
+-        const start = () => {
++        const start = () => loadEnterFlight().then(({ flyInside }) => {
+             cancelFlightRef.current = flyInside({
+                 root: rootRef.current,
+                 cameraPoseRef,
+@@ -345,7 +354,12 @@ function LandingPageInner() {
+                     setEntered(true)
+                 }
+             })
+-        }
++        }).catch((error) => {
++            // The flight's own module never arrived: say so, and give the
++            // door back instead of leaving it armed over nothing.
++            console.error('[landing] the door flight could not load', error)
++            setRoomSpeaks(false)
++        })
+         // Where the scene is already on screen, fly on the next frame — the
+         // clones have to be measured against a page that has finished being
+         // laid out. Where it is not (a phone), wait for the chunk first, and
+@@ -406,6 +420,16 @@ function LandingPageInner() {
+     // Idle decoration is flat (no canvas); ?scene=1 or pressing the door brings the room.
+     const showBackground = entered || flightArmed || (heroInView && !isSmallScreen && landingBackdropOn())
+ 
++    // Where the room is on screen, three.js is already coming, so the door's
++    // flight and the falling page are fetched with it: the press then starts
++    // as it did when they were static imports. Where the room is NOT wanted
++    // (a phone just reading the page) they are never fetched.
++    useEffect(() => {
++        if (!showBackground) return
++        loadEnterFlight().catch(() => {})
++        loadPageDebris().catch(() => {})
++    }, [showBackground])
++
+     return (
+         <Box component="main" className={`lp-root${entered ? ' lp-root--inside' : ''}`} data-page="landing" ref={rootRef}>
+ 
+@@ -446,7 +470,11 @@ function LandingPageInner() {
+                                 onArrivalPose={handleArrivalPose}
+                                 fitArrivalToDoors
+                                 sceneExtras={pieces.length
+-                                    ? <PageDebris pieces={pieces} cameraPose={REST_POSE} leaving={piecesLeaving} onGone={dropPieces} />
++                                    ? (
++                                        <Suspense fallback={null}>
++                                            <PageDebris pieces={pieces} cameraPose={REST_POSE} leaving={piecesLeaving} onGone={dropPieces} />
++                                        </Suspense>
++                                    )
+                                     : null}
+                             />
+                         </Suspense>
+diff --git a/src/landing/enterFlight.js b/src/landing/enterFlight.js
+index 94ac43b62..a659b233b 100644
+--- a/src/landing/enterFlight.js
++++ b/src/landing/enterFlight.js
+@@ -1,14 +1,11 @@
+ import { makePagePieces } from './pagePieces.js'
++import { REST_POSE } from './restPose.js'
+ 
+-// Where the visit starts and where it lands.
+-//
+-// REST is the composed entry camera authored on the `main` space itself — the
+-// same shot `/main` opens on — so the room behind the landing is already
+-// framed the way it will be framed when the page is gone. WALK is where the
+-// walker stands the instant it takes over. The flight is the straight line
+-// between them, which is why the handover has nothing to cover up: the last
+-// frame of the flight and the first frame of walking are the same pose.
+-export const REST_POSE = { position: [0, 3, 14.5], target: [0, 1.2, -14], fov: 50 }
++export { REST_POSE }
++
++// Where the visit starts and where it lands: REST_POSE and the walker pose.
++// REST_POSE lives in restPose.js so the landing page can read it without
++// loading this module (which pulls three.js through pagePieces.js).
+ 
+ // Where the walker stands when the room authors no spawn of its own. A room
+ // that DOES author one reports it (`onArrivalPose`) and that wins — this
+diff --git a/src/landing/landingEntryWeight.test.js b/src/landing/landingEntryWeight.test.js
+new file mode 100644
+index 000000000..be2d9bce4
+--- /dev/null
++++ b/src/landing/landingEntryWeight.test.js
+@@ -0,0 +1,57 @@
++import fs from 'node:fs'
++import path from 'node:path'
++import { fileURLToPath } from 'node:url'
++import { describe, expect, it } from 'vitest'
++
++// The front page's own chunk must not drag three.js in. Measured 2026-11-10
++// (Lighthouse mobile, built tree): LandingPage.jsx statically imported
++// PageDebris.jsx (react-three-fiber) and, through enterFlight.js, pagePieces.js
++// (three), so 512 KB gzip of three-vendor rode along with every visit, in front
++// of the wordmark: LCP 6.9 s, TBT 349 ms. Both are now fetched by import() when
++// the room is wanted. This walks the STATIC import graph of the page, so the
++// next innocent `import X from './SomethingWith3D.jsx'` goes red here, not on
++// somebody's phone.
++const here = path.dirname(fileURLToPath(import.meta.url))
++const IMPORT = /^\s*(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|^\s*import\s*['"]([^'"]+)['"]/gm
++const resolveFile = (from, spec) => {
++    const base = path.resolve(path.dirname(from), spec)
++    return [base, `${base}.js`, `${base}.jsx`, `${base}/index.js`, `${base}/index.jsx`].find((f) => fs.existsSync(f) && fs.statSync(f).isFile())
++}
++const staticGraph = (entry) => {
++    const seen = new Set()
++    const bare = new Set()
++    const walk = (file) => {
++        if (seen.has(file)) return
++        seen.add(file)
++        const source = fs.readFileSync(file, 'utf8')
++        for (const m of source.matchAll(IMPORT)) {
++            const spec = m[1] || m[2]
++            if (spec.startsWith('.')) {
++                const next = resolveFile(file, spec)
++                if (next && /\.jsx?$/.test(next)) walk(next)
++            } else bare.add(spec)
++        }
++    }
++    walk(entry)
++    return { files: [...seen].map((f) => path.relative(path.resolve(here, '..'), f)), bare: [...bare] }
++}
++
++describe('the front page entry weight', () => {
++    const { files, bare } = staticGraph(path.join(here, 'LandingPage.jsx'))
++
++    it('does not statically reach three.js or react-three-fiber', () => {
++        const threeBound = bare.filter((s) => s === 'three' || s.startsWith('three/') || s.startsWith('@react-three/') || s.startsWith('three-'))
++        expect(threeBound, `static imports: ${files.join(', ')}`).toEqual([])
++    })
++
++    it('does not statically import the door flight or the falling page', () => {
++        for (const heavy of ['landing/enterFlight.js', 'landing/PageDebris.jsx', 'landing/pagePieces.js']) {
++            expect(files).not.toContain(heavy)
++        }
++    })
++
++    it('keeps pdf.js out of the shared vendor chunk (its own pdfjs-vendor)', () => {
++        const config = fs.readFileSync(path.resolve(here, '../../vite.config.js'), 'utf8')
++        expect(config).toMatch(/pkg === 'pdfjs-dist'\) return 'pdfjs-vendor'/)
++    })
++})
+diff --git a/src/landing/landingPageLeaves.test.jsx b/src/landing/landingPageLeaves.test.jsx
+index 6323899cb..8d9e72819 100644
+--- a/src/landing/landingPageLeaves.test.jsx
++++ b/src/landing/landingPageLeaves.test.jsx
+@@ -1,11 +1,19 @@
+ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
++import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+ import { debrisLeaveState, DEBRIS_LEAVE_MS } from './PageDebris.jsx'
+ 
+ // The fallen page used to stay in the room for good: a dark tilted strip of
+ // tiny warped nav text lying across the doors. It must leave once the visitor
+ // is nearly there, and be dropped from the scene once it has gone.
+ 
++// The page fetches the door's flight and the falling page only when the room is
++// wanted (LandingPage.jsx), so the first press in a cold test run would pay for
++// three.js inside the test's 5 s. Warm them the way the page's own effect does.
++beforeAll(async () => {
++    await import('./enterFlight.js')
++    await import('./PageDebris.jsx')
++}, 60000)
++
+ const bgProps = vi.hoisted(() => ({ current: null }))
+ const texture = vi.hoisted(() => ({ dispose: null }))
+ vi.mock('../components/GridFloorBackground.jsx', () => ({
+@@ -32,6 +40,9 @@ window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListe
+ 
+ import LandingPage from './LandingPage.jsx'
+ 
++// sceneExtras is the lazy PageDebris inside its own Suspense (LandingPage.jsx).
++const debrisProps = () => bgProps.current?.sceneExtras?.props?.children?.props
++
+ describe('the fallen page', () => {
+     // These tests are about the room itself, so they open the front page in the
+     // mode where the room is already behind it (?scene=1, decorative3d.js); the
+@@ -46,9 +57,9 @@ describe('the fallen page', () => {
+     it('is told to leave the room, then is dropped from the scene and its textures freed', async () => {
+         render(<LandingPage />)
+         fireEvent.click(screen.getAllByRole('link', { name: /Step inside/ })[0])
+-        await waitFor(() => expect(bgProps.current?.sceneExtras?.props?.leaving).toBe(true))
++        await waitFor(() => expect(debrisProps()?.leaving).toBe(true))
+ 
+-        act(() => { bgProps.current.sceneExtras.props.onGone() })
++        act(() => { debrisProps().onGone() })
+         await waitFor(() => expect(bgProps.current.sceneExtras).toBeNull())
+         expect(texture.dispose).toHaveBeenCalled()
+     })
+diff --git a/src/landing/landingViewMode.test.jsx b/src/landing/landingViewMode.test.jsx
+index 3e464bbd9..6c21e643f 100644
+--- a/src/landing/landingViewMode.test.jsx
++++ b/src/landing/landingViewMode.test.jsx
+@@ -1,10 +1,18 @@
+ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
++import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+ 
+ // The room, reduced to the props the page hands it. What broke view mode was
+ // never visible in the DOM: the page passed `interactive={entered && !viewMode}`,
+ // so pressing "View mode" turned the room into the decorative, click-through
+ // background and every drag went nowhere. The props ARE the behaviour here.
++// The page fetches the door's flight and the falling page only when the room is
++// wanted (LandingPage.jsx), so the first press in a cold test run would pay for
++// three.js inside the test's 5 s. Warm them the way the page's own effect does.
++beforeAll(async () => {
++    await import('./enterFlight.js')
++    await import('./PageDebris.jsx')
++}, 60000)
++
+ const bgProps = vi.hoisted(() => ({ current: null }))
+ vi.mock('../components/GridFloorBackground.jsx', () => ({
+     default: (props) => {
+diff --git a/src/landing/restPose.js b/src/landing/restPose.js
+new file mode 100644
+index 000000000..279bb3c08
+--- /dev/null
++++ b/src/landing/restPose.js
+@@ -0,0 +1,9 @@
++// Where the visit starts. (WALK_POSE, where it lands, stays in enterFlight.js.)
++//
++// REST is the composed entry camera authored on the `main` space itself — the
++// same shot `/main` opens on — so the room behind the landing is already
++// framed the way it will be framed when the page is gone. WALK is where the
++// walker stands the instant it takes over. The flight is the straight line
++// between them, which is why the handover has nothing to cover up: the last
++// frame of the flight and the first frame of walking are the same pose.
++export const REST_POSE = { position: [0, 3, 14.5], target: [0, 1.2, -14], fov: 50 }
+diff --git a/vite.config.js b/vite.config.js
+index f6cece503..4dc362370 100755
+--- a/vite.config.js
++++ b/vite.config.js
+@@ -817,6 +817,22 @@ export default {
+                     // route actually mounts (2026-07-17 perf audit).
+                     if (pkg === 'gsap') return 'gsap-vendor'
+ 
++                    // pdf.js is imported only by a dynamic import() in
++                    // studio/utils/assetFormats.js (a PDF dropped into the Studio).
++                    // In the 'vendor' catch-all it was 840 KB of source in the
++                    // chunk every route loads, the front page's included: measured
++                    // 2026-11-10 (Lighthouse mobile, home page) it rode in front of
++                    // the first paint with the MUI the page needs. Its own chunk
++                    // loads when a PDF is opened (home-load-speed).
++                    if (pkg === 'pdfjs-dist') return 'pdfjs-vendor'
++
++                    // The same reasoning for the realtime client, the Ask-di search
++                    // index and the QR encoder: each is reached from a hook or a
++                    // panel a visitor opens, not from the front page.
++                    if (pkg === 'socket.io-client' || pkg === 'socket.io-parser' || pkg === 'engine.io-client' || pkg === 'engine.io-parser' || pkg === '@socket.io/component-emitter' || pkg === 'xmlhttprequest-ssl') return 'realtime-vendor'
++                    if (pkg === 'minisearch') return 'search-vendor'
++                    if (pkg === 'uqr') return 'qr-vendor'
++
+                     // CodeMirror 6 + its lezer parsers are only imported by the code window's
+                     // editor (panels/CodeMirrorBox.jsx, React.lazy). In the 'vendor' catch-all
+                     // it added ~495 KB to the chunk every route loads (measured, S18 2026-10-29);
+-- 
+2.56.0
+

@@ -1,0 +1,173 @@
+From 26548e9f21afe5717e881f8087dd2b6aad4a39df Mon Sep 17 00:00:00 2001
+From: dob-0 <info@thedi.studio>
+Date: Sun, 22 Nov 2026 16:25:13 +0400
+Subject: [PATCH] wip: rescue of unsaved work in deck-midi-map (2026-11-22,
+ folder left as it was)
+
+---
+ scripts/show/stage-open.sh | 25 ++++++++----
+ scripts/show/words-clip.sh | 84 ++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 102 insertions(+), 7 deletions(-)
+ create mode 100755 scripts/show/words-clip.sh
+
+diff --git a/scripts/show/stage-open.sh b/scripts/show/stage-open.sh
+index 46b085cb8..a04d8f73c 100755
+--- a/scripts/show/stage-open.sh
++++ b/scripts/show/stage-open.sh
+@@ -21,14 +21,16 @@
+ # Agents must NOT run this for real: it opens windows on the owner's desktop (use --dry-run).
+ set -euo pipefail
+ 
+-space=platina; project=platina-screen; stage_ws=2; tool_ws=1; base=http://diiii.localhost; preset=
++space=platina; project=platina-screen; stage_ws=2; tool_ws=1; base=http://diiii.localhost; preset=; tool_only=0
+ tool_x=80; tool_y=60; tool_w=1036; tool_h=837
+ port=9224; profile="${HOME}/.local/state/di/out-profile"; dry=0
+ 
+ usage() {
+   cat <<'USAGE'
+ usage: stage-open.sh [--space S] [--project P] [--stage-ws N] [--tool-ws N] [--base URL]
+-                     [--preset ID] [--tool-geometry X,Y,W,H] [--dry-run] [--help]
++                     [--preset ID] [--tool-geometry X,Y,W,H] [--tool-only] [--dry-run] [--help]
++  --tool-only      open ONLY the Perform window; no stage window is opened or placed (the operator opens the
++                   output by hand from the deck's own output button and picks the screen there)
+   --space          space id                     (default platina)
+   --project        project slug                 (default platina-screen)
+   --stage-ws       workspace for the stage page (default 2); the window is fullscreened there
+@@ -53,6 +55,7 @@ while [ $# -gt 0 ]; do
+     --base) base=${2%/}; shift 2;;
+     --preset) preset=$2; shift 2;;
+     --tool-geometry) IFS=, read -r tool_x tool_y tool_w tool_h <<<"$2"; shift 2;;
++    --tool-only) tool_only=1; shift;;
+     --dry-run) dry=1; shift;;
+     -h|--help) usage; exit 0;;
+     *) echo "stage-open: unknown argument: $1" >&2; usage >&2; exit 2;;
+@@ -89,8 +92,10 @@ else
+   echo "+ mkdir -p $profile"
+ fi
+ 
+-# 1. stage window
+-if [ "$dry" = 1 ]; then
++# 1. stage window (skipped with --tool-only)
++if [ "$tool_only" = 1 ]; then
++  stage_addr=
++elif [ "$dry" = 1 ]; then
+   printf '+ %s --app=%s &\n' "${chromium[*]}" "$stage_url"
+   stage_addr=0xSTAGE
+ else
+@@ -110,8 +115,10 @@ else
+ fi
+ 
+ # 3. placement
+-eval_hl "hl.dispatch(hl.dsp.window.move({ workspace = $stage_ws, window = 'address:$stage_addr', follow = false }))"
+-eval_hl "hl.dispatch(hl.dsp.window.fullscreen({ window = 'address:$stage_addr' }))"
++if [ "$tool_only" = 0 ]; then
++  eval_hl "hl.dispatch(hl.dsp.window.move({ workspace = $stage_ws, window = 'address:$stage_addr', follow = false }))"
++  eval_hl "hl.dispatch(hl.dsp.window.fullscreen({ window = 'address:$stage_addr' }))"
++fi
+ eval_hl "hl.dispatch(hl.dsp.window.move({ workspace = $tool_ws, window = 'address:$tool_addr', follow = false }))"
+ 
+ # Fit X,Y,W,H (relative to a monitor) inside that monitor; prints the absolute "x y w h".
+@@ -162,5 +169,9 @@ else
+   fi
+ fi
+ 
+-echo "stage: $stage_url  (workspace $stage_ws, fullscreen)"
++if [ "$tool_only" = 1 ]; then
++  echo "stage: not opened (--tool-only); open the output from the deck's output button"
++else
++  echo "stage: $stage_url  (workspace $stage_ws, fullscreen)"
++fi
+ echo "tool:  $tool_url  (workspace $tool_ws, floating ${gw}x${gh} at $gx,$gy)"
+diff --git a/scripts/show/words-clip.sh b/scripts/show/words-clip.sh
+new file mode 100755
+index 000000000..06c89fa37
+--- /dev/null
++++ b/scripts/show/words-clip.sh
+@@ -0,0 +1,84 @@
++#!/usr/bin/env bash
++# words-clip.sh — make a looping clip of handwritten words and crosses on black, to lay over a camera layer (blend Add).
++#
++#   scripts/show/words-clip.sh --font FONT.ttf --out OUT.mp4 [--size 1920x1080] [--secs 8] [--fps 30]
++#                              [--colour '#ff1a1a'] [--jitter 9] [--dry-run] WORDS.txt
++#
++# WORDS.txt: one mark per line, fields separated by "|":
++#     text | x % | y % | point size | rotation in degrees | from second | to second
++#   x and y place the top-left corner of the mark, in percent of the picture. Lines starting with # are skipped.
++# Each mark is drawn once with ImageMagick in the font file you name (keep that font's licence next to it). ffmpeg then
++# lays the marks on black for their time window and moves each one a few pixels 12 times a second, like a hand-drawn loop.
++# Nothing is installed or changed. Output: OUT.mp4 and OUT.mp4.txt (the font's sha256, the settings and the marks).
++# Undo: delete the two files. --dry-run prints the marks and the ffmpeg filter and writes nothing.
++set -euo pipefail
++
++TMP_DIR=""
++cleanup() { if [[ -n ${TMP_DIR:-} && -d ${TMP_DIR:-} ]]; then rm -rf -- "$TMP_DIR"; fi; }
++trim() { local s=$1; s="${s#"${s%%[![:space:]]*}"}"; s="${s%"${s##*[![:space:]]}"}"; printf '%s' "$s"; }
++
++main() {
++    local font="" out="" size=1920x1080 secs=8 fps=30 colour='#ff1a1a' jitter=9 dry=0 words=""
++    while (( $# )); do
++        case "$1" in
++            --font) font=$2; shift 2 ;;
++            --out) out=$2; shift 2 ;;
++            --size) size=$2; shift 2 ;;
++            --secs) secs=$2; shift 2 ;;
++            --fps) fps=$2; shift 2 ;;
++            --colour) colour=$2; shift 2 ;;
++            --jitter) jitter=$2; shift 2 ;;
++            --dry-run) dry=1; shift ;;
++            -h|--help) sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; return 0 ;;
++            -*) echo "unknown option: $1 (see --help)" >&2; return 2 ;;
++            *) words=$1; shift ;;
++        esac
++    done
++    if [[ ! -f $font || ! -f $words || -z $out ]]; then
++        echo "need --font FILE, --out FILE and a words file (see --help)" >&2; return 2
++    fi
++    if ! command -v magick >/dev/null || ! command -v ffmpeg >/dev/null; then
++        echo "this needs ImageMagick (magick) and ffmpeg" >&2; return 1
++    fi
++    local w=${size%x*} h=${size#*x}
++    TMP_DIR=$(mktemp -d); trap cleanup EXIT
++
++    local inputs=(-f lavfi -i "color=c=black:s=${w}x${h}:r=${fps}:d=${secs}")
++    local graph="[0:v]format=rgba[bg];" last=bg n=0 marks=""
++    local text x y pt rot from to px py png
++    while IFS='|' read -r text x y pt rot from to || [[ -n ${text:-} ]]; do
++        text=$(trim "${text:-}")
++        if [[ -z $text || $text == \#* ]]; then continue; fi
++        x=$(trim "$x"); y=$(trim "$y"); pt=$(trim "$pt"); rot=$(trim "$rot"); from=$(trim "$from"); to=$(trim "$to")
++        px=$(awk -v a="$w" -v b="$x" 'BEGIN { printf "%d", a * b / 100 }')
++        py=$(awk -v a="$h" -v b="$y" 'BEGIN { printf "%d", a * b / 100 }')
++        png="$TMP_DIR/mark-$n.png"
++        marks+="  $text | at $px,$py px | size $pt | turned $rot | $from to $to s"$'\n'
++        if (( ! dry )); then
++            magick -background none -fill "$colour" -font "$font" -pointsize "$pt" label:"$text" -rotate "$rot" +repage "PNG32:$png"
++        fi
++        inputs+=(-loop 1 -framerate "$fps" -t "$secs" -i "$png")
++        graph+="[$last][$((n + 1)):v]overlay=x='$px+$jitter*sin(floor(t*12)*12.9898+$n*78.233)':y='$py+$jitter*cos(floor(t*12)*4.1414+$n*37.719)':enable='between(t,$from,$to)'[v$n];"
++        last="v$n"; n=$((n + 1))
++    done < "$words"
++    if (( n == 0 )); then echo "no marks in $words" >&2; return 2; fi
++    graph+="[$last]format=yuv420p[out]"
++
++    if (( dry )); then
++        echo "dry run, nothing is written. $n marks, ${w}x${h}, $secs s, $fps fps, colour $colour:"
++        printf '%s' "$marks"
++        echo "ffmpeg filter: $graph"
++        return 0
++    fi
++    ffmpeg -hide_banner -loglevel error -y "${inputs[@]}" -filter_complex "$graph" -map "[out]" \
++        -t "$secs" -r "$fps" -c:v libx264 -crf 16 -preset medium -pix_fmt yuv420p -movflags +faststart -an "$out"
++    {
++        echo "made by scripts/show/words-clip.sh on $(date '+%F %H:%M')"
++        echo "font: $font  sha256 $(sha256sum "$font" | cut -d' ' -f1)"
++        echo "size ${w}x${h}, $secs s, $fps fps, colour $colour, jitter $jitter px; words file: $words"
++        printf '%s' "$marks"
++    } > "$out.txt"
++    echo "wrote $out ($n marks) and $out.txt"
++}
++
++if [[ ${BASH_SOURCE[0]} == "$0" ]]; then main "$@"; fi
+-- 
+2.56.0
+
