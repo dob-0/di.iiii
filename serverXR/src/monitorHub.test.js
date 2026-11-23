@@ -216,6 +216,18 @@ describe('hub snapshot', () => {
     expect((await hub.getSnapshot()).shared).toBeNull()
   })
 
+  it('PR count: every open PR passes the shared path with its real totals, not the first 40 rows (57 showed as 30, 11-23)', async () => {
+    const { hub, reports } = build()
+    const rows = Array.from({ length: 57 }, (_, i) => ({ number: i + 1, title: 't', draft: i < 28 }))
+    reports.put({ host: 'aylmo', panels: { pullRequests: { ok: true, rows, open: 57, drafts: 28 } } }, { subject: 'o', ledger: true })
+    const shared = await hub.getShared({ subjects: ['o'] })
+    expect(shared.pullRequests).toMatchObject({ ok: true, open: 57, drafts: 28 })
+    expect(shared.pullRequests.rows).toHaveLength(57)
+    const own = build({ store: { getMonitor: async () => ({ host: 'studio', panels: { ...panels, pullRequests: { ok: false, rows: [], error: 'gh: not logged in' } } }) } })
+    const lent = (await own.hub.getSnapshot({ shared: { state: 'ok', data: { pullRequests: { ...shared.pullRequests, rows: rows.slice(0, 40) } } } })).panels.pullRequests
+    expect(lent).toMatchObject({ ok: true, open: 57, drafts: 28 })
+  })
+
   it('a 3xx answer is not up; labels are never "undefined"; the serves edge goes to the tier that took the report', async () => {
     const { hub, reports } = build({ fetchImpl: async (url) => (url.endsWith('/api/health') ? { ok: false, status: 302 } : { ok: false, status: 302 }), hostname: () => 'studio.local' })
     reports.put({ host: 'aylmo', panels: { shows: { ok: true, rows: [{ ok: true }] }, agents: { ok: true, rows: [{ status: 'busy' }, {}] } } })

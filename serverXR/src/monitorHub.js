@@ -715,7 +715,7 @@ function createHub({
     // PRs: this machine's own list when it has one; else the shared one from dev (no GitHub login needed here)
     const sharedPrs = shared?.data?.pullRequests
     const prs = base.panels?.pullRequests?.ok !== true && sharedPrs?.ok === true
-      ? { ok: true, ms: 0, at: Date.parse(sharedPrs.reportedAt) || now(), rows: sharedPrs.rows, open: sharedPrs.rows.length, drafts: sharedPrs.rows.filter((p) => p.draft).length, from: sharedPrs.from }
+      ? { ok: true, ms: 0, at: Date.parse(sharedPrs.reportedAt) || now(), rows: sharedPrs.rows, open: Number.isInteger(sharedPrs.open) ? sharedPrs.open : sharedPrs.rows.length, drafts: Number.isInteger(sharedPrs.drafts) ? sharedPrs.drafts : sharedPrs.rows.filter((p) => p.draft).length, from: sharedPrs.from }
       : null
     const tasks = feedFor(base, shared, 'tasks')
     const shows = feedFor(base, shared, 'shows')
@@ -745,6 +745,8 @@ function createHub({
   // Machines with the version each reports, the freshest good pull request list, spaces, the owner's asks, and each machine's
   // tasks/shows feed lines tagged with the machine. Bounded; nothing is probed here. Chats and credits are NOT in it (personal).
   const SHARED_ROWS = 60
+  // every open PR is sent on (gh lists up to 300); 40 cut the list (57 open, 11-23)
+  const SHARED_PRS_MAX = 300
   const pickFeed = (raw, name) => {
     const rows = []
     for (const r of raw) {
@@ -766,7 +768,7 @@ function createHub({
       generatedAt: new Date(t).toISOString(),
       machines: raw.slice(0, SHARED_ROWS).map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, commit: r.commit, builtAt: r.builtAt })),
       tiers: tierBlock.rows.slice(0, SHARED_ROWS).map((r) => ({ id: r.id, status: r.status, commit: r.commit, builtAt: r.builtAt, behindDev: r.behindDev ?? null, state: r.state || null })),
-      pullRequests: pr ? { ok: true, from: pr.host, reportedAt: new Date(pr.at).toISOString(), rows: pr.p.rows.filter(isPlainObject).slice(0, 40) } : { ok: false, rows: [], error: 'no machine has sent a pull request list' },
+      pullRequests: pr ? { ok: true, from: pr.host, reportedAt: new Date(pr.at).toISOString(), rows: pr.p.rows.filter(isPlainObject).slice(0, SHARED_PRS_MAX), ...(Number.isInteger(pr.p.open) ? { open: pr.p.open } : {}), ...(Number.isInteger(pr.p.drafts) ? { drafts: pr.p.drafts } : {}) } : { ok: false, rows: [], error: 'no machine has sent a pull request list' },
       spaces: { ok: spaceBlock.ok, rows: spaceBlock.rows.slice(0, 200) },
       asks: asksBlock(subjects),
       shows: pickFeed(raw, 'shows'),
