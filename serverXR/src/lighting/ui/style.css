@@ -1711,8 +1711,11 @@ body.dragscene .bankrow { cursor: grabbing; }
 .sp-rail input.zoom { writing-mode: vertical-lr; direction: rtl; width: 18px; height: 84px; flex: none; }
 .sp-rail .sp-slot:empty { display: none; }
 .stagepage .bigstage .stage { flex: 1 1 auto; }
-.sp-insp { width: 272px; flex: none; border-width: 0 0 0 1px; overflow-y: auto; }
+.sp-insp { width: var(--sp-insp, 272px); flex: none; border-width: 0 0 0 1px; overflow-y: auto; }
 .stagepage.insp-closed .sp-insp { display: none; }
+/* The splitter between the stage and the inspector (--sp-insp on .sp-body is its knob). */
+.sp-body > .sp-split { flex: none; width: 6px; }
+.stagepage.insp-closed .sp-split { display: none; }
 .stagepage:not(.insp-closed) .objstrip { display: none !important; }   /* the inspector edits objects here */
 .sp-insp-open {
   position: absolute; right: 8px; top: 8px; z-index: 6; background: var(--pane); color: var(--muted);
@@ -1785,6 +1788,7 @@ body.dragscene .bankrow { cursor: grabbing; }
 .sp-bo { width: auto; padding: 6px 14px; }
 @media (max-width: 1100px) {
   .sp-insp { position: absolute; right: 0; top: 0; bottom: 0; z-index: 6; }
+  .sp-body > .sp-split { display: none; }   /* the inspector floats over the stage here */
   .sp-strip { flex-wrap: wrap; }
   .sp-live { flex-wrap: wrap; }
 }

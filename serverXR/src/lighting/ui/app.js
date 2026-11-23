@@ -7386,6 +7386,8 @@ const SPLIT_DEFS = {
   'ctl-rail':   { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.scenearea', min: 220, max: 560 },
   'ctl-sel':    { axis: 'x', varName: '--sp-1', pane: 'next', flexSel: '.stagepane', min: 110, max: 420 },
   'ctl-attr':   { axis: 'x', varName: '--sp-2', pane: 'next', flexSel: '.stagepane', min: 320, max: 960 },
+  // The Stage page: stage | inspector (Emily, 2026-11-23: "make the grid smaller and the inspector bigger").
+  'sp-insp':    { axis: 'x', varName: '--sp-insp', pane: 'next', flexSel: '.bigstage', min: 240, max: 900 },
   'ctl-rows':   { axis: 'y', min: 22, max: 78 },
 };
 
