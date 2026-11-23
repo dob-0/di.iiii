@@ -70,6 +70,15 @@ describe('server-env.mjs', () => {
         for (const [, key, devName] of devKeys) expect(out[key]).toBe(`v-${devName}`)
     })
 
+    it('dev: MONITOR_OWNER_USER_IDS comes from DEV_MONITOR_OWNER_USER_IDS (empty when unset); prod never carries it', () => {
+        const { env: out } = run([BASE, DEV], fakeEnv([BASE, DEV]))
+        expect(out.MONITOR_OWNER_USER_IDS).toBe('v-DEV_MONITOR_OWNER_USER_IDS')
+        const unset = run([BASE, DEV], fakeEnv([BASE, DEV], ['DEV_MONITOR_OWNER_USER_IDS']))
+        expect(unset.status).toBe(0)
+        expect(unset.env.MONITOR_OWNER_USER_IDS ?? '').toBe('')
+        expect('MONITOR_OWNER_USER_IDS' in run([BASE], fakeEnv([BASE])).env).toBe(false)
+    })
+
     it('dev: refuses, with Compose\'s own message, when a ${VAR:?} the dev file demands is empty', () => {
         const env = fakeEnv([BASE, DEV], ['DEV_AUTH_SESSION_SECRET'])
         const r = run([BASE, DEV], env)

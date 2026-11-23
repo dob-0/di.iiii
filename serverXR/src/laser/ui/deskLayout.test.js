@@ -31,7 +31,8 @@ const rulesOf = (text) => [...stripComments(text).matchAll(/([^{}]+)\{([^{}]*)\}
 const queryAt = css.indexOf(GRID_QUERY)
 const gridBlock = queryAt >= 0 ? blockAt(css, css.indexOf('{', queryAt)) : null
 const gridRules = gridBlock ? rulesOf(gridBlock.body) : []
-const afterRules = gridBlock ? rulesOf(css.slice(gridBlock.end + 1)) : []
+// The short-window block (Preview/Stage heights, 2026-11-20) follows the layout switch; its rules are all Grid-scoped, so it is not a 'switch' rule.
+const afterRules = gridBlock ? rulesOf(css.slice(gridBlock.end + 1)).filter((r) => !r.selector.startsWith(SCOPE)) : []
 const beforeCss = queryAt >= 0 ? css.slice(0, queryAt) : css
 const grid = (selector) => gridRules.find((r) => r.selector === `${SCOPE} ${selector}`)?.declarations ?? null
 // A top-level Classic rule (a selector at the start of a line), whitespace folded.
@@ -43,7 +44,7 @@ const classic = (selector) => {
 
 describe('Classic is untouched: the Grid rules are one block, at the end, scoped', () => {
   it('there is exactly one Grid size query (1000 x 600 and up), and below it the page is Classic', () => {
-    expect(css.split(GRID_QUERY).length - 1).toBe(1)
+    expect(css.split(GRID_QUERY + ' {').length - 1).toBe(1) // the short-window block below is a second, narrower query (and max-height: 779px), scoped the same way
     expect(gridBlock, 'the Grid block is not in desk.css').not.toBeNull()
     expect(gridRules.length).toBeGreaterThan(80)
     // the layout switch is hidden in the same small sizes where Grid does not apply
@@ -80,18 +81,19 @@ describe('nothing is lost', () => {
     expect(new Set(CLASSIC_IDS).size).toBe(86)
     for (const id of CLASSIC_IDS) expect(doc.querySelectorAll(`[id="${id}"]`).length, `#${id}`).toBe(1)
   })
-  it('the .editbody children keep their order: the Grid rules place Shape as child 2 and Colour as child 3', () => {
-    const label = (c) => (c.id ? `#${c.id}` : c.querySelector('#shapes') ? 'group:Shape' : c.querySelector('#swatches') ? 'group:Colour' : c.querySelector('#lookCubes') ? 'group.multi:Cubes' : `.${[...c.classList].join('.')}`)
-    expect([...doc.getElementById('editor').children].map(label)).toEqual(['#followGroup', 'group:Shape', 'group:Colour', '#pictureFields', '#moveFields', 'group.multi:Cubes', '.actions'])
-    expect(grid('.editbody > .group:nth-child(2)')).toMatch(/grid-area: 2 \/ 1 \/ 3 \/ 5/)
-    expect(grid('.editbody > .group:nth-child(3)')).toMatch(/grid-area: 1 \/ 1/)
+  it('the .editbody children keep their order, and the Grid rules place Shape and Colour by id (Emilya\'s Layers and Beam groups sit between, so :nth-child no longer names them)', () => {
+    const label = (c) => (c.id ? `#${c.id}` : c.querySelector('#lookCubes') ? 'group.multi:Cubes' : `.${[...c.classList].join('.')}`)
+    expect([...doc.getElementById('editor').children].map(label)).toEqual(['#followGroup', '#layersGroup', '#shapeGroup', '#colourGroup', '#pictureFields', '#moveFields', '#beamFields', 'group.multi:Cubes', '.actions'])
+    expect(grid('.editbody > #shapeGroup')).toMatch(/grid-area: 3 \/ 1 \/ 4 \/ 5/)
+    expect(grid('.editbody > #colourGroup')).toMatch(/grid-area: 1 \/ 1/)
   })
   it('the base rules of the top bar and the stops are the ones Classic had (the Grid block overrides them only under its own scope)', () => {
     expect(classic('.stops')).toBe('flex: none; margin-left: auto; display: flex; align-items: center; gap: 6px; min-height: 30px;')
     expect(classic('.topright')).toBe('flex: 1 0 100%; display: flex; align-items: flex-start; gap: 6px 14px; padding: 6px 10px; flex-wrap: nowrap;')
     expect(classic('.tools')).toBe('flex: 1 1 0; min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;')
     expect(classic('.options')).toBe('flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 10px;')
-    expect(classic('#page-control')).toBe('display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "bank editor" "stage editor"; height: calc(100vh - var(--bar-h, 47px));')
+    // Classic is now Emilya's desk: the Preview is its own pane left of the Stage (PR #1218), so the base page has three columns.
+    expect(classic('#page-control')).toBe('display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 360px; grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "bank bank editor" "preview stage editor"; height: calc(100vh - var(--bar-h, 47px));')
   })
   it('the keys 1-9 are printed on the first nine looks, and the grid has nine columns', () => {
     expect(grid('.tile:nth-child(-n+9) .pic::after')).toMatch(/content: counter\(tile\)/)

@@ -345,6 +345,90 @@ describe('project contracts', () => {
         expect(repeatDelete.status).toBe(404)
     })
 
+    // A map "visual" is a single-file HTML page. It is the one document type
+    // served inline, and only because the server sandboxes it itself.
+    it('accepts HTML project assets and serves them inline under a CSP sandbox', async () => {
+        const server = await startServer()
+        const create = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Html Project', slug: 'html-project' })
+        })
+        expect(create.status).toBe(201)
+        const upload = (blob, name) => {
+            const form = new FormData()
+            form.append('asset', blob, name)
+            return fetch(`${server.baseUrl}/api/projects/html-project/assets`, { method: 'POST', body: form })
+        }
+        const page = '<!doctype html><title>v</title><script>document.title="x"</script>'
+
+        const direct = await upload(new Blob([page], { type: 'text/html' }), 'index.html')
+        expect(direct.status).toBe(200)
+        const directAsset = (await direct.json()).asset
+        expect(directAsset.mimeType).toBe('text/html')
+
+        const served = await fetch(new URL(directAsset.url, server.baseUrl))
+        expect(served.status).toBe(200)
+        expect(served.headers.get('content-type')).toBe('text/html; charset=utf-8')
+        expect(served.headers.get('content-disposition')).toBe('inline')
+        expect(served.headers.get('content-security-policy')).toBe('sandbox allow-scripts allow-pointer-lock')
+        expect(served.headers.get('x-content-type-options')).toBe('nosniff')
+        expect(served.headers.get('referrer-policy')).toBe('no-referrer')
+        // Served with the frame relay added at the end (no </body> here), so
+        // the mapper can bend it; everything the artist wrote comes first,
+        // byte for byte, and the asset id still names those bytes.
+        const body = await served.text()
+        expect(body.startsWith(page)).toBe(true)
+        expect(body).toContain('data-di-frame-relay')
+        expect(body.match(/data-di-frame-relay/g)).toHaveLength(1)
+
+        const octet = await upload(new Blob([page + '<!-- b -->'], { type: 'application/octet-stream' }), 'visual.HTM')
+        expect(octet.status).toBe(200)
+        const octetAsset = (await octet.json()).asset
+        expect(octetAsset.mimeType).toBe('text/html')
+        const octetServed = await fetch(new URL(octetAsset.url, server.baseUrl))
+        expect(octetServed.headers.get('content-security-policy')).toBe('sandbox allow-scripts allow-pointer-lock')
+
+        // everything else script-capable keeps today's download behaviour
+        const svg = await upload(new Blob(['<svg xmlns="http://www.w3.org/2000/svg"><script>1</script></svg>'], { type: 'image/svg+xml' }), 'p.svg')
+        const svgServed = await fetch(new URL((await svg.json()).asset.url, server.baseUrl))
+        expect(svgServed.headers.get('content-disposition')).toBe('attachment')
+        expect(svgServed.headers.get('content-security-policy')).toBe(null)
+        const txt = await upload(new Blob(['<script>1</script>'], { type: 'text/plain' }), 'n.txt')
+        const txtServed = await fetch(new URL((await txt.json()).asset.url, server.baseUrl))
+        expect(txtServed.headers.get('content-security-policy')).toBe(null)
+        expect(txtServed.headers.get('content-disposition')).toBe(null)
+
+        const big = await upload(new Blob([new Uint8Array(10 * 1024 * 1024 + 1)], { type: 'text/html' }), 'big.html')
+        expect(big.status).toBe(413)
+    })
+
+    // The page goes out byte for byte: a latin-1 page (no charset) must not be
+    // turned into U+FFFD by a text round trip, and a U+0130 in the text must not
+    // move the relay out of place.
+    it('serves an HTML visual with its own bytes unchanged and the relay before the real </body>', async () => {
+        const server = await startServer()
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Bytes Project', slug: 'bytes-project' })
+        })
+        const upload = (bytes, name) => {
+            const form = new FormData()
+            form.append('asset', new Blob([bytes], { type: 'text/html' }), name)
+            return fetch(`${server.baseUrl}/api/projects/bytes-project/assets`, { method: 'POST', body: form })
+        }
+        const head = Buffer.from('<html><body><h1>\u0130\u0130\u0130\u0130\u0130</h1>', 'utf8')
+        const bad = Buffer.from([0xe9, 0xff, 0xc3])
+        const tail = Buffer.from('</body></html>', 'utf8')
+        const res = await upload(Buffer.concat([head, bad, tail]), 'latin.html')
+        expect(res.status).toBe(200)
+        const served = Buffer.from(await (await fetch(new URL((await res.json()).asset.url, server.baseUrl))).arrayBuffer())
+        expect(served.subarray(0, head.length + bad.length).equals(Buffer.concat([head, bad]))).toBe(true)
+        expect(served.subarray(served.length - tail.length).equals(tail)).toBe(true)
+        expect(served.toString('latin1')).toContain('data-di-frame-relay')
+    })
+
     // A published project is a public URL, so an asset that still carries the
     // photographer's GPS is a leak. The scrubber handles the formats sharp can
     // re-encode; anything else must be refused rather than stored verbatim,

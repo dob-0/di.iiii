@@ -1,0 +1,156 @@
+name: Desktop app
+
+# The Electron app in desktop/. Unsigned installers, built on all three
+# systems. On a pull request that touches desktop/: tests on Ubuntu (under a
+# virtual display) and the three installers as workflow artifacts. On a
+# published release (or by hand): the same installers attached to the release.
+
+on:
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/desktop-app.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to attach the installers to (empty: build only)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Unit tests (origin, permission, navigation policy)
+        run: npm run test:unit
+      - name: Smoke test (real window under a virtual display)
+        # No user namespaces on the runner, so the test adds --no-sandbox to the
+        # launch only; the app's own window setting stays sandboxed.
+        run: xvfb-run -a -s "-screen 0 1920x1920x24" npm run test:smoke
+        env:
+          DI_TEST_NO_SANDBOX: '1'
+          DI_DESKTOP_SHOTS: ${{ runner.temp }}/shots
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: desktop-smoke-pictures
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: warn
+
+  installers:
+    name: installers (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux, os: ubuntu-24.04, script: dist:linux }
+          - { name: macos, os: macos-15, script: dist:mac }
+          - { name: windows, os: windows-2025, script: dist:win }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Build installers (unsigned)
+        run: npm run ${{ matrix.script }}
+        env:
+          # No certificate is ever read here: macOS is ad-hoc signed (see
+          # desktop/README.md), Windows is left unsigned.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # electron-builder skips signing on pull requests unless told; the
+          # identity is the ad-hoc "-", no secret is involved.
+          CSC_FOR_PULL_REQUEST: 'true'
+      - name: Electron fuses of each built app (a regression fails the build)
+        shell: bash
+        run: |
+          set -e
+          case "${{ matrix.name }}" in
+            linux)   apps=(dist/linux-unpacked/di-desktop) ;;
+            macos)   apps=(dist/mac*/di.iiii.app) ;;
+            windows) apps=(dist/win-unpacked/di.iiii.exe) ;;
+          esac
+          for app in "${apps[@]}"; do
+            echo "== $app"
+            npx @electron/fuses read --app "$app"
+          done
+          node scripts/check-fuses.js "${apps[@]}"
+      - name: Packaged app starts and loads a page (linux, under a virtual display)
+        # The fuses act only in the packaged app, which the smoke test never
+        # starts. Loads a fixture page on 127.0.0.1, reads it over the app's
+        # loopback DevTools port (DI_DESKTOP_CDP), then stops the app.
+        if: matrix.name == 'linux'
+        run: xvfb-run -a -s "-screen 0 1280x800x24" node scripts/check-packaged.js dist/linux-unpacked/di-desktop
+        env:
+          DI_TEST_NO_SANDBOX: '1'
+      - name: macOS signature (ad-hoc) of each app
+        if: matrix.name == 'macos'
+        shell: bash
+        run: |
+          set -e
+          for app in dist/mac*/di.iiii.app; do
+            echo "== $app"
+            codesign --verify --deep --strict "$app"
+            codesign -dv "$app" 2>&1 | grep -E 'Signature|Identifier|Authority' || true
+          done
+      - name: List installers
+        shell: bash
+        run: ls -l dist | grep -E '\.(AppImage|deb|dmg|exe)$'
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: di-desktop-${{ matrix.name }}
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+            desktop/dist/*.dmg
+            desktop/dist/*.exe
+          if-no-files-found: error
+
+  release:
+    name: attach to the release
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+    needs: [test, installers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: di-desktop-*
+          path: installers
+          merge-multiple: true
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          ls -l installers
+          gh release upload "$TAG" installers/* --repo "$REPO" --clobber

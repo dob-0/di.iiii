@@ -97,7 +97,11 @@ const hashDeviceCode = (code) => sha256Hex(`device-code:${code}`)
 
 // ── device codes ────────────────────────────────────────────────────────────
 
-const startDeviceLogin = ({ label = null, from = null, now = Date.now() } = {}) => {
+const SCOPES = Object.freeze(['login', 'connect'])
+const normalizeScope = (value) => (value === 'connect' ? 'connect' : 'login')
+const isConnectScope = (value) => normalizeScope(value) === 'connect'
+
+const startDeviceLogin = ({ label = null, from = null, scope = 'login', now = Date.now() } = {}) => {
   const db = getDb()
   const live = db.prepare("SELECT COUNT(*) AS n FROM cli_device_codes WHERE status = 'pending' AND expires_at > ?").get(now)
   if (Number(live?.n || 0) >= MAX_LIVE_DEVICE_CODES) {
@@ -116,11 +120,11 @@ const startDeviceLogin = ({ label = null, from = null, now = Date.now() } = {}) 
     if (clash) continue
     db.prepare(`
       INSERT INTO cli_device_codes
-        (id, device_hash, user_code_hash, label, created_from, status, interval_ms, created_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+        (id, device_hash, user_code_hash, label, created_from, status, interval_ms, created_at, expires_at, scope)
+      VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
     `).run(
       crypto.randomBytes(8).toString('hex'), hashDeviceCode(deviceCode), hash,
-      cleanLabel(label), from ? String(from).slice(0, 64) : null, INTERVAL_MS, now, now + DEVICE_TTL_MS
+      cleanLabel(label), from ? String(from).slice(0, 64) : null, INTERVAL_MS, now, now + DEVICE_TTL_MS, normalizeScope(scope)
     )
     return {
       deviceCode,
@@ -149,19 +153,21 @@ const findPendingByUserCode = (input, now = Date.now()) => {
 const describePending = (input, now = Date.now()) => {
   const row = findPendingByUserCode(input, now)
   if (!row) return null
-  return { label: row.label || null, requestedAt: row.created_at, expiresAt: row.expires_at, from: row.created_from || null }
+  return { label: row.label || null, requestedAt: row.created_at, expiresAt: row.expires_at, from: row.created_from || null, scope: normalizeScope(row.scope) }
 }
 
 // The person's answer. Returns { approved } or null when no live code matches
 // (wrong, expired, or already decided — the caller cannot tell which, nor can
 // anyone probing).
-const decide = ({ userCode, userId, approve, now = Date.now() }) => {
+// `spaceIds` is only kept for a 'connect' code that is approved: the ids the person ticked.
+const decide = ({ userCode, userId, approve, spaceIds = null, now = Date.now() }) => {
   if (!userId) return null
   const row = findPendingByUserCode(userCode, now)
   if (!row) return null
   const status = approve ? 'approved' : 'denied'
-  const result = getDb().prepare("UPDATE cli_device_codes SET status = ?, user_id = ? WHERE id = ? AND status = 'pending'")
-    .run(status, String(userId), row.id)
+  const ticked = approve && normalizeScope(row.scope) === 'connect' && Array.isArray(spaceIds) ? JSON.stringify(spaceIds.map(String)) : null
+  const result = getDb().prepare("UPDATE cli_device_codes SET status = ?, user_id = ?, spaces = ? WHERE id = ? AND status = 'pending'")
+    .run(status, String(userId), ticked, row.id)
   if (result.changes !== 1) return null
   return { approved: Boolean(approve) }
 }
@@ -196,6 +202,12 @@ const exchangeDeviceCode = ({ deviceCode, canIssueFor = () => true, now = Date.n
 
   if (row.status === 'denied') return { status: 'denied' }
   if (!row.user_id || !canIssueFor(row.user_id)) return { status: 'denied' }
+  // A connect code carries no terminal token: the route turns the ticked spaces into keys (connectStore.js).
+  if (normalizeScope(row.scope) === 'connect') {
+    let spaceIds = []
+    try { spaceIds = JSON.parse(row.spaces || '[]') } catch { /* an unreadable list is an empty one */ }
+    return { status: 'approved', scope: 'connect', userId: row.user_id, label: row.label || null, spaceIds: Array.isArray(spaceIds) ? spaceIds : [] }
+  }
   const minted = mintCliToken({ userId: row.user_id, label: row.label, from: row.created_from, now })
   return { status: 'approved', token: minted.token, tokenId: minted.id, expiresAt: minted.expiresAt, userId: row.user_id }
 }
@@ -297,6 +309,9 @@ const pruneCliLogin = (now = Date.now()) => {
 }
 
 module.exports = {
+  SCOPES,
+  isConnectScope,
+  normalizeScope,
   startDeviceLogin,
   describePending,
   decide,

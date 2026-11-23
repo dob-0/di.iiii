@@ -3,6 +3,7 @@ import StudioViewport from './StudioViewport.jsx'
 import { useViewportMode } from '../utils/viewportMode.js'
 import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
+import { pageAllow } from '../../utils/pageFramePermissions.js'
 
 const overlayCardStyle = {
     position: 'absolute',
@@ -124,7 +125,7 @@ export default function StudioPresentationSurface({
                     src={codeUrl}
                     loading="lazy"
                     sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
-                    allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
+                    allow={pageAllow(presentationState.deviceAccess)}
                     referrerPolicy="strict-origin-when-cross-origin"
                     style={{
                         border: 0,
@@ -152,7 +153,7 @@ export default function StudioPresentationSurface({
                 title={document.projectMeta?.title || document.projectMeta?.id || 'Studio code preview'}
                 srcDoc={previewDocument}
                 sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
-                    allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
+                    allow={pageAllow(presentationState.deviceAccess)}
                 style={{
                     border: 0,
                     width: '100%',
