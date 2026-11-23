@@ -1246,11 +1246,13 @@
     place(); paintStrip();
   }
 
-  // The Stage page's inspector section shows while the strip is open or the video is on.
+  // The Stage page's inspector always has its Video section once the strip is built in it.
+  // It used to show only while the strip was open or the video on, so with the video off
+  // the Stage page seemed to have no video at all (Emily, 2026-11-23: "there's no NDI video
+  // place"). Showing it starts nothing: a source starts only when one is picked or On pressed.
   function paintSlots() {
-    const show = stripOpen || !!V.on || running() || !!waiting;
     for (const slot of $$('.sp-slot[data-slot="video-inspector"]')) {
-      if (slot.querySelector('.videostrip')) slot.hidden = !show;
+      if (slot.querySelector('.videostrip')) slot.hidden = false;
     }
   }
 
