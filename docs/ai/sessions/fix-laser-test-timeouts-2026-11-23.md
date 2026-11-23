@@ -9,3 +9,5 @@ src/project/nodes/laser.shape/laserShapes.test.js. No test logic changed.
 
 Tested: `npx vitest run serverXR/src/laser/laserGuards.test.js src/project/nodes/laser.shape/laserShapes.test.js` = 170 passed
 (before the change, laserGuards alone: 5 timed out in 5000ms on this machine).
+
+Also: services/name-broker/test/worker.test.js signs ±125 s instead of ±121 s. Across a second boundary "+121" became 120, inside the window, and CI got 204 on this PR (20:35). Tested: `npx vitest run services/name-broker`.
