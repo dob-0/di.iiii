@@ -8,6 +8,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { chromium } from 'playwright'
 import { backVerdict, classifyChange, isSkipped, looksLikeBack, summarise } from './nav-audit-lib.mjs'
+import { isMainModule } from '../lib/isMainModule.mjs'
 
 // How each route is reached. {space} = a space from the scratch data, {project} = its project. Source of truth: src/RootApp.jsx AppRouter
 // and the *Routing.js files (segments), src/components/PreferencesPage.jsx SECTIONS (the /admin#<key> hashes).
@@ -228,4 +229,4 @@ export async function main() {
     console.log(JSON.stringify(sum.total))
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1) })
+if (isMainModule(import.meta.url)) main().then(() => process.exit(0), (e) => { console.error(e); process.exit(1) })
