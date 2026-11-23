@@ -36,6 +36,8 @@ services:
       MAX_UPLOAD_MB: ${DEV_MAX_UPLOAD_MB:-2048}
       REQUIRE_AUTH: ${DEV_REQUIRE_AUTH:-true}
       ADMIN_API_TOKEN: ${DEV_ADMIN_API_TOKEN:-}
+      # Who may open the private Monitor on this tier: account ids, comma-separated. Empty = nobody.
+      MONITOR_OWNER_USER_IDS: ${DEV_MONITOR_OWNER_USER_IDS:-}
       AUTH_SESSION_SECRET: ${DEV_AUTH_SESSION_SECRET:?set DEV_AUTH_SESSION_SECRET in the dev .env}
       AUTH_SESSION_COOKIE_SECURE: ${DEV_AUTH_SESSION_COOKIE_SECURE:-true}
       CORS_ORIGINS: ${DEV_CORS_ORIGINS:-}

@@ -1,7 +1,15 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import axe from 'axe-core'
+
+// records the onPick every 2D/3D map was given, to prove its identity survives a poll (the 3D map is memoised on it)
+const pickSeen = []
+vi.mock('./MonitorMap.jsx', async (orig) => {
+    const m = await orig()
+    const R = await import('react')
+    return { ...m, default: (props) => { pickSeen.push(props.onPick); return R.createElement(m.default, props) } }
+})
 
 vi.mock('../../services/serverSpaces.js', () => ({
     listServerSpaces: vi.fn(),
@@ -60,6 +68,8 @@ import { navigateToStudioPath } from '../../studio/utils/studioRouting.js'
 describe('AdminManageSection', () => {
     beforeEach(() => {
         vi.clearAllMocks()
+        // the tree tests run in the List tab; the default tab (Mixed) is covered by SpacesMixed.test.jsx
+        window.localStorage.setItem('di.admin.spaces.view', 'list')
         listServerSpaces.mockResolvedValue([
             { id: 'main', label: 'Main Space', isPublic: true, isPermanent: true },
             { id: 'demo', label: 'Demo', isPublic: false, isPermanent: false }
@@ -67,6 +77,16 @@ describe('AdminManageSection', () => {
         getServerConfig.mockResolvedValue({ defaultSpaceId: 'main', globalSpaceId: 'main' })
         listUsers.mockResolvedValue([])
         listProjects.mockResolvedValue([{ id: 'p1', title: 'First Project', spaceId: 'demo' }])
+    })
+
+    it('tabs read Mixed | List | 2D | 3D and Mixed is the default when nothing is stored', async () => {
+        window.localStorage.removeItem('di.admin.spaces.view')
+        const { container } = render(<AdminManageSection />)
+        await screen.findByText('Spaces world')
+        const tabs = [...container.querySelectorAll('[data-world-view]')].map((b) => b.getAttribute('data-world-view'))
+        expect(tabs).toEqual(['mixed', 'list', '2d', '3d'])
+        expect(container.querySelector('[data-world-view="mixed"]').getAttribute('aria-pressed')).toBe('true')
+        expect(container.querySelector('[data-spaces-mixed]')).toBeTruthy()
     })
 
     it('renders the spaces tree and root overview', async () => {
@@ -219,6 +239,85 @@ describe('AdminManageSection', () => {
         fireEvent.click(row)
         expect(row.getAttribute('aria-expanded')).toBe('false')
         expect((await axe.run(container, { runOnly: ['nested-interactive'] })).violations).toEqual([])
+    })
+
+    // Regression guards (PR #1309 review, 2026-11-19): the live poll.
+    const poll = () => act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+    it('a failed people poll keeps the last list and says it is old; only a 403 clears it', async () => {
+        listUsers.mockResolvedValue([{ id: 'u1', displayName: 'Ana', role: 'editor', spaces: ['demo'] }])
+        render(<AdminManageSection />)
+        await screen.findByText('Demo')
+        await waitFor(() => expect(listUsers).toHaveBeenCalledTimes(1))
+        listUsers.mockRejectedValueOnce(Object.assign(new Error('offline'), { status: 0 }))
+        await poll()
+        await screen.findByText(/people list old/)
+        listUsers.mockRejectedValueOnce(Object.assign(new Error('no'), { status: 403 }))
+        await poll()
+        await waitFor(() => expect(screen.queryByText(/people list old/)).toBeNull())
+    })
+
+    it('a slow older poll never overwrites a newer one', async () => {
+        render(<AdminManageSection />)
+        await screen.findByText('Demo')
+        let late
+        listServerSpaces.mockReturnValueOnce(new Promise((r) => { late = r }))
+        await poll() // slow, older
+        listServerSpaces.mockResolvedValueOnce([{ id: 'main', label: 'Main Space', isPublic: true, isPermanent: true }])
+        await poll() // newer, answers first
+        await waitFor(() => expect(screen.queryByText('Demo')).toBeNull())
+        await act(async () => { late([{ id: 'main', label: 'Main Space' }, { id: 'demo', label: 'Demo' }]) })
+        expect(screen.queryByText('Demo')).toBeNull()
+    })
+
+    it('an answer that arrives after unmount is dropped quietly', async () => {
+        const err = vi.spyOn(console, 'error').mockImplementation(() => {})
+        const { unmount } = render(<AdminManageSection />)
+        await screen.findByText('Demo')
+        let late
+        listServerSpaces.mockReturnValueOnce(new Promise((r) => { late = r }))
+        await poll()
+        unmount()
+        await act(async () => { late([]) })
+        expect(err).not.toHaveBeenCalled()
+        err.mockRestore()
+    })
+
+    it('a selected space that vanishes resets to the overview with a one-line note', async () => {
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        await waitFor(() => expect(screen.getAllByText('Demo').length).toBeGreaterThan(0))
+        listServerSpaces.mockResolvedValue([{ id: 'main', label: 'Main Space', isPublic: true, isPermanent: true }])
+        await poll()
+        await waitFor(() => expect(document.querySelector('[data-gone-note]').textContent).toMatch(/That space is gone/))
+    })
+
+    it('pickNode keeps one identity across polls so the memoised map is not redrawn', async () => {
+        window.localStorage.setItem('di.admin.spaces.view', '2d')
+        render(<AdminManageSection />)
+        await screen.findByText('Spaces world')
+        await waitFor(() => expect(pickSeen.length).toBeGreaterThan(0))
+        const first = pickSeen[pickSeen.length - 1]
+        listServerSpaces.mockResolvedValue([{ id: 'main', label: 'Main Space', isPublic: true, isPermanent: true }, { id: 'demo', label: 'Demo renamed', isPublic: false }])
+        await poll()
+        await waitFor(() => expect(document.body.textContent).toContain('Demo renamed'))
+        expect(pickSeen[pickSeen.length - 1]).toBe(first)
+        expect(new Set(pickSeen).size).toBe(1)
+    })
+
+    // Regression guard (admin MdiD, 2026-11-18): Spaces and users has List | 2D | 3D; the map and the list share one selection.
+    it('shows the spaces world in 2D, and a node click selects the same space the list shows', async () => {
+        listUsers.mockResolvedValue([{ id: 'u1', displayName: 'Ana', role: 'editor', spaces: ['demo'] }])
+        const { container } = render(<AdminManageSection />)
+        await screen.findByText('Demo')
+        expect(screen.getByRole('group', { name: 'Spaces view' })).toBeTruthy(); fireEvent.click(container.querySelector('[data-world-view="2d"]'))
+        expect(container.querySelector('[data-map-node="space:demo"]')).toBeTruthy()
+        expect(container.querySelector('[data-map-node="person:u1"]')).toBeTruthy()
+        expect(screen.getByText(/Live · updated/)).toBeTruthy()
+        fireEvent.click(container.querySelector('[data-map-node="space:demo"]'))
+        await waitFor(() => expect(container.querySelector('[data-map-node="space:demo"]').getAttribute('aria-pressed')).toBe('true'))
+        fireEvent.click(container.querySelector('[data-world-view="list"]'))
+        await waitFor(() => expect(container.querySelector('.preferences-tree-row.is-child.is-selected')).toBeTruthy())
+        expect(container.querySelector('.preferences-tree-row.is-selected').textContent).toContain('Demo')
     })
 })
 

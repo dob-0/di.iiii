@@ -87,7 +87,7 @@ const sleepFor = (ms, signal) => new Promise((resolve) => {
     signal?.addEventListener('abort', done, { once: true })
 })
 
-const withDefaults = (deps = {}) => ({
+export const withDefaults = (deps = {}) => ({
     fetch: (...parameters) => globalThis.fetch(...parameters),
     sleep: sleepFor,
     now: () => Date.now(),
@@ -132,14 +132,14 @@ const dateOf = (value) => {
     return Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : null
 }
 
-const nameOf = (user) => cleanText(user?.name) || cleanText(user?.id) || 'your account'
+export const nameOf = (user) => cleanText(user?.name) || cleanText(user?.id) || 'your account'
 
 const envWins = (env) => (String(env?.DI_TOKEN || '').trim() ? ui.loginEnvWins() : null)
 
 // ── one request ───────────────────────────────────────────────────────────
 
 /** Never throws: `{ down: true }` for a network error or a timeout, else `{ status, body, retryAfter, location }`. */
-const ask = async (d, method, url, { body = null, token = null } = {}) => {
+export const ask = async (d, method, url, { body = null, token = null } = {}) => {
     const headers = { accept: 'application/json', 'user-agent': DI_USER_AGENT }
     if (body) headers['content-type'] = 'application/json'
     // The token goes in the header and nowhere else.
@@ -167,10 +167,10 @@ const ask = async (d, method, url, { body = null, token = null } = {}) => {
     }
 }
 
-const errorCode = (answer) => (typeof answer.body?.error === 'string' ? cleanText(answer.body.error, 40) : '')
+export const errorCode = (answer) => (typeof answer.body?.error === 'string' ? cleanText(answer.body.error, 40) : '')
 
 /** Why a request that was not an answer we can use is not one, in words. Null if it is fine. */
-const refusal = (answer, host, { site, wanted = [200] } = {}) => {
+export const refusal = (answer, host, { site, wanted = [200] } = {}) => {
     if (answer.down) return ui.loginDown(host, 1)
     if (answer.status >= 300 && answer.status < 400) return ui.loginRedirected(host, answer.location)
     if (answer.status === 404 && errorCode(answer) === 'login_not_available') return ui.loginNoAccounts()
@@ -184,7 +184,7 @@ const refusal = (answer, host, { site, wanted = [200] } = {}) => {
 
 const clampedSeconds = (value, fallback, min, max) => (Number.isFinite(value) && value > 0 ? Math.min(max, Math.max(min, value)) : fallback)
 
-const readGrant = (body) => {
+export const readGrant = (body) => {
     const deviceCode = typeof body.deviceCode === 'string' ? body.deviceCode : ''
     const userCode = typeof body.userCode === 'string' ? body.userCode.trim() : ''
     if (!/^\S{8,}$/.test(deviceCode) || !/^[A-Za-z0-9-]{4,24}$/.test(userCode)) return null
@@ -204,7 +204,7 @@ const readToken = (body) => {
 }
 
 /** Poll until yes, no, or too late. `{ ok, grant }` or `{ code, message }`. */
-const pollForToken = async (d, { base, host, grant }) => {
+export const pollForToken = async (d, { base, host, grant, read = readToken }) => {
     const deadline = d.now() + grant.expiresIn * 1000
     let waitS = grant.interval
     let downInARow = 0
@@ -225,7 +225,7 @@ const pollForToken = async (d, { base, host, grant }) => {
         downInARow = 0
         if (answer.status === 429) { waitS = Math.max(waitS + 5, answer.retryAfter); continue }
         if (answer.status === 200) {
-            const got = readToken(answer.body)
+            const got = read(answer.body)
             return got ? { ok: true, got } : { code: 1, message: ui.loginOdd(host) }
         }
         const code = errorCode(answer)
@@ -299,6 +299,12 @@ export const cmdLogin = async (args, deps) => {
     await d.say(ui.loginDone(host, user.name))
     const note = envWins(d.env)
     if (note) d.say(note)
+    // One Enter connects this machine to every space of the account. Only offered where a person can answer
+    // (the caller injects `offerConnect` + `confirm` for a terminal); a script, a pipe or --no-connect never waits.
+    if (d.offerConnect && d.confirm && !flags['no-connect']) {
+        await d.say(ui.loginOfferConnect())
+        if (await d.confirm()) return d.offerConnect({ ...args, _: ['connect'], flags: { from: site, ...(flags['no-open'] ? { 'no-open': true } : {}) } })
+    }
     return 0
 }
 
@@ -397,6 +403,14 @@ export const moveToken = ({ from, env = process.env, home = os.homedir() } = {})
 }
 
 // ── what cli.mjs registers ────────────────────────────────────────────────
+
+/** Enter or y = yes; n = no. Reads one line from the terminal; false at once when there is none. */
+export const askEnter = () => new Promise((resolve) => {
+    if (!process.stdin.isTTY) { resolve(false); return }
+    process.stdin.setEncoding('utf8')
+    process.stdin.once('data', (chunk) => { process.stdin.pause(); resolve(!/^\s*n/i.test(String(chunk))) })
+    process.stdin.resume()
+})
 
 export const runLogin = async (args, extra = {}) => {
     // Ctrl-C stops the wait and writes nothing; a second one is the default (kill).

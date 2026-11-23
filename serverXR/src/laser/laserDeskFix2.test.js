@@ -88,3 +88,16 @@ describe('R7 a look that is itself a still beam says so', () => {
         expect(src).toMatch(/stillGone\.add\(stillKey\)/)
     })
 })
+describe('a dot look stopped by the still-beam guard says why (laser.json dots off)', () => {
+    const src = fs.readFileSync(path.join(__dirname, 'ui/desk.js'), 'utf8')
+    it('the cube row carries a plain line naming the dot looks and the laser.json switch, only when dots is off', () => {
+        expect(src).toMatch(/const DOT_LOOKS = \['phyllotaxis', 'phyllochaos'\]/)
+        expect(src).toMatch(/engine\?\.guard\?\.dots === false/)
+        expect(src).toMatch(/Turn them on with "dots": true in laser\.json/)
+        expect(src).toMatch(/dotNote\(e\) \? el\('div', \{ class: 'muted'/)
+    })
+    it('DOT_LOOKS match the shared DOT_SHAPES list', () => {
+        const { DOT_SHAPES } = require('../../../shared/laserShapes.cjs')
+        expect(DOT_SHAPES).toEqual(['phyllotaxis', 'phyllochaos'])
+    })
+})
