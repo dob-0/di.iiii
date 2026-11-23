@@ -1,5 +1,5 @@
-// node --test scripts/address-guard.test.mjs
-import test from 'node:test'
+// npx vitest run scripts/address-guard.test.mjs
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { judgeName } from './address-guard.mjs'
 
