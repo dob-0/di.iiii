@@ -309,6 +309,8 @@ const config = {
   mountPath: basePath || '/',
   apiToken,
   internalApiToken,
+  // The one account (or few) that may open the private Monitor on the dev tier. Empty = nobody.
+  monitorOwnerUserIds: parseList(process.env.MONITOR_OWNER_USER_IDS),
   requireAuth,
   corsOrigins,
   maxUploadBytes,

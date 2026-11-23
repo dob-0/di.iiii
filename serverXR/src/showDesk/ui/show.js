@@ -38,7 +38,10 @@
     // sends one. "spots" (dots) comes first on the strip, so any live look becomes dots with one tap.
     const SHAPES = ['circle', 'line', 'square', 'triangle', 'star', 'wave', 'fan', 'spiral', 'galaxy', 'sunflower', 'noisy', 'grid',
         'arc', 'cross', 'bars', 'rings', 'corners', 'chevron', 'glint', 'sparkle', 'twinkle', 'lines', 'spots', 'wobble',
-        'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse']
+        'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse', 'unfold', 'lissajous', 'helix', 'tunnel',
+        'echo', 'sides', 'count', 'rain', 'cube', 'dust', 'heartbeat', 'point', 'weave', 'venn', 'lava', 'magma',
+        'eruption', 'bubble', 'crack', 'drip', 'volcano', 'strands', 'contour', 'draw', 'blade', 'coil', 'down', 'vortex',
+        'phyllotaxis', 'phyllolines', 'crossgrid', 'phyllochaos', 'horse']
     // Every field of a look the laser desk knows (laser/laserDesk.js normaliseLook): its range there, its step here.
     const LIVE = {
         level: { label: 'Level', min: 0, max: 1, step: 0.01, pct: true },
@@ -859,10 +862,24 @@
     let midiWhy = 'asking'
     let learning = null
     const pickup = new Map()
+    // Any channel (owner 2026-11-01, "make all mapped, maybe they do not trigger the right one"): a control that matches
+    // the map on its own channel wins; when none does, the same kind and number on ANY channel takes that row, so a K2
+    // set to another MIDI channel (or another controller) still drives the desk. The exact-channel map is kept whole.
+    // The fallback only fires when it is unambiguous: with two rows on the same number the first one is a guess, and a
+    // wrong guess moves the wrong fader. Then Blackout still wins if it is one of them, otherwise the control is left
+    // unmapped and the line says so.
+    const midiFind = (ctl) => {
+        const exact = midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
+        if (exact) return exact
+        const any = midiMap.filter((x) => x.kind === ctl.kind && x.num === ctl.num)
+        if (any.length === 1) return any[0]
+        return any.find((x) => x.target === 'blackout') || null
+    }
+    let midiLast = ''
     const midiLine = (note = '') => {
         const base = midiNames && midiNames.length ? `MIDI: ${midiNames.join(', ')}` : `MIDI: ${midiNames ? 'none seen' : midiWhy}`
         const learn = !learning ? '' : learning.target ? ` · Learn: move one control for ${learning.target}` : ' · Learn: tap a fader, a scene key or Blackout all'
-        setText($('midiLine'), `${base}${learn}${note ? ` · ${note}` : ''}`)
+        setText($('midiLine'), `${base}${learn}${midiLast ? ` · heard ${midiLast}` : ''}${note ? ` · ${note}` : ''}`)
         $('midiLearn').classList.toggle('is-on', Boolean(learning))
         $('midiLearn').setAttribute('aria-pressed', learning ? 'true' : 'false')
     }
@@ -928,9 +945,11 @@
         const ctl = { kind, ch: d[0] & 0x0f, num: d[1] }
         // The panic button comes first: while Learn waits for a control, the Blackout button still blacks out and is
         // never learned onto something else (review 2026-10-31 M1).
-        if (kind === 'note' && midiMap.some((x) => x.target === 'blackout' && x.kind === 'note' && x.ch === ctl.ch && x.num === ctl.num)) { pressBlackout(); return }
+        const m = midiFind(ctl)
+        midiLast = `${kind === 'cc' ? 'CC' : 'note'} ${ctl.num} ch ${ctl.ch + 1} → ${m && m.target !== 'spare' ? m.target : 'not mapped'}`
+        if (kind === 'note' && m && m.target === 'blackout') { midiLine(); pressBlackout(); return }
         if (learning && learning.target) { midiLearnSet(ctl); return }
-        const m = midiMap.find((x) => x.kind === ctl.kind && x.ch === ctl.ch && x.num === ctl.num)
+        midiLine()
         if (!m || !midiValid(m) || m.target === 'spare') return
         if (kind === 'cc') midiMove(m, d[2])
         else midiPress(m)

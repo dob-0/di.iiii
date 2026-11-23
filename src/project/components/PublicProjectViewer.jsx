@@ -49,6 +49,7 @@ import useOutputMode from '../viewport/useOutputMode.js'
 import { renderPlan } from '../../shared/renderPlan.js'
 import useRenderMode from '../viewport/useRenderMode.js'
 import { useGraphMakesRoom } from './graphRoom.js'
+import { pageAllow } from '../../utils/pageFramePermissions.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -742,7 +743,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         src={codeUrl}
                         loading="lazy"
                         sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
-                        allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
+                        allow={pageAllow(presentationState.deviceAccess)}
                         referrerPolicy="strict-origin-when-cross-origin"
                         style={{
                             border: 0,
@@ -760,7 +761,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         title={viewerTitle}
                         srcDoc={previewDocument}
                         sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
-                        allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
+                        allow={pageAllow(presentationState.deviceAccess)}
                         style={{
                             border: 0,
                             width: '100%',

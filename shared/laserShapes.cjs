@@ -22,12 +22,61 @@ const LASER_SHAPES = [
     // Scenes of a few lines, circles and dots that move on the beat (2026-10-30, the owner: "more scenes like complex ones
     // but minimalistic lines circle dots").
     'planets', 'pendulum', 'bounce', 'radar', 'constellation', 'clock', 'horizon', 'morse',
+    // One line that changes what it is on the beat (2026-10-31, the owner: "circle is pulsing and then becoming spiral and
+    // then the spiral is going out of it and becomg line around all sqaure").
+    'unfold',
+    // Patterns of lines and circles that move on the beat (2026-10-31, the owner: "more patterns for laser"): two one-line
+    // figures, two that go out from the centre, two that count the beats, falling dashes and a turning cube.
+    'lissajous', 'helix', 'tunnel', 'echo', 'sides', 'count', 'rain', 'cube',
+    // The same night: "how laser dot can be small that much, too many dots" — many dots, as small as the laser may draw one.
+    'dust',
+    // 2026-11-01: "pattern like heart cardiograma lines" — a heart monitor's trace, its spike written on the beat.
+    'heartbeat',
+    // "one pattern smallest one point in middle": one dot alone, as small as the engine lets a lone dot stay lit.
+    'point',
+    // "more lasers animation patterns like line line and grid becoming, also circle one then two three and mixing":
+    // one line that splits into a grid and folds back, one circle that splits into three that mix and merge again.
+    'weave', 'venn',
+    // 2026-11-06, for the REA festival (four cubes, "lava concepts laser show"): lava (a lava lamp's blobs rising and
+    // sinking), magma (level lines flowing like a slow river), eruption (a volcano throwing bombs on the beat), bubble (a
+    // pool whose bubbles swell and pop), crack (a crust splitting open from the middle) and drip (drops falling from a
+    // ceiling into a pool).
+    'lava', 'magma', 'eruption', 'bubble', 'crack', 'drip',
+    // The same evening: "okay doing lava laser animation" — the lava story told by one line over four bars: a drop falls
+    // into the pool, the pool swells into a volcano, it erupts, and it melts back.
+    'volcano',
+    // Then, from the owner's laser.html and LASER_BRIEF.md: "organic, tangled, wandering strands drawn by laser beams".
+    'strands',
+    // 2026-11-07, the owner's references of solid-light pieces (one thin line on the floor, a cone of light in haze):
+    // "more line based stuff". Contour (nested loops flowing out, like a map's contour lines), draw (a loop that draws
+    // itself and rubs itself out), blade (long lines turning slowly with a ripple running along them) and coil (a loose
+    // spiral, breathing).
+    'contour', 'draw', 'blade', 'coil',
+    // The same night: "flat 3 lines go down loop".
+    'down',
+    // And "spiral animation and inside of it … red dot scaning one point": a turning spiral with one point beam inside,
+    // drawn in the look's second colour.
+    'vortex',
+    // 2026-11-07, the owner, showing her TouchDesigner Phyllotaxis network: "can we have the sameeee".
+    'phyllotaxis',
+    // Its second branch (datto2 → copy3 → copy4): the same seeds joined in order, as lines.
+    'phyllolines',
+    // "add pattern cross grid": down, crossed — level lines gliding down and upright ones gliding right.
+    'crossgrid',
+    // "phylltaxis is starting one point which is slow from up going down and then it becoming chaotic and too many dots
+    // how posoible 15 sec loop": one point falls, the seeds grow out of where it lands, then they break up.
+    'phyllochaos',
+    // "can you generate horse run animation in laser deck" (the REA show): a galloping horse, one outline, a stride a beat.
+    'horse',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
 // the cube until the picture grows again (laser.test.js). Every other shape stays a stroke down to size 0.05.
-const MARK_SHAPES = ['sparkle', 'twinkle', 'spots', 'morse']
+const MARK_SHAPES = ['sparkle', 'twinkle', 'spots', 'morse', 'rain', 'dust', 'lava']
 const MARK_MIN_SIZE = 0.15
+// The shapes drawn as true point dots, the beam resting on a spot (2026-11-07, phyllotaxis). The engine lets them play
+// only with laser.json `"dots": true` (laserEngine.js DOTS_MAX_SHARE); without it every frame of theirs is a still beam.
+const DOT_SHAPES = ['phyllotaxis', 'phyllochaos']
 // A shape name may be a comma list ('galaxy,sunflower,noisy,grid'): with `cycle` seconds each shape plays in turn,
 // the way TD's switch1 steps through its four scenes on a slow oscillator.
 const shapeListOf = (shape) => String(shape ?? '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)
@@ -174,6 +223,368 @@ const dotFrom = (dot, from) => arcPath(dot[0], dot[1], SPOT_R, Math.atan2(from[1
 const glideOf = (beat) => {
     const f = clamp((beat - Math.floor(beat)) * 2, 0, 1)
     return f * f * (3 - 2 * f)
+}
+// The beats so far with the glide: a pattern that moves by a step on every beat moves it in the first half and holds.
+const stepOf = (beat) => Math.floor(beat) + glideOf(beat)
+// A count of things from `copies`: its own number when copies is 0, else copies held between lo and hi.
+const countOf = (copies, own, lo, hi) => Math.round(clamp(copies > 0 ? copies : own, lo, hi))
+// The patterns' parts. The tunnel's smallest square: 0.15 of the picture, so at size 0.05 it is still a stroke's
+// worth of the frame and never a dot on its own (the rest of the tunnel is around it).
+const TUNNEL_MIN = 0.15
+// A falling dash of rain, and the least of one that is drawn as it comes in at the top or goes out at the bottom: at
+// MARK_MIN_SIZE the piece is 0.25 × 0.15 = 0.0375 of the field, over the still-beam window.
+const RAIN_DASH = 0.5
+const RAIN_LEAST = 0.25
+// The cube: its corners, and its twelve edges as four strokes with three short blank moves between them (a cube's
+// eight corners each have three edges, so no fewer than four strokes draw it without lighting an edge twice): the bottom
+// square, up one corner and round the top, then the other three uprights, each hop one edge long.
+const CUBE_CORNERS = [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1], [-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1]]
+const CUBE_STROKES = [[0, 1, 2, 3, 0, 4, 5, 6, 7, 4], [5, 1], [2, 6], [7, 3]]
+// It leans 0.42 rad (24°) towards you so its top shows, seen from 5 half-edges away (a little perspective).
+const CUBE_TILT = 0.42
+const CUBE_EYE = 5
+const cubeView = (turn) => {
+    const c = Math.cos(turn)
+    const s = Math.sin(turn)
+    return CUBE_CORNERS.map(([x0, y0, z0]) => {
+        const x = x0 * c + z0 * s
+        const z1 = z0 * c - x0 * s
+        const y = y0 * Math.cos(CUBE_TILT) - z1 * Math.sin(CUBE_TILT)
+        const z = y0 * Math.sin(CUBE_TILT) + z1 * Math.cos(CUBE_TILT)
+        const k = CUBE_EYE / (CUBE_EYE - z)
+        return [x * k, y * k]
+    })
+}
+// Dust's dot: a ring 0.046 of the field across once the look is sized (its radius in the shape is DUST_R / size, up to
+// SPOT_R), whatever the size. The still-beam window is 0.032 (0.6°): a frame of dots that small only is a still beam and
+// the engine blanks the cube, so this is as small as a dot may be, with room for a corner pin that keeps a side at 75 % or
+// more (the owner's mapping, 79 % wide, draws it 0.65° across: 2026-11-01, "must be point the smallest point laser can show").
+const DUST_R = 0.023
+// Phyllotaxis as the owner's TouchDesigner scene draws it (TD_LASER_CUBE_WIFI_LAN_2022.toe, the Phyllotaxis COMP and
+// its parexec1 script, read 2026-11-07 with toeexpand): seed i of Samples (17) at radius √i and angle i × Angle, the
+// Angle running 0° → 180° and back on a triangle (lfo1, 0.05 Hz: 20 s; here PHYLLO_SWEEP beats, 20 s at 120 BPM), the
+// whole fitted to a circle and copied round the centre (copy1: turned half a turn; with Double, copy2: mirrored top to
+// bottom too). TD's laser1 draws each seed as a point held still (Min/Max Vertex Hold 0.001–0.01 s); here too: the
+// beam rests on each seed for the look's Points / PHYLLO_HOLD_PER points (1 to 30; 600 → 12, then the engine adds its
+// dwells: 27 lit samples, 0.8 ms at 35 kpps, 30–32 redraws a second for 17 dots; 1500 → 30, TD-bright), a true point, no ring (the
+// owner: "jsut points smallest one"). A frame of only dots is a still beam to the engine unless laser.json has
+// `"dots": true` (laserEngine.js DOTS_MAX_SHARE). The cube's budget holds PHYLLO_MOST dots: past it the outer seeds go.
+const PHYLLO_SEEDS = 17
+const PHYLLO_SWEEP = 40
+const PHYLLO_MOST = 25
+const PHYLLO_HOLD_PER = 50
+// The most line phyllolines draws, in field widths once sized: past it its outermost seeds are left out for that moment
+// (two copies at full size, the Angle near 180°: 3 of 320 frames were over the cube's pass, measured 2026-11-07).
+const PHYLLO_LINE_MOST = 30
+// The Angle at a beat (TD: (lfo + 1) × 90°, the triangle rising from 0 at the start of its period), and seed i's place.
+const phylloAngle = (beat) => {
+    const phase = (((beat / PHYLLO_SWEEP) % 1) + 1) % 1
+    const tri = phase < 0.25 ? 4 * phase : phase < 0.75 ? 2 - 4 * phase : 4 * phase - 4
+    return (Math.PI / 2) * (1 + tri)
+}
+const phylloSeed = (i, angle, reach) => {
+    const rad = reach * Math.sqrt(i / (PHYLLO_SEEDS - 1))
+    return [Math.cos(i * angle) * rad, Math.sin(i * angle) * rad]
+}
+// Copies 1 (the default: the seeds alone), 2 or 4. The cube draws 17 dots or one line of them 23–54 times a second at
+// size 0.7; their copies cost it as much again (measured 2026-11-07 at 35 kpps), so they are a choice, not the default.
+const phylloFold = (copies) => (copies >= 3 ? 4 : copies === 2 ? 2 : 1)
+// Phyllochaos (2026-11-07, REA): one loop of CHAOS_LOOP beats, 15 s at the desk's 120 BPM. Beats 0–CHAOS_FALL: one point
+// falls slowly from the top of the picture to its centre and stays there as the first seed of the owner's TouchDesigner
+// Phyllotaxis (PHYLLO_SEEDS): seed i at radius √i and angle i × Angle. A new seed lights at the rim every half beat
+// (CHAOS_BORN a beat), 17 by CHAOS_ORDER, while the Angle turns from 90° (four straight arms) at TD's own pace (18°
+// a second, CHAOS_TURN a beat), so the arms wind into spirals as the flower grows. From CHAOS_ORDER the order breaks up:
+// seeds keep coming four a beat up to as many as the cube's pass holds, the Angle turns faster and faster (CHAOS_WHIRL:
+// the outer seeds whirl past what the eye can follow), and the seeds jump off their places a little more each time (new
+// jumps every half beat, then quarter, then eighth). From CHAOS_PEAK every dot is thrown somewhere new in the circle
+// every eighth of a beat, until the loop starts again with the point at the top (a cut, not a fade). Dots move whole and
+// never smear (the owner's raw dots). A lone point is drawn as Point's ring (POINT_R): one true point alone is a still
+// beam the engine stops, even with laser.json "dots"; the centre seed becomes a true point once CHAOS_LONE_UNTIL seeds
+// are lit, when a frame of only dots is allowed (each under 12 % of the time).
+const CHAOS_LOOP = 30
+const CHAOS_FALL = 8
+const CHAOS_ORDER = 16
+const CHAOS_PEAK = 26
+const CHAOS_LONE_UNTIL = 9
+const CHAOS_BORN = 2
+const CHAOS_BORN_FAST = 4
+const CHAOS_ANGLE_FROM = Math.PI / 2
+const CHAOS_TURN = Math.PI / 20
+// While breaking up the Angle turns CHAOS_TURN × (1 + CHAOS_WHIRL × c²) a beat, c going 0 → 1 to the peak (60 × TD's
+// pace in all), and the jumps reach CHAOS_JUMP × c³ of the circle.
+const CHAOS_WHIRL = 15
+const CHAOS_JUMP = 0.45
+// How many dots one pass of the cube takes: CHAOS_PASS points, each dot costing its hold + CHAOS_DOT_COST (the blank wait
+// before it, the dwells and the lit tail the guards add, and the blank hop to the next: laserLook.cjs PASS; measured
+// 53–66 at the peak, nearest-first), so a lower Points gives more, dimmer dots: 31 at Points 100, 27 at 600, 21 at 1500.
+const CHAOS_PASS = 1850
+const CHAOS_DOT_COST = 56
+const CHAOS_LEAST = 12
+// Dots keep CHAOS_GAP of the field apart (a thrown one tries a few places), so two never land on one spot.
+const CHAOS_GAP = 0.05
+// The places dust rests on: a 9 × 9 grid 0.22 apart over the whole picture, split as a checkerboard's two colours, one
+// for each half of the dots, so a dot that jumps never lands on one that stays.
+const DUST_PLACES = [0, 1].map((colour) => {
+    const out = []
+    for (let row = -4; row <= 4; row += 1) for (let col = -4; col <= 4; col += 1) if (((row + col) & 1) === colour) out.push([col * 0.22, row * 0.22])
+    return out
+})
+// One heartbeat of a cardiogram, u beats from its R spike (−0.5…0.5): the P wave, the Q dip, the R spike, the S dip and
+// the T wave, each a bump [where, how wide, how high]. The spike is 1; the trace sits on 0 between beats.
+const ECG_WAVES = [[-0.2, 0.035, 0.12], [-0.025, 0.008, -0.12], [0, 0.01, 1], [0.025, 0.01, -0.3], [0.25, 0.05, 0.25]]
+const ecgAt = (u) => ECG_WAVES.reduce((sum, [at, w, a]) => sum + a * Math.exp(-(((u - at) / w) ** 2) / 2), 0)
+// The heartbeat trace in the picture: the spike 1.2 tall, the whole trace centred top to bottom (it spans −0.78…0.78),
+// and the gap a monitor wipes ahead of what it writes.
+const ECG_HEIGHT = 1.2
+const ECG_BASE = -0.42
+const ECG_GAP = 0.25
+// Point's dot: a ring 0.1 of the field across at any size from 0.05 up. Alone, all the beam's time is in it, so it must
+// be wider than a dust dot (0.046): through a corner pin like the owner's (79 % wide, 33 % tall) a ring 0.06 across puts
+// 44 % of the frame in one 0.6° window, near the engine's 50 % stop; 0.046 is stopped; 0.1 puts 34 % (1.5° × 0.6° on her wall).
+const POINT_R = 0.05
+// Weave's 16 beats, [lines before, lines after] on each beat, for the level lines and the upright ones. A count that
+// doubles splits each line in two, gliding apart in the first half of the beat; one that halves glides pairs together.
+// The first upright line appears whole on beat 3 and the last goes on beat 11 (0 → 1, 1 → 0 are on the beat).
+const WEAVE_LEVEL = [[1, 1], [1, 2], [2, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 2], [2, 1], [1, 1], [1, 1]]
+const WEAVE_UPRIGHT = [[0, 0], [0, 0], [0, 0], [1, 1], [1, 2], [2, 4], [4, 4], [4, 4], [4, 4], [4, 2], [2, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
+// Where line i of c sits across the picture: the middles of c equal bands, so a line splits into the two of its band.
+const bandOf = (i, c) => -1 + (2 * (i + 0.5)) / c
+const weaveLines = ([from, to], f) => {
+    if (to === from || from === 0 || to === 0) return Array.from({ length: to }, (_, i) => bandOf(i, to))
+    if (to > from) return Array.from({ length: to }, (_, j) => bandOf(Math.floor(j / 2), from) + (bandOf(j, to) - bandOf(Math.floor(j / 2), from)) * f)
+    if (f >= 1) return Array.from({ length: to }, (_, i) => bandOf(i, to))
+    return Array.from({ length: from }, (_, j) => bandOf(j, from) + (bandOf(Math.floor(j / 2), to) - bandOf(j, from)) * f)
+}
+// Venn's circles: all the same size (0.5), two 0.8 apart, three on a ring of 0.45 (each overlaps the others), and while
+// they mix the ring closes to 0.12 on every other beat. Places on the three-ring, from the top, a third of a turn apart.
+const VENN_R = 0.5
+const VENN_TWO = 0.4
+const VENN_THREE = 0.45
+const VENN_TIGHT = 0.12
+const vennRing = (d, turn) => [0, 1, 2].map((i) => [Math.cos(Math.PI / 2 + turn + (i * TAU) / 3) * d, Math.sin(Math.PI / 2 + turn + (i * TAU) / 3) * d])
+// The lava shapes (2026-11-06). Lava's blobs each rise and sink on a loop of their own, so they rarely meet the top
+// together: these many beats a round trip, by lane.
+const LAVA_LOOPS = [16, 24, 20, 28, 12, 32]
+// Eruption's volcano: its foot at the picture's corners, the crater's rims and the floor of the crater, as one line.
+const VOLCANO = [[-0.95, -0.95], [-0.3, -0.3], [-0.12, -0.4], [0.12, -0.4], [0.3, -0.3], [0.95, -0.95]]
+const volcanoAt = (x) => {
+    const ax = Math.abs(x)
+    if (ax <= 0.12) return -0.4
+    if (ax <= 0.3) return -0.4 + ((ax - 0.12) / 0.18) * 0.1
+    return -0.3 - ((ax - 0.3) / 0.65) * 0.65
+}
+// A bomb leaves the crater's floor from ERUPT_X either side of the middle (the two of a beat start more than a dot
+// apart), climbs for ERUPT_RISE beats and falls until it lands on the cone, where it is gone.
+const ERUPT_X = 0.14
+const ERUPT_RISE = 0.4
+// Bubble's pool surface, and the biggest a bubble gets before it pops (one in each half of the pool, so they never meet).
+const POOL_Y = -0.35
+const BUBBLE_R = 0.28
+// Crack's line across the picture: CRACK_STEPS pieces, opening from the middle.
+const CRACK_STEPS = 10
+// Drip's ceiling and pool, and its six lanes 0.3 apart (more than a drop across), taken in this order so the drops of
+// one beat and the next never share a lane.
+const DRIP_TOP = 0.8
+const DRIP_FLOOR = -0.8
+const DRIP_LANES = [0, 3, 5, 1, 4, 2]
+// Volcano's pool level; how high its cone grows over it; the cone's foot either side as it starts to rise, at its full
+// height and as it melts flat; and its crater: its half-width (of the foot) and its depth.
+const CONE_POOL = -0.55
+const CONE_PEAK = 0.85
+const CONE_FOOT = [0.5, 0.85, 0.95]
+const CONE_CRATER = 0.2
+const CONE_DEPTH = 0.1
+// The cone over the pool at x, grown to `rise` (0…1) with its foot `foot` either side and its crater `open` (0: shut, a
+// peak; 1: open). Its flanks curve in towards the top, as a volcano's do.
+const coneAt = (x, rise, foot, open) => {
+    const t = Math.abs(x) / foot
+    if (!(rise > 0) || t >= 1) return 0
+    const flank = (s) => (1 - s) ** 1.6
+    const peak = flank(t)
+    const crater = t < CONE_CRATER ? flank(CONE_CRATER) - (CONE_DEPTH / CONE_PEAK) * (1 - (t / CONE_CRATER) ** 4) : peak
+    return CONE_PEAK * rise * (peak + (crater - peak) * open)
+}
+// The drop's ripples: two waves running out from where it fell, one each way, dying away over RIPPLE_BEATS. Each is a
+// dip between two crests this deep, this wide and this long, running this fast (of the picture, a beat).
+const RIPPLE_DEPTH = 0.08
+const RIPPLE_WIDTH = 0.15
+const RIPPLE_WAVE = 0.3
+const RIPPLE_SPEED = 0.27
+const RIPPLE_BEATS = 4
+const rippleAt = (x, age) => {
+    if (!(age > 0) || age >= RIPPLE_BEATS) return 0
+    const wave = (s) => -Math.exp(-((s / RIPPLE_WIDTH) ** 2)) * Math.cos((TAU * s) / RIPPLE_WAVE)
+    return RIPPLE_DEPTH * Math.min(1, age / 0.1) * (1 - age / RIPPLE_BEATS) * (wave(x - RIPPLE_SPEED * age) + wave(x + RIPPLE_SPEED * age))
+}
+// 0 → 1 eased in and out over f = 0…1, held at either end.
+const easeOf = (f) => {
+    const c = clamp(f, 0, 1)
+    return c * c * (3 - 2 * c)
+}
+// Strands (the owner's laser.html): the beam runs along a path that is a sum of drifting sines. Its harmonics are drawn
+// as the page draws them, from hash01 here so the server, the twin and the tiles draw the same strand: each one's
+// frequency across and up, its two phases, how fast it drifts, and how much it adds. Copies takes the first 2 to 8 (the
+// page's Tangle; 5 is the page's own).
+const STRAND_HARMONICS = Array.from({ length: 8 }, (_, j) => ({
+    fx: (1 + 2.2 * hash01(j, 601)) * (j + 1) * 0.5,
+    fy: (1 + 2.2 * hash01(j, 602)) * (j + 1) * 0.5,
+    px: 7 * hash01(j, 603),
+    py: 7 * hash01(j, 604),
+    vx: (hash01(j, 605) - 0.5) * 0.5,
+    vy: (hash01(j, 606) - 0.5) * 0.5,
+    a: 1 / (1 + 0.7 * j),
+}))
+// The page at its own settings, read at 120 BPM: the beam runs STRAND_RUN radians of the path a beat and the tangle
+// drifts STRAND_DRIFT of its own time a beat. What shows is the path the beam ran over in the last STRAND_TRAIL beats
+// (the page's exposure keeps about half a second), so a faster look draws a longer strand, up to twice as long, the
+// page's fastest: longer would need more points than one pass of the cube. A slower look keeps the strand's length and
+// only crawls slower: a shorter strand curls into the engine's still-beam window (at size 0.15 a strand half as long put
+// 45 % of the frame in one window, this one 24 %). STRAND_REACH of the picture, as the page's 0.46 of the screen either
+// side of the middle.
+const STRAND_RUN = 5.8
+const STRAND_DRIFT = 0.3
+const STRAND_TRAIL = 1
+const STRAND_REACH = 0.92
+// The scale that keeps the cube inside the picture at every turn (it looks the same each quarter turn).
+// Solid-light lines (the owner's references, 2026-11-07). An organic loop: a circle whose radius is bent by four slow
+// harmonics (2 to 5 lobes), each with its own size, phase and drift from hash01, so a seed always gives the same loop and
+// `t` moves it on. The harmonics add up to at most SOLID_BEND, so a loop's radius stays within 1 ± SOLID_BEND.
+const SOLID_BEND = 0.27
+const solidHarmonics = (seed) => [2, 3, 4, 5].map((k, i) => ({
+    k,
+    a: [0.12, 0.08, 0.04, 0.03][i] * (0.5 + 0.5 * hash01(seed, k, 901)),
+    p: TAU * hash01(seed, k, 902),
+    v: 2 * hash01(seed, k, 903) - 1,
+}))
+const solidAt = (harmonics, angle, t) => 1 + harmonics.reduce((sum, h) => sum + h.a * Math.sin(h.k * angle + h.p + h.v * t), 0)
+// A loop's points from angle `from` to angle `to` (radians, either way round), round (cx, cy) at radius r × the bend.
+const solidArc = (harmonics, cx, cy, r, from, to, t) => {
+    const steps = Math.max(12, Math.ceil(Math.abs(to - from) * 28))
+    return Array.from({ length: steps + 1 }, (_, i) => {
+        const a = from + ((to - from) * i) / steps
+        const rr = r * solidAt(harmonics, a, t)
+        return [cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]
+    })
+}
+// Contour: the loops' sizes, smallest (as one is born in the middle) to largest (as it leaves at the edge), and how far
+// the middle of the smallest drifts off centre: the inner lines sit off to one side, so the lines bunch there, as a
+// map's contour lines do on a steep slope. The drift is under the gap between two loops, so two never cross.
+const CONTOUR_MIN = 0.12
+const CONTOUR_MAX = 0.95 / (1 + SOLID_BEND)
+const CONTOUR_OFF = 0.25
+// Draw: the least of its loop that stays lit, and at a small size the least lit length, in the field's half-widths
+// (measured 2026-11-07: 0.03 keeps every frame at 0.05 under 31 % in one window, never still; a quarter alone was still).
+const DRAW_LEAST = 0.25
+const DRAW_SMALL = 0.03
+// Blade: the circle the lines stay inside as they turn, the gap between lines, and the ripple that runs along each:
+// its height, its wave and how wide its packet is.
+const BLADE_REACH = 0.92
+const BLADE_GAP = 0.28
+const BLADE_RIPPLE = [0.12, 0.35, 0.25]
+// Vortex: the spiral's hole and its outer edge, how far the dot wanders from the middle, and the share of the frame's
+// points the dot gets: a point beam in haze needs time on it to show, but under the still-beam guard's half (laserEngine.js).
+const VORTEX_HOLE = 0.28
+const VORTEX_OUT = 0.95
+const VORTEX_WANDER = 0.1
+const VORTEX_DOT_SHARE = 0.25
+// The dot filled: this many turns from its edge in to VORTEX_FILL of its radius (the owner: "smallest one laser can have
+// possible dot fully covered"). Its edge is DUST_R of the field on the wall, the least the guard lets a dot be.
+const VORTEX_FILL_TURNS = 3
+const VORTEX_FILL = 0.2
+// Coil: the spiral's inner and outer radius before the bend.
+const COIL_IN = 0.22
+const COIL_OUT = 0.95 / (1 + SOLID_BEND)
+const CUBE_FIT = 1 / Math.max(...Array.from({ length: 91 }, (_, i) => Math.max(...cubeView((i / 90) * (Math.PI / 2)).flat().map(Math.abs))))
+
+// Cross grid's points. Gaps of at most CROSS_STEP of the field once the look is sized (the size it gets already holds the
+// cube's Setup size): just under the guards' lit step at 35 kpps (2/80 × 30/35 = 0.0214). With wider gaps the guards split
+// every one in two (600 points over 8 lines at size 1 went out as 1655, with these 1201). And at most CROSS_PASS less
+// CROSS_STROKE a line, CROSS_STROKE being what a line's ends cost the guards at 35 kpps (blank 35, dwells 2 + 2, lit before
+// off 11, and the hop): the cube draws at most 2333 a pass, and full Wobble breaks the edge lines where they leave the
+// field (each piece ~50 more), so a frame at 1992 points stays inside it bent too (laserGuards.test.js).
+const CROSS_STEP = 0.021
+const CROSS_PASS = 1650
+const CROSS_STROKE = 60
+
+// The horse (2026-11-07, the owner during the REA show: "can you generate horse run animation in laser deck"): a galloping
+// horse as ONE closed outline facing right, one stride per beat. A transverse gallop: the hooves land hind near, hind far,
+// fore near, fore far (HORSE_LEGS, when in the stride each lands; HORSE_STANCE, how long it stays down), then the legs
+// gather under the body in the air. Each leg is a narrow loop on the outline (down its front edge, round the hoof, up its
+// back edge), so the whole horse is one stroke and the laser never blanks inside it. The body bobs and pitches with the
+// stride, the neck nods round the withers and the tail waves.
+const HORSE_LEGS = { hindNear: 0, hindFar: 0.1, foreNear: 0.3, foreFar: 0.42 }
+const HORSE_STANCE = 0.3
+// At most this many points: more only slow the redraw, and at 1992 with full Displace + Wobble a pass came to 2714, past
+// the real cube's 2333 (frame-too-long stops it). At 1500 the fullest bend measured 2198.
+const HORSE_MOST = 1500
+const horseEase = (s) => s * s * (3 - 2 * s)
+// A smooth curve through points (Catmull-Rom), `per` points per span, its last point included.
+const horseCurve = (pts, per) => {
+    const out = []
+    for (let i = 0; i < pts.length - 1; i += 1) {
+        const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)]
+        for (let k = 0; k < per; k += 1) {
+            const t = k / per, t2 = t * t, t3 = t2 * t
+            out.push([0, 1].map((d) => 0.5 * (2 * p1[d] + (p2[d] - p0[d]) * t + (2 * p0[d] - 5 * p1[d] + 4 * p2[d] - p3[d]) * t2 + (3 * p1[d] - p0[d] - 3 * p2[d] + p3[d]) * t3)))
+        }
+    }
+    out.push(pts[pts.length - 1])
+    return out
+}
+// A leg's swing from straight down (radians, + = forward) and how far its lower joint folds (0…1), at its stride phase q.
+const horseLegAt = (q) => {
+    if (q < HORSE_STANCE) return { swing: 0.4 - 0.9 * (q / HORSE_STANCE), fold: 0.05 }
+    const s = (q - HORSE_STANCE) / (1 - HORSE_STANCE)
+    return { swing: -0.5 + 0.9 * horseEase(s), fold: Math.sin(Math.PI * s) }
+}
+const horseDown = (o, len, a) => [o[0] + len * Math.sin(a), o[1] - len * Math.cos(a)]
+const horseSide = (p, a, w) => [p[0] + w * Math.cos(a), p[1] + w * Math.sin(a)]
+// One leg as a loop from its joint: the fore knee folds back, the hind hock folds forward under the body.
+const horseLeg = (joint, q, hind) => {
+    const { swing, fold } = horseLegAt(q)
+    const upA = hind ? swing - 0.3 : swing
+    const lowA = hind ? upA + 0.45 + 0.75 * fold : upA - 1.25 * fold
+    const knee = horseDown(joint, hind ? 0.27 : 0.26, upA)
+    const hoof = horseDown(knee, hind ? 0.36 : 0.32, lowA)
+    const tip = horseDown(hoof, 0.03, lowA)
+    const top = hind ? 0.09 : 0.06
+    const kneeA = (upA + lowA) / 2
+    return [
+        horseSide(joint, upA, top), horseSide(knee, kneeA, 0.032), horseSide(hoof, lowA, 0.03), horseSide(tip, lowA, 0.018),
+        horseSide(tip, lowA, -0.018), horseSide(hoof, lowA, -0.03), horseSide(knee, kneeA, -0.032), horseSide(joint, upA, -top),
+    ]
+}
+/** The horse's outline at stride phase p (0…1): one closed path, about −0.95…0.95 across and −0.85…0.8 up. */
+const horsePath = (p) => {
+    const bob = 0.035 * Math.cos(TAU * (p - 0.7))
+    const pitch = 0.05 * Math.sin(TAU * (p - 0.3))
+    const nod = 0.07 * Math.sin(TAU * (p - 0.4))
+    const body = ([x, y]) => [x * Math.cos(pitch) - y * Math.sin(pitch), x * Math.sin(pitch) + y * Math.cos(pitch) + bob]
+    const withers = [0.28, 0.25]
+    const head = ([x, y]) => {
+        const dx = x - withers[0], dy = y - withers[1]
+        return body([withers[0] + dx * Math.cos(nod) - dy * Math.sin(nod), withers[1] + dx * Math.sin(nod) + dy * Math.cos(nod)])
+    }
+    const wave = (i, k) => 0.05 * k * Math.sin(TAU * p - i * 0.9)
+    const q = (off) => (((p - off) % 1) + 1) % 1
+    // Near and far legs a little apart along the body, so they read as two legs and not one box.
+    const foreNear = body([0.38, -0.22]), foreFar = body([0.31, -0.23]), hindFar = body([-0.36, -0.18]), hindNear = body([-0.43, -0.15])
+    const back = horseCurve([[-0.5, 0.2], [-0.42, 0.23], [-0.2, 0.18], [0.05, 0.18], [0.28, 0.25]].map(body), 5)
+    const neckTop = horseCurve([[0.28, 0.25], [0.42, 0.4], [0.54, 0.54], [0.62, 0.64]].map(head), 5)
+    const face = [[0.62, 0.64], [0.6, 0.77], [0.67, 0.66]].map(head)
+        .concat(horseCurve([[0.67, 0.66], [0.78, 0.56], [0.88, 0.44], [0.94, 0.38], [0.95, 0.32], [0.88, 0.28], [0.78, 0.31], [0.7, 0.36], [0.63, 0.4]].map(head), 4).slice(1))
+    const neckLow = horseCurve([[0.63, 0.4], [0.56, 0.26], [0.51, 0.1]].map(head).concat([[0.5, -0.05], [0.42, -0.2]].map(body)), 5)
+    const belly = horseCurve([[0.3, -0.23], [0.1, -0.27], [-0.15, -0.26], [-0.31, -0.19]].map(body), 5)
+    const rump = horseCurve([[-0.49, -0.14], [-0.57, -0.02], [-0.57, 0.1], [-0.52, 0.2]].map(body), 5)
+    const tailUp = [[-0.52, 0.2], [-0.63, 0.18], [-0.75, 0.08], [-0.83, -0.07], [-0.87, -0.22]].map(([x, y], i) => body([x, y + wave(i, i / 4)]))
+    const tailDown = [[-0.84, -0.23], [-0.79, -0.08], [-0.71, 0.05], [-0.6, 0.13], [-0.5, 0.2]].map(([x, y], i) => body([x, y + wave(4 - i, (4 - i) / 4)]))
+    return [
+        ...back, ...neckTop.slice(1), ...face.slice(1), ...neckLow.slice(1),
+        ...horseLeg(foreNear, q(HORSE_LEGS.foreNear), false), ...horseLeg(foreFar, q(HORSE_LEGS.foreFar), false),
+        ...belly,
+        ...horseLeg(hindFar, q(HORSE_LEGS.hindFar), true), ...horseLeg(hindNear, q(HORSE_LEGS.hindNear), true),
+        ...rump, ...horseCurve(tailUp, 4).slice(1), ...horseCurve(tailDown, 4).slice(1),
+    ].map(([x, y]) => [clamp(x, -1, 1), clamp(y, -1, 1)])
 }
 
 // Each builder returns strokes: arrays of [x, y] drawn lit, in a unit circle.
@@ -582,6 +993,734 @@ const STROKES = {
         }
         return byLength(paths, n)
     },
+    // One line on a 16-beat loop: a circle (0.5) that swells on every beat (beats 0–4), winds into a spiral of three turns
+    // (4–8), runs out from its eye as it unwinds into the line round the whole square (8–11), holds the square (11–14) and
+    // draws back into the circle (14–16). Each moment is the same line with its points evenly along it, so it is equally
+    // bright everywhere and the spiral's eye (0.12 across) never heaps them; the spiral turns a quarter a beat as it goes.
+    unfold: (n, { beat = 0 } = {}) => {
+        const b = ((beat % 16) + 16) % 16
+        const ease = (f) => { const c = clamp(f, 0, 1); return c * c * (3 - 2 * c) }
+        const f = b - Math.floor(b)
+        // The swell: up in the first eighth of the beat, back down over the rest.
+        const kick = f < 0.125 ? f / 0.125 : (1 - (f - 0.125) / 0.875) ** 2
+        const r0 = b < 4 ? 0.5 * (1 + 0.14 * kick) : 0.5
+        const wind = b < 4 ? 0 : b < 8 ? ease((b - 4) / 3) : b < 14 ? 1 : 0
+        const open = b < 8 ? 0 : b < 11 ? ease((b - 8) / 3) : b < 14 ? 1 : 1 - ease((b - 14) / 2)
+        const phase = Math.PI / 2 - (TAU * clamp(b - 4, 0, 7)) / 4
+        if (open >= 1) {
+            // The square itself, from the corner the line's start has come round to.
+            const k = Math.round(((((phase - Math.PI / 4) % TAU) + TAU) % TAU) / (Math.PI / 2))
+            const corners = [[1, 1], [-1, 1], [-1, -1], [1, -1]]
+            return [along(polygon(Array.from({ length: 4 }, (_, i) => corners[(k + i) % 4])), n)]
+        }
+        const turns = 1 + 2 * wind * (1 - open)
+        const steps = Math.ceil(240 * turns)
+        const path = Array.from({ length: steps + 1 }, (_, i) => {
+            const t = i / steps
+            const a = phase + TAU * turns * t
+            const spiral = 0.06 + 0.56 * t
+            const r = (r0 + (spiral - r0) * wind) * (1 - open) + open
+            const c = Math.cos(a)
+            const s = Math.sin(a)
+            const square = 1 + (1 / Math.max(Math.abs(c), Math.abs(s)) - 1) * open
+            return [c * r * square, s * r * square]
+        })
+        return [along(path, n)]
+    },
+    // The patterns (2026-10-31). Each moves by itself on the beat; the desk's Spin, Pulse and Sweep still add to it.
+    // One line, the Lissajous figure x = sin(a·t + φ), y = sin(b·t), a = `copies` (3, 2 to 6) and b = a − 1, its phase φ
+    // stepping a sixteenth of a turn on every beat (eased in the first half): the figure turns like a ribbon in space.
+    lissajous: (n, { copies = 0, beat = 0 } = {}) => {
+        const a = countOf(copies, 3, 2, 6)
+        const phase = Math.PI / 4 + (TAU * stepOf(beat)) / 16
+        const steps = 120 * a
+        return [along(Array.from({ length: steps + 1 }, (_, i) => {
+            const t = (i / steps) * TAU
+            return [Math.sin(a * t + phase), Math.sin((a - 1) * t)]
+        }), n)]
+    },
+    // Two strands held together at both ends, crossing between them (`copies` half waves, 3, 1 to 8), the crossings
+    // running on half a wave every beat: a rope twisting. One closed line, out along one strand and back along the other.
+    helix: (n, { copies = 0, beat = 0 } = {}) => {
+        const halves = countOf(copies, 3, 1, 8)
+        const steps = 80 * halves
+        const strand = (sign) => Array.from({ length: steps + 1 }, (_, i) => {
+            const s = i / steps
+            return [s * 2 - 1, sign * 0.6 * Math.sqrt(Math.sin(Math.PI * s)) * Math.sin(Math.PI * (halves * s - beat))]
+        })
+        return [along([...strand(1), ...strand(-1).reverse().slice(1)], n)]
+    },
+    // `copies` squares (4, 2 to 8) one inside another, each the next one's size × the same step, so they read as depth.
+    // On every beat they all move out one place, eased in the first half: as the beat starts the outermost goes from the
+    // edge and a new one is there at the centre. Every square is as bright as its length.
+    tunnel: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 4, 2, 8)
+        const f = glideOf(beat)
+        return byLength(Array.from({ length: count }, (_, i) => {
+            const s = TUNNEL_MIN ** (1 - (count - i - 1 + f) / count)
+            return polygon([[-s, s], [s, s], [s, -s], [-s, -s]])
+        }), n)
+    },
+    // `copies` circles (4, 2 to 8) sent out from the centre, one on every beat, at an even pace: each grows from 0.15 to
+    // the edge in `copies` beats and is gone as it gets there. They stay 0.85 / copies apart, so they never touch.
+    echo: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 4, 2, 8)
+        const f = beat - Math.floor(beat)
+        return byLength(Array.from({ length: count }, (_, i) => arcPath(0, 0, 0.15 + (0.85 * (count - i - 1 + f)) / count, Math.PI / 2)), n)
+    },
+    // One figure that gains a side on every beat: a triangle on the first beat, then a square, a pentagon, a hexagon, and
+    // a triangle again (`copies` is the most sides, 6, 4 to 12). It jumps from one to the next; it never morphs. Each sits
+    // on a flat side and is centred top to bottom.
+    sides: (n, { copies = 0, beat = 0 } = {}) => {
+        const most = countOf(copies, 6, 4, 12)
+        const loop = most - 2
+        const sides = 3 + (((Math.floor(beat) % loop) + loop) % loop)
+        const corners = Array.from({ length: sides }, (_, i) => corner(i, sides, Math.PI / sides - Math.PI / 2))
+        const ys = corners.map((p) => p[1])
+        const mid = (Math.max(...ys) + Math.min(...ys)) / 2
+        return [along(polygon(corners.map(([x, y]) => [x, y - mid])), n)]
+    },
+    // `copies` upright bars (4, 2 to 8) that count the bar: one on the first beat, two on the second, all of them on the
+    // last, then one again. Each lights whole in its own lane; drawn down and up in turn, so each hop is short.
+    count: (n, { copies = 0, beat = 0 } = {}) => {
+        const most = countOf(copies, 4, 2, 8)
+        const lit = 1 + (((Math.floor(beat) % most) + most) % most)
+        const lane = 2 / most
+        const each = Math.max(2, Math.floor(n / lit))
+        return Array.from({ length: lit }, (_, i) => {
+            const x = -1 + lane * (i + 0.5)
+            return along(i % 2 === 0 ? [[x, 0.9], [x, -0.9]] : [[x, -0.9], [x, 0.9]], each)
+        })
+    },
+    // `copies` dashes of rain (6, 2 to 10), one in each lane, each falling from above the picture to below it in two beats,
+    // the lanes a golden share of a fall apart, so they never fall in a row and the picture is never empty. Each time a dash comes
+    // round again it falls somewhere new in the middle of its lane. Cut at the picture's edge; a piece under RAIN_LEAST is not drawn.
+    rain: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 6, 2, 10)
+        const lane = 2 / count
+        const paths = []
+        for (let i = 0; i < count; i += 1) {
+            const fall = beat / 2 + ((i * (Math.sqrt(5) - 1)) / 2) % 1
+            const k = Math.floor(fall)
+            const top = 1 + RAIN_DASH - (2 + RAIN_DASH) * (fall - k)
+            const hi = Math.min(1, top)
+            const lo = Math.max(-1, top - RAIN_DASH)
+            if (hi - lo < RAIN_LEAST) continue
+            const x = -1 + lane * (i + 0.2 + 0.6 * hash01(i, k, 51))
+            // Drawn from whichever end is nearer the last dash's end, so the hop between them is short.
+            const end = paths.length ? paths[paths.length - 1][1] : [x, 1]
+            paths.push(Math.abs(end[1] - hi) <= Math.abs(end[1] - lo) ? [[x, hi], [x, lo]] : [[x, lo], [x, hi]])
+        }
+        return byLength(paths, n)
+    },
+    // A wire cube, every edge drawn, turning an eighth of a turn on every beat (eased in the first half) round its upright,
+    // leaning towards you so its top shows. Sized to stay inside the picture at every turn.
+    cube: (n, { beat = 0 } = {}) => {
+        const at = cubeView((Math.PI / 4) * stepOf(beat)).map(([x, y]) => [x * CUBE_FIT, y * CUBE_FIT])
+        return byLength(CUBE_STROKES.map((stroke) => stroke.map((i) => at[i])), n)
+    },
+    // `copies` tiny dots (20, 2 to 28: each costs the cube a blank move, ~77 points; 28 is the most inside its budget) over the whole picture, each DUST_R in the field
+    // whatever the look's size. Half of them jump to new places on every beat, the other half on the next, so each dot
+    // lives two beats; a dot appears whole and goes whole. Each half rests on its own colour of DUST_PLACES, a little off
+    // the grid point (less as the dots grow, so from size 0.3 up no two ever touch). Drawn nearest first: short hops.
+    dust: (n, { copies = 0, beat = 0, size = 1 } = {}) => {
+        const count = countOf(copies, 20, 2, 28)
+        const r = size > 0 ? Math.min(SPOT_R, DUST_R / size) : SPOT_R
+        const nudge = clamp((0.22 - 2 * r) / (2 * Math.SQRT2) - 0.005, 0, 0.05)
+        const dots = []
+        for (const half of [0, 1]) {
+            const k = Math.floor((beat + half) / 2)
+            const order = DUST_PLACES[half].map((p, s) => ({ p, s, draw: hash01(s, k, 61 + half) })).sort((a, b) => a.draw - b.draw)
+            for (const { p, s } of order.slice(0, half ? Math.floor(count / 2) : Math.ceil(count / 2))) {
+                dots.push([p[0] + nudge * (2 * hash01(s, k, 63 + half) - 1), p[1] + nudge * (2 * hash01(s, k, 65 + half) - 1)])
+            }
+        }
+        const each = clamp(Math.floor(n / count), 8, 16)
+        const out = []
+        let last = dots.shift()
+        out.push(along(arcPath(last[0], last[1], r, Math.PI / 2), each))
+        while (dots.length) {
+            let best = 0
+            for (let i = 1; i < dots.length; i += 1) if (Math.hypot(dots[i][0] - last[0], dots[i][1] - last[1]) < Math.hypot(dots[best][0] - last[0], dots[best][1] - last[1])) best = i
+            const next = dots.splice(best, 1)[0]
+            out.push(along(arcPath(next[0], next[1], r, Math.atan2(last[1] - next[1], last[0] - next[0])), each))
+            last = next
+        }
+        return out
+    },
+    // Phyllotaxis (the owner's TD scene, see PHYLLO_SEEDS): `copies` 1 = the 17 seeds alone (the default), 2 = with their
+    // half-turn copy (TD's Double off), 4 = mirrored top to bottom too (Double on; past PHYLLO_MOST the outer seeds go). Dots that land on each other (the
+    // centre seed, a mirror on its own axis) are drawn once; drawn nearest first, as dust. Each is the beam resting on
+    // one spot (Points sets how long: brighter, or redrawn more often): a point, the size of the beam, at any size.
+    phyllotaxis: (n, { copies = 0, beat = 0, size = 1 } = {}) => {
+        const fold = phylloFold(copies)
+        const angle = phylloAngle(beat)
+        const reach = 1
+        const r = 0.002 / Math.max(size, 0.02) // closer than this on the wall: the same dot
+        const copiesOf = ([x, y]) => (fold === 1 ? [[x, y]] : fold === 2 ? [[x, y], [-x, -y]] : [[x, y], [-x, -y], [x, -y], [-x, y]])
+        const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]) < 2.4 * r
+        let dots = []
+        for (let i = 0; i < PHYLLO_SEEDS; i += 1) {
+            const seed = []
+            for (const p of copiesOf(phylloSeed(i, angle, reach))) if (![...dots, ...seed].some((q) => near(p, q))) seed.push(p)
+            if (dots.length + seed.length > PHYLLO_MOST) break
+            dots = dots.concat(seed)
+        }
+        const hold = clamp(Math.round(n / PHYLLO_HOLD_PER), 1, 30)
+        const at = ([x, y]) => Array.from({ length: hold }, () => [x, y])
+        const out = []
+        let last = dots.shift()
+        out.push(at(last))
+        while (dots.length) {
+            let best = 0
+            for (let i = 1; i < dots.length; i += 1) if (Math.hypot(dots[i][0] - last[0], dots[i][1] - last[1]) < Math.hypot(dots[best][0] - last[0], dots[best][1] - last[1])) best = i
+            const next = dots.splice(best, 1)[0]
+            out.push(at(next))
+            last = next
+        }
+        return out
+    },
+    // Phyllotaxis lines (the TD scene's datto2 branch): the 17 seeds joined in order, centre outwards, one line each copy
+    // (`copies` 1, the default, or 2; never 4: four arms of long lines are more than the cube can draw in one pass).
+    // Both copies start at the centre, so they are one stroke: out along one, back in along the other. The seeds are its corners, where the beam slows: in
+    // haze they show as brighter points along the lines.
+    phyllolines: (n, { copies = 0, beat = 0, size = 1 } = {}) => {
+        const fold = Math.min(2, phylloFold(copies))
+        const angle = phylloAngle(beat)
+        const arm = Array.from({ length: PHYLLO_SEEDS }, (_, i) => phylloSeed(i, angle, 1))
+        const turned = (sx, sy) => arm.map(([x, y]) => [sx * x, sy * y])
+        let stroke = fold === 1 ? arm : [...turned(-1, -1).reverse(), ...arm.slice(1)]
+        const lengthOf = (pts) => pts.reduce((sum, p, i) => (i ? sum + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0), 0)
+        while (stroke.length > 3 && lengthOf(stroke) * size > PHYLLO_LINE_MOST) stroke = fold === 1 ? stroke.slice(0, -1) : stroke.slice(1, -1)
+        return byLength([stroke], n)
+    },
+    // Phyllochaos (see CHAOS_LOOP): a point falls, the owner's phyllotaxis grows out of it and winds, then breaks up into
+    // as many dots as the cube can draw, and the loop starts again from the top.
+    phyllochaos: (n, { beat = 0, size = 1 } = {}) => {
+        const b = ((beat % CHAOS_LOOP) + CHAOS_LOOP) % CHAOS_LOOP
+        const scale = Math.max(size, 0.02)
+        const ringR = Math.min(1, POINT_R / scale)
+        const ring = ([x, y], m) => Array.from({ length: m }, (_, i) => {
+            const a = Math.PI / 2 + (i / (m - 1)) * TAU
+            return [x + Math.cos(a) * ringR, y + Math.sin(a) * ringR]
+        })
+        if (b < CHAOS_FALL) {
+            const u = b / CHAOS_FALL
+            return [ring([0, (1 - ringR) * (1 - u * u * (3 - 2 * u))], Math.min(n, 300))]
+        }
+        const hold = clamp(Math.round(n / PHYLLO_HOLD_PER), 1, 30)
+        const most = Math.max(CHAOS_LEAST, Math.floor(CHAOS_PASS / (hold + CHAOS_DOT_COST)))
+        const at = ([x, y]) => Array.from({ length: hold }, () => [x, y])
+        const gap = CHAOS_GAP / scale
+        const near = (p, list) => list.some((q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < gap)
+        const dots = []
+        let lone = false
+        if (b >= CHAOS_PEAK) {
+            // Thrown anywhere in the circle (r = √u: even over its area), a new throw every eighth of a beat.
+            const throwAt = Math.floor(b * 8)
+            for (let i = 0; i < most; i += 1) {
+                for (let tryAt = 0; tryAt < 4; tryAt += 1) {
+                    const a = TAU * hash01(i, throwAt, tryAt, 41)
+                    const r = Math.sqrt(hash01(i, throwAt, tryAt, 42))
+                    const p = [Math.cos(a) * r, Math.sin(a) * r]
+                    if (!near(p, dots)) { dots.push(p); break }
+                }
+            }
+        } else {
+            const grown = Math.min(b, CHAOS_ORDER) - CHAOS_FALL
+            const since = Math.max(0, b - CHAOS_ORDER)
+            const span = CHAOS_PEAK - CHAOS_ORDER
+            const c = since / span
+            const count = Math.min(most, 1 + Math.floor(CHAOS_BORN * grown) + Math.floor(CHAOS_BORN_FAST * since))
+            const angle = CHAOS_ANGLE_FROM + CHAOS_TURN * (grown + since + (CHAOS_WHIRL * since ** 3) / (3 * span * span))
+            const every = c < 0.34 ? 2 : c < 0.67 ? 4 : 8
+            const jumpAt = Math.floor(b * every)
+            const reach = CHAOS_JUMP * c * c * c
+            for (let i = 0; i < count; i += 1) {
+                const r = Math.sqrt(i / (most - 1))
+                let p = [Math.cos(i * angle) * r, Math.sin(i * angle) * r]
+                if (reach > 0) {
+                    const ja = TAU * hash01(i, jumpAt, 43)
+                    const jr = reach * Math.sqrt(hash01(i, jumpAt, 44))
+                    p = [p[0] + Math.cos(ja) * jr, p[1] + Math.sin(ja) * jr]
+                    const out = Math.hypot(p[0], p[1])
+                    if (out > 1) p = [p[0] / out, p[1] / out]
+                }
+                if (!near(p, dots)) dots.push(p)
+            }
+            // The centre seed (the fallen point) stays Point's ring while too few others are lit for a frame of only dots.
+            lone = count < CHAOS_LONE_UNTIL
+        }
+        // Nearest first from the centre seed (or the ring), so the blank hops stay short.
+        const out = []
+        let last = dots.shift()
+        out.push(lone ? ring(last, Math.min(n, 120)) : at(last))
+        while (dots.length) {
+            let best = 0
+            for (let i = 1; i < dots.length; i += 1) if (Math.hypot(dots[i][0] - last[0], dots[i][1] - last[1]) < Math.hypot(dots[best][0] - last[0], dots[best][1] - last[1])) best = i
+            const next = dots.splice(best, 1)[0]
+            out.push(at(next))
+            last = next
+        }
+        return out
+    },
+    // A heart monitor: the cardiogram written left to right across the picture, `copies` beats across (3, 1 to 8), one
+    // heartbeat in the middle of each beat's width. The pen is at the spike exactly on the beat, so the spike is drawn on
+    // the beat; just ahead of the pen ECG_GAP of the old trace is wiped, the rest of it stays. Two strokes: the trace up to
+    // the pen, and the old trace from the gap to the right edge (a piece under 0.02 is left out; one of them is always long).
+    heartbeat: (n, { copies = 0, beat = 0 } = {}) => {
+        const across = countOf(copies, 3, 1, 8)
+        const pen = -1 + (2 * ((((beat + 0.5) % across) + across) % across)) / across
+        const trace = (x0, x1) => {
+            const steps = Math.max(2, Math.ceil(((x1 - x0) / 2) * across * 600))
+            return Array.from({ length: steps + 1 }, (_, i) => {
+                const x = x0 + ((x1 - x0) * i) / steps
+                const p = ((x + 1) / 2) * across - 0.5
+                return [x, ECG_BASE + ECG_HEIGHT * ecgAt(p - Math.round(p))]
+            })
+        }
+        const paths = []
+        if (pen + 1 >= 0.02) paths.push(trace(-1, pen))
+        if (1 - pen - ECG_GAP >= 0.02) paths.push(trace(pen + ECG_GAP, 1))
+        return byLength(paths, n)
+    },
+    // One dot in the middle, held still: a ring POINT_R round, the same on the wall at any size (below 0.05 it shrinks with
+    // the picture, and at 0 it is a still beam the engine stops, as every shape is).
+    point: (n, { size = 1 } = {}) => {
+        const r = size > 0 ? Math.min(1, POINT_R / size) : 1
+        // At most 300 points: more only slow the loop, and at 1992 through the owner's pin one window held 40 %.
+        const m = Math.min(n, 300)
+        return [Array.from({ length: m }, (_, i) => {
+            const a = Math.PI / 2 + (i / (m - 1)) * TAU
+            return [Math.cos(a) * r, Math.sin(a) * r]
+        })]
+    },
+    // One level line that splits into two, then four (beats 1, 2); an upright line appears (3) and splits the same way (4, 5)
+    // into a grid of four by four, held three beats; then the upright lines fold back together and go (9–11), the level
+    // ones fold back into one (12, 13), held to beat 16. Every line runs the whole picture; drawn back and forth.
+    weave: (n, { beat = 0 } = {}) => {
+        const b = ((beat % 16) + 16) % 16
+        const k = Math.floor(b)
+        const f = glideOf(b)
+        const level = weaveLines(WEAVE_LEVEL[k], f)
+        const upright = weaveLines(WEAVE_UPRIGHT[k], f)
+        const paths = [
+            ...level.map((y, i) => (i % 2 === 0 ? [[-1, y], [1, y]] : [[1, y], [-1, y]])),
+            ...upright.map((x, i) => (i % 2 === 0 ? [[x, 1], [x, -1]] : [[x, -1], [x, 1]])),
+        ]
+        return byLength(paths, n)
+    },
+    // One circle that splits into two (beat 2), then into three, overlapping like a Venn picture (beat 4); the three mix
+    // (beats 6–12): a sixth of a turn round the middle on every beat, closing in tight on the odd beats and opening on the
+    // even ones, so they pass through each other; then they merge back into two (12) and one (14). They only move: every
+    // circle stays the same size. Each is a stroke of its own.
+    venn: (n, { beat = 0 } = {}) => {
+        const b = ((beat % 16) + 16) % 16
+        const k = Math.floor(b)
+        const f = glideOf(b)
+        const lerp = (p, q) => [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f]
+        const two = [[-VENN_TWO, 0], [VENN_TWO, 0]]
+        const three = vennRing(VENN_THREE, 0)
+        let centres
+        if (k < 2 || k === 15) centres = [[0, 0]]
+        else if (k === 2) centres = two.map((q) => lerp([0, 0], q))
+        else if (k === 3 || k === 13) centres = two
+        // The left circle goes to the lower left place; the right one splits to the lower right and the top.
+        else if (k === 4) centres = [lerp(two[0], three[1]), lerp(two[1], three[2]), lerp(two[1], three[0])]
+        else if (k === 5) centres = three
+        else if (k < 12) {
+            const s = b - 6
+            const step = Math.floor(s) + f
+            const d = (i) => (i % 2 === 0 ? VENN_THREE : VENN_TIGHT)
+            centres = vennRing(d(Math.floor(s)) + (d(Math.floor(s) + 1) - d(Math.floor(s))) * f, (TAU / 6) * step)
+        } else if (k === 12) centres = f >= 1 ? two : [lerp(three[1], two[0]), lerp(three[2], two[1]), lerp(three[0], two[1])]
+        else centres = f >= 1 ? [[0, 0]] : two.map((p) => lerp(p, [0, 0]))
+        return byLength(centres.map(([x, y]) => arcPath(x, y, VENN_R, Math.PI / 2)), n)
+    },
+    // The lava shapes (2026-11-06, for the REA festival). They only move their parts: a blob, a bomb or a drop keeps its
+    // round shape and its size, and appears and goes whole.
+    // Lava: `copies` blobs (3, 2 to 5), one in each lane across the picture, each rising from the floor to the ceiling and
+    // sinking back on its own loop (LAVA_LOOPS), slowest at both ends where a lava lamp's wax rests, and drifting a little
+    // side to side. A lane is wider than its blob and its drift together, so two blobs never touch. A blob is never smaller
+    // than a spot (SPOT_R): lava is all blobs, so it is a mark shape, and a spot is the least that stays a stroke.
+    lava: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 3, 2, 5)
+        const lane = 1.8 / count
+        return byLength(Array.from({ length: count }, (_, i) => {
+            const r = SPOT_R + (Math.min(0.26, lane * 0.4) - SPOT_R) * hash01(i, 101)
+            const loop = LAVA_LOOPS[i % LAVA_LOOPS.length]
+            const u = (((beat / loop + hash01(i, 102)) % 1) + 1) % 1
+            const tri = u < 0.5 ? u * 2 : 2 - u * 2
+            const rise = tri * tri * (3 - 2 * tri)
+            const drift = 0.8 * (lane / 2 - r) * Math.sin(TAU * ((2 * beat) / loop + hash01(i, 103)))
+            return arcPath(-0.9 + lane * (i + 0.5) + drift, -(0.95 - r) + 2 * (0.95 - r) * rise, r, Math.PI / 2)
+        }), n)
+    },
+    // Magma: `copies` level lines (3, 1 to 6) down the picture, each a slow swell of two waves flowing sideways, the lower
+    // lines faster as if nearer: the top line's swell moves a wavelength every 16 beats. A swell is under a third of the
+    // gap to the next line, so the lines never touch. Drawn back and forth, so each hop is short.
+    magma: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 3, 1, 6)
+        const gap = count > 1 ? 1.4 / (count - 1) : 1.4
+        const swell = Math.min(0.25, 0.3 * gap)
+        const steps = 96
+        return byLength(Array.from({ length: count }, (_, i) => {
+            const y0 = count > 1 ? 0.7 - gap * i : 0
+            const line = Array.from({ length: steps + 1 }, (_, s) => {
+                const x = -0.95 + (1.9 * s) / steps
+                const a = 1.5 * Math.PI * x - (TAU * beat * (1 + 0.5 * i)) / 16 + i * 1.7
+                const b = 2.7 * Math.PI * x + (TAU * beat) / 24 + i * 0.9
+                return [x, y0 + swell * (0.67 * Math.sin(a) + 0.33 * Math.sin(b))]
+            })
+            return i % 2 ? line.reverse() : line
+        }), n)
+    },
+    // Eruption: a volcano (VOLCANO, one line) throwing bombs on the beat. On every beat a bomb leaves the crater to the
+    // left and, a quarter beat later, one to the right, going high and far on one beat and lower on the next, each its own
+    // height; with `copies` 3 or 4 (2, 1 to 4), one or two more go up on the half beat and the quarter after it, small
+    // hops that fall back near the crater (with 1, the one bomb goes to the left and the right in turn). A bomb is a dot that climbs, slowing as it goes, then falls faster and faster until
+    // it lands on the cone, where it is gone, inside the beat. Their flights never cross (measured every 1/128 of a beat).
+    eruption: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 2, 1, 4)
+        const now = Math.floor(beat)
+        const bombs = []
+        for (let k = now - 2; k <= now; k += 1) {
+            const high = ((k % 2) + 2) % 2 === 0
+            for (let j = 0; j < count; j += 1) {
+                const side = ((j + (count === 1 ? k : 0)) % 2 + 2) % 2 ? 1 : -1
+                const far = j < 2
+                const age = beat - k - 0.25 * j
+                if (age < 0) continue
+                const h = (far ? (high ? 0.95 : 0.7) : 0.35) * (0.8 + 0.3 * hash01(k, 200 + j))
+                const rise = ERUPT_RISE * (far ? 1 : 0.6)
+                const vx = side * (far ? 0.55 : 0.12) * (0.8 + 0.4 * hash01(k, 210 + j))
+                const x = side * ERUPT_X + vx * age
+                const y = -0.4 + SPOT_R + h * (1 - (1 - age / rise) ** 2)
+                if (age > rise && y - SPOT_R <= volcanoAt(x)) continue
+                if (Math.abs(x) > 1 - SPOT_R || y < -1 + SPOT_R) continue
+                bombs.push([x, y])
+            }
+        }
+        bombs.sort((a, b) => b[0] - a[0])
+        const paths = [VOLCANO]
+        let from = VOLCANO[VOLCANO.length - 1]
+        for (const bomb of bombs) {
+            const dot = dotFrom(bomb, from)
+            paths.push(dot)
+            from = dot[dot.length - 1]
+        }
+        return byLength(paths, n)
+    },
+    // Bubble: a lava pool's surface, one line, with bubbles swelling out of it: one born on each beat, in the left and the
+    // right half of the pool in turn. A bubble swells for two beats and pops as the next is born in its half, throwing up a
+    // drop that rises and falls back within the beat. One bubble to a half, so two never meet, and the drop flies clear of
+    // the new bubble beneath it.
+    bubble: (n, { beat = 0 } = {}) => {
+        const now = Math.floor(beat)
+        const domes = []
+        const drops = []
+        for (let k = now - 2; k <= now; k += 1) {
+            const side = ((k % 2) + 2) % 2 ? 1 : -1
+            const x = side * (0.3 + 0.35 * hash01(k, 301))
+            const big = BUBBLE_R * (0.75 + 0.25 * hash01(k, 302))
+            const age = beat - k
+            if (age < 2) {
+                const f = age / 2
+                domes.push([x, big * (0.25 + 0.75 * f * f * (3 - 2 * f))])
+            } else if (age < 2.7) {
+                const t = (age - 2) / 0.7
+                drops.push([x, POOL_Y + big + SPOT_R + 0.45 * 4 * t * (1 - t)])
+            }
+        }
+        domes.sort((a, b) => a[0] - b[0])
+        const surface = [[-0.95, POOL_Y]]
+        for (const [x, r] of domes) {
+            surface.push([x - r, POOL_Y])
+            for (let s = 1; s <= 24; s += 1) {
+                const a = Math.PI - (s / 24) * Math.PI
+                surface.push([x + Math.cos(a) * r, POOL_Y + Math.sin(a) * r])
+            }
+        }
+        surface.push([0.95, POOL_Y])
+        const paths = [surface]
+        let from = surface[surface.length - 1]
+        for (const drop of drops.sort((a, b) => b[0] - a[0])) {
+            const dot = dotFrom(drop, from)
+            paths.push(dot)
+            from = dot[dot.length - 1]
+        }
+        return byLength(paths, n)
+    },
+    // Crack: a crust splitting open from the middle, on an 8-beat loop. On the loop's first beat the middle eight pieces of
+    // the crack open at once, and half a beat later the last piece at both ends, so it runs right across (CRACK_STEPS
+    // pieces; it opens that wide because a picture much narrower holds the beam in too few places when it is small);
+    // four branches fork off it after that, a piece every half beat, and the whole crack holds until a new one opens, a
+    // different one, on the next loop. Each piece appears whole: nothing slides or bends.
+    crack: (n, { beat = 0 } = {}) => {
+        const loop = Math.floor(beat / 8)
+        const half = Math.floor((beat - loop * 8) * 2)
+        const vertex = (k) => [-0.95 + (1.9 * k) / CRACK_STEPS, (k % 2 ? 0.1 : -0.1) + 0.5 * (hash01(loop, k, 401) - 0.5)]
+        const mid = CRACK_STEPS / 2
+        const reach = Math.min(mid, 4 + half)
+        const main = []
+        for (let k = mid - reach; k <= mid + reach; k += 1) main.push(vertex(k))
+        const paths = [main]
+        const flip = hash01(loop, 402) < 0.5 ? 1 : -1
+        const roots = [3 + (hash01(loop, 403) < 0.5 ? 0 : 1), 6 + (hash01(loop, 404) < 0.5 ? 0 : 1), 1 + (hash01(loop, 405) < 0.5 ? 0 : 1), 8 + (hash01(loop, 406) < 0.5 ? 0 : 1)]
+        roots.forEach((root, b) => {
+            const pieces = clamp(half - 1 - 2 * b, 0, 2)
+            if (pieces === 0) return
+            const up = (b === 0 || b === 3 ? 1 : -1) * flip
+            const [x0, y0] = vertex(root)
+            const lean = (hash01(loop, b, 407) - 0.5) * 0.24
+            const p1 = [x0 + lean, y0 + up * (0.22 + 0.08 * hash01(loop, b, 408))]
+            const p2 = [p1[0] + lean * 0.6 + (hash01(loop, b, 409) - 0.5) * 0.16, p1[1] + up * (0.18 + 0.08 * hash01(loop, b, 410))]
+            paths.push(pieces === 1 ? [[x0, y0], p1] : [[x0, y0], p1, p2])
+        })
+        return byLength(paths, n)
+    },
+    // Drip: drops falling from a ceiling into a pool, two level lines across the picture. Each beat `copies` drops (2, 1
+    // to 3) fall: each hangs under the ceiling for the beat before, then falls, faster and faster, and lands in the pool
+    // half a beat later, where it is gone. The lanes are taken in turn (DRIP_LANES), so a falling drop never passes one
+    // hanging in its lane.
+    drip: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 2, 1, 3)
+        const now = Math.floor(beat)
+        const f = beat - now
+        const xOf = (k, j) => -0.75 + 0.3 * DRIP_LANES[(((k * count + j) % 6) + 6) % 6]
+        const top = DRIP_TOP - SPOT_R
+        const bottom = DRIP_FLOOR + SPOT_R
+        const drops = []
+        for (let j = 0; j < count; j += 1) {
+            drops.push([xOf(now + 1, j), top])
+            if (f < 0.5) drops.push([xOf(now, j), top + (bottom - top) * (f / 0.5) ** 2])
+        }
+        drops.sort((a, b) => b[0] - a[0])
+        const ceiling = [[-0.95, DRIP_TOP], [0.95, DRIP_TOP]]
+        const paths = [ceiling]
+        let from = ceiling[1]
+        for (const drop of drops) {
+            const dot = dotFrom(drop, from)
+            paths.push(dot)
+            from = dot[dot.length - 1]
+        }
+        paths.push([[-0.95, DRIP_FLOOR], [0.95, DRIP_FLOOR]])
+        return byLength(paths, n)
+    },
+    // Volcano: the lava story in one line, on a 16-beat loop (four bars). Bar one: a drop of lava falls into the pool on
+    // the loop's first beat and its ripples run out to both sides. Bar two: the pool swells into a cone where the drop
+    // fell, a step on each beat. Bar three: the crater opens and the volcano throws a bomb to the left on each beat and one
+    // to the right a quarter beat later; each falls back onto the cone, where it is gone. Bar four: the volcano melts back
+    // into the pool, a step on each of three beats, and the next drop hangs and falls. The line only moves; the drop and
+    // the bombs are whole dots that move, appear and go.
+    volcano: (n, { beat = 0 } = {}) => {
+        const loop = Math.floor(beat / 16)
+        const u = beat - loop * 16
+        const stepped = (from, count) => (Math.floor(u - from) + glideOf(u - from)) / count
+        const rise = u < 4 ? 0 : u < 8 ? stepped(4, 4) : u < 12 ? 1 : Math.max(0, 1 - stepped(12, 3))
+        const foot = u < 12 ? CONE_FOOT[0] + (CONE_FOOT[1] - CONE_FOOT[0]) * rise : CONE_FOOT[2] + (CONE_FOOT[1] - CONE_FOOT[2]) * rise
+        const open = u < 8 ? 0 : u < 12 ? 1 : 1 - easeOf((u - 12) / 0.5)
+        const surface = Array.from({ length: 121 }, (_, s) => {
+            const x = -0.95 + (1.9 * s) / 120
+            return [x, CONE_POOL + rippleAt(x, u) + coneAt(x, rise, foot, open)]
+        })
+        const dots = []
+        // The drop hangs at the top through the last beat's first half, then falls faster and faster onto the pool.
+        if (u >= 15) {
+            const top = 0.95 - SPOT_R
+            dots.push([0, top + (CONE_POOL + SPOT_R - top) * clamp((u - 15.5) / 0.5, 0, 1) ** 2])
+        }
+        // A bomb leaves the open crater ERUPT_X from the middle, climbs for ERUPT_RISE beats, and is gone where it falls
+        // onto the full cone (so it never shows again over a cone that is melting under it).
+        const crater = CONE_POOL + coneAt(ERUPT_X, 1, CONE_FOOT[1], 1) + SPOT_R
+        for (let k = 8; k < 12 && u >= 8; k += 1) {
+            for (let j = 0; j < 2; j += 1) {
+                const age = u - k - 0.25 * j
+                if (age < 0) continue
+                const side = j ? 1 : -1
+                const h = (k % 2 ? 0.45 : 0.62) * (0.85 + 0.3 * hash01(loop, k, 500 + j))
+                const x = side * (ERUPT_X + 0.5 * (0.8 + 0.4 * hash01(loop, k, 510 + j)) * age)
+                const y = crater + h * (1 - (1 - age / ERUPT_RISE) ** 2)
+                if (age > ERUPT_RISE && y - SPOT_R <= CONE_POOL + coneAt(x, 1, CONE_FOOT[1], 1)) continue
+                if (Math.abs(x) > 0.95 - SPOT_R || y < -0.95 + SPOT_R) continue
+                dots.push([x, y])
+            }
+        }
+        dots.sort((a, b) => b[0] - a[0])
+        const paths = [surface]
+        let from = surface[surface.length - 1]
+        for (const dot of dots) {
+            const ring = dotFrom(dot, from)
+            paths.push(ring)
+            from = ring[ring.length - 1]
+        }
+        return byLength(paths, n)
+    },
+    // Strands: one line, the stretch of a tangle of drifting sines (STRAND_HARMONICS) that the beam has just run over, so
+    // it wanders on as the beam runs and the tangle drifts. Copies sets how tangled (2 to 8 harmonics; 5 its own). A look's
+    // Speed runs the beam faster and, as on the page, leaves a longer strand (up to twice as long, from Speed 2); slower,
+    // it only crawls slower.
+    strands: (n, { copies = 0, beat = 0, speed = 1 } = {}) => {
+        const harmonics = STRAND_HARMONICS.slice(0, countOf(copies, 5, 2, 8))
+        const sum = harmonics.reduce((s, k) => s + k.a, 0)
+        const drift = beat * STRAND_DRIFT
+        const head = beat * STRAND_RUN
+        const length = STRAND_RUN * STRAND_TRAIL * clamp(finite(speed, 1), 1, 2)
+        const steps = 360
+        const path = Array.from({ length: steps + 1 }, (_, i) => {
+            const u = head - length + (length * i) / steps
+            let x = 0
+            let y = 0
+            for (const k of harmonics) {
+                x += k.a * Math.sin(k.fx * u + k.px + drift * k.vx)
+                y += k.a * Math.cos(k.fy * u + k.py + drift * k.vy)
+            }
+            return [(STRAND_REACH * x) / sum, (STRAND_REACH * y) / sum]
+        })
+        return byLength([path], n)
+    },
+    // Contour: `copies` organic loops (5, 2 to 8) one inside the other, flowing slowly outward: each grows from the
+    // middle to the edge over `copies` × 2 beats, where it is gone and a new one starts in the middle, so the lines
+    // stream out like rings round a stone in water, but bent like a map's contour lines. The loops share one bend that
+    // drifts slowly, and the inner ones sit off centre, so the lines bunch on one side, the side drifting too. Loops
+    // never cross.
+    contour: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 5, 2, 8)
+        const harmonics = solidHarmonics(7)
+        const t = (TAU * beat) / 16
+        const cx = CONTOUR_OFF * Math.sin(t * 0.37)
+        const cy = CONTOUR_OFF * Math.cos(t * 0.23)
+        const flow = beat / 2
+        const loops = Array.from({ length: count }, (_, i) => {
+            const f = ((((i + flow) % count) + count) % count) / count
+            const r = CONTOUR_MIN + (CONTOUR_MAX - CONTOUR_MIN) * f
+            const from = TAU * hash01(i, 911)
+            return solidArc(harmonics, cx * (1 - f), cy * (1 - f), r, from, from + TAU, t)
+        })
+        loops.sort((a, b) => lengthOf(a) - lengthOf(b))
+        return byLength(loops, n)
+    },
+    // Draw: an organic loop that draws itself and rubs itself out, on an 8-beat round: over the first four beats the
+    // line runs once round from its start (easing in and out), and over the next four its tail follows, so it shrinks
+    // away the way it came. A quarter of it (DRAW_LEAST) always stays lit: shorter, at a small size, the engine's guard
+    // would take it for a still beam. The loop drifts slowly and its start turns slowly, so one round flows into the next
+    // with nothing jumping. With `copies` 2 or 3, smaller loops inside do the same a beat behind, the other way round.
+    // Points go with how much is lit, so a short arc is not packed with the whole frame's. Below size 0.12 more stays
+    // lit (DRAW_SMALL / size of the loop, all of it at 0.03): at 0.05 a quarter loop was a still beam to the guard.
+    draw: (n, { copies = 0, beat = 0, size = 1 } = {}) => {
+        const count = countOf(copies, 1, 1, 3)
+        const least = Math.min(1, Math.max(DRAW_LEAST, DRAW_SMALL / Math.max(size, 1e-6)))
+        let lit = 0
+        const paths = Array.from({ length: count }, (_, j) => {
+            const v = ((((beat - j) % 8) + 8) % 8)
+            const head = easeOf(v / 4)
+            const tail = easeOf((v - 4) / 4)
+            const to = Math.max(head, tail + least)
+            lit += to - tail
+            const way = j % 2 ? -1 : 1
+            const start = TAU * hash01(j, 921) + (way * TAU * beat) / 64
+            const r = CONTOUR_MAX - 0.22 * j
+            return solidArc(solidHarmonics(100 + j), 0, 0, r, start + way * TAU * tail, start + way * TAU * to, (TAU * beat) / 32)
+        })
+        return byLength(paths, Math.max(MIN_POINTS * count, Math.round((n * lit) / count)))
+    },
+    // Blade: `copies` long lines (1, 1 to 4) side by side, turning slowly round the middle (half a turn every 16 beats),
+    // each with a ripple running along it from end to end every four beats, one line a beat behind the next. In haze each
+    // line is a blade of light that sweeps round. The lines stay inside a circle as they turn, and never touch.
+    blade: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 1, 1, 4)
+        const [height, wave, packet] = BLADE_RIPPLE
+        const turn = (Math.PI * beat) / 16
+        const cos = Math.cos(turn)
+        const sin = Math.sin(turn)
+        const paths = Array.from({ length: count }, (_, j) => {
+            const d = (j - (count - 1) / 2) * BLADE_GAP
+            const half = Math.sqrt(Math.max(0.04, BLADE_REACH ** 2 - (Math.abs(d) + height) ** 2))
+            const at = -half - packet + 2 * (half + packet) * (((((beat - j) / 4) % 1) + 1) % 1)
+            const line = Array.from({ length: 121 }, (_, s) => {
+                const x = -half + (2 * half * s) / 120
+                const y = d + height * Math.exp(-(((x - at) / packet) ** 2)) * Math.sin((TAU * (x - at)) / wave)
+                return [x * cos - y * sin, x * sin + y * cos]
+            })
+            return j % 2 ? line.reverse() : line
+        })
+        return byLength(paths, n)
+    },
+    // Coil: one line, a loose spiral of `copies` turns (2, 1 to 4) bent into an organic shape, turning slowly (a turn
+    // every 64 beats) while its bend drifts. Its arms are always apart: the bend scales them all alike.
+    coil: (n, { copies = 0, beat = 0 } = {}) => {
+        const turns = countOf(copies, 2, 1, 4)
+        const harmonics = solidHarmonics(31)
+        const t = (TAU * beat) / 24
+        const spin = (TAU * beat) / 64
+        const steps = 160 * turns
+        const path = Array.from({ length: steps + 1 }, (_, i) => {
+            const a = (TAU * turns * i) / steps
+            const r = (COIL_IN + ((COIL_OUT - COIL_IN) * i) / steps) * solidAt(harmonics, a + spin, t)
+            return [Math.cos(a + spin) * r, Math.sin(a + spin) * r]
+        })
+        return byLength([path], n)
+    },
+    // Vortex: a spiral of `copies` turns (3, 2 to 5) from a hole in the middle out to the edge, turning a whole turn every
+    // 8 beats, so its arms seem to flow; and in the hole one point beam in the look's second colour: a filled dot as small
+    // as the engine lets a dot be on the wall (DUST_R of the field at any size, as dust's dots), scanning slowly round the
+    // middle in a loose figure (a loop every 32 beats). The dot gets VORTEX_DOT_SHARE of the points, so it shows as a beam;
+    // it never reaches the spiral (the hole opens round it when the look is small).
+    vortex: (n, { copies = 0, beat = 0, size = 1 } = {}) => {
+        const turns = countOf(copies, 3, 2, 5)
+        const spin = (TAU * beat) / 8
+        const steps = 120 * turns
+        const r = DUST_R / Math.max(size, 0.02)
+        const hole = Math.max(VORTEX_HOLE, r + 0.08)
+        const spiral = Array.from({ length: steps + 1 }, (_, i) => {
+            const u = i / steps
+            const a = TAU * turns * u - spin
+            const reach = hole + (VORTEX_OUT - hole) * u
+            return [Math.cos(a) * reach, Math.sin(a) * reach]
+        })
+        const wander = Math.max(0, Math.min(VORTEX_WANDER, (hole - 0.04 - r) / Math.SQRT2))
+        const cx = wander * Math.sin((TAU * beat) / 32)
+        const cy = wander * Math.sin((TAU * beat * 1.5) / 32 + 0.7)
+        const dots = Math.round(clamp(n * VORTEX_DOT_SHARE, 24, 300))
+        const from = Math.atan2(spiral[0][1] - cy, spiral[0][0] - cx)
+        const dot = Array.from({ length: dots }, (_, i) => {
+            const u = i / (dots - 1)
+            const a = from + u * TAU * VORTEX_FILL_TURNS
+            const reach = r * (1 - (1 - VORTEX_FILL) * u)
+            return [cx + Math.cos(a) * reach, cy + Math.sin(a) * reach]
+        })
+        dot.second = true
+        return [dot, along(spiral, Math.max(MIN_POINTS, n - dots))]
+    },
+    // Down: `copies` flat lines (3, 1 to 6) right across the picture, evenly spaced, gliding down without stopping; each
+    // comes back in at the top as it leaves at the bottom. A new line comes in at the top on every beat, so each takes
+    // `copies` beats to cross. Drawn back and forth, so each hop is short.
+    down: (n, { copies = 0, beat = 0 } = {}) => {
+        const count = countOf(copies, 3, 1, 6)
+        const levels = Array.from({ length: count }, (_, i) => 0.95 - 1.9 * (((((i + beat) / count) % 1) + 1) % 1)).sort((a, b) => b - a)
+        return byLength(levels.map((y, i) => (i % 2 ? [[0.95, y], [-0.95, y]] : [[-0.95, y], [0.95, y]])), n)
+    },
+    // Cross grid: `copies` level lines (4, 1 to 4) gliding down and as many upright ones gliding right, right across the
+    // picture and evenly spaced, so they cross into a grid that flows down and to the right without stopping: down, crossed.
+    // Each line comes back in at the far side as it leaves, so a new one comes in at the top and one at the left on every
+    // beat. The lines only move. Drawn back and forth: the level ones top to bottom, then the upright ones from the side
+    // the last level one ends on, so each hop is short. Each line gets a point at least every CROSS_STEP once sized, and
+    // all of them at most what keeps the pass inside the cube's (CROSS_PASS).
+    // The galloping horse (horsePath): one stride per beat, so the desk's Speed and BPM set the pace.
+    horse: (n, { beat = 0 } = {}) => [along(horsePath(((beat % 1) + 1) % 1), Math.min(n, HORSE_MOST))],
+    crossgrid: (n, { copies = 0, beat = 0, size = 1 } = {}) => {
+        const count = countOf(copies, 4, 1, 4)
+        const glide = (i) => 1.9 * (((((i + beat) / count) % 1) + 1) % 1)
+        const levels = Array.from({ length: count }, (_, i) => 0.95 - glide(i)).sort((a, b) => b - a)
+        const uprights = Array.from({ length: count }, (_, i) => -0.95 + glide(i)).sort((a, b) => a - b)
+        if (count % 2 === 1) uprights.reverse()
+        const least = Math.max(MIN_POINTS, Math.ceil((1.9 * size) / CROSS_STEP) + 1)
+        const lit = clamp(n, 2 * count * least, CROSS_PASS - 2 * count * CROSS_STROKE)
+        return byLength([
+            ...levels.map((y, i) => (i % 2 ? [[0.95, y], [-0.95, y]] : [[-0.95, y], [0.95, y]])),
+            ...uprights.map((x, i) => (i % 2 ? [[x, 0.95], [x, -0.95]] : [[x, -0.95], [x, 0.95]])),
+        ], lit, least)
+    },
 }
 
 /** Hue 0..1 (saturated, full value) to [r, g, b] in 0..1. */
@@ -604,6 +1743,8 @@ const generateShape = ({
     spin = 0,
     time = 0,
     colour = DEFAULT_LASER_COLOUR,
+    // A shape's second part (a stroke it marks `second`, as vortex's dot) in this colour; left out, the one colour.
+    colour2,
     level = 1,
     points = 120,
     // The TD scenes' knobs: copies (galaxy's spirals, noisy's rings; 0 = the shape's own number), rainbow
@@ -615,6 +1756,8 @@ const generateShape = ({
     // Beats since the clock's zero: sparkle and twinkle change on its half beats. The laser desk passes its own clock;
     // left out, it is `time` at 120 BPM.
     beat,
+    // The laser desk's Speed, already in `beat`: passed on for a shape whose picture changes with it (strands is longer).
+    speed = 1,
 } = {}) => {
     const names = shapeListOf(shape)
     const t = finite(time, 0)
@@ -628,6 +1771,7 @@ const generateShape = ({
     const sin = Math.sin(turn)
     const gain = clamp(finite(level, 1), 0, 1)
     const lit = parseLaserColour(colour).map((c) => c * gain)
+    const lit2 = colour2 ? parseLaserColour(colour2).map((c) => c * gain) : lit
     // `height` lifts the shape up the field after it is turned and sized (the node's default is
     // 0.5: wholly above the cube's aim, where the server's keep-in zone lets it draw).
     const lift = clamp(finite(height, 0), -1, 1)
@@ -635,7 +1779,8 @@ const generateShape = ({
         clamp((x * cos - y * sin) * scale, -1, 1),
         clamp((x * sin + y * cos) * scale + lift, -1, 1),
     ]
-    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2) })
+    // `size` too, for a shape whose marks keep one size on the wall however big the picture is (dust).
+    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2), size: scale, speed: finite(speed, 1) })
     const total = strokes.reduce((sum, s) => sum + s.length, 0)
     const out = []
     let k = 0
@@ -644,7 +1789,7 @@ const generateShape = ({
         // The blank move: arrive at the stroke's start with the light off.
         if (out.length) out.push([placed[0][0], placed[0][1], 0, 0, 0])
         for (const p of placed) {
-            const rgb = rainbow === true ? hueToRgb(((k / Math.max(1, total)) + t / 16) % 1).map((c) => c * gain) : lit
+            const rgb = rainbow === true ? hueToRgb(((k / Math.max(1, total)) + t / 16) % 1).map((c) => c * gain) : stroke.second ? lit2 : lit
             out.push([p[0], p[1], rgb[0], rgb[1], rgb[2]])
             k += 1
         }
@@ -653,5 +1798,6 @@ const generateShape = ({
 }
 
 module.exports = {
-    LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE, shapeListOf, DEFAULT_LASER_COLOUR, MIN_POINTS, parseLaserColour, generateShape,
+    horsePath, HORSE_LEGS,
+    LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE, DOT_SHAPES, shapeListOf, DEFAULT_LASER_COLOUR, MIN_POINTS, parseLaserColour, generateShape,
 }

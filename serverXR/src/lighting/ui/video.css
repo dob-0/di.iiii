@@ -1,0 +1,108 @@
+/* [video] Video pixel-mapping on the stage — the strip, the toolbar button and the layer.
+   Loaded after style.css. di.iiii: near-black, squared, one cyan accent, flat colour. */
+
+/* The toolbar button reads as a word: a glyph in a 30px square would say nothing. */
+.stage-tools .videoBtn { width: auto; padding: 0 8px; position: relative; }
+.stage-tools .videoBtn.live { color: var(--accent); }
+.stage-tools .videoBtn.live::after,
+.stage-tools .videoBtn.waiting::after {
+  content: ''; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; background: var(--accent);
+}
+.stage-tools .videoBtn.waiting::after { background: #f0a94f; }
+
+.videostrip {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 5px; flex: none;
+  padding: 5px 8px; border-bottom: 1px solid var(--line); background: var(--pane2);
+}
+.videostrip .vs-title { color: var(--muted); font-weight: 600; font-size: 12px; margin-right: 2px; }
+.videostrip .vs-src { display: inline-flex; flex-wrap: wrap; }
+.videostrip button {
+  background: var(--field); border: 1px solid var(--line); border-radius: 0; color: var(--muted);
+  height: 26px; padding: 0 9px; white-space: nowrap;
+}
+.videostrip .vs-src button + button { border-left: 0; }
+/* Seven sources in one row, with room left for the source's own picker beside them. */
+.videostrip button { font-size: 12px; }
+.videostrip .vs-src button { padding: 0 5px; }
+.videostrip button:hover { color: var(--text); }
+.videostrip button.is-active { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.videostrip .vOn.is-on { color: var(--accent); border-color: var(--accent); }
+.videostrip .vStop:hover { color: var(--danger); border-color: var(--danger); }
+.videostrip select { height: 26px; max-width: 200px; padding: 0 4px; line-height: 24px; }
+.videostrip .vUrlBox { display: inline-flex; }
+.videostrip .vUrlBox[hidden] { display: none; }
+.videostrip .vUrl { width: 240px; height: 26px; }
+.videostrip .vUrlBox .vGo { border-left: 0; }
+.videostrip .vHint { color: var(--muted); font-size: 11px; }
+.videostrip .vs-slide { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.videostrip .vs-slide input[type=range] { width: 64px; }
+.videostrip .vs-slide .mono { min-width: 32px; color: var(--text); }
+.videostrip .vStatus { flex: 1 1 140px; min-width: 0; color: var(--muted); font-size: 12px; }
+.videostrip .vStatus.bad { color: #f0a94f; }
+.videostrip .vClose { width: 26px; padding: 0; margin-left: auto; }
+
+/* The Stage page: an icon in its vertical rail, the controls in its inspector section. */
+.sp-rail .videoBtn { width: 36px; padding: 0; }
+.videostrip.inslot { padding: 0; border: 0; background: none; gap: 6px; }
+.videostrip.inslot .vs-title { width: 100%; font-size: 11px; }
+.videostrip.inslot .vStatus { flex-basis: 100%; }
+.videostrip.inslot .vClose { display: none; }   /* the inspector section hides itself */
+.videostrip.inslot .vUrl { width: 170px; }
+
+/* The picture on the stage: the FIRST child of the stage's inner layer and no z-index of its
+   own, so the objects' low layer, the light squares and the objects' handles all paint over
+   it in DOM order. Display only, until the strip is open — then the grip moves the box and
+   the corner resizes it. */
+.video-layer {
+  position: absolute; pointer-events: none;
+  outline: 1px dashed #ffffff30; background: #ffffff05;
+}
+.video-layer.live { outline-color: #35d2dd66; }
+.video-layer.layeroff .video-canvas { opacity: .35; }
+.video-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: .9; image-rendering: pixelated; }
+.video-tag {
+  position: absolute; left: 0; bottom: 100%; margin-bottom: 2px; font-size: 10px; color: var(--muted);
+  white-space: nowrap; pointer-events: none;
+}
+.video-layer.live .video-tag { color: var(--accent); }
+/* While the strip is open the tag becomes a grip: a title bar the lights cannot cover. */
+.video-grip {
+  display: none; position: absolute; left: -1px; right: -1px; bottom: 100%; height: 18px; line-height: 18px;
+  padding: 0 6px; font-size: 10px; color: var(--bg); background: var(--accent);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: move;
+}
+.video-layer.editing .video-grip { display: block; }
+.video-layer.editing .video-tag { display: none; }
+.video-handle { display: none; position: absolute; right: -5px; bottom: -5px; width: 10px; height: 10px; background: var(--accent); cursor: nwse-resize; }
+.video-layer.editing { pointer-events: auto; cursor: move; outline: 1px solid var(--accent); }
+.video-layer.editing .video-handle { display: block; }
+.video-layer.dragging { cursor: grabbing; }
+.stage.hand .video-layer.editing { cursor: grab; }
+
+/* [anim] The animation row: box A → B, the mix breathing, picture tone, file speed/loop.
+   Behind "Animate ▸" on the small stages; always open in the Stage page's inspector. */
+.videostrip .vs-anim { display: none; flex-basis: 100%; flex-wrap: wrap; gap: 6px 16px; padding-top: 5px; border-top: 1px solid var(--line); }
+.videostrip.anim-open .vs-anim, .videostrip.inslot .vs-anim { display: flex; }
+.videostrip.inslot .vAnimBtn { display: none; }
+.videostrip .vs-group { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.videostrip .vs-group b { font-size: 11px; font-weight: 600; color: var(--text); }
+.videostrip .vs-group label { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
+.videostrip .vs-group input[type=number] { width: 56px; height: 24px; }
+.videostrip .vs-group select { height: 24px; }
+.videostrip .vs-u { font-size: 11px; color: var(--muted); }
+.videostrip .vs-group button.is-on { color: var(--accent); border-color: var(--accent); }
+.videostrip .vs-group button:disabled { opacity: .45; }
+.videostrip .vs-file.dim { opacity: .5; }
+/* B: where the box travels to — a dashed outline with its own grip, never a fill. */
+.video-bghost { position: absolute; pointer-events: none; outline: 1px dashed var(--accent); }
+.video-bghost[hidden] { display: none; }
+.video-bgrip {
+  position: absolute; left: -1px; right: -1px; bottom: 100%; height: 18px; line-height: 18px;
+  padding: 0 6px; font-size: 10px; color: var(--accent); background: var(--pane);
+  border: 1px dashed var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: move; pointer-events: auto;
+}
+
+/* The NDI mark line, shown wherever NDI is picked (docs/architecture/NDI.md): quiet, flat. */
+.videostrip .vLegal { font-size: 11px; }
+.videostrip .vLegal a { color: inherit; }

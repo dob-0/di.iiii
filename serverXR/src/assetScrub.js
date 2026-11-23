@@ -112,9 +112,20 @@ async function scrubImageMetadata(filePath) {
     safeToStore: !looksLikeImage
   })
 
+  // Decoded from memory, not from the path: on Windows libvips keeps a GIF or
+  // WebP file open after reading it, so renaming the scrubbed copy over it
+  // failed (EPERM) and every GIF and WebP was refused as "could not remove its
+  // location data" (audit 11-12). The scrubbed bytes are written back in place.
+  let input
+  try {
+    input = await fsp.readFile(filePath)
+  } catch {
+    return unscrubbed('unreadable')
+  }
+
   let metadata
   try {
-    metadata = await sharp(filePath).metadata()
+    metadata = await sharp(input).metadata()
   } catch {
     // Not a decodable image (video, archive, model, corrupt upload) — or an
     // image in a codec this build cannot decode, which is why the sniff above
@@ -128,22 +139,20 @@ async function scrubImageMetadata(filePath) {
   }
 
   const isAnimated = (metadata.pages || 1) > 1
-  const tempPath = `${filePath}.scrub`
 
   try {
     // animated:true keeps every frame of an animated GIF/WebP; rotate() is
     // frame-hostile there and animated sources carry no EXIF orientation
     // anyway, so it is only applied to stills.
-    const pipeline = sharp(filePath, { animated: isAnimated })
+    const pipeline = sharp(input, { animated: isAnimated })
     const output = isAnimated ? pipeline : pipeline.rotate()
-    await output.toFormat(format, encodeOptionsFor(format, metadata)).toFile(tempPath)
-    await fsp.rename(tempPath, filePath)
+    const scrubbed = await output.toFormat(format, encodeOptionsFor(format, metadata)).toBuffer()
+    await fsp.writeFile(filePath, scrubbed)
     // The proportions travel with the result: a room with build zones has to
     // scale a banner down to its slot, and reading the file a second time to
     // learn 3.3:1 would be a second decode of every upload.
     return { scrubbed: true, format, animated: isAnimated, safeToStore: true, ...dimensionsOf(metadata) }
   } catch (error) {
-    await fsp.rm(tempPath, { force: true }).catch(() => {})
     // Logged rather than silent: for a non-image this is harmless, for an image
     // it is a rejected upload and someone will ask why.
     logger.warn(`[assetScrub] could not scrub ${format} upload: ${error.message}`)
