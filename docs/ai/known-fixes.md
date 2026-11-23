@@ -2071,3 +2071,10 @@ Guard:
 Guard:
 - `serverXR/src/monitorHub.test.js` "lends the other machines' own spaces; the map is the same whichever machine draws it": the same two machines drawn from each side give the same agent nodes.
 - `serverXR/src/monitorStore.test.js` spaces panel; `scripts/di/monitorReport.test.js` localBase.
+
+### 2026-11-24 — Hot machines never followed dev
+
+**Symptom:** studio-mac and aylmo stayed on an old di after merges ("why it not update the aylmo why it not synced"); the autoupdate log said `skipped-heat cpu package 91 C > 85 C` every 5 minutes.
+**Cause:** the heat guard skipped every tick above 85 C with no limit; both machines sit above it all day (studio-mac 91-105 C, aylmo 91 C).
+**Fix:** after 6 heat skips in a row (30 minutes) the update runs anyway and says so in the log; the count starts again after any run that is not a heat skip.
+Guard: `scripts/di/autoupdate.test.js` "a machine that stays hot updates anyway after the heat wait".
