@@ -3164,6 +3164,8 @@ function buildTouch() {
   if (tf && document.activeElement !== tf && tf.value !== sceneFilter) tf.value = sceneFilter;
   if (document.activeElement !== $('#tMaster')) $('#tMaster').value = S.master;
   $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+  if (document.activeElement !== $('#tFxMaster')) $('#tFxMaster').value = S.master;
+  $('#tFxMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
   paintBlackout(S.blackout, ['#tBlackout']);
   buildTouchLooks();
   paintTouchCues();
@@ -6793,18 +6795,22 @@ $('#master').addEventListener('input', (e) => {
   $('#masterOut').textContent = Math.round(S.master / 255 * 100) + '%';
   post('api/master', { master: S.master });
 });
-$('#tMaster').addEventListener('input', (e) => {
+// The Touch page has the master twice — its Master tab and beside Speed on the FX tab —
+// and both move together.
+['#tMaster', '#tFxMaster'].forEach((id) => $(id).addEventListener('input', (e) => {
   S.master = +e.target.value;
-  $('#tMasterOut').textContent = Math.round(S.master / 255 * 100) + '%';
+  const pct = Math.round(S.master / 255 * 100) + '%';
+  $('#tMasterOut').textContent = pct; $('#tFxMasterOut').textContent = pct;
+  if (id === '#tMaster') $('#tFxMaster').value = S.master; else $('#tMaster').value = S.master;
   post('api/master', { master: S.master });
-});
+}));
 // Value gestures on the static sliders: the whole row is the grab surface, the readout
 // takes a typed value. (The dynamic rows — LFOs, layers — do the same where they are built.)
 scrubRange($('#railMaster'), $('#master'));
 $$('.fxfader, .ls-fader').forEach((h) => scrubRange(h, h.querySelector('input[type=range]')));
 // Hold and Fade read in seconds, so they are left out of the typed readouts: the generic
 // field would take and show milliseconds.
-[['#masterOut', '#master'], ['#fMasterOut', '#fMaster'], ['#tMasterOut', '#tMaster'], ['#fxDepthOut', '#fxDepth'],
+[['#masterOut', '#master'], ['#fMasterOut', '#fMaster'], ['#tMasterOut', '#tMaster'], ['#tFxMasterOut', '#tFxMaster'], ['#fxDepthOut', '#fxDepth'],
   ['#tFxDepthOut', '#tFxDepth'], ['#tSpeedOut', '#tSpeed'], ['#audAmountOut', '#audAmount'], ['#tAudAmountOut', '#tAudAmount'], ['#audReleaseOut', '#audRelease']]
   .forEach(([o, i]) => dblEditRange($(o), $(i)));
 // The panic button is the one control that must never claim to have worked. Everything

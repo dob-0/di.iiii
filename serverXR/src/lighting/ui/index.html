@@ -895,6 +895,9 @@
                  every FX mode and every LFO — so this fader IS the speed of the room, and
                  halve/double are here because that is the move you make on a drop. -->
             <label class="ls-fader"><span>Speed</span><input type="range" id="tSpeed" min="20" max="300" value="120"><output id="tSpeedOut">120</output></label>
+            <!-- The same master as the Master tab and the Control rail, here beside Speed so a
+                 drop never needs a tab change (Emily, 2026-11-23). -->
+            <label class="ls-fader master"><span>Master</span><input type="range" id="tFxMaster" min="0" max="255" value="255"><output id="tFxMasterOut">100%</output></label>
             <button class="ls-big" id="tHalf" title="Half tempo">÷2</button>
             <button class="ls-big" id="tDouble" title="Double tempo">×2</button>
             <div class="ls-bpm"><b id="tBpm">120</b><span>BPM</span></div>
