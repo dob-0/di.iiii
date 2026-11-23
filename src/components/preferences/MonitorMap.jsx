@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useWideScreen } from './useWideScreen.js'
 import WorldLegend, { shapePoints } from './WorldLegend.jsx'
+import { planLabels, labelWidth, LABEL_H, hangOf } from './monitorMapOverlap.js'
 import { ASPECT, KIND_ORDER, KIND_STYLE, KIND_TITLE, layoutMap, sizeOf } from './monitorMapLayout.js'
 
 // One map, three views of one layout (monitorMapLayout.js):
@@ -114,6 +115,10 @@ const writePos = (o) => { try { window.localStorage.setItem(POS_KEY, JSON.string
 // (a trackpad pinch sends Ctrl). An embedded map keeps the page scrolling under the wheel.
 export const wheelZooms = (ev, fullscreen, fills = false) => Boolean(fullscreen || (fills && (typeof window === 'undefined' || window.innerWidth > 900)) || ev.ctrlKey || ev.metaKey)
 
+// How many letters of a name fit in a node box: 16 px left pad, 12 px right pad, the kind glyph's corner when drawn,
+// at ~0.56 em a letter (the UI sans; 0.48 let names run under the glyph, 11-24).
+export const labelRoom = (w, fs, glyph = false) => Math.max(3, Math.floor((w - 28 - (glyph ? 22 : 0)) / (fs * 0.56)))
+
 export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, world = false, kinds = false, pointerOnly = false }) {
     // pointerOnly: a mouse/touch surface only (the Mixed view): out of the tab order, one data-map-node per node (the list owns it)
     const nodeAttr = pointerOnly ? 'data-pointer-node' : 'data-map-node'
@@ -133,20 +138,35 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
     const nodeDrag = useRef(null)
     const posOf = useCallback((id) => moved[id] || layout.pos.get(id), [moved, layout.pos])
     useEffect(() => { vbRef.current = vb }, [vb])
-    // pixels per layout unit: in the kinds look a name never draws under 11 px, however small the pane
+    // pixels per layout unit: a name never draws under 11 px on screen, however small the pane or far the zoom (every map, 11-24)
     const [ppu, setPpu] = useState(1)
     useLayoutEffect(() => {
         const el = svgRef.current
-        if (!el || !showKinds) return undefined
+        if (!el) return undefined
         const measure = () => { const r = el.getBoundingClientRect(); if (r.width && r.height) setPpu(Math.min(r.width / vb.w, r.height / vb.h)) }
         measure()
         const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null
         ro?.observe(el)
         return () => ro?.disconnect()
-    }, [vb, showKinds])
-    const labelFs = showKinds ? Math.min(30, Math.max(20, 11 / ppu)) : 20
-    const stateFs = showKinds ? Math.max(14.4, 11 / ppu) : 14.4
-    const showState = !showKinds || stateFs <= 18
+    }, [vb])
+    const labelFs = Math.min(30, Math.max(20, 11 / ppu))
+    const stateFs = Math.max(14.4, 11 / ppu)
+    const showState = stateFs <= 18
+    // Names far out (owner 11-24: "can't see what is what"): when a box's own name would draw under 10.5 px, the
+    // boxes go quiet and a names layer draws readable 12 px names in screen space, hanging above their box, only
+    // where one covers no other (the 3D map's planner). Hover or zoom in for the rest.
+    const farOut = labelFs * ppu < 10.5
+    const names = useMemo(() => {
+        if (!farOut || !(ppu > 0)) return new Map()
+        const size = { width: vb.w * ppu, height: vb.h * ppu }
+        const items = layout.nodes.map((n) => {
+            const p = posOf(n.id)
+            const top = p.y - sizeOf(n.kind).h / 2
+            return { id: n.id, kind: n.kind, label: n.label, sx: (p.x - vb.x) * ppu, sy: (top - vb.y) * ppu - 2, sz: 0 }
+        }).filter((it) => it.sx > 0 && it.sx < size.width && it.sy > LABEL_H + 56 && it.sy < size.height - 72) // clear of the tool row and the hint + legend
+        return planLabels(items, size, []).shown
+    }, [farOut, ppu, vb, layout.nodes, posOf])
+    const px = (v) => v / (ppu || 1) // screen px → layout units
 
     // a different set of nodes (not a state change) refits the view
     const shape = layout.nodes.map((n) => n.id).join('|')
@@ -173,10 +193,10 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
     useEffect(() => {
         const el = svgRef.current
         if (!el) return undefined
-        const onWheel = (ev) => { if (!wheelZooms(ev, fsRef.current, kinds)) return; ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
+        const onWheel = (ev) => { if (!wheelZooms(ev, fsRef.current, showKinds)) return; ev.preventDefault(); zoomAt(ev.deltaY > 0 ? 1.15 : 1 / 1.15, ev.clientX, ev.clientY) }
         el.addEventListener('wheel', onWheel, { passive: false })
         return () => el.removeEventListener('wheel', onWheel)
-    }, [zoomAt, kinds])
+    }, [zoomAt, showKinds])
 
     const onPointerDown = (ev) => {
         const d = drag.current
@@ -307,19 +327,35 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                             <rect width={w} height={h} className="monitor-node-box" />
                             <rect width="6" height={h} className="monitor-node-edge" />
                             {showKinds && KIND_STYLE[n.kind] ? <polygon points={shapePoints(KIND_STYLE[n.kind].shape, w - 16, h - 16, 12)} className="monitor-node-glyph" style={{ fill: `var(${KIND_STYLE[n.kind].token})` }} /> : null}
-                            <text x="16" y={showState ? h / 2 - 3 : h / 2 + labelFs * 0.35} className="monitor-node-label" style={showKinds ? { fontSize: labelFs } : undefined}>{clip(n.label, Math.floor((w - 28) / (labelFs * 0.48)))}</text>
-                            {showState ? <text x="16" y={h / 2 + 15 + (showKinds ? (stateFs - 14.4) * 0.8 : 0)} className="monitor-node-state" style={showKinds ? { fontSize: stateFs } : undefined}>{world ? (n.stateLabel || n.state) : `${n.stateLabel || n.state} · ${n.kind}`}</text> : null}
+                            {farOut ? null : <text x="16" y={showState ? h / 2 - 3 : h / 2 + labelFs * 0.35} className="monitor-node-label" style={{ fontSize: labelFs }}>{clip(n.label, labelRoom(w, labelFs, showKinds && !!KIND_STYLE[n.kind]))}</text>}
+                            {showState && !farOut ? <text x="16" y={h / 2 + 15 + (stateFs - 14.4) * 0.8} className="monitor-node-state" style={{ fontSize: stateFs }}>{world ? (n.stateLabel || n.state) : `${n.stateLabel || n.state} · ${n.kind}`}</text> : null}
                             <title>{`${n.kind}: ${n.label} (${n.stateLabel || n.state})`}</title>
                         </g>
                     )
                 })}
-                {hovered && ((showKinds && !showState) || hovered.label.length > Math.floor((sizeOf(hovered.kind).w - 28) / (labelFs * 0.48))) ? (() => {
+                {farOut ? (
+                    <g className="monitor-map-names" pointerEvents="none" data-map-names={names.size}>
+                        {layout.nodes.filter((n) => names.has(n.id) || n.id === hover || n.id === selectedId).map((n) => {
+                            const p = posOf(n.id)
+                            const top = p.y - sizeOf(n.kind).h / 2
+                            const w = labelWidth(n.label)
+                            const r = hangOf(0, 0, w, LABEL_H)
+                            return (
+                                <g key={n.id} transform={`translate(${p.x},${top - px(2)}) scale(${px(1)})`} className={`monitor-name-chip tone-${toneOf(n.state)}${focus && !hot(n.id) ? ' is-dim' : ''}`}>
+                                    <rect x={r.x} y={r.y} width={r.w} height={r.h} className="monitor-name-chip-box" />
+                                    <text x={r.x + 10} y={r.y + 17} className="monitor-name-chip-label">{clip(n.label, Math.floor((w - 16) / 6.6))}</text>
+                                </g>
+                            )
+                        })}
+                    </g>
+                ) : null}
+                {hovered && (farOut || !showState || hovered.label.length > labelRoom(sizeOf(hovered.kind).w, labelFs, showKinds && !!KIND_STYLE[hovered.kind])) ? (() => {
                     const p = posOf(hovered.id)
                     const { h } = sizeOf(hovered.kind)
                     const text = hovered.label
                     const w = Math.max(120, text.length * 9 + 28)
                     return (
-                        <g className={`monitor-tip tone-${toneOf(hovered.state)}`} transform={`translate(${p.x - w / 2},${p.y - h / 2 - 58})`} pointerEvents="none">
+                        <g className={`monitor-tip tone-${toneOf(hovered.state)}`} transform={farOut ? `translate(${p.x},${p.y - h / 2 - px(LABEL_H + 6)}) scale(${px(1)}) translate(${-w / 2},-46)` : `translate(${p.x - w / 2},${p.y - h / 2 - 58})`} pointerEvents="none">
                             <rect width={w} height="46" className="monitor-tip-box" />
                             <text x="12" y="20" className="monitor-tip-label">{text}</text>
                             <text x="12" y="38" className="monitor-tip-meta">{`${hovered.kind} · ${hovered.stateLabel || hovered.state}`}</text>
@@ -334,7 +370,7 @@ export function Map2D({ layout, selectedId, onPick, live, fullscreen = false, wo
                 <button type="button" tabIndex={tab} className="monitor-map-tool" data-map-tool="out" aria-label="Zoom out" onClick={() => zoomAt(1.3)}>−</button>
             </div>
             <div className="monitor-map-foot">
-                <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen || (kinds && wide) ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
+                <div className="monitor-map-hint">Drag a node to move it · drag the map to pan · {fullscreen || (showKinds && wide) ? 'scroll' : 'Ctrl + scroll'} or pinch to zoom</div>
                 {showKinds ? <WorldLegend nodes={layout.nodes} edges={layout.edges} /> : null}
             </div>
         </div>

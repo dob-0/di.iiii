@@ -3,6 +3,14 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Monitor 3D map card flickered under a resting pointer; a drag that started on a card did not turn the camera (2026-11-24, N6446.1)
+
+Symptom: resting the pointer on a 3D map card (Monitor map, Spaces world 3D) made it open and close about 20 times a second; a drag started on a card moved the camera −5 px instead of turning it. Measured headless (scratch flicker test, 12 one-second rests with a 1 px jiggle): 12541 DOM changes.
+Cause: `.monitor-card3d.is-full:not(.is-hub)` moved the open card up with `transform: translateY(calc(-50% - 12px))`, so the card slid out from under the pointer, `pointerleave` closed it, it slid back, `pointerenter` opened it again: a hover loop that also mounted and unmounted the drei `<Html>`. The card button swallowed the press, and three-stdlib OrbitControls only starts a turn on a `pointerdown` on its own element.
+Fix: the card never moves itself: `<Html style={{ transform: 'translate3d(-50%, -100%, 0)' }}>` hangs every card above its anchor (`LABEL_LIFT`, `hangOf` in `monitorMapOverlap.js`, so the label planner measures the same box); leaving waits 140 ms (`HOVER_LEAVE_MS`) and a re-enter cancels it; a press that moves 4 px on a card hands a synthetic `pointerdown` to the controls element (`onCardDown`), and the click after a drag does not pick. `user-select: none; touch-action: none` on the card.
+Regression tests: `src/components/preferences/adminCssGuards.test.js` "3D map card guards" (the open card has no transform; the card is not selectable) and `monitorMapOverlap.test.js` "3D cards hang from their anchor". After the fix: 0 changes over the same 12 rests on both maps (two reruns), every rested card stays open, a drag from a card turned the camera 512 px (Spaces) and 163 px (Monitor).
+Not done: the hub card keeps `center`; a phone has no hover, so cards there open only by tap.
+
 ## Monitor Agents box and "Agents at work" list showed only this machine's agents, although the account's other machines had live ones (2026-11-21, N6026, N6027)
 
 Symptom: on studio-mac the Agents box listed 1 agent ("1 live of 81 sessions") while aylmo's report in the same account held 7 live agents (1 busy); on aylmo it was the other way round. The Work tab's "Agents at work" list showed the same one-machine view.

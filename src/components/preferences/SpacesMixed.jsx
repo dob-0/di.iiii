@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo } from 'react'
 import { layoutSpacesWorld } from './spacesWorld.js'
+import { useWideScreen } from './useWideScreen.js'
 import { Map2D, MapList, useNarrow } from './MonitorMap.jsx'
 
 // The MIXED view of the Spaces world: the 3D room, the 2D map and the live
@@ -14,6 +15,7 @@ const PHONE_ASPECT = 1 // round on a phone, where each pane is nearly square
 const Map3D = lazy(() => import('./MonitorMap3D.jsx'))
 
 export default function SpacesMixed({ world, selectedId, onPick, live = true }) {
+    const wide = useWideScreen() // the maps take the wheel only on a wide screen (wheelFree)
     const narrow = useNarrow()
     const layout = useMemo(() => layoutSpacesWorld(world, narrow ? PHONE_ASPECT : MIXED_ASPECT), [world, narrow])
     const nodes = world?.nodes || []
@@ -23,7 +25,7 @@ export default function SpacesMixed({ world, selectedId, onPick, live = true }) 
                 <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
                     <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} world pointerOnly />
                 </Suspense>
-                <p className="spaces-mixed-hint" data-mixed-hint>Drag to turn · Ctrl/Cmd + scroll or full screen to zoom</p>
+                <p className="spaces-mixed-hint" data-mixed-hint>Drag to turn · right-drag to move · {wide ? 'scroll' : 'Ctrl + scroll'} to zoom</p>
             </section>
             <section className="spaces-mixed-pane is-2d" data-mixed-pane="2d" aria-label="2D map" aria-hidden="true">
                 <Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} world pointerOnly />

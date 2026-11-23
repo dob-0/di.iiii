@@ -70,3 +70,13 @@ describe('Monitor map 3D: lane bundles and camera', () => {
         expect(keyStep('x', cam, 1)).toBeNull()
     })
 })
+
+describe('3D cards hang from their anchor (hover flicker fix, 11-24)', () => {
+    it('a node card sits above its point and the full card is never narrower than its label', async () => {
+        const { hangOf, fullWidth, labelWidth } = await import('./monitorMapOverlap.js')
+        const r = hangOf(100, 200, 80, 26)
+        expect(r.y + r.h).toBe(200)
+        expect(r.x + r.w / 2).toBe(100)
+        for (const name of ['Bo', 'Admin monitoring UI and 3D view', 'x'.repeat(60)]) expect(fullWidth(name)).toBeGreaterThanOrEqual(labelWidth(name))
+    })
+})
