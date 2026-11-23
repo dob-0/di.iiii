@@ -527,6 +527,46 @@ module.exports = [
     note: "multipart upload (field \"bundle\"), not a plain JSON call. Needs a real signed-in account (or admin/unrestricted). Refuses to overwrite a space id that already exists here."
   },
   {
+    route: "POST /api/spaces/bundle/uploads",
+    summary: "start sending a .diiii file in parts (JSON: size, sha256, name, optional as/label); answers an upload id and the part size",
+    reach: "private",
+    role: "editor",
+    agent: false,
+    note: "for files over what one request may carry (a proxy such as Cloudflare refuses bodies over 100 MB). Same sign-in rule as POST /api/spaces/bundle. Total cap is MAX_BUNDLE_MB."
+  },
+  {
+    route: "PUT /api/spaces/bundle/uploads/:id/parts/:n",
+    summary: "send part n of an upload started with POST /api/spaces/bundle/uploads, as raw bytes",
+    reach: "private",
+    role: "editor",
+    agent: false,
+    note: "each part is exactly the announced part size, the last one the remainder; optional header x-part-sha256. Only the account that started the upload may send parts."
+  },
+  {
+    route: "POST /api/spaces/bundle/uploads/:id/finish",
+    summary: "finish an upload in parts: answers 202 at once, then joins the parts, checks size and sha256 and opens the file like POST /api/spaces/bundle does",
+    reach: "private",
+    role: "editor",
+    agent: false,
+    note: "the result is read with GET on the upload (same codes as the single POST, space_exists 409 included). Missing parts answer 409 parts_missing and the upload is kept; a second finish answers 409 already_finishing."
+  },
+  {
+    route: "GET /api/spaces/bundle/uploads/:id",
+    summary: "the state of an upload in parts: receiving, joining, importing, done (with the space id) or failed (with the reason and code)",
+    reach: "read",
+    role: "editor",
+    agent: false,
+    note: "finish answers 202 and the join + import run in the background; poll this. Only the account that started the upload may read it."
+  },
+  {
+    route: "DELETE /api/spaces/bundle/uploads/:id",
+    summary: "cancel an upload in parts and remove what was sent",
+    reach: "private",
+    role: "editor",
+    agent: false,
+    note: "parts also expire on their own after 24 hours."
+  },
+  {
     route: "GET /api/spaces/:spaceId/domains",
     summary: "list the space's own domains, whether each is live, and the DNS records still owed",
     reach: "read",

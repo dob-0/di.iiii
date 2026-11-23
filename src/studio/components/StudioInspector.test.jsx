@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import StudioInspector from './StudioInspector.jsx'
+import { ScreenActionsContext } from './ScreenActionsContext.js'
 import { MATERIAL_PRESETS, getInspectorSections } from '../../project/entityRegistry.js'
 
 const sections = [{
@@ -124,5 +125,43 @@ describe('StudioInspector rotation in degrees (Blender: Object Properties › Tr
         const [component, next] = onSectionChange.mock.calls.at(-1)
         expect(component).toBe('transform')
         expect(next.rotation[0]).toBeCloseTo(Math.PI / 4, 12)
+    })
+})
+
+// The door from the room to the deck: a plane reads "Shows" with names + sources
+// and jumps to Projection / the deck; a file-video offers the live deck instead.
+describe('StudioInspector screen rows', () => {
+    it('a plane says "Shows" and has the two jumps', () => {
+        const actions = { openProjection: vi.fn(), openDeck: vi.fn() }
+        const sections = getInspectorSections({ type: 'plane', components: {} }).filter((s) => s.id === 'surface')
+        render(
+            <ScreenActionsContext.Provider value={actions}>
+                <StudioInspector title="Screen" sections={sections} values={{}} surfaceOptions={[{ value: 'a', label: 'Wall — VJ Deck Main' }]} />
+            </ScreenActionsContext.Provider>
+        )
+        expect(screen.getByText('Shows')).toBeTruthy()
+        expect(screen.getByRole('option', { name: 'Wall — VJ Deck Main' })).toBeTruthy()
+        fireEvent.click(screen.getByRole('button', { name: 'Open in Projection' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Open the deck' }))
+        expect(actions.openProjection).toHaveBeenCalledTimes(1)
+        expect(actions.openDeck).toHaveBeenCalledTimes(1)
+    })
+
+    it('a file-video offers "Show the live deck here instead"', () => {
+        const convertToScreen = vi.fn()
+        const sections = getInspectorSections({ type: 'video', components: {} }).filter((s) => s.id === 'liveDeck')
+        render(
+            <ScreenActionsContext.Provider value={{ convertToScreen }}>
+                <StudioInspector title="Video" sections={sections} values={{}} />
+            </ScreenActionsContext.Provider>
+        )
+        fireEvent.click(screen.getByRole('button', { name: 'Show the live deck here instead' }))
+        expect(convertToScreen).toHaveBeenCalledTimes(1)
+    })
+
+    it('renders no buttons without the editor around it', () => {
+        const sections = getInspectorSections({ type: 'plane', components: {} }).filter((s) => s.id === 'surface')
+        render(<StudioInspector title="Screen" sections={sections} values={{}} />)
+        expect(screen.queryByRole('button', { name: 'Open the deck' })).toBeNull()
     })
 })

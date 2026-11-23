@@ -295,6 +295,15 @@ describe('StudioShell — a new project opens bare', () => {
         expect([...document.querySelectorAll('.sbar-switch .sbar-link')].map((a) => a.textContent)).toEqual(['Desk', 'Perform'])
     })
 
+    it('a bare project that holds a VJ deck still shows Desk | Perform', () => {
+        renderShell({
+            ...inProject,
+            document: { ...inProject.document, nodes: [{ id: 'd1', typeId: 'vj.deck', label: 'VJ Deck', values: {} }] },
+            layers: NEW
+        })
+        expect(hasPerformSwitch()).toBe(true)
+    })
+
     it('"All tools" gives a new project everything, bar included', () => {
         saveAllTools(true)
         renderShell({ ...inProject, layers: NEW })

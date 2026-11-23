@@ -1,7 +1,7 @@
 import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { SpacePreviewRow } from './PreferencesShared.jsx'
+import { SpacePreviewRow, SectionNav } from './PreferencesShared.jsx'
 
 describe('SpacePreviewRow', () => {
     it('builds route actions from the row space id', () => {
@@ -27,5 +27,17 @@ describe('SpacePreviewRow', () => {
 
         fireEvent.click(screen.getByRole('button', { name: 'Admin' }))
         expect(onOpenRoute).toHaveBeenCalledWith('/alpha/admin')
+    })
+})
+
+describe('SectionNav badges', () => {
+    it('shows a count only when there is something to count', () => {
+        const sections = [
+            { key: 'a', label: 'Alpha', group: 'g', badge: undefined },
+            { key: 'b', label: 'Beta', group: 'g', badge: 3 }
+        ]
+        render(<SectionNav sections={sections} activeKey="a" onSelect={() => {}} />)
+        expect(screen.getByText('3')).toBeInTheDocument()
+        expect(screen.queryByText('0')).toBeNull()
     })
 })

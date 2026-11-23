@@ -48,11 +48,11 @@ describe('the deck, as the owner saw it on 2026-09-24', () => {
         expect(empty.querySelector('img')).toBe(null)
     })
 
-    it('the blend has a line to itself, so "Difference" is never squeezed beside Clear', () => {
+    it('the blend shares its line only with the side select, so "Difference" is never squeezed beside Clear', () => {
         render(<Host />)
         const blend = screen.getByLabelText('Layer 1 blend')
         const line = blend.closest('.vj-deck-layer-line')
-        expect([...line.querySelectorAll('button, select, input')]).toEqual([blend])
+        expect([...line.querySelectorAll('button, select, input')]).toEqual([screen.getByLabelText('Crossfader side for Layer 1'), blend])
         expect(screen.getByRole('button', { name: 'Clear Layer 1' }).closest('.vj-deck-layer-line')).not.toBe(line)
     })
 

@@ -100,7 +100,7 @@ describe('what a person types', () => {
     it('shows the page only what the machine said about itself — never a code', () => {
         const { userCode, deviceCode } = startDeviceLogin({ label: 'taron-laptop', from: '203.0.x.x', now: T0 })
         const seen = describePending(userCode.toLowerCase(), T0 + 1000)
-        expect(seen).toEqual({ label: 'taron-laptop', requestedAt: T0, expiresAt: T0 + DEVICE_TTL_MS, from: '203.0.x.x' })
+        expect(seen).toEqual({ label: 'taron-laptop', requestedAt: T0, expiresAt: T0 + DEVICE_TTL_MS, from: '203.0.x.x', scope: 'login' })
         expect(JSON.stringify(seen)).not.toContain(deviceCode)
         expect(describePending('BBBB-BBBB', T0)).toBeNull()
         expect(describePending(userCode, T0 + DEVICE_TTL_MS + 1)).toBeNull()

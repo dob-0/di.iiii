@@ -284,6 +284,61 @@ const strayServers = (home) => {
     }
 }
 
+/**
+ * Is a server of THIS install running — by the supervisor, the pid file, or a
+ * process out of this install's own versions directory. A healthy answer on the
+ * port is not enough to say so: another program's serverXR (another install, a
+ * standby copy) answers the same health check, and `di up` then claimed it as
+ * its own ("already running"), after which `di new` met a server with no
+ * database of ours and said Unauthorized (seen on a Raspberry Pi, 2026-11-18).
+ */
+export const ownsServer = (home, { systemd = null } = {}) => isRunning(home, { systemd }) || strayServers(home).length > 0
+
+/**
+ * The socket inode(s) listening on a TCP port, from /proc/net/tcp{,6}; null
+ * where that cannot be read (macOS, Windows). `ss -p` was tried first and
+ * shows no pids on some machines, /proc does not depend on it.
+ */
+const listenerInodes = (port) => {
+    const hex = port.toString(16).toUpperCase().padStart(4, '0')
+    const inodes = []
+    let read = false
+    for (const file of ['/proc/net/tcp', '/proc/net/tcp6']) {
+        let text
+        try { text = fs.readFileSync(file, 'utf8') } catch { continue }
+        read = true
+        for (const line of text.split('\n').slice(1)) {
+            const cols = line.trim().split(/\s+/)
+            // cols: sl local_address rem_address st ... inode(9); st 0A = LISTEN
+            if (cols[3] === '0A' && cols[1]?.endsWith(`:${hex}`) && cols[9]) inodes.push(cols[9])
+        }
+    }
+    return read ? inodes : null
+}
+
+/** Does any of these pids hold one of these socket inodes. */
+const holdsSocket = (pids, inodes) => pids.some(pid => {
+    try {
+        return fs.readdirSync(`/proc/${pid}/fd`).some(fd => {
+            try { return inodes.includes(/^socket:\[(\d+)\]$/.exec(fs.readlinkSync(`/proc/${pid}/fd/${fd}`))?.[1]) } catch { return false }
+        })
+    } catch { return false }
+})
+
+/**
+ * Is the server answering on THIS PORT this install's own. `ownsServer` says an
+ * own server runs somewhere; a stranger can still hold the port asked about
+ * (own server on :4171, stranger on :4000). Where /proc can say which process
+ * holds the port it must be one of ours; where it cannot, the earlier answer stands.
+ */
+export const ownsPort = (home, port, opts = {}) => {
+    if (!ownsServer(home, opts)) return false
+    const inodes = listenerInodes(port)
+    const mine = [readPid(home), ...strayServers(home)].filter(Boolean)
+    if (!inodes || !inodes.length || !mine.length) return true
+    return holdsSocket(mine, inodes)
+}
+
 export const stop = async ({ home, systemd = null }) => {
     // The unit first: systemd never restarts a unit it was asked to stop, so
     // `di down` lasts. Then the detached path as before, which also ends a

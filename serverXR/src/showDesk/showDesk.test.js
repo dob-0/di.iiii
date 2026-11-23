@@ -783,7 +783,7 @@ describe('the live strip plays the live look with the laser desk\'s own looks/ed
 
 describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
     it('the MIDI line names the device; the default map uses the K2\'s own numbers on channel 15 (14 on the wire)', () => {
-        expect($('midiLine').textContent).toBe('MIDI: XONE:K2')
+        expect($('midiLine').textContent).toMatch(/^MIDI: XONE:K2( · heard (CC|note) \d+ ch (1[0-6]|[1-9]) → [\w:-]+( [\w ]+)?)?$/) // exactly the device, or the device plus ONE well-formed 'heard' note from an earlier test
         const k2 = JSON.parse(fs.readFileSync(path.join(UI, 'midi/xone-k2.json'), 'utf8'))
         const num = (control) => k2.find((c) => c.control === control).number
         const map = window.DiShowDesk.midiMap()
@@ -817,6 +817,46 @@ describe('MIDI: a controller in the page, the Xone:K2 map by default', () => {
         midi(0x9e, 37, 127)
         await settle()
         expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+    })
+    it('any channel: a K2 set to channel 1 still drives the same rows, and the line says what it heard', async () => {
+        midi(0x90, 37, 127) // matrix B on channel 1 (0 on the wire), not the map's 15
+        await settle()
+        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+        expect($('midiLine').textContent).toContain('heard note 37 ch 1 → scene:1')
+        midi(0xb3, 99, 10) // a number the map does not hold, on any channel
+        expect($('midiLine').textContent).toContain('heard CC 99 ch 4 → not mapped')
+    })
+    it('any channel: the Blackout button on another channel still blacks out', async () => {
+        midi(0x95, 27, 127)
+        await settle()
+        expect(posts).toEqual(DARK)
+    })
+    it('any channel: two rows on one number is a guess, so it is left unmapped; Blackout still wins', async () => {
+        const learnOn = async (target, status, num = 37) => {
+            await press($('midiLearn'))
+            const key = document.querySelector(`[data-midi="${target}"]`)
+            key.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }))
+            key.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }))
+            midi(status, num, 127)
+            await settle()
+        }
+        const before = window.DiShowDesk.midiMap()
+        const scene1 = before.find((m) => m.target === 'scene:1')
+        expect(scene1).toMatchObject({ kind: 'note', num: 37, ch: 14 })
+        const orig2 = before.find((m) => m.target === 'scene:2')
+        await learnOn('scene:2', 0x92) // note 37 now also drives scene:2 on channel 3
+        posts.length = 0
+        midi(0x96, 37, 127) // note 37 on channel 7: two rows hold it, neither is this channel's
+        await settle()
+        expect(posts).toEqual([])
+        expect($('midiLine').textContent).toContain('heard note 37 ch 7 → not mapped')
+        midi(0x9e, 37, 127) // the exact channel still wins
+        await settle()
+        expect(posts[0]).toEqual({ url: '../light/api/scenes/recall', body: { id: 'blue' } })
+        // put scene:2 back on its own control, so the next tests see the map they expect
+        await learnOn('scene:2', 0x90 | orig2.ch, orig2.num)
+        expect(window.DiShowDesk.midiMap().filter((m) => m.target === 'scene:2')).toEqual([orig2])
+        expect(window.DiShowDesk.midiMap().filter((m) => m.kind === 'note' && m.num === 37).map((m) => m.target)).toEqual(['scene:1'])
     })
     it('the Blackout button (matrix P) sends only the two dark routes', async () => {
         midi(0x9e, 27, 127)

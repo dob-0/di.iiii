@@ -10,6 +10,7 @@ import { isEmbedRequest } from '../utils/previewMode.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import { buildWikiArticlePath, buildWikiPath } from '../utils/spaceRouting.js'
 import { wikiBackdropOn } from '../utils/decorative3d.js'
+import { readLastProject } from '../components/lastProject.js'
 
 // Lazy, not static — same fix as LandingPage.jsx: a plain import ships the
 // three.js vendor chunk (1.47 MB) to every wiki reader, phones included,
@@ -52,6 +53,7 @@ function useMetaDescription(text) {
 }
 
 export default function WikiPage({ articleId = null }) {
+    const lastProject = useMemo(() => readLastProject(), [])
     const [query, setQuery] = useState('')
     // Same admin gate as StudioHub. While auth resolves, role is null
     // and the link stays hidden — anonymous readers never see a dead end.
@@ -134,7 +136,7 @@ export default function WikiPage({ articleId = null }) {
                 sections and linked to none of them; its own way home was a
                 fourth name ("← Home") for the screen three other surfaces
                 already called three other things. One bar, one set of names. */}
-            <SurfaceBar here="wiki" isLocalInstall={localInstall.isLocal} hidden={isEmbed}>
+            <SurfaceBar here="wiki" space={lastProject.space} project={lastProject.project} isLocalInstall={localInstall.isLocal} hidden={isEmbed}>
                 {role === 'admin' && <a className="sbar-link" href="/admin">Admin</a>}
             </SurfaceBar>
 

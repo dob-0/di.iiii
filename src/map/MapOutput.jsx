@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
+import useDeskClock from './useDeskClock.js'
 import { mapOutputReason } from './mapOutputReason.js'
 import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import RigBlackout from '../rig/RigBlackout.jsx'
 import useScreenWakeLock from '../hooks/useScreenWakeLock.js'
+import { useOutputPresence } from './outputPresence.js'
+import { buildPerformPath } from '../perform/performRouting.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { isPreviewRequest, signalPreviewReady } from '../utils/previewMode.js'
 import './mapSurface.css'
@@ -24,6 +27,8 @@ const NO_NETWORK = { nodes: [], wires: [] }
 
 export default function MapOutput({ projectId, spaceId }) {
     const { store, mapping, document: doc } = useMapDocument(projectId, { role: 'out' })
+    // LFOs swing to the same beat as the desk, drawn a little ahead like the show's windows.
+    useDeskClock(mapping?.tempo, { out: true })
     // The project's picture operators, for a surface whose source is Pictures.
     const network = useMemo(() => toTopNetwork(doc), [doc])
     // This page is its machine on the desk: a kiosk with a camera and a
@@ -59,6 +64,9 @@ export default function MapOutput({ projectId, spaceId }) {
     // src/hooks/useScreenWakeLock.js) — a two-display rig going black 15
     // minutes in because the OS blanked the screen is the bug this fixes.
     useScreenWakeLock()
+    // Answers the Perform desk's "is it open" ping, and asks for full screen when the
+    // mapping says so (src/map/outputPresence.js).
+    useOutputPresence(projectId, { fullscreen: mapping?.output?.window?.fullscreen === true, enabled: !isPreview })
 
     // Mirrored into the tab title, not the picture: a black wall is
     // ambiguous from a screenshot alone (nothing mapped? everything
@@ -111,7 +119,7 @@ export default function MapOutput({ projectId, spaceId }) {
             {stage.width > 0 ? (
                 <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} assets={doc?.assets || null} projectId={projectId} live />
             ) : null}
-            {isPreview ? null : <MapOutputControls />}
+            {isPreview ? null : <MapOutputControls spaceId={spaceId} projectId={projectId} />}
             <RigBlackout />
         </div>
     )
@@ -120,7 +128,7 @@ export default function MapOutput({ projectId, spaceId }) {
 // The only chrome the signal carries, and it hides itself the moment the
 // pointer stops. Everything here is one problem: getting this window onto the
 // projector and filling it, which is otherwise a drag and an F11 in the dark.
-function MapOutputControls() {
+export function MapOutputControls({ spaceId, projectId }) {
     const [screens, setScreens] = useState([])
     const [full, setFull] = useState(false)
 
@@ -168,6 +176,13 @@ function MapOutputControls() {
         }
     }, [])
 
+    // The way back to the desk this wall was set up from. Part of the same
+    // controls (hidden when idle with them) and never while full screen, so
+    // the projector picture carries nothing it did not before.
+    const backToPerform = useCallback(() => {
+        window.location.assign(buildPerformPath(spaceId, projectId, { from: 'map' }))
+    }, [spaceId, projectId])
+
     return (
         <div className="map-output-controls">
             <button type="button" onClick={() => goFullscreen()}>{full ? 'Exit full screen' : 'Full screen'}</button>
@@ -181,6 +196,7 @@ function MapOutputControls() {
                     {screen.label || `Display ${index + 1}`}
                 </button>
             )) : null}
+            {!full && spaceId && projectId ? <button type="button" onClick={backToPerform}>Back to Perform</button> : null}
         </div>
     )
 }
