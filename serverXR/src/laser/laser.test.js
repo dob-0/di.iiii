@@ -4,11 +4,15 @@ import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
-import { generateShape, LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE } from '../../../src/project/nodes/laser.shape/laserShapes.js'
+import { generateShape, LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE, DOT_SHAPES } from '../../../src/project/nodes/laser.shape/laserShapes.js'
 
 const require = createRequire(import.meta.url)
 const proto = require('./lasercubeProtocol')
-const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, GUARD } = require('./laserEngine')
+const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, dotsAllowed, DOTS_MAX_SHARE, ARM_PHRASE, GUARD, CUSHION_MS } = require('./laserEngine')
+// What a cube is topped up to at a rate (2026-11-07, REA: one tick's worth a tick left the cubes 7 ms from empty).
+// Not still, or only dots that laser.json "dots": true lets through.
+const okDots = (list) => !list.length || dotsAllowed(list)
+const cushionAt = (rate) => Math.ceil((rate * CUSHION_MS) / 1000)
 const guards = require('./laserGuards')
 
 const fakeSocket = () => {
@@ -191,7 +195,9 @@ describe('still beams in a frame', () => {
             for (const points of [120, 500]) {
                 for (const size of MARK_SHAPES.includes(shape) ? [0.5, MARK_MIN_SIZE] : [0.5, 0.1, 0.05]) {
                     const frame = applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points
-                    expect(stillBeams(frame), `${shape} size ${size} × ${points}`).toEqual([])
+                    // A dot shape is dots only: a still beam unless laser.json says "dots": true, which lets it through.
+                    if (DOT_SHAPES.includes(shape)) expect(okDots(stillBeams(frame)), `${shape} size ${size} × ${points}`).toBe(true)
+                    else expect(stillBeams(frame), `${shape} size ${size} × ${points}`).toEqual([])
                 }
                 const collapsed = applyZone(generateShape({ shape, size: 0, height: 0.5, points }), normaliseZone()).points
                 expect(stillBeams(collapsed).length, `${shape} collapsed`).toBeGreaterThan(0)
@@ -380,6 +386,44 @@ describe('the laser engine', () => {
     })
 })
 
+describe('the cushion (2026-11-07, REA festival: the cubes blinked on cable; TouchDesigner, keeping ~5000 points queued, did not)', () => {
+    it('a dark frame after a lit one empties the cube\'s queue too, then streams dark', () => {
+        const { engine, socket, hear, at } = armedWith(ONE)
+        engine.setFrame('all', circle)
+        engine.tick()
+        socket.sent.length = 0
+        engine.setFrame('all', [[0, 0.5, 0, 0, 0]])
+        at(20)
+        engine.tick()
+        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x8a]])
+        expect(dataTo(socket)).toEqual([])
+        hear('10.0.0.51', [0x8a, 0, 0x70, 0x17])
+        at(20)
+        engine.tick()
+        expect(pointsIn(dataTo(socket))).toBeGreaterThan(0)
+        expect(litIn(dataTo(socket))).toBe(0)
+        // Dark stays dark without clearing again.
+        socket.sent.length = 0
+        at(20)
+        engine.tick()
+        expect(cmds(socket)).toEqual([])
+    })
+    it('the state shows each cube\'s stream: the least queued before a top-up, the longest gap, dry spells and late ticks', () => {
+        const { engine, at } = armedWith(ONE)
+        engine.setFrame('all', circle)
+        engine.tick() // the first top-up after the clear counts no gap
+        at(20)
+        engine.tick()
+        at(CUSHION_MS + 30) // a stall longer than the cushion: it ran out
+        engine.tick()
+        const s = engine.state().cubes[0].stream
+        expect(s.cushionMs).toBe(CUSHION_MS)
+        expect(s.now).toMatchObject({ tops: 3, maxGapMs: CUSHION_MS + 30, dry: 1, late: 1 })
+        expect(s.now.lowMs).toBe(0)
+        expect(s.total).toEqual({ dry: 1, late: 1 })
+    })
+})
+
 describe('the signal-loss stop', () => {
     it('a lit frame not refreshed for 200 ms: the cube is blanked and sent output-off twice, then nothing', () => {
         const { engine, socket, at } = armedWith(ONE)
@@ -491,6 +535,35 @@ describe('the still-beam guard', () => {
         expect(rig.engine.state().cubes[0].stop).toBe(null)
         expect(cmds(rig.socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x80, 1]])
         expect(dataTo(rig.socket)).toEqual([])
+    })
+    // 2026-11-07, REA: laser.json "dots": true (the owner: "jsut points smallest one"; her TouchDesigner holds a point still).
+    const dots = (n, at = 0.6) => Array.from({ length: n }, (_, i) => {
+        const a = (i * 2 * Math.PI) / n
+        return Array.from({ length: 6 }, () => [Math.cos(a) * at, 0.5 + Math.sin(a) * at * 0.4, 0, 1, 1])
+    }).flatMap((d) => [...d, [d[0][0], d[0][1], 0, 0, 0]])
+    it('dots are ON by default; laser.json "dots": false makes many separate dots a still beam', () => {
+        const dflt = armedWith(ONE)
+        holdStill(dflt, dots(17), 2000)
+        expect(dflt.engine.state().cubes[0].stop).toBe(null)
+        expect(dflt.engine.state().guard.dots).toBe(true)
+        const off = armedWith({ ...ONE, dots: false })
+        holdStill(off, dots(17), GUARD.STILL_HOLD_MS + 40)
+        expect(off.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+        const on = armedWith({ ...ONE, dots: true })
+        holdStill(on, dots(17), 2000)
+        expect(on.engine.state().cubes[0].stop).toBe(null)
+        expect(on.engine.state().guard).toMatchObject({ dots: true, dotsMaxShare: DOTS_MAX_SHARE })
+        expect(off.engine.state().guard.dots).toBe(false)
+    })
+    it('with dots on one dot alone, a few big dots, or one spot holding half the frame still stop the cube', () => {
+        for (const frame of [dot(), dots(4), [...dots(9), ...Array.from({ length: 400 }, () => [0.6, 0.5, 0, 1, 1])]]) {
+            const rig = armedWith(ONE)
+            holdStill(rig, frame, GUARD.STILL_HOLD_MS + 40)
+            expect(rig.engine.state().cubes[0].stop).toMatchObject({ reason: 'still-beam' })
+        }
+        expect(dotsAllowed([{ kind: 'dot', share: 0.05 }])).toBe(false)
+        expect(dotsAllowed([{ kind: 'dot', share: 0.05 }, { kind: 'dwell', share: 0.05 }])).toBe(false)
+        expect(dotsAllowed([{ kind: 'dot', share: 0.05 }, { kind: 'dot', share: 0.05 }])).toBe(true)
     })
     it('a moving figure is never stopped, however long it is held', () => {
         const rig = armedWith(ONE)

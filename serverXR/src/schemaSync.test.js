@@ -1154,3 +1154,155 @@ describe('output.window on the CJS twin — how the output window opens (Perform
     }
   })
 })
+
+describe('the visuals bank on the CJS twin', () => {
+  // The server applies every op through this file; if only the ESM side knew the bank, the
+  // first save would empty it and turn every 'visual' screen back into a test pattern.
+  const v = (id, source) => ({ id, name: id, source: source || { kind: 'image', ref: '/a.png' } })
+  const base = () => normalizeProjectDocument({})
+
+  it('applies the visual ops and keeps the new source kinds and input through a re-normalize', () => {
+    const written = applyProjectOps(base(), [
+      { type: 'createMappingVisual', payload: { visual: v('a') } },
+      { type: 'createMappingVisual', payload: { visual: v('b', { kind: 'html', ref: '/x.html' }), index: 0 } },
+      { type: 'createMappingSurface', payload: { surface: { id: 's', source: { kind: 'visual', ref: 'a' }, input: [0.5, 0, 2, 1] } } },
+      { type: 'setMappingState', payload: { patch: { playing: 'a', visuals: [] } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.mappingState.visuals.map((x) => x.id)).toEqual(['b', 'a'])
+    expect(read.mappingState.playing).toBe('a')
+    expect(read.mappingState.surfaces[0].source).toEqual({ kind: 'visual', ref: 'a' })
+    expect(read.mappingState.surfaces[0].input).toEqual([0.5, 0, 0.5, 1])
+  })
+
+  it('deleteMappingVisual repoints surfaces, and its inverse undoes it', () => {
+    const doc = applyProjectOps(base(), [
+      { type: 'createMappingVisual', payload: { visual: v('a') } },
+      { type: 'createMappingSurface', payload: { surface: { id: 's', source: { kind: 'visual', ref: 'a' } } } },
+      { type: 'setMappingState', payload: { patch: { playing: 'a' } } }
+    ])
+    const ops = [{ type: 'deleteMappingVisual', payload: { visualId: 'a' } }]
+    const after = applyProjectOps(doc, ops)
+    expect(after.mappingState.surfaces[0].source).toEqual({ kind: 'wall', ref: '' })
+    expect(after.mappingState.playing).toBe('')
+    // the inverse restores everything but the wall, which it leaves as it is (audit 11-12)
+    const undone = applyProjectOps(after, schema.invertProjectOps(doc, ops)).mappingState
+    expect(undone.playing).toBe('')
+    expect({ ...undone, playing: 'a' }).toEqual(doc.mappingState)
+  })
+
+  it('matches the ESM twin on clamping, caps and kinds', () => {
+    const state = normalizeProjectDocument({ mappingState: {
+      visuals: [{ id: 'w', source: { kind: 'wall' } }, { id: 'w' }, { name: 'idless' }],
+      surfaces: [{ id: 's', input: [-1, 2, 5, -3] }, { id: 't', input: [0, 0, 1] }]
+    } }).mappingState
+    expect(state.visuals).toEqual([{ id: 'w', name: 'Visual 1', source: { kind: 'test', ref: 'card' }, opacity: 1, effects: [], thumb: '', paramSpec: [], params: {} }])
+    expect(state.surfaces[0].input).toEqual([0, 1, 1, 0.001])
+    expect('input' in state.surfaces[1]).toBe(false)
+  })
+
+  it('stores effects and opacity on visuals and the composition, bounded', () => {
+    const fx = [{ id: ' a ', type: 'blur', on: false, params: { amount: 5, big: 1e9, flag: true, label: 'x'.repeat(40), bad: null, '1no': 3 } }, { type: 'tint' }]
+    let d = base()
+    d = applyProjectOps(d, [{ type: 'createMappingVisual', payload: { visual: { id: 'a', effects: fx, opacity: 5 } } }])
+    expect(d.mappingState.visuals[0].opacity).toBe(1)
+    expect(d.mappingState.visuals[0].effects).toEqual([
+      { id: 'a', type: 'blur', on: false, params: { amount: 5, big: 100000, flag: true, label: 'x'.repeat(24) } },
+      { id: 'fx1', type: 'tint', on: true, params: {} }
+    ])
+    const ops = [{ type: 'setMappingVisual', payload: { visualId: 'a', patch: { opacity: 0.5, effects: [{ type: 'mirror' }] } } }]
+    const after = applyProjectOps(d, ops)
+    expect(after.mappingState.visuals[0].opacity).toBe(0.5)
+    expect(after.mappingState.visuals[0].effects).toEqual([{ id: 'fx0', type: 'mirror', on: true, params: {} }])
+    expect(applyProjectOps(after, schema.invertProjectOps(d, ops)).mappingState).toEqual(d.mappingState)
+    const cops = [{ type: 'setMappingState', payload: { patch: { effects: [{ id: 'c', type: 'glow', params: { k: 2 } }] } } }]
+    const comp = applyProjectOps(d, cops)
+    expect(comp.mappingState.effects).toEqual([{ id: 'c', type: 'glow', on: true, params: { k: 2 } }])
+    expect(applyProjectOps(comp, schema.invertProjectOps(d, cops)).mappingState.effects).toEqual([])
+    expect(base().mappingState.effects).toEqual([])
+  })
+  it('keeps a safe thumb on visuals, blanks bad schemes, and the inverse restores it', () => {
+    let d = base()
+    d = applyProjectOps(d, [{ type: 'createMappingVisual', payload: { visual: { id: 'a' } } }])
+    expect(d.mappingState.visuals[0].thumb).toBe('')
+    const ops = [{ type: 'setMappingVisual', payload: { visualId: 'a', patch: { thumb: '  /t/a.png ' } } }]
+    const after = applyProjectOps(d, ops)
+    expect(after.mappingState.visuals[0].thumb).toBe('/t/a.png')
+    expect(schema.normalizeMappingVisual(after.mappingState.visuals[0]).thumb).toBe('/t/a.png')
+    expect(applyProjectOps(after, schema.invertProjectOps(d, ops)).mappingState).toEqual(d.mappingState)
+    const back = applyProjectOps(after, [{ type: 'setMappingVisual', payload: { visualId: 'a', patch: { thumb: 'javascript:alert(1)' } } }])
+    expect(back.mappingState.visuals[0].thumb).toBe('')
+    const inv = schema.invertProjectOps(after, [{ type: 'setMappingVisual', payload: { visualId: 'a', patch: { thumb: 'x' } } }])
+    expect(applyProjectOps(back, inv).mappingState.visuals[0].thumb).toBe('/t/a.png')
+    expect(schema.normalizeMappingVisual({ thumb: 'data:image/png;base64,AA' }).thumb).toBe('data:image/png;base64,AA')
+    expect(schema.normalizeMappingVisual({ thumb: 5 }).thumb).toBe('')
+    expect(schema.normalizeMappingVisual({ thumb: '/' + 'x'.repeat(3000) }).thumb).toHaveLength(2048)
+  })
+  it('keeps paramSpec and params on visuals, filters bad entries, and the inverse restores them', () => {
+    let d = base()
+    d = applyProjectOps(d, [{ type: 'createMappingVisual', payload: { visual: { id: 'a' } } }])
+    expect(d.mappingState.visuals[0].paramSpec).toEqual([])
+    expect(d.mappingState.visuals[0].params).toEqual({})
+    const spec = [
+      { key: 'speed', label: ' Speed ', type: 'number', min: 0, max: 2, default: 9 },
+      { key: '9bad', type: 'number' },
+      { key: 'weird', type: 'nope' },
+      { key: 'speed', type: 'toggle' },
+      { key: 'mode', type: 'choice', options: [['a', 'A'], ['b'], [5, 'x'], ['bad id', 'y']], default: 'zzz' }
+    ]
+    const ops = [{ type: 'setMappingVisual', payload: { visualId: 'a', patch: { paramSpec: spec, params: { speed: 1.5, 'x y': 1, on: true, s: 'hi', o: {}, n: NaN } } } }]
+    const after = applyProjectOps(d, ops)
+    const v = after.mappingState.visuals[0]
+    expect(v.paramSpec.map((p) => p.key)).toEqual(['speed', 'mode'])
+    expect(v.paramSpec[0]).toEqual({ key: 'speed', label: 'Speed', type: 'number', min: 0, max: 2, step: 0.01, default: 2, options: [] })
+    expect(v.paramSpec[1].options).toEqual([['a', 'A'], ['b', 'b']])
+    expect(v.paramSpec[1].default).toBe('a')
+    expect(v.params).toEqual({ speed: 1.5, on: true, s: 'hi' })
+    expect(schema.normalizeMappingVisual(v)).toEqual(v)
+    expect(applyProjectOps(after, schema.invertProjectOps(d, ops)).mappingState).toEqual(d.mappingState)
+    const many = Array.from({ length: 40 }, (_, i) => ({ key: 'k' + i, type: 'toggle' }))
+    expect(schema.normalizeMappingVisual({ paramSpec: many }).paramSpec).toHaveLength(32)
+    const opts = Array.from({ length: 20 }, (_, i) => ['o' + i, 'O'])
+    expect(schema.normalizeMappingVisual({ paramSpec: [{ key: 'c', type: 'choice', options: opts }] }).paramSpec[0].options).toHaveLength(16)
+    const bag = Object.fromEntries(many.map((p) => [p.key, 1]))
+    expect(Object.keys(schema.normalizeMappingVisual({ params: bag }).params)).toHaveLength(32)
+    expect(schema.normalizeMappingVisual({ params: [1] }).params).toEqual({})
+  })
+  it('drops invalid effect entries, caps at 16 and makes duplicate ids unique', () => {
+    const list = schema.normalizeMappingEffects([null, 'x', 3, [], { type: '9bad' }, { type: 'has space' }, { type: 5 }, { id: 'd', type: 'a' }, { id: 'd', type: 'b' }])
+    expect(list.map((e) => e.id)).toEqual(['d', 'd-1'])
+    expect(schema.normalizeMappingEffects('nope')).toEqual([])
+    expect(schema.normalizeMappingEffects(Array.from({ length: 30 }, () => ({ type: 'a' })))).toHaveLength(16)
+    const p = schema.normalizeMappingEffects([{ type: 'a', params: Object.fromEntries(Array.from({ length: 30 }, (_, i) => ['k' + i, i])) }])[0].params
+    expect(Object.keys(p)).toHaveLength(16)
+    expect(schema.normalizeMappingEffects([{ type: 'a', params: 'x' }])[0].params).toEqual({})
+  })
+})
+
+describe('advanced output surface fields on the CJS twin', () => {
+  const inputs = [
+    {},
+    { flip: 'hv', isKey: true, blackBg: false, red: 5, green: -0.123456, blue: 0.5, inputRotation: 190, softEdge: { enabled: true, left: 9, power: 0, gamma: 50, luminance: -1 } },
+    { warp: { mode: 'bezier', divisionsX: 1, divisionsY: 1, points: [[0.2, 0.2], [0.5, 0], [0.9, 0.9], [0, 0.5], [0.123456789, 3], [1, 0.5], [0, 1], [0.5, 1], [5, 5]] } },
+    { warp: { mode: 'nope', divisionsX: 9, divisionsY: -1, points: [[0, 0]] } },
+    { warp: null },
+    { flip: 'x', inputRotation: -180, softEdge: 'x' },
+  ]
+
+  it('agrees with the ESM twin on every shape', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    for (const input of inputs) {
+      expect(schema.normalizeMappingSurface({ id: 'a', ...input })).toEqual(esm.normalizeMappingSurface({ id: 'a', ...input }))
+    }
+    expect(schema.regularWarpGrid(2, 1)).toEqual(esm.regularWarpGrid(2, 1))
+    expect(schema.regularWarpGrid(2, 1)).toHaveLength(15)
+  })
+
+  it('sets and removes warp through setMappingSurface', () => {
+    const doc = applyProjectOps(normalizeProjectDocument({}), [{ type: 'createMappingSurface', payload: { surface: { id: 'a' } } }])
+    const set = applyProjectOps(doc, [{ type: 'setMappingSurface', payload: { surfaceId: 'a', patch: { warp: { divisionsX: 1 } } } }])
+    expect(set.mappingState.surfaces[0].warp.points).toHaveLength(6)
+    const gone = applyProjectOps(set, [{ type: 'setMappingSurface', payload: { surfaceId: 'a', patch: { warp: null } } }])
+    expect('warp' in gone.mappingState.surfaces[0]).toBe(false)
+  })
+})

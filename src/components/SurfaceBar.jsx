@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import './surfaceBar.css'
 import { appNavigate } from '../utils/appNavigate.js'
@@ -8,7 +8,7 @@ import { buildMapPath } from '../map/mapRouting.js'
 import { useAllTools } from '../studio/utils/jamMode.js'
 import SyncLight from '../sync/SyncLight.jsx'
 import { spaceWordFor } from '../utils/oneNamePerSpace.js'
-import { rememberProject } from './lastProject.js'
+import { readLastProjectOf, rememberProject } from './lastProject.js'
 
 /**
  * The one strip that is on every surface.
@@ -78,7 +78,20 @@ const LAYER_OF = { raw: 'connections', map: 'wall', light: 'lamps' }
 // `layers` null means "show everything": still loading, the open jam, "All tools".
 export const layerReached = (key, layers) => !layers || !LAYER_OF[key] || Boolean(layers[LAYER_OF[key]])
 
-export const surfaceDestinations = ({ isLocalInstall = false, space = null, project = null, projectLabel = null, layers = null, here = null } = {}) => {
+// At space level (a space, no project) Nodes opens the project the person last stood in
+// inside THIS space, when there is one (`lastProject`, an id; batch 2 of the reach work,
+// N3851.19). It goes to the list as before when there is none, when the page KNOWS the
+// space's projects (`knownProjects`, ids) and that one is no longer among them, and when
+// the person is on the Nodes surface itself (`here` is raw): the list is Nodes' own
+// picker, not a place to be thrown out of.
+const nodesAtSpaceLevel = ({ space, here, lastProject, knownProjects }) => {
+    const known = Array.isArray(knownProjects) ? knownProjects.includes(lastProject) : true
+    return lastProject && here !== 'raw' && known
+        ? buildRawProjectPath(lastProject, space)
+        : buildRawProjectsPath(space)
+}
+
+export const surfaceDestinations = ({ isLocalInstall = false, space = null, project = null, projectLabel = null, layers = null, here = null, lastProject = null, knownProjects = null } = {}) => {
     // A project only means something inside its space; without the space
     // there is no address to build.
     const inProject = Boolean(space && project)
@@ -100,7 +113,7 @@ export const surfaceDestinations = ({ isLocalInstall = false, space = null, proj
             if (d.key === 'studio') {
                 return { ...d, href: inProject ? buildStudioProjectPath(project, space) : buildStudioHubPath(space) }
             }
-            return { ...d, href: inProject ? buildRawProjectPath(project, space) : buildRawProjectsPath(space) }
+            return { ...d, href: inProject ? buildRawProjectPath(project, space) : nodesAtSpaceLevel({ space, here, lastProject, knownProjects }) }
         })
 }
 
@@ -149,11 +162,15 @@ export default function SurfaceBar({
     children = null,       // one surface-specific control, at most
     trail = null,          // where you are inside the project (Nodes: › node, ← Back), after its name
     layers = null,         // inside a project: which layers are open (src/project/layers.js)
+    knownProjects = null,  // at space level: the ids of the space's projects, when the page has them (a last project not among them is not opened)
 }) {
     // "⚒ All tools", kept in this browser, brings every name back.
     const allTools = useAllTools()
     useEffect(() => { rememberProject(space, project) }, [space, project])
-    const destinations = surfaceDestinations({ isLocalInstall, space, project, projectLabel, layers: allTools ? null : layers, here })
+    // At space level Nodes opens this space's last project; inside a project the bar
+    // already names it, so nothing is read there.
+    const lastProject = useMemo(() => (project ? null : readLastProjectOf(space)), [space, project])
+    const destinations = surfaceDestinations({ isLocalInstall, space, project, projectLabel, layers: allTools ? null : layers, here, lastProject, knownProjects })
 
     // Priority+ (2026-09-27): a phone at 390px could not hold the bar — WIKI
     // was sliced off the right edge, and with every layer open seven names

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 // Partial: the Pictures source reaches the project asset URLs (Clip In), which
 // read the rest of apiClient at import time.
@@ -80,6 +80,21 @@ describe('what a surface draws', () => {
     it('holds a page surface as a card until it is asked to run', () => {
         render(<MapSourceView surface={surfaceOf({ kind: 'url', ref: 'https://example.test' })} live={false} label="ԳՈՌ" />)
         expect(screen.getByText('https://example.test')).toBeTruthy()
+    })
+
+    it('runs an html visual in an iframe sandboxed without same-origin', async () => {
+        const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'html', ref: '/api/projects/p1/assets/page1' })} />)
+        // The page waits for a boot slot first; the queue releases it.
+        await waitFor(() => expect(container.querySelector('iframe')).toBeTruthy())
+        const frame = container.querySelector('iframe')
+        expect(frame.getAttribute('sandbox')).toBe('allow-scripts allow-pointer-lock')
+        expect(frame.src.endsWith('/serverXR/api/projects/p1/assets/page1')).toBe(true)
+    })
+
+    it('holds an html visual as a placeholder when it is not live', () => {
+        const { container } = render(<MapSourceView surface={surfaceOf({ kind: 'html', ref: '/api/projects/p1/assets/page1' })} live={false} label="ԳՈՌ" />)
+        expect(container.querySelector('iframe')).toBeNull()
+        expect(container.querySelector('.map-source-placeholder')).toBeTruthy()
     })
 
     it('says so on the surface when motion glow has no WebGL to run on', async () => {
