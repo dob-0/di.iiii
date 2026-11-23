@@ -1,0 +1,27 @@
+{
+    "about": "Every public address of di. scripts/address-guard.mjs checks each one before and after any change to DNS, Cloudflare rules, redirects, sign-in callbacks, cookie host or env. settled=true only once a move is proven and a permanent jump is wanted.",
+    "names": [
+        {
+            "host": "diiii.xyz"
+        },
+        {
+            "host": "www.diiii.xyz",
+            "aliasOf": "diiii.xyz"
+        },
+        {
+            "host": "dev.diiii.xyz"
+        },
+        {
+            "host": "di-studio.xyz"
+        },
+        {
+            "host": "www.di-studio.xyz",
+            "aliasOf": "di-studio.xyz"
+        },
+        {
+            "host": "yokozo.xyz",
+            "installer": false,
+            "providers": []
+        }
+    ]
+}
