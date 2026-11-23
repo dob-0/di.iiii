@@ -280,6 +280,14 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .tool.is-active, .tool:hover { border-color: var(--line); color: var(--text); background: var(--pane2); }
 .stage-tools .sep { width: 1px; height: 18px; background: var(--line); margin: 0 4px; }
 .stage-tools input[type=range] { width: 90px; }
+/* The small stages carry the full set (select, hand, snap, arrange, light size, label, objects,
+   video, zoom): tighter, and the zoom slider gives way, so it stays one row at 1500 px. */
+.stagepane:not(.bigstage):not(.touchstage) .stage-tools { gap: 2px; padding: 6px 6px; }
+.stagepane:not(.bigstage):not(.touchstage) .stage-tools .tool { width: 27px; }
+.stagepane:not(.bigstage):not(.touchstage) .stage-tools .sep { margin: 0 2px; }
+.stagepane:not(.bigstage):not(.touchstage) .stage-tools input[type=range] { flex: 0 1 90px; width: 90px; min-width: 36px; }
+.tool.snapBtn svg { stroke-width: 3.4; }   /* the grid dots: round caps of zero-length strokes */
+.tool:disabled { opacity: .35; pointer-events: none; }
 
 /* The grid used to live on the inner (transformed) layer, sized to the old -1..2 world —
    pan or zoom far enough past that and the backdrop ran out, so the "room" read as a
@@ -289,9 +297,11 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .stage {
   flex: 1; position: relative; overflow: hidden; cursor: crosshair;
   background-color: var(--stagebg);
+  /* One line per tile, at its top and left edge: placeStages sets the tile (GRID world units
+     wide) and where it starts, so every line is a snap target. */
   background-image:
-    repeating-linear-gradient(0deg, #ffffff08 0 1px, transparent 1px 40px),
-    repeating-linear-gradient(90deg, #ffffff08 0 1px, transparent 1px 40px);
+    linear-gradient(180deg, #ffffff0c 0 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff0c 0 1px, transparent 1px);
 }
 /* the visible rect at zoom 1 — the 'home' screen the Fit button frames back to */
 .stage-inner::after {
@@ -303,14 +313,14 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 
 .fx-node { position: absolute; transform: translate(-50%, -50%); }
 .fx-body {
-  position: relative; width: 34px; height: 30px; border-radius: 0;
+  position: relative; width: calc(34px * var(--ns, 1)); height: calc(30px * var(--ns, 1)); border-radius: 0;   /* --ns: the light size of this view */
   border: 1px solid #00000055; display: flex; align-items: center; justify-content: center;
-  font-size: 11px; color: var(--text); font-weight: 600; cursor: grab;
+  font-size: calc(11px * var(--ns, 1)); color: var(--text); font-weight: 600; cursor: grab;
   background: #1d1d20; transition: background .1s linear;   /* matches paintStage's unlit body */
 }
 .fx-node.sel .fx-body { outline: 2px solid #fff; outline-offset: 1px; }
 .fx-node.dragging .fx-body { cursor: grabbing; }
-.fx-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; font-size: 9px; color: var(--muted); white-space: nowrap; pointer-events: none; }
+.fx-label { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 3px; font-size: calc(9px * var(--ns, 1)); color: var(--muted); white-space: nowrap; pointer-events: none; }
 
 .marquee { position: absolute; border: 1px solid var(--accent); background: #35d2dd22; pointer-events: none; }
 
@@ -1798,7 +1808,7 @@ body.dragscene .bankrow { cursor: grabbing; }
 /* A glance box: the lights are squares with their number, no captions: the 34px squares of
    the Setup plan pile on top of each other in a box this size. */
 .touchstage .fx-node { transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1))); }
-.touchstage .fx-body { width: 16px; height: 16px; font-size: 8px; font-weight: 500; cursor: grab; }
+.touchstage .fx-body { width: calc(16px * var(--ns, 1)); height: calc(16px * var(--ns, 1)); font-size: calc(8px * var(--ns, 1)); font-weight: 500; cursor: grab; }
 .touchstage .fx-label { display: none; }
 .touchstage .stage-empty { font-size: 11px; padding: 0 8px; text-align: center; }
 .touchstage.folded .stage { display: none; }

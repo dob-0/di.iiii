@@ -57,7 +57,10 @@ let banksPostedAt = 0;         // pullState ignores replies requested before thi
 let sceneSel = new Set();      // scenes multi-selected in the open container (shift/ctrl-click)
 let sceneAnchor = null;        // where a shift-click range starts
 let tool = 'select';
-let snap = false;
+// Snap to grid: ON unless she switched it off on this browser (the studio desk's default —
+// her lights, labels and objects then land on the lines the stage draws).
+let snap = true;
+try { snap = localStorage.getItem('lightdeskSnap') !== '0'; } catch (e) { /* private mode: on */ }
 // The stage viewport: pan in screen pixels, zoom 0.01-4 — wide enough to fit a rig
 // spread across the whole WORLD bound, not just the old fixed room. Setup and Control share
 // one (views.desk), so those two stay the same picture. The Stage page (the big workspace,
@@ -74,9 +77,24 @@ let spaceHeld = false;   // Space + drag pans, like every canvas tool she uses
 const viewOf = (el) => (!el || !el.closest ? views.desk
   : el.closest('#touchStage') ? views.touch : el.closest('.stagepage') ? views.stage : views.desk);
 const slidersOf = (el) => $$('.zoom').filter((z) => viewOf(z) === viewOf(el));
-// The grid objects and labels snap to: the 1/40 fixtures snap to across.
+// ONE grid step, in world units, shared by the lines the stage draws, the drag snap, the
+// arrange tools and the objects and labels. It used to be three: lines every 40 screen px,
+// fixtures snapping to 1/40 across and 1/24 down, objects to 1/40 — so a snapped light
+// landed between the drawn lines. (The studio desk's GRID, 2026-09-03.)
+const GRID = 0.05;
 // eslint-disable-next-line no-unused-vars -- read by objects.js and markers.js
-const snapv = (v) => Math.round(v * 40) / 40;
+const snapv = (v) => Math.round(Math.round(v / GRID) * GRID * 1e6) / 1e6;
+// The stage view each stage element belongs to, by name — the key its light size is kept under.
+const viewName = (el) => (!el || !el.closest ? 'desk'
+  : el.closest('#touchStage') ? 'touch' : el.closest('.stagepage') ? 'stage' : 'desk');
+// Light size: how big the lights are drawn, per view, kept in THIS browser (never in the show —
+// the Touch box on a phone wants small lights, the Stage page on a monitor wants big ones).
+// 1 = the size the lights have always had (the studio desk's 34 x 30 px).
+const NODE_SIZES = [0.5, 0.65, 0.8, 1, 1.25, 1.6, 2, 2.5];
+const nodeSize = { desk: 1, stage: 1, touch: 1 };
+for (const k of Object.keys(nodeSize)) {
+  try { const n = parseFloat(localStorage.getItem('lightdeskNodeSize.' + k)); if (NODE_SIZES.includes(n)) nodeSize[k] = n; } catch (e) { /* private mode */ }
+}
 // When this page last posted the stage objects / the stage labels (set by objects.js and
 // markers.js): a poll asked for before that cannot know about it and must not put the old
 // list back — a drag posts the whole list many times a second.
@@ -1221,13 +1239,20 @@ function placeStages() {
     const v = viewOf(inner);
     inner.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.zoom})`;
     inner.style.setProperty('--zoom', v.zoom);   // the Touch stage keeps its lights one size whatever the zoom
+    inner.style.setProperty('--ns', nodeSize[viewName(inner)]);   // light size, this view only
     // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
-    // tile forever — position and size just track the same pan/zoom the fixtures use, 40
-    // world-px apart at zoom 1, same as the grid dragging snaps fixtures to.
+    // tile forever. One line on every multiple of GRID in world units — the very grid the
+    // drag snap and the arrange tools use — so a snapped light sits ON a drawn line. A
+    // line is at inner x = ox + k*GRID*sc, so the tiling starts at ox*zoom + pan. Zoomed
+    // out far enough that the lines would crowd, every 5th (or 25th) is drawn instead:
+    // still on the same grid, just sparser.
     const outer = inner.closest('.stage');
     if (outer) {
-      outer.style.backgroundPosition = `${v.x}px ${v.y}px`;
-      outer.style.backgroundSize = `${40 * v.zoom}px ${40 * v.zoom}px`;
+      const g = stageMap(sizes[paneIdx].W, sizes[paneIdx].H);
+      let cell = GRID * g.sc * v.zoom;
+      while (cell < 7) cell *= 5;
+      outer.style.backgroundPosition = `${v.x + g.ox * v.zoom}px ${v.y + g.oy * v.zoom}px`;
+      outer.style.backgroundSize = `${cell}px ${cell}px`;
     }
     // Label crowding: labels scale with the zoom, and positions scale with (scale ×
     // zoom), so whether two labels collide depends only on the container size — a narrow
@@ -1247,6 +1272,7 @@ function placeStages() {
       node.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
     }
     const tiny = v.zoom < 0.5 || W < 360;
+    const ns = nodeSize[viewName(inner)];
     const shown = [];                    // fixtures whose labels stay visible
     for (const node of $$('.fx-node', inner)) {
       const f = fxById(node.dataset.id);
@@ -1258,7 +1284,7 @@ function placeStages() {
       let hide = tiny || !W;
       if (!hide) {
         for (const g of shown) {
-          if (Math.abs(f.x - g.x) * sc < 46 && Math.abs(f.y - g.y) * sc < 26) { hide = true; break; }
+          if (Math.abs(f.x - g.x) * sc < 46 * ns && Math.abs(f.y - g.y) * sc < 26 * ns) { hide = true; break; }
         }
         if (!hide) shown.push(f);
       }
@@ -1383,12 +1409,25 @@ function wireStage(stage) {
       if (!drag.moved && Math.hypot(e.clientX - drag.cx, e.clientY - drag.cy) < 4) return;   // still a click
       drag.moved = true;
       const p = xy(e);
-      const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+      let dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+      // Snap the MOVEMENT, not each light: the one you grabbed lands on a grid crossing and
+      // the rest keep their offsets, so a row dragged as a group stays a row (rounding each
+      // light to its own nearest line made a tidy row arrive crooked).
+      if (snap) {
+        const a = drag.origin.get(drag.anchor) || drag.origin.values().next().value;
+        dx = snapv(a.x + dx) - a.x;
+        dy = snapv(a.y + dy) - a.y;
+      }
+      // Clamp the whole body once, so reaching the world edge slides the group instead of
+      // flattening it onto the boundary.
+      for (const [, o] of drag.origin) {
+        dx = clamp(dx, -WORLD - o.x, WORLD - o.x);
+        dy = clamp(dy, -WORLD - o.y, WORLD - o.y);
+      }
       for (const [id, o] of drag.origin) {
         const f = fxById(id);
         if (!f) continue;
-        f.x = clamp(o.x + dx, -WORLD, WORLD); f.y = clamp(o.y + dy, -WORLD, WORLD);
-        if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }
+        f.x = o.x + dx; f.y = o.y + dy;
       }
       placeStages();
     } else {
@@ -1475,7 +1514,7 @@ function wireStage(stage) {
     if (!profile || viewOnly) return;
     e.preventDefault();
     const p = xy(e);
-    patchProfile(profile, { universe: gridUni, x: p.x, y: p.y });
+    patchProfile(profile, { universe: gridUni, x: snap ? snapv(p.x) : p.x, y: snap ? snapv(p.y) : p.y });
   });
 }
 
@@ -1573,7 +1612,7 @@ function arrange(kind) {
   });
   fs.forEach((f, i) => {
     f.x = clamp(pts[i].x, -WORLD, WORLD); f.y = clamp(pts[i].y, -WORLD, WORLD);
-    if (snap) { f.x = Math.round(f.x * 40) / 40; f.y = Math.round(f.y * 24) / 24; }   // same grid as dragging
+    if (snap) { f.x = snapv(f.x); f.y = snapv(f.y); }   // same grid as dragging and as the lines drawn
   });
   placeStages();
   post('api/fixtures/move', { moves: fs.map((f) => ({ id: f.id, x: f.x, y: f.y })) });
@@ -6649,8 +6688,40 @@ $$('.tool[data-tool]').forEach((b) => b.addEventListener('click', () => {
   $$('.tool[data-tool]').forEach((x) => x.classList.toggle('is-active', x.dataset.tool === tool));
   $$('.stage').forEach((s) => s.classList.toggle('hand', tool === 'hand'));
 }));
+// Snap to grid: one switch for every stage, remembered in this browser. Not an arrange tool —
+// it only decides where a light, label or object lands when it is dropped.
+function paintSnap() {
+  $$('.snapBtn').forEach((x) => {
+    x.classList.toggle('is-active', snap);
+    x.title = snap
+      ? 'Snap to grid is ON — lights, labels and objects land on the grid lines. Click to move them freely (not an arrange tool)'
+      : 'Snap to grid is OFF — things land exactly where you let go. Click to land on the grid lines (not an arrange tool)';
+  });
+}
+paintSnap();
 $$('.snapBtn').forEach((b) => b.addEventListener('click', () => {
-  snap = !snap; $$('.snapBtn').forEach((x) => x.classList.toggle('is-active', snap));
+  snap = !snap;
+  try { localStorage.setItem('lightdeskSnap', snap ? '1' : '0'); } catch (e) { /* this session only */ }
+  paintSnap();
+  say(snap ? 'Snap to grid on — lights, labels and objects land on the grid lines' : 'Snap to grid off — they land exactly where you let go');
+}));
+// Light size − / +: this stage's view only, remembered here, never saved in the show.
+function paintNodeSize() {
+  for (const b of $$('.nodeSmaller, .nodeBigger')) {
+    const name = viewName(b), i = NODE_SIZES.indexOf(nodeSize[name]), up = b.classList.contains('nodeBigger');
+    const pct = Math.round(nodeSize[name] * 100);
+    b.disabled = up ? i >= NODE_SIZES.length - 1 : i <= 0;
+    b.title = `Lights ${up ? 'bigger' : 'smaller'} on this view — now ${pct}% (kept in this browser, not in the show)`;
+  }
+}
+paintNodeSize();
+$$('.nodeSmaller, .nodeBigger').forEach((b) => b.addEventListener('click', () => {
+  const name = viewName(b), i = NODE_SIZES.indexOf(nodeSize[name]);
+  const j = clamp(i + (b.classList.contains('nodeBigger') ? 1 : -1), 0, NODE_SIZES.length - 1);
+  nodeSize[name] = NODE_SIZES[j];
+  try { localStorage.setItem('lightdeskNodeSize.' + name, String(nodeSize[name])); } catch (e) { /* this session only */ }
+  paintNodeSize(); placeStages();
+  say(`Lights ${Math.round(nodeSize[name] * 100)}% on this view`);
 }));
 $$('.rowBtn').forEach((b) => b.addEventListener('click', () => arrange('row')));
 $$('.colBtn').forEach((b) => b.addEventListener('click', () => arrange('column')));

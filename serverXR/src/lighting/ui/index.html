@@ -319,13 +319,17 @@
   <section class="bottom-split">
     <div class="pane stagepane">
       <div class="stage-tools">
-        <button class="tool is-active" data-tool="select" title="Select">▭</button>
+        <button class="tool is-active" data-tool="select" title="Select — drag a box around lights, drag a light to move it">▭</button>
+        <button class="tool" data-tool="hand" title="Hand — drag the stage to move around it; drag a light to move it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12h1V3.5a1.5 1.5 0 0 1 3 0V12h1V5.5a1.5 1.5 0 0 1 3 0V14h1V9.5a1.5 1.5 0 0 1 3 0V16c0 3.9-3.1 7-7 7h-1.6c-1.9 0-3.6-.8-4.9-2.1L4 15.3a1.6 1.6 0 0 1 2.3-2.3L8 14.6"/></svg></button>
         <span class="sep"></span>
-        <button class="tool snapBtn" title="Snap to grid">▦</button>
-        <button class="tool rowBtn" title="Arrange selection in a row">⇥</button>
-        <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
-        <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
-        <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <button class="tool snapBtn" title="Snap to grid — lights, labels and objects land on the grid lines (not an arrange tool)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01"/></svg></button>
+        <button class="tool rowBtn" title="Arrange the selected lights in a row, evenly spaced">⇥</button>
+        <button class="tool colBtn" title="Arrange the selected lights in a column, evenly spaced">⇵</button>
+        <button class="tool gridBtn" title="Arrange the selected lights in a grid of rows and columns">⊞</button>
+        <button class="tool circleBtn" title="Arrange the selected lights in a circle">◎</button>
+        <span class="sep"></span>
+        <button class="tool nodeSmaller" title="Lights smaller on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8"/></svg></button>
+        <button class="tool nodeBigger" title="Lights bigger on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/></svg></button>
         <span class="sep"></span>
         <span class="toolnote">Objects</span>
         <button class="tool objBtn" data-obj="line" title="Line — a bar that sweeps across the lights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></button>
@@ -333,9 +337,9 @@
         <button class="tool objBtn" data-obj="ring" title="Ring — a circle growing out of a point"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg></button>
         <button class="tool objBtn" data-obj="spot" title="Spot — lights what is under it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor" fill-opacity=".35"/></svg></button>
         <span class="sep"></span>
-        <button class="tool zoomOut" aria-label="Zoom out">⊖</button>
-        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100">
-        <button class="tool zoomIn" aria-label="Zoom in">⊕</button>
+        <button class="tool zoomOut" aria-label="Zoom out" title="Zoom out">⊖</button>
+        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100" title="Zoom — or the wheel over the stage">
+        <button class="tool zoomIn" aria-label="Zoom in" title="Zoom in">⊕</button>
         <button class="tool fitBtn" aria-label="Fit everything in view" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
       </div>
       <div class="stage">
@@ -669,12 +673,17 @@
     <!-- the same light imitation as SETUP -->
     <div class="pane stagepane">
       <div class="stage-tools">
-        <button class="tool is-active" data-tool="select" title="Select">▭</button>
+        <button class="tool is-active" data-tool="select" title="Select — drag a box around lights, drag a light to move it">▭</button>
+        <button class="tool" data-tool="hand" title="Hand — drag the stage to move around it; drag a light to move it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12h1V3.5a1.5 1.5 0 0 1 3 0V12h1V5.5a1.5 1.5 0 0 1 3 0V14h1V9.5a1.5 1.5 0 0 1 3 0V16c0 3.9-3.1 7-7 7h-1.6c-1.9 0-3.6-.8-4.9-2.1L4 15.3a1.6 1.6 0 0 1 2.3-2.3L8 14.6"/></svg></button>
         <span class="sep"></span>
-        <button class="tool rowBtn" title="Arrange selection in a row">⇥</button>
-        <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
-        <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
-        <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <button class="tool snapBtn" title="Snap to grid — lights, labels and objects land on the grid lines (not an arrange tool)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01"/></svg></button>
+        <button class="tool rowBtn" title="Arrange the selected lights in a row, evenly spaced">⇥</button>
+        <button class="tool colBtn" title="Arrange the selected lights in a column, evenly spaced">⇵</button>
+        <button class="tool gridBtn" title="Arrange the selected lights in a grid of rows and columns">⊞</button>
+        <button class="tool circleBtn" title="Arrange the selected lights in a circle">◎</button>
+        <span class="sep"></span>
+        <button class="tool nodeSmaller" title="Lights smaller on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8"/></svg></button>
+        <button class="tool nodeBigger" title="Lights bigger on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/></svg></button>
         <span class="sep"></span>
         <span class="toolnote">Objects</span>
         <button class="tool objBtn" data-obj="line" title="Line — a bar that sweeps across the lights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></button>
@@ -682,9 +691,9 @@
         <button class="tool objBtn" data-obj="ring" title="Ring — a circle growing out of a point"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg></button>
         <button class="tool objBtn" data-obj="spot" title="Spot — lights what is under it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor" fill-opacity=".35"/></svg></button>
         <span class="sep"></span>
-        <button class="tool zoomOut" aria-label="Zoom out">⊖</button>
-        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100">
-        <button class="tool zoomIn" aria-label="Zoom in">⊕</button>
+        <button class="tool zoomOut" aria-label="Zoom out" title="Zoom out">⊖</button>
+        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100" title="Zoom — or the wheel over the stage">
+        <button class="tool zoomIn" aria-label="Zoom in" title="Zoom in">⊕</button>
         <button class="tool fitBtn" aria-label="Fit everything in view" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
       </div>
       <div class="stage">
@@ -735,11 +744,14 @@
         <button class="tool is-active" data-tool="select" title="Select — drag a box around lights, drag a light to move it">▭</button>
         <button class="tool" data-tool="hand" title="Hand — drag the stage to move around it; drag a light to move it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12h1V3.5a1.5 1.5 0 0 1 3 0V12h1V5.5a1.5 1.5 0 0 1 3 0V14h1V9.5a1.5 1.5 0 0 1 3 0V16c0 3.9-3.1 7-7 7h-1.6c-1.9 0-3.6-.8-4.9-2.1L4 15.3a1.6 1.6 0 0 1 2.3-2.3L8 14.6"/></svg></button>
         <span class="sep"></span>
-        <button class="tool snapBtn" title="Snap to grid">▦</button>
-        <button class="tool rowBtn" title="Arrange selection in a row">⇥</button>
-        <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
-        <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
-        <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <button class="tool snapBtn" title="Snap to grid — lights, labels and objects land on the grid lines (not an arrange tool)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01"/></svg></button>
+        <button class="tool rowBtn" title="Arrange the selected lights in a row, evenly spaced">⇥</button>
+        <button class="tool colBtn" title="Arrange the selected lights in a column, evenly spaced">⇵</button>
+        <button class="tool gridBtn" title="Arrange the selected lights in a grid of rows and columns">⊞</button>
+        <button class="tool circleBtn" title="Arrange the selected lights in a circle">◎</button>
+        <span class="sep"></span>
+        <button class="tool nodeSmaller" title="Lights smaller on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8"/></svg></button>
+        <button class="tool nodeBigger" title="Lights bigger on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/></svg></button>
         <span class="sep"></span>
         <span class="toolnote">Objects</span>
         <button class="tool objBtn" data-obj="line" title="Line — a bar that sweeps across the lights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></button>
@@ -823,6 +835,8 @@
         <button class="tool zoomOut" aria-label="Zoom out" title="Zoom out">⊖</button>
         <button class="tool zoomIn" aria-label="Zoom in" title="Zoom in">⊕</button>
         <button class="tool fitBtn" aria-label="Fit every light in view" title="Fit every light in view">⤢</button>
+        <button class="tool nodeSmaller" title="Lights smaller on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8"/></svg></button>
+        <button class="tool nodeBigger" title="Lights bigger on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/></svg></button>
         <button class="tool tsFold" id="tsFold" title="Collapse the stage">▾</button>
       </div>
       <div class="stage viewonly">
