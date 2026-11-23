@@ -1,7 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { FRAME_MAX_POINTS, normaliseFramePoints } from '../../../shared/laserFrame.js'
 import { LASER_SHAPES, generateShape, parseLaserColour } from './laserShapes.js'
 import * as twin from '../../../shared/laserShapes.js'
+
+// These tests sweep every shape over whole loops: 6-14 s each on a laptop, and past
+// the 5 s default on a busy CI runner, which failed PRs at random (2026-11-23).
+vi.setConfig({ testTimeout: 60_000 })
 
 // The shapes live in shared/laserShapes.cjs since the laser desk draws them on the server (2026-10-29); this file is
 // the node's old import path and must hand out the twin's own functions.

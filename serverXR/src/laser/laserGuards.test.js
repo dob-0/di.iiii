@@ -4,8 +4,12 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { generateShape, LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE, DOT_SHAPES } from '../../../src/project/nodes/laser.shape/laserShapes.js'
+
+// These tests sweep every shape over whole loops: 6-14 s each on a laptop, and past
+// the 5 s default on a busy CI runner, which failed PRs at random (2026-11-23).
+vi.setConfig({ testTimeout: 60_000 })
 
 const require = createRequire(import.meta.url)
 const { flattenLaserPaths } = require('../../../shared/laserFrame.cjs')
