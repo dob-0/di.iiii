@@ -49,7 +49,7 @@ const bounded = (d) => {
   const out = { generatedAt: typeof d.generatedAt === 'string' ? d.generatedAt.slice(0, 40) : null }
   for (const k of LISTS) out[k] = (Array.isArray(d[k]) ? d[k] : []).filter(plain).slice(0, 60)
   const prs = plain(d.pullRequests) ? d.pullRequests : {}
-  out.pullRequests = { ok: prs.ok === true, from: typeof prs.from === 'string' ? prs.from.slice(0, 64) : null, reportedAt: typeof prs.reportedAt === 'string' ? prs.reportedAt.slice(0, 40) : null, rows: (Array.isArray(prs.rows) ? prs.rows : []).filter(plain).slice(0, 40), ...(typeof prs.error === 'string' ? { error: prs.error.slice(0, 200) } : {}) }
+  out.pullRequests = { ok: prs.ok === true, from: typeof prs.from === 'string' ? prs.from.slice(0, 64) : null, reportedAt: typeof prs.reportedAt === 'string' ? prs.reportedAt.slice(0, 40) : null, rows: (Array.isArray(prs.rows) ? prs.rows : []).filter(plain).slice(0, 300), ...(Number.isInteger(prs.open) && prs.open >= 0 ? { open: prs.open } : {}), ...(Number.isInteger(prs.drafts) && prs.drafts >= 0 ? { drafts: prs.drafts } : {}), ...(typeof prs.error === 'string' ? { error: prs.error.slice(0, 200) } : {}) }
   for (const k of ['spaces', 'asks']) { const b = plain(d[k]) ? d[k] : {}; out[k] = { ok: b.ok !== false, rows: (Array.isArray(b.rows) ? b.rows : []).filter(plain).slice(0, 200) } }
   return out
 }
