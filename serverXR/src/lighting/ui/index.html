@@ -779,6 +779,8 @@
     <div class="splitter v sp-split" data-split="sp-insp" title="Drag to resize — double-click to reset"></div>
     <aside class="pane sp-insp" aria-label="Inspector" data-obj-keep>
       <div class="pane-head"><h2 id="spInspTitle">Inspector</h2><span class="flex"></span><button class="sq" id="spInspClose" title="Hide the inspector — the stage gets the width">⟩</button></div>
+      <!-- The sections flow into columns when the inspector is dragged wide (style.css .sp-insp-cols). -->
+      <div class="sp-insp-cols">
       <div class="sp-insp-body" id="spInspBody"></div>
       <!-- Effects (her ask, 2026-09-26: "like colours, I want effects there too"): the Control
            rail's pads — brightness effects act on the selected lights, or the whole rig when
@@ -793,6 +795,7 @@
       </section>
       <!-- VIDEO SLOT (inspector): the video layer's properties go here. -->
       <section class="sp-sec sp-slot" data-slot="video-inspector" hidden></section>
+      </div>
     </aside>
     <button class="sp-insp-open" id="spInspOpen" title="Show the inspector" hidden>⟨ Inspector</button>
     <div class="sp-msg" id="spMsg" aria-live="polite"></div>

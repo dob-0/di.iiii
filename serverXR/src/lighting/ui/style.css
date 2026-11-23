@@ -1723,6 +1723,15 @@ body.dragscene .bankrow { cursor: grabbing; }
 }
 .sp-insp-open:hover { color: var(--text); border-color: var(--muted); }
 .sp-insp-body { padding: 0 0 8px; }
+/* Drag the inspector wide and its sections flow into columns (Emily, 2026-11-23: "with the
+   inspector bigger, more space and less scroll"): one column at the default 272px, two from
+   ~570px, three near the 900px maximum. A section never splits across two columns; the
+   body is not a section, so its sections (objects, names, dimmer, colour) spread out too.
+   The columns live on this inner box, not on the scrolling aside: a multi-column box with
+   a fixed height would push extra columns out sideways instead of scrolling. */
+.sp-insp-cols { columns: 270px; column-gap: 0; column-rule: 1px solid var(--line); }
+.sp-insp-cols .sp-sec { break-inside: avoid; }
+.sp-insp-cols .sp-insp-body { padding-bottom: 0; }
 .sp-sec { padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; }
 .sp-sec:last-child { border-bottom: 0; }
 .sp-sec h3 { margin: 0; font-size: 11px; font-weight: 600; color: var(--muted); }

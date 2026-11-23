@@ -709,13 +709,15 @@ function objListFor(stage) {
 function objInspectorList() {
   const insp = document.querySelector('.stagepage .sp-insp');
   if (!insp) return null;
-  let box = insp.querySelector(':scope > .objlist-insp');
+  // The inspector's sections sit inside .sp-insp-cols (they flow into columns when the
+  // inspector is dragged wide), so the list goes in beside the body, wherever that is.
+  let box = insp.querySelector('.objlist-insp');
   if (!box) {
     box = document.createElement('section');
     box.className = 'sp-sec objlist objlist-insp';
     box.innerHTML = '<div class="ol-head"></div><div class="ol-rows"></div>';
     const body = insp.querySelector('#spInspBody');
-    if (body) insp.insertBefore(box, body); else insp.appendChild(box);
+    if (body) body.parentElement.insertBefore(box, body); else insp.appendChild(box);
     objListWire(box);
   }
   return box;
