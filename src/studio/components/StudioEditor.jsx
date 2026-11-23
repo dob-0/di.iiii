@@ -4,10 +4,13 @@ import { useMediaQuery, useTheme } from '@mui/material'
 import { Vector3 } from 'three'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { currentAuthor } from '../../project/authorship.js'
+import useDocumentTitle from '../../hooks/useDocumentTitle.js'
+import { pageTitle } from '../../hooks/pageTitles.js'
 import useDeleteConfirm from '../../hooks/useDeleteConfirm.jsx'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { isTypingTarget, lockFromKey, undoRedoFromKey } from '../utils/editKeys.js'
+import { letterKeyIsOff } from '../utils/studioKeyPrefs.js'
 import { unitMembersOf } from '../utils/laserTest.js'
 import { clearFromKey, clearTransformOps } from '../utils/clearTransform.js'
 import { hallEntityIds, lockOps, movableEntities, selectionWithout } from '../utils/selectionTools.js'
@@ -25,9 +28,11 @@ import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAsse
 import { spaceAddressOf } from '../../utils/spaceAddress.js'
 import { buildAppSpacePath, buildPublicProjectPath, buildShareUrl } from '../../utils/spaceRouting.js'
 import { buildStudioPreviewUrl } from '../utils/previewUrl.js'
-import { buildSpaceProjectsPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildSpaceProjectsPath, buildStudioDeckPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { buildRawProjectPath } from '../../raw/utils/rawRouting.js'
 import { buildMapPath } from '../../map/mapRouting.js'
+import { buildScreenOps, buildVideoToScreenOps, findPictureSource, screenSurfaceOptions } from '../utils/screenOps.js'
+import { ScreenActionsContext } from './ScreenActionsContext.js'
 import { useStudioCues } from '../hooks/useStudioCues.js'
 import useProjectViews from '../hooks/useProjectViews.js'
 import useLightEnvPicker from '../hooks/useLightEnvPicker.js'
@@ -58,9 +63,12 @@ import {
     geoNodeInspectorValues,
     listGeoChildren,
     listGeoChoices,
+    listRoomNodes,
     nodeTransformPatch,
-    nodeValuesPatch
+    nodeValuesPatch,
+    roomNodeRow
 } from '../../project/graph/geoScope.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 // Inside a Geo, Create offers what exists as a node — the Create window's own
 // entries, filtered (src/project/graph/geoScope.js GEO_ADD_TYPES).
@@ -188,6 +196,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     // or a machine without a desk, is untouched.
     useRigAutoPatch({ projectId, entities: document.entities, applyOps: _applyLocalOps, edits })
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
+    useDocumentTitle(pageTitle('studio-project', { project: document.projectMeta?.title, space: resolvedSpaceId }))
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     // useDriveImport counts result.entries, the routes answer with .assets
     const asImportResult = (data) => ({ entries: data?.assets || [], failed: data?.failed || [] })
@@ -238,6 +247,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         [insideGeo, document, geoNode?.id]
     )
     const geoRows = useMemo(() => geoChildren.map(geoChildRow), [geoChildren])
+    const roomNodeRows = useMemo(
+        // Only where Studio draws them (graphRoom: never in a jam project).
+        () => (insideGeo || !geoAllowed || !document ? [] : listRoomNodes(document).map(roomNodeRow)),
+        [insideGeo, geoAllowed, document]
+    )
     const geoSelectedNode = insideGeo ? (geoChildren.find((node) => node.id === geoSelectedId) || null) : null
     const geoSelectedRow = geoSelectedNode ? geoChildRow(geoSelectedNode) : null
     const openGeo = useCallback((nextGeoId) => {
@@ -351,6 +365,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         // whole-document replace would revert their concurrent edits too
         // (see docs/ai/known-fixes.md).
         const handler = (event) => {
+            if (isPlaying()) return
             if (isTypingTarget(event.target)) return
             // By the key's place as well as its letter: Shift makes it 'Z', and the
             // Armenian layout makes it '\u0566' — both used to fall through (utils/editKeys.js).
@@ -428,6 +443,20 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             }
             applyLocalOps(result.ops, { activityMessage: `Put ${result.node.label} into ${geoNode.label}.` })
             setGeoSelectedId(result.node.id)
+            return
+        }
+        if (type === 'screen') {
+            // One batch (surface + plane): one Ctrl+Z takes both back.
+            const made = buildScreenOps(document, {
+                position: position || getViewPlacement(controlsRef, entities.length),
+                createdBy: currentAuthor(displayName)
+            })
+            applyLocalOps(made.ops, {
+                activityMessage: made.bound
+                    ? 'Created a Screen showing the live deck.'
+                    : 'Created a Screen. The project has no deck yet — add one in Nodes, then pick it under Shows.'
+            })
+            dispatch({ type: 'select-entity', entityId: made.entity.id })
             return
         }
         const entity = createEntityOfType(type, {
@@ -840,6 +869,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
     useEffect(() => {
         const handler = (event) => {
+            if (isPlaying()) return
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
 
@@ -849,6 +879,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
             const meta = event.ctrlKey || event.metaKey
             const key = event.key
+            // Letter keys switched off (Help > Shortcuts, WCAG 2.1.4): A, F, ".", Shift+D, Shift+G do nothing; Ctrl/Cmd/Alt ones stay.
+            if (letterKeyIsOff(event)) return
 
             // Blender view keys by event.code (numpad, Home, and the no-numpad
             // Shift+1/3/7, Shift+Arrows) -- see resolveViewKey. Skipped while focus is
@@ -1375,8 +1407,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
     // The project's own mapping surfaces, for a plane that is a screen.
     const surfaceOptions = useMemo(
-        () => (document.mappingState?.surfaces || []).map((surface) => ({ value: surface.id, label: surface.name || surface.id })),
-        [document.mappingState?.surfaces]
+        () => screenSurfaceOptions(document),
+        [document]
     )
 
     const inspectorSections = insideGeo
@@ -1406,11 +1438,38 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         activity: state.activity,
         sceneStreamState: state.sceneStreamState,
         sceneStreamError: state.sceneStreamError,
-        pendingSyncError: state.pendingSyncError
+        pendingSyncError: state.pendingSyncError,
+        // Edits not yet acknowledged, and whether the sign-in ran out: the save line reads both.
+        pendingOpCount: state.pendingOpCount,
+        authExpired: state.authExpired,
+        // The save line says nothing until the project has loaded, and says so if it could not.
+        hasLoaded: state.hasLoaded,
+        loadError: state.loadError
     }
 
+    // F125: the tab names the project; the Studio had no h1 and no main
+    // landmark, so a screen reader met a page with neither (S19).
+    const studioHeading = document.projectMeta?.title || projectId
+    const screenActions = useMemo(() => ({
+        openProjection: () => navigateToStudioPath(buildMapPath(resolvedSpaceId, projectId)),
+        openDeck: () => navigateToStudioPath(buildStudioDeckPath(resolvedSpaceId, projectId)),
+        convertToScreen: selectedEntity?.type === 'video'
+            ? () => {
+                const made = buildVideoToScreenOps(document, selectedEntity, { createdBy: currentAuthor(displayName) })
+                if (!made) return
+                applyLocalOps(made.ops, { activityMessage: made.bound ? 'The video object now shows the live deck (Undo brings the video back).' : 'The video object is now a Screen; the project has no deck yet.' })
+                dispatch({ type: 'select-entity', entityId: made.entity.id })
+            }
+            : null,
+        hasDeck: Boolean(findPictureSource(document))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [document, selectedEntity, resolvedSpaceId, projectId, displayName])
+
     return (
+        <ScreenActionsContext.Provider value={screenActions}>
         <>
+            <main className="studio-page-main">
+            <h1 className="studio-sr-only">{studioHeading}</h1>
             <StudioShell
             document={document}
             walkBuild={(uiHidden) => (
@@ -1430,12 +1489,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             loadError={state.loadError}
             editHistory={history()}
             onHistoryJump={jumpTo}
+            onUndo={undo}
+            onRedo={redo}
             displayName={displayName}
             onDisplayNameChange={setDisplayName}
             selectedEntity={insideGeo ? geoSelectedRow : selectedEntity}
             selectedEntityId={insideGeo ? (geoSelectedRow?.id || null) : state.selectedEntityId}
             selectedEntityIds={insideGeo ? (geoSelectedRow ? [geoSelectedRow.id] : []) : selectedEntityIds}
             entities={insideGeo ? geoRows : entities}
+            nodeRows={roomNodeRows}
+            onOpenNodeRow={geoAllowed ? openGeo : undefined}
             graphRoom={graphRoom}
             geoSwitcher={geoAllowed ? {
                 geos: geoList,
@@ -1503,7 +1566,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onEnterXr={xr.handleEnterXrSession}
             onExitXr={xr.handleExitXrSession}
             onBackToHub={() => navigateToStudioPath(buildSpaceProjectsPath(resolvedSpaceId))}
-            onOpenNodeEditor={() => navigateToStudioPath(buildRawProjectPath(projectId, resolvedSpaceId))}
+            // "Edit in Nodes" on a node row passes that node's id; the bar's Nodes
+            // button passes a click event. Only a string id goes in the address.
+            onOpenNodeEditor={(nodeId) => {
+                const path = buildRawProjectPath(projectId, resolvedSpaceId)
+                navigateToStudioPath(typeof nodeId === 'string' && nodeId ? `${path}?node=${encodeURIComponent(nodeId)}` : path)
+            }}
             onOpenProjection={() => navigateToStudioPath(buildMapPath(resolvedSpaceId, projectId))}
             cues={cues}
             liveCueId={liveCueId}
@@ -1532,6 +1600,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onClearLiveProject={handleClearLiveProject}
             onMakeSpacePublic={handleMakeSpacePublic}
             />
+            </main>
             <AssetOptimizationDialog
                 prompt={assetOptimizationPrompt}
                 onOptimize={handleOptimizeAsset}
@@ -1540,5 +1609,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             />
             {deleteConfirm}
         </>
+        </ScreenActionsContext.Provider>
     )
 }

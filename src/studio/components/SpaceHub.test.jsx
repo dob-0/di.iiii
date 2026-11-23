@@ -2,6 +2,7 @@ import React from 'react'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SpaceHub, { resetSpaceCardPosters } from './SpaceHub.jsx'
+import { SPACE_CARD_PREVIEWS_KEY } from '../utils/spaceCardMode.js'
 import { WORKS } from '../../works/works.js'
 
 // Several tests here render the thirteen-card hub, which mounts thirteen preview
@@ -174,6 +175,9 @@ describe('SpaceHub', () => {
         sandboxSummary = null
         projectTitlesById = {}
         localStorage.clear()
+        // The tests below are about the 'live' card mode (a hidden app per card
+        // takes the picture). The calm-still default has its own tests at the end.
+        localStorage.setItem(SPACE_CARD_PREVIEWS_KEY, 'live')
         authState = {
             authenticated: true,
             type: 'session',
@@ -191,6 +195,15 @@ describe('SpaceHub', () => {
         render(<SpaceHub />)
         await screen.findByRole('heading', { name: 'spaces' })
         expect(document.title).toBe('Spaces — di.iiii')
+    })
+
+    // StudioApp used to wrap this view in a second main (axe
+    // landmark-no-duplicate-main): the view owns the page's only main.
+    it('renders exactly one main region', async () => {
+        listServerSpaces.mockResolvedValue([])
+        const { container } = render(<SpaceHub />)
+        await screen.findByRole('heading', { name: 'spaces' })
+        expect(container.querySelectorAll('main')).toHaveLength(1)
     })
 
     it('leads to the lighting desk only when a desk on this machine answers', async () => {
@@ -266,8 +279,8 @@ describe('SpaceHub', () => {
         render(<SpaceHub />)
 
         await findCard('mine')
-        // Resting, an owned card offers only Manage — the eight actions are behind it.
-        expect(cardActionsFor('mine')).toEqual(['Manage'])
+        // Resting, an owned card offers Edit and Manage — the eight actions are behind it.
+        expect(cardActionsFor('mine')).toEqual(['Edit', 'Manage'])
         openManageFor('mine')
         expect(cardActionsFor('mine')).toEqual(
             expect.arrayContaining(['Rename', 'Delete', 'GitHub sync'])
@@ -275,6 +288,24 @@ describe('SpaceHub', () => {
         // Someone else's public space: no management at all, only the live-link Copy.
         expect(cardActionsFor('theirs')).toEqual(['Copy'])
         expect(screen.getByText('View live')).toBeTruthy()
+    })
+
+    // UX S10 (F012, F055): a card opens the SPACE; the Studio is its Edit button;
+    // the card is not a button holding other buttons.
+    it('a card is a link to the space, with Edit beside it for the Studio, and no role=button on the card', async () => {
+        listServerSpaces.mockResolvedValue([{ id: 'mine', label: 'Mine', isOwner: true, isPublic: true }])
+        render(<SpaceHub />)
+        const card = await findCard('mine')
+        expect(card.getAttribute('role')).not.toBe('button')
+        expect(card.getAttribute('tabindex')).toBeNull()
+        const link = screen.getByRole('link', { name: 'Mine' })
+        expect(link.getAttribute('href')).toBe('/mine')
+        mockEnter.mockClear()
+        fireEvent.click(link)
+        expect(mockEnter).toHaveBeenCalledWith('/mine')
+        mockEnter.mockClear()
+        fireEvent.click(within(card).getByRole('button', { name: 'Edit' }))
+        expect(mockEnter).toHaveBeenCalledWith('/mine/studio')
     })
 
     // 2026-10-20: "Invite a machine" in the Manage row must open its panel with the four words
@@ -381,10 +412,10 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        // Guest is scoped into main (open jam) — the card still opens the editor.
+        // Guest is scoped into main (open jam) — the card opens the space; Edit opens the editor (UX S10).
         fireEvent.click(await screen.findByText('Main Space'))
-        expect(mockEnter).toHaveBeenCalledWith('/main/studio')
-        expect(mockEnter).not.toHaveBeenCalledWith('/main')
+        expect(mockEnter).toHaveBeenCalledWith('/main')
+        expect(mockEnter).not.toHaveBeenCalledWith('/main/studio')
 
         // A public space outside the session scope goes straight to the live view.
         fireEvent.click(screen.getByText('Beyond Form'))
@@ -802,10 +833,10 @@ describe('SpaceHub', () => {
         expect(shelfLabels[1]).toMatch(/^Your sandbox/)
         expect(shelfLabels[2]).toMatch(/^Your spaces/)
 
-        // The open space is public but everyone can enter it — the card opens
-        // the editor, never the read-only live view.
+        // The open space is public and everyone can enter it — the card opens
+        // the space (UX S10); its Edit button opens the editor.
         fireEvent.click(cardOf('open'))
-        expect(mockEnter).toHaveBeenCalledWith('/open/studio')
+        expect(mockEnter).toHaveBeenCalledWith('/open')
         expect(mockEnter).toHaveBeenCalledTimes(1)
     })
 
@@ -1035,6 +1066,19 @@ describe('SpaceHub', () => {
         const rootBlock = css.match(/\.ssh-root\s*\{[^}]*\}/)?.[0] ?? ''
         expect(rootBlock).toMatch(/overflow-y:\s*auto/)
         expect(rootBlock).not.toMatch(/min-height:\s*100vh/)
+    })
+
+    it('the "(opens in a new tab)" hint keeps a visible gap inside the inline-flex tools link', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const cssPath = ['src/studio/styles/studio-space-hub.css', 'studio/styles/studio-space-hub.css']
+            .map(p => path.join(cwd(), p))
+            .find(p => fs.existsSync(p))
+        const css = fs.readFileSync(cssPath, 'utf8')
+        // A flex container drops the leading space of its child, so the gap must be a margin.
+        expect(css.match(/\.ssh-tools-link\s*\{[^}]*\}/)?.[0]).toMatch(/display:\s*inline-flex/)
+        expect(css.match(/\.ssh-tools-newtab\s*\{[^}]*\}/)?.[0]).toMatch(/margin-left:\s*0?\.25em/)
     })
 
     it('puts Open Space and the sandbox side by side from ~1024px up, stacked below it', async () => {
@@ -1424,6 +1468,52 @@ describe('SpaceHub', () => {
             render(<SpaceHub />)
             await waitFor(() => expect(rowOf('theirs')).toBeTruthy())
             expect(manageBtn('theirs')).toBeUndefined()
+        })
+    })
+
+    describe('calm still (the default for a card with no picture)', () => {
+        const stubVisible = () => vi.stubGlobal('IntersectionObserver', class {
+            constructor(callback) { this.callback = callback }
+            observe(target) { this.callback([{ isIntersecting: true, target }]) }
+            unobserve() {}
+            disconnect() {}
+        })
+
+        it('draws a still with the name and starts no hidden app; pressing it opens the 3D in one step', async () => {
+            localStorage.removeItem(SPACE_CARD_PREVIEWS_KEY)
+            stubVisible()
+            try {
+                listServerSpaces.mockResolvedValue([
+                    { id: 'showroom', label: 'Showroom', isOwner: true, isPublic: true, publishedProjectId: 'p1', blurb: 'A hall for light.' },
+                ])
+                render(<SpaceHub />)
+                const card = await findCard('showroom')
+                await waitFor(() => expect(card.querySelector('[data-card-still]')).not.toBeNull())
+                // give the boot effect every chance to start a frame
+                await new Promise(resolve => setTimeout(resolve, 50))
+                expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
+                expect(card.querySelector('[data-card-still]').textContent).toContain('Showroom')
+                expect(card.querySelector('[data-card-still]').textContent).toContain('A hall for light.')
+                fireEvent.click(card.querySelector('.ssh-card-preview'))
+                await waitFor(() => expect(card.querySelector('.ssh-card-live-frame iframe')).not.toBeNull())
+            } finally {
+                vi.unstubAllGlobals()
+            }
+        })
+
+        it('keeps the earlier behaviour as a mode: previews=live boots the card frame again', async () => {
+            stubVisible()
+            try {
+                listServerSpaces.mockResolvedValue([
+                    { id: 'showroom', label: 'Showroom', isOwner: true, isPublic: true, publishedProjectId: 'p1' },
+                ])
+                render(<SpaceHub />)
+                const card = await findCard('showroom')
+                await waitFor(() => expect(card.querySelector('.ssh-card-preview iframe')).not.toBeNull())
+                expect(card.querySelector('[data-card-still]')).toBeNull()
+            } finally {
+                vi.unstubAllGlobals()
+            }
         })
     })
 })

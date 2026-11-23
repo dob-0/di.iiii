@@ -1,4 +1,5 @@
 import { recallCueLighting } from './lightingLink.js'
+import { recallCueLaser } from './laserLink.js'
 
 // FIRING A CUE, once, for every tool that can fire one.
 //
@@ -52,6 +53,9 @@ export const cueOps = (cue) => {
 // hosted tab: /light answers 404 there) costs the projection cue nothing.
 export function fireCue(cue, applyOps) {
     if (!cue || typeof applyOps !== 'function') return
+    // The laser look goes right after the light: one cue, one go. Same terms:
+    // never throws, a cue with no laser look touches no network.
     recallCueLighting(cue)
+    recallCueLaser(cue)
     applyOps(cueOps(cue))
 }

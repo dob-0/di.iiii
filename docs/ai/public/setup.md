@@ -4,6 +4,8 @@
 
 The same page, for people: https://diiii.xyz/ai/setup
 
+New to di? [Start with di.iiii](https://diiii.xyz/ai/join.md) takes you from nothing to a saved space, with no account.
+
 ## Any assistant, no key
 
 Claude on the web, ChatGPT, duck.ai, Gemini, Perplexity: anything that can open a web address. Paste one of these into the chat and ask it to read it first.
@@ -27,15 +29,19 @@ Get a key by signing in from a terminal, once:
     curl -fsSL https://diiii.xyz/get | sh
     di login --to https://diiii.xyz
 
+`di login` needs a di newer than 0.4.3. The released 0.4.3 does not have it yet: it answers `no such command: login`. Check yours with `di --version`. On 0.4.3, use the page without a key above, and try di on your own computer with no account: [Start with di.iiii](https://diiii.xyz/ai/join.md).
+
 Then read your level, with the key the login saved in `~/.config/di/credentials.json` (or set `DI_TOKEN`):
 
     curl -H "Authorization: Bearer $DI_TOKEN" https://diiii.xyz/ai/context
 
 ## An assistant on your own machine
 
-Claude Code, and any other assistant that speaks MCP (the Model Context Protocol), can use di.iiii as a set of tools. After `di login`, add it once:
+Claude Code, and any other assistant that speaks MCP (the Model Context Protocol), can use di.iiii as a set of tools. On a di newer than 0.4.3, sign in with `di login`, then add it once:
 
     claude mcp add di -- di mcp --base https://diiii.xyz/serverXR
+
+On the released 0.4.3, `di mcp` has no `--base` (it takes `--port N` only), so the line above does not fit it. `claude mcp add di -- di mcp` is the form 0.4.3 lists in `di mcp --help`; it talks to the di.iiii running on your own computer.
 
 The tools: `di_find`, `di_describe`, `di_call`, `di_run`, and `di_context` (the context at your level). The assistant acts as you, never past your own access. Anything public (making a space public, an invite link, deleting) is refused unless you started it with `DI_MCP_ALLOW_PUBLIC=1`, and each call still has to carry your yes.
 

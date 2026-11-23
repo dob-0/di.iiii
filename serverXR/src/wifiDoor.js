@@ -16,7 +16,9 @@
  *     beacon (follow/beacon.js: UDP 41767, `{ v: 1, kind: 'di-name', label, port }`, a hint for other installs, unsigned), and
  *     checks the address every 10 s so a DHCP change rebinds and re-points.
  * Close reverses all of it. Nothing is written down: after a restart the install
- * is private again; the name and certificate stay.
+ * is private again; the name and certificate stay. Because the broker keeps the
+ * last address it was given, a start also points the record home (startHome,
+ * once, a few seconds after the start) so no link outlives the door.
  */
 const fs = require('node:fs')
 const os = require('node:os')
@@ -28,6 +30,8 @@ const beaconModule = require('./follow/beacon')
 const BEACON_EVERY_MS = 2000
 const WATCH_EVERY_MS = 10 * 1000
 const LOOPBACK_ADDRESS = '127.0.0.1'
+const HOME_AFTER_MS = 5 * 1000
+const HOME_RETRY_MS = 60 * 1000
 const BORROWED = /^(docker|br-|virbr|veth|cni|flannel|podman|lxc|tun|tap)/i
 
 const nameDirFor = (env = process.env) =>
@@ -235,8 +239,42 @@ const createWifiDoor = ({
     return { ok: true, ...status() }
   }
 
-  const close = async () => {
-    if (!state.open) return { ok: true, ...status() }
+  /**
+   * Point the broker record at this machine only. For a closed door: the broker keeps the last address it
+   * was given, and a restart closes the door without telling it. Never throws. { ok, skipped?, error? }
+   */
+  const pointHome = async () => {
+    if (state.open) return { ok: true, skipped: 'open' }
+    const fields = readName(nameDir)
+    if (fields.error) return { ok: false, skipped: fields.error }
+    try {
+      state.fields = fields
+      const result = await moveRecord(LOOPBACK_ADDRESS)
+      if (result.ok) log('[wifi] name record pointed home')
+      return result
+    } catch (error) {
+      log(`[wifi] name record not pointed home: ${error?.message || error}`)
+      return { ok: false, error: String(error?.message || error) }
+    }
+  }
+
+  /** At start: one pointHome after a few seconds, one retry after a minute if the broker did not answer. Unref'd. */
+  const startHome = ({ afterMs = HOME_AFTER_MS, retryMs = HOME_RETRY_MS } = {}) => {
+    const attempt = async (retry) => {
+      const result = await pointHome()
+      if (!result.ok && !result.skipped && retry) {
+        const timer = setTimeout(() => { attempt(false).catch(() => {}) }, retryMs)
+        timer.unref?.()
+      }
+    }
+    const timer = setTimeout(() => { attempt(true).catch(() => {}) }, afterMs)
+    timer.unref?.()
+    return timer
+  }
+
+  // `di wifi --stop` on a door that is already closed still points the record home.
+  const close = async ({ home = false } = {}) => {
+    if (!state.open) return home ? { ...status(), ...(await pointHome()), ok: true } : { ok: true, ...status() }
     clearInterval(state.watch)
     state.watch = null
     stopBeacon()
@@ -250,7 +288,7 @@ const createWifiDoor = ({
     return { ok: true, ...done, open: false }
   }
 
-  return { open, close, status, tick }
+  return { open, close, status, tick, pointHome, startHome }
 }
 
 module.exports = { createWifiDoor, loadBrokerClient, defaultRouteAddress, hostIsOwnName, nameDirFor, readName }

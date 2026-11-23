@@ -123,3 +123,20 @@ describe('the Move row', () => {
         expect(screen.getByRole('button', { name: 'Move test' }).getAttribute('aria-pressed')).toBe('false')
     })
 })
+
+describe('Mouse in Edit (Scene -> Move, editMouse.js)', () => {
+    it('offers Pull to move (on by default) and Like Blender, and remembers the pick in this browser', async () => {
+        const { EDIT_MOUSE_STORAGE_KEY, getEditMousePreference } = await import('../navigation/preference.js')
+        render(<MoveSettings />)
+        const pull = screen.getByRole('button', { name: 'Pull to move' })
+        const blender = screen.getByRole('button', { name: 'Like Blender' })
+        expect(pull.getAttribute('aria-pressed')).toBe('true')
+        expect(blender.getAttribute('aria-pressed')).toBe('false')
+        act(() => { fireEvent.click(blender) })
+        expect(getEditMousePreference()).toBe('blender')
+        expect(window.localStorage.getItem(EDIT_MOUSE_STORAGE_KEY)).toBe('blender')
+        expect(screen.getByRole('button', { name: 'Like Blender' }).getAttribute('aria-pressed')).toBe('true')
+        act(() => { fireEvent.click(screen.getByRole('button', { name: 'Pull to move' })) })
+        expect(getEditMousePreference()).toBe('pull')
+    })
+})

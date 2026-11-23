@@ -26,6 +26,9 @@ import { cueClockWords, cueListSignature, deskCues, nextCueIndex } from './cueRu
 import { lightingApiUrl, lightingDeskPath, probeLightingDesk } from '../map/lightingLink.js'
 import { NO_DESK_SENTENCE, NO_WRITE } from './rigToolAccess.js'
 import ViewOnlyLine from './ViewOnlyLine.jsx'
+import NextStep from './NextStep.jsx'
+import { NEXT_STEP_WORDS, firstLookOps, rigFileLooksOps } from './nextStep.js'
+import { rigStepPath } from './rigTools.js'
 import './plot.css'
 import './cards.css'
 
@@ -155,7 +158,7 @@ const WAIT_WIDTH_S = 60 // how wide a cue that waits for GO is drawn on the time
  * desk. Drawn against time by each cue's hold: a cue with a hold moves on by itself, a
  * cue with none waits for GO. A list, not a timeline editor.
  */
-function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk, onRest, onHold, onDelete, desk, onDeskLooks, loop, onLoop, onStop, running, clock, readOnly = false }) {
+function CuePart({ emptyLooks = null, cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk, onRest, onHold, onDelete, desk, onDeskLooks, loop, onLoop, onStop, running, clock, readOnly = false }) {
     const lookOf = (cue) => looks?.looks?.find((l) => l.id === lookIdOfDesk(cue.lightLook)) || null
     // A clock time only while every cue before has a hold; after a cue that waits for
     // GO, when the next one starts is the operator's.
@@ -187,7 +190,8 @@ function CuePart({ cues, looks, current, onGo, onBack, onFire, onAddAll, onDesk,
                     {desk ? <a className="rigcards-btn" href={desk}>GO from /light</a> : null}
                 </span>}
             </header>
-            {!looks ? <p className="rigplot-hint">No designed looks in this project. They are written from the rig file by scripts/rigbuild/looks.mjs.</p> : null}
+            {/* No looks: the next step as buttons (F038); scripts/rigbuild/looks.mjs runs the same code from a terminal */}
+            {!looks ? emptyLooks : null}
             {cues.length ? (
                 <div className="rigcards-timeline" role="list">
                     {blocks.map(({ cue, i, at, w }) => {
@@ -520,7 +524,8 @@ export default function CardsSurface({ spaceId, projectId, readOnly = false, lib
         <section className="rigcards-cards" aria-label="Rental list">
             <h2 className="rigcards-h">rental list</h2>
             {!state.hasLoaded ? <p className="rigplot-hint">Reading the rig…</p> : null}
-            {state.hasLoaded && !list ? <p className="rigplot-hint">No rental list in this project. It is written from the rental house&apos;s spreadsheet by scripts/rigbuild/rental.mjs.</p> : null}
+            {/* No list: the equipment page makes one (F038); scripts/rigbuild/rental.mjs still writes it from a rental house's spreadsheet */}
+            {state.hasLoaded && !list ? <NextStep line={NEXT_STEP_WORDS.rental} actions={[{ label: NEXT_STEP_WORDS.equipment, href: rigStepPath('equipment', spaceId, projectId) }]} /> : null}
             <div className="rigcards-cardlist">
                 {/* A non-DMX item (a node, a cable) is on the list but is never dealt: no card. */}
                 {counts.items.filter((item) => !item.item).map((item) => (
@@ -566,7 +571,8 @@ export default function CardsSurface({ spaceId, projectId, readOnly = false, lib
             <h2 className="rigcards-h">positions</h2>
             {dealBar}
             {pickedBar}
-            {state.hasLoaded && !positions.length ? <p className="rigplot-hint">No positions: this project has no truss, towers, decks or venue plan to hang from. Build them on the plot, or load them (scripts/rigbuild/load-plot.mjs).</p> : null}
+            {/* No positions: build them (F038); scripts/rigbuild/load-plot.mjs still loads a rig document's from a terminal */}
+            {state.hasLoaded && !positions.length ? <NextStep line={NEXT_STEP_WORDS.positions} actions={[{ label: NEXT_STEP_WORDS.plot, href: rigStepPath('plot', spaceId, projectId) }, { label: NEXT_STEP_WORDS.build, href: rigStepPath('build', spaceId, projectId) }]} /> : null}
             {positions.map((p) => (
                 <PositionRow key={p.id} position={p} fill={fill} lampById={lampById} card={card} n={dealN} onDeal={deal} onSlot={onSlot} onTakeBack={takeBack} picked={picked} readOnly={readOnly} />
             ))}
@@ -575,6 +581,17 @@ export default function CardsSurface({ spaceId, projectId, readOnly = false, lib
 
     const cuePart = (
         <CuePart
+            emptyLooks={state.hasLoaded ? (
+                <NextStep
+                    line={NEXT_STEP_WORDS.looks}
+                    readOnly={readOnly}
+                    applyOps={applyLocalOps}
+                    actions={[
+                        lamps.length ? { label: NEXT_STEP_WORDS.firstLook, make: () => firstLookOps(entities, library), done: 'a first look is made: every lamp on the stage centre, open white' } : null,
+                        { label: NEXT_STEP_WORDS.rigFile, file: (rig, name) => rigFileLooksOps(entities, rig, name) }
+                    ]}
+                />
+            ) : null}
             cues={cues} looks={looks} current={shownCurrent} desk={deskHere ? lightingDeskPath({ spaceId, projectId, label: title }) : null} onDesk={onDesk}
             onGo={goNext} onBack={() => fire(Math.max(0, shownCurrent - 1))} onFire={fire}
             loop={loop} onLoop={toggleLoop} onStop={stop} running={running} clock={deskRunsThis ? cueClockWords(deskRun) : (localRunning ? (loop ? 'loop' : '') : '')}

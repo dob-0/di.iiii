@@ -1,0 +1,8 @@
+## 2026-11-12 — a proposal reads a .diiii that carries a light show (format 2)
+
+- Bug: `space-bundle.mjs propose` of a format-2 file (carries `space/lighting/show.json`) was refused at finish: "This file is format 2; this di.iiii reads 1". `contentProposals.js` still had `BUNDLE_VERSION = 1`, and apply never wrote the show.
+- Fix (serverXR/src/contentProposals.js): reads format 2 (format 3 still refused); validates the show is a JSON object (rig `output` dropped); the summary says whether the file carries a show, its fixture/scene/look counts, and whether it differs from the space's current one (key-order-normalised compare); apply writes it the desk's way (temp file, previous copied to `show.prev.json`, rename). A show here that the file lacks, or a format-1 file, leaves the space's show untouched.
+- Restore point: `takeRestorePoint` snapshots scene and projects only, not lighting/. So the replaced show survives as `show.prev.json` (rename it over `show.json` to undo); the summary text says so.
+- Desk reload: new `desk.adoptShowFile(id)` (via `registerLightingRoutes(...).adoptShowFile`, wired in index.js) re-reads the show if the desk has that space loaded and drops a pending save, so the old in-memory copy is not written back over the new file. Never builds a desk.
+- Tests: serverXR/src/contentProposals.lightShow.test.js (8). `npx vitest run serverXR/src/contentProposals* serverXR/src/routes scripts/space-bundle.test.js scripts/space-proposal.test.js`: 41 files, 461 tests passed. serverXR/src/lighting: 83 passed. eslint 0 errors; lint:api-contract ok.
+- Not tested: a real desk with the space loaded (adoptShowFile has no test of its own); not run against a live server.

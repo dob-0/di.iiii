@@ -1,7 +1,12 @@
 import React from 'react'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
+import { projectDoors } from '../../project/doors.js'
+import { surfaceDestinations } from '../../components/SurfaceBar.jsx'
 import { setAppNavigate } from '../../utils/appNavigate.js'
 // Literals rather than an import from the piece: this is a test of Studio's
 // hub, and the paths are what a visitor types.
@@ -83,6 +88,20 @@ vi.mock('../../hooks/useAuthSession.js', () => ({
     default: () => authState
 }))
 
+// The two facts a card's doors depend on besides the row: the install, and the
+// top bar's "All tools" switch. Mocked the way the hooks answer, not run, so
+// this suite makes no config request.
+const doorFacts = vi.hoisted(() => ({ isLocal: false, allTools: false }))
+
+vi.mock('../../hooks/useLocalInstall.js', () => ({
+    default: () => ({ resolved: true, isLocal: doorFacts.isLocal })
+}))
+
+vi.mock('../utils/jamMode.js', async (importOriginal) => ({
+    ...(await importOriginal()),
+    useAllTools: () => doorFacts.allTools
+}))
+
 describe('StudioHub', () => {
     beforeEach(() => {
         createProject.mockReset()
@@ -141,6 +160,14 @@ describe('StudioHub', () => {
             expect(updateServerSpace).toHaveBeenCalledWith('gallery', { publishedProjectId: null })
             expect(deleteProject).toHaveBeenCalledWith('live-project')
         })
+    })
+
+    it('renders exactly one main region', async () => {
+        listProjects.mockResolvedValue([{ id: 'p1', title: 'P One', updatedAt: Date.now(), source: 'studio-v3' }])
+        getServerSpace.mockResolvedValue({ id: 'gallery', publishedProjectId: null })
+        const { container } = render(<StudioHub spaceId="gallery" />)
+        await screen.findByRole('main')
+        expect(container.querySelectorAll('main')).toHaveLength(1)
     })
 
     // The doors audit (2026-08-21): this button promised "The node editor" and
@@ -396,6 +423,54 @@ describe('shelves and the trash', () => {
         fireEvent.click(screen.getByText('Bring it back'))
         await waitFor(() => expect(restoreProject).toHaveBeenCalledWith('gone'))
     })
+
+    // UX S10 (F078, F031): the way back exists before a first delete, and Delete is a word.
+    it('shows the trash with 0 items, and the delete button says Delete', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        fireEvent.click(await screen.findByText('Trash — 0'))
+        expect(await screen.findByText(/wait here for 30 days/i)).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Delete' })).toBeTruthy()
+    })
+
+    // UX S10 (F031): a project card is not a button holding buttons; its name opens it.
+    it('a project card is no button itself, and its name is the button that opens it', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        const open = await screen.findByRole('button', { name: 'Kept' })
+        const card = open.closest('.sh-project-card')
+        expect(card.getAttribute('role')).not.toBe('button')
+        expect(card.getAttribute('tabindex')).toBeNull()
+        expect(card.querySelector('.sh-project-open')).toBe(open)
+    })
+
+    // UX S10 (CI fix): the name and its Rename and Delete share one row, so a long name, or a longer
+    // word in another language, wraps beside the two buttons instead of running under them — no reserve in px.
+    it('a project card keeps Rename and Delete in the name\'s row, not over it', async () => {
+        listProjects.mockResolvedValue([{ id: 'a', title: 'Kept', updatedAt: Date.now(), source: 'project' }])
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 30 * 24 * 60 * 60 * 1000 })
+
+        render(<StudioHub spaceId="main" />)
+
+        const head = (await screen.findByRole('button', { name: 'Kept' })).closest('.sh-project-head')
+        expect(head).toBeTruthy()
+        expect([...head.querySelectorAll('.sh-project-tools button')].map(b => b.textContent)).toEqual(['Rename', 'Delete'])
+
+        const css = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../styles/studio-hub.css'), 'utf8')
+        const rule = sel => css.match(new RegExp(`\\n${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`))?.[1] ?? ''
+        for (const sel of ['.sh-btn-rename', '.sh-btn-delete']) expect(rule(sel)).not.toMatch(/position\s*:\s*absolute/)
+        expect(rule('.sh-project-title')).not.toMatch(/padding-right/)
+        expect(rule('.sh-project-title')).toMatch(/overflow-wrap\s*:\s*anywhere/)
+    })
 })
 
 // ── One project list per space (2026-09-23) ─────────────────────────────────
@@ -418,6 +493,8 @@ describe('the Nodes copy of the list', () => {
         listCollections.mockReset()
         listCollections.mockResolvedValue([])
         authState = { role: null, openSpaceId: null }
+        doorFacts.isLocal = false
+        doorFacts.allTools = false
     })
 
     afterEach(() => setAppNavigate(null))
@@ -471,7 +548,39 @@ describe('the Nodes copy of the list', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Create' }))
 
         await waitFor(() => expect(navigate).toHaveBeenCalledWith('/lab/raw/projects/first-thing', { replace: false }))
-        expect(createProject).toHaveBeenCalledWith('lab', { title: 'First thing', slug: 'First thing', source: 'raw-v2' })
+        expect(createProject).toHaveBeenCalledWith('lab', { title: 'First thing', source: 'raw-v2' })
+    })
+
+    it('keeps the new-project form open with a plain message when the name is taken in this space', async () => {
+        listProjects.mockResolvedValue([])
+        createProject.mockRejectedValue(new Error('This space already has a project called "my scene". Pick another name.'))
+
+        render(<StudioHub spaceId="lab" />)
+        fireEvent.click(await screen.findByRole('button', { name: '+ New project' }))
+        fireEvent.change(screen.getByPlaceholderText('Project name'), { target: { value: 'my scene' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+        const alert = await screen.findByRole('alert')
+        expect(alert.textContent).toBe('This space already has a project called "my scene". Pick another name.')
+        const input = screen.getByPlaceholderText('Project name')
+        expect(input.value).toBe('my scene')
+        expect(input.getAttribute('aria-invalid')).toBe('true')
+        expect(navigateToStudioPath).not.toHaveBeenCalled()
+
+        // Typing a new name clears the message.
+        fireEvent.change(input, { target: { value: 'my scene too' } })
+        expect(screen.queryByRole('alert')).toBeNull()
+    })
+
+    it('sends an empty name as empty, for the server to name it', async () => {
+        listProjects.mockResolvedValue([])
+        createProject.mockResolvedValue({ project: { id: 'untitled' } })
+
+        render(<StudioHub spaceId="lab" />)
+        fireEvent.click(await screen.findByRole('button', { name: '+ New project' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+        await waitFor(() => expect(createProject).toHaveBeenCalledWith('lab', { title: '', source: 'studio-v3' }))
     })
 
     it('crosses to the Studio copy of the same list, where Studio crosses back', async () => {
@@ -665,5 +774,269 @@ describe('StudioHub stale responses on space change', () => {
         expect(screen.queryByText(/Project from A/)).not.toBeInTheDocument()
         expect(screen.getByText(/Project from B/)).toBeInTheDocument()
         expect(screen.getByText(/Space: Label B/)).toBeInTheDocument()
+    })
+})
+
+// ── Nav reach (2026-11-12): which tool the page opens in, and a project's doors ──
+// The list is a picker, and a card carries the other places its project opens:
+// Perform, and whichever of Studio and Nodes the card does not open itself.
+// Doors come from projectDoors, so these hrefs are compared with it rather than
+// restated: the address of a door has one source.
+describe('the doors on a card, and the tool the page names', () => {
+    const navigate = vi.fn()
+    const alpha = { id: 'a', title: 'Alpha', updatedAt: Date.now(), source: 'studio-v3' }
+    const textsOf = (container) => [...container.querySelectorAll('a.sh-door')].map(a => a.textContent)
+    const hrefsOf = (container) => [...container.querySelectorAll('a.sh-door')].map(a => a.getAttribute('href'))
+    const hrefsFor = (project, from, dropKey) => projectDoors({
+        space: 'lab',
+        project: project.id,
+        projectLabel: project.title,
+        from
+    }).filter(door => door.key !== dropKey).map(door => door.href)
+
+    beforeEach(() => {
+        navigate.mockReset()
+        setAppNavigate(navigate)
+        createProject.mockReset()
+        listProjects.mockReset()
+        navigateToStudioPath.mockReset()
+        getServerSpace.mockReset()
+        getServerSpace.mockResolvedValue(null)
+        listCollections.mockReset()
+        listCollections.mockResolvedValue([])
+        listTrash.mockResolvedValue({ projects: [], ttlMs: 0 })
+        authState = { role: null, openSpaceId: null }
+        // One test below turns "All tools" on: every test starts from off, so
+        // a switch one test set never reaches the next (it did, 2026-11-12).
+        doorFacts.isLocal = false
+        doorFacts.allTools = false
+    })
+
+    afterEach(() => setAppNavigate(null))
+
+    it('opened as Studio, the heading area names Studio and says the page is a picker', async () => {
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('Alpha')
+
+        expect(document.querySelector('.sh-tool-line').textContent).toBe('Pick a project. A card opens it in Studio.')
+        expect(document.querySelector('.sh-title').textContent).toBe('projects')
+        expect(document.querySelector('.sh-space-context').textContent).toBe('Space: lab')
+    })
+
+    it('opened as Nodes, the heading area names Nodes, and the word Raw is nowhere on the page', async () => {
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" openIn="nodes" />)
+        await screen.findByText('Alpha')
+
+        expect(document.querySelector('.sh-tool-line').textContent).toBe('Pick a project. A card opens it in Nodes.')
+        expect(document.body.textContent).not.toMatch(/\bRaw\b/)
+    })
+
+    it('a scene card in Studio shows Perform and Nodes, with the addresses projectDoors gives', async () => {
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+
+        expect(textsOf(card)).toEqual(['Perform', 'Nodes'])
+        expect(hrefsOf(card)).toEqual(hrefsFor(alpha, 'studio', 'studio'))
+        // The deck door names no layout and says which desk the person came from.
+        const perform = card.querySelector('a.sh-door').getAttribute('href')
+        expect(perform).toContain('from=studio')
+        expect(perform).not.toContain('preset=')
+    })
+
+    it('a scene card in Nodes shows Perform and Studio, and Perform comes from the Nodes desk', async () => {
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" openIn="nodes" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+
+        expect(textsOf(card)).toEqual(['Perform', 'Studio'])
+        expect(hrefsOf(card)).toEqual(hrefsFor(alpha, 'raw', 'raw'))
+        expect(card.querySelector('a.sh-door').getAttribute('href')).toContain('from=raw')
+    })
+
+    it('the doors are links in a group of their own, beside the name row and not in the Rename and Delete tools', async () => {
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+
+        const group = card.querySelector('.sh-card-doors')
+        expect(group.parentElement).toBe(card)
+        expect(group.getAttribute('role')).toBe('group')
+        expect(group.getAttribute('aria-label')).toBe('Open Alpha in')
+        expect(card.querySelector('.sh-project-tools .sh-card-doors')).toBeNull()
+        expect([...card.querySelectorAll('.sh-project-tools button')].map(b => b.textContent)).toEqual(['Rename', 'Delete'])
+        // Links, so the buttons by these names are still the one in the top row.
+        expect(screen.getAllByRole('button', { name: 'Nodes' })).toHaveLength(1)
+    })
+
+    it('a card of a page that is read (mode code) has no doors', async () => {
+        listProjects.mockResolvedValue([{ ...alpha, mode: 'code' }])
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('Alpha')
+
+        expect(document.querySelector('.sh-card-doors')).toBeNull()
+        expect(document.querySelectorAll('a.sh-door')).toHaveLength(0)
+    })
+
+    // A project list row is the project's meta plus `layers`, the counts of what it holds; it carries no `mode`
+    // (only the space page's contents rows do). A page says so in its counts.
+    it('a card whose counts say it is a page has no door strip at all', async () => {
+        listProjects.mockResolvedValue([{ ...alpha, layers: { page: true, pageBytes: 120 } }])
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('Alpha')
+
+        expect(document.querySelector('.sh-card-doors')).toBeNull()
+        expect(document.querySelectorAll('a.sh-door')).toHaveLength(0)
+    })
+
+    it('a card with lamps shows a Light door at the address the top bar gives', async () => {
+        listProjects.mockResolvedValue([{ ...alpha, layers: { things: 12, lamps: 4, joinedLamps: 4 } }])
+
+        render(<StudioHub spaceId="lab" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+
+        expect(textsOf(card)).toEqual(['Perform', 'Nodes', 'Light'])
+        const light = [...card.querySelectorAll('a.sh-door')].find(a => a.textContent === 'Light')
+        const bar = surfaceDestinations({ space: 'lab', project: 'a', projectLabel: 'Alpha', isLocalInstall: false })
+            .find(d => d.key === 'light')
+        expect(light.getAttribute('href')).toBe(bar.href)
+        // Pinned, so a wrong shape cannot pass by agreeing with the helper: the hosted desk page.
+        expect(light.getAttribute('href')).toBe('/light')
+    })
+
+    it('sends the hosted Light door through the app, and leaves the other doors to the browser', async () => {
+        listProjects.mockResolvedValue([{ ...alpha, layers: { things: 12, lamps: 4, joinedLamps: 4 } }])
+
+        render(<StudioHub spaceId="lab" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+        const door = (name) => [...card.querySelectorAll('a.sh-door')].find(a => a.textContent === name)
+
+        expect(fireEvent.click(door('Nodes'))).toBe(true)
+        expect(navigate).not.toHaveBeenCalled()
+        expect(fireEvent.click(door('Light'))).toBe(false)
+        expect(navigate).toHaveBeenCalledWith('/light', { replace: false })
+    })
+
+    it('says "Pick a project" only when there is a card to pick', async () => {
+        listProjects.mockResolvedValue([])
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('No projects yet')
+
+        expect(document.querySelector('.sh-tool-line')).toBeNull()
+    })
+
+    it('a card with a wall and lamps in Nodes shows Projection and Light after Perform and Studio', async () => {
+        listProjects.mockResolvedValue([{ ...alpha, layers: { things: 9, surfaces: 1, lamps: 2 } }])
+
+        render(<StudioHub spaceId="lab" openIn="nodes" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+
+        expect(textsOf(card)).toEqual(['Perform', 'Studio', 'Projection', 'Light'])
+    })
+
+    it('a card without counts, or with empty counts, has no Projection and no Light', async () => {
+        listProjects.mockResolvedValue([alpha, { ...alpha, id: 'b', title: 'Beta', layers: {} }])
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('Beta')
+
+        for (const group of document.querySelectorAll('.sh-card-doors')) {
+            expect(textsOf(group)).toEqual(['Perform', 'Nodes'])
+        }
+    })
+
+    it('with "All tools" on, a card offers Projection and Light whatever it holds', async () => {
+        doorFacts.allTools = true
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+
+        expect(textsOf(card)).toEqual(['Perform', 'Nodes', 'Projection', 'Light'])
+    })
+
+    it('a card in rename mode has no doors', async () => {
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('Alpha')
+        expect(document.querySelectorAll('a.sh-door')).toHaveLength(2)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+
+        expect(document.querySelectorAll('a.sh-door')).toHaveLength(0)
+    })
+
+    it('a click on a door does not open the card, and is left to the browser', async () => {
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+
+        // fireEvent returns false when something called preventDefault: the
+        // link's own navigation must stay, only the click's climb stops.
+        const notPrevented = fireEvent.click(card.querySelector('a.sh-door'))
+
+        expect(notPrevented).toBe(true)
+        expect(navigateToStudioPath).not.toHaveBeenCalled()
+        expect(navigate).not.toHaveBeenCalled()
+    })
+
+    it('a click elsewhere on the card still opens it', async () => {
+        listProjects.mockResolvedValue([alpha])
+
+        render(<StudioHub spaceId="lab" />)
+        const card = (await screen.findByRole('button', { name: 'Alpha' })).closest('.sh-project-card')
+        fireEvent.click(card.querySelector('.sh-project-meta'))
+
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/lab/studio/projects/a')
+    })
+
+    it('the card of the space\'s way in carries the mark, first in its meta row, and no other card does', async () => {
+        listProjects.mockResolvedValue([alpha, { id: 'b', title: 'Beta', updatedAt: Date.now(), source: 'studio-v3' }])
+        getServerSpace.mockResolvedValue({ id: 'lab', label: 'Lab', publishedProjectId: 'a' })
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('Beta')
+
+        await waitFor(() => expect(document.querySelectorAll('.sh-way-in')).toHaveLength(1))
+        const mark = document.querySelector('.sh-way-in')
+        expect(mark.textContent).toBe('the way in')
+        expect(mark.getAttribute('title')).toBe('What this space opens on')
+        expect(mark.parentElement.className).toBe('sh-project-meta')
+        expect(mark.parentElement.firstElementChild).toBe(mark)
+        expect(mark.closest('.sh-project-card').textContent).toContain('Alpha')
+        // The mark is not part of the name that opens the card.
+        expect(screen.getByRole('button', { name: 'Alpha' })).toBeTruthy()
+    })
+
+    it('shelves still group as before, and a card on a shelf has its doors', async () => {
+        listProjects.mockResolvedValue([
+            { ...alpha, collectionId: 'call-2026' },
+            { id: 'b', title: 'Something else', collectionId: null, updatedAt: Date.now(), source: 'studio-v3' }
+        ])
+        listCollections.mockResolvedValue([
+            { id: 'call-2026', label: 'Open call 2026', spaceId: 'lab', position: 0 },
+            { id: 'empty-one', label: 'Empty one', spaceId: 'lab', position: 1 }
+        ])
+
+        render(<StudioHub spaceId="lab" />)
+        await screen.findByText('Alpha')
+
+        expect([...document.querySelectorAll('.sh-shelf-label')].map(el => el.textContent))
+            .toEqual(['Open call 2026', 'Empty one', 'Not on a shelf'])
+        expect(document.querySelector('.sh-shelf-empty').textContent).toBe('Nothing on this shelf yet.')
+        const shelf = document.querySelector('.sh-shelf')
+        expect(textsOf(shelf)).toEqual(['Perform', 'Nodes'])
     })
 })

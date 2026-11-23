@@ -81,4 +81,14 @@ describe('apiFetch auth sessions', () => {
             .rejects.toMatchObject({ status: 403 })
         expect(fetchMock).toHaveBeenCalledTimes(1)
     })
+
+    it('puts the response maxBytes on the thrown error (413 size limit)', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({
+            error: 'Uploaded file is too large.',
+            maxBytes: 104857600
+        }), { status: 413, headers: { 'Content-Type': 'application/json' } })))
+
+        await expect(apiFetch('/api/projects/p/assets', { method: 'POST', body: {} }))
+            .rejects.toMatchObject({ status: 413, maxBytes: 104857600 })
+    })
 })

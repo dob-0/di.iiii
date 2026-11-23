@@ -37,6 +37,9 @@ describe('EstateSection', () => {
         // the console is always dark; the map must not follow the visitor's OS
         expect(frame.getAttribute('srcdoc')).toContain('data-theme="dark"')
         expect(frame.getAttribute('src')).toBeNull()
+        // plain words (UX audit F045): the section is "Machines", not "Estate"
+        expect(frame.getAttribute('title')).toBe('Machines map')
+        expect(container.textContent).not.toContain('Estate')
     })
 
     it('says the map is simply absent when the host was never given one', async () => {

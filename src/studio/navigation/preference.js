@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { DEFAULT_NAVIGATION_PRESET, normalizeNavigationPreset } from './mappings.js'
 import { DEFAULT_TURN, normalizeSpeedSetting, normalizeTurnSetting } from './freeMove.js'
 import { DEFAULT_MOVE_ID, normalizeMoveId } from './moves.js'
+import { DEFAULT_EDIT_MOUSE, normalizeEditMouse } from './editMouse.js'
+import { DEFAULT_FLY_KEYS, normalizeFlyKeys } from './flyKeys.js'
 
 export const NAVIGATION_STORAGE_KEY = 'di.studio.navigation'
 export const ORBIT_SELECTION_STORAGE_KEY = 'di.studio.navigation.orbitSelection'
@@ -15,6 +17,10 @@ export const TURN_STORAGE_KEY = 'di.studio.navigation.turn'
 // Which named move (moves.js) this device uses; Move 1 until it chooses. With one move the engine does not read it
 // (useCameraNavigation has only Move 1's branch); the day a second move exists, the engine branches on it.
 export const MOVE_STORAGE_KEY = 'di.studio.navigation.move'
+// The mouse in the Studio's Edit (editMouse.js): 'pull' (Pull to move, the default) or 'blender' (Like Blender, 2026-10-12's map).
+export const EDIT_MOUSE_STORAGE_KEY = 'di.studio.navigation.editMouse'
+// The fly keys (flyKeys.js): 'standard' (E up, Q down, the default) or 'classic' (Q up, E down, kept as a mode).
+export const FLY_KEYS_STORAGE_KEY = 'di.studio.navigation.flyKeys'
 
 function storage() {
     try {
@@ -98,6 +104,48 @@ export function setMovePreference(value) {
     return next
 }
 
+export function getEditMousePreference() {
+    try {
+        return normalizeEditMouse(storage()?.getItem(EDIT_MOUSE_STORAGE_KEY))
+    } catch {
+        return DEFAULT_EDIT_MOUSE
+    }
+}
+
+// Returns the value actually in effect (junk -> 'pull').
+export function setEditMousePreference(value) {
+    const next = normalizeEditMouse(value)
+    try {
+        storage()?.setItem(EDIT_MOUSE_STORAGE_KEY, next)
+    } catch {
+        // storage blocked — the choice holds for this page only
+    }
+    memory.editMouse = next
+    announce()
+    return next
+}
+
+export function getFlyKeysPreference() {
+    try {
+        return normalizeFlyKeys(storage()?.getItem(FLY_KEYS_STORAGE_KEY))
+    } catch {
+        return DEFAULT_FLY_KEYS
+    }
+}
+
+// Returns the value actually in effect (junk -> 'standard').
+export function setFlyKeysPreference(value) {
+    const next = normalizeFlyKeys(value)
+    try {
+        storage()?.setItem(FLY_KEYS_STORAGE_KEY, next)
+    } catch {
+        // storage blocked — the choice holds for this page only
+    }
+    memory.flyKeys = next
+    announce()
+    return next
+}
+
 // Returns the value actually in effect (junk -> 'auto').
 export function setSpeedPreference(value) {
     const next = normalizeSpeedSetting(value)
@@ -138,7 +186,7 @@ export function setOrbitSelectionPreference(on) {
 
 // When storage throws, a choice made on this page still has to stick for the
 // rest of the visit; this is that page-lifetime copy.
-const memory = { preset: null, orbitSelection: null, speed: null, turn: null, move: null }
+const memory = { preset: null, orbitSelection: null, speed: null, turn: null, move: null, editMouse: null, flyKeys: null }
 
 function read() {
     return {
@@ -147,6 +195,8 @@ function read() {
         speed: memory.speed ?? getSpeedPreference(),
         turn: memory.turn ?? getTurnPreference(),
         move: memory.move ?? getMovePreference(),
+        editMouse: memory.editMouse ?? getEditMousePreference(),
+        flyKeys: memory.flyKeys ?? getFlyKeysPreference(),
     }
 }
 
@@ -157,6 +207,8 @@ export function resetNavigationPreferenceMemory() {
     memory.speed = null
     memory.turn = null
     memory.move = null
+    memory.editMouse = null
+    memory.flyKeys = null
 }
 
 export function useNavigationPreference() {
@@ -180,5 +232,7 @@ export function useNavigationPreference() {
     const setSpeed = useCallback((value) => setSpeedPreference(value), [])
     const setTurn = useCallback((value) => setTurnPreference(value), [])
     const setMove = useCallback((value) => setMovePreference(value), [])
-    return { ...state, setPreset, setOrbitSelection, setSpeed, setTurn, setMove }
+    const setEditMouse = useCallback((value) => setEditMousePreference(value), [])
+    const setFlyKeys = useCallback((value) => setFlyKeysPreference(value), [])
+    return { ...state, setPreset, setOrbitSelection, setSpeed, setTurn, setMove, setEditMouse, setFlyKeys }
 }

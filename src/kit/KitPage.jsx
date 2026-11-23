@@ -16,6 +16,9 @@ import {
 import { kitStackGroups } from './kitStack.js'
 import KitPreview from './KitPreview.jsx'
 import kitWeights from './kitWeights.json'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { pageTitle } from '../hooks/pageTitles.js'
+import { readLastProject } from '../components/lastProject.js'
 
 /**
  * `/tools` — the Kit.
@@ -170,6 +173,7 @@ const kb = (value) => `${Math.round(Number(value) || 0)} KB`
 
 export default function KitPage({ isLocalInstall = false }) {
     const isEmbed = isEmbedRequest()
+    useDocumentTitle(pageTitle('tools'))
     const { sandboxSpaceId } = useAuthSession()
     const [liveId, setLiveId] = useState(null)
     const [coarse] = useState(isCoarsePointer)
@@ -180,11 +184,12 @@ export default function KitPage({ isLocalInstall = false }) {
         [sandboxSpaceId]
     )
     const stackGroups = useMemo(() => kitStackGroups(), [])
+    const lastProject = useMemo(() => readLastProject(), [])
     const count = groups.reduce((total, group) => total + group.tools.length, 0)
 
     return (
         <div className="kit">
-            <SurfaceBar here="tools" isLocalInstall={isLocalInstall} hidden={isEmbed} />
+            <SurfaceBar here="tools" space={lastProject.space} project={lastProject.project} isLocalInstall={isLocalInstall} hidden={isEmbed} />
 
             <main className="kit-page">
                 <header className="kit-intro">

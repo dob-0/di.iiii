@@ -16,6 +16,10 @@
 // is 127.0.0.1 (the connector and nginx are on the same machine, nothing else may reach it), and
 // NODE_ENV stays production. DI_LOCAL is never written: hosted mode only. --set replaces or
 // adds one standby-specific value (e.g. MAX_UPLOAD_MB=95 below a proxy's own body limit).
+// --nginx <host:port> is the tier's own nginx (e.g. 127.0.0.1:8081): every value that names the
+// client container (`http://client:8080`, SHELL_URL and SITEMAP_BUILT_URL in docker-compose.yml)
+// is pointed at it, because a Docker name has no host on a standby machine and the page route
+// answered 503 there. A value still naming client:8080 after that is refused, never written.
 // Output is `KEY=value` lines for `node --env-file`. Values are never printed anywhere else.
 import { readFileSync } from 'node:fs'
 
@@ -81,12 +85,23 @@ if (!env.NODE_ENV || !env.APP_BASE_PATH || !('AUTH_SESSION_SECRET' in env)) {
 env.NODE_ENV = 'production'
 env.DATA_ROOT = args['data-root']
 env.HOST = '127.0.0.1'
+const CLIENT = 'http://client:8080'
+if (args.nginx !== undefined) {
+  if (!/^[A-Za-z0-9.-]+:[0-9]+$/.test(args.nginx)) { console.error(`bad --nginx: ${args.nginx} (host:port)`); process.exit(2) }
+  for (const k of Object.keys(env)) env[k] = env[k].split(CLIENT).join(`http://${args.nginx}`)
+}
 for (const kv of sets) {
   const m = kv.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/)
   if (!m || ['NODE_ENV', 'DI_LOCAL', 'HOST'].includes(m[1])) { console.error(`--set refused: ${kv.split('=')[0]}`); process.exit(2) }
   env[m[1]] = m[2]
 }
 delete env.DI_LOCAL
+// the host must be exactly `client` (a URL's //client:8080), so a name like myclient:8080 passes
+const docker = Object.keys(env).filter((k) => /\/\/client:8080(?![0-9])/.test(env[k]))
+if (docker.length) {
+  console.error(`${docker.join(', ')} name the Docker client container (client:8080), which a standby host cannot reach; pass --nginx <the tier's nginx host:port>`)
+  process.exit(1)
+}
 
 const missing = ['AUTH_SESSION_SECRET'].filter((k) => !env[k])
 if (missing.length) { console.error(`required and empty: ${missing.join(', ')}`); process.exit(1) }

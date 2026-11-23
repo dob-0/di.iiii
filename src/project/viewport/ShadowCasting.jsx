@@ -13,7 +13,9 @@ import { SHADOW_LAMP_CAP, dressForShadows, undressShadows } from './shadowCastin
 // shadow pass itself.
 const REDRESS_EVERY_FRAMES = 30
 
-export default function ShadowCasting({ enabled = false, mapSize = 1024 }) {
+// `lamps` false: only the solid meshes join the pass (the head light's shadow needs the walls in it);
+// no lamp of the room is made a caster. Default true: the room's own switch, as before.
+export default function ShadowCasting({ enabled = false, mapSize = 1024, lamps = true }) {
     const scene = useThree((state) => state.scene)
     // How many lamps may throw at once: 12 at most, fewer where THIS GPU's texture units
     // and the room's busiest material leave fewer (shadowCasting.js dressForShadows). A room
@@ -23,8 +25,8 @@ export default function ShadowCasting({ enabled = false, mapSize = 1024 }) {
 
     const dress = useCallback(() => {
         if (!enabled || !scene) return
-        dressForShadows(scene, mapSize, { maxLights: SHADOW_LAMP_CAP, maxTextures })
-    }, [enabled, mapSize, maxTextures, scene])
+        dressForShadows(scene, mapSize, { maxLights: SHADOW_LAMP_CAP, maxTextures, lamps })
+    }, [enabled, lamps, mapSize, maxTextures, scene])
 
     // Dress while it is on, and put the scene back the moment it goes off or
     // this surface goes away. The cleanup is the switch's other half: the flags

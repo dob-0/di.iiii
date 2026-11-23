@@ -126,10 +126,16 @@ const needsCrossOrigin = (url) => {
  * @param {object} values   the node's values (see normaliseClipValues)
  * @param {object} [options]
  * @param {(asset: string) => string} [options.resolveAssetUrl]  asset → URL; default: the value itself
+ * @param {(message: string|null) => void} [options.onError]  a file that fails to load says so (a message);
+ *        null once a later file loads. Without it a failed file kept the old frame, silently.
  * @returns {{ video: HTMLVideoElement, update: (values: object) => void, dispose: () => void }}
  */
 export const createClipVideo = (values = {}, {
     resolveAssetUrl = (asset) => asset,
+    // (url) => { promise: Promise<objectUrl|null>, release } — plays the file
+    // from memory (clipSourceCache.js). Absent: the address is played directly.
+    loadSource = null,
+    onError = null,
     document: doc = globalThis.document,
     requestFrame = (callback) => globalThis.requestAnimationFrame(callback),
     cancelFrame = (handle) => globalThis.cancelAnimationFrame(handle)
@@ -210,19 +216,48 @@ export const createClipVideo = (values = {}, {
         else seek(clipWindow(video.duration, current).start)
     }
     video.addEventListener('loadedmetadata', onMetadata)
+    const onVideoError = () => {
+        if (disposed || !url) return // taking the source away is not a failure
+        const code = video.error?.code
+        const detail = video.error?.message || (code ? `media error ${code}` : 'it could not be played')
+        onError?.(`Clip file failed: ${detail}`)
+    }
+    const onLoadedData = () => { if (!disposed) onError?.(null) }
+    video.addEventListener('error', onVideoError)
+    video.addEventListener('loadeddata', onLoadedData)
+
+    let releaseSource = null
+    const applySource = (address, src) => {
+        if (needsCrossOrigin(address)) video.crossOrigin = 'anonymous'
+        else video.removeAttribute('crossorigin')
+        video.src = src
+    }
 
     const setSource = (next) => {
         if (next === url) return
         url = next
         direction = 1
+        if (releaseSource) { releaseSource(); releaseSource = null }
         if (!url) {
             video.removeAttribute('src')
             try { video.load() } catch { /* nothing loaded */ }
             return
         }
-        if (needsCrossOrigin(url)) video.crossOrigin = 'anonymous'
-        else video.removeAttribute('crossorigin')
-        video.src = url
+        if (!loadSource || /^(blob|data):/i.test(url)) {
+            applySource(url, url)
+            return
+        }
+        // The previous clip keeps playing until the new file is in memory: a
+        // switch never shows a gap, and never waits on a busy connection.
+        const wanted = url
+        const handle = loadSource(url)
+        releaseSource = handle.release
+        handle.promise.then((objectUrl) => {
+            if (disposed || url !== wanted) return
+            if (objectUrl) video.removeAttribute('crossorigin')
+            if (objectUrl) video.src = objectUrl
+            else applySource(wanted, wanted)
+        })
     }
 
     const update = (nextValues = {}) => {
@@ -256,7 +291,10 @@ export const createClipVideo = (values = {}, {
         if (disposed) return
         stop()
         disposed = true
+        if (releaseSource) { releaseSource(); releaseSource = null }
         video.removeEventListener('loadedmetadata', onMetadata)
+        video.removeEventListener('error', onVideoError)
+        video.removeEventListener('loadeddata', onLoadedData)
         try { video.pause() } catch { /* already gone */ }
         video.removeAttribute('src')
         // Releases the decoder; a removed src alone keeps it until GC.

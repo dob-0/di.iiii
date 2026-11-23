@@ -29,7 +29,7 @@ describe('the visitor viewer draws rectangles', () => {
 
     it('keeps the live scene\'s buttons and the sign-in notice off the pill token', () => {
         const scene = read('../../components/liveProjectScene.css')
-        const buttons = ['.live-scene-exit', '.live-scene-sound', '.live-scene-fly-btn', '.live-scene-vert-btn']
+        const buttons = ['.live-scene-exit', '.live-scene-sound', '.live-scene-fly-btn', '.live-scene-light-btn', '.live-scene-vert-btn']
         for (const selector of buttons) {
             const rule = scene.split('}').find((block) => block.includes(`${selector} {`) || block.includes(`${selector}{`))
             expect(rule, selector).toBeTruthy()

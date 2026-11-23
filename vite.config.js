@@ -817,6 +817,12 @@ export default {
                     // route actually mounts (2026-07-17 perf audit).
                     if (pkg === 'gsap') return 'gsap-vendor'
 
+                    // CodeMirror 6 + its lezer parsers are only imported by the code window's
+                    // editor (panels/CodeMirrorBox.jsx, React.lazy). In the 'vendor' catch-all
+                    // it added ~495 KB to the chunk every route loads (measured, S18 2026-10-29);
+                    // its own chunk loads only when a code file is opened.
+                    if (pkg.startsWith('@codemirror/') || pkg.startsWith('@lezer/') || pkg === 'style-mod' || pkg === 'w3c-keyname' || pkg === 'crelt' || pkg === '@marijn/find-cluster-break') return 'codemirror-vendor'
+
                     // One helper file, @babel/runtime/helpers/esm/extends.js, is
                     // shared by drei (three-vendor) and MUI (vendor). Left to the
                     // catch-all, rolldown seated it inside three-vendor, so the

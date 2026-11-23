@@ -31,7 +31,8 @@ describe('StudioHelpDialog', () => {
         render(<StudioHelpDialog open onClose={vi.fn()} />)
         fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }))
         expect(screen.getByText('Move: with a selection the drag starts at once (Blender grab); without, picks the gizmo mode')).toBeInTheDocument()
-        expect(screen.getByText('Toggle Navigate ↔ Edit')).toBeInTheDocument()
+        expect(screen.getByText(/Toggle Navigate ↔ Edit/)).toBeInTheDocument()
+        expect(screen.getByText('Close the window you are in (else the one opened last)')).toBeInTheDocument()
         expect(screen.getByText('Quick insert')).toBeInTheDocument()
     })
 
@@ -54,5 +55,28 @@ describe('StudioHelpDialog', () => {
         expect(screen.getByText('Deselect')).toBeInTheDocument()
         expect(screen.getByText('Unlock all (our own keys, Blender has no lock key)')).toBeInTheDocument()
         for (const key of ['Click a beam', 'Click a locked object', 'L', 'Alt+L', 'Alt+A']) expect(row(key).length).toBeGreaterThan(0)
+    })
+
+    // Nothing is lost (owner 2026-10-29): the Like Blender table stays beside the default one (editMouse.js).
+    it('shows the mouse of View and Pull to move, and of Edit with Like Blender', () => {
+        render(<StudioHelpDialog open onClose={vi.fn()} />)
+        fireEvent.click(screen.getByRole('tab', { name: 'Shortcuts' }))
+        expect(screen.getByText('Mouse · View, and Edit with Pull to move (like Sketchfab)')).toBeTruthy()
+        expect(screen.getByText('Mouse · Edit with Like Blender (Scene, Move, Mouse in Edit)')).toBeTruthy()
+        expect(screen.getByText('Shift+Middle drag')).toBeTruthy()
+    })
+
+    it('Shortcuts page has the two keyboard switches and they are kept (letter keys off, Blender Tab on)', () => {
+        window.localStorage.clear()
+        render(<StudioHelpDialog open onClose={vi.fn()} initialMode="shortcuts" />)
+        const letters = screen.getByRole('checkbox', { name: /Single-letter keys work/ })
+        const tab = screen.getByRole('checkbox', { name: /Blender keys/ })
+        expect(letters).toBeChecked()
+        expect(tab).not.toBeChecked()
+        fireEvent.click(letters)
+        fireEvent.click(tab)
+        expect(JSON.parse(window.localStorage.getItem('di.studio.keys'))).toEqual({ letters: false, blenderTab: true })
+        expect(screen.getByRole('checkbox', { name: /Single-letter keys work/ })).not.toBeChecked()
+        window.localStorage.clear()
     })
 })

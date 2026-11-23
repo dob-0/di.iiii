@@ -344,10 +344,21 @@ Owner-approved sketches A + C (`/home/dob/Downloads/di-sync-ui/sketches.html`, 2
 - The sketch's "Edits made here wait and cross … Nothing is lost" is true while the host's op log still holds the
   gap; a follower offline past the retained window is resynced by the converge pass, and no warning says so yet.
 
+## Following every space with one sign-in (2026-11-22)
+
+`di connect` (docs/architecture/CLI_LOGIN.md, "Connecting a machine") gets one editor key per space the person owns or edits and
+follows each one from now on. A space of that name that exists here is followed only when the host holds every project this copy
+holds; otherwise it is skipped and reported, and the existing choices (`--take-host`, `--take-mine`) stay the way to decide. `di disconnect`
+stops those follows and ends those keys; it deletes no work.
+
+Stay-connected (same day): a machine that connected is checked again by `di connect --sync` / `di up` / `di autoupdate run`; spaces gained since
+are followed under the same consent with the same "host holds everything this copy holds" rule, and an ahead copy is skipped and named.
+Details: docs/architecture/CLI_LOGIN.md, "Connecting a machine", items 6-8.
+
 ## Resolving a name (2026-10-28)
 
 `di follow <space> --from <label> --key <key>`: a bare label (no scheme, no dot) is a network name; the zone
-(`l.thedi.studio` unless `DI_NAME_ZONE` or this install's `name/name.json` says another) is added. The install is
+(`l.diiii.xyz` unless `DI_NAME_ZONE` or this install's `name/name.json` says another) is added. The install is
 found by, in order: (1) the **beacon** — a UDP broadcast `{ v:1, kind:'di-name', label, port }` on port 41767,
 unsigned, listened to for 2 s; (2) **DNS** of `<label>.<zone>` (a loopback answer is the broker's "not shared" marker
 and is skipped); (3) the **last address** stored with the follow (`name.lastAddress`, `lastPort`). Each address is

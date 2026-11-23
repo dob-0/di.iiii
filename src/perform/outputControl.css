@@ -1,0 +1,73 @@
+/* The output control (OutputControl.jsx): tokens from base.css only, square corners,
+   every control at least 28px (44px on a touch screen, like the rest of Perform). */
+.output-control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    min-width: 0;
+}
+
+.output-control-row,
+.output-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-width: 0;
+}
+
+.output-control :is(button, select, input[type='number']) {
+    min-height: 28px;
+}
+
+@media (pointer: coarse) {
+    .output-control :is(button, select, input[type='number']) {
+        min-height: 44px;
+    }
+}
+
+.output-control input[type='number'] {
+    /* Five digits and the spinner: "1920" and "3840" are never cut. */
+    width: 9ch;
+    min-width: 9ch;
+}
+
+.output-control input[type='checkbox'] {
+    min-height: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.output-state {
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.08em;
+}
+
+.output-toggle.is-on + .output-state {
+    color: var(--di-cyan);
+}
+
+.output-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    padding: var(--di-space-2);
+    border: 1px solid var(--di-line);
+}
+
+.output-field > span:first-child {
+    min-width: 6ch;
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+}
+
+.output-note {
+    margin: 0;
+    color: var(--di-dim);
+    font-size: var(--di-text-2);
+}
+
+.output-note[role='alert'] {
+    color: var(--di-warning);
+}

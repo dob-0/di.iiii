@@ -30,6 +30,18 @@ term expires. Do not delete it as part of adopting this path.
   reverse-proxies `DEV_DOMAIN` to the dev tier's host-published client port
   — see the second site block in `Caddyfile`.
 
+### Dev deploy trusts a tested tree
+
+Every commit on `dev` came through a PR whose required checks ran green, and a
+squash merge onto an up-to-date base keeps the tree. The `proof` job
+(`scripts/ci/tested-tree.mjs`) compares the pushed commit's tree with the tree
+of the merged PR head and requires green `build-and-test` and `browser-checks /
+browser-checks` runs there. If it holds, the `test` job is skipped (it was
+8.9-10.7 min of a 14-21 min deploy, measured 2026-10-29) and the image build and
+deploy follow. Anything unproven (no PR, another tree, a red or missing check,
+an API error, `workflow_dispatch`) runs the tests as before. The run's summary
+says which: "tests skipped: ..." or "tests run: <reason>".
+
 ### One-time VPS setup for the dev tier
 
 1. Clone this repo (or copy the compose files + `Caddyfile`) into a second

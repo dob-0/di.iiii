@@ -1,0 +1,22 @@
+{
+  "v": 1,
+  "production": "Example production",
+  "t": "2026-11-01T00:30:05.000Z",
+  "light": {
+    "scene": "Scene three"
+  },
+  "laser": {
+    "state": "stopped",
+    "stop_reason": "the cube stopped answering"
+  },
+  "controller": null,
+  "link": {
+    "up": true,
+    "kind": "relay"
+  },
+  "heat": {
+    "c": 104
+  },
+  "changed_at": "2026-11-01T00:30:05.000Z",
+  "human": null
+}

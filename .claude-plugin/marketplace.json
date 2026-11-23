@@ -1,0 +1,14 @@
+{
+  "name": "di-iiii",
+  "description": "Plugins made in the di.iiii repo.",
+  "owner": {
+    "name": "di.iiii"
+  },
+  "plugins": [
+    {
+      "name": "di-games",
+      "source": "./plugins/di-games",
+      "description": "Concept to game: stage skills, agents and tool config for making games. Roblox first, di.iiii next."
+    }
+  ]
+}

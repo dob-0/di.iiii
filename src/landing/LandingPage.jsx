@@ -11,6 +11,7 @@ import PageDebris from './PageDebris.jsx'
 import { enterFromElement } from '../components/entryTransition/entryTransition.js'
 import { buildJamPublicPath } from '../project/routing/jamRouting.js'
 import { WORK_IDS } from '../works/works.js'
+import { landingBackdropOn } from '../utils/decorative3d.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
 // LiveProjectScene into the landing chunk for every visitor — including phones,
@@ -402,7 +403,8 @@ function LandingPageInner() {
     // `entered` is exempt from the small-screen gate: "Step inside" *is* the
     // walkable scene, so a phone visitor who taps it has asked for three.js
     // and gets it then — on demand, rather than on every passive page view.
-    const showBackground = entered || flightArmed || (heroInView && !isSmallScreen)
+    // Idle decoration is flat (no canvas); ?scene=1 or pressing the door brings the room.
+    const showBackground = entered || flightArmed || (heroInView && !isSmallScreen && landingBackdropOn())
 
     return (
         <Box component="main" className={`lp-root${entered ? ' lp-root--inside' : ''}`} data-page="landing" ref={rootRef}>
@@ -550,7 +552,7 @@ function LandingPageInner() {
                                     : 'Drag to orbit · Scroll to zoom · Click a door')
                                 : (isMobile
                                     ? 'Joystick to move · Drag to look · Fly button to switch modes'
-                                    : 'Walk (WASD) · Drag to look · F to fly (Space/Q up · C/E down) · V to view')}
+                                    : 'Walk (WASD) · Drag to look · F to fly (Space/E up · C/Q down) · V to view')}
                         </p>
                     </>
                 )}

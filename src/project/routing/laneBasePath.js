@@ -12,7 +12,8 @@ export const createBasePathHelpers = (rawBasePath = '/') => {
 
     const stripBasePath = (pathname = '/') => {
         if (!pathname) return '/'
-        if (normalizedBase !== '/' && pathname.startsWith(normalizedBase)) {
+        // A whole segment: base '/hy' does not own '/hyper/studio'.
+        if (normalizedBase !== '/' && (pathname === normalizedBase || pathname.startsWith(`${normalizedBase}/`))) {
             const stripped = pathname.slice(normalizedBase.length)
             return stripped || '/'
         }

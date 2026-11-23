@@ -172,6 +172,63 @@ describe('undressing', () => {
 // units and every shadow-casting lamp takes one in every lit material, so past ~12 the room
 // fails to compile and goes black — the shadows were switched off for the whole room.
 // Now a fixed number of lamps throw: the ones putting the most light into the room.
+describe('a lamp that keeps its own shadow (the head light)', () => {
+    const lamp = (name, intensity) => ({ ...spotLight(), name, intensity, angle: 0.3, uuid: name })
+    const tex = { isTexture: true }
+    // The head light opts out of the dressing (userData.noShadow) and casts for itself.
+    const headLight = () => ({ isSpotLight: true, isLight: true, castShadow: true, userData: { noShadow: true }, distance: 10, children: [] })
+
+    it('is never dressed, and never switched off by the cap', () => {
+        const head = headLight()
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`h${String(i).padStart(2, '0')}`, 10 + i))
+        dressForShadows({ children: [mesh(), head, ...lamps] }, 2048, { maxLights: 12, maxTextures: 32 })
+        expect(head.castShadow).toBe(true)
+        expect(head.userData.__diShadowBefore).toBeUndefined()
+        expect(lamps.filter((l) => l.castShadow).length).toBe(12)
+    })
+
+    it('takes one texture unit from the cap, like any other shadow', () => {
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`u${String(i).padStart(2, '0')}`, 10 + i))
+        const busy = mesh({ material: { map: tex, normalMap: tex } })
+        dressForShadows({ children: [busy, ...lamps] }, 1024, { maxLights: 12, maxTextures: 14 })
+        const without = lamps.filter((l) => l.castShadow).length
+        const more = Array.from({ length: 20 }, (_, i) => lamp(`v${String(i).padStart(2, '0')}`, 10 + i))
+        dressForShadows({ children: [busy, headLight(), ...more] }, 1024, { maxLights: 12, maxTextures: 14 })
+        expect(without).toBe(14 - 2 - 1) // two maps, one spare
+        expect(more.filter((l) => l.castShadow).length).toBe(14 - 2 - 1 - 1) // two maps, the head light, one spare
+    })
+
+    it('counts nothing while it does not cast (Low quality)', () => {
+        const head = { ...headLight(), castShadow: false }
+        const lamps = Array.from({ length: 20 }, (_, i) => lamp(`w${String(i).padStart(2, '0')}`, 10 + i))
+        dressForShadows({ children: [mesh(), head, ...lamps] }, 1024, { maxLights: 12, maxTextures: 16 })
+        expect(lamps.filter((l) => l.castShadow).length).toBe(12)
+    })
+})
+
+describe('meshes only (lamps: false)', () => {
+    it('dresses the solid meshes and leaves every lamp as it was', () => {
+        const wall = mesh()
+        const lamp = { ...spotLight(), name: 'l1', intensity: 5, angle: 0.3, uuid: 'l1', castShadow: false }
+        const modelLamp = { ...spotLight(), name: 'l2', intensity: 5, angle: 0.3, uuid: 'l2', castShadow: true }
+        const result = dressForShadows({ children: [wall, lamp, modelLamp] }, 1024, { maxLights: 0, lamps: false })
+        expect(result).toEqual({ meshes: 1, lights: 0 })
+        expect(wall.castShadow).toBe(true)
+        expect(wall.receiveShadow).toBe(true)
+        expect(lamp.castShadow).toBe(false)
+        expect(modelLamp.castShadow).toBe(true)
+    })
+    it('is undone by undressShadows like the full dressing', () => {
+        const wall = mesh({ castShadow: false, receiveShadow: false })
+        const root = { children: [wall] }
+        dressForShadows(root, 1024, { lamps: false })
+        expect(wall.castShadow).toBe(true)
+        undressShadows(root)
+        expect(wall.castShadow).toBe(false)
+        expect(wall.receiveShadow).toBe(false)
+    })
+})
+
 describe('shadows for a room of many lamps', () => {
     const lamp = (name, intensity, angle = 0.3) => ({ ...spotLight(), name, intensity, angle, uuid: name })
     it('gives a shadow to exactly the cap, the lamps throwing the most light, and the count never changes', () => {

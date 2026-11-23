@@ -27,16 +27,17 @@ di status      what is running, where, whether the room can reach it, how big,
 di new NAME    start a new space
 di save SPACE  save it as one file you can carry anywhere
 di open FILE   open a file someone saved
+di open FILE --to URL   open it on another di.iiii with your login there (--as ID names it; --token - reads a token from stdin)
 di spaces      what is in this di.iiii
 
 di backup      write your whole di.iiii to one file
 di update      get the newest — never touches your work
 di channel     which channel this install follows: stable (releases) or dev (what dev.diiii.xyz serves)
-di autoupdate  on | off | status — keep it on its channel every 15 minutes (Linux)
+di autoupdate  on | off | status — keep it on its channel every 5 minutes (Linux)
 di doctor      what this machine can and cannot do
 di keeper get  a small model on this machine — works with no internet
 di ndi get     video in and out over the network — OBS, Resolume, a projector
-di login       sign in once from the terminal — then di and Claude act as you
+di login       sign in once from the terminal — then di and Claude act as you (needs a di newer than 0.4.3)
 di whoami      who this terminal is signed in as · di logout ends it
 di help        the rest
 ```
@@ -403,13 +404,13 @@ and says so. `di update --rollback` returns to `previous`.
   unpacked.
 - No GitHub account is needed, ever: installs download public release files anonymously.
 - `di channel dev` remembers the channel; `di channel` shows it.
-- `di autoupdate on` installs a systemd **user** timer (Linux) that runs the update every 15 minutes. It skips and
+- `di autoupdate on` installs a systemd **user** timer (Linux) that runs the update every 5 minutes (an install that had it on at 15 is rewritten by its next tick). It skips and
   logs while the CPU package is above 85 C. `di autoupdate status` (and `di status`) show last check, last update and
   last error; the log is `~/.di/logs/autoupdate.log`, one line per run. `di autoupdate off` removes it.
   To run with nobody logged in: `loginctl enable-linger $USER`.
 - On a running di an automatic update restarts it, like `di update` does. Keep a show on `stable`, or `autoupdate off`.
 - Windows and macOS: not built. The equivalent is a Task Scheduler task or a LaunchAgent running
-  `di autoupdate run` every 15 minutes.
+  `di autoupdate run` every 5 minutes.
 
 Why and the limits: `docs/architecture/decisions/2026-10-05-release-channels.md`.
 
@@ -597,6 +598,11 @@ looked nothing like a real install — see below.
   `.zshenv` for zsh, `.bash_profile` before `.bashrc` on macOS.
 
 ## Signing in from the terminal
+
+`di login` needs a di newer than 0.4.3: the released 0.4.3 answers
+`no such command: login`, and no stable release has it yet. `di --version` shows
+which you have. On 0.4.3, everything above works without signing in; see
+`docs/ai/public/join.md`.
 
 `di login` signs this machine in once, so `di` and the agents started from it
 (`di mcp`, Claude) act as the person in their own spaces — no trip to the

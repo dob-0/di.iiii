@@ -57,14 +57,29 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
             // (serverXR machines/onThisMachine.js) — it must not act as it.
             if (answer?.machine) machine = { ...answer.machine, away: answer.away === true }
             setPeers(answer?.peers)
+            if (!stopped && othersLinked()) listen()
         } catch {
             // The server may be restarting, or older than this page. Try again
             // on the next beat; a page that cannot link still runs locally.
         }
     }
 
+    // The long poll holds one of the six connections a browser gives a site,
+    // for as long as the page lives. Two pages of one show (stage and tool),
+    // each with its event streams, filled all six and every click, save and
+    // clip then waited in a queue (measured 2026-11-10). Messages only ever
+    // come from ANOTHER machine, so the poll runs only while one is linked;
+    // the hello beat (5 s) notices one arriving, and its messages wait in this
+    // page's mailbox on the server until then.
+    const othersLinked = () => peers.some((peer) => peer?.peerId !== peerId && peer?.machineId && peer.machineId !== machine?.id)
+    let listening = false
     const listen = async () => {
-        while (!stopped) {
+        if (listening) return
+        listening = true
+        try { await poll() } finally { listening = false }
+    }
+    const poll = async () => {
+        while (!stopped && othersLinked()) {
             controller = new AbortController()
             try {
                 const answer = await apiFetch(`${base}/signal?peer=${encodeURIComponent(peerId)}&wait=${WAIT_SECONDS}`, { signal: controller.signal })
@@ -97,7 +112,7 @@ export const createMachineLink = ({ spaceId, role = 'runner' }) => {
         }
     }
 
-    hello().then(() => { if (!stopped) listen() })
+    hello()
     helloTimer = setInterval(hello, HELLO_EVERY_MS)
 
     return {

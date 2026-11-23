@@ -35,7 +35,9 @@ export function useSpaceNaming({
                 tone: 'error',
                 message: isSpaceNameReserved
                     ? 'That name is reserved by the app. Try another.'
-                    : 'That name is taken. Try another.'
+                    // Space names are the first part of every link, so they stay unique on the
+                    // whole di.iiii (project names only inside one space). Say which name.
+                    : `There is already a space called "${newSpaceSlug}". Try another name.`
             }
         }
         const sharePath = typeof buildSpacePath === 'function' ? buildSpacePath(newSpaceSlug) : newSpaceSlug

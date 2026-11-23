@@ -224,7 +224,7 @@ describe('landing promises: the premises the new sentences stand on', () => {
         // loads the chunk and flies anyway.
         const door = read('src/landing/LandingPage.jsx')
         expect(door).toContain("window.matchMedia?.('(max-width: 520px)').matches")
-        expect(door).toContain('const showBackground = entered || flightArmed || (heroInView && !isSmallScreen)')
+        expect(door).toContain('const showBackground = entered || flightArmed || (heroInView && !isSmallScreen && landingBackdropOn())')
     })
 
     it('a public space opens with no live project (wiki: publishing)', () => {

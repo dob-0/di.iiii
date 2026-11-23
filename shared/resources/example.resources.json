@@ -1,0 +1,32 @@
+{
+  "schema": "di.resources/1",
+  "title": "Example studio — resources",
+  "readAt": "2026-11-01 01:00",
+  "by": "an example check",
+  "note": "Made up for the tests and the screenshots; no real team, machine or account.",
+  "tasks": [
+    { "id": "chat", "label": "answer a chat" },
+    { "id": "gpu-big", "label": "big GPU job (train, scan, render)" },
+    { "id": "always-on", "label": "always-on service" }
+  ],
+  "resources": [
+    { "id": "desk-pc", "kind": "machine", "name": "desk-pc", "what": "8-core laptop, 32 GB, 8 GB GPU", "state": "works", "use": "owner", "order": 2,
+      "bestFor": ["gpu-big"], "proof": { "text": "lscpu and nvidia-smi ran", "source": "lscpu; nvidia-smi", "date": "2026-11-01" } },
+    { "id": "home-server", "kind": "machine", "name": "home-server", "what": "small always-on box", "state": "works", "use": "ours", "order": 1,
+      "bestFor": ["always-on"], "proof": { "text": "ssh answered", "source": "ssh home-server uname", "date": "2026-11-01" } },
+    { "id": "old-laptop", "kind": "machine", "name": "old-laptop", "state": "down", "use": "ours",
+      "proof": { "text": "ssh timed out", "source": "ssh old-laptop", "date": "2026-11-01" } },
+    { "id": "cloud-a100", "kind": "cloud-gpu", "name": "Rented A100", "state": "works", "use": "shared", "order": 3, "cost": "7 units/h", "limit": "balance 1000 units",
+      "bestFor": ["gpu-big"], "secretsAt": "the notebook service's own sign-in",
+      "proof": { "text": "balance read", "source": "usage command", "date": "2026-11-01" } },
+    { "id": "plan-a", "kind": "model-credit", "name": "Plan login A", "state": "works", "use": "ours", "order": 2, "limit": "weekly meter",
+      "bestFor": ["chat"], "proof": { "text": "one prompt answered", "source": "claude -p", "date": "2026-11-01" } },
+    { "id": "api-key-b", "kind": "model-credit", "name": "API key B", "state": "spent", "use": "shared",
+      "bestFor": ["chat"], "secretsAt": "the server's secrets file", "proof": { "text": "credit balance is too low", "source": "one Messages call", "date": "2026-11-01" } },
+    { "id": "local-4b", "kind": "local-model", "name": "Local 4B model", "state": "works", "use": "shared", "order": 1, "cost": "free (our power)",
+      "bestFor": ["chat"], "proof": { "text": "answered OK", "source": "POST /v1/chat/completions", "date": "2026-11-01" },
+      "facts": [ { "text": "4096 context", "source": "GET /v1/models", "date": "2026-11-01" } ] },
+    { "id": "routines", "kind": "service", "name": "Cloud routines credit", "state": "unchecked", "use": "shared", "why": "the balance has no reading door" },
+    { "id": "hazer", "kind": "show-device", "name": "Hazer", "state": "off", "use": "venue" }
+  ]
+}

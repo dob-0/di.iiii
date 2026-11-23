@@ -15,7 +15,10 @@ import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { CC_ACTION } from '../navigation/mappings.js'
 import { isTypingTarget } from '../utils/editKeys.js'
+import { letterKeyIsOff } from '../utils/studioKeyPrefs.js'
 import { boxModeFor, isPickableEntity, mergeSelection, normalizeRect, pickInRect } from '../utils/selectionTools.js'
+import { pullInProgress } from '../navigation/pullToMove.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 const DRAG_START_PX = 4
 
@@ -97,6 +100,8 @@ export default function BoxSelect({ active = false, entities = [], selectedEntit
             const { active: on } = live.current
             if (event.button !== 0 || event.altKey) return
             if (!on && !armed) return
+            // Edit (View | Edit): the press already started a pull on the selected thing (pullToMove.js), so it draws no box.
+            if (pullInProgress()) return
             start = { x: event.clientX, y: event.clientY, mode: boxModeFor(event) }
             dragging = false
             setButtons({ left: CC_ACTION.NONE })
@@ -155,6 +160,7 @@ export default function BoxSelect({ active = false, entities = [], selectedEntit
         }
 
         const onKeyDown = (event) => {
+            if (isPlaying()) return
             if (isTypingTarget(event.target)) return
             if (event.key === 'Escape' && (start || armed)) {
                 armed = false
@@ -162,7 +168,7 @@ export default function BoxSelect({ active = false, entities = [], selectedEntit
                 return
             }
             const isB = event.code === 'KeyB' || String(event.key).toLowerCase() === 'b'
-            if (isB && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+            if (isB && !letterKeyIsOff(event) && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
                 armed = true
                 canvas.style.cursor = 'crosshair'
             }

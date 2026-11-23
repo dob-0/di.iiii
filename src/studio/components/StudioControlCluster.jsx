@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
+import StudioSaveLine from './StudioSaveLine.jsx'
+import { isCueKey } from '../../map/cueFiring.js'
+import { setCueKeysOn, useCueKeysOn } from '../utils/cueKeysSwitch.js'
 
 // Five scene windows, one per job: add things, edit the scene, configure the
 // world, ship it, write code — plus Projects, the space-level window for
@@ -12,6 +15,8 @@ const PANEL_BUTTONS = [
     { key: 'files', label: 'Code' },
     { key: 'projects', label: 'Projects' },
 ]
+// The windows that only make sense for a scene; a page project leaves them out.
+const SCENE_PANELS = new Set(['create', 'scene', 'world'])
 
 export default function StudioControlCluster({
     spaceName,
@@ -42,6 +47,11 @@ export default function StudioControlCluster({
     onOpenProjection,
     xrState,
     syncState,
+    // Undo and Redo: the same calls as Ctrl+Z. Null onUndo draws no buttons; canUndo / canRedo say the ends.
+    onUndo = null,
+    onRedo = null,
+    canUndo = false,
+    canRedo = false,
     presence,
     snapEdges = false,
     onToggleSnap,
@@ -72,6 +82,10 @@ export default function StudioControlCluster({
     // `onToggleAllTools` renders the escape hatch between Simple ⇄ All tools.
     panelKeys = null,
     minimal = false,
+    // A page project (StudioShell pageOnly, S16): no Tools row and no 3D windows (Create, Objects, Scene); one
+    // "Add a scene" button in their place brings them all back (onAddScene).
+    pageOnly = false,
+    onAddScene = null,
     allTools = false,
     onToggleAllTools = null,
     // Every project has "⚒ All tools" now (the layers decision, 2026-09-23);
@@ -79,13 +93,18 @@ export default function StudioControlCluster({
     allToolsHint = null,
 }) {
     const [collapsed, setCollapsed] = useState(false)
+    // The number keys 1-9 fire the cue bound to that digit, and that changes the real lights, laser and wall; this row says so and turns them off.
+    const cueKeysOn = useCueKeysOn()
+    const hasKeyedCue = Array.isArray(cues) && cues.some((cue) => isCueKey(cue?.key))
+    const keysTitle = 'Number keys 1-9 fire this project\'s cues: the real lights, and a laser or wall look where a cue has one'
 
     const initialPos = { x: typeof window !== 'undefined' ? window.innerWidth - 400 : 880, y: 90 }
     const { panelRef, dragProps, dragStyle, panelPointerProps } = usePanelDrag(initialPos, { baseZ: 1500, snapEdges })
 
-    const panelButtons = panelKeys
+    const panelButtons = (panelKeys
         ? PANEL_BUTTONS.filter(({ key }) => panelKeys.includes(key))
         : PANEL_BUTTONS
+    ).filter(({ key }) => !pageOnly || !SCENE_PANELS.has(key))
 
     const canVr = xrState?.canEnterVr
     const canAr = xrState?.canEnterAr
@@ -101,79 +120,122 @@ export default function StudioControlCluster({
                     </span>
                     {syncState && (
                         <span
-                            className={`scc-sync-dot scc-sync-dot--${syncState.pendingSyncError ? 'error' : (syncState.sceneStreamState || 'idle')}`}
-                            // "retrying" was a lie on the path that matters most: a 401
-                            // clearTimeout()s the retry and breaks, so nothing is retrying
-                            // and the queued edits sit in memory until a reload drops them.
-                            // The message the sync layer already wrote says what to do.
-                            title={syncState.pendingSyncError || syncState.sceneStreamState}
+                            className={`scc-sync-dot scc-sync-dot--${syncState.sceneStreamState || 'idle'}`}
+                            // The dot is the live scene connection only. Whether work is stored is the
+                            // save line below, in words (F089); the red dot and its raw-error tooltip
+                            // said the same thing a second time.
+                            title={syncState.sceneStreamState}
                         />
+                    )}
+                    {collapsed && hasKeyedCue && (
+                        <button
+                            type="button"
+                            className={`scc-btn scc-btn--xs ${cueKeysOn ? 'active' : ''}`}
+                            data-testid="cue-keys-chip"
+                            title={`${keysTitle}. Press to turn them ${cueKeysOn ? 'off' : 'on'}.`}
+                            onClick={() => setCueKeysOn(!cueKeysOn)}
+                        >
+                            {cueKeysOn ? '1-9 on' : '1-9 off'}
+                        </button>
+                    )}
+                    {onUndo && (
+                        <button type="button" className="scc-btn scc-undo-btn" onClick={onUndo} disabled={!canUndo} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+                    )}
+                    {onRedo && (
+                        <button type="button" className="scc-btn scc-undo-btn" onClick={onRedo} disabled={!canRedo} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
                     )}
                     <button className="scc-collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
                         {collapsed ? '▸' : '▾'}
                     </button>
                 </div>
 
+                {syncState && <StudioSaveLine syncState={syncState} className="scc-save-line" />}
+
                 {!collapsed && (
                     <>
-                        <div className="scc-section">
-                            <div className="scc-section-label">Tools</div>
-                            <div className="scc-buttons">
-                                <button
-                                    className={`scc-btn ${editMode === 'navigate' ? 'active' : ''}`}
-                                    onClick={() => onSetEditMode('navigate')}
-                                    title="Navigate mode (E)"
-                                >
-                                    Navigate
-                                </button>
-                                <button
-                                    className={`scc-btn ${editMode === 'edit' ? 'active' : ''}`}
-                                    onClick={() => onSetEditMode('edit')}
-                                    title="Edit mode (E)"
-                                >
-                                    Edit
-                                </button>
-                                <button
-                                    className={`scc-btn ${selectTool ? 'active' : ''}`}
-                                    onClick={() => onSetEditMode('select')}
-                                    aria-pressed={selectTool}
-                                    title="Select box: drag on the room to select everything inside (Shift adds, Ctrl removes). B for one box from any mode."
-                                >
-                                    Select
-                                </button>
-                                {onWalk && (
-                                    <>
-                                        <button
-                                            className={`scc-btn ${walkMode === 'walk' ? 'active' : ''}`}
-                                            data-walk-mode="walk"
-                                            onClick={() => onWalk('walk')}
-                                            aria-pressed={walkMode === 'walk'}
-                                            title="Walk: the camera stays at eye height above the floor; mouse looks, W A S D move, Tab flies; Esc keeps the place, right click returns (Blender: Walk with gravity)"
-                                        >
-                                            Walk
-                                        </button>
-                                        <button
-                                            className={`scc-btn ${walkMode === 'fly' ? 'active' : ''}`}
-                                            data-walk-mode="fly"
-                                            onClick={() => onWalk('fly')}
-                                            aria-pressed={walkMode === 'fly'}
-                                            title="Fly (Shift+`): mouse looks, W A S D move, Q E down/up, Tab walks; Esc keeps the place, right click returns (Blender: Walk without gravity)"
-                                        >
-                                            Fly
-                                        </button>
-                                    </>
-                                )}
-                                {editMode === 'edit' && (
-                                    <>
-                                        <div className="scc-sep" />
-                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'translate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('translate')} title="Move — G starts it at once, X / Y / Z constrain">Move G</button>
-                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'rotate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('rotate')} title="Rotate — R starts it at once">Rotate R</button>
-                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'scale' ? 'active' : ''}`} onClick={() => onSetGizmoMode('scale')} title="Scale — S starts it at once (S is never Select; Select is the tool, B for one box)">Scale S</button>
-                                        <button className={`scc-btn ${gizmoSpace === 'local' ? 'active' : ''}`} aria-pressed={gizmoSpace === 'local'} onClick={() => onSetGizmoSpace?.(gizmoSpace === 'local' ? 'world' : 'local')} title="Local axes — the gizmo follows the object's own axes; off, it moves along the world's (Blender: Transform Orientation, Global / Local)">Local</button>
-                                    </>
-                                )}
+                        {hasKeyedCue && (
+                            <div className="scc-section" data-testid="cue-keys-row">
+                                <div className="scc-section-label">Keys 1-9</div>
+                                <div className="scc-buttons">
+                                    <span className="scc-keys-note">fire cues: real lights, laser, wall.</span>
+                                    <button
+                                        type="button"
+                                        className={`scc-btn ${cueKeysOn ? 'active' : ''}`}
+                                        title={keysTitle}
+                                        onClick={() => setCueKeysOn(!cueKeysOn)}
+                                    >
+                                        {cueKeysOn ? 'Turn off' : 'Turn on'}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
+                        {pageOnly ? (
+                            <div className="scc-section">
+                                <div className="scc-section-label">Scene</div>
+                                <div className="scc-buttons">
+                                    <button type="button" className="scc-btn" onClick={onAddScene} title="Add a scene to this project: the 3D tools come back, with Create open">Add a scene</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="scc-section">
+                                <div className="scc-section-label">Tools</div>
+                                <div className="scc-buttons">
+                                    <button
+                                        className={`scc-btn ${editMode === 'navigate' ? 'active' : ''}`}
+                                        onClick={() => onSetEditMode('navigate')}
+                                        title="Navigate mode (E)"
+                                    >
+                                        Navigate
+                                    </button>
+                                    <button
+                                        className={`scc-btn ${editMode === 'edit' ? 'active' : ''}`}
+                                        onClick={() => onSetEditMode('edit')}
+                                        title="Edit mode (E)"
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        className={`scc-btn ${selectTool ? 'active' : ''}`}
+                                        onClick={() => onSetEditMode('select')}
+                                        aria-pressed={selectTool}
+                                        title="Select box: drag on the room to select everything inside (Shift adds, Ctrl removes). B for one box from any mode."
+                                    >
+                                        Select
+                                    </button>
+                                    {onWalk && (
+                                        <>
+                                            <button
+                                                className={`scc-btn ${walkMode === 'walk' ? 'active' : ''}`}
+                                                data-walk-mode="walk"
+                                                onClick={() => onWalk('walk')}
+                                                aria-pressed={walkMode === 'walk'}
+                                                title="Walk: the camera stays at eye height above the floor; mouse looks, W A S D move, Tab flies; Esc keeps the place, right click returns (Blender: Walk with gravity)"
+                                            >
+                                                Walk
+                                            </button>
+                                            <button
+                                                className={`scc-btn ${walkMode === 'fly' ? 'active' : ''}`}
+                                                data-walk-mode="fly"
+                                                onClick={() => onWalk('fly')}
+                                                aria-pressed={walkMode === 'fly'}
+                                                title="Fly (Shift+`): mouse looks, W A S D move, Q E down/up, Tab walks; Esc keeps the place, right click returns (Blender: Walk without gravity)"
+                                            >
+                                                Fly
+                                            </button>
+                                        </>
+                                    )}
+                                    {editMode === 'edit' && (
+                                        <>
+                                            <div className="scc-sep" />
+                                            <button className={`scc-btn scc-btn--icon ${gizmoMode === 'translate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('translate')} title="Move — G starts it at once, X / Y / Z constrain">Move G</button>
+                                            <button className={`scc-btn scc-btn--icon ${gizmoMode === 'rotate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('rotate')} title="Rotate — R starts it at once">Rotate R</button>
+                                            <button className={`scc-btn scc-btn--icon ${gizmoMode === 'scale' ? 'active' : ''}`} onClick={() => onSetGizmoMode('scale')} title="Scale — S starts it at once (S is never Select; Select is the tool, B for one box)">Scale S</button>
+                                            <button className={`scc-btn ${gizmoSpace === 'local' ? 'active' : ''}`} aria-pressed={gizmoSpace === 'local'} onClick={() => onSetGizmoSpace?.(gizmoSpace === 'local' ? 'world' : 'local')} title="Local axes — the gizmo follows the object's own axes; off, it moves along the world's (Blender: Transform Orientation, Global / Local)">Local</button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="scc-section">
                             <div className="scc-section-label">Windows</div>
@@ -181,6 +243,7 @@ export default function StudioControlCluster({
                                 {panelButtons.map(({ key, label }) => (
                                     <button
                                         key={key}
+                                        data-window-key={key}
                                         className={`scc-btn ${openPanels.has(key) ? 'active' : ''}`}
                                         onClick={() => onTogglePanel(key)}
                                     >
@@ -214,10 +277,10 @@ export default function StudioControlCluster({
                                 {!minimal && onOpenProjection && (
                                     <button className="scc-btn" onClick={onOpenProjection} title="Put this project on a wall">Projection</button>
                                 )}
-                                {!minimal && onToggleRigMirror && (
+                                {!minimal && !pageOnly && onToggleRigMirror && (
                                     <button className={`scc-btn ${rigMirrorOn ? 'active' : ''}`} onClick={onToggleRigMirror} aria-pressed={rigMirrorOn} title="Show the real lighting rig in the room">Lights</button>
                                 )}
-                                {!minimal && onToggleRigMirror && rigMirrorOn && onSendRigPositions && (
+                                {!minimal && !pageOnly && onToggleRigMirror && rigMirrorOn && onSendRigPositions && (
                                     <button className="scc-btn" onClick={onSendRigPositions} title="Move each fixture on the desk's plan to where its lamp stands in this room">Send positions to the desk</button>
                                 )}
                                 {!minimal && rigMirrorOn && rigPositionsNote && (
@@ -241,7 +304,7 @@ export default function StudioControlCluster({
                         {/* The Cues section is gone from the cluster (owner 2026-10-12 06:30, editing MOXIR v2.7 lamps: "the cue
                             things is not necessary, remove that"): firing a cue from the editing panel changes the shared show
                             for everyone watching; looks are previewed in the scene's SHOW chip and run from the desk / cue list. */}
-                        {(canVr || canAr) && (
+                        {(canVr || canAr) && !pageOnly && (
                             <div className="scc-section">
                                 <div className="scc-section-label">XR</div>
                                 <div className="scc-buttons">

@@ -201,6 +201,6 @@ module.exports = [
     reach: "read",
     role: "viewer",
     agent: true,
-    note: "404 when there is nothing to forward, and when the caller could not open the destination project or its space — a private destination is never named."
+    note: "200 { movedTo: null } when there is nothing to forward, and when the caller could not open the destination project or its space — a private destination is never named. 404 only for a space that does not exist."
   },
 ]

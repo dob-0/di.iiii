@@ -3,11 +3,14 @@
  *
  * All the doing is in the running server (serverXR/src/wifiDoor.js, routes
  * /api/wifi-door); this file calls the three routes and says what came back. The
- * server answers the owner only, and the CLI is the owner by being on loopback.
+ * server answers the owner only, and the CLI is the owner by being on this machine and carrying the install's own token.
  * Plan: docs/ai/team-sync-by-network-name.md §7.
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import dns from 'node:dns'
+
+import { readEnv } from './state.mjs'
 
 const readLabel = (home) => {
     try {
@@ -46,21 +49,39 @@ const openLines = async (state) => {
     ]
 }
 
+/** What the system resolver says the name is, or null (2 s cap). */
+const lookupName = async (name) => {
+    try {
+        const found = await Promise.race([
+            dns.promises.lookup(name, { family: 4 }),
+            new Promise((resolve) => { setTimeout(() => resolve(null), 2000).unref?.() })
+        ])
+        return found?.address || null
+    } catch { return null }
+}
+
 /** { code, lines } for one `di wifi …`; never prints, so a test reads it. */
-export const runWifi = async ({ flags = {}, home, base, fetchImpl = fetch }) => {
-    if (!readLabel(home)) return { code: 2, lines: ['Run di name first — this install has no name yet.'] }
+export const runWifi = async ({ flags = {}, home, base, fetchImpl = fetch, resolve = lookupName }) => {
+    const named = readLabel(home)
+    if (!named) return { code: 2, lines: ['Run di name first — this install has no name yet.'] }
     const url = `${base}/api/wifi-door`
     const stop = Boolean(flags.stop)
     const method = stop ? 'DELETE' : (flags.status ? 'GET' : 'POST')
     let response
     try {
-        response = await fetchImpl(url, { method })
+        const token = readEnv(home).ADMIN_API_TOKEN
+        response = await fetchImpl(url, { method, ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}) })
     } catch {
         return { code: 1, lines: ['This install is not running. Start it with di up.'] }
     }
     const body = await response.json().catch(() => ({}))
     if (!response.ok) return { code: 1, lines: [`Not opened: ${REFUSED[body.error] || body.message || `the install answered ${response.status}`}`] }
     if (stop) return { code: 0, lines: ['Private again: the door is closed and the name points at this machine only.'] }
-    if (!body.open) return { code: 0, lines: ['Private. The wifi door is closed. Open it with di wifi.'] }
+    if (!body.open) {
+        const lines = ['Private. The wifi door is closed. Open it with di wifi.']
+        const seen = flags.status ? await resolve(named.name) : null
+        if (seen && !seen.startsWith('127.')) lines.push(`The name still points at ${seen}; the install points it home on start — run di wifi --stop to do it now.`)
+        return { code: 0, lines }
+    }
     return { code: 0, lines: await openLines(body) }
 }

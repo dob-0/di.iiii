@@ -110,6 +110,10 @@ const CONNECTION_TYPES = Object.freeze({ 0: 'unknown', 1: 'USB', 2: 'Ethernet', 
  * maker's name for it; why it is set only after an arm is NOT known (a latch? the interlock read only
  * once output was enabled?) — UNVALIDATED until a cube is read with its interlock open and closed. The connection type
  * is the table's offset 25 (the spec's prose says 26; Wicked's driver reads 25 too, :443).
+ * MEASURED 2026-10-30 (studio Mac, LaserCube 7.5 W Ultra Mk2, firmware 1.17, Ethernet, ledger N1561/N1562): byte 5 read 2 BOTH
+ * while the laser was dark and disarmed (20:44) AND while the owner saw the beam lit with the engine streaming (20:51-20:55).
+ * So on firmware 1.17 bit 0 does not say "output on" and bit 1 is set either way: outputEnabled is reported as null (unknown)
+ * with outputState saying why; the raw statusFlags stay. Never tell a person "output off" from this byte on that firmware.
  * Pure.
  */
 /** The status byte's flags by firmware version (see parseFullInfo). Pure. */
@@ -120,6 +124,9 @@ const statusFlagsOf = (flags, major, minor) => {
         : { interlockEnabled: (flags & 0x08) !== 0, temperatureWarning: (flags & 0x10) !== 0, overTemperature: (flags & 0x20) !== 0, packetErrors: 0 }
 }
 
+// Firmware whose byte 5 was measured NOT to carry the output state (2026-10-30, see parseFullInfo).
+const OUTPUT_NOT_REPORTED = new Set(['1.17'])
+
 const parseFullInfo = (msg) => {
     if (!Buffer.isBuffer(msg) || msg.length < FULL_INFO_MIN_BYTES || msg[0] !== CMD.GET_FULL_INFO) return null
     const end = Math.min(msg.length, FULL_INFO_BYTES)
@@ -128,7 +135,9 @@ const parseFullInfo = (msg) => {
     const modelName = msg.subarray(38, nameEnd).toString('latin1').replace(/[^\x20-\x7e]/g, '').trim()
     return {
         firmware: `${msg[3]}.${msg[4]}`,
-        outputEnabled: (msg[5] & 0x01) !== 0,
+        ...(OUTPUT_NOT_REPORTED.has(`${msg[3]}.${msg[4]}`)
+            ? { outputEnabled: null, outputState: 'not reported by this firmware' }
+            : { outputEnabled: (msg[5] & 0x01) !== 0 }),
         statusFlags: msg[5],
         ...statusFlagsOf(msg[5], msg[3], msg[4]),
         dacRate: msg.readUInt32LE(10),

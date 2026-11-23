@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cueForKey, fireCue as fireCueShared, isCueKey } from '../../map/cueFiring.js'
 import { useMapOpCourier } from '../../map/mapCourier.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
+import { getCueKeysOn } from '../utils/cueKeysSwitch.js'
 
 // ONE KEY, THE WHOLE STAGE.
 //
@@ -37,6 +39,9 @@ export function useStudioCues({ projectId, document, applyLocalOps, enabled = tr
     useEffect(() => {
         if (!enabled || !cues.length) return undefined
         const onKeyDown = (event) => {
+            if (isPlaying()) return
+            // The person turned the number keys off (the cluster's Keys 1-9 row): a digit fires nothing.
+            if (!getCueKeysOn()) return
             const target = event.target
             if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
             if (target?.isContentEditable) return

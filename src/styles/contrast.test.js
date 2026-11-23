@@ -216,8 +216,11 @@ describe('contrast pairs from the 2026-10-01 audit', () => {
     // entry must keep failing at about the recorded ratio. If one is raised to 3:1
     // this test goes red and the entry must be deleted; if one gets worse it goes
     // red too. Audit id: F2 (PROGRESS.md, the 2026-10-01 a11y batch entry).
+    // --ui-border (the edge of a control) was in this list at 2.14:1; it now
+    // clears 3:1 (UX audit F140, 2026-10-28) and is guarded below. --di-line is
+    // the quiet hairline between sections: decoration, not a control's edge,
+    // and it stays recorded.
     const KNOWN_BORDER_FAILURES = [
-        { token: '--ui-border', recorded: 2.14, audit: 'F2' },
         { token: '--di-line', recorded: 1.22, audit: 'F2' }
     ]
     it.each(KNOWN_BORDER_FAILURES)('$token is a recorded border failure ($audit, $recorded:1)', ({ token, recorded }) => {
@@ -229,5 +232,26 @@ describe('contrast pairs from the 2026-10-01 audit', () => {
 
     it('white at .1 alpha as a border is the recorded 1.20:1 failure (F2)', () => {
         expect(ratio(over([255, 255, 255, 0.1], BLACK), BLACK)).toBeCloseTo(1.2, 1)
+    })
+
+    // 2026-10-28, UX audit F140: every grey that is TEXT clears 4.5:1 on the
+    // black ground (WCAG 2.2 SC 1.4.3), and the edge of a control clears 3:1
+    // (SC 1.4.11). The list names the text greys; a new one is added here.
+    // --di-card-ink is not on it: it is the projector card's deliberately dark
+    // amber (NEVER WHITE ON A PROJECTOR) and is not read on a screen.
+    it.each(['--di-text-muted', '--di-dim', '--di-faint', '--ui-text-muted'])(
+        'text grey %s is at least 4.5:1 on black',
+        (name) => {
+            expect(tokenOnBlack(name), name).toBeGreaterThanOrEqual(AA_BODY)
+        }
+    )
+
+    it('--di-note-ink (text under a field) is at least 4.5:1 on its warm ground', () => {
+        const ground = colour('#0a0704')
+        expect(ratio(over(colour('var(--di-note-ink)'), ground), ground)).toBeGreaterThanOrEqual(AA_BODY)
+    })
+
+    it('--ui-border, the edge of a control, is at least 3:1 on black', () => {
+        expect(tokenOnBlack('--ui-border')).toBeGreaterThanOrEqual(3)
     })
 })

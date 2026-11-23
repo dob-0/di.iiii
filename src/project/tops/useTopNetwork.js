@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createTopEngine } from './topEngine.js'
 import { TOP_OPERATORS, resolveTopParams, runsHere, sendsOut } from './topOperators.js'
 import { topThumbnailGroups, topThumbnailsFor } from './topThumbnails.js'
+import { createThumbnailScheduler } from './thumbnailPlan.js'
+import { openSharedCamera } from './cameraPool.js'
 import { DECK_INPUTS, VJ_DECK_TYPE, expandDecks, isPictureType } from './vjDeck.js'
 import { useClipVideos } from './useClipVideos.js'
 import { acquireMachineLink, machinesIn, runnerOn } from './machineLink.js'
@@ -9,6 +11,7 @@ import { createPicturePeers } from './picturePeers.js'
 import { createPictureOut } from './pictureOut.js'
 import { readTopReport, reportTop, useInspectedTop } from './topReports.js'
 import { compileTopScript } from './topScripts.js'
+import { CameraNotFoundError, cameraRetryDelay, cameraRetryable, resolveCamera } from './cameraResolve.js'
 
 // A camera's capabilities hold functions and odd objects on some browsers;
 // what crosses the network is plain numbers, strings and ranges.
@@ -27,6 +30,10 @@ const plainSettings = (track) => {
 // and Level operators that make its picture (tops/vjDeck.js), and every wire
 // out of it is rewritten to read its master. `alias` says which engine
 // operator has a deck's picture (deck id → its master's id).
+// A camera with no new frame for this long has stopped (it never started: the longer one).
+export const CAMERA_STALL_MS = 4000
+export const CAMERA_START_MS = 12000
+
 export const toTopNetwork = (document) => {
     const nodes = (document?.nodes || [])
         .filter((node) => isPictureType(node.typeId))
@@ -104,7 +111,6 @@ export const cameraRefusal = ({ secure = true, hasApi = true, errorName = '' } =
     return null
 }
 
-const THUMBNAIL_EVERY = 3
 const EMPTY = { nodes: [], wires: [] }
 
 /**
@@ -131,6 +137,9 @@ export function useTopNetwork({
     const peersRef = useRef(null)
     const outRef = useRef(null)
     const tracksRef = useRef(new Map())
+    // Cameras that are open right now: id -> { key, stream, engine }. The camera effect re-runs when
+    // the SET of cameras changes; only a camera whose own spec changed is closed and reopened.
+    const liveCamerasRef = useRef(new Map())
     const numbersRef = useRef({})
     const failedScripts = useRef(new Set())
     const inspected = useInspectedTop()
@@ -219,17 +228,17 @@ export function useTopNetwork({
         engineRef.current = engine
         let raf = 0
         let count = 0
+        const tiles = createThumbnailScheduler()
         const loop = (now) => {
             raf = requestAnimationFrame(loop)
             engine.frame(now)
             count += 1
-            if (thumbnails && count % THUMBNAIL_EVERY === 0) {
+            if (thumbnails) {
                 // One map per layer of registrations: a deck's master is on
-                // its card AND in its window at once.
-                for (const targets of topThumbnailGroups()) {
-                    const mine = new Map([...targets].filter(([nodeId]) => engine.has(nodeId)))
-                    if (mine.size) engine.thumbnails(mine)
-                }
+                // its card AND in its window at once. The scheduler says which
+                // tiles are due on this frame (small cards 4 a second, a few
+                // per frame; big windows as before).
+                for (const mine of tiles.due(topThumbnailGroups(), (nodeId) => engine.has(nodeId), now)) engine.thumbnails(mine)
             }
             peersRef.current?.pump()
             // Same task as the thumbnails, before the browser composites: the
@@ -393,6 +402,7 @@ export function useTopNetwork({
         return value && typeof value === 'object' && !Array.isArray(value) ? value : {}
     }
     const constraintsForRef = useRef(constraintsFor)
+    const lostCameraRef = useRef(() => {})
     useEffect(() => { constraintsForRef.current = constraintsFor })
     useEffect(() => {
         for (const [nodeId, constraints] of JSON.parse(constraintsKey)) {
@@ -406,6 +416,17 @@ export function useTopNetwork({
     useEffect(() => {
         const cameras = JSON.parse(cameraKey)
         const ids = cameras.map(([id]) => id)
+        // Per camera: close what is gone or changed (or whose engine was replaced and so knows
+        // no video); an unchanged camera stays open and is not touched.
+        const live = liveCamerasRef.current
+        const wantedKeys = new Map(cameras.map((camera) => [camera[0], JSON.stringify(camera)]))
+        for (const [id, entry] of [...live]) {
+            if (wantedKeys.get(id) === entry.key && entry.engine === engineRef.current) continue
+            entry.engine?.setVideo(id, null)
+            entry.stream.getTracks().forEach((track) => track.stop())
+            tracksRef.current.delete(id)
+            live.delete(id)
+        }
         if (!ids.length) return undefined
         const media = globalThis.navigator?.mediaDevices
         if (!media?.getUserMedia) {
@@ -414,66 +435,133 @@ export function useTopNetwork({
             setError(refusal)
             return undefined
         }
-        const streams = []
-        const tracks = tracksRef.current
         let cancelled = false
         // A camera's id is per page: the Desk on another page of this machine
-        // may have recorded a different one. The label is the fallback, and the
-        // machine's default camera the last word.
-        const resolveCamera = async (deviceId, label) => {
-            if (!deviceId && !label) return true
+        // may have recorded a different one. The label is the fallback; a NAMED
+        // camera never falls to the default one (cameraResolve.js). A camera that
+        // cannot open is reported with its error name and tried again on a slow
+        // back-off, and at once when a device appears.
+        const timers = new Map()
+        const attempts = new Map()
+        const running = new Set()
+        const again = new Set()
+        const permission = { asked: false }
+        const failed = (id, caught) => {
+            const errorName = caught?.name || 'Error'
+            const camera = caught instanceof CameraNotFoundError ? caught.camera : null
+            const refusal = camera ? `Camera "${camera}" not found.` : cameraRefusal({ errorName })
+            reportTop(id, { camera: { error: refusal, errorName, blocked: true } })
+            setError(refusal)
+            if (!cameraRetryable(errorName)) return
+            const attempt = attempts.get(id) || 0
+            attempts.set(id, attempt + 1)
+            clearTimeout(timers.get(id))
+            timers.set(id, setTimeout(() => open(id), cameraRetryDelay(attempt)))
+        }
+        const spec = new Map(cameras.map(([id, deviceId, label, script]) => [id, { deviceId, label, script }]))
+        const open = async (id) => {
+            if (cancelled) return
+            if (running.has(id)) { again.add(id); return }
+            if (live.has(id)) return // already open and unchanged
+            running.add(id)
+            clearTimeout(timers.get(id))
             try {
-                const list = (await media.enumerateDevices()).filter((device) => device.kind === 'videoinput')
-                const found = list.find((device) => device.deviceId === deviceId) || list.find((device) => label && device.label === label)
-                return found ? { deviceId: { exact: found.deviceId } } : true
-            } catch {
-                return true
+                const { deviceId, label, script } = spec.get(id)
+                const video = await resolveCamera(media, deviceId, label, permission)
+                const constraints = { ...(video === true ? {} : video), ...constraintsForRef.current(id) }
+                const compiled = script ? compileTopScript(script) : {}
+                let stream = null
+                if (compiled.open) {
+                    try {
+                        stream = await compiled.open({ constraints, deviceId: video?.deviceId?.exact || null, mediaDevices: media })
+                        reportTop(id, { script: null })
+                    } catch (error) {
+                        reportTop(id, { script: String(error?.message || error) })
+                    }
+                }
+                if (!stream) stream = await openSharedCamera(media, { video: Object.keys(constraints).length ? constraints : true, audio: false })
+                if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
+                live.set(id, { key: wantedKeys.get(id), stream, engine: engineRef.current })
+                attempts.delete(id)
+                const track = stream.getVideoTracks()[0]
+                if (track) {
+                    tracksRef.current.set(id, track)
+                    reportTop(id, { camera: { label: track.label, capabilities: plainCapabilities(track), settings: plainSettings(track), error: null, errorName: null, blocked: false } })
+                }
+                const element = globalThis.document.createElement('video')
+                element.muted = true
+                element.playsInline = true
+                element.srcObject = stream
+                element.play?.()?.catch?.(() => {})
+                engineRef.current?.setVideo(id, element)
+                watchCamera(id, stream, element, track)
+            } catch (caught) {
+                if (!cancelled) failed(id, caught)
+            } finally {
+                running.delete(id)
+                // A device changed while this try ran: look again, unless it opened.
+                if (again.delete(id) && !cancelled && !tracksRef.current.has(id)) open(id)
             }
         }
-        for (const [id, deviceId, label, script] of cameras) {
-            resolveCamera(deviceId, label)
-                .then(async (video) => {
-                    const constraints = { ...(video === true ? {} : video), ...constraintsForRef.current(id) }
-                    const compiled = script ? compileTopScript(script) : {}
-                    if (compiled.open) {
-                        try {
-                            const stream = await compiled.open({ constraints, deviceId: video?.deviceId?.exact || null, mediaDevices: media })
-                            reportTop(id, { script: null })
-                            return stream
-                        } catch (error) {
-                            reportTop(id, { script: String(error?.message || error) })
-                        }
-                    }
-                    return media.getUserMedia({ video: Object.keys(constraints).length ? constraints : true, audio: false })
-                })
-                .then((stream) => {
-                    if (cancelled) { stream.getTracks().forEach((track) => track.stop()); return }
-                    streams.push(stream)
-                    const track = stream.getVideoTracks()[0]
-                    if (track) {
-                        tracksRef.current.set(id, track)
-                        reportTop(id, { camera: { label: track.label, capabilities: plainCapabilities(track), settings: plainSettings(track), error: null } })
-                    }
-                    const video = globalThis.document.createElement('video')
-                    video.muted = true
-                    video.playsInline = true
-                    video.srcObject = stream
-                    video.play().catch(() => {})
-                    engineRef.current?.setVideo(id, video)
-                })
-                .catch((caught) => {
-                    if (cancelled) return
-                    const refusal = cameraRefusal({ errorName: caught?.name || 'Error' })
-                    reportTop(id, { camera: { error: refusal, blocked: true } })
-                    setError(refusal)
-                })
+        // A camera that was open can stop: its feed restarts (a phone over wifi), the
+        // cable is pulled, the device ends the track. The picture then stays on its
+        // last frame for ever unless somebody looks. Each open camera is watched: an
+        // ended track, or no new frame for CAMERA_STALL_MS, closes it and opens it
+        // again on the same back-off as a camera that never opened.
+        lostCameraRef.current = (id) => {
+            if (cancelled || !spec.has(id)) return
+            failed(id, { name: 'CameraStopped' })
         }
+        const watchCamera = (id, stream, element, track) => {
+            let last = null
+            let since = Date.now()
+            let flowed = false
+            const lose = () => {
+                clearInterval(timer)
+                track?.removeEventListener?.('ended', lose)
+                if (live.get(id)?.stream !== stream) return
+                live.get(id).engine?.setVideo(id, null)
+                stream.getTracks().forEach((each) => each.stop())
+                tracksRef.current.delete(id)
+                live.delete(id)
+                lostCameraRef.current(id)
+            }
+            const timer = setInterval(() => {
+                if (live.get(id)?.stream !== stream) { clearInterval(timer); return }
+                const now = element.currentTime
+                if (now !== last && element.readyState >= 2) {
+                    last = now
+                    since = Date.now()
+                    flowed = true
+                    return
+                }
+                // Never a frame yet: only a track the browser itself calls muted (no
+                // frames arriving) is given up on; a slow first frame is waited for.
+                if (!flowed && track?.muted !== true) return
+                if (Date.now() - since > (flowed ? CAMERA_STALL_MS : CAMERA_START_MS)) lose()
+            }, 1000)
+            track?.addEventListener?.('ended', lose)
+        }
+        const onDeviceChange = () => { for (const id of ids) if (!live.has(id)) open(id) }
+        media.addEventListener?.('devicechange', onDeviceChange)
+        for (const id of ids) open(id)
         return () => {
+            // Only this run's own work ends here; the open cameras outlive it (the next run keeps
+            // or closes each one, and the unmount effect below closes what is left).
             cancelled = true
-            for (const id of ids) { engineRef.current?.setVideo(id, null); tracks.delete(id) }
-            streams.forEach((stream) => stream.getTracks().forEach((track) => track.stop()))
+            media.removeEventListener?.('devicechange', onDeviceChange)
+            for (const timer of timers.values()) clearTimeout(timer)
         }
     }, [cameraKey, hasNodes, canvas])
+    useEffect(() => () => {
+        const live = liveCamerasRef.current
+        for (const [id, entry] of live) {
+            entry.engine?.setVideo(id, null)
+            entry.stream.getTracks().forEach((track) => track.stop())
+            tracksRef.current.delete(id)
+        }
+        live.clear()
+    }, [])
 
     return { error, machine: linkView.machine, peers: linkView.peers }
 }

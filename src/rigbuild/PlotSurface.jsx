@@ -14,6 +14,9 @@ import { snap, wrapYaw } from './snap.js'
 import { buildPatchSheetPath } from './patchRouting.js'
 import { plotModel, titleTotals } from './plotModel.js'
 import { planExtent } from './venuePlan.js'
+import NextStep from './NextStep.jsx'
+import { rigStepPath } from './rigTools.js'
+import { NEXT_STEP_WORDS, hallPlanOps } from './nextStep.js'
 import {
     SHEETS, chooseScale, fitView, formatMetres, hitTest, inMarquee, layRun, nextUnit, rigExtent,
     sheetLayout, snapToGrid, zoomView
@@ -325,7 +328,7 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
     // Read only (a visitor on a public space): every write in this file goes through here,
     // so none of them reaches the document.
     const syncOps = readOnly ? NO_WRITE : sentOps
-    const { applyLocalOps, undo, redo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
+    const { applyLocalOps, undo, redo, canUndo, canRedo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const document_ = state.document
     const entities = useMemo(() => document_.entities || [], [document_.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
@@ -750,12 +753,32 @@ export default function PlotSurface({ spaceId, projectId, readOnly = false, libr
                 ) : null}
             </svg>
             {!state.hasLoaded ? <p className="rigplot-loading">Reading the rig…</p> : null}
-            {state.hasLoaded && !model.venue ? <p className="rigplot-banner">No venue plan in this project: the hall is not drawn. It comes from the hall the model was built from (scripts/rigbuild/load-plot.mjs).</p> : null}
+            {/* No hall plan: load it here (F038); scripts/rigbuild/load-plot.mjs --plan-only does the same from a terminal */}
+            {state.hasLoaded && !model.venue ? (
+                <div className="rigplot-banner">
+                    <NextStep
+                        line={NEXT_STEP_WORDS.hall}
+                        readOnly={readOnly}
+                        applyOps={(ops) => edit(ops)}
+                        actions={[
+                            { label: NEXT_STEP_WORDS.hallFile, file: (hall, name) => hallPlanOps(entities, hall, name), done: 'the hall plan is loaded' },
+                            { label: NEXT_STEP_WORDS.build, href: rigStepPath('build', spaceId, projectId) }
+                        ]}
+                    />
+                </div>
+            ) : null}
             <div className="rigplot-zoom" role="group" aria-label="Zoom">
                 <button type="button" aria-label="Zoom in" title="Zoom in (+)" onClick={() => zoomBy(ZOOM_STEP)}>+</button>
                 <button type="button" aria-label="Zoom out" title="Zoom out (-)" onClick={() => zoomBy(1 / ZOOM_STEP)}>−</button>
                 <button type="button" aria-label="Fit the plan" title="Fit the plan (0)" onClick={fit}>fit</button>
             </div>
+            {/* The same undo as Ctrl/Cmd+Z, for a finger on a tablet: a deleted truss must come back. */}
+            {readOnly ? null : (
+                <div className="rigplot-undo" role="group" aria-label="Undo and redo">
+                    <button type="button" onClick={undo} disabled={!canUndo()} title="Undo the last change (Ctrl/Cmd+Z)">Undo</button>
+                    <button type="button" onClick={redo} disabled={!canRedo()} title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
+                </div>
+            )}
             <ScaleBar u={u} />
         </div>
     )

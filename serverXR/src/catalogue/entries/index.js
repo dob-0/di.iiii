@@ -3,6 +3,7 @@
 const entries = {
   access: require("./access"),
   accounts: require("./accounts"),
+  agentMail: require("./agentMail"),
   agents: require("./agents"),
   assets: require("./assets"),
   chat: require("./chat"),
@@ -14,6 +15,7 @@ const entries = {
   platform: require("./platform"),
   projects: require("./projects"),
   rig: require("./rig"),
+  showDesk: require("./showDesk"),
   spaces: require("./spaces")
 }
 

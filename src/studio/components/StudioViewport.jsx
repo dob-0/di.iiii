@@ -53,6 +53,8 @@ import { controlBindingsFor, getNavigationPreset, mouseButtonsFor } from '../nav
 import { MOVE_1_CAMERA } from '../navigation/freeMove.js'
 import { useNavigationPreference } from '../navigation/preference.js'
 import { useCameraNavigation } from '../navigation/useCameraNavigation.js'
+import { isPulling, registerPullGizmo, usePullToMove } from '../navigation/pullToMove.js'
+import { presetForTool, pullOnFor } from '../navigation/editMouse.js'
 import { useWalkNavigation } from '../navigation/useWalkNavigation.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
@@ -65,6 +67,7 @@ import BoxSelect from './BoxSelect.jsx'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { KICK_AFTER_INPUT_MS, RenderDemandProvider, useHoldFrames, useFrameloopMode, useStableDemand } from '../utils/renderDemand.jsx'
 import { handlePickClick, pickUserData } from '../utils/pickPriority.js'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 // The lamps' bodies (src/rigbuild/RigBodies.jsx): loaded only by a room that has a rig.
 const RigBodies = lazy(() => import('../../rigbuild/RigBodies.jsx'))
@@ -116,7 +119,7 @@ function useEntityPose(entity, groupRef, isDraggingRef = null) {
         const group = groupRef.current
         if (!group) return
         // Mid-drag the gizmo owns the group — neither pose nor restore may touch it.
-        if (isDraggingRef?.current === true) return
+        if (isDraggingRef?.current === true || isPulling(entity.id)) return
         // Dimming is independent of the pose, so it runs before the early
         // return the timeline branch takes — same order as walk mode.
         if (playLive && prox) applyProximity(group, prox, state.camera.position, proxPoint.current)
@@ -285,7 +288,7 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
     }, [overrideTransform, entity.components?.transform, selected])
 
     useFrame(() => {
-        if (isDragging.current && highlightRef.current && groupRef.current) {
+        if ((isDragging.current || isPulling(entity.id)) && highlightRef.current && groupRef.current) {
             bodyBounds(groupRef.current, highlightRef.current.box)
         }
     })
@@ -308,7 +311,9 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
         // World axes by default (Blender's Global orientation); 'local' follows the object's own axes (owner 10-13: 'no way
         // to move an object in the world frame').
         tc.setSpace(gizmoSpace)
-        return () => { tc.detach() }
+        // Edit's pull (View | Edit) leaves a press on a handle to the gizmo (pullToMove.js gizmoHasPointer).
+        const unregister = registerPullGizmo(tc)
+        return () => { unregister(); tc.detach() }
     }, [gizmoActive, gizmoSpace])
 
     const storedTransformRef = useRef(entity.components?.transform)
@@ -554,7 +559,7 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
     )
 }
 
-function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null, editMode = 'navigate' }) {
+function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true, fovRef = null, selectedEntityIds = null, editMode = 'navigate', entities = null, onPullCommit = null }) {
     const isXrPresenting = useXR((state) => state.session != null)
     useHoldFrames(isXrPresenting, 'xr') // a headset session is the headset's own loop
     const scene = useThree((state) => state.scene)
@@ -563,9 +568,11 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Mouse navigation preset (Shift+? > Shortcuts). 'studio' is the default and
     // the bindings Studio always had; see src/studio/navigation/mappings.js.
     const navigation = useNavigationPreference()
-    // The tool picks the mapping (owner, 2026-10-12: "view like sketchfab, edit like blender — people will not need to
-    // learn something new"): Navigate and the public viewer move like Sketchfab, Edit exactly like Blender.
-    const preset = getNavigationPreset(editMode === 'edit' ? 'blender' : 'studio')
+    // The Edit mouse (editMouse.js, Scene -> Move): with Pull to move (default) the camera is Move 1 in View AND in Edit (owner
+    // 2026-10-28, View | Edit: "a pull on empty space still turns the view") and Edit adds the pull on the selected thing; with
+    // Like Blender, Edit is exactly 2026-10-12's "edit like blender" map ('blender'), no pull. View is always 'studio'.
+    const preset = getNavigationPreset(presetForTool(editMode, navigation.editMouse))
+    const pullOn = pullOnFor(editMode, navigation.editMouse)
     // Blender turns 0.4° per pixel (its Orbit Sensitivity default, the owner's value); camera-controls turns 360° per
     // viewport height, so the speed is scaled by the height to keep Blender's per-pixel feel in Edit.
     const viewportHeight = useThree((state) => state.size.height)
@@ -575,6 +582,15 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     const [walking, setWalking] = useState(false)
     useHoldFrames(walking, 'walk')
     useWalkNavigation({ controlsRef, active: enabled && !isXrPresenting, onWalkingChange: setWalking, onCameraChange })
+    // Edit mode (View | Edit): a pull on the selected thing moves it; only where the Studio can write (onPullCommit) and only in
+    // Edit (pullToMove.js PULL_TOOLS). In View every pull is Move 1's.
+    const pull = usePullToMove({
+        controlsRef,
+        entities,
+        selectedEntityIds,
+        onCommit: onPullCommit,
+        enabled: enabled && !isXrPresenting && !walking && pullOn,
+    })
     useCameraNavigation({
         controlsRef,
         presetId: preset.id,
@@ -585,6 +601,8 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         speed: navigation.speed,
         turn: navigation.turn,
         active: enabled && !isXrPresenting,
+        mode: editMode,
+        pull: pullOn ? pull : null,
     })
 
     // The lens the camera eases toward. Shared with the smart view when there is one
@@ -618,7 +636,6 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     // Writable copies for camera-controls, made once per preset (navigation/
     // mappings.js controlBindingsFor): it keeps the object it is given, and
     // this file and useCameraNavigation write into it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     const bindings = useMemo(() => controlBindingsFor(preset.id), [preset.id])
 
     // In ortho views (small FOV), left drag pans instead of rotating so you can
@@ -1307,21 +1324,22 @@ export default function StudioViewport({
     useEffect(() => {
         if (lowPower) return undefined
         const kick = () => demand.kick()
+        const keyKick = () => { if (!isPlaying()) demand.kick() }
         const visible = () => { if (!window.document.hidden) kick() }
         // The pointer arriving over the view: frames start before the first drag, so the GPU clock is up when it begins
         // (measured 2026-10-12: after ~4 s idle the clock sat at 225 MHz and the first frames of a drag took 52–144 ms;
         // 300 ms of frames bring it back to 1680 MHz — docs/ai/research/render-smoothness-audit-2026-10-12.md).
         const over = (e) => { if (e.target?.tagName === 'CANVAS') kick() }
         window.addEventListener('resize', kick)
-        window.addEventListener('keydown', kick, true)
-        window.addEventListener('keyup', kick, true)
+        window.addEventListener('keydown', keyKick, true)
+        window.addEventListener('keyup', keyKick, true)
         window.addEventListener('pointerover', over, true)
         window.document.addEventListener('visibilitychange', visible)
         return () => {
             window.removeEventListener('resize', kick)
             window.removeEventListener('pointerover', over, true)
-            window.removeEventListener('keydown', kick, true)
-            window.removeEventListener('keyup', kick, true)
+            window.removeEventListener('keydown', keyKick, true)
+            window.removeEventListener('keyup', keyKick, true)
             window.document.removeEventListener('visibilitychange', visible)
         }
     }, [demand, lowPower])
@@ -1391,6 +1409,8 @@ export default function StudioViewport({
                         fovRef={smartOn ? fovRef : null}
                         selectedEntityIds={selectedEntityIds}
                         editMode={editMode}
+                        entities={document.entities}
+                        onPullCommit={!followLinks && !lookDrawn && !transformOp ? (onTransformCommit || null) : null}
                     />
                     {onSelectEntities && !lowPower ? (
                         <BoxSelect

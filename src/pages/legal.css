@@ -56,7 +56,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-3);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .legal-title {
@@ -141,11 +141,9 @@
     padding: 0;
 }
 
-.legal-section a { color: var(--di-cyan); text-decoration: none; }
-.legal-section a:hover { text-decoration: underline; }
+.legal-section a { color: var(--di-cyan); text-decoration: underline; text-underline-offset: 0.18em; }
 
-.legal-updated a { color: var(--di-cyan); text-decoration: none; }
-.legal-updated a:hover { text-decoration: underline; }
+.legal-updated a { color: var(--di-cyan); text-decoration: underline; text-underline-offset: 0.18em; }
 
 .legal-updated {
     margin: 0 0 var(--di-space-6);

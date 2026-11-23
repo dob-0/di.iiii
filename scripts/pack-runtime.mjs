@@ -37,6 +37,7 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { stampParts } from './partStamps.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUT_DIR = path.join(ROOT, 'dist-runtime')
@@ -135,6 +136,8 @@ const main = async () => {
     await copy(path.join(ROOT, 'serverXR', 'package.json'), path.join(stage, 'serverXR', 'package.json'))
     await copy(path.join(ROOT, 'serverXR', 'package-lock.json'), path.join(stage, 'serverXR', 'package-lock.json'))
     await copy(path.join(ROOT, 'scripts', 'di'), path.join(stage, 'cli'))
+    // `di show` (scripts/show) sits beside cli/ so `../show/` resolves the same here and in the repo.
+    await copy(path.join(ROOT, 'scripts', 'show'), path.join(stage, 'show'), (src) => !/\.(test|spec)\.(js|mjs)$/.test(src))
     // serverXR/src/aiPublic.js reads <root>/docs/ai/public; without it /llms.txt
     // and /ai/… were a 404 on the dev tier, which runs the pack natively. Only
     // that folder, in every profile: the dev tier packs the local profile.
@@ -209,6 +212,14 @@ const main = async () => {
         // network. The difference an artist actually feels, so it is written
         // down rather than inferred from the profile name.
         works: marker.works,
+        // One stamp per Monitor part (serverXR/src/parts.json): the last commit touching its dirs, so the
+        // Monitor can show a version per part on an install that has no git checkout. null = unknown.
+        parts: await (async () => {
+            try { return stampParts(JSON.parse(await fsp.readFile(path.join(ROOT, 'serverXR', 'src', 'parts.json'), 'utf8')).parts, { cwd: ROOT }) } catch (error) {
+                log(`warning: part version stamps skipped (${error.message}); the Monitor will say 'not stamped'`)
+                return []
+            }
+        })(),
         schemaVersion,
         packedAt: new Date().toISOString(),
         node: process.version
