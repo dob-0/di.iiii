@@ -65,6 +65,7 @@ import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
 import { listInvites, listKeyActions, mintInvite, revokeInvite, undoKey } from './share.mjs'
 import { readFollows, removeFollow } from './follows.mjs'
 import { followSpace } from './follow.mjs'
+import { cmdConnect, cmdDisconnect, hostProjects, localProjects, readConnected, syncConnected } from './connect.mjs'
 import { runPost } from './post.mjs'
 import { runAgentMail } from './agentMail.mjs'
 import { runMonitor } from './monitorReport.mjs'
@@ -78,7 +79,7 @@ import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
 import { versionLabel } from './overlays.mjs'
-import { mcpArgs, moveToken, resolveTarget, runLogin, runLogout, runWhoami } from './login.mjs'
+import { mcpArgs, moveToken, resolveTarget, askEnter, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
 import { withUserAgent } from './userAgent.mjs'
 
@@ -187,6 +188,25 @@ const freePortNear = async (taken) => {
     return 4171
 }
 
+/** The deps `di connect` and its stay-connected sync share: this install's projects, the host's, and `followSpace` from now on. */
+const connectDeps = async (home) => {
+    const port = resolvePort(home)
+    const selfBase = apiBase(home, port)
+    const running = await ownAlive(home, port)
+    const adminToken = readEnv(home).ADMIN_API_TOKEN || null
+    return {
+        home, version: installedVersion(home), hostProjects,
+        local: { projects: (spaceId) => localProjects({ home, spaceId, port, selfBase, adminToken, running }) },
+        follow: ({ spaceId, key, from, into }) => followSpace({ home, spaceId, from, key, into, port, start: 'now' })
+    }
+}
+
+/** A machine that was connected stays connected: new spaces of the person are followed. Quiet when nothing is new; a refusal is said, never swallowed. */
+const syncConnectedHere = async (home) => {
+    if (!readConnected(home)) return
+    try { await syncConnected(await connectDeps(home), { quiet: true }) } catch (error) { warn(`connect sync failed: ${String(error?.message || error)}`) }
+}
+
 const cmdUp = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
@@ -213,6 +233,7 @@ const cmdUp = async (args) => {
         if (runner === node && !node.ownsPort(home, port)) { fail(ui.portTaken(port, await freePortNear(port))); process.exitCode = 1; return }
         const address = await printedAddress(home, port)
         say(ui.alreadyRunning(address.url, await probeReach(home, port), lan, address))
+        await syncConnectedHere(home)
         return
     }
 
@@ -301,6 +322,7 @@ const cmdUp = async (args) => {
     if (!args.flags['no-open']) openBrowser(address.url)
     await noticeNewVersion(home)
     await noticeNameRenewal(home)
+    await syncConnectedHere(home)
 }
 
 /**
@@ -1427,6 +1449,29 @@ const cmdFollows = async () => {
     say(ui.followList(follows, live?.follows || [], live))
 }
 
+/** `di connect` — sign in once, follow every space the account owns or edits (scripts/di/connect.mjs). */
+const runConnect = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const controller = new AbortController()
+    const stop = () => controller.abort()
+    process.once('SIGINT', stop)
+    process.once('SIGTERM', stop)
+    try {
+        process.exitCode = await cmdConnect(args, { ...(await connectDeps(home)), signal: controller.signal })
+    } finally {
+        process.off('SIGINT', stop)
+        process.off('SIGTERM', stop)
+    }
+}
+
+/** `di disconnect` — stop every follow `di connect` made and end its keys. No work is deleted. */
+const runDisconnect = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    process.exitCode = await cmdDisconnect(args, { home })
+}
+
 /** `di unfollow <space>` — stop carrying edits. Your copy of the space is not touched; the follower's saved place is dropped. */
 const cmdUnfollow = async (args) => {
     const home = HOME()
@@ -1816,6 +1861,7 @@ const cmdAutoupdate = async (args) => {
             if (timer.changed) say(timer.ok ? `timer rewritten — now every ${autoupdate.EVERY_MINUTES} minutes` : `timer rewrite failed: ${timer.why}`)
         } catch { /* a timer that cannot be refreshed keeps its old interval; the tick itself is logged */ }
         await noticeNameRenewal(home)
+        await syncConnectedHere(home)
         return
     }
     if (action === 'status') { for (const l of autoupdate.statusLines(autoupdate.statusOf({ home }))) say(l); return }
@@ -1875,7 +1921,13 @@ const COMMANDS = {
     ndi: cmdNdi,
     mcp: cmdMcp,
     name: (args) => runName(args, { home: HOME() }),
-    login: (args) => runLogin(args, { version: installedVersion(HOME()) }),
+    login: (args) => runLogin(args, {
+        version: installedVersion(HOME()),
+        // A fresh machine is one command: after the sign-in, one Enter connects it (only on a terminal, only when di is installed here).
+        ...(process.stdin.isTTY && process.stdout.isTTY && isInstalled(HOME()) ? { confirm: askEnter, offerConnect: async (a) => { await runConnect(a); return process.exitCode || 0 } } : {})
+    }),
+    connect: (args) => runConnect(args),
+    disconnect: (args) => runDisconnect(args),
     logout: (args) => runLogout(args),
     whoami: (args) => runWhoami(args),
     help: (args) => say(ui.usageFor(args._[1]) || ui.help())

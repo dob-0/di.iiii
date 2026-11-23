@@ -53,6 +53,7 @@ const NOW = Date.parse('2026-10-07T12:00:00Z')
 const LOOKUP = 'POST /api/auth/device/lookup'
 const DECISION = 'POST /api/auth/device/decision'
 const TOKENS = 'GET /api/auth/cli/tokens'
+const MACHINES = 'GET /api/auth/connect/machines'
 
 const reply = (status, body) => ({
     ok: status >= 200 && status < 300,
@@ -88,7 +89,7 @@ beforeEach(() => {
     clearServerUnavailable()
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(NOW)
-    routes = { [TOKENS]: () => reply(200, { tokens: [] }) }
+    routes = { [TOKENS]: () => reply(200, { tokens: [] }), [MACHINES]: () => reply(200, { machines: [] }) }
     fetchMock = vi.fn((url, init = {}) => {
         const handler = routes[keyOf(url, init)]
         if (!handler) return Promise.reject(new Error(`no stub for ${keyOf(url, init)}`))
@@ -126,6 +127,33 @@ const DENIED = 'Denied. Nothing was signed in.'
 
 // ── the address ─────────────────────────────────────────────────────────────
 
+describe('/device — connected machines', () => {
+    it('says connect in its heading and lists each machine with its spaces', async () => {
+        route(MACHINES, () => reply(200, { machines: [{ id: 'ab12cd34', name: 'studio-mac', since: '2026-11-22', spaces: [{ id: 'main', label: 'Main' }, { id: 'x', label: 'Hay' }] }] }))
+        render(<DeviceLoginPage />)
+        expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('connect a machine')
+        expect(await screen.findByText('studio-mac')).toBeTruthy()
+        expect(screen.getByText(/2 spaces: Main, Hay/)).toBeTruthy()
+    })
+
+    it('Disconnect asks once, then ends that machine only', async () => {
+        route(MACHINES, () => reply(200, { machines: [{ id: 'ab12cd34', name: 'studio-mac', since: '2026-11-22', spaces: [] }] }))
+        route('DELETE /api/auth/connect/machines/ab12cd34', () => reply(200, { disconnected: 2 }))
+        const user = userEvent.setup()
+        render(<DeviceLoginPage />)
+        await user.click(await screen.findByRole('button', { name: 'Disconnect studio-mac' }))
+        expect(calls('DELETE /api/auth/connect/machines/ab12cd34')).toHaveLength(0)
+        await user.click(screen.getByRole('button', { name: 'Yes, disconnect studio-mac' }))
+        expect(await screen.findByText(/Disconnected studio-mac. Its work was not touched./)).toBeTruthy()
+        expect(calls('DELETE /api/auth/connect/machines/ab12cd34')).toHaveLength(1)
+    })
+
+    it('says so when none are connected yet', async () => {
+        render(<DeviceLoginPage />)
+        expect(await screen.findByText(/None yet. Run/, { selector: 'p.cm-empty' })).toBeTruthy()
+    })
+})
+
 describe('/device is its own address', () => {
     it('is routed as a page, and no space can take the word', () => {
         expect(getAppLocationState({ pathname: '/device', search: '' }).page).toBe(APP_PAGE_DEVICE)
@@ -135,7 +163,7 @@ describe('/device is its own address', () => {
 
     it('names itself in the tab, Sentence case', () => {
         render(<DeviceLoginPage />)
-        expect(document.title).toBe('Terminal sign-in — di.iiii')
+        expect(document.title).toBe('Connect a machine — di.iiii')
     })
 
     it('asks search engines to leave it out, and only while it is open', () => {
@@ -579,7 +607,7 @@ describe('terminals signed in as you', () => {
 
     it('says "None yet" when there are none', async () => {
         render(<DeviceLoginPage />)
-        expect(await screen.findByText(/None yet\./)).toHaveTextContent('None yet. Run di login in a terminal.')
+        expect(await screen.findByText(/None yet\. Run/, { selector: 'p.device-note' })).toHaveTextContent('None yet. Run di login in a terminal.')
         expect(screen.queryByRole('list')).toBeNull()
     })
 
@@ -824,5 +852,61 @@ describe('the stylesheet keeps its promises to a phone', () => {
         for (const selector of ['.device-code', '.device-btn', '.device-card-title']) {
             expect(ring[1]).toContain(`${selector}:focus-visible`)
         }
+    })
+})
+
+// ── di connect: the same screen, a different question ──────────────────────
+
+describe('a machine asking to connect (di connect)', () => {
+    const SPACES = [
+        { id: 'main', label: 'Main Space', role: 'owner' },
+        { id: 'hayfilm', label: 'Hayfilm', role: 'editor' },
+        { id: 'x', label: '<img src=x onerror=alert(1)>', role: 'owner' }
+    ]
+    const reachConnect = async (user) => {
+        route(LOOKUP, () => reply(200, lookupAnswer({ scope: 'connect', spaces: SPACES })))
+        render(<DeviceLoginPage />)
+        await submitCode(user)
+        return screen.findByRole('heading', { name: 'A machine asked to connect to your spaces' })
+    }
+
+    it('lists the person\'s spaces, all ticked, as text only', async () => {
+        const user = userEvent.setup()
+        await reachConnect(user)
+        const boxes = screen.getAllByRole('checkbox')
+        expect(boxes).toHaveLength(3)
+        for (const box of boxes) expect(box).toBeChecked()
+        expect(screen.getByText('Spaces it may follow and edit (3 of 3)')).toBeInTheDocument()
+        expect(document.querySelector('.device-space img')).toBeNull()
+        expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Connect this machine' })).toBeEnabled()
+        expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull()
+    })
+
+    it('sends only the ticked spaces when "Connect this machine" is pressed', async () => {
+        const user = userEvent.setup()
+        await reachConnect(user)
+        await user.click(screen.getByRole('checkbox', { name: /Hayfilm/ }))
+        route(DECISION, () => reply(200, { approved: true }))
+        await user.click(screen.getByRole('button', { name: 'Connect this machine' }))
+        expect(await screen.findByText('Connected. You can close this tab and go back to the terminal.')).toBeInTheDocument()
+        expect(calls(DECISION)[0].json).toEqual({ userCode: 'BDFG-HJKL', approve: true, spaceIds: ['main', 'x'] })
+    })
+
+    it('cannot connect with nothing ticked, and Deny sends no spaces', async () => {
+        const user = userEvent.setup()
+        await reachConnect(user)
+        for (const box of screen.getAllByRole('checkbox')) await user.click(box)
+        expect(screen.getByRole('button', { name: 'Connect this machine' })).toBeDisabled()
+        route(DECISION, () => reply(200, { approved: false }))
+        await user.click(screen.getByRole('button', { name: 'Deny' }))
+        expect(await screen.findByText('Denied. Nothing was connected.')).toBeInTheDocument()
+        expect(calls(DECISION)[0].json).toEqual({ userCode: 'BDFG-HJKL', approve: false })
+    })
+
+    it('a plain login code still shows the old question', async () => {
+        const user = userEvent.setup()
+        await reachQuestion(user)
+        expect(screen.queryByRole('checkbox')).toBeNull()
     })
 })

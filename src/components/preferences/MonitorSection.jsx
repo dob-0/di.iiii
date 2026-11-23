@@ -74,7 +74,7 @@ const signatures = (snap) => {
     for (const n of panels?.network?.rows || []) sig[`n:${n.id}`] = `${n.ok}:${n.status}`
     // the key is the row's own id (`a:<session id>`, see the Agents rows): a machine in it would never match, and no agent would flash
     for (const a of panels?.agents?.rows || []) sig[`a:${a.sessionId}`] = a.status
-    for (const s of panels?.services?.rows || []) sig[`s:${s.unit}`] = s.active
+    for (const s of panels?.services?.rows || []) sig[`s:${s.id ?? s.unit}`] = s.active
     for (const c of panels?.connected?.rows || []) sig[`c:${c.id}`] = `${c.state}:${c.detail}`
     for (const u of panels?.presence?.rows || []) sig[`u:${u.id}`] = String(u.people.length)
     for (const p of panels?.pullRequests?.rows || []) sig[`p:${p.number}`] = `${p.draft}:${p.updatedAt}`
@@ -168,6 +168,18 @@ function Row({ id, selected, flash, tone, onSelect, children }) {
 const RECONNECT_MIN_MS = 3000
 const RECONNECT_MAX_MS = 30000
 export const nextBackoff = (ms) => Math.min(RECONNECT_MAX_MS, ms * 2)
+
+// Network and services are each machine's, shown for the whole account: the subtitle names the other machines in the list.
+export const machinesSubtitle = (panel, text) =>
+    Array.isArray(panel?.lentFrom) && panel.lentFrom.length ? `${text} · this machine and ${panel.lentFrom.join(', ')}` : text
+
+// Tasks and shows are the account's: rows another machine read are lent here (each tagged with its machine).
+export function feedsSubtitle(panels) {
+    const from = [...new Set([...(panels?.tasks?.lentFrom || []), ...(panels?.shows?.lentFrom || [])])].sort()
+    return from.length
+        ? `This machine's feeds and your account's from ${from.join(', ')}`
+        : 'Your feeds from ~/.di/monitor.json'
+}
 
 export default function MonitorSection({ onStats }) {
     const [snap, setSnap] = useState(null)
@@ -637,7 +649,7 @@ export default function MonitorSection({ onStats }) {
                         </div>
                     </ModuleSection></div>
 
-                    <div data-panel="network"><ModuleSection title="Network" subtitle="Tiers and addresses we probe">
+                    <div data-panel="network"><ModuleSection title="Network" subtitle={machinesSubtitle(panels.network, 'Tiers and addresses we probe')}>
                         <PanelLive name="network" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.network} empty="No probes configured." />
                         <div className="monitor-grid">
@@ -645,7 +657,7 @@ export default function MonitorSection({ onStats }) {
                                 <Row key={n.id} id={`n:${n.id}`} tone={n.ok ? 'success' : 'danger'} flash={flash(`n:${n.id}`)}
                                     selected={selected?.kind === 'probe' && selected.id === n.id} onSelect={() => pick('probe', n)}>
                                     <span className="monitor-name">{n.name}</span>
-                                    <span className="monitor-meta">{n.ok ? `${n.status} · ${n.ms} ms` : `down · ${n.status || String(n.error || 'no answer').slice(0, 30)}`}</span>
+                                    <span className="monitor-meta">{n.ok ? `${n.status} · ${n.ms} ms` : `down · ${n.status || String(n.error || 'no answer').slice(0, 30)}`}{n.machine ? <span data-row-machine={n.machine}> · {n.machine}</span> : null}</span>
                                 </Row>
                             ))}
                         </div>
@@ -704,13 +716,13 @@ export default function MonitorSection({ onStats }) {
                         ))}
                     </ModuleSection></div>
 
-                    <ModuleSection title="Tasks and shows" subtitle="Your feeds from ~/.di/monitor.json">
-                        {!snap?.configured ? (
+                    <ModuleSection title="Tasks and shows" subtitle={feedsSubtitle(panels)}>
+                        {!snap?.configured && !(panels.tasks?.rows?.length || panels.shows?.rows?.length) ? (
                             <div className="monitor-note">No feeds yet. Add feeds with panel &ldquo;tasks&rdquo; or &ldquo;shows&rdquo; to ~/.di/monitor.json — a command, a file or a URL each.</div>
                         ) : null}
                         {['tasks', 'shows'].map((key) => (panels[key]?.rows || []).map((feedRow) => (
                             <div key={`${key}:${feedRow.id}`} className={`monitor-feed${feedRow.ok ? '' : ' is-down'}`}>
-                                <div className="monitor-group-title">{feedRow.title} <span className="preferences-tree-tag">{key}</span>{feedRow.updatedAt ? <span className="monitor-meta"> · {timeAgo(feedRow.updatedAt)}</span> : null}</div>
+                                <div className="monitor-group-title">{feedRow.title} <span className="preferences-tree-tag">{key}</span>{feedRow.machine ? <span className="monitor-meta" data-feed-machine={feedRow.machine}> · from {feedRow.machine}</span> : null}{feedRow.updatedAt ? <span className="monitor-meta"> · {timeAgo(feedRow.updatedAt)}</span> : null}</div>
                                 {feedRow.ok
                                     ? <pre className="monitor-pre">{feedRow.lines.filter((l) => matches(query, l)).join('\n') || '—'}</pre>
                                     : <div className="monitor-note is-down">Unavailable here: {feedRow.error}</div>}
@@ -718,15 +730,15 @@ export default function MonitorSection({ onStats }) {
                         )))}
                     </ModuleSection>
 
-                    <div data-panel="services"><ModuleSection title="Services" subtitle={`${panels.services?.running ?? 0} running · ${failed} failed (failed first)`}>
+                    <div data-panel="services"><ModuleSection title="Services" subtitle={machinesSubtitle(panels.services, `${panels.services?.running ?? 0} running · ${failed} failed (failed first)`)}>
                         <PanelLive name="services" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.services} empty="No services reported." />
                         <div className="monitor-grid">
                             {services.map((sv) => (
-                                <Row key={sv.unit} id={`s:${sv.unit}`} tone={sv.active === 'failed' ? 'danger' : 'success'} flash={flash(`s:${sv.unit}`)}
-                                    selected={selected?.kind === 'service' && selected.id === sv.unit} onSelect={() => pick('service', sv)}>
+                                <Row key={sv.id ?? sv.unit} id={`s:${sv.id ?? sv.unit}`} tone={sv.active === 'failed' ? 'danger' : 'success'} flash={flash(`s:${sv.id ?? sv.unit}`)}
+                                    selected={selected?.kind === 'service' && selected.id === (sv.id ?? sv.unit)} onSelect={() => pick('service', sv)}>
                                     <span className="monitor-name">{sv.unit.replace(/\.service$/, '')}</span>
-                                    <span className="monitor-meta">{sv.active} · {sv.sub}</span>
+                                    <span className="monitor-meta">{sv.active} · {sv.sub}{sv.machine ? <span data-row-machine={sv.machine}> · {sv.machine}</span> : null}</span>
                                 </Row>
                             ))}
                         </div>

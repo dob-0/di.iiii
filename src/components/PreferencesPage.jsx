@@ -27,6 +27,7 @@ import AgentsSection from './preferences/AgentsSection.jsx'
 import MonitorSection from './preferences/MonitorSection.jsx'
 import EstateSection from './preferences/EstateSection.jsx'
 import AppVisitorsSection from './preferences/AppVisitorsSection.jsx'
+import ConnectedMachines from './ConnectedMachines.jsx'
 
 // Two groups: "admin" is real access-control (who can see/publish what),
 // "diagnostics" is live operator/debug telemetry — same nav, visually
@@ -252,8 +253,9 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     const isAdminSection = ADMIN_SECTION_KEYS.has(activeSection)
     // Scene counters and the copy-snapshot / XR-debug buttons describe the open scene; the Machines page is not about it.
     const isSceneSection = activeSection !== 'estate'
-    // Pages that carry their own counts (or none) get no header cards.
-    const hideHeaderCards = isAdminSection ? ['manage', 'opencall', 'visitors', 'agents', 'monitor'].includes(activeSection) : !isSceneSection
+    // Pages that carry their own counts (or none) get no header cards. Agent sessions shows its counts here, in the one slim row
+    // (owner 11-22, N6201: the header was big with almost no information).
+    const hideHeaderCards = isAdminSection ? ['manage', 'opencall', 'visitors', 'monitor'].includes(activeSection) : !isSceneSection
 
     return (
         <div className="preferences-page">
@@ -563,7 +565,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </>
                     )}
 
-                    {activeSection === 'manage' && <AdminManageSection onStats={setManageStats} />}
+                    {activeSection === 'manage' && (<><AdminManageSection onStats={setManageStats} /><ModuleSection title="Connected machines" subtitle="made with di connect"><ConnectedMachines heading="Your machines" headingLevel={3} /></ModuleSection></>)}
 
                     {activeSection === 'opencall' && <OpenCallSection />}
 

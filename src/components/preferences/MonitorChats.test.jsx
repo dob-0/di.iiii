@@ -70,4 +70,20 @@ describe('chats in the needs-you strip', () => {
         expect(s.tone).toBe('danger')
         expect(s.issues.map((i) => i.chat)).toContain('a')
     })
+
+    it('a chat with a step list shows its bar, done of total and percent; left behind is red and has its own filter', () => {
+        const steps = { done: 2, total: 5, open: ['Rehearse on r-di', 'Put it on the Mac', 'Third'] }
+        const rows = [row('l', 'idle', { steps, leftBehind: true }), row('q', 'idle', { steps: { done: 5, total: 5, open: [] } }), row('n', 'idle')]
+        const { container } = render(<MonitorChats chats={block(rows, { counts: { ask: 0, working: 0, idle: 3, left: 1, total: 3 } })} />)
+        const card = container.querySelector('[data-chat-id="l"]')
+        expect(card.querySelector('[data-chat-steps="2/5"]').textContent).toContain('2/5 · 40%')
+        expect(card.textContent).toContain('open: Rehearse on r-di; Put it on the Mac…')
+        expect(card.textContent).toContain('left behind')
+        expect(card.className).toContain('tone-danger')
+        expect(container.querySelector('[data-chat-id="q"]').className).not.toContain('tone-danger')
+        expect(container.querySelector('[data-chat-id="n"] [data-chat-steps]')).toBeNull()
+        expect(container.querySelector('[data-chat-filter="left"]').textContent).toContain('1')
+        fireEvent.click(container.querySelector('[data-chat-filter="left"]'))
+        expect([...container.querySelectorAll('[data-chat-id]')].map((n) => n.dataset.chatId)).toEqual(['l'])
+    })
 })

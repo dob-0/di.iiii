@@ -20,6 +20,8 @@ const { sanitizeCredits } = require('./monitorCredits')
 const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
 
 const CACHE_TTL_MS = 5000
+// gh pr list stops at its --limit; 30 cut the count (57 open showed as 30, 11-23), so ask for all
+const PR_LIST_LIMIT = 300
 const PANEL_TIMEOUT_MS = 4000
 const PANEL_CAP_MS = 9000
 const FEED_MAX_LINES = 60
@@ -374,7 +376,7 @@ function createMonitorStore({
   async function pullRequests(config = {}) {
     // config.repo ("owner/name") lets a server that does not run inside a checkout still list its pull requests
     const repoArgs = typeof config.repo === 'string' && /^[\w.-]+\/[\w.-]+$/.test(config.repo) ? ['-R', config.repo] : []
-    const out = await runCommand('gh', ['pr', 'list', ...repoArgs, '--limit', '30', '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
+    const out = await runCommand('gh', ['pr', 'list', ...repoArgs, '--limit', String(PR_LIST_LIMIT), '--json', 'number,title,headRefName,isDraft,updatedAt,url'], { cwd: repoDir, timeout: 8000 })
     const rows = JSON.parse(out).map((p) => ({
       number: p.number,
       title: p.title,

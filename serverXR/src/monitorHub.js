@@ -657,6 +657,75 @@ function createHub({
     }
   }
 
+  // Tasks and shows belong to the account, not to one machine: a feed that only one machine can read (the owner's ledger,
+  // a show board, the brain) is shown on every machine's Monitor. The rows come from the shared picture dev already
+  // builds (`shared.data.tasks` / `.shows`, newest report first, each row tagged with the machine that read it); nothing
+  // is read or probed here. A row is lent only when it is whole and fresh: a plain object from another machine (never
+  // this one, under any spelling), not stale, ok, with a text id and title and a list of text lines. This machine's own
+  // rows always win: an id it has already is not lent again (so a per-machine feed such as the chat counts, which every
+  // machine has under the same id, stays this machine's own), and of two machines with the same id the newest report wins.
+  // Lent rows keep `machine`, so the page names where each was read; `lentFrom` lists those machines. The page only: the
+  // machine's own report to dev carries its own panel, so a lent row is never reported back as its own.
+  // Network probes and services are each machine's own, but the Monitor is the account's (owner 11-23: "it still not the same",
+  // "make that be synced"): every machine shows the same list, its own rows first, then each other machine's from that
+  // machine's fresh report (the reports the hub already holds, nothing probed here). Every row is tagged `machine` and gets an
+  // `id` "<machine>/<probe id or unit>", so two machines' "dev" probe or "di-server.service" never collide. A stale report,
+  // a failed panel or a row without its key is skipped; at most MACHINE_ROWS_MAX rows per other machine.
+  const MACHINE_ROWS_MAX = 80
+  const machineRowsFor = (base, sources, name, keyOf) => {
+    const mine = base.panels?.[name]
+    const self = machineName(String(base.host || os.hostname()))
+    const selfKey = self.toLowerCase()
+    const tag = (r, machine) => { const k = keyOf(r); return typeof k === 'string' && k ? { ...r, machine, id: `${machine}/${k}` } : null }
+    const lent = []
+    const from = []
+    const seenHosts = new Set([selfKey])
+    for (const src of sources) {
+      if (!src || typeof src.host !== 'string' || src.stale === true) continue
+      const host = machineName(src.host)
+      if (seenHosts.has(host.toLowerCase())) continue
+      const p = src.panels?.[name]
+      if (!isPlainObject(p) || p.ok !== true || !Array.isArray(p.rows)) continue
+      const rows = p.rows.filter(isPlainObject).map((r) => tag(r, host)).filter(Boolean).slice(0, MACHINE_ROWS_MAX)
+      if (!rows.length) continue
+      seenHosts.add(host.toLowerCase())
+      from.push(host)
+      lent.push(...rows)
+    }
+    if (!lent.length) return mine
+    const ownOk = isPlainObject(mine) && mine.ok === true && Array.isArray(mine.rows)
+    const own = ownOk ? mine.rows.filter(isPlainObject).map((r) => tag(r, self)).filter(Boolean) : []
+    return { ...(isPlainObject(mine) ? mine : { ms: 0, at: now() }), ok: true, rows: [...own, ...lent], lentFrom: from.sort(), ...(ownOk ? {} : { ownError: (isPlainObject(mine) && mine.error) || 'not read on this machine' }) }
+  }
+
+  const FEED_LENT_MAX = 40
+  const feedFor = (base, shared, name) => {
+    const mine = base.panels?.[name]
+    const list = shared?.data?.[name]
+    if (!Array.isArray(list) || !list.length) return mine
+    const selfHost = machineName(String(base.host || os.hostname())).toLowerCase()
+    const ownRows = isPlainObject(mine) && Array.isArray(mine.rows) ? mine.rows : []
+    const seen = new Set(ownRows.filter(isPlainObject).map((r) => r.id))
+    const lent = []
+    for (const r of list) {
+      if (lent.length >= FEED_LENT_MAX) break
+      if (!isPlainObject(r) || typeof r.machine !== 'string' || !r.machine) continue
+      if (machineName(r.machine).toLowerCase() === selfHost) continue
+      if (r.stale === true || r.ok !== true || typeof r.id !== 'string' || !r.id || typeof r.title !== 'string') continue
+      if (!Array.isArray(r.lines) || !r.lines.every((l) => typeof l === 'string')) continue
+      if (seen.has(r.id)) continue
+      seen.add(r.id)
+      lent.push({ ...r, machine: machineName(r.machine) })
+    }
+    if (!lent.length) return mine
+    return {
+      ...(isPlainObject(mine) ? mine : { ms: 0, at: now() }),
+      ok: isPlainObject(mine) && typeof mine.ok === 'boolean' ? mine.ok : true,
+      rows: [...ownRows, ...lent],
+      lentFrom: [...new Set(lent.map((r) => r.machine))].sort()
+    }
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
   // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
@@ -678,9 +747,23 @@ function createHub({
     // PRs: this machine's own list when it has one; else the shared one from dev (no GitHub login needed here)
     const sharedPrs = shared?.data?.pullRequests
     const prs = base.panels?.pullRequests?.ok !== true && sharedPrs?.ok === true
-      ? { ok: true, ms: 0, at: Date.parse(sharedPrs.reportedAt) || now(), rows: sharedPrs.rows, open: sharedPrs.rows.length, drafts: sharedPrs.rows.filter((p) => p.draft).length, from: sharedPrs.from }
+      ? { ok: true, ms: 0, at: Date.parse(sharedPrs.reportedAt) || now(), rows: sharedPrs.rows, open: Number.isInteger(sharedPrs.open) ? sharedPrs.open : sharedPrs.rows.length, drafts: Number.isInteger(sharedPrs.drafts) ? sharedPrs.drafts : sharedPrs.rows.filter((p) => p.draft).length, from: sharedPrs.from }
       : null
-    const lent = { ...(credits !== base.panels?.credits ? { credits } : {}), ...(agents !== base.panels?.agents ? { agents } : {}), ...(prs ? { pullRequests: prs } : {}) }
+    const tasks = feedFor(base, shared, 'tasks')
+    const shows = feedFor(base, shared, 'shows')
+    const network = machineRowsFor(base, [...own, ...extra], 'network', (r) => r.id ?? r.target)
+    const servicesAll = machineRowsFor(base, [...own, ...extra], 'services', (r) => r.unit)
+    const services = servicesAll === base.panels?.services ? servicesAll
+      : { ...servicesAll, running: servicesAll.rows.filter((r) => r.active === 'active').length, failed: servicesAll.rows.filter((r) => r.active === 'failed').length }
+    const lent = {
+      ...(credits !== base.panels?.credits ? { credits } : {}),
+      ...(agents !== base.panels?.agents ? { agents } : {}),
+      ...(prs ? { pullRequests: prs } : {}),
+      ...(tasks !== base.panels?.tasks ? { tasks } : {}),
+      ...(shows !== base.panels?.shows ? { shows } : {}),
+      ...(network !== base.panels?.network ? { network } : {}),
+      ...(services !== base.panels?.services ? { services } : {})
+    }
     return {
       ...base,
       ...(Object.keys(lent).length ? { panels: { ...base.panels, ...lent } } : {}),
@@ -700,6 +783,8 @@ function createHub({
   // Machines with the version each reports, the freshest good pull request list, spaces, the owner's asks, and each machine's
   // tasks/shows feed lines tagged with the machine. Bounded; nothing is probed here. Chats and credits are NOT in it (personal).
   const SHARED_ROWS = 60
+  // every open PR is sent on (gh lists up to 300); 40 cut the list (57 open, 11-23)
+  const SHARED_PRS_MAX = 300
   const pickFeed = (raw, name) => {
     const rows = []
     for (const r of raw) {
@@ -721,7 +806,7 @@ function createHub({
       generatedAt: new Date(t).toISOString(),
       machines: raw.slice(0, SHARED_ROWS).map((r) => ({ host: r.host, reportedAt: new Date(r.reportedAt).toISOString(), stale: t - r.reportedAt > STALE_MS, commit: r.commit, builtAt: r.builtAt })),
       tiers: tierBlock.rows.slice(0, SHARED_ROWS).map((r) => ({ id: r.id, status: r.status, commit: r.commit, builtAt: r.builtAt, behindDev: r.behindDev ?? null, state: r.state || null })),
-      pullRequests: pr ? { ok: true, from: pr.host, reportedAt: new Date(pr.at).toISOString(), rows: pr.p.rows.filter(isPlainObject).slice(0, 40) } : { ok: false, rows: [], error: 'no machine has sent a pull request list' },
+      pullRequests: pr ? { ok: true, from: pr.host, reportedAt: new Date(pr.at).toISOString(), rows: pr.p.rows.filter(isPlainObject).slice(0, SHARED_PRS_MAX), ...(Number.isInteger(pr.p.open) ? { open: pr.p.open } : {}), ...(Number.isInteger(pr.p.drafts) ? { drafts: pr.p.drafts } : {}) } : { ok: false, rows: [], error: 'no machine has sent a pull request list' },
       spaces: { ok: spaceBlock.ok, rows: spaceBlock.rows.slice(0, 200) },
       asks: asksBlock(subjects),
       shows: pickFeed(raw, 'shows'),

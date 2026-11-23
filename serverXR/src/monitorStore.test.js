@@ -639,5 +639,7 @@ describe('monitor devices and credits', () => {
     } })
     expect((await store.getMonitor()).panels.pullRequests.ok).toBe(true)
     expect(seen[0].slice(0, 4)).toEqual(['pr', 'list', '-R', 'dob-0/di.iiii'])
+    // gh stops at --limit; it must ask for more than the 57 open on 11-23 (30 cut the count)
+    expect(Number(seen[0][seen[0].indexOf('--limit') + 1])).toBeGreaterThanOrEqual(300)
   })
 })

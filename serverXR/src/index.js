@@ -109,6 +109,7 @@ const { createActTokenGate } = require('./actTokenGate')
 const { resolveCliToken, pruneCliLogin, TOKEN_PREFIX: cliTokenPrefix } = require('./cliLoginStore')
 const { createCliTokenGate } = require('./cliTokenGate')
 const { registerCliLoginRoutes } = require('./routes/cliLoginRoutes')
+const { connectKeyHolds } = require('./connectStore')
 const { tierFor, capForTier } = require('./actTokenTier')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, getSyncKey, otherLiveKeys, TTL_MS: SYNC_KEY_TTL_MS, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const syncKeyActions = require('./syncKeyActions')
@@ -979,6 +980,8 @@ const getAuthState = (req, res = null) => {
   // Only consulted on a static-table miss, and only for the dii_sync_ prefix.
   if (token && token.startsWith(syncKeyPrefix)) {
     const sk = resolveSyncKey(token)
+    // A `di connect` key lives on its person's right to the space: when the role, the space or the account is gone, the key stops at once.
+    if (sk && sk.connect && !connectKeyHolds(sk)) return buildAuthState({ authenticated: false, type: 'sync-key', reason: 'connect-role-ended' })
     if (sk) {
       // A second key, for the one action that needs two spaces: moving a
       // project between them (SPEC_space_sync_keys.md §13.3, T11). Read only
@@ -1421,7 +1424,11 @@ registerCliLoginRoutes(router, {
   isAvailable: () => Boolean(config.requireAuth) && !isLocalInstall(),
   startLimiter: cliStartLimiter,
   pollLimiter: cliPollLimiter,
-  answerLimiters: [cliAnswerByAddress, cliAnswerByAccount]
+  answerLimiters: [cliAnswerByAddress, cliAnswerByAccount],
+  listSpaces,
+  // Approving a connect, or ending a machine, needs a person who signed in (a positive stamp) on a server whose cookie secret is its own,
+  // like minting a manage key (mayMintManageKey): a cookie made some other way cannot hand a machine the person's spaces.
+  isSignedInPerson: (state) => state?.session?.via === 'signin' && Boolean(config.auth.sessionSecretSeparate)
 })
 
 router.get('/api/auth/session', async (req, res, next) => {

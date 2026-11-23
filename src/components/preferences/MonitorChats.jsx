@@ -6,12 +6,24 @@ import { rowMatches } from './monitorDetail.js'
 // A chat list that is missing or old says so in words; it is never drawn as "nothing asks you".
 const GROUP_LABEL = { ask: 'asks you', working: 'working', idle: 'idle' }
 const GROUP_TONE = { ask: 'warning', working: 'success', idle: 'muted' }
-const FILTERS = [['all', 'All'], ['ask', 'Asks you'], ['working', 'Working'], ['idle', 'Idle']]
+const FILTERS = [['all', 'All'], ['ask', 'Asks you'], ['working', 'Working'], ['idle', 'Idle'], ['left', 'Left behind']]
 const ASK_CHATS_IN_STRIP = 4
 
 // "!! Plug it in" -> "Plug it in": the line marks are for terminals
 const plain = (text) => String(text || '').replace(/^\s*(?:!!|\?\?)\s*/, '').trim()
 const askRows = (chats) => (chats?.rows || []).filter((r) => r.group === 'ask')
+
+// the chat's own step list: a bar, done of total, the percent and the first steps still open
+export const stepsPercent = (s) => (s && s.total > 0 ? Math.round((s.done * 100) / s.total) : 0)
+function Steps({ steps }) {
+    const pct = stepsPercent(steps)
+    return (
+        <span className="monitor-chat-steps" data-chat-steps={`${steps.done}/${steps.total}`}>
+            <span className="monitor-chat-bar" role="img" aria-label={`${steps.done} of ${steps.total} steps done`}><i style={{ width: `${pct}%` }} /></span>
+            <span className="monitor-meta">{steps.done}/{steps.total} · {pct}%{steps.open?.length ? ` · open: ${steps.open.slice(0, 2).join('; ')}${steps.open.length > 2 ? '…' : ''}` : ''}</span>
+        </span>
+    )
+}
 
 export const idleLabel = (minutes) => {
     if (typeof minutes !== 'number') return 'idle time unknown'
@@ -48,13 +60,14 @@ export const chatIssues = (chats) => {
 
 function Card({ chat, selected, onPick }) {
     return (
-        <button type="button" className={`monitor-chat tone-${GROUP_TONE[chat.group] || 'muted'}${selected ? ' is-selected' : ''}`} data-chat-id={chat.id} data-chat-group={chat.group}
+        <button type="button" className={`monitor-chat tone-${chat.leftBehind ? 'danger' : GROUP_TONE[chat.group] || 'muted'}${selected ? ' is-selected' : ''}`} data-chat-id={chat.id} data-chat-group={chat.group}
             aria-pressed={selected} onClick={() => onPick?.(chat)}>
             <span className="monitor-chat-head">
                 {chat.group === 'working' ? <i className="monitor-live-square" aria-hidden="true" /> : <i className="monitor-live-square is-off" aria-hidden="true" />}
                 <span className="monitor-chat-title">{chat.title}</span>
-                <span className="monitor-chat-tag">{GROUP_LABEL[chat.group]}</span>
+                <span className="monitor-chat-tag">{chat.leftBehind ? 'left behind' : GROUP_LABEL[chat.group]}</span>
             </span>
+            {chat.steps ? <Steps steps={chat.steps} /> : null}
             {chat.asks?.map((a) => <p key={a} className="monitor-chat-ask">{plain(a)}</p>)}
             {chat.says ? <p className="monitor-chat-says">{plain(chat.says).replace(/^(?:\+\+|\.\.|->|==|--)\s*/, '')}</p> : null}
             <span className="monitor-meta">{chat.group === 'working' ? 'working now' : idleLabel(chat.idleMinutes)}{chat.host ? ` · ${chat.host}` : ''}{chat.failed ? ' · last turn failed' : ''}</span>
@@ -64,10 +77,10 @@ function Card({ chat, selected, onPick }) {
 
 export default function MonitorChats({ chats, onPick, selectedId = null, query = '' }) {
     const [filter, setFilter] = useState('all')
-    const counts = chats?.counts || { ask: 0, working: 0, idle: 0, total: 0 }
+    const counts = chats?.counts || { ask: 0, working: 0, idle: 0, left: 0, total: 0 }
     const rows = chats?.rows || []
     const byQuery = query ? rows.filter((r) => rowMatches(query, r)) : rows
-    const shown = filter === 'all' ? byQuery : byQuery.filter((r) => r.group === filter)
+    const shown = filter === 'all' ? byQuery : filter === 'left' ? byQuery.filter((r) => r.leftBehind) : byQuery.filter((r) => r.group === filter)
     const state = chats?.state || 'none'
     return (
         <div className="monitor-chats" data-monitor-chats="" data-chats-state={state}>
@@ -78,9 +91,9 @@ export default function MonitorChats({ chats, onPick, selectedId = null, query =
                 <>
                     <div className="monitor-chips" role="group" aria-label="Filter chats">
                         {FILTERS.map(([id, label]) => (
-                            <button key={id} type="button" className={`monitor-chip${id === 'ask' && counts.ask ? ' tone-warning' : ''}`} aria-pressed={filter === id} data-chat-filter={id}
+                            <button key={id} type="button" className={`monitor-chip${id === 'ask' && counts.ask ? ' tone-warning' : ''}${id === 'left' && counts.left ? ' tone-danger' : ''}`} aria-pressed={filter === id} data-chat-filter={id}
                                 onClick={() => setFilter(id)}>
-                                {label} <span className="monitor-chip-count">{id === 'all' ? counts.total : counts[id]}</span>
+                                {label} <span className="monitor-chip-count">{id === 'all' ? counts.total : counts[id] || 0}</span>
                             </button>
                         ))}
                     </div>

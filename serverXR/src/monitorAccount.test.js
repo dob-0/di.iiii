@@ -151,7 +151,7 @@ describe('the hub snapshot with an account', () => {
 })
 
 describe('the shared picture feed', () => {
-  const shared = { generatedAt: 't', machines: [{ host: 'aylmo', reportedAt: 'x', stale: false }], tiers: [], shows: [], tasks: [], pullRequests: { ok: true, from: 'aylmo', rows: [{ number: 1, title: 'a' }] }, spaces: { ok: true, rows: [{ slug: 's' }] }, asks: { ok: true, rows: [] }, evil: 'dropped' }
+  const shared = { generatedAt: 't', machines: [{ host: 'aylmo', reportedAt: 'x', stale: false }], tiers: [], shows: [], tasks: [], pullRequests: { ok: true, from: 'aylmo', open: 57, drafts: 28, rows: [{ number: 1, title: 'a' }] }, spaces: { ok: true, rows: [{ slug: 's' }] }, asks: { ok: true, rows: [] }, evil: 'dropped' }
   const okRes = { ok: true, status: 200, json: async () => ({ ok: true, shared }) }
 
   it('signed out: no request; signed in: token goes to dev /shared only, never returned, unknown keys dropped', async () => {
@@ -163,6 +163,7 @@ describe('the shared picture feed', () => {
     const feed = createAccountFeed({ home: homeWith(login), fetchImpl: async (url, opts) => { seen.push([url, opts.headers.Authorization]); return okRes } })
     const out = await feed.shared()
     expect(out.state).toBe('ok')
+    expect(out.data.pullRequests).toMatchObject({ open: 57, drafts: 28 })
     expect(out.data.machines[0].host).toBe('aylmo')
     expect(out.data.evil).toBeUndefined()
     expect(JSON.stringify(out)).not.toContain('secret-token-1')
