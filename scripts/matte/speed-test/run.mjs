@@ -1,7 +1,8 @@
 import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 const require = createRequire(new URL("../../../package.json", import.meta.url));
 const { chromium } = require("playwright");
-const dir = new URL(".", import.meta.url).pathname;
+const dir = fileURLToPath(new URL(".", import.meta.url));
 const clip = process.env.MATTE_CLIP || process.argv[2];
 if (!clip) { console.error("usage: DI_TEST_CDP=... node run.mjs <clip1080.webm>  (or MATTE_CLIP=...)"); process.exit(2); }
 const browser = await chromium.connectOverCDP(process.env.DI_TEST_CDP);
