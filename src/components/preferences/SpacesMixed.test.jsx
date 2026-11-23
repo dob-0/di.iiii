@@ -73,7 +73,7 @@ describe('Mixed view', () => {
         expect([...twoD.querySelectorAll('[tabindex]')].every((e) => e.getAttribute('tabindex') === '-1')).toBe(true)
         expect(twoD.querySelectorAll('button:not([tabindex="-1"])').length).toBe(0)
         expect(container.querySelectorAll(`[data-map-node="${spaceNodeId('a')}"]`).length).toBe(1)
-        expect(container.querySelector('[data-mixed-hint]').textContent).toMatch(/Ctrl\/Cmd \+ scroll|full screen/)
+        expect(container.querySelector('[data-mixed-hint]').textContent).toMatch(/scroll to zoom/)
     })
 
     it('stacks 3D, 2D, list in one column under 1100 px (390 px included) and sits side by side above', () => {

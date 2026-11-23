@@ -12,3 +12,13 @@ describe('admin layout guards (2026-11-18)', () => {
         expect(rule('.preferences-switch')).toContain('height: 100%')
     })
 })
+
+describe('3D map card guards (2026-11-24, N6446.1)', () => {
+    it('an open 3D card never moves itself: a hover transform slid it off the pointer and it flickered ~20 times a second', () => {
+        const full = rule('.monitor-card3d.is-full:not(.is-hub)')
+        expect(full).not.toMatch(/transform|translate/)
+    })
+    it('a card label is not text a drag selects, so a drag that starts on it turns the camera', () => {
+        expect(rule('.monitor-card3d')).toContain('user-select: none')
+    })
+})

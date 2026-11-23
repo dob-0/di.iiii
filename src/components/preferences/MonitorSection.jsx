@@ -1,3 +1,4 @@
+import MonitorFeed from './MonitorFeed.jsx'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ModuleSection } from './PreferencesShared.jsx'
 import { getMonitor, monitorStreamUrl } from '../../services/apiClient.js'
@@ -89,11 +90,6 @@ const signatures = (snap) => {
     sig['k:prs'] = `${k?.pullRequests?.open}:${k?.pullRequests?.drafts}`
     sig['k:services'] = String(k?.services?.failed)
     return sig
-}
-
-const matches = (query, ...parts) => {
-    const q = query.trim().toLowerCase()
-    return !q || parts.some((part) => String(part ?? '').toLowerCase().includes(q))
 }
 
 function IssueItem({ issue, onOpen }) {
@@ -720,14 +716,11 @@ export default function MonitorSection({ onStats }) {
                         {!snap?.configured && !(panels.tasks?.rows?.length || panels.shows?.rows?.length) ? (
                             <div className="monitor-note">No feeds yet. Add feeds with panel &ldquo;tasks&rdquo; or &ldquo;shows&rdquo; to ~/.di/monitor.json — a command, a file or a URL each.</div>
                         ) : null}
-                        {['tasks', 'shows'].map((key) => (panels[key]?.rows || []).map((feedRow) => (
-                            <div key={`${key}:${feedRow.id}`} className={`monitor-feed${feedRow.ok ? '' : ' is-down'}`}>
-                                <div className="monitor-group-title">{feedRow.title} <span className="preferences-tree-tag">{key}</span>{feedRow.machine ? <span className="monitor-meta" data-feed-machine={feedRow.machine}> · from {feedRow.machine}</span> : null}{feedRow.updatedAt ? <span className="monitor-meta"> · {timeAgo(feedRow.updatedAt)}</span> : null}</div>
-                                {feedRow.ok
-                                    ? <pre className="monitor-pre">{feedRow.lines.filter((l) => matches(query, l)).join('\n') || '—'}</pre>
-                                    : <div className="monitor-note is-down">Unavailable here: {feedRow.error}</div>}
-                            </div>
-                        )))}
+                        <div className="monitor-feeds">
+                            {['tasks', 'shows'].map((key) => (panels[key]?.rows || []).map((feedRow) => (
+                                <MonitorFeed key={`${key}:${feedRow.id}`} row={feedRow} kind={key} query={query} ago={(iso) => timeAgo(iso)} />
+                            )))}
+                        </div>
                     </ModuleSection>
 
                     <div data-panel="services"><ModuleSection title="Services" subtitle={machinesSubtitle(panels.services, `${panels.services?.running ?? 0} running · ${failed} failed (failed first)`)}>
