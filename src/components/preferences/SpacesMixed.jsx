@@ -23,7 +23,7 @@ export default function SpacesMixed({ world, selectedId, onPick, live = true }) 
                 <Suspense fallback={<div className="monitor-note">Loading the 3D room…</div>}>
                     <Map3D layout={layout} selectedId={selectedId} onPick={onPick} live={live} world pointerOnly />
                 </Suspense>
-                <p className="spaces-mixed-hint" data-mixed-hint>Drag to turn · Ctrl/Cmd + scroll or full screen to zoom</p>
+                <p className="spaces-mixed-hint" data-mixed-hint>Drag to turn · right-drag to move · scroll to zoom</p>
             </section>
             <section className="spaces-mixed-pane is-2d" data-mixed-pane="2d" aria-label="2D map" aria-hidden="true">
                 <Map2D layout={layout} selectedId={selectedId} onPick={onPick} live={live} world pointerOnly />

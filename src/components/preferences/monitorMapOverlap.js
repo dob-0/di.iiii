@@ -13,6 +13,12 @@ const PRIORITY = { hub: 0, tier: 1, machine: 2, agent: 3, show: 4, space: 5, rep
 
 const hit = (a, b) => a.x < b.x + b.w + GAP && b.x < a.x + a.w + GAP && a.y < b.y + b.h + GAP && b.y < a.y + a.h + GAP
 export const rectOf = (cx, cy, w, h) => ({ x: cx - w / 2, y: cy - h / 2, w, h })
+/** A node card hangs from its anchor: bottom edge on the point, centred across (MonitorMap3D CARD_ANCHOR). */
+export const LABEL_LIFT = 0.3
+export const hangOf = (cx, cy, w, h) => ({ x: cx - w / 2, y: cy - h, w, h })
+const boxOf = (it, w, h) => (it.kind === 'hub' ? rectOf : hangOf)(it.sx, it.sy, w, h)
+/** The full card keeps the name on one line, so it is never narrower than its label. */
+export const fullWidth = (text) => Math.max(FULL.w, labelWidth(text) + 16)
 
 /** Overlapping pairs in a list of {id, x, y, w, h}. */
 export const countOverlaps = (rects) => {
@@ -39,9 +45,9 @@ export const planLabels = (items, size, blockers = []) => {
     const hidden = []
     const order = [...items].sort((a, b) => (b.full ? 1 : 0) - (a.full ? 1 : 0) || (PRIORITY[a.kind] ?? 9) - (PRIORITY[b.kind] ?? 9) || (a.depth ?? 0) - (b.depth ?? 0) || (a.id < b.id ? -1 : 1))
     for (const it of order) {
-        const w = it.full ? FULL.w : labelWidth(it.label)
+        const w = it.full ? fullWidth(it.label) : labelWidth(it.label)
         const h = it.full ? FULL.h : LABEL_H
-        const r = { id: it.id, kind: 'label', ...rectOf(it.sx, it.sy, w, h) }
+        const r = { id: it.id, kind: 'label', ...boxOf(it, w, h) }
         const inside = it.sz < 1 && r.x >= 0 && r.y >= 0 && r.x + r.w <= size.width && r.y + r.h <= size.height
         if (inside && !placed.some((p) => hit(r, p))) { placed.push(r); shown.set(it.id, it.opacity ?? 1) } else if (it.full) { placed.push(r); shown.set(it.id, 1) } else hidden.push(it.id)
     }
@@ -58,7 +64,7 @@ export const screenItems = (layout, camera, size, fitDist = 10) => {
     items.push({ id: '__hub', kind: 'hub', label: 'di.iiii', sx: hub.x, sy: hub.y, sz: hub.z, depth: camera.position.distanceTo({ x: 0, y: 0.5, z: 0 }) })
     for (const n of layout.nodes) {
         const p = layout.pos.get(n.id)
-        const pt = [p.x * S, p.h * S + 0.45, p.y * S]
+        const pt = [p.x * S, p.h * S + LABEL_LIFT, p.y * S]
         const s = toScreen(camera, pt, size)
         const depth = Math.hypot(camera.position.x - pt[0], camera.position.y - pt[1], camera.position.z - pt[2])
         const t = Math.min(1, Math.max(0, (depth / fitDist - 0.9) / 0.9))
@@ -72,7 +78,7 @@ export const measurePreset = (layout, name, size) => {
     const pose = presetPose(layout, name, size)
     const cam = cameraAt(pose, size)
     const items = screenItems(layout, cam, size, pose.dist)
-    const rectFor = (it) => ({ id: it.id, kind: 'label', ...rectOf(it.sx, it.sy, labelWidth(it.label), LABEL_H) })
+    const rectFor = (it) => ({ id: it.id, kind: 'label', ...boxOf(it, labelWidth(it.label), LABEL_H) })
     const blockers = stageBlockers(size)
     const visible = (it) => it.sz < 1
     const oldFit = items.filter((it) => visible(it) && (it.kind === 'hub' || legacyNamed(it.kind, false)))

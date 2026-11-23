@@ -9,7 +9,7 @@ import { KIND_STYLE } from './monitorMapLayout.js'
 import { fitKey, layoutSignature, PULSE_MS, pulseEdgeIndexes, shouldAnimate } from './monitorMap3dPolicy.js'
 import { keyStep, mapPoints, poseForNode, presetPose, PRESET_LABEL, PRESET_NAMES, S } from './monitorMapCamera.js'
 import { buildEdgeLayers, bundleWidth } from './monitorMapEdges.js'
-import { planLabels, screenItems, stageBlockers } from './monitorMapOverlap.js'
+import { LABEL_LIFT, planLabels, screenItems, stageBlockers } from './monitorMapOverlap.js'
 
 // The 3D view of the Monitor map: the same layout as the 2D graph, as bodies in
 // a room. Kind sets the height (tiers above machines above spaces); each node
@@ -76,7 +76,7 @@ function Body({ node, p, color, glow, ring, pip, dim, sel, near, kinds, onHover,
     const hl = kinds ? ring : glow // the kinds look rings the pick in the text token, never a literal white
     return (
         <group position={at(p)}>
-            <mesh onPointerOver={(e) => { e.stopPropagation(); onHover(node.id) }} onPointerOut={() => onHover(null)}
+            <mesh onPointerOver={(e) => { e.stopPropagation(); onHover(node.id) }} onPointerOut={() => onHover(null, node.id)}
                 onClick={(e) => { e.stopPropagation(); onPick(node) }} onDoubleClick={(e) => { e.stopPropagation(); onFly(node) }}>
                 <KindGeometry shape={shape} size={size} />
                 <meshBasicMaterial color={color} transparent opacity={dim ? (kinds ? 0.18 : 0.25) : off && kinds ? 0.6 : 1} />
@@ -175,6 +175,7 @@ function Rig({ ground, layout, preset, points, fitDist, api, autoRotate, reduced
     }, [controls, autoRotate, reduced, onTouch])
     useEffect(() => {
         api.current = {
+            controlsElement: () => controls?.domElement || null,
             fly: (name) => flyTo(presetPose(layoutRef.current, name, size)),
             flyToNode: (id) => {
                 if (!controls) return
@@ -229,6 +230,12 @@ const useVisible = () => {
     return visible
 }
 
+const HOVER_LEAVE_MS = 140
+const DRAG_PX = 4
+const CARD_ANCHOR = { transform: 'translate3d(-50%, -100%, 0)' }
+const Z_FULL = [1000, 900]
+const Z_LABEL = [200, 0]
+
 // Still = zero frames: the canvas draws on a change, a gesture, or a 3 s pulse after a snapshot that changed
 // something (and while a node is hovered). The page's 1 s clock never reaches this tree (memo + stable props).
 function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false, autoRotate = true, world = false, kinds = false, pointerOnly = false }) {
@@ -238,7 +245,7 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     // The wheel turns the camera's zoom in full screen, on a map that fills its screen (the Monitor map) or with Ctrl/Cmd (a pinch);
     // otherwise it never reaches the controls (stopped in the capture phase) and the page scrolls.
     const wide = useWideScreen()
-    const wheelFree = fullscreen || (kinds && wide)
+    const wheelFree = fullscreen || (showKinds && wide)
     const freeRef = useRef(wheelFree)
     useEffect(() => { freeRef.current = wheelFree }, [wheelFree])
     useEffect(() => {
@@ -266,7 +273,36 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     const reduced = useReducedMotion()
     const visible = useVisible()
     const colors = useMemo(() => readColors(), [])
-    const [hover, setHover] = useState(null)
+    // Hover: entering is instant; leaving waits HOVER_LEAVE_MS and is cancelled by any re-enter, so a card that
+    // grows under the pointer or a 1 px jitter between the body and its card never toggles the look (it flickered ~20 times a second).
+    const [hover, setHoverNow] = useState(null)
+    const leaveTimer = useRef(0)
+    const setHover = useCallback((id, leaving) => {
+        if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = 0 }
+        if (id) { setHoverNow(id); return }
+        leaveTimer.current = setTimeout(() => {
+            leaveTimer.current = 0
+            setHoverNow((h) => (leaving == null || h === leaving ? null : h))
+        }, HOVER_LEAVE_MS)
+    }, [])
+    useEffect(() => () => clearTimeout(leaveTimer.current), [])
+    // A drag that starts on a card turns the camera like a drag on empty map: past DRAG_PX the press is handed to the
+    // camera control and the card's click is dropped. A press that does not move stays a click on the card.
+    const dragged = useRef(false)
+    const onCardDown = useCallback((ev) => {
+        if (ev.button !== 0 && ev.button !== 2) return
+        dragged.current = false
+        const start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId, button: ev.button, type: ev.pointerType }
+        const move = (m) => {
+            if (dragged.current || Math.hypot(m.clientX - start.x, m.clientY - start.y) < DRAG_PX) return
+            dragged.current = true
+            const target = api.current?.controlsElement?.()
+            target?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: start.x, clientY: start.y, pointerId: start.id, button: start.button, buttons: m.buttons, pointerType: start.type, isPrimary: true }))
+        }
+        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+        window.addEventListener('pointermove', move)
+        window.addEventListener('pointerup', up)
+    }, [])
     const preset = START
     const [plan, setPlan] = useState(() => new Map())
     const [rotating, setRotating] = useState(Boolean(autoRotate))
@@ -368,15 +404,16 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
                             <Line points={stemOf.get(n.id)} color={colors.line} lineWidth={1} />
                             <Body node={n} p={p} color={bodyColor(n)} glow={colors.cyan} ring={colors.text} pip={showKinds ? toneColor(n.state) : null} dim={dim} sel={sel} near={!!focus && !sel && hot(n.id)} kinds={showKinds} onHover={setHover} onPick={onPick} onFly={flyToNode} />
                             {named || full ? (
-                                <Html position={[p.x * S, p.h * S + 0.45, p.y * S]} center zIndexRange={full ? [1000, 900] : [200, 0]}>
+                                <Html position={[p.x * S, p.h * S + LABEL_LIFT, p.y * S]} style={CARD_ANCHOR} zIndexRange={full ? Z_FULL : Z_LABEL}>
                                     <button type="button" {...{ [pointerOnly ? 'data-pointer-node' : 'data-map-node']: n.id }} tabIndex={pointerOnly ? -1 : undefined}
                                         className={`monitor-card3d tone-${STATE_TONE[n.state] || 'muted'}${sel ? ' is-selected' : ''}${dim ? ' is-dim' : ''}${full ? ' is-full' : ''}`}
                                         style={!dim && !full && shownOpacity != null && shownOpacity < 1 ? { opacity: shownOpacity } : undefined}
                                         aria-pressed={sel} aria-label={`${n.kind} ${n.label}, ${n.stateLabel || n.state}`}
-                                        onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover((h) => (h === n.id ? null : h))}
-                                        onFocus={() => setHover(n.id)} onBlur={() => setHover((h) => (h === n.id ? null : h))}
-                                        onDoubleClick={() => flyToNode(n)}
-                                        onClick={() => onPick(n)}>
+                                        onPointerEnter={() => setHover(n.id)} onPointerLeave={() => setHover(null, n.id)}
+                                        onFocus={() => setHover(n.id)} onBlur={() => setHover(null, n.id)}
+                                        onPointerDown={onCardDown} onContextMenu={(ev) => ev.preventDefault()}
+                                        onDoubleClick={() => { if (!dragged.current) flyToNode(n) }}
+                                        onClick={() => { if (dragged.current) { dragged.current = false; return } onPick(n) }}>
                                         <span className="monitor-card3d-name">{n.label}</span>
                                         <span className="monitor-card3d-state">{n.stateLabel || n.state}</span>
                                         <span className="monitor-card3d-fact">{`${n.kind} · ${degree(n.id)} ${degree(n.id) === 1 ? 'link' : 'links'}`}</span>
