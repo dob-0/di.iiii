@@ -198,6 +198,7 @@ describe('PublicProjectViewer', () => {
             expect(iframe?.getAttribute('allow')).toContain('camera')
             // no deviceAccess opt-in → the page must stay origin-isolated
             expect(iframe?.getAttribute('sandbox')).not.toContain('allow-same-origin')
+            expect(iframe?.getAttribute('allow')).not.toContain('midi')
         })
     })
 
@@ -289,6 +290,8 @@ describe('PublicProjectViewer', () => {
             // the permission delegation and a real origin
             expect(iframe?.getAttribute('allow')).toContain('camera')
             expect(iframe?.getAttribute('sandbox')).toContain('allow-same-origin')
+            // a music page driving a controller (Akai APC40) needs Web MIDI delegated too
+            expect(iframe?.getAttribute('allow')).toContain('midi')
         })
     })
 

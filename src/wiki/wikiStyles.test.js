@@ -70,4 +70,11 @@ describe('wiki.css eyebrows and links', () => {
         expect(block).toMatch(/color:\s*var\(--di-text\)/)
         expect(block).not.toMatch(/opacity/)
     })
+
+    // UX audit 2026-10-28, wiki phone 390: the links row is right-aligned, so with Admin
+    // it overflowed to the left and "Spaces" sat under the "di.iiii" wordmark.
+    it('never lets the bar links start left of their own box, and keeps the wordmark on top', () => {
+        expect(rule('.wiki-root .sbar-links')).toMatch(/justify-content:\s*safe flex-end/)
+        expect(rule('.wiki-root .sbar-home')).toMatch(/z-index:\s*1/)
+    })
 })

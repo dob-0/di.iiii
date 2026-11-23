@@ -1,4 +1,5 @@
 const path = require('node:path')
+const { findSimilar, newAnywayReason } = require('../../../shared/continueStem.cjs')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
@@ -9,7 +10,17 @@ const { withProjectWriteLock, withProjectInProcessLock, commitProjectWrite: comm
 const { createKeyedLock } = require('../asyncLock')
 const { createTestBarrier } = require('../testBarrier')
 const logger = require('../logger')
-const { applyAssetSafetyHeaders } = require('../spaceStore')
+const { applyAssetSafetyHeaders, applyHtmlAssetHeaders, isHtmlAssetMime } = require('../spaceStore')
+const { injectFrameRelayBuffer } = require('../frameRelay')
+
+// A single-file HTML page uploaded as a project asset (a map "visual").
+const MAX_HTML_ASSET_BYTES = 10 * 1024 * 1024
+const isHtmlUpload = (file) => {
+  const mime = String(file?.mimetype || '').toLowerCase().split(';')[0].trim()
+  if (mime === 'text/html') return true
+  if (mime && mime !== 'application/octet-stream') return false
+  return /\.html?$/i.test(String(file?.originalname || ''))
+}
 const { findIdlessCreateOp } = require('../opValidation')
 const { placeOps } = require('../../../shared/placement.cjs')
 const { actorFromAuthState } = require('../opActor')
@@ -61,6 +72,8 @@ function registerProjectRoutes(router, {
   ensureProject,
   ensureSpaceWritable,
   findProjectBySlug,
+  // Optional: (id) => { spaceId, trashed } | null, trash included (projectStore.js).
+  findAnyProjectById,
   getProjectLiveBucket,
   getProjectPaths,
   // Fails CLOSED. This used to default to `() => false`, so a router mounted without the
@@ -335,6 +348,60 @@ function registerProjectRoutes(router, {
     }
   })
 
+  // Who holds an id, trash included: a trashed project still owns its id
+  // (upsertProjectMeta brings it back on a write). Without the store's door,
+  // fall back to live projects only.
+  const idHolder = async (id) => {
+    if (typeof findAnyProjectById === 'function') return findAnyProjectById(id)
+    const live = await resolveProjectContext(id)
+    return live ? { spaceId: live.spaceId, trashed: false } : null
+  }
+  const sameName = (project, base, title) =>
+    project.id === base || project.slug === base ||
+    (base && normalizeProjectId(project.title || '') === base) ||
+    (title && String(project.title || '').trim().toLowerCase() === title.toLowerCase())
+
+  // A person's name for a new project in one space → its title, id and short name.
+  const pickNamedProject = async (spaceId, typedTitle) => {
+    const inSpace = typeof listProjectsInSpace === 'function' ? (await listProjectsInSpace(spacesDir, spaceId)) || [] : []
+    let title = typedTitle
+    if (!title) {
+      // An empty name gets a real one, never a clash: the first free "Untitled N" here.
+      for (let n = 1; n < 1000; n += 1) {
+        const candidate = n === 1 ? 'Untitled' : `Untitled ${n}`
+        if (!inSpace.some((p) => sameName(p, normalizeProjectId(candidate), candidate))) { title = candidate; break }
+      }
+      title = title || `Untitled ${Date.now()}`
+    }
+    const base = normalizeProjectId(title) || 'project'
+    const clash = inSpace.find((p) => sameName(p, normalizeProjectId(title), title))
+    if (clash) return { clash }
+    if (isReservedProjectSlug(base)) return { reserved: base }
+    const freeHere = async (id) => {
+      const holder = await idHolder(id)
+      // A trashed project of THIS space under the very id the name makes comes
+      // back, as it always has (upsertProjectMeta) — never one of another space.
+      if (holder && !(id === base && holder.trashed && holder.spaceId === spaceId)) return false
+      const bySlug = await findProjectBySlug(spaceId, id)
+      return !bySlug || bySlug.id === id
+    }
+    const stem = base.slice(0, 56).replace(/-+$/, '')
+    let id = null
+    if (base !== 'project' && await freeHere(base)) id = base
+    for (let n = 2; !id && n < 1000; n += 1) {
+      const candidate = `${stem}-${n}`
+      if (await freeHere(candidate)) id = candidate
+    }
+    if (!id) id = normalizeProjectId(`${stem}-${Date.now()}`)
+    let slug
+    if (id !== base && base !== 'project') {
+      const bySlug = await findProjectBySlug(spaceId, base)
+      const holder = await idHolder(base)
+      if (!bySlug && !(holder && holder.spaceId === spaceId)) slug = base
+    }
+    return { title, id, slug }
+  }
+
   router.post('/api/spaces/:spaceId/projects', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -353,8 +420,55 @@ function registerProjectRoutes(router, {
       if (visibility !== undefined && visibility !== 'public' && visibility !== 'private') {
         return res.status(400).json({ error: 'visibility must be "public" or "private".' })
       }
-      const slugSource = req.body?.slug || title || `project-${Date.now()}`
-      const projectId = normalizeProjectId(slugSource)
+      const carried = req.body?.carried === true
+      // Two ways in (2026-10-29, ux-fix S21, docs/ai/decisions/2026-10-29-project-names-per-space.md):
+      // - EXACT: the caller names the id (`slug`, or `carried`) — a follow, a copy
+      //   script, an import. The id is used as given or refused with a 409, exactly
+      //   as before; those callers match projects across installs by id.
+      // - NAMED: a person typed only a name (`title`, maybe empty). A name has to be
+      //   unique only inside this space. Ids stay global, so when another space
+      //   already holds the id the name would make, the project gets a free id
+      //   (`my-scene-2`) and the name as its short name (`slug`), so it still opens
+      //   at /{space}/my-scene. An empty name becomes "Untitled", "Untitled 2", …
+      const named = !carried && (req.body?.slug === undefined || req.body?.slug === null || req.body?.slug === '')
+      let projectTitle = title
+      let projectSlug
+      let projectId
+      if (named) {
+        const picked = await pickNamedProject(spaceId, title)
+        if (picked.clash) {
+          return res.status(409).json({
+            error: `This space already has a project called "${picked.clash.title || picked.clash.id}". Pick another name.`,
+            code: 'name-taken-in-space'
+          })
+        }
+        if (picked.reserved) {
+          return res.status(400).json({ error: `"${picked.reserved}" is a reserved address and can't be a project name — try another.` })
+        }
+        // Continue, never recreate (owner 2026-11-02, N1880): a live project of this space
+        // with the same title stem (-vN, -N, -copy, a date stripped) is the same job again.
+        // A new state of it is a VERSION of it (scripts/production/versions.mjs,
+        // scripts/rigbuild/copy-version.mjs; in-product Versions is plan V3, not built yet).
+        // Only projects this caller may see are compared (visibleTo, as the GET routes): a private
+        // project of someone else is never named. Named creation only: follows, imports and copy scripts name their ids and are untouched.
+        if (title && typeof listProjectsInSpace === 'function') {
+          const reason = newAnywayReason(req.body?.newAnyway)
+          const similar = reason ? null : findSimilar([title], visibleTo(req, spaceId, (await listProjectsInSpace(spacesDir, spaceId)) || []))
+          if (similar) {
+            return res.status(409).json({
+              error: 'project_exists_similar',
+              existing: similar.id,
+              hint: `new version of ${similar.id}: continue that project; older states are versions (scripts/production/versions.mjs, scripts/rigbuild/copy-version.mjs). A real second project needs newAnyway with a reason.`
+            })
+          }
+        }
+        projectTitle = picked.title
+        projectSlug = picked.slug
+        projectId = picked.id
+      } else {
+        const slugSource = req.body?.slug || title || `project-${Date.now()}`
+        projectId = normalizeProjectId(slugSource)
+      }
       if (!projectId) {
         return res.status(400).json({ error: 'Invalid project id.' })
       }
@@ -378,8 +492,7 @@ function registerProjectRoutes(router, {
       // only at /{space}/p/{id}). The copy scripts (project-pull, space-sync,
       // space-sync-github, local-mirror, tier-sync) use this route too and do not say so
       // yet: for a reserved id they get the 400.
-      const carried = req.body?.carried === true
-      if (!carried && isReservedProjectSlug(projectId)) {
+      if (!named && !carried && isReservedProjectSlug(projectId)) {
         return res.status(400).json({ error: `"${projectId}" is a reserved address and can't be a project name — try another.` })
       }
       const existing = await resolveProjectContext(projectId)
@@ -391,10 +504,17 @@ function registerProjectRoutes(router, {
         // exists." named nothing and gave nobody anything to act on — a
         // newcomer who picks an ordinary name twice, weeks apart, in two
         // different spaces, hit this with no way to tell what happened.
+        if (existing.spaceId === spaceId) {
+          return res.status(409).json({
+            error: `This space already has a project called "${existing.meta?.title || projectId}". Pick another name.`,
+            code: 'name-taken-in-space'
+          })
+        }
         return res.status(409).json({ error: 'that name is taken on this di.iiii — try another' })
       }
       const meta = await ensureProject(spacesDir, spaceId, projectId, {
-        title: title || 'Untitled Project',
+        title: projectTitle || 'Untitled Project',
+        ...(projectSlug ? { slug: projectSlug } : {}),
         ...(source ? { source } : {}),
         ...(visibility ? { visibility } : {})
       })
@@ -1210,7 +1330,16 @@ function registerProjectRoutes(router, {
       await fsp.mkdir(assetsDir, { recursive: true })
       // Strip EXIF/GPS before anything hashes the file — the id must address
       // the bytes we actually store and serve.
-      const scrub = await scrubImageMetadata(req.file.path)
+      // HTML has nothing to scrub: size-capped, stored as text/html, passed through.
+      const isHtml = isHtmlUpload(req.file)
+      if (isHtml) {
+        if (req.file.size > MAX_HTML_ASSET_BYTES) {
+          await fsp.rm(req.file.path, { force: true }).catch(() => {})
+          return res.status(413).json({ error: 'HTML file too large.', maxBytes: MAX_HTML_ASSET_BYTES })
+        }
+        req.file.mimetype = 'text/html'
+      }
+      const scrub = isHtml ? { scrubbed: false, safeToStore: true } : await scrubImageMetadata(req.file.path)
       // An image we could not scrub must not be stored — the whole point of
       // the scrubber is that nothing reaches a public URL still carrying the
       // photographer's GPS position. Refusing loudly beats storing quietly.
@@ -1478,9 +1607,17 @@ function registerProjectRoutes(router, {
       const served = await fsp.lstat(servePath)
       if (!served.isFile()) throw Object.assign(new Error('not a regular file'), { code: 'ENOENT' })
       res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
-      applyAssetSafetyHeaders(res, meta?.mimeType)
+      if (isHtmlAssetMime(meta?.mimeType)) applyHtmlAssetHeaders(res)
+      else applyAssetSafetyHeaders(res, meta?.mimeType)
       // A private project's bytes are never stored by a shared cache.
       res.setHeader('Cache-Control', assetCacheControl(project.meta))
+      // An HTML visual goes out with the frame relay added (../frameRelay.js),
+      // so the mapper can bend it through a warp mesh. The stored bytes are
+      // untouched; HTML is capped at 10 MB on upload, so reading it whole is fine.
+      if (isHtmlAssetMime(meta?.mimeType)) {
+        const html = await fsp.readFile(servePath)
+        return res.send(injectFrameRelayBuffer(html))
+      }
       // `root` + a name, never sendFile(absolutePath). `send` applies
       // dotfiles: 'ignore' to EVERY segment of an absolute path, and the
       // default install lives in ~/.di — so on any `di` install this 404'd

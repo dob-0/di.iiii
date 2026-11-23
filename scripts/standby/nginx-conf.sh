@@ -4,6 +4,7 @@
 #
 #   listen 8080;                 -> listen <listen>;          (e.g. 127.0.0.1:8080)
 #   root /usr/share/nginx/html;  -> root <release>/dist;
+#   alias /usr/share/nginx/html/ -> alias <release>/dist/      (/sitemap-built.xml, 404 on the Mac before)
 #   http://server:4000           -> http://<upstream>          (e.g. 127.0.0.1:4000)
 #
 # plus a minimal main config (pid and temp paths under <run-dir>, logs under [log-dir], default
@@ -27,8 +28,12 @@ server_block="$(dirname "$out")/server.conf"
 sed -E \
   -e "s#^([[:space:]]*)listen 8080;#\\1listen $listen;#" \
   -e "s#^([[:space:]]*)root /usr/share/nginx/html;#\\1root $rel/dist;#" \
+  -e "s#^([[:space:]]*)alias /usr/share/nginx/html/#\\1alias $rel/dist/#" \
   -e "s#http://server:4000#http://$up#g" \
   "$src" > "$server_block"
+if grep -nE '^[^#]*/usr/share/nginx/html' "$server_block" >&2; then
+  echo "the server block still names /usr/share/nginx/html (above); teach nginx-conf.sh that line" >&2; exit 1
+fi
 
 mime="$(cd "$(dirname "$nginx")/.." && pwd)/etc/nginx/mime.types"
 [[ -f $mime ]] || mime=/opt/homebrew/etc/nginx/mime.types

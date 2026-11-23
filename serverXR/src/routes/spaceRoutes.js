@@ -11,17 +11,20 @@ const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
 const logger = require('../logger')
+const { registerBundleParts } = require('./bundleParts')
 const { createKeyedLock } = require('../asyncLock')
 const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
 const { actorFromAuthState } = require('../opActor')
 const { isSpaceMember } = require('../projectVisibility')
 const { SPACE_BLURB_MAX, normalizeSpaceBlurb } = require('../../../shared/spaceBlurb.cjs')
+const { findSimilar, newAnywayReason, spaceHint } = require('../../../shared/continueStem.cjs')
 
 const defaultWithSpaceOpsLock = createKeyedLock()
 
 const PRIVATE_PUBLISH_ERROR = 'That project is private, so it cannot be the space\'s published front door. Make it public first (project settings), then publish it.'
 
 function registerSpaceRoutes(router, {
+  proposals = null,
   applySceneOps,
   blankScene,
   broadcastLiveEvent,
@@ -313,6 +316,33 @@ function registerSpaceRoutes(router, {
     }
   })
 
+  // Continue, never recreate (owner 2026-11-02, N1880): a space whose id or label
+  // shares a stem with the new one (-3d, -test, -vN, -N, a date stripped) is the
+  // same place again. The caller is told which one and may only go on with
+  // `newAnyway: "<reason>"`. Only spaces the caller can see are named. A caller that
+  // names the id itself (`slug`, `as`: scripts, follows, tests) is not stem-compared at all
+  // (the exact-id rule still refuses a taken id); a
+  // person who typed just a label is compared by id and label.
+  const similarSpaceFor = async (req, names) => {
+    const state = req.authState || {}
+    const sees = !config.requireAuth || state.isUnrestricted || state.role === 'admin'
+    const all = (await listSpaces()) || []
+    const visible = all.filter((space) =>
+      space.kind !== 'sandbox' &&
+      (sees || space.isPublic || (state.authenticated && canAccessSpace(state, space.id))))
+    return findSimilar(names, visible)
+  }
+  const refuseSimilarSpace = async (req, res, names) => {
+    if (newAnywayReason(req.body?.newAnyway)) {
+      logger.warn(`[continue-guard] new space allowed anyway for ${names.join(' / ')}: ${newAnywayReason(req.body.newAnyway)}`)
+      return false
+    }
+    const similar = await similarSpaceFor(req, names)
+    if (!similar) return false
+    res.status(409).json({ error: 'space_exists_similar', existing: similar.id, label: similar.label || similar.id, hint: spaceHint(similar.id) })
+    return true
+  }
+
   router.post('/api/spaces', async (req, res, next) => {
     try {
       const { label = '', slug, permanent = false, allowEdits } = req.body || {}
@@ -334,6 +364,8 @@ function registerSpaceRoutes(router, {
       if (loadTrashedSpaceMeta && await loadTrashedSpaceMeta(spaceId)) {
         return res.status(409).json({ error: `"${spaceId}" is in the trash. Restore it from the Trash, or purge it, to use the name again.`, code: 'space_in_trash' })
       }
+
+      if (!slug && await refuseSimilarSpace(req, res, [spaceId, label])) return
 
       const state = req.authState || {}
       // Returning guests carry session cookies with a guest: subject — they
@@ -675,19 +707,29 @@ function registerSpaceRoutes(router, {
 
   // Opening a file CREATES a space, so it answers to the same rule as creating
   // one: an owning account, an admin, or a local install where auth is off.
-  router.post('/api/spaces/bundle', acceptBundleFile, async (req, res, next) => {
-    const uploaded = req.file?.path || null
-    try {
-      const state = req.authState || {}
-      const exempt = state.isUnrestricted || state.role === 'admin'
-      const sessionUserId = state.type === 'session' && !isGuestSubject(state.subject) ? state.subject : null
-      if (config.requireAuth && !exempt && !sessionUserId) {
-        return res.status(403).json({ error: 'Sign in with an account to open a file here.', code: 'auth_required' })
-      }
-      if (!uploaded) return res.status(400).json({ error: 'No file was sent.' })
+  const mayOpenAFile = (req, res) => {
+    const state = req.authState || {}
+    const exempt = state.isUnrestricted || state.role === 'admin'
+    const sessionUserId = state.type === 'session' && !isGuestSubject(state.subject) ? state.subject : null
+    if (config.requireAuth && !exempt && !sessionUserId) {
+      res.status(403).json({ error: 'Sign in with an account to open a file here.', code: 'auth_required' })
+      return false
+    }
+    return true
+  }
 
+  // The import itself, from a file already on disk: one path for the single
+  // POST below and for a file that arrived in parts (routes/bundleParts.js), so
+  // every refusal (space_exists, the similar-name guard, the role check) is the
+  // same for both. The caller removes `uploaded`.
+  const importBundleFile = async (req, res, uploaded, { as: asRaw = '', label = '' } = {}) => {
+      const state = req.authState || {}
+      const sessionUserId = state.type === 'session' && !isGuestSubject(state.subject) ? state.subject : null
       const args = ['import', uploaded]
-      const as = normalizeSpaceId(String(req.body?.as || '').trim())
+      const as = normalizeSpaceId(String(asRaw || '').trim())
+      // The id inside the file is only known after the tool has run, so the guard
+      // sees what the caller names: `as` and `label`.
+      if (!as && await refuseSimilarSpace(req, res, [String(label || '')])) return
       if (as) args.push('--as', as)
       // This route never passes --force, so the tool refuses an id that is
       // already here and nothing is replaced. Should that ever change, the
@@ -748,12 +790,22 @@ function registerSpaceRoutes(router, {
         grantSpaceToSessionUser(req, res, sessionUserId, opened)
       }
       res.status(201).json({ spaceId: opened, space: meta })
+  }
+
+  router.post('/api/spaces/bundle', acceptBundleFile, async (req, res, next) => {
+    const uploaded = req.file?.path || null
+    try {
+      if (!mayOpenAFile(req, res)) return
+      if (!uploaded) return res.status(400).json({ error: 'No file was sent.' })
+      await importBundleFile(req, res, uploaded, { as: req.body?.as, label: req.body?.label })
     } catch (error) {
       next(error)
     } finally {
       if (uploaded) await fsp.rm(uploaded, { force: true }).catch(() => {})
     }
   })
+
+  registerBundleParts(router, { config, mayOpenAFile, importBundleFile, normalizeSpaceId, proposals })
 
   // Sends a refusal the store raised on purpose (protected space, name in the
   // trash) as its own status and code instead of a bare 500.

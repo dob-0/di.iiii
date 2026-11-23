@@ -3,7 +3,7 @@
 import { handle } from '../src/worker.js'
 import { bytesToBase64url, signedMessage } from '../src/sign.js'
 
-export const ZONE = 'l.thedi.studio'
+export const ZONE = 'l.diiii.xyz'
 export const ADMIN = 'admin-secret-for-tests'
 export const BASE = 'https://broker.test'
 

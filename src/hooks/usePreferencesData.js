@@ -206,7 +206,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
     const signalNodes = [
         { key: 'ui', label: 'UI', value: ui?.isUiVisible ? 'Visible' : 'Hidden', detail: 'floating panels', tone: ui?.isUiVisible ? 'accent' : 'muted' },
         { key: 'selection', label: 'Selection', value: selectedCount ? `${selectedCount}` : 'Idle', detail: ui?.isSelectionLocked ? 'locked' : 'movable', tone: selectedCount ? 'success' : 'muted' },
-        { key: 'socket', label: 'Socket', value: sync?.isSocketConnected ? 'Live' : 'Down', detail: sync?.effectiveDisplayName || 'anonymous', tone: sync?.isSocketConnected ? 'success' : 'warning' },
+        { key: 'socket', label: 'Live link', value: sync?.isSocketConnected ? 'Connected' : 'Offline', detail: sync?.effectiveDisplayName || 'anonymous', tone: sync?.isSocketConnected ? 'success' : 'warning' },
         {
             key: 'stream', label: 'Stream', value: sync?.sceneStreamState || 'idle',
             detail: sync?.sceneStreamError || (sync?.isLiveSyncEnabled ? 'live edits' : 'presence only'),
@@ -397,7 +397,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
             tone: sync?.isSceneStreamConnected ? 'success' : sync?.sceneStreamError ? 'warning' : 'default',
             tooltip: 'Socket presence, scene stream, and live collaboration state.',
             facts: [
-                { label: 'Socket', value: sync?.isSocketConnected ? 'Connected' : 'Disconnected' },
+                { label: 'Live link', value: sync?.isSocketConnected ? 'Connected' : 'Disconnected' },
                 { label: 'Scene Stream', value: sync?.sceneStreamState || 'idle' },
                 { label: 'Live Sync', value: sync?.isLiveSyncEnabled ? 'On' : 'Off' },
                 { label: 'Mode', value: sync?.liveSyncFeatureEnabled ? 'Collaborative editing enabled' : 'Presence only' }
@@ -489,23 +489,30 @@ export function usePreferencesData({ onNavigateToEditor }) {
     }, [actions, sync?.isReadOnly, sync?.spaceId])
 
     const managementButtons = [
-        { key: 'admin-mode', label: `Admin ${ui?.isAdminMode ? 'On' : 'Off'}`, isActive: ui?.isAdminMode, onClick: () => ui?.setIsAdminMode?.((prev) => !prev) },
-        { key: 'ui-visible', label: `UI ${ui?.isUiVisible ? 'Visible' : 'Hidden'}`, isActive: ui?.isUiVisible, onClick: () => ui?.setIsUiVisible?.((prev) => !prev) },
-        { key: 'ui-default', label: `Default UI ${ui?.uiDefaultVisible ? 'On' : 'Off'}`, isActive: ui?.uiDefaultVisible, onClick: () => ui?.toggleUiDefaultVisible?.() },
+        // On/off settings are switches (kind 'switch'): the label is what the
+        // switch does, `checked` its state, `detail` who or what it touches
+        // (UX audit 2026-10-28, F108). Actions stay buttons named as actions.
+        { key: 'admin-mode', kind: 'switch', label: 'Admin tools in the editor', checked: Boolean(ui?.isAdminMode), detail: 'Only for you, on this screen.', onClick: () => ui?.setIsAdminMode?.((prev) => !prev) },
+        { key: 'ui-visible', kind: 'switch', label: 'Show the editor panels', checked: Boolean(ui?.isUiVisible), detail: 'Only for you, on this screen.', onClick: () => ui?.setIsUiVisible?.((prev) => !prev) },
+        { key: 'ui-default', kind: 'switch', label: 'Panels shown when the editor opens', checked: Boolean(ui?.uiDefaultVisible), onClick: () => ui?.toggleUiDefaultVisible?.() },
         { key: 'interaction', label: `Mode ${ui?.interactionMode === 'edit' ? 'Edit' : 'Navigate'}`, isActive: ui?.interactionMode === 'edit', onClick: () => ui?.toggleInteractionMode?.() },
-        { key: 'selection-lock', label: ui?.isSelectionLocked ? 'Selection Locked' : 'Selection Free', variant: ui?.isSelectionLocked ? 'warning' : undefined, onClick: () => ui?.setIsSelectionLocked?.((prev) => !prev) },
-        { key: 'offline', label: sync?.isOfflineMode ? 'Exit Offline' : 'Work Offline', variant: sync?.isOfflineMode ? 'warning' : undefined, onClick: () => sync?.setOfflineMode?.(!sync?.isOfflineMode) },
+        { key: 'selection-lock', kind: 'switch', label: 'Lock what is selected', checked: Boolean(ui?.isSelectionLocked), variant: 'warning', detail: 'Clicks in the scene stop changing the selection.', onClick: () => ui?.setIsSelectionLocked?.((prev) => !prev) },
+        { key: 'offline', kind: 'switch', label: 'Work offline', checked: Boolean(sync?.isOfflineMode), variant: 'warning', detail: 'Changes stay on this computer until you turn it off.', onClick: () => sync?.setOfflineMode?.(!sync?.isOfflineMode) },
         {
             key: 'live-sync',
-            label: sync?.liveSyncFeatureEnabled ? `Live Sync ${sync?.isLiveSyncEnabled ? 'On' : 'Off'}` : 'Presence Only',
-            isActive: sync?.isLiveSyncEnabled,
+            kind: 'switch',
+            label: 'Live sync',
+            checked: Boolean(sync?.liveSyncFeatureEnabled && sync?.isLiveSyncEnabled),
+            detail: sync?.liveSyncFeatureEnabled
+                ? 'Everyone in this space sees changes as they are made.'
+                : 'Not available here: only who is present is shown.',
             onClick: () => sync?.setIsLiveSyncEnabled?.(!sync?.isLiveSyncEnabled),
             disabled: !sync?.liveSyncFeatureEnabled || !sync?.canSyncServerScene
         },
-        { key: 'edit-lock', label: sync?.isReadOnly ? 'Editing Locked' : 'Editing Open', variant: sync?.isReadOnly ? 'warning' : undefined, onClick: toggleEditLock, disabled: !sync?.supportsServerSpaces || !sync?.spaceId },
+        { key: 'edit-lock', kind: 'switch', label: 'Lock editing', checked: Boolean(sync?.isReadOnly), variant: 'warning', detail: 'When on, nobody can change this space. Turn it off to undo.', onClick: toggleEditLock, disabled: !sync?.supportsServerSpaces || !sync?.spaceId },
         { key: 'copy-space-link', label: 'Copy Space Link', onClick: () => actions?.handleCopySpaceLink?.(sync?.spaceId), disabled: !actions?.handleCopySpaceLink || !sync?.spaceId },
         { key: 'reload-server', label: 'Reload Server', onClick: () => actions?.handleReloadFromServer?.(), disabled: !actions?.handleReloadFromServer || !sync?.canPublishToServer },
-        { key: 'publish', label: 'Publish', variant: 'success', onClick: () => actions?.handlePublishToServer?.(), disabled: !actions?.handlePublishToServer || !sync?.canPublishToServer }
+        { key: 'publish', label: 'Publish to the server now', variant: 'success', onClick: () => actions?.handlePublishToServer?.(), disabled: !actions?.handlePublishToServer || !sync?.canPublishToServer }
     ]
 
     const ambientLightSummary = sceneSettings?.ambientLight

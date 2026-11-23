@@ -44,9 +44,11 @@ export const lookupDeviceCode = (userCode) => call('/api/auth/device/lookup', {
 })
 
 // The person's answer for that code: { approved }.
-export const decideDeviceCode = (userCode, approve) => call('/api/auth/device/decision', {
+// For a `di connect` code (lookup says scope: 'connect', with `spaces`) an approval also carries the ticked
+// space ids: `spaceIds`. The server cuts the list down to what this account owns or edits.
+export const decideDeviceCode = (userCode, approve, spaceIds = null) => call('/api/auth/device/decision', {
     method: 'POST',
-    body: { userCode, approve: Boolean(approve) }
+    body: { userCode, approve: Boolean(approve), ...(Array.isArray(spaceIds) ? { spaceIds } : {}) }
 })
 
 // This account's live terminal logins: { tokens: [{ id, label, createdAt, lastUsedAt, expiresAt }] }.
@@ -54,5 +56,13 @@ export const listTerminalLogins = () => call('/api/auth/cli/tokens')
 
 // Ends one of them: { revoked: true }. 404 { error: 'not_found' } when it is not this account's.
 export const revokeTerminalLogin = (id) => call(`/api/auth/cli/tokens/${encodeURIComponent(id)}`, {
+    method: 'DELETE'
+})
+
+// This account's connected machines (made by `di connect`): { machines: [{ id, name, since, lastUsedAt, spaces: [{ id, label }] }] }.
+export const listMachines = () => call('/api/auth/connect/machines')
+
+// Disconnects one: ends every key that machine holds. { disconnected: <n> }. 404 when it is not this account's.
+export const disconnectMachine = (id) => call(`/api/auth/connect/machines/${encodeURIComponent(id)}`, {
     method: 'DELETE'
 })

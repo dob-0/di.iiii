@@ -4,10 +4,13 @@ import useAuthSession from '../hooks/useAuthSession.js'
 import useDocumentTitle from '../hooks/useDocumentTitle.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
+import AskDi from '../askdi/AskDi.jsx'
 import SurfaceBar from '../components/SurfaceBar.jsx'
 import { isEmbedRequest } from '../utils/previewMode.js'
 import useLocalInstall from '../hooks/useLocalInstall.js'
 import { buildWikiArticlePath, buildWikiPath } from '../utils/spaceRouting.js'
+import { wikiBackdropOn } from '../utils/decorative3d.js'
+import { readLastProject } from '../components/lastProject.js'
 
 // Lazy, not static — same fix as LandingPage.jsx: a plain import ships the
 // three.js vendor chunk (1.47 MB) to every wiki reader, phones included,
@@ -50,6 +53,7 @@ function useMetaDescription(text) {
 }
 
 export default function WikiPage({ articleId = null }) {
+    const lastProject = useMemo(() => readLastProject(), [])
     const [query, setQuery] = useState('')
     // Same admin gate as StudioHub. While auth resolves, role is null
     // and the link stays hidden — anonymous readers never see a dead end.
@@ -120,15 +124,19 @@ export default function WikiPage({ articleId = null }) {
 
     return (
         <div className="wiki-root" data-page="wiki" ref={rootRef}>
-            <Suspense fallback={null}>
-                <GridFloorBackground aria-hidden="true" interactive={false} />
-            </Suspense>
+            {/* Flat by default: a help page does not start the graphics card.
+                `?scene=1` brings the old 3D backdrop back (decorative3d.js). */}
+            {wikiBackdropOn() ? (
+                <Suspense fallback={null}>
+                    <GridFloorBackground aria-hidden="true" interactive={false} />
+                </Suspense>
+            ) : null}
 
             {/* The wiki described Raw, Tools and the lighting desk in named
                 sections and linked to none of them; its own way home was a
                 fourth name ("← Home") for the screen three other surfaces
                 already called three other things. One bar, one set of names. */}
-            <SurfaceBar here="wiki" isLocalInstall={localInstall.isLocal} hidden={isEmbed}>
+            <SurfaceBar here="wiki" space={lastProject.space} project={lastProject.project} isLocalInstall={localInstall.isLocal} hidden={isEmbed}>
                 {role === 'admin' && <a className="sbar-link" href="/admin">Admin</a>}
             </SurfaceBar>
 
@@ -146,6 +154,7 @@ export default function WikiPage({ articleId = null }) {
                     onChange={(e) => setQuery(e.target.value)}
                     aria-label="Search the wiki"
                 />
+                <AskDi />
             </header>
 
             <div className="wiki-layout">

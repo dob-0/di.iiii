@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { debrisLeaveState, DEBRIS_LEAVE_MS } from './PageDebris.jsx'
 
 // The fallen page used to stay in the room for good: a dark tilted strip of
@@ -33,6 +33,11 @@ window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListe
 import LandingPage from './LandingPage.jsx'
 
 describe('the fallen page', () => {
+    // These tests are about the room itself, so they open the front page in the
+    // mode where the room is already behind it (?scene=1, decorative3d.js); the
+    // default front page is flat since UX S15 (F138).
+    beforeEach(() => { window.history.replaceState(null, '', '/?scene=1') })
+    afterEach(() => { window.history.replaceState(null, '', '/') })
     beforeEach(() => {
         bgProps.current = null
         texture.dispose = vi.fn()

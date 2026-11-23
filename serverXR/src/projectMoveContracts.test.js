@@ -160,6 +160,14 @@ describe('POST /api/projects/:id/move', () => {
 // with the same replace (RootApp.jsx SpaceRootRoute).
 describe('GET /api/resolve/:space — the old space root forwards to its front door', () => {
     const resolveRoot = (space, token) => get(`/api/resolve/${space}`, token)
+    // Nothing to forward is the designed answer, so it is a 200 with a null
+    // pointer, not a 404 the browser logs as a red error on every space open
+    // (UX audit F137). Only a space that does not exist is a 404.
+    const expectNothingToForward = async (pending) => {
+        const res = await pending
+        expect(res.status).toBe(200)
+        expect((await res.json()).movedTo).toBeNull()
+    }
     let galleryId = null
 
     it('forwards the old space root to the project\'s new address', async () => {
@@ -168,26 +176,26 @@ describe('GET /api/resolve/:space — the old space root forwards to its front d
         expect(body).toEqual({ movedTo: { spaceId: galleryId, projectId: 'door' } })
     })
 
-    it('a space no front door ever left is unchanged: 404, nothing to forward', async () => {
+    it('a space no front door ever left is unchanged: 200 { movedTo: null }, nothing to forward', async () => {
         await ok(await send('POST', '/api/spaces', ADMIN, { label: 'quiet', slug: 'quiet' }), 201)
-        expect((await resolveRoot('quiet', ADMIN)).status).toBe(404)
+        await expectNothingToForward(resolveRoot('quiet', ADMIN))
         // bravo only ever RECEIVED a project, and lost none.
-        expect((await resolveRoot('bravo', ADMIN)).status).toBe(404)
+        await expectNothingToForward(resolveRoot('bravo', ADMIN))
     })
 
     it('never names a destination the caller could not open', async () => {
         // VIEWER may read alpha but not gallery, which is not public.
-        expect((await resolveRoot('alpha', VIEWER)).status).toBe(404)
+        await expectNothingToForward(resolveRoot('alpha', VIEWER))
         await ok(await send('PATCH', '/api/spaces/gallery', ADMIN, { isPublic: true }))
         expect((await (await ok(await resolveRoot('alpha', VIEWER))).json()).movedTo.projectId).toBe('door')
         // gallery public, the project private inside it: still nothing.
         await ok(await send('PATCH', '/api/projects/door', ADMIN, { visibility: 'private' }))
-        expect((await resolveRoot('alpha', VIEWER)).status).toBe(404)
+        await expectNothingToForward(resolveRoot('alpha', VIEWER))
         expect((await resolveRoot('alpha', ADMIN)).status).toBe(200)
         await ok(await send('PATCH', '/api/projects/door', ADMIN, { visibility: 'public' }))
         // A draft is not shown to a visitor either.
         await ok(await send('PATCH', '/api/projects/door/shelf', ADMIN, { state: 'draft' }))
-        expect((await resolveRoot('alpha', VIEWER)).status).toBe(404)
+        await expectNothingToForward(resolveRoot('alpha', VIEWER))
         await ok(await send('PATCH', '/api/projects/door/shelf', ADMIN, { state: 'live' }))
         expect((await resolveRoot('alpha', VIEWER)).status).toBe(200)
         // Anonymous, alpha private: the gate answers before any pointer.
@@ -196,13 +204,13 @@ describe('GET /api/resolve/:space — the old space root forwards to its front d
 
     it('stops forwarding as soon as the space gets a new front door — and stays stopped', async () => {
         await ok(await send('PATCH', '/api/spaces/alpha', ADMIN, { publishedProjectId: 'clasher' }))
-        expect((await resolveRoot('alpha', ADMIN)).status).toBe(404)
+        await expectNothingToForward(resolveRoot('alpha', ADMIN))
         // Taking the new front door down again does not bring the old forward back:
         // the space's last front door is clasher now, and it never left.
         await ok(await send('PATCH', '/api/spaces/alpha', ADMIN, { publishedProjectId: null }))
         const space = await (await ok(await get('/api/spaces/alpha', ADMIN))).json()
         expect(space.space?.publishedProjectId ?? space.publishedProjectId ?? null).toBeNull()
-        expect((await resolveRoot('alpha', ADMIN)).status).toBe(404)
+        await expectNothingToForward(resolveRoot('alpha', ADMIN))
     })
 
     it('a new space made under a purged space\'s name never had a move: nothing to forward', async () => {
@@ -217,6 +225,6 @@ describe('GET /api/resolve/:space — the old space root forwards to its front d
         await ok(await send('DELETE', '/api/spaces/delta', ADMIN))
         await ok(await send('DELETE', '/api/spaces/delta/purge', ADMIN))
         await ok(await send('POST', '/api/spaces', ADMIN, { label: 'delta', slug: 'delta' }), 201)
-        expect((await resolveRoot('delta', ADMIN)).status).toBe(404)
+        await expectNothingToForward(resolveRoot('delta', ADMIN))
     })
 })

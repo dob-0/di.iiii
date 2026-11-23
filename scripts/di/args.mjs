@@ -24,7 +24,9 @@ export const parseArgs = (argv) => {
         if (name === 'to') { args.flags.to = argv[++i]; continue }
         // `di post draft --text … --link … --media a.png,b.png --to telegram,bluesky`
         if (name === 'text' || name === 'link' || name === 'media') { args.flags[name] = argv[++i]; continue }
-        if (name === 'token') { args.flags.token = argv[++i]; continue }
+        // The secret must never sit in argv: `--token=VALUE` and a trailing `--token`
+        // both become a non-'-' value, which `di open` refuses. Only `--token -` passes.
+        if (name === 'token' || name.startsWith('token=')) { args.flags.token = name === 'token' ? (argv[++i] ?? '') : '(inline)'; continue }
         if (name === 'at') { args.flags.at = argv[++i]; continue }
         if (name === 'build') { args.flags.build = argv[++i]; continue }
         // `di stage join` — which mapping, which Chromium, what this machine
@@ -38,6 +40,10 @@ export const parseArgs = (argv) => {
         if (name === 'tier' || name === 'label' || name === 'base') { args.flags[name] = argv[++i]; continue }
         // `di open file.diiii --force --accept-loss 76` — the exact number of
         // media items a forced replace removes, passed to space-bundle.mjs.
+        // `di monitor report --every 45` — seconds between sends.
+        if (name === 'every') { args.flags.every = argv[++i]; continue }
+        // `di monitor feed add chats --command "python3 x --json" --id main --title "Chats"` — a command with spaces is ONE value.
+        if (name === 'command' || name === 'id' || name === 'title') { args.flags[name] = argv[++i]; continue }
         if (name === 'accept-loss') { args.flags['accept-loss'] = argv[++i]; continue }
         args.flags[name] = true
     }

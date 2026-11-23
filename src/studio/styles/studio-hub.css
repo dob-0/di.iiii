@@ -37,6 +37,23 @@
     line-height: 1;
 }
 
+/* ─── Which tool this list opens its cards in (nav reach, 2026-11-12) ───
+   One list serves Studio and Nodes. The page now says which tool a card opens,
+   in the tool's own name (docs/ai/vocabulary.md: Studio, Nodes). */
+.sh-tool-line {
+    margin: var(--di-space-2) 0 0;
+    font-size: var(--di-text-4);
+    line-height: 1.4;
+    color: var(--di-text-muted);
+}
+
+.sh-tool-name {
+    font-family: var(--di-mono);
+    font-weight: 500;
+    letter-spacing: var(--di-label-tracking);
+    color: var(--di-ink);
+}
+
 .sh-btn-new {
     font-size: var(--di-text-3);
     font-weight: 600;
@@ -195,6 +212,8 @@
     font-weight: 600;
     color: var(--di-text);
     margin: 0;
+    /* A name with no spaces (moxir_scenes_v5_…) breaks rather than running under Rename. */
+    overflow-wrap: anywhere;
     line-height: 1.3;
 }
 
@@ -214,10 +233,25 @@
     padding: var(--di-space-1) var(--di-space-2);
 }
 
+/* The name and its Rename and Delete share one row (UX S10): the name wraps
+   beside the two words whatever their length, in any language. */
+.sh-project-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--di-space-2);
+}
+/* The name never gets narrower than about four letters; below that the two
+   words go under it instead of squeezing it to a word per line. */
+.sh-project-head > .sh-project-title,
+.sh-project-head > .sh-rename-form { flex: 1 1 0; min-width: min(4em, 100%); }
+.sh-project-tools {
+    display: flex;
+    flex: none;
+    gap: var(--di-space-2);
+}
+
 .sh-btn-rename {
-    position: absolute;
-    top: 10px;
-    right: 46px;
     font-size: var(--di-text-3);
     background: transparent;
     color: var(--di-text-muted);
@@ -227,11 +261,24 @@
     transition: color 0.1s, border-color 0.1s, opacity 0.15s;
     border-radius: 0;
     font-family: inherit;
-    opacity: 0;
+    /* Always visible: a word you can find on touch and by keyboard (UX F031). */
+    opacity: 0.85;
+    min-height: 24px;
     line-height: 1;
 }
 
 .sh-project-card:hover .sh-btn-rename { opacity: 1; }
+
+/* The project's name is the button that opens it (UX S10, F031): it reads as the title. */
+.sh-project-open {
+    all: unset;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+}
+.sh-project-open:hover { text-decoration: underline; }
+.sh-project-open:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px; }
+.sh-project-card:focus-within { border-color: rgba(var(--di-cyan-rgb), 0.4); }
 .sh-btn-rename:hover { color: var(--di-text); border-color: rgba(255, 255, 255, 0.4); }
 
 .sh-rename-form {
@@ -283,9 +330,6 @@
 .sh-rename-cancel:hover { color: var(--di-danger); border-color: rgba(var(--di-danger-rgb), 0.4); }
 
 .sh-btn-delete {
-    position: absolute;
-    top: 10px;
-    right: 10px;
     font-size: var(--di-text-3);
     background: transparent;
     color: rgba(var(--di-danger-rgb), 0.7);
@@ -295,7 +339,9 @@
     transition: color 0.1s, border-color 0.1s, opacity 0.15s;
     border-radius: 0;
     font-family: inherit;
-    opacity: 0;
+    /* Always visible: a word you can find on touch and by keyboard (UX F031). */
+    opacity: 0.85;
+    min-height: 24px;
     line-height: 1;
 }
 
@@ -304,6 +350,65 @@
 .sh-btn-delete:hover {
     color: var(--di-danger);
     border-color: rgba(var(--di-danger-rgb), 0.6);
+}
+
+/* ─── The doors of a project, on its card ───────────────────────────────
+   The other places this project opens: Perform, and whichever of Studio and
+   Nodes the card does not open itself. Always visible (a screen you touch has
+   no hover), links not buttons, so a click on one never reaches the card. */
+.sh-card-doors {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--di-space-2);
+}
+
+.sh-door {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--di-target-min);
+    padding: var(--di-space-1) var(--di-space-2);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    color: var(--di-text-muted);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    line-height: 1;
+    letter-spacing: var(--di-label-tracking);
+    text-transform: var(--di-label-case);
+    text-decoration: none;
+    transition:
+        color var(--di-motion-base) ease,
+        background var(--di-motion-base) ease,
+        border-color var(--di-motion-base) ease;
+}
+
+.sh-door:hover { color: var(--di-cyan); background: var(--di-cyan-dim); border-color: var(--di-cyan); }
+.sh-door:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px; }
+
+/* The project this space opens on. Same words and the same look as the mark
+   on the space page's list (spaceContents.css, .sc-row-door). */
+.sh-way-in {
+    padding: var(--di-space-1) var(--di-space-2);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: var(--di-radius);
+    color: var(--di-cyan);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-2);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* A finger's size for a door, as for the save and cancel beside a name. */
+@media (pointer: coarse), (max-width: 600px) {
+    .sh-door { min-height: var(--di-touch-target); }
+}
+
+/* A card holds up to four doors (Perform, the other tool, Projection, Light).
+   On a phone they wrap and each line shares the card's width, so no line ends
+   ragged and no word is cut. */
+@media (max-width: 600px) {
+    .sh-door { flex: 1 1 auto; justify-content: center; }
 }
 
 /* ─── EMPTY STATE ───────────────────────────────────────────── */
@@ -384,7 +489,7 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     color: var(--di-cyan);
     font-weight: 500;
     margin: 0;

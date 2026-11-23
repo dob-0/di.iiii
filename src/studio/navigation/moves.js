@@ -7,6 +7,8 @@
 // its own branch in the engine (useCameraNavigation.js), beside Move 1, never an edit of it. src/studio/navigation/move1.golden.test.js
 // freezes Move 1's numbers; if it fails, you changed Move 1: put it back and add a new move instead.
 // (NAVIGATION_PRESETS 'studio' / 'blender' in mappings.js are mouse-button maps, a different thing.)
+// The Studio's View | Edit switch is not a move either (owner 2026-10-28): in both the camera is Move 1; Edit only adds that a pull
+// on the selected thing moves it (pullToMove.js), a branch in the engine before Move 1's, which it never changes.
 export const MOVES = Object.freeze([
     Object.freeze({
         id: 'move-1',

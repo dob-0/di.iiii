@@ -20,8 +20,9 @@ Each word does exactly one job. If you need a second job done, use a different w
 
 | Word | Means, and only this |
 | --- | --- |
-| **space** | A place that is yours: an address, a guest list, and everything in it. |
+| **space** | A place that is yours: an address, a guest list, and everything in it. A real place is ONE space; coming back to a job continues its project, it never makes a sibling ("continue, never recreate", 2026-11-02, `docs/ai/decisions/2026-11-02-continue-never-recreate.md`). |
 | **project** | One thing you make inside a space. |
+| **shelf** | A named group of projects inside a space. It groups work without becoming a place of its own; deleting a shelf never deletes the work on it, and a project on no shelf is listed under "Not on a shelf". Made and filled in Studio, shown as a heading in the Studio and Nodes project lists and, for members, on the space page. In the data it is a collection; the word a person reads is shelf. Added 2026-11-12. |
 | **canvas** | The surface your nodes sit on. |
 | **node** | One card on the canvas. |
 | **object** | One thing standing in the scene. |
@@ -34,9 +35,12 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 | **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
+| **Perform** | The tool that runs a project as a show: the VJ deck, the wall and the lights on screen, and nothing else. Opens at `/{space}/perform/{project}`. A door to it never names a layout: the show's default or the last one used on the device opens (`src/perform/presets.js`). The capital is the tool; to perform is the verb. Added 2026-11-12. |
 | **Light** | The lighting desk: patch, looks, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
 | **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
 | **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |
+| **Rows · Upright** | The two arrangements of the Show desk's fader bank: a switch in its bottom line beside **Touch · Compact**, kept in that browser. **Rows**: one row for each lamp, lying faders, the cubes in one line (the default). **Upright**: the console posture, a tall strip for each lamp. Labels for a layout, not things: choosing one makes, saves and sends nothing. Owner, 2026-10-31: *"the faders area is not used right."* Added 2026-10-31. |
+| **head light** | A flashlight that follows a visitor's view while they walk in a scene. A project turns it on; the visitor switches it on and off with L (on a phone, the Head light button) and it starts off, never saved. Two words; the button says Head light. Not **Light** (the lighting desk), not a **light** (a 3D scene light that belongs to the scene, lit for everyone) and not a **lamp** (a stage fixture): only the visitor who walks sees it. Added 2026-10-28. |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 | **mesh** | serverXR's live hub at `/serverXR/mesh`, where every screen and phone in one **group** hears what the others publish on a **channel**. Spoken in Nodes through Mesh In and Mesh Out. The hub's own protocol calls a group a `room`; copy says **group**, because Room is banned copy. Added 2026-10-21. |
 | **post** | A short message the share door sends out about a space or a project: words, one link, pictures or a video. A draft until it is approved; then sent to the channels it names. Never a project and never a page. Added 2026-10-21. |
@@ -45,6 +49,7 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **wifi door** | The part of an install that opens its door on the wifi for guests, under the install's network name and certificate (`di wifi`, `/api/wifi-door`). Added 2026-10-28. |
 | **team** | The members of a space, said as one word where a page has to name them to a guest — the show page's "who may choose: team". Not a role and not a new group: exactly the people the space's scope already lets edit. Added 2026-10-08. |
 | **view** | A named camera a project keeps — a button that takes you there. A **live** view is one visitors get; a **work** view stays in the Studio. A project that is a version of a **production** shares its views with every other version. Added 2026-10-13 (decisions 1–3, `docs/ai/decisions/2026-10-13-views-library-words-workflow.md`). |
+| **View \| Edit** | The Studio's one switch for what a pull does (owner 2026-10-28). **View**: every pull turns the camera, nothing moves. **Edit**: a pull on the selected thing slides it along the floor. The owner's words on the switch; not the named camera **view** above. In code: the Navigate and Edit tools (`viewportEditMode`). **Mouse in Edit** (Scene → Move): **Pull to move** (default) or **Like Blender** (the 2026-10-12 Edit mouse, kept as a mode; `editMouse.js`). |
 | **quality** | The room's one render setting, with two values: **Low** (beams and haze, light enough for a phone) and **High** (the work renderer: shadows, bloom, every lamp a real light). The button shows the quality now in use; its title says what a tap switches to. `?quality=low\|high` in an address. Why these words: the field names a renderer's two presets Low / High (quality presets in games, video players, Blender's render presets); HD / HQ name video formats, not a renderer setting. Owner 2026-10-15 ("Full and Lite do not suit"). Stored values and old links `lite` / `full` are read as `low` / `high`. |
 | **render** | What a room is drawn FOR, three values: **Studio** (the building view, every tool — where you make it), **Tech** (the crew's schematic in the live show: only the rig as plain shapes, the floor and the hall outline; no air, no glow, no other objects) and **Show** (the room as the audience and a client see it — the public link, the Studio's Preview, the room page's default). Display → Tech \| Show on the room page; `?render=tech\|show` in an address. Separate from **quality** (what the device can carry). Why these words: the owner's own (2026-10-15 07:0x–07:2x: "Studio work when we create", "the light show" → Tech, "the showcase" → Show); previz and CAD keep a drawing view apart from a rendered view. **Show** here is a way of drawing, not the **show** of a production (the cues in order) — the button sits under Display, never alone. Decision: docs/ai/decisions/2026-10-15-studio-tech-show-render.md. |
 
@@ -550,13 +555,79 @@ in future people can use that."*
 | Word | Means | Not |
 |---|---|---|
 | **app** | Any program a person installs and runs on a machine: a game, Blender, TouchDesigner, a browser. The overall word — Steam names every item an app (its *appid*), the Linux desktop names every launcher entry an application (freedesktop Desktop Entry, `Type=Application`, games under `Categories=Game`). | not a di.iiii **tool** (Studio · Nodes · Projection · Light are tools *inside* di.iiii) |
-| **game** | An app made to be played. A *type* of app, never a separate thing. | not "software", not "title" in copy |
+| **game** | An app made to be played. A *type* of app, never a separate thing. In di.iiii the same word names a **project you play**: a project that has rules (see "Amended 2026-10-29"). | not "software", not "title" in copy |
 | **creative app** | An app made to create with: Blender, TouchDesigner, a DAW, an editor. | not "creative tool" — **tool** is taken by di.iiii's own tools |
 | **software** | Not used in product copy. It means any code at all (drivers, libraries, firmware), wider than what a person runs. | — |
 | **settings set** | The values di.g_apptune writes into an app's own settings for one goal (Recommended, Performance, Quality, Yours). | not "profile" (a person has a profile), not "preset" (a game's own word for its menu presets) |
 
 Where it lives in code: di.g_apptune `apps/<source>-<id>.toml` with `type = "game" | "creative" | "app"`
 (described in the di.g_apptune repo, dob-0/di.g_apptune, file APP_FILE.md).
+
+## Amended 2026-10-29 — a game is a project you play
+
+Studio games design (`di-studio-games-design.md`, section 7), slice A. Owner's words (ledger N1469): *"1 playlab 2. we need pro
+level 3 and 4 your pick"*. Pick 3 was the word for a project you play: **game**, or "a project with rules" with "game" kept for
+apps only. The owner left it to the lead; the lead picked **game**. Decision record:
+`docs/ai/decisions/2026-10-29-game-is-a-project-you-play.md`.
+
+**game** stays one meaning, the one of 2026-10-21: a *type* of something, never a separate thing. It is a type of app on a
+machine, and a type of project in di.iiii: a project you play, because it has rules. A game is made in a space like any project
+(the space `playlab` holds the first ones).
+
+| Word | Means | Not |
+|---|---|---|
+| **Play** (the button) | Run this project as a visitor would, from the Studio or Make. **Stop** returns to editing. Nothing done while playing is saved. | not "Preview", not "Test" in copy |
+| **Play panel** | Where a project turns on head light, solid walls, sounds, things you can use, rules, walker and friends. | not "game settings" |
+| **play-test** | Playing your own project to try it, then stopping. | — |
+| **thing you can use** | An object a visitor can take or open while walking. | not "item", "pickup" |
+| **take / open / locked / Use** | The actions on a thing you can use: take it, open it, it is locked until its key is used; **Use** is the button (key E while walking). | — |
+| **rules** · **round** · **counter** (on screen) | The rules are what makes a project a game; a round is one play from start to win or end; a counter is a number shown on screen. | not the `signal.counter` node in copy |
+| **start point** | Where a visitor appears when play starts. | not "spawn" in copy |
+| **walker** | An object that walks the scene by itself: patrol, follow, search. | not "NPC", "AI" |
+
+## Proposed 2026-10-29 — the six core words in Armenian and Russian (unverified)
+
+Languages design, slice S13c (`docs/ai/decisions/2026-10-29-languages-in-the-address.md`, "Words first"). Before any
+message file exists, the six words every other sentence leans on get one Armenian and one Russian form here. Every row is a
+machine draft: state **unverified**, source `machine:<model>@<date>`. The owner checks them on one page
+(`node scripts/i18n/review.mjs page`); his answer per row is written back by the agent with
+`node scripts/i18n/review.mjs check <word> <lang> --by <name> [--says <his word>]`, which sets the state to **checked**
+and the source to `human:<name>@<date>`. He never edits this file. Russian is checked by a native speaker he names.
+
+The words keep their English meaning from the dictionary above; only the form a person reads changes. Nouns are given in
+the singular; a heading that lists them takes the plural (Տարածքներ, пространства).
+
+<!-- i18n-core-words:start -->
+| Word | Language | Says | State | Source | Why this word |
+| --- | --- | --- | --- | --- | --- |
+| space | hy | Տարածք | unverified | machine:claude-opus-5-5@2026-10-29 | The plain word for an area that is someone's; the sketch already says Տարածքներ for Spaces. |
+| space | ru | пространство | unverified | machine:claude-opus-5-5@2026-10-29 | The word Russian software uses for a shared place of work ("рабочее пространство"); not "комната", which is a room. |
+| project | hy | Նախագիծ | unverified | machine:claude-opus-5-5@2026-10-29 | The standard word for a thing one plans and makes; the camp says սենյակ (room), which the dictionary bans for a project. |
+| project | ru | проект | unverified | machine:claude-opus-5-5@2026-10-29 | The same word and the same meaning as in English; no other word competes. |
+| scene | hy | Տեսարան | unverified | machine:claude-opus-5-5@2026-10-29 | A scene one sees and stands in; not Բեմ, which is the stage itself and would clash with a real place's stage. |
+| scene | ru | сцена | unverified | machine:claude-opus-5-5@2026-10-29 | The word 3D tools use in Russian (Blender: «Сцена»); a theatre ear also hears the stage, the owner may prefer it or not. |
+| object | hy | Օբյեկտ | unverified | machine:claude-opus-5-5@2026-10-29 | As the sketch writes it (Օբյեկտներ); not Առարկա, which also means a school subject. |
+| object | ru | объект | unverified | machine:claude-opus-5-5@2026-10-29 | The word 3D tools use in Russian (Blender: «Объект»); "предмет" also means a school subject. |
+| place | hy | Վայր | unverified | machine:claude-opus-5-5@2026-10-29 | A real location in the world; not Տարածք (that is a space) and not Սրահ, which is only a hall. |
+| place | ru | площадка | unverified | machine:claude-opus-5-5@2026-10-29 | What Russian theatre and events call a venue; "место" is heard as a seat or a spot. |
+| production | hy | Բեմադրություն | unverified | machine:claude-opus-5-5@2026-10-29 | A staged work with its place and run; not Արտադրություն, which is a factory's output. Narrower for a light show: owner's call. |
+| production | ru | постановка | unverified | machine:claude-opus-5-5@2026-10-29 | The theatre word for a staged work and its run; not "производство" (a factory) or "продакшн" (a film company's slang). |
+| play | hy | ԽԱՂԱԼ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The standard infinitive, same form as ԽՈՍԵԼ and ԱՎԵԼԱՑՆԵԼ beside it in Make; for the Play button (Studio, Make). |
+| playing | hy | ԽԱՂՈՒՄ ԵՍ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The bar's state while a project is walked: "you are playing", second person like Make's other words; the form of address is for a speaker to confirm. |
+| stop | hy | ԿԱՆԳՆԵՑՆԵԼ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The standard infinitive of "to stop" (causative); ԿԱՆԳ is the short sign form a speaker may prefer on a small button. |
+<!-- i18n-core-words:end -->
+
+**Where earlier guesses differ** (read 2026-10-29, nothing in them was changed):
+
+- The sketch (`docs/design/lang-switch/concept-b.html:112,121`) says Տարածքներ (Spaces) and Օբյեկտներ (Objects): the same
+  words as above, in the plural. Its third word, Հատկություններ (Properties), is a panel name, not a core word; it waits for
+  the message files (S13g).
+- The camp's table (`src/make/makeVocabulary.js`) has no word for space, project, scene, object, place or production. It
+  calls a child's project a room ("put your photo in the room", դիր քո նկարը սենյակում) and a shape by its own name
+  (ԽՈՐԱՆԱՐԴ, ԳՆԴԱԿ…). That is `/make`'s own mode, outside the switch (the decision, "What it replaces"): it stays as it is.
+  The difference to review is the room: on `/make` a project is սենյակ, everywhere else Նախագիծ.
+- The camp writes its buttons in capitals (ԱՎԵԼԱՑՆԵԼ); this table gives the words in sentence case, the way the frame
+  sets them. Neither changes the other.
 
 ## The rule for anything new
 

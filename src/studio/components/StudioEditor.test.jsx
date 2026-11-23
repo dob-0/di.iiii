@@ -37,7 +37,12 @@ vi.mock('../../services/serverSpaces.js', () => ({
 // seeds undo history) so undo/redo can be exercised without the real shell.
 vi.mock('./StudioShell.jsx', () => ({
     default: (props) => (
-        <button type="button" onClick={() => props.onCreateEntity('box')}>create-entity</button>
+        <>
+            <button type="button" onClick={() => props.onCreateEntity('box')}>create-entity</button>
+            <button type="button" onClick={props.onUndo}>shell-undo</button>
+            <button type="button" onClick={props.onRedo}>shell-redo</button>
+            <span data-testid="shell-sync" data-has-loaded={String(props.syncState?.hasLoaded)} data-load-error={String(props.syncState?.loadError)} />
+        </>
     )
 }))
 
@@ -88,5 +93,37 @@ describe('StudioEditor undo/redo', () => {
         expect(redoBatch[0].payload.entity.id).toBe(batches()[0][0].payload.entity.id)
         expect(redoBatch[0].opId).toBeUndefined()
         expect(mockReplaceDocument).not.toHaveBeenCalled()
+    })
+
+    // UX audit F025: undo was a key only. The shell now gets onUndo / onRedo, and they must be the very same
+    // calls the key makes: inverse ops through applyLocalOps, never replaceDocument.
+    it('the Undo and Redo buttons of the shell run the same op path as Ctrl+Z', () => {
+        render(<StudioEditor projectId="proj-1" />)
+        fireEvent.click(screen.getByRole('button', { name: 'create-entity' }))
+        const created = batches()[0][0]
+
+        fireEvent.click(screen.getByRole('button', { name: 'shell-undo' }))
+        expect(batches()[1]).toEqual([{ type: 'deleteEntity', payload: { entityId: created.payload.entity.id } }])
+
+        fireEvent.click(screen.getByRole('button', { name: 'shell-redo' }))
+        const redoBatch = batches()[2]
+        expect(redoBatch[0].type).toBe('createEntity')
+        expect(redoBatch[0].payload.entity.id).toBe(created.payload.entity.id)
+        expect(mockReplaceDocument).not.toHaveBeenCalled()
+    })
+
+    it('the Undo button with an empty history emits nothing', () => {
+        render(<StudioEditor projectId="proj-1" />)
+        fireEvent.click(screen.getByRole('button', { name: 'shell-undo' }))
+        expect(mockApplyLocalOps).not.toHaveBeenCalled()
+    })
+
+    // Review of S03: the save line said "Saved" before the project had loaded. It can only know if the Studio
+    // hands it the store's hasLoaded and loadError, so the Studio must.
+    it('hands the shell hasLoaded and loadError for the save line', () => {
+        render(<StudioEditor projectId="proj-1" />)
+        const probe = screen.getByTestId('shell-sync')
+        expect(probe.dataset.hasLoaded).not.toBe('undefined')
+        expect(probe.dataset.loadError).not.toBe('undefined')
     })
 })

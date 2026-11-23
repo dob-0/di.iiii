@@ -10,7 +10,15 @@ import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
-import { confineToAreas } from './walkableAreas.js'
+import { createSolidWallsKeeper, walkStep, SOLID_WALLS_MAX_TRIANGLES, SOLID_WALLS_MAX_TRIANGLES_PHONE } from './solidWalls.js'
+import HeadLight from './HeadLight.jsx'
+import { resolveHeadLight, headLightCastsShadow } from './headLight.js'
+import { isFlyKey, walkKeyHintText } from './walkKeys.js'
+import { altitudeKeysFor, altitudeHintTextFor } from '../studio/navigation/flyKeys.js'
+import { useNavigationPreference } from '../studio/navigation/preference.js'
+import { layoutLabel, moveKeysText, useLayoutMap } from './layoutLabels.js'
+import { physicalKey } from './physicalKey.js'
+import { useHeadLight } from './useHeadLight.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -103,7 +111,6 @@ const STEEL_TAG = Object.freeze({ svSteel: true })
 
 // Fly mode's altitude keys. A caller that needs Q and E for something else (the
 // rig builder's hand raises and lowers with them) passes its own set.
-const DEFAULT_ALTITUDE_KEYS = Object.freeze({ up: [' ', 'q'], down: ['e', 'c'] })
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
 
@@ -484,14 +491,30 @@ export const detectTouchDevice = () => {
     return (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia('(any-pointer: fine)').matches
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true, walkLook = 'lock' }) {
-    const { camera, gl } = useThree()
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, solidWalls = null, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys, wheelDolly = true, walkLook = 'lock' }) {
+    const { camera, gl, scene } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
     // write camera.position/lookAt then, or it yanks the camera back to the
     // flat-screen player pose every frame -- fighting head-tracking and
     // defeating XROrigin movement entirely.
     const isPresenting = useXR((state) => state.session != null)
+    // Solid walls (opt-in, worldState.solidWalls): the walker is a capsule swept against the scene's own meshes
+    // (solidWalls.js). Without the switch there is no keeper and the movement below is exactly what it always was.
+    const wallsOn = solidWalls?.enabled === true
+    const wallsKeeper = useMemo(() => {
+        if (!wallsOn) return null
+        return createSolidWallsKeeper({
+            root: scene,
+            maxTriangles: COARSE_POINTER ? SOLID_WALLS_MAX_TRIANGLES_PHONE : SOLID_WALLS_MAX_TRIANGLES,
+            // the one obvious place that says what the walls are doing, and why not when they are not
+            onStatus: (text, stats) => { gl.domElement.dataset.solidWalls = text; gl.domElement.__solidWallsStats = stats }
+        })
+    }, [wallsOn, scene, gl])
+    useEffect(() => () => {
+        wallsKeeper?.dispose()
+        if (wallsKeeper) { delete gl.domElement.dataset.solidWalls; delete gl.domElement.__solidWallsStats }
+    }, [wallsKeeper, gl])
     const keysRef = useRef(new Set())
     const speedRef = useRef(0)
     const strafeSpeedRef = useRef(0)
@@ -519,12 +542,14 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'e', 'c']
         const onKeyDown = (e) => {
             if (isTypingTarget(e.target)) return
-            const key = e.key.toLowerCase()
+            // A key held with Alt / Option, Ctrl or Cmd is a shortcut, not a step (Mac Option+W must not walk). Key-up stays open so none sticks.
+            if (e.altKey || e.ctrlKey || e.metaKey) return
+            const key = physicalKey(e)
             if (!moveKeys.includes(key)) return
             if (key === ' ') e.preventDefault()
             keys.add(key)
         }
-        const onKeyUp = (e) => keys.delete(e.key.toLowerCase())
+        const onKeyUp = (e) => keys.delete(physicalKey(e))
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
         return () => {
@@ -904,6 +929,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         const joy = joystickRef?.current || { x: 0, y: 0 }
         const fly = flyRef.current
         if (player.pitch === undefined) player.pitch = 0
+        // the walls follow the scene (cheap: one clock read most frames); not while flying
+        const walls = wallsKeeper && !fly ? wallsKeeper.tick() : null
         if (player.altY === undefined) player.altY = EYE_HEIGHT
 
         // Only arrow keys (and mouse/touch drag, and the mobile joystick's x
@@ -946,15 +973,15 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             // Forward/strafe always move on the horizontal plane, even while
             // flying -- like a drone, not a jet. Looking down to film the
             // ground below shouldn't also make you descend; altitude is only
-            // ever changed explicitly, via Space/Q (up) and C/E (down).
+            // ever changed explicitly, via Space/E (up) and C/Q (down).
             const forwardX = Math.sin(player.yaw) * speedRef.current
             const forwardZ = Math.cos(player.yaw) * speedRef.current
             const rightX = -Math.cos(player.yaw) * strafeSpeedRef.current
             const rightZ = Math.sin(player.yaw) * strafeSpeedRef.current
             const nextX = player.x + (forwardX + rightX) * delta
             const nextZ = player.z + (forwardZ + rightZ) * delta
-            const moved = confineToAreas(
-                walkableAreas,
+            const moved = walkStep(
+                walkableAreas, walls,
                 player.x, player.z,
                 THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX),
                 THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
@@ -968,8 +995,8 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
         if (wheelDollyRef.current !== 0) {
             const dolly = wheelDollyRef.current
             wheelDollyRef.current = 0
-            const dollied = confineToAreas(
-                walkableAreas,
+            const dollied = walkStep(
+                walkableAreas, walls,
                 player.x, player.z,
                 THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * dolly, bounds.minX, bounds.maxX),
                 THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * dolly, bounds.minZ, bounds.maxZ)
@@ -1231,7 +1258,7 @@ function MobileJoystick({ outerRef, thumbRef }) {
     )
 }
 
-// Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
+// Fly mode's altitude keys (Space/E, C/Q) have no touch equivalent --
 // press-and-hold buttons fill that gap. Pointer events (not click) so
 // altitude changes continuously while held, like the keyboard.
 // Animated first-visit movement cue: a ghost joystick demo on mobile (the real
@@ -1261,14 +1288,14 @@ function MoveHintVisual({ isMobile }) {
     )
 }
 
-function VerticalTouchControls({ vertTouchRef }) {
+function VerticalTouchControls({ vertTouchRef, aboveHeadLight = false }) {
     const setVert = (value) => (e) => {
         e.preventDefault()
         vertTouchRef.current = value
     }
     const clearVert = () => { vertTouchRef.current = 0 }
     return (
-        <div className="live-scene-vert-controls">
+        <div className={`live-scene-vert-controls${aboveHeadLight ? ' live-scene-vert-controls--above-head-light' : ''}`}>
             <button
                 type="button"
                 className="live-scene-vert-btn"
@@ -1646,8 +1673,8 @@ export default function LiveProjectScene({
     // (src/rigbuild/BuildSurface.jsx). Each defaults to what walk mode did before.
     //
     // `altitudeKeys`: fly mode's up/down keys ({ up: [...], down: [...] }, lower
-    // case `KeyboardEvent.key`); the builder keeps Space/C and gives Q/E to the hand.
-    altitudeKeys = DEFAULT_ALTITUDE_KEYS,
+    // case key token: physicalKey.js); the builder keeps Space/C and gives Q/E to the hand.
+    altitudeKeys = null,
     // `wheelDolly`: the scroll wheel dollies the walker. The builder's wheel scrolls
     // its hotbar instead, so a wheel turn must not also walk the builder forward.
     wheelDolly = true,
@@ -1683,10 +1710,12 @@ export default function LiveProjectScene({
         }
     }, [])
     const [flyMode, setFlyMode] = useState(false)
+    const { flyKeys: flyKeysChoice } = useNavigationPreference()
+    const layoutMap = useLayoutMap()
     const joystickRef = useRef({ x: 0, y: 0 })
     const joyVisRef = useRef(null)
     const joyThumbRef = useRef(null)
-    // Fly mode's altitude keys (Space/Q up, C/E down) have no touch
+    // Fly mode's altitude keys (Space/E up, C/Q down) have no touch
     // equivalent -- without this, mobile fly has no way to ascend/descend at all.
     const vertTouchRef = useRef(0)
     const arTouchElRef = useRef(null)
@@ -1777,11 +1806,22 @@ export default function LiveProjectScene({
         Object.assign(root.style, { position: 'fixed', inset: '0', width: '100%', height: '100%' })
     }, [xr.domOverlayRoot])
 
+    // Head light: the project's document says whether it exists (worldState.headLight,
+    // headLight.js); the visitor's own state says whether it is on (always off at
+    // first, never saved).
+    const headLight = resolveHeadLight(doc?.worldState)
+    const headLightAvailable = walking && headLight.available
+    const headLightControl = useHeadLight(headLightAvailable)
+    // The key words of the hint lines; empty when the project has no head light and Fly is hidden (Play), so no bare separator is drawn.
+    const lockHintKeys = walkKeyHintText({ headLight: headLight.available, fly: showModeControls })
+    const walkHintKeys = walkKeyHintText({ headLight: headLight.available, flying: flyMode, fly: showModeControls })
+
+    // F flies, in every project; the head light has its own key, L (walkKeys.js).
     useEffect(() => {
         if (!walking || !showModeControls) return undefined
         const onKey = (e) => {
             if (isTypingTarget(e.target)) return
-            if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f)
+            if (isFlyKey(e)) setFlyMode((f) => !f)
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
@@ -1948,6 +1988,9 @@ export default function LiveProjectScene({
     // Shadows from the room: off unless this space asked for them. Walk mode
     // and the arrival frame read the same switch (shadowCasting.js).
     const shadowCasting = resolveShadowCasting(renderSettings)
+    // The head light casts its own shadow whenever the renderer allows shadows (High
+    // quality); the solid meshes then join the shadow pass, without the room's lamps.
+    const headLightShadow = headLightAvailable && headLightCastsShadow(renderSettings)
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
@@ -1993,7 +2036,7 @@ export default function LiveProjectScene({
             >
                 <XR store={xr.xrStore}>
                 <RenderSettingsEffect renderSettings={renderSettings} />
-                <ShadowCasting enabled={shadowCasting.enabled} mapSize={shadowCasting.mapSize} />
+                <ShadowCasting enabled={shadowCasting.enabled || headLightShadow} mapSize={shadowCasting.mapSize} lamps={shadowCasting.enabled} />
                 {/* The landing holds its page through a front-page button; this
                     is how the copy of the page gets this room's frame. */}
                 <FrameSource />
@@ -2071,6 +2114,7 @@ export default function LiveProjectScene({
                         entities={entities}
                         bounds={bounds}
                         walkableAreas={worldState.walkableAreas}
+                        solidWalls={worldState.solidWalls}
                         joystickRef={joystickRef}
                         joyVisRef={joyVisRef}
                         joyThumbRef={joyThumbRef}
@@ -2080,7 +2124,7 @@ export default function LiveProjectScene({
                         flyMode={flyMode}
                         isArActive={isArActive}
                         arTouchElRef={arTouchElRef}
-                        altitudeKeys={altitudeKeys}
+                        altitudeKeys={altitudeKeys ?? altitudeKeysFor(flyKeysChoice)}
                         wheelDolly={wheelDolly}
                     />
                 ) : viewing ? (
@@ -2091,6 +2135,8 @@ export default function LiveProjectScene({
                     <IdleOrbit center={center} />
                 )}
                 {walking && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
+                {/* After the Walker: frame callbacks run in mount order, and the light must read the camera the Walker just moved. */}
+                {headLightAvailable ? <HeadLight on={headLightControl.on} shadow={headLightShadow} /> : null}
                 {walking && worldState.ringTour?.enabled ? (
                     <RingTour playerRef={playerRef} config={worldState.ringTour} />
                 ) : null}
@@ -2111,7 +2157,17 @@ export default function LiveProjectScene({
                             <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
                         )}
                         {walking && isMobile && flyMode && showModeControls && (
-                            <VerticalTouchControls vertTouchRef={vertTouchRef} />
+                            <VerticalTouchControls vertTouchRef={vertTouchRef} aboveHeadLight={headLightAvailable} />
+                        )}
+                        {headLightAvailable && (
+                            <button
+                                type="button"
+                                className={`live-scene-light-btn${headLightControl.on ? ' active' : ''}`}
+                                aria-pressed={headLightControl.on}
+                                onClick={headLightControl.toggle}
+                            >
+                                Head light
+                            </button>
                         )}
                         {walking && showModeControls && (
                             <button
@@ -2238,7 +2294,7 @@ export default function LiveProjectScene({
 
                     {walking && !isMobile && locking && !isLocked && (
                         <p className="live-scene-hint live-scene-hint--lock">
-                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
+                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look{lockHintKeys ? <> &nbsp;·&nbsp; {lockHintKeys}</> : null}
                         </p>
                     )}
                     {walking && !isMobile && (!locking || isLocked) && walkHint ? (
@@ -2246,8 +2302,8 @@ export default function LiveProjectScene({
                     ) : null}
                     {walking && !isMobile && (!locking || isLocked) && !walkHint && (
                         <p className="live-scene-hint">
-                            WASD · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'} &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
-                            {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
+                            {moveKeysText(layoutMap)} · move &nbsp;·&nbsp; {locking ? 'Mouse · look' : 'Drag · look \u00A0·\u00A0 Scroll · forward / back'}{walkHintKeys ? <> &nbsp;·&nbsp; {walkHintKeys}</> : null}
+                            {flyMode ? <>&nbsp;·&nbsp; {altitudeHintTextFor(flyKeysChoice, (code, fallback) => layoutLabel(layoutMap, code, fallback))}</> : null}
                             {locking ? <>&nbsp;·&nbsp; ESC · release</> : exitLabel ? <>&nbsp;·&nbsp; Esc · exit</> : null}
                         </p>
                     )}

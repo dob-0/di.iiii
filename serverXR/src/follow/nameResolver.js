@@ -19,7 +19,7 @@ const dns = require('node:dns')
 const net = require('node:net')
 const beacon = require('./beacon')
 
-const DEFAULT_ZONE = 'l.thedi.studio'
+const DEFAULT_ZONE = 'l.diiii.xyz'
 const ROUTES = ['beacon', 'dns', 'last']
 
 /** A bare label: no scheme, no dot, no slash, no port — the only form that means "a network name". */

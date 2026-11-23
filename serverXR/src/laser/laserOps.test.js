@@ -12,7 +12,7 @@ const require = createRequire(import.meta.url)
 const express = require('express')
 const { registerLaserRoutes } = require('../routes/laserRoutes')
 const { ARM_PHRASE } = require('./laserEngine')
-const { sweep, localNetworks, sweepTargets, explain } = require('./laserFind')
+const { sweep, findCubes, localNetworks, sweepTargets, explain } = require('./laserFind')
 const { mergeConfig, validatePicked } = require('./laserConfig')
 const { isSameMachineRequest } = require('../localRuntimeGuard')
 
@@ -77,14 +77,14 @@ const startServer = async ({ config, findCubes } = {}) => {
     }
     const app = express()
     app.set('trust proxy', 'loopback')
-    const lasers = registerLaserRoutes(app, { dataDir, log: null, engineOptions: { createSocket: fakeSocket }, findCubes })
+    const lasers = registerLaserRoutes(app, { dataDir, log: null, engineOptions: { createSocket: fakeSocket, signOff: 'phrase' }, findCubes })
     const server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)) })
     servers.push(server)
     const base = `http://127.0.0.1:${server.address().port}/laser/api`
     const call = async (method, route, body, headers = {}) => {
         const res = await fetch(`${base}${route}`, {
             method,
-            headers: { 'content-type': 'application/json', ...headers },
+            headers: { 'content-type': 'application/json', 'x-laser-token': fs.readFileSync(path.join(dataDir, 'laser', '.token'), 'utf8').trim(), ...headers },
             body: body === undefined ? undefined : JSON.stringify(body)
         })
         return { status: res.status, body: await res.json().catch(() => null) }
@@ -247,6 +247,49 @@ describe('Find cubes', () => {
         expect(targets).toContain('192.168.88.254')
     })
 
+    it('a cube on the laser network is found although another network is a big silent /24 (stage, 2026-10-30)', async () => {
+        // Virtual clock: the sweep's own timer is injected, so "when was it asked" is exact. The fake cube is only
+        // reachable in the first 500 ms of the sweep (its ARP/route window); 253 silent wifi hosts at 2 ms each
+        // take 506 ms (the cube at .196 then 896 ms), so one flat list (wifi first) asks the cube too late, one sweep per network asks it at once.
+        const real = Buffer.from('7700000111020000ff0fb8880000b88800000370177017ff20028cbfea06ab3c0a2a01c4020a4c617365724375626520372e355720556c747261204d6b320000', 'hex')
+        const queue = []
+        let now = 0
+        const later = (fn, ms) => { queue.push({ at: now + ms, fn }) }
+        const asked = []
+        const createSocket = () => {
+            const s = { handlers: {}, on: (ev, fn) => { s.handlers[ev] = fn }, close: () => {} }
+            s.bind = (_, cb) => queueMicrotask(cb)
+            s.send = (buf, port, ip, cb) => {
+                asked.push([ip, now])
+                if (ip === '10.42.1.196' && now <= 500) setImmediate(() => s.handlers.message(real, { address: ip }))
+                cb?.()
+            }
+            return s
+        }
+        const interfaces = {
+            wifi: [{ family: 'IPv4', address: '10.158.133.9', internal: false }],
+            eth0: [{ family: 'IPv4', address: '10.42.1.1', internal: false }]
+        }
+        // wifi listed first, as on the stage Mac: the old flat sweep asked its 253 silent hosts before the laser network
+        const run = findCubes({ interfaces, createSocket, setTimeout: later, gapMs: 2, waitMs: 50 })
+        // the laser network has the one answering host among 253 silent ones
+        let settled = false
+        run.then(() => { settled = true })
+        while (!settled) {
+            await new Promise((r) => setImmediate(r))
+            if (queue.length) { queue.sort((a, b) => a.at - b.at); const next = queue.shift(); now = next.at; next.fn() }
+        }
+        const out = await run
+        expect(out.ok).toBe(true)
+        expect(out.cubes.map((c) => c.ip)).toEqual(['10.42.1.196'])
+        expect(out.cubes[0]).toMatchObject({ firmware: '1.17', modelName: 'LaserCube 7.5W Ultra Mk2' })
+        expect(out.asked).toBe(253 + 253)
+        expect(asked.filter(([ip]) => ip.startsWith('10.158.133.'))).toHaveLength(253)
+        // each network keeps its own 2 ms gap between packets
+        const times = asked.filter(([ip]) => ip.startsWith('10.158.133.')).map(([, t]) => t)
+        expect(times[1] - times[0]).toBe(2)
+    })
+
     it('a firewall refusal is said as one, not as "no cubes"', async () => {
         const blocked = () => {
             const s = { handlers: {}, on: (ev, fn) => { s.handlers[ev] = fn }, bind: (_, cb) => cb(), close: () => {}, send: () => { const e = new Error('send EACCES'); e.code = 'EACCES'; throw e } }
@@ -279,6 +322,7 @@ describe('only this machine\'s own page may drive the lasers', () => {
 
     // The review's setup: the server's own cors() as a non-production server has it (any origin,
     // credentials), so the preflight passes and only the laser gate stands in the way.
+    let tokenOfCors = ''
     const startWithCors = async (opts) => {
         const cors = require('cors')
         const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'laser-ops-'))
@@ -293,6 +337,7 @@ describe('only this machine\'s own page may drive the lasers', () => {
         const server = await new Promise((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)) })
         servers.push(server)
         const port = server.address().port
+        tokenOfCors = fs.readFileSync(path.join(dataDir, 'laser', '.token'), 'utf8').trim()
         const raw = (method, route, body, headers = {}) => new Promise((resolve, reject) => {
             const data = body === undefined ? null : JSON.stringify(body)
             const req = http.request({ host: '127.0.0.1', port, method, path: `/laser/api${route}`, headers: { host: `127.0.0.1:${port}`, ...(data ? { 'content-type': 'application/json' } : {}), ...headers } }, (res) => {
@@ -352,7 +397,8 @@ describe('only this machine\'s own page may drive the lasers', () => {
         ['diiii.localhost:80 written out', () => ({ host: 'diiii.localhost:80', origin: 'http://diiii.localhost' })],
         ['a tree under diiii.localhost', () => ({ host: 'laser-ops.diiii.localhost', origin: 'http://laser-ops.diiii.localhost' })],
         ['a same-origin Referer, no Origin', (p) => ({ referer: `http://127.0.0.1:${p}/raw` })],
-        ['curl on this machine: no Origin, no Referer', () => ({})]
+        // a script on this machine carries the local token (stage audit row 9); without it the arm is refused (laserRoutes.test.js)
+        ['curl on this machine: no Origin, no Referer, with the local token', () => ({ 'x-laser-token': tokenOfCors })]
     ])('arms and disarms from this machine\'s own page: %s', async (_, make) => {
         const { raw, port } = await startWithCors()
         expect((await raw('POST', '/arm', { armed: true, confirm: ARM_PHRASE }, make(port))).body).toMatchObject({ ok: true, armed: true })

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import VjDeckView from './VjDeckView.jsx'
-import { createDeck, setClip, trigger } from '../../../project/tops/vjDeck.js'
+import { createDeck, setBypass, setClip, setSolo, trigger } from '../../../project/tops/vjDeck.js'
 import { topThumbnailTargets } from '../../../project/tops/topThumbnails.js'
 
 const assets = [
@@ -62,7 +62,7 @@ describe('VjDeckView', () => {
         expect(screen.getByRole('region', { name: 'Clip settings' })).toBeTruthy()
     })
 
-    it('tapping a clip plays it on its layer, and again restarts it', () => {
+    it('tapping a clip plays it on its layer, and tapping it again stops the layer', () => {
         const onValues = vi.fn()
         render(<Host onValues={onValues} initialDeck={setClip(createDeck(), 2, 0, { id: 'c1', kind: 'asset', asset: 'asset-dusk', label: 'dusk' })} />)
         const tile = screen.getByRole('button', { name: 'Layer 3, slot 1: dusk' })
@@ -71,7 +71,9 @@ describe('VjDeckView', () => {
         expect(lastDeck(onValues).layers[2]).toMatchObject({ active: 0, trigger: 1 })
         expect(screen.getByRole('button', { name: 'Layer 3, slot 1: dusk' }).getAttribute('aria-pressed')).toBe('true')
         fireEvent.click(screen.getByRole('button', { name: 'Layer 3, slot 1: dusk' }))
-        expect(lastDeck(onValues).layers[2].trigger).toBe(2)
+        expect(lastDeck(onValues).layers[2].active).toBe(-1)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 3, slot 1: dusk' }))
+        expect(lastDeck(onValues).layers[2]).toMatchObject({ active: 0, trigger: 2 })
         fireEvent.click(screen.getByRole('button', { name: 'Clear Layer 3' }))
         expect(lastDeck(onValues).layers[2].active).toBe(-1)
     })
@@ -119,7 +121,6 @@ describe('VjDeckView', () => {
         const onValues = vi.fn()
         render(<Host onValues={onValues} initialDeck={setClip(createDeck(), 0, 0, { id: 'c1', kind: 'asset', asset: 'asset-dusk' })} />)
         fireEvent.click(screen.getByRole('button', { name: 'Layer 1, slot 1: dusk_01.mp4' }))
-        fireEvent.click(within(screen.getByRole('group', { name: 'Selected clip' })).getByRole('button', { name: 'Settings' }))
         const settings = screen.getByRole('region', { name: 'Clip settings' })
         fireEvent.change(within(settings).getByLabelText('Speed'), { target: { value: '2.5' } })
         expect(lastDeck(onValues).layers[0].clips[0].speed).toBe(2.5)
@@ -134,18 +135,68 @@ describe('VjDeckView', () => {
         expect(screen.queryByRole('region', { name: 'Clip settings' })).toBeNull()
     })
 
-    it('a tap only plays: the grid stays in view, settings wait behind one button', () => {
-        // On a phone the settings panel opened on every tap covered the grid,
-        // so each next clip needed a Close first (walked 09-14).
+    it('clip settings show without a Settings click, and say "Select a clip" when none is selected', () => {
+        // The panel sits under the grid (CLIP), so a tap never covers the grid.
         render(<Host initialDeck={setClip(createDeck(), 0, 0, { id: 'c1', kind: 'asset', asset: 'asset-dusk' })} />)
+        expect(screen.queryByRole('region', { name: 'Clip settings' })).toBeNull()
+        expect(within(screen.getByRole('region', { name: 'Clip' })).getByText('Select a clip')).toBeTruthy()
         fireEvent.click(screen.getByRole('button', { name: 'Layer 1, slot 1: dusk_01.mp4' }))
-        expect(screen.queryByRole('region', { name: 'Clip settings' })).toBeNull()
-        const line = screen.getByRole('group', { name: 'Selected clip' })
-        expect(within(line).getByText('dusk_01.mp4')).toBeTruthy()
-        fireEvent.click(within(line).getByRole('button', { name: 'Settings' }))
-        fireEvent.click(within(screen.getByRole('region', { name: 'Clip settings' })).getByRole('button', { name: 'Close' }))
-        expect(screen.queryByRole('region', { name: 'Clip settings' })).toBeNull()
-        expect(screen.getByRole('group', { name: 'Selected clip' })).toBeTruthy()
+        const settings = screen.getByRole('region', { name: 'Clip settings' })
+        expect(within(settings).getByText('dusk_01.mp4')).toBeTruthy()
+        expect(within(settings).getByLabelText('Speed')).toBeTruthy()
+        expect(screen.queryByRole('button', { name: 'Settings' })).toBeNull()
+        expect(screen.getByRole('button', { name: 'Layer 1, slot 1: dusk_01.mp4' })).toBeTruthy()
+    })
+
+    it('B toggles bypass and S toggles solo on the layer they sit on', () => {
+        const onValues = vi.fn()
+        render(<Host onValues={onValues} />)
+        const bypass = screen.getByRole('button', { name: 'Bypass Layer 2' })
+        const solo = screen.getByRole('button', { name: 'Solo Layer 3' })
+        expect(bypass.getAttribute('aria-pressed')).toBe('false')
+        expect(bypass.getAttribute('title')).toBe('Bypass layer')
+        expect(solo.getAttribute('title')).toBe('Solo layer')
+        fireEvent.click(bypass)
+        expect(lastDeck(onValues).layers.map((layer) => layer.bypass)).toEqual([false, true, false])
+        expect(screen.getByRole('button', { name: 'Bypass Layer 2' }).getAttribute('aria-pressed')).toBe('true')
+        expect(screen.getByRole('group', { name: 'Layer 2' }).getAttribute('data-bypass')).toBe('true')
+        fireEvent.click(solo)
+        expect(lastDeck(onValues).layers.map((layer) => layer.solo)).toEqual([false, false, true])
+        fireEvent.click(screen.getByRole('button', { name: 'Solo Layer 3' }))
+        expect(lastDeck(onValues).layers[2].solo).toBe(false)
+    })
+
+    it('B and S show what the deck holds', () => {
+        const base = createDeck()
+        render(<Host initialDeck={setSolo(setBypass(base, base.layers[0].id, true), base.layers[1].id, true)} />)
+        expect(screen.getByRole('button', { name: 'Bypass Layer 1' }).getAttribute('aria-pressed')).toBe('true')
+        expect(screen.getByRole('button', { name: 'Solo Layer 2' }).getAttribute('aria-pressed')).toBe('true')
+        expect(screen.getByRole('button', { name: 'Solo Layer 1' }).getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('the side select puts a layer on A or B, and the crossfader writes the crossfade', () => {
+        const onValues = vi.fn()
+        render(<Host onValues={onValues} />)
+        fireEvent.change(screen.getByLabelText('Crossfader side for Layer 1'), { target: { value: 'b' } })
+        expect(lastDeck(onValues).layers.map((layer) => layer.side)).toEqual(['b', '', ''])
+        fireEvent.change(screen.getByLabelText('Crossfader side for Layer 1'), { target: { value: '' } })
+        expect(lastDeck(onValues).layers[0].side).toBe('')
+        fireEvent.change(screen.getByLabelText('Crossfader'), { target: { value: '0.8' } })
+        expect(lastDeck(onValues).crossfade).toBe(0.8)
+    })
+
+    it('PREVIEW and OUTPUT monitors render; preview says "Select a clip" until one is selected', () => {
+        const { container } = render(<Host initialDeck={setClip(createDeck(), 0, 0, { id: 'c1', kind: 'asset', asset: 'asset-dusk' })} />)
+        const preview = container.querySelector('.vj-deck-monitor--preview')
+        const output = container.querySelector('.vj-deck-monitor--output')
+        expect(within(preview).getByText('Preview')).toBeTruthy()
+        expect(within(output).getByText('Output')).toBeTruthy()
+        expect(within(preview).getByText('Select a clip')).toBeTruthy()
+        expect(within(output).getByRole('img', { name: 'Deck output' })).toBeTruthy()
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 1, slot 1: dusk_01.mp4' }))
+        expect(within(preview).queryByText('Select a clip')).toBeNull()
+        // The clip now plays, so PREVIEW draws its live canvas.
+        expect(within(preview).getByRole('img', { name: 'Preview of dusk_01.mp4' })).toBeTruthy()
     })
 
     it('a playing input tile shows the picture of the node wired into that input', () => {
@@ -171,6 +222,64 @@ describe('VjDeckView', () => {
         fireEvent.change(input, { target: { files: [file] } })
         await vi.waitFor(() => expect(onUploadFile).toHaveBeenCalledWith(file))
         await vi.waitFor(() => expect(lastDeck(onValues).layers[1].clips[2]).toMatchObject({ asset: 'asset-new', label: 'fresh.mp4' }))
+    })
+
+    it('a slow upload places its clip into the LATEST deck, keeping what changed meanwhile', async () => {
+        const onValues = vi.fn()
+        let finish
+        const onUploadFile = vi.fn(() => new Promise((resolve) => { finish = resolve }))
+        render(<Host onValues={onValues} onUploadFile={onUploadFile} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 2, slot 3: add a clip' }))
+        const file = new File(['x'], 'slow.mp4', { type: 'video/mp4' })
+        fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
+        await vi.waitFor(() => expect(onUploadFile).toHaveBeenCalled())
+        // while the file travels: the master moves and another layer is bypassed
+        fireEvent.change(screen.getByLabelText('Master'), { target: { value: '0.3' } })
+        fireEvent.click(screen.getByRole('button', { name: /Bypass Layer 1|Layer 1 bypass/i }))
+        const before = lastDeck(onValues)
+        expect(before.master).toBeCloseTo(0.3)
+        expect(before.layers[0].bypass).toBe(true)
+        finish({ id: 'asset-slow', name: 'slow.mp4' })
+        await vi.waitFor(() => expect(lastDeck(onValues).layers[1].clips[2]).toMatchObject({ asset: 'asset-slow' }))
+        const after = lastDeck(onValues)
+        expect(after.master).toBeCloseTo(0.3)
+        expect(after.layers[0].bypass).toBe(true)
+    })
+
+    // 2026-11-10 (owner row N3529): a video over the server's limit said only "could not".
+    it('a file the server refuses as too large says so, with its size', async () => {
+        const onUploadFile = vi.fn(async () => { throw Object.assign(new Error('too large'), { status: 413 }) })
+        render(<Host onUploadFile={onUploadFile} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 2, slot 3: add a clip' }))
+        const file = new File(['x'], 'big.mp4', { type: 'video/mp4' })
+        Object.defineProperty(file, 'size', { value: 250 * 1024 * 1024 })
+        fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
+        await vi.waitFor(() => expect(screen.getByText(/big\.mp4: the server refused it for size/)).toBeTruthy())
+    })
+
+    it('a 413 that carries maxBytes names the limit; other failures show their message', async () => {
+        const onUploadFile = vi.fn()
+            .mockRejectedValueOnce(Object.assign(new Error('too large'), { status: 413, maxBytes: 100 * 1024 * 1024 }))
+            .mockRejectedValueOnce(new Error('disk full'))
+        render(<Host onUploadFile={onUploadFile} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Layer 2, slot 3: add a clip' }))
+        const file = new File(['x'], 'big.mp4', { type: 'video/mp4' })
+        fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
+        await vi.waitFor(() => expect(screen.getByText(/big\.mp4 is too large: this di takes 100 MB/)).toBeTruthy())
+        fireEvent.change(screen.getByLabelText('Upload video'), { target: { files: [file] } })
+        await vi.waitFor(() => expect(screen.getByText(/Could not bring in big\.mp4: disk full/)).toBeTruthy())
+    })
+
+    // Audit 2026-11-10: handlers built from the render-time deck; two edits in one frame lost one.
+    it('two edits before the host re-renders both land', () => {
+        const patches = []
+        const deck = setClip(createDeck(), 0, 1, { id: 'c1', kind: 'asset', asset: 'asset-dusk' })
+        render(<VjDeckView node={{ id: 'deck-1', typeId: 'vj.deck', values: { machine: '', deck } }} assets={assets} onPatchValues={(p) => patches.push(p)} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Play column 2' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Bypass Layer 1' }))
+        const last = patches.at(-1).deck
+        expect(last.layers[0].bypass).toBe(true)
+        expect(last.layers[0].active).toBe(1)
     })
 
     it('every placement behaves the same; only the density class differs', () => {

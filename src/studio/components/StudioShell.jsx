@@ -3,7 +3,9 @@ import { Plane, Raycaster, Vector2, Vector3 } from 'three'
 import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
+import { letterKeyIsOff, readKeyPrefs, tabFlipsMode } from '../utils/studioKeyPrefs.js'
 import StudioControlCluster from './StudioControlCluster.jsx'
+import StudioSaveLine from './StudioSaveLine.jsx'
 import StudioCueStrip from './StudioCueStrip.jsx'
 import StudioProjectsPanel from './StudioProjectsPanel.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
@@ -21,6 +23,7 @@ import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspa
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { setViewportChoice, useViewportMode } from '../utils/viewportMode.js'
+import { holdsScene } from '../../shared/openingView.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { useRigMirrorSwitch } from '../hooks/useRigMirrorSwitch.js'
 import { useSendRigPositions } from '../hooks/useSendRigPositions.js'
@@ -41,6 +44,9 @@ import {
     TimelinePanel,
 } from './StudioShellPanels.jsx'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
+import ViewEditSwitch from './ViewEditSwitch.jsx'
+import { PlayButton, PlayHost, usePlay } from '../../project/components/PlayButton.jsx'
+import { isPlaying } from '../../project/play/playingFlag.js'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
@@ -110,6 +116,8 @@ export default function StudioShell({
     selectedEntityId,
     selectedEntityIds = [],
     entities,
+    nodeRows,
+    onOpenNodeRow,
     inspectorSections,
     inspectorValues,
     assetOptions,
@@ -125,8 +133,8 @@ export default function StudioShell({
     controlsRef,
     paneControlsRef,
     xrState,
-    onCreateEntity,
-    onCreateFromAsset,
+    onCreateEntity: createEntity,
+    onCreateFromAsset: createFromAsset,
     onAssetFilesSelected,
     onDriveImportUrl,
     onDriveImportSelection,
@@ -179,6 +187,10 @@ export default function StudioShell({
     onTransformCancel,
     editHistory = null,
     onHistoryJump,
+    // Undo and Redo, the same calls as Ctrl+Z (useOpHistory's undo and redo, which replay inverse ops
+    // through applyLocalOps). Null draws no buttons. The ends come from editHistory's cursor.
+    onUndo = null,
+    onRedo = null,
     // mappingState.cues, and the one way to fire one. The same cues the
     // projection tool lists; firing from here reaches the wall and the
     // lighting desk by exactly the same path.
@@ -207,6 +219,8 @@ export default function StudioShell({
     const [viewportSelectTool, setViewportSelectTool] = useState(false)
     // Walk / Fly in the cluster (owner, 2026-10-13): the controller lives in the canvas, the buttons only ask it.
     const walkMode = useWalkMode()
+    // Play ▸ / Stop ■ (project/components/PlayButton.jsx): the walk over the editor, on a copy of the document. The editor stays mounted.
+    const play = usePlay()
     useEffect(() => {
         const toggle = () => setUiHidden((v) => !v)
         globalThis.document.addEventListener(UI_TOGGLE_EVENT, toggle)
@@ -221,6 +235,20 @@ export default function StudioShell({
         }
         setViewportEditMode(mode)
     }, [])
+    // Adding a thing (Create, the quick insert, a drop) puts the Studio in Edit, so the first pull on the new, selected thing
+    // moves it (owner 2026-10-28, View | Edit; UX audit F030: the first pull turned the view and the new box left the screen).
+    const onCreateEntity = useCallback((...args) => {
+        const made = createEntity?.(...args)
+        setViewportEditMode('edit')
+        return made
+    }, [createEntity])
+    const onCreateFromAsset = useCallback((...args) => {
+        const made = createFromAsset?.(...args)
+        setViewportEditMode('edit')
+        return made
+    }, [createFromAsset])
+    // The View | Edit switch (ViewEditSwitch.jsx): View is the Navigate tool, Edit the Edit tool; one state, not two.
+    const setViewOrEdit = useCallback((mode) => setEditModeFromTools(mode === 'edit' ? 'edit' : 'navigate'), [setEditModeFromTools])
     const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
     const [viewportGizmoSpace, setViewportGizmoSpace] = useState('world')
     const [viewportGizmoAxis, setViewportGizmoAxis] = useState(null)
@@ -269,6 +297,7 @@ export default function StudioShell({
         onPositionChange: recordPanelPosition(id),
         onSizeChange: recordPanelSize(id),
         onCollapsedChange: recordPanelCollapsed(id),
+        windowKey: id,
         snapEdges
     }), [positions, panelSizes, collapsedPanels, snapEdges, recordPanelPosition, recordPanelSize, recordPanelCollapsed])
 
@@ -316,6 +345,7 @@ export default function StudioShell({
     const rigSpaceId = liveProjectState?.spaceId
     const rigProjectId = document?.projectMeta?.id
     const projectHasRig = useMemo(() => hasRig(document?.entities || []), [document?.entities])
+    const hasDeckNode = Boolean(document?.nodes?.some?.((node) => node?.typeId === 'vj.deck'))
     const rigHref = projectHasRig && rigSpaceId && rigProjectId ? rigEntryPath(rigSpaceId, rigProjectId, 'plot') : null
     const [jamAllTools, setJamAllTools] = useState(loadJamAllTools)
     const jamMinimal = isJam && !jamAllTools
@@ -365,6 +395,21 @@ export default function StudioShell({
         }
         handleTogglePanel(id)
     }, [createHeldBack, open, handleTogglePanel])
+    // A PAGE PROJECT SHOWS PAGE TOOLS ONLY (S16, 2026-10-29): a project that opens on its page and holds no scene
+    // (no objects, no nodes) does not draw the 3D tools around the page: no Objects or Scene window, no View | Edit,
+    // no Navigate / Edit / Select / Walk / Fly, no split buttons, axis ball or view name. Nothing is lost:
+    // "Add a scene" (the control cluster) brings every 3D tool back with Create open and the viewport on the scene,
+    // for the rest of this page; "⚒ All tools" keeps the full screen on every project. Nothing is saved.
+    const projectId = document?.projectMeta?.id
+    const [sceneAskedFor, setSceneAskedFor] = useState(null)
+    const pageOnly = codeFirst && !isJam && !allTools && sceneAskedFor !== projectId && !holdsScene(document)
+    const handleAddScene = useCallback(() => {
+        setSceneAskedFor(projectId)
+        setCreateAsked(true)
+        setViewportChoice(projectId, 'scene')
+        if (!open.has('create')) handleTogglePanel('create')
+        if (isMobile) setMobileSheet('create')
+    }, [projectId, open, handleTogglePanel, isMobile])
     const isShown = (id) => shownOpen.has(id)
     // Studio's own jump buttons to Nodes and Projection (the control cluster, the phone
     // header) follow the bar: offered once the project has reached that tool's layer,
@@ -379,7 +424,10 @@ export default function StudioShell({
         ? [...MOBILE_PANELS.filter(([id]) => id === 'create'), ['jamedit', 'Edit']]
         : bare
             ? MOBILE_PANELS.filter(([id]) => id === 'create' || (id === 'files' && codeAskedFor))
-            : MOBILE_PANELS
+            // A page project's phone: Share and Code, and "Add a scene" in the bar (S16); Create stays when the address asked for it.
+            : pageOnly
+                ? MOBILE_PANELS.filter(([id]) => !['create', 'scene', 'world'].includes(id) || (id === 'create' && createAskedFor))
+                : MOBILE_PANELS
 
     // The one bar, carrying this project across to Nodes, Projection and Light.
     // Not in a window (?embed=1), a headset, Hide UI, or the jam's simple mode —
@@ -402,6 +450,16 @@ export default function StudioShell({
 
     const openRef = useRef(open)
     useEffect(() => { openRef.current = open }, [open])
+
+    // While the phone's bottom bar is drawn, tell the floating notices and
+    // questions how much of the screen it takes (--di-bottom-offset, ui.css).
+    const bottomBarDrawn = !uiHidden && Boolean(isMobile)
+    useEffect(() => {
+        if (!bottomBarDrawn) return undefined
+        const root = window.document.documentElement
+        root.classList.add('has-studio-bottom-bar')
+        return () => root.classList.remove('has-studio-bottom-bar')
+    }, [bottomBarDrawn])
 
     const resetLayout = useCallback(() => {
         setPositions(DEFAULT_POSITIONS())
@@ -447,25 +505,75 @@ export default function StudioShell({
 
     useEffect(() => {
         const handler = (e) => {
-            const inInput = e.target.tagName === 'INPUT'
+            if (isPlaying()) return
+            // A text field keeps every key (typing never fires a shortcut). A checkbox, radio, range or button is not typing: Esc still works there.
+            const NON_TEXT = ['checkbox', 'radio', 'range', 'button', 'submit', 'reset', 'color', 'file']
+            const inText = e.target.isContentEditable
                 || e.target.tagName === 'TEXTAREA'
-                || e.target.isContentEditable
-            if (inInput) return
+                || (e.target.tagName === 'INPUT' && !NON_TEXT.includes(e.target.type))
+            const inInput = inText || e.target.tagName === 'INPUT'
+            // WAI-ARIA dialog pattern: Esc in a text field first leaves the field (the focus goes to the page), the next Esc closes.
+            // After the field's own Esc has run: a rename field that Esc cancels is gone by then, so blur cannot save it.
+            if (inText && e.key === 'Escape') {
+                const field = e.target
+                setTimeout(() => {
+                    if (field.isConnected && field.ownerDocument.activeElement === field) field.blur?.()
+                }, 0)
+                return
+            }
+            if (inInput && e.key !== 'Escape') return
+
+            // Esc closes what is on top: Quick Insert, then Help, then the window the focus is in, else the window opened last (WCAG 2.1.2 / Nielsen H3).
+            // Not while a transform runs (its own Esc cancels it) or something is selected (the editor's Esc deselects first), and never by a letter, so it works with letter keys off.
+            if (e.key === 'Escape') {
+                if (quickInsert) setQuickInsert(null)
+                setShowHelp(false)
+                // One thing per press: an Esc that closed Quick Insert or the help closes no window as well.
+                if (!quickInsert && !showHelp && !transformOp && selectedEntityIds.length === 0) {
+                    // The window the focus is in; with the focus on the page or the scene, the window opened last (the top one).
+                    let panel = e.target?.closest?.('.sfp-shell')
+                    if (!panel) {
+                        const doc = e.target?.ownerDocument || window.document
+                        const keys = [...openRef.current].reverse()
+                        for (const k of keys) {
+                            const candidate = doc.querySelector(`.sfp-shell[data-window-key="${k}"]`)
+                            if (candidate?.querySelector('.sfp-close')) { panel = candidate; break }
+                        }
+                    }
+                    const closeButton = panel?.querySelector?.('.sfp-close')
+                    if (closeButton) {
+                        // Keep the place in the Tab order (WCAG 2.4.3): the close button is about to go, so the focus moves to the
+                        // button that opens this window again, else to the first control of the window bar.
+                        const key = panel.dataset?.windowKey
+                        const wrap = panel.ownerDocument.querySelector('.scc-wrap')
+                        const back = (key && wrap?.querySelector(`[data-window-key="${key}"]`)) || wrap?.querySelector('button')
+                        closeButton.click()
+                        back?.focus()
+                        e.preventDefault()
+                    }
+                }
+                return
+            }
+
+            const prefs = readKeyPrefs()
+            // Tab is the browser's: it walks the focus. It flips Navigate/Edit only for the "Blender keys" opt-in.
+            if (tabFlipsMode(e, prefs)) {
+                e.preventDefault()
+                setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
+                setViewportSelectTool(false)
+                return
+            }
+            // Letter keys switched off (Help > Shortcuts): H, E, ?, G, R, S, X, Y, Z, T, Shift+A, Shift+R do nothing.
+            if (letterKeyIsOff(e, prefs)) return
 
             if (e.key === 'h' || e.key === 'H') {
                 e.preventDefault()
                 setUiHidden((v) => !v)
             }
-            if (e.key === 'e' || e.key === 'E' || e.key === 'Tab') {
+            if (e.key === 'e' || e.key === 'E') {
                 e.preventDefault()
                 setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
                 setViewportSelectTool(false)
-            }
-            if (e.key === 'Escape' && quickInsert) {
-                setQuickInsert(null)
-            }
-            if (e.key === 'Escape') {
-                setShowHelp(false)
             }
             if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault()
@@ -531,7 +639,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, entities])
+    }, [quickInsert, showHelp, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, entities])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
@@ -608,6 +716,8 @@ export default function StudioShell({
     )
 
     const viewportShared = {
+        // A page project draws no split buttons, axis ball or view name over its page (S16).
+        pageOnly,
         // a Try in the Light environment section draws the viewport with another version's light; nothing is written
         document: lightEnv?.previewDocument || document,
         selectedEntityId,
@@ -667,6 +777,9 @@ export default function StudioShell({
             <>
                             <StructurePanel
                                 entities={entities}
+                                nodeRows={nodeRows}
+                                onOpenNodeRow={onOpenNodeRow}
+                                onEditNodeRowInNodes={offerNodes ? onOpenNodeEditor : undefined}
                                 selectedEntityId={selectedEntityId}
                                 selectedEntityIds={selectedEntityIds}
                                 onSelectEntity={handleSelectEntity}
@@ -779,7 +892,7 @@ export default function StudioShell({
                     a connection (a deck, a picture) or a wall. A bare project
                     opens bare (the layers decision, 2026-09-23); "All tools"
                     and a project still loading show it, as they show every name. */}
-                {!isJam && (allTools || !layers?.open || layers.open.connections || layers.open.wall) ? (
+                {!isJam && (allTools || !layers?.open || layers.open.connections || layers.open.wall || hasDeckNode) ? (
                     <DeskPerformSwitch current="desk" space={liveProjectState?.spaceId} project={document?.projectMeta?.id} from="studio" />
                 ) : null}
                 {/* Rig, when the project holds one (a typed lamp or a rental list): the
@@ -788,10 +901,15 @@ export default function StudioShell({
                 {!isJam && rigHref ? (
                     <a className="sbar-link studio-rig-link" href={rigHref} title="The rig of this project: equipment, build, plot, cards, patch sheet, crew link">Rig</a>
                 ) : null}
+                {!isJam && document?.projectMeta?.id ? <PlayButton onPlay={play.start} /> : null}
             </SurfaceBar>
 
             {!uiHidden && !isMobile && (
                 <>
+                    {/* Nothing to move in an empty room. */}
+                    {!bare && !pageOnly && (
+                        <ViewEditSwitch className="ves--desk" mode={viewportEditMode} onChange={setViewOrEdit} />
+                    )}
                     {(isShown('create') || (bare && !createHeldBack)) && (
                         // Bare, Create is the one window: always drawn, and not
                         // closable, or the first screen would have nothing on it.
@@ -804,7 +922,7 @@ export default function StudioShell({
                             {panelBodies.jamedit}
                         </StudioFloatingPanel>
                     )}
-                    {!jamMinimal && !bare && isOpen('scene') && (
+                    {!jamMinimal && !bare && !pageOnly && isOpen('scene') && (
                         <StudioFloatingPanel key={`scene-${layoutKey}`} title="Objects" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
                             {panelBodies.scene}
                         </StudioFloatingPanel>
@@ -819,7 +937,7 @@ export default function StudioShell({
                             {panelBodies.publish}
                         </StudioFloatingPanel>
                     )}
-                    {!jamMinimal && !bare && isOpen('world') && (
+                    {!jamMinimal && !bare && !pageOnly && isOpen('world') && (
                         <StudioFloatingPanel key={`world-${layoutKey}`} title="Scene" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
                             {panelBodies.world}
                         </StudioFloatingPanel>
@@ -850,6 +968,8 @@ export default function StudioShell({
                         onSetGizmoSpace={setViewportGizmoSpace}
                         openPanels={shownOpen}
                         onTogglePanel={handleTogglePanelFor}
+                        pageOnly={pageOnly}
+                        onAddScene={handleAddScene}
                         onFullscreen={handleFullscreen}
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
@@ -857,6 +977,10 @@ export default function StudioShell({
                         onOpenProjection={offerProjection ? onOpenProjection : undefined}
                         xrState={xrState}
                         syncState={syncState}
+                        onUndo={onUndo}
+                        onRedo={onRedo}
+                        canUndo={Boolean(editHistory && editHistory.cursor > 0)}
+                        canRedo={Boolean(editHistory && editHistory.cursor < editHistory.steps.length)}
                         presence={presence}
                         snapEdges={snapEdges}
                         onToggleSnap={() => setSnapEdges((v) => !v)}
@@ -925,19 +1049,28 @@ export default function StudioShell({
                                 Projection
                             </button>
                         )}
-                        {/* Nothing to edit in an empty room. */}
-                        {!bare && (
-                            <button
-                                type="button"
-                                className={`smb-top-btn${viewportEditMode === 'edit' ? ' is-active' : ''}`}
-                                onClick={() => setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))}
-                            >
-                                {viewportEditMode === 'edit' ? 'Editing' : 'Edit'}
-                            </button>
+                        {/* Nothing to edit in an empty room. The same View | Edit switch as on the desk. */}
+                        {!bare && !pageOnly && (
+                            <ViewEditSwitch className="ves--phone" mode={viewportEditMode} onChange={setViewOrEdit} />
+                        )}
+                        {/* Undo and Redo, and the save line: the phone has no Ctrl key. Their own row
+                            (full width, never more than one 44 px button high), so the bar grows by at most
+                            one row in every save state and the long "Not saved: ..." wraps beside the buttons
+                            instead of pushing a third row (UX audit S03 review). */}
+                        {!bare && ((onUndo && onRedo) || syncState) && (
+                            <div className="smb-status-row">
+                                {onUndo && onRedo && (
+                                    <span className="smb-undo-redo">
+                                        <button type="button" className="smb-top-btn" onClick={onUndo} disabled={!(editHistory && editHistory.cursor > 0)} aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+                                        <button type="button" className="smb-top-btn" onClick={onRedo} disabled={!(editHistory && editHistory.cursor < editHistory.steps.length)} aria-label="Redo" title="Redo (Ctrl+Shift+Z)">Redo</button>
+                                    </span>
+                                )}
+                                {syncState && <StudioSaveLine syncState={syncState} className="smb-save-line" />}
+                            </div>
                         )}
                     </div>
                     {mobileSheet && (
-                        <div className="smb-sheet">
+                        <div className="smb-sheet" data-sheet={mobileSheet}>
                             <div className="smb-sheet-head">
                                 <span>{mobilePanels.find(([id]) => id === mobileSheet)?.[1]}</span>
                                 <button type="button" onClick={() => setMobileSheet(null)} aria-label="Close panel">×</button>
@@ -969,11 +1102,16 @@ export default function StudioShell({
                                 {label}
                             </button>
                         ))}
+                        {pageOnly && (
+                            <button type="button" className="smb-nav-btn" onClick={handleAddScene}>Add a scene</button>
+                        )}
                     </nav>
                 </>
             )}
 
             {walkBuild ? walkBuild(uiHidden) : null}
+
+            <PlayHost playing={play.playing} document={document} onStop={play.stop} />
 
             {uiHidden && !walkMode && (
                 <button className="sfp-show-ui-btn" onClick={() => setUiHidden(false)} title="Show UI (H)">

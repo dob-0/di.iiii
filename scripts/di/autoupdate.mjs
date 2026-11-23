@@ -1,7 +1,7 @@
 /**
  * `di autoupdate` — the install keeps itself on its channel, with no hands.
  *
- * A systemd USER timer (no root) runs `di autoupdate run` every 15 minutes.
+ * A systemd USER timer (no root) runs `di autoupdate run` every 5 minutes.
  * That command is the whole job: heat guard, then `di update --channel <c>`
  * (which keeps the stage → rehearse → backup → flip → rollback safety of a
  * hand-typed update), then ONE log line in ~/.di/logs/autoupdate.log and the
@@ -28,9 +28,28 @@ import process from 'node:process'
 import { paths } from './paths.mjs'
 import { readState, writeState } from './state.mjs'
 
-export const EVERY_MINUTES = 15
+// 5, not 15: after a dev deploy the wait for the next tick was the longest piece
+// left in the chain (0-15 min, median 7.5). A tick is two small anonymous GETs
+// (hub /serverXR/api/health, release checksums.txt) and di names itself, so the
+// hub counts it as an identified app: 300 reads/min per address
+// (serverXR/src/appVisitors.js). 12 ticks/hour/install is far inside that, and
+// checksums.txt is a release download, not the 60/h GitHub API.
+export const EVERY_MINUTES = 5
 export const HEAT_LIMIT_C = 85
 export const UNIT = 'di-autoupdate'
+// The hub (dev.diiii.xyz / the release host) answering 5xx or not at all is the hub's state, not a fault of this install
+// (measured on aylmo: 132 "failed" ticks in 7 days, all 502/503/fetch failed, in two outages 11-03 and 11-09). It is logged as
+// `hub-down`, exit 0; after this many ticks in a row (12 x 5 min = 1 hour) it is a `failed` again, so a long outage stays loud.
+export const HUB_DOWN_LOUD_AFTER = 12
+export const isHubDown = (reason) =>
+    /could not read the hub's health \([^)]*: (?:429|5\d\d)[;)]/.test(reason) || /fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN/.test(reason)
+
+// The stored count is read back from a file anyone can edit: only a positive integer counts, anything else is 0
+// (a string would concatenate, NaN/an object never reach the limit, and the alert would stay silent for ever).
+export const savedHubDownRuns = (state) => {
+    const n = state?.autoupdate?.hubDownRuns
+    return Number.isInteger(n) && n > 0 ? n : 0
+}
 
 export const logFile = (home) => path.join(paths(home).logs, 'autoupdate.log')
 
@@ -134,11 +153,13 @@ export const runAutoUpdate = async ({
     let detail = ''
     let error = null
     let updated = null
+    let hubDownRuns = 0
 
     try {
         const degrees = temp()
         if (degrees !== null && degrees > heatLimit) {
             outcome = 'skipped-heat'
+            hubDownRuns = savedHubDownRuns(state) // a run that did not talk to the hub says nothing about it: keep the count
             detail = `cpu package ${degrees} C > ${heatLimit} C — not updating while hot`
         } else {
             const before = state.version || null
@@ -153,6 +174,11 @@ export const runAutoUpdate = async ({
                 const reason = [text, ...lines.reverse()].find(l => !/^update failed, still on /.test(l))
                 error = reason || text || `di update exited ${result.code}`
                 detail = `channel=${channel} ${error}`
+                if (isHubDown(error)) {
+                    hubDownRuns = savedHubDownRuns(state) + 1
+                    if (hubDownRuns >= HUB_DOWN_LOUD_AFTER) detail = `channel=${channel} hub unreachable for ${hubDownRuns} runs: ${error}`
+                    else outcome = 'hub-down'
+                }
             } else if (/already the newest|up to date|nothing to update to/i.test(text)) {
                 outcome = 'up-to-date'
                 detail = `channel=${channel} ${text}`
@@ -178,11 +204,12 @@ export const runAutoUpdate = async ({
         autoupdate: {
             lastCheck: at.toISOString(),
             lastOutcome: outcome,
+            hubDownRuns,
             lastUpdate: updated ? updated.at : (state.autoupdate?.lastUpdate || null),
             lastError: error ? { at: at.toISOString(), message: error } : (state.autoupdate?.lastError || null)
         }
     })
-    return { outcome, detail }
+    return { outcome, detail, failed: outcome === 'failed' }
 }
 
 const systemctl = (args) => {
@@ -196,8 +223,8 @@ export const supported = (platform = process.platform) => platform === 'linux'
 export const unsupportedText = (platform = process.platform) => [
     `automatic updates are built for Linux only; this is ${platform}.`,
     platform === 'win32'
-        ? '  equivalent: a Task Scheduler task running `di autoupdate run` every 15 minutes (schtasks /create /sc minute /mo 15).'
-        : '  equivalent: a LaunchAgent with StartInterval 900 running `di autoupdate run`.',
+        ? '  equivalent: a Task Scheduler task running `di autoupdate run` every 5 minutes (schtasks /create /sc minute /mo 5).'
+        : '  equivalent: a LaunchAgent with StartInterval 300 running `di autoupdate run`.',
     '  until then:  di update'
 ].join('\n')
 
@@ -212,6 +239,26 @@ export const enable = async ({ home, run = systemctl, dir = unitDir() }) => {
         if (!result.ok) return { ok: false, why: result.output || `systemctl ${args.join(' ')} failed` }
     }
     return { ok: true }
+}
+
+/**
+ * An install that turned automatic updates on under an older interval keeps
+ * that timer until someone types `di autoupdate on` again. `di autoupdate run`
+ * calls this at the end of every tick: when the installed timer text differs
+ * from the code's, it is rewritten and the timer restarted, so every install
+ * lands on the current interval by itself. Absent timer = off = untouched.
+ */
+export const refreshTimer = async ({ home, run = systemctl, dir = unitDir() }) => {
+    const file = path.join(dir, `${UNIT}.timer`)
+    if (!fs.existsSync(file)) return { changed: false }
+    const { timer } = unitTexts({ home, shim: paths(home).shim })
+    if (fs.readFileSync(file, 'utf8') === timer) return { changed: false }
+    await fsp.writeFile(file, timer)
+    for (const args of [['daemon-reload'], ['restart', `${UNIT}.timer`]]) {
+        const result = run(args)
+        if (!result.ok) return { changed: true, ok: false, why: result.output || `systemctl ${args.join(' ')} failed` }
+    }
+    return { changed: true, ok: true }
 }
 
 export const disable = async ({ run = systemctl, dir = unitDir() } = {}) => {
@@ -234,6 +281,7 @@ export const statusOf = ({ home, run = systemctl, dir = unitDir() }) => {
         channel: state.channel || 'stable',
         lastCheck: auto.lastCheck || null,
         lastOutcome: auto.lastOutcome || null,
+        hubDownRuns: savedHubDownRuns(state),
         lastUpdate: state.lastUpdate?.at ? `${state.lastUpdate.at} (${state.lastUpdate.from} -> ${state.lastUpdate.to}, ${state.lastUpdate.channel})` : (auto.lastUpdate || null),
         lastError: auto.lastError || null,
         log: logFile(home)
@@ -242,7 +290,7 @@ export const statusOf = ({ home, run = systemctl, dir = unitDir() }) => {
 
 export const statusLines = (s) => [
     `automatic updates  ${s.installed ? (s.active ? 'on' : 'installed, timer not active') : 'off'} · channel ${s.channel}`,
-    `  last check   ${s.lastCheck ? `${s.lastCheck} (${s.lastOutcome})` : 'never'}`,
+    `  last check   ${s.lastCheck ? `${s.lastCheck} (${s.lastOutcome}${s.hubDownRuns ? `, ${s.hubDownRuns} of ${HUB_DOWN_LOUD_AFTER} runs` : ''})` : 'never'}`,
     `  last update  ${s.lastUpdate || 'never'}`,
     `  last error   ${s.lastError ? `${s.lastError.at} ${s.lastError.message}` : 'none'}`,
     `  log          ${s.log}`

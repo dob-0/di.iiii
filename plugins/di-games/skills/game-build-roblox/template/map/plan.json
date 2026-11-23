@@ -1,0 +1,30 @@
+{
+  "_about": "Greybox plan. Units are studs. x runs east, z runs south, y is up. scripts/gen_greybox.py turns this into the .model.json files next to it. Edit this file, run the script, commit both. Starter plan: two areas, one door, a goal zone.",
+  "wall_height": 14,
+  "thickness": 1,
+  "door_width": 8,
+  "door_height": 10,
+  "areas": [
+    {"name": "Start", "min": [0, 0], "max": [40, 30]},
+    {"name": "Hall", "min": [40, 0], "max": [100, 30]}
+  ],
+  "walls": [
+    {"a": [0, 0], "b": [100, 0]},
+    {"a": [0, 30], "b": [100, 30]},
+    {"a": [0, 0], "b": [0, 30]},
+    {"a": [100, 0], "b": [100, 30]},
+    {"a": [40, 0], "b": [40, 30]}
+  ],
+  "doors": [
+    {"name": "StartToHall", "at": [40, 15]}
+  ],
+  "spawn": [20, 0.5, 15],
+  "zones": [
+    {"name": "GoalZone", "min": [85, 5], "max": [95, 25], "height": 8}
+  ],
+  "markers": [
+    {"name": "Item_01", "at": [70, 1, 8]},
+    {"name": "Item_02", "at": [70, 1, 22]},
+    {"name": "Item_03", "at": [90, 1, 15]}
+  ]
+}

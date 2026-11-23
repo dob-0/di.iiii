@@ -105,7 +105,7 @@
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
     color: var(--di-dim);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .spanel-row {
@@ -189,7 +189,7 @@
     font-size: var(--di-text-2);
     letter-spacing: var(--di-label-tracking);
     color: var(--di-dim);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
 }
 
 .sinput {
@@ -238,6 +238,6 @@
     font-family: var(--di-mono);
     font-size: var(--di-text-3);
     letter-spacing: var(--di-label-tracking);
-    text-transform: uppercase;
+    text-transform: var(--di-label-case);
     font-weight: 500;
 }

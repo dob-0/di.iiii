@@ -1,0 +1,386 @@
+// @vitest-environment node
+// "Check why the laser does not work" (ledger N1585, 2026-10-31 15:1x). The stage Mac's log: cube-1 ON at 15:08:56, then
+// "dark and unrefreshed for 5000 ms: switching it OFF" at 15:09:01, while the desk page said "Nothing on the laser".
+// Each sequence below drives the real desk and the real engine on a fake cube (fake clock, fake socket) and says
+// whether the cube plays or is switched off, and why. The look is the one live on the Mac at 15:25 (muth-05-catacomb:
+// lines, size 0.3, height 0.85, level 0.8, nothing moving) on the Mac's cube setup (Up -1, size 2).
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { createRequire } from 'node:module'
+import { afterAll, afterEach, describe, expect, it } from 'vitest'
+import { createLaserDesk, OUT } from './laserDesk.js'
+
+const require = createRequire(import.meta.url)
+const proto = require('./lasercubeProtocol')
+const { createLaserEngine, OFF } = require('./laserEngine')
+
+const dirs = []
+const tmp = (cfg) => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'lon-')); dirs.push(d)
+    if (cfg) fs.writeFileSync(path.join(d, 'laser.json'), JSON.stringify(cfg))
+    return d
+}
+afterEach(() => { for (const d of dirs.splice(0)) fs.rmSync(d, { recursive: true, force: true }) })
+
+const IP = '10.0.0.51'
+const info = (ip) => {
+    const b = Buffer.alloc(64)
+    b[0] = 0x77; b[3] = 1; b[4] = 7; b.writeUInt32LE(30000, 10); b.writeUInt32LE(35000, 14)
+    b.writeUInt16LE(5800, 19); b.writeUInt16LE(6000, 21); b[24] = 31; b[25] = 2
+    Buffer.from([0xde, 0xad, 0xbe, 0xef, 0, 0x42]).copy(b, 26); Buffer.from(ip.split('.').map(Number)).copy(b, 32); b[37] = 1
+    return b
+}
+// One cube that answers like a LaserCube: its info every second, its free buffer every engine tick. Nothing armed.
+const rigOf = (opts = {}) => {
+    const sent = []; const handlers = {}; const clock = { t: 1000000 }; const logs = []
+    const log = { warn: (m) => logs.push(m), info: (m) => logs.push(m) }
+    const socket = { send: (buf, port, ip, done) => { sent.push({ buf: Buffer.from(buf), port, ip, at: clock.t }); done?.() }, on: (ev, fn) => { handlers[ev] = fn }, bind: () => {}, close: () => {} }
+    const dataDir = tmp({ cubes: [{ id: 'cube-1', ip: IP }] })
+    const make = () => createLaserEngine({ dataDir, createSocket: () => socket, log, now: () => clock.t, setInterval: () => 1, clearInterval: () => {}, setTimeout: () => 0, signOff: 'click', ...opts })
+    const rig = { sent, clock, logs, engine: make() }
+    rig.answerInfo = () => handlers.message?.(info(IP), { address: IP })
+    rig.answerInfo()
+    rig.renew = () => { rig.engine = make(); rig.answerInfo(); return rig.engine }
+    // Lit points the cube was sent at or after `since`.
+    rig.litSince = (since) => sent.filter((s) => s.port === proto.PORT.DATA && s.at >= since).reduce((n, s) => {
+        for (let o = 4; o < s.buf.length; o += 10) if (s.buf.readUInt16LE(o + 4) || s.buf.readUInt16LE(o + 6) || s.buf.readUInt16LE(o + 8)) n += 1
+        return n
+    }, 0)
+    rig.on = () => rig.engine.arm({ armed: true, cube: 'cube-1', out: OUT })
+    rig.off = () => rig.engine.arm({ armed: false, cube: 'cube-1', out: OUT })
+    rig.cube = () => rig.engine.state().cubes[0]
+    rig.switchedOffDark = () => logs.some((m) => /dark and unrefreshed/.test(m))
+    return rig
+}
+// Time runs in 10 ms steps: the engine ticks every 20 ms (the cube answers its free buffer), the desk every 50 ms,
+// the cube's info every second. `deskTicks: false` is a desk whose timer is not running (nothing live).
+const run = (rig, d, ms, { deskTicks = true } = {}) => {
+    for (let e = 0; e < ms; e += 10) {
+        rig.clock.t += 10
+        if (rig.clock.t % 1000 === 0) rig.answerInfo()
+        if (deskTicks && d && rig.clock.t % 50 === 0) d.tick()
+        if (rig.clock.t % 20 === 0) { rig.answerFree?.(); rig.engine.tick() }
+    }
+}
+const deskOf = (rig, dataDir = tmp()) => {
+    const d = createLaserDesk({ dataDir, getEngine: () => rig.engine, now: () => rig.clock.t, setInterval: () => 1, clearInterval: () => {}, log: null })
+    d.setCube('cube-1', { y: -1, size: 2 })
+    return d
+}
+const STILL = { name: 'Catacomb', shape: 'lines', size: 0.3, height: 0.85, level: 0.8, colour: '#e0001a', spin: 0, sweep: 0, pulse: 0, cycle: 0 }
+const OFF_FIELD = { name: 'Below', shape: 'circle', size: 0.3, height: -0.6, level: 1, colour: '#ffffff' }
+const lookIn = (d, look) => d.store({ name: look.name, look }).id
+// The desk only ticks while something is live (its own timer); a released desk does not.
+const deskLive = (d) => d.state().live !== null
+
+const rows = []
+const outcome = (name, rig, d, since) => {
+    const c = rig.cube()
+    const row = { sequence: name, armed: c.armed, litAfterOn: rig.litSince(since), stop: c.stop?.reason ?? null, switchedOffBy5s: rig.switchedOffDark(), deskLive: d ? deskLive(d) : null }
+    rows.push(row)
+    return row
+}
+afterAll(() => { console.log('\n' + rows.map((r) => JSON.stringify(r)).join('\n')) })
+
+describe('laser On: does the cube play, or go dark and switch itself off (N1585)', () => {
+    it('(a) On with nothing live: switched off after 5 s by the dark rule (by design, R2)', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        const t0 = rig.clock.t; expect(rig.on().ok).toBe(true)
+        run(rig, d, 6000, { deskTicks: false })
+        const r = outcome('a: On, nothing live', rig, d, t0)
+        expect(r).toMatchObject({ armed: false, litAfterOn: 0, switchedOffBy5s: true })
+    })
+    it('(b) a still look live, then On: plays and stays on', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, STILL)); run(rig, d, 500)
+        const t0 = rig.clock.t; expect(rig.on().ok).toBe(true)
+        run(rig, d, 6000)
+        const r = outcome('b: still look live, then On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
+        expect(r.litAfterOn).toBeGreaterThan(0)
+    })
+    it('(b2) a moving seed look live, then On: plays and stays on', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go('star'); run(rig, d, 500)
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('b2: moving look live, then On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
+        expect(r.litAfterOn).toBeGreaterThan(0)
+    })
+    it('(c) a still look, On, Off, On again: plays', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, STILL)); rig.on(); run(rig, d, 1000)
+        rig.off(); run(rig, d, 1000)
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('c: still look, On, Off, On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
+        expect(r.litAfterOn).toBeGreaterThan(0)
+    })
+    it('(c2) a still look, On, Off, 12 s (the hold lapses), On again: plays', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, STILL)); rig.on(); run(rig, d, 1000)
+        rig.off(); run(rig, d, 12000)
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('c2: still look, Off 12 s, On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
+        expect(r.litAfterOn).toBeGreaterThan(0)
+    })
+    it('(d) Blackout, Release, On: nothing live, switched off after 5 s (by design)', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, STILL)); rig.on(); run(rig, d, 1000)
+        d.setBlackout(true); run(rig, d, 500)
+        d.release()
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000, { deskTicks: false })
+        const r = outcome('d: Blackout, Release, On', rig, d, t0)
+        expect(r).toMatchObject({ armed: false, litAfterOn: 0, switchedOffBy5s: true, deskLive: false })
+    })
+    it('(d2) Blackout, Release, a look pressed, On: plays', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        const id = lookIn(d, STILL)
+        d.go(id); rig.on(); run(rig, d, 1000)
+        d.setBlackout(true); run(rig, d, 500)
+        d.release(); run(rig, d, 500, { deskTicks: false })
+        d.go(id); run(rig, d, 200)
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('d2: Blackout, Release, Go, On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
+        expect(r.litAfterOn).toBeGreaterThan(0)
+    })
+    it('(d3) Blackout, Blackout lifted (not released), On: plays', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, STILL)); rig.on(); run(rig, d, 1000)
+        d.setBlackout(true); run(rig, d, 500)
+        d.setBlackout(false); run(rig, d, 200)
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('d3: Blackout, lifted, On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
+        expect(r.litAfterOn).toBeGreaterThan(0)
+    })
+    it('(e) Disarm all, On: plays', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, STILL)); rig.on(); run(rig, d, 1000)
+        rig.engine.arm({ armed: false }); run(rig, d, 1000)
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('e: Disarm all, On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
+        expect(r.litAfterOn).toBeGreaterThan(0)
+    })
+    it('(f1) the server restarts with a look live before: the desk comes back with nothing live, On is switched off (by design)', () => {
+        const rig = rigOf(); const dir = tmp()
+        const a = deskOf(rig, dir); a.go(lookIn(a, STILL)); run(rig, a, 500); a.close()
+        rig.renew()
+        const b = deskOf(rig, dir)
+        const t0 = rig.clock.t; rig.on(); run(rig, b, 6000, { deskTicks: false })
+        const r = outcome('f1: restart, then On', rig, b, t0)
+        expect(r).toMatchObject({ armed: false, litAfterOn: 0, switchedOffBy5s: true, deskLive: false })
+    })
+    it('(f2) the engine is rebuilt (Use these) under a live still look, then On: plays', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, STILL)); run(rig, d, 500)
+        rig.renew(); run(rig, d, 200)
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('f2: engine rebuilt, then On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, stop: null, switchedOffBy5s: false })
+        expect(r.litAfterOn).toBeGreaterThan(0)
+    })
+    it('(g) every point pushed off the field by the cube\'s Up: on and dark, never lit (the desk refreshes its dark picture)', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, OFF_FIELD)); run(rig, d, 500)
+        expect(d.state().cubes[0]).toMatchObject({ lit: 0, dark: true, offPercent: 100 })
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('g: all off the field, On', rig, d, t0)
+        expect(r).toMatchObject({ armed: true, litAfterOn: 0, switchedOffBy5s: false })
+    })
+    it('(h) a Blackout from another page while the desk\'s picture is dark, lifted, then a lit look: plays', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, OFF_FIELD)); run(rig, d, 500)
+        rig.engine.blackout(); run(rig, d, 500)
+        d.setBlackout(false); run(rig, d, 500)
+        const t0 = rig.clock.t; rig.on(); run(rig, d, 6000)
+        const r = outcome('h: dark picture, Blackout elsewhere, lifted, On', rig, d, t0)
+        // Same as (g): on and dark while the desk keeps posting its dark picture.
+        expect(r).toMatchObject({ armed: true, litAfterOn: 0, switchedOffBy5s: false })
+        d.setCube('cube-1', { y: 0 }); run(rig, d, 1000)
+        expect(rig.litSince(rig.clock.t - 800)).toBeGreaterThan(0)
+    })
+})
+
+describe('the dark rule is said on the cube (N1585): the countdown, and why the engine switched it off', () => {
+    it('On with nothing to draw counts down from 5 s; the Off by the rule is kept on the cube until the next On', () => {
+        const rig = rigOf()
+        rig.on()
+        expect(rig.engine.state().guard.darkIdleMs).toBe(5000)
+        expect(rig.cube()).toMatchObject({ armed: true, darkOffInMs: 5000, offBy: null })
+        run(rig, null, 3000)
+        expect(rig.cube().darkOffInMs).toBe(2000)
+        run(rig, null, 2100)
+        expect(rig.cube()).toMatchObject({ armed: false, darkOffInMs: null, offBy: { reason: OFF.DARK_IDLE, text: 'Off: it had nothing to draw for 5 s' } })
+        run(rig, null, 3000)
+        expect(rig.cube().offBy.reason).toBe(OFF.DARK_IDLE)
+        rig.on()
+        expect(rig.cube()).toMatchObject({ armed: true, offBy: null })
+    })
+    it('no countdown while a lit look plays, nor while the desk keeps posting a dark picture (it is not switched off)', () => {
+        const lit = rigOf(); const d1 = deskOf(lit)
+        d1.go(lookIn(d1, STILL)); lit.on(); run(lit, d1, 1000)
+        expect(lit.cube()).toMatchObject({ armed: true, darkOffInMs: null })
+        const dark = rigOf(); const d2 = deskOf(dark)
+        d2.go(lookIn(d2, OFF_FIELD)); dark.on(); run(dark, d2, 1000)
+        expect(dark.cube()).toMatchObject({ armed: true, darkOffInMs: null })
+    })
+    it('a sender that stops refreshing its dark picture: the countdown starts, then the cube is switched off', () => {
+        const rig = rigOf(); const d = deskOf(rig)
+        d.go(lookIn(d, OFF_FIELD)); rig.on(); run(rig, d, 1000)
+        run(rig, d, 1000, { deskTicks: false })
+        expect(rig.cube().darkOffInMs).toBe(4000)
+        run(rig, d, 4100, { deskTicks: false })
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.DARK_IDLE } })
+    })
+})
+
+// darkOff 'never' (owner 2026-10-31 16:1x, N1591: the laser "did not work" twice because On came before a look was live):
+// On stays On, armed and dark, until a person's Off. 'auto' (DI_LASER_DARK_OFF=auto, the library default) keeps the 5 s rule.
+describe("darkOff 'never': On stays On until Off (N1591)", () => {
+    // Long runs in 10 s slices: the packets are counted (lit points, data packets) and dropped, so 5 min stays small.
+    const runCounting = (rig, d, ms, opts) => {
+        let lit = 0; let data = 0
+        for (let left = ms; left > 0; left -= 10000) {
+            const from = rig.clock.t
+            run(rig, d, Math.min(10000, left), opts)
+            lit += rig.litSince(from)
+            data += rig.sent.filter((s) => s.port === proto.PORT.DATA && s.at >= from).length
+            rig.sent.length = 0
+        }
+        return { lit, data }
+    }
+    // All on (the desk's top-bar On: no Out holds the cubes) with nothing live.
+    const allOn = (rig) => rig.engine.arm({ armed: true })
+    it('All on with nothing live stays On and dark past 5 s, 30 s and 5 min, drawing nothing lit; Disarm all switches it off', () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        expect(rig.engine.state().darkOff).toBe('never')
+        expect(allOn(rig).ok).toBe(true)
+        let lit = 0; let data = 0
+        for (const ms of [6000, 24000, 270000]) { // past 5 s, then 30 s, then 5 min since On
+            const r = runCounting(rig, d, ms, { deskTicks: false }); lit += r.lit; data += r.data
+            expect(rig.cube()).toMatchObject({ armed: true, stop: null, offBy: null, darkOffInMs: null, nothingToDraw: true })
+        }
+        expect(lit).toBe(0)
+        expect(data).toBeGreaterThan(0) // armed and fed blank points, not silence
+        expect(rig.switchedOffDark()).toBe(false)
+        rig.engine.arm({ armed: false })
+        expect(rig.cube()).toMatchObject({ armed: false, nothingToDraw: false })
+    }, 60000)
+    it('a look made live later lights it: the person who pressed On armed it', () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        allOn(rig); runCounting(rig, d, 30000, { deskTicks: false })
+        expect(rig.cube()).toMatchObject({ armed: true, nothingToDraw: true })
+        d.go(lookIn(d, STILL)); const t1 = rig.clock.t
+        run(rig, d, 2000)
+        expect(rig.cube()).toMatchObject({ armed: true, stop: null, nothingToDraw: false })
+        expect(rig.litSince(t1)).toBeGreaterThan(0)
+    }, 30000)
+    // What the lane does after a cube's own On on the desk (POST /api/arm, out 'desk'): the engine's On, then desk.keepHold().
+    const deskOn = (rig, d) => { const r = rig.on(); d.keepHold(); return r }
+    it("a cube's own On with nothing live stays On past 10 s, 30 s and 5 min: the desk keeps its hold; nothing lit; Off switches it off", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        expect(deskOn(rig, d).ok).toBe(true)
+        let lit = 0
+        for (const ms of [11000, 19000, 270000]) { // past 10 s (CLAIM_TTL_MS), then 30 s, then 5 min since On
+            const r = runCounting(rig, d, ms); lit += r.lit
+            expect(rig.cube()).toMatchObject({ armed: true, stop: null, offBy: null, claimedBy: 'desk' })
+        }
+        expect(lit).toBe(0)
+        rig.off()
+        expect(rig.cube()).toMatchObject({ armed: false })
+    }, 60000)
+    it('a desk that stops ticking (crash, restart) still lets go: its hold lapses and "its Out let go" switches the cube off', () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 6000)
+        expect(rig.cube()).toMatchObject({ armed: true, offBy: null })
+        run(rig, d, 11000, { deskTicks: false })
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.OUT_LET_GO } })
+        expect(rig.switchedOffDark()).toBe(false)
+    })
+    it("a cube's own On, then a look made live later, lights the cube", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        deskOn(rig, d); runCounting(rig, d, 30000)
+        expect(rig.cube()).toMatchObject({ armed: true, stop: null })
+        d.go(lookIn(d, STILL)); const t1 = rig.clock.t
+        run(rig, d, 2000)
+        expect(rig.cube()).toMatchObject({ armed: true, stop: null })
+        expect(rig.litSince(t1)).toBeGreaterThan(0)
+    }, 30000)
+    it("in 'auto' the desk holds nothing: the 5 s rule switches its own On off, as before", () => {
+        const rig = rigOf({ darkOff: 'auto' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 6000)
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.DARK_IDLE } })
+    })
+    it("'auto' (DI_LASER_DARK_OFF=auto) keeps the 5 s rule: the same On is switched off", () => {
+        const rig = rigOf({ darkOff: 'auto' }); const d = deskOf(rig)
+        expect(rig.engine.state().darkOff).toBe('auto')
+        rig.on(); run(rig, d, 6000, { deskTicks: false })
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.DARK_IDLE } })
+        expect(rig.switchedOffDark()).toBe(true)
+    })
+})
+
+// Review O1/O2 (copy 9, 2026-10-31): Release switches off a cube the desk holds by its own On, in both modes; the hold's limits.
+// H1/H11/H12/H13 are the reviewer's mutations: each test below names the one it catches.
+describe("Release and the desk's own hold (review O1, O2; N1591)", () => {
+    // What the lane does after a cube's own On on the desk (POST /api/arm, out 'desk'): the engine's On, then desk.keepHold().
+    const deskOn = (rig, d) => { const r = rig.on(); d.keepHold(); return r }
+    const CIRCLE = Array.from({ length: 120 }, (_, i) => [0.3 * Math.cos((i / 120) * 2 * Math.PI), 0.3 * Math.sin((i / 120) * 2 * Math.PI), 1, 1, 1])
+    it("O1 'never': a cube's own On held 30 s, then Release: Off at once; a Go or a desk frame right after lights nothing", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 30000)
+        expect(rig.cube()).toMatchObject({ armed: true, claimedBy: 'desk' })
+        d.release()
+        expect(rig.cube()).toMatchObject({ armed: false })
+        const t1 = rig.clock.t
+        d.go(lookIn(d, STILL)); run(rig, d, 2000)
+        rig.engine.setFrame('cube-1', CIRCLE, OUT); run(rig, d, 1000)
+        expect(rig.cube().armed).toBe(false)
+        expect(rig.litSince(t1)).toBe(0)
+    }, 30000)
+    it("O1 'auto': a cube's own On, 1 s, then Release: Off at once; a Go right after lights nothing", () => {
+        const rig = rigOf({ darkOff: 'auto' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 1000)
+        d.release()
+        expect(rig.cube()).toMatchObject({ armed: false })
+        const t1 = rig.clock.t
+        d.go(lookIn(d, STILL)); run(rig, d, 2000)
+        expect(rig.litSince(t1)).toBe(0)
+    })
+    it("O2/H1 'auto': the hold never runs: keepHold starts no tick, and a Release's blank frame does not keep the own On on (Off at 5 s)", () => {
+        const rig = rigOf({ darkOff: 'auto' })
+        let started = 0
+        const d = createLaserDesk({ dataDir: tmp(), getEngine: () => rig.engine, now: () => rig.clock.t, setInterval: () => { started += 1; return 1 }, clearInterval: () => {}, log: null })
+        d.setCube('cube-1', { y: -1, size: 2 })
+        d.go(lookIn(d, STILL)); rig.on(); run(rig, d, 1000); d.release() // the desk leaves its blank frame on the cube
+        started = 0
+        expect(deskOn(rig, d).ok).toBe(true)
+        expect(started).toBe(0)
+        run(rig, d, 6000)
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.DARK_IDLE } })
+    })
+    it("O2/H11 'never': the hold stops when no held cube is On: after an Off, a later On without a new desk On lapses at 10 s", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 1000)
+        rig.off(); run(rig, d, 1000)
+        rig.on(); run(rig, d, 11000)
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.OUT_LET_GO } })
+    })
+    it("O2/H12 'never': Release ends the hold: a cube armed again without a new desk On lapses at 10 s", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        deskOn(rig, d); run(rig, d, 1000)
+        d.release()
+        rig.on(); run(rig, d, 11000)
+        expect(rig.cube()).toMatchObject({ armed: false, offBy: { reason: OFF.OUT_LET_GO } })
+    })
+    it("O2/H13 'never': All on is not claimed by the hold: only cubes the desk holds are kept", () => {
+        const rig = rigOf({ darkOff: 'never' }); const d = deskOf(rig)
+        rig.engine.arm({ armed: true }); d.keepHold(); run(rig, d, 2000)
+        expect(rig.cube()).toMatchObject({ armed: true, claimedBy: null })
+    })
+})

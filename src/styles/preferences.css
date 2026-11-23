@@ -250,8 +250,9 @@
     color: var(--ui-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-size: var(--di-text-2);
-    opacity: 0.7;
+    /* 12 px and full muted colour: at 10 px and 0.7 opacity the two group
+       names failed contrast (axe, UX audit 2026-10-28 F109). */
+    font-size: var(--di-text-3);
 }
 
 .preferences-nav-entry:first-child .preferences-nav-group-label {
@@ -1155,6 +1156,7 @@
 
 .preferences-input {
     width: 100%;
+    box-sizing: border-box; /* 100% + padding ran 26 px past its cell (This scene, Display name) */
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid var(--pref-border-active);
     border-radius: 0;
@@ -1268,6 +1270,56 @@
     to { transform: translateX(260%); }
 }
 
+/* ─── Switches: an on/off setting says its state in words (F108) ─── */
+
+.preferences-switch {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--di-space-1);
+    height: 100%; /* the switch and its sentence are one cell of the grid, so a row stays one height */
+    background: var(--di-surface);
+}
+
+.preferences-switch-control {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    min-height: 44px;
+    padding: var(--di-space-2) var(--di-space-3);
+    border: 1px solid var(--pref-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-text);
+    font: inherit;
+    font-size: var(--di-text-4);
+    text-align: left;
+    cursor: pointer;
+}
+
+.preferences-switch-control:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.preferences-switch-state {
+    min-width: 3.5em;
+    padding: var(--di-space-1) var(--di-space-2);
+    border: 1px solid currentColor;
+    color: var(--ui-text-muted);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    text-align: center;
+}
+
+.preferences-switch-control.is-on .preferences-switch-state { color: var(--di-cyan); }
+
+.preferences-switch-control.is-warning .preferences-switch-state { color: var(--di-warning); }
+
+.preferences-switch-detail {
+    padding: 0 var(--di-space-3) var(--di-space-2);
+    color: var(--ui-text-muted);
+    font-size: var(--di-text-3);
+}
+
 /* ─── Responsive ───────────────────────────────────────────── */
 
 @media (max-width: 1480px) {
@@ -1297,13 +1349,23 @@
 @media (max-width: 880px) {
     .preferences-shell { grid-template-columns: 1fr; }
 
+    /* Two even columns of plain rows instead of chips wrapping in ragged
+       rows (F109); a group name takes a full row of its own. */
     .preferences-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: var(--di-space-2);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--di-space-1) var(--di-space-2);
     }
 
-    .preferences-nav-item { width: auto; }
+    .preferences-nav-entry { display: contents; }
+
+    .preferences-nav-group-label { grid-column: 1 / -1; }
+
+    .preferences-nav-item { min-height: 44px; }
+}
+
+@media (pointer: coarse) {
+    .preferences-nav-item { min-height: 44px; }
 }
 
 @media (max-width: 760px) {
@@ -1335,4 +1397,955 @@
     max-width: 480px;
     margin: 15vh auto 0;
     padding: 0 var(--di-space-4);
+}
+
+/* Monitor — one page for machines, network, agents, services, PRs and feeds.
+   Flat per brand SYSTEM.md: square corners, no shadow, state as a 2px leading
+   edge in the semantic triple, motion under 0.2s on named properties only. */
+.monitor-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    gap: var(--di-space-2);
+}
+.monitor-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+    gap: var(--di-space-3);
+    align-items: start;
+}
+.monitor-main { min-width: 0; }
+.monitor-inspector { position: sticky; top: var(--di-space-3); }
+.monitor-filter {
+    min-width: 12rem;
+    padding: var(--di-space-1) var(--di-space-2);
+    background: var(--di-surface);
+    color: var(--di-text);
+    border: 1px solid var(--pref-border);
+    border-radius: 0;
+    font: inherit;
+}
+.monitor-filter:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+.monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+    gap: var(--di-space-2);
+}
+.monitor-group { margin-top: var(--di-space-2); }
+.monitor-group-title {
+    margin: var(--di-space-2) 0 var(--di-space-1);
+    color: var(--ui-text-muted);
+    font-size: var(--di-text-2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.monitor-row {
+    --pref-tone: var(--pref-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    min-width: 0;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-surface);
+    color: var(--di-text);
+    border: none;
+    border-radius: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    /* state is a 2px leading edge, drawn inset, not a shadow */
+    box-shadow: inset 2px 0 0 var(--pref-tone);
+    transition: background-color 0.18s ease-out;
+}
+.monitor-row:hover { background: rgba(255, 255, 255, 0.06); }
+.monitor-row:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+.monitor-row.is-selected { background: rgba(255, 255, 255, 0.1); }
+.monitor-row.is-changed { background: color-mix(in srgb, var(--di-cyan) 22%, transparent); }
+.monitor-row.tone-success { --pref-tone: var(--di-success); }
+.monitor-row.tone-warning { --pref-tone: var(--di-warning); }
+.monitor-row.tone-danger { --pref-tone: var(--di-danger); }
+.monitor-row.tone-accent { --pref-tone: var(--di-cyan); }
+.monitor-row.tone-muted { --pref-tone: var(--pref-border); }
+.monitor-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+.monitor-meta {
+    color: var(--ui-text-muted);
+    font-size: var(--di-text-2);
+    font-variant-numeric: tabular-nums;
+}
+.monitor-note {
+    padding: var(--di-space-2) var(--di-space-3);
+    color: var(--ui-text-muted);
+    /* state is a 2px leading edge, drawn inset, not a shadow */
+    box-shadow: inset 2px 0 0 var(--pref-border);
+}
+/* a warning edge, 2px inset, not a shadow */
+.monitor-note.is-down { box-shadow: inset 2px 0 0 var(--di-warning); }
+.monitor-pre {
+    margin: 0;
+    padding: var(--di-space-2) var(--di-space-3);
+    max-height: 18rem;
+    overflow: auto;
+    background: var(--di-surface);
+    font-size: var(--di-text-2);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+/* Overview strip: one card per tier; drift is the warning edge, not a new colour */
+.monitor-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: var(--di-space-2);
+    margin-bottom: var(--di-space-2);
+}
+.monitor-tier {
+    --pref-tone: var(--pref-border);
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    min-width: 0;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-surface);
+}
+.monitor-tier.tone-success { --pref-tone: var(--di-success); }
+.monitor-tier.tone-warning { --pref-tone: var(--di-warning); }
+.monitor-tier.tone-danger { --pref-tone: var(--di-danger); }
+.monitor-tier-commit { font-family: var(--di-mono); font-variant-numeric: tabular-nums; }
+.monitor-tier-note { font-size: var(--di-text-2); color: var(--pref-tone); }
+.monitor-tabs { display: flex; flex-wrap: wrap; gap: var(--di-space-1); margin-top: var(--di-space-3); }
+.monitor-tab {
+    padding: var(--di-space-1) var(--di-space-3);
+    background: var(--di-surface);
+    color: var(--ui-text-muted);
+    border: none;
+    border-radius: 0;
+    font: inherit;
+    cursor: pointer;
+    /* Holds the 2px underline's place so the active tab does not shift; inset, not a shadow. */
+    box-shadow: inset 0 -2px 0 transparent;
+    transition: color 0.18s ease-out, background-color 0.18s ease-out;
+}
+.monitor-tab:hover { background: rgba(255, 255, 255, 0.06); }
+.monitor-tab:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+/* The active tab's 2px underline, inset so it takes no layout; not a shadow. */
+.monitor-tab.is-active { color: var(--di-text); box-shadow: inset 0 -2px 0 var(--di-cyan); }
+/* Map */
+.monitor-map { --monitor-map-h: clamp(26rem, 68vh, 46rem); min-width: 0; display: flex; flex-direction: column; gap: var(--di-space-2); }
+.monitor-map-views { display: flex; align-self: flex-start; background: var(--pref-border); }
+.monitor-map-view + .monitor-map-view, .monitor-map-tool + .monitor-map-tool { border-left: 1px solid var(--pref-border); }
+.monitor-map-view {
+    min-height: 44px; min-width: 64px; padding: 0 var(--di-space-3);
+    background: var(--di-surface); color: var(--ui-text-muted); border: 0;
+    font: inherit; font-size: var(--di-text-4); cursor: pointer;
+    transition: color var(--di-motion-fast), background-color var(--di-motion-fast);
+}
+.monitor-map-view:hover { background: var(--di-surface-2); color: var(--di-text); }
+.monitor-map-view:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: -1px; }
+.monitor-map-view.is-active { background: var(--di-cyan); color: var(--di-black); }
+.monitor-map-stage { position: relative; height: var(--monitor-map-h); min-width: 0; background: var(--di-black); border: 1px solid var(--pref-border); overflow: hidden; touch-action: none; }
+.monitor-map-svg { display: block; width: 100%; height: 100%; cursor: grab; user-select: none; }
+.monitor-map-svg:active { cursor: grabbing; }
+.monitor-ring { fill: none; stroke: var(--pref-border); stroke-width: 1; }
+.monitor-hub-line { stroke: var(--pref-border); stroke-width: 1; }
+.monitor-hub-box { fill: var(--di-black); stroke: var(--di-cyan); stroke-width: 2; }
+.monitor-hub-label { fill: var(--di-cyan); font-size: var(--di-text-5); font-family: var(--di-mono); }
+.monitor-edge { fill: none; stroke: var(--ui-text-muted); stroke-width: 1.5; transition: stroke var(--di-motion-fast), opacity var(--di-motion-fast); }
+.monitor-edge.kind-shows-on, .monitor-edge.kind-works-on { stroke-dasharray: 3 5; }
+.monitor-edge.kind-reports { stroke-dasharray: 2 6; }
+.monitor-edge.is-dim { opacity: 0.15; }
+.monitor-edge.is-lit { stroke: var(--di-cyan); stroke-width: 3; }
+.monitor-edge.is-live { stroke: rgb(var(--di-live-rgb)); stroke-dasharray: 8 8; }
+@media (prefers-reduced-motion: no-preference) {
+    .monitor-edge.is-live { animation: monitor-edge-flow 0.9s linear infinite; }
+}
+@keyframes monitor-edge-flow { to { stroke-dashoffset: -16; } }
+.monitor-node { --pref-tone: var(--pref-border); cursor: pointer; outline: none; transition: opacity var(--di-motion-fast); }
+.monitor-node.tone-success { --pref-tone: var(--di-success); }
+.monitor-node.tone-warning { --pref-tone: var(--di-warning); }
+.monitor-node.tone-muted { --pref-tone: var(--pref-border); }
+.monitor-node.is-dim { opacity: 0.22; }
+.monitor-node-box { fill: var(--di-surface); stroke: var(--pref-tone); stroke-width: 1.5; }
+.monitor-node.kind-tier .monitor-node-box, .monitor-node.kind-machine .monitor-node-box { fill: var(--di-surface-2); }
+.monitor-node-edge { fill: var(--pref-tone); }
+.monitor-node-label { fill: var(--di-text); font-size: var(--di-text-6); }
+.monitor-node-state { fill: var(--pref-tone); font-size: var(--di-text-4); font-family: var(--di-mono); }
+.monitor-node.tone-muted .monitor-node-state { fill: var(--ui-text-muted); }
+.monitor-node:hover .monitor-node-box, .monitor-node.is-hover .monitor-node-box { fill: var(--di-surface-3); stroke-width: 3; }
+.monitor-node:focus-visible .monitor-node-box, .monitor-node.is-selected .monitor-node-box { stroke: var(--di-cyan); stroke-width: 3; }
+.monitor-tip-box { fill: var(--di-black); stroke: var(--di-cyan); stroke-width: 1.5; }
+.monitor-tip-label { fill: var(--di-text); font-size: var(--di-text-4); }
+.monitor-tip-meta { fill: var(--ui-text-muted); font-size: var(--di-text-3); font-family: var(--di-mono); }
+.monitor-map-tools { position: absolute; top: var(--di-space-2); right: var(--di-space-2); display: flex; background: var(--pref-border); }
+.monitor-map-tool {
+    min-height: 44px; min-width: 44px; padding: 0 var(--di-space-3);
+    background: var(--di-surface); color: var(--di-text); border: 0;
+    font: inherit; font-size: var(--di-text-4); cursor: pointer;
+}
+.monitor-map-tool:hover { background: var(--di-surface-3); }
+.monitor-map-tool:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: -1px; }
+.monitor-map-hint { position: absolute; left: var(--di-space-2); bottom: var(--di-space-2); max-width: calc(100% - 2 * var(--di-space-2)); color: var(--ui-text-muted); font-size: var(--di-text-3); pointer-events: none; }
+.monitor-card3d {
+    --pref-tone: var(--pref-border);
+    display: flex; flex-direction: column; min-width: 7.5rem; max-width: 12rem; padding: var(--di-space-2);
+    background: var(--di-surface); color: var(--di-text); border: 1px solid var(--pref-tone);
+    font: inherit; text-align: left; cursor: pointer;
+    /* A 4px tone band on the leading edge, inset so it takes no layout; not a shadow. */
+    box-shadow: inset 4px 0 0 var(--pref-tone);
+    padding-left: var(--di-space-3);
+    transition: opacity var(--di-motion-fast);
+}
+.monitor-card3d.tone-success { --pref-tone: var(--di-success); }
+.monitor-card3d.tone-warning { --pref-tone: var(--di-warning); }
+.monitor-card3d.is-dim { opacity: 0.3; }
+.monitor-card3d:hover, .monitor-card3d.is-selected, .monitor-card3d:focus-visible { border-color: var(--di-cyan); outline: none; }
+.monitor-card3d.is-full:not(.is-hub) { transform: translateY(calc(-50% - 12px)); } /* the open card sits ABOVE its body, never over it */
+.monitor-card3d.is-hub { border-color: var(--di-cyan); cursor: default; min-width: 0; white-space: nowrap; }
+.monitor-card3d:not(.is-full):not(.is-hub) { min-width: 0; max-width: none; white-space: nowrap; padding: var(--di-space-1) var(--di-space-2) var(--di-space-1) var(--di-space-3); }
+.monitor-card3d-name { font-size: var(--di-text-4); overflow-wrap: anywhere; }
+.monitor-card3d:not(.is-full) .monitor-card3d-state, .monitor-card3d:not(.is-full) .monitor-card3d-fact { display: none; }
+.monitor-card3d-state { font-size: var(--di-text-3); font-family: var(--di-mono); color: var(--pref-tone); }
+.monitor-card3d-fact { font-size: var(--di-text-2); font-family: var(--di-mono); color: var(--ui-text-muted); }
+.monitor-map-key {
+    display: flex; flex-wrap: wrap; gap: var(--di-space-3);
+    color: var(--ui-text-muted); font-size: var(--di-text-3);
+}
+@media (max-width: 600px) {
+    .monitor-map { --monitor-map-h: clamp(22rem, 62vh, 36rem); }
+    .monitor-map-views { align-self: stretch; }
+    .monitor-map-view { flex: 1; }
+    .monitor-map-hint { display: none; }
+}
+/* Map full screen: covers the page, the stage takes everything below the view bar */
+.monitor-map-fs { margin-left: var(--di-space-2); }
+.monitor-map.is-fullscreen {
+    position: fixed; inset: 0; z-index: 1200; background: var(--di-black);
+    padding: var(--di-space-3); box-sizing: border-box; --monitor-map-h: calc(100vh - 7.5rem);
+}
+.monitor-map.is-fullscreen .monitor-map-views { align-self: flex-start; }
+.monitor-map.is-fullscreen .monitor-map-stage { height: var(--monitor-map-h); flex: 1; }
+.monitor-map.is-fullscreen .monitor-map-hint { display: block; }
+/* Workspace */
+.monitor-ask-form { display: flex; flex-direction: column; gap: var(--di-space-2); }
+.monitor-ask-text { width: 100%; box-sizing: border-box; resize: vertical; }
+.monitor-ask-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-2); }
+.monitor-asks { display: flex; flex-direction: column; gap: var(--di-space-2); }
+.monitor-ask {
+    --pref-tone: var(--di-cyan);
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-surface);
+    /* A 2px tone line on the leading edge, inset so it takes no layout; not a shadow. */
+    box-shadow: inset 2px 0 0 var(--pref-tone);
+}
+.monitor-ask.tone-danger { --pref-tone: var(--di-danger); }
+.monitor-ask-text-line { overflow-wrap: anywhere; white-space: pre-wrap; }
+@media (max-width: 900px) {
+    .monitor-layout { grid-template-columns: minmax(0, 1fr); }
+    .monitor-inspector { position: static; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .monitor-row { transition: none; }
+}
+
+/* Monitor look (2026-11-16): full screen, one status line, big tiles, a live feed, a drawer.
+   Ground black, state in the semantic triple as a field (rgb at low alpha) plus a band,
+   square corners, no glow. Looping motion only on live marks, none under reduced motion. */
+.monitor-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-3);
+    min-width: 0;
+    box-sizing: border-box;
+}
+.monitor-page.is-full {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    overflow-y: auto;
+    padding: var(--di-space-4);
+    background: var(--di-black);
+}
+.monitor-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+}
+.monitor-bar-title h2 { margin: 0; font-size: var(--di-text-6); }
+.monitor-bar-title span { display: block; color: var(--ui-text-muted); font-size: var(--di-text-2); font-variant-numeric: tabular-nums; }
+.monitor-bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-2); }
+.monitor-bar-actions .preferences-inline-action,
+.monitor-bar-actions .monitor-filter { min-height: 44px; box-sizing: border-box; }
+.monitor-frame {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem);
+    grid-template-areas:
+        "hero hero"
+        "tiers feed"
+        "counts feed"
+        "tabs feed"
+        "main feed";
+    gap: var(--di-space-3);
+    align-items: start;
+    min-width: 0;
+}
+.monitor-hero { grid-area: hero; }
+.monitor-area-strip { display: contents; }
+.monitor-area-tiers { grid-area: tiers; min-width: 0; }
+.monitor-area-counts { grid-area: counts; min-width: 0; }
+.monitor-area-main { grid-area: main; }
+.monitor-area-feed { grid-area: feed; }
+
+/* the status line; a tone class sets --tone-rgb, a component without one reads grey */
+.monitor-page, .monitor-tier, .monitor-count, .monitor-event, .monitor-agent, .monitor-chat, .monitor-chip, .monitor-hero { --tone-rgb: 130, 130, 140; }
+.tone-success { --tone-rgb: var(--di-success-rgb); }
+.tone-warning { --tone-rgb: var(--di-warning-rgb); }
+.tone-danger { --tone-rgb: var(--di-danger-rgb); }
+.tone-accent { --tone-rgb: var(--di-cyan-rgb); }
+.tone-live { --tone-rgb: var(--di-live-rgb); }
+.tone-muted, .tone-default { --tone-rgb: 130, 130, 140; }
+.monitor-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-3);
+    padding: var(--di-space-4) var(--di-space-5);
+    background: rgba(var(--tone-rgb), 0.12);
+    border-left: 8px solid rgb(var(--tone-rgb));
+}
+.monitor-hero-text {
+    flex: 1 1 18rem;
+    min-width: 0;
+    color: rgb(var(--tone-rgb));
+    font-size: var(--di-text-7);
+    font-weight: 700;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.monitor-hero-live { display: flex; align-items: center; gap: var(--di-space-2); color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-4); font-variant-numeric: tabular-nums; }
+.monitor-hero-issues { flex-basis: 100%; margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--di-space-2); }
+.monitor-hero-issues li { padding: var(--di-space-1) var(--di-space-3); background: rgba(var(--tone-rgb), 0.16); color: var(--di-text); font-size: var(--di-text-3); }
+.monitor-live-mark {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    background: rgb(var(--tone-rgb));
+}
+.monitor-live-mark.is-beat { animation: monitor-beat 0.7s ease-out 1; }
+@keyframes monitor-beat {
+    from { transform: scale(2); background: var(--di-text); }
+    to { transform: scale(1); }
+}
+
+/* tier tiles */
+.monitor-overview { grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr)); margin-bottom: 0; }
+.monitor-tier {
+    align-items: stretch;
+    padding: var(--di-space-3) var(--di-space-4);
+    color: var(--di-text);
+    background: rgba(var(--tone-rgb), 0.1);
+    border: none;
+    border-top: 4px solid rgb(var(--tone-rgb));
+    border-radius: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--di-motion-base) ease-out;
+}
+.monitor-tier:hover { background: rgba(var(--tone-rgb), 0.18); }
+.monitor-tier:focus-visible, .monitor-count:focus-visible, .monitor-agent:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 0; }
+.monitor-tier.is-selected { outline: 2px solid var(--di-cyan); outline-offset: -2px; }
+.monitor-tier.is-changed, .monitor-count.is-changed { background: color-mix(in srgb, var(--di-cyan) 28%, transparent); }
+.monitor-tier-name { font-size: var(--di-text-5); font-weight: 600; }
+.monitor-tier-commit { font-family: var(--di-mono); font-size: var(--di-text-7); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.monitor-tier-note { font-size: var(--di-text-6); font-weight: 600; color: rgb(var(--tone-rgb)); overflow-wrap: anywhere; }
+.monitor-spark { display: block; width: 100%; height: 1.75rem; color: rgb(var(--tone-rgb)); }
+.monitor-spark.is-empty { color: var(--ui-text-muted); font-size: var(--di-text-2); line-height: 1.75rem; }
+
+/* count tiles */
+.monitor-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.25rem, 1fr)); /* 7 tiles fit one row beside "What changed" (the 7th sat alone) */ gap: var(--di-space-2); }
+.monitor-count {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    min-width: 0;
+    min-height: 44px;
+    padding: var(--di-space-3);
+    color: var(--di-text);
+    background: rgba(var(--tone-rgb), 0.08);
+    border: none;
+    border-top: 4px solid rgb(var(--tone-rgb));
+    border-radius: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--di-motion-base) ease-out;
+}
+.monitor-count:hover { background: rgba(var(--tone-rgb), 0.16); }
+.monitor-count-value { font-family: var(--di-mono); font-size: var(--di-text-7); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.monitor-count-label { color: var(--ui-text-muted); font-size: var(--di-text-2); }
+.monitor-dots { display: flex; flex-wrap: wrap; gap: var(--di-space-1); min-height: 0.75rem; }
+.monitor-dot { display: inline-block; width: 0.75rem; height: 0.75rem; background: rgb(var(--tone-rgb)); }
+.monitor-dot.tone-muted, .monitor-dot.tone-default { background: rgba(255, 255, 255, 0.28); }
+
+/* tabs show their key */
+.monitor-tabs .monitor-tab { min-height: 44px; font-size: var(--di-text-4); }
+.monitor-tab-key::after { content: attr(data-key); margin-left: var(--di-space-2); color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-2); font-style: normal; }
+
+/* what changed */
+.monitor-changes { position: sticky; top: var(--di-space-3); max-height: calc(100vh - 6rem); overflow-y: auto; min-width: 0; }
+.monitor-events { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--di-space-1); }
+.monitor-event {
+    display: flex;
+    flex-direction: column;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: rgba(var(--tone-rgb), 0.1);
+    /* state is a 4px leading edge, drawn inset, not a shadow */
+    box-shadow: inset 4px 0 0 rgb(var(--tone-rgb));
+    animation: monitor-enter 0.5s ease-out 1;
+}
+.monitor-event-text { overflow-wrap: anywhere; font-size: var(--di-text-3); }
+@keyframes monitor-enter { from { background: rgba(var(--di-cyan-rgb), 0.45); } }
+
+/* the drawer: right side over the page, a bottom sheet on the phone */
+.monitor-drawer, .monitor-keys {
+    position: fixed;
+    z-index: 950;
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    box-sizing: border-box;
+    padding: var(--di-space-4);
+    overflow-y: auto;
+    background: var(--di-surface-2);
+    border: 1px solid var(--pref-border-active);
+}
+.monitor-drawer { top: 0; right: 0; bottom: 0; width: min(26rem, 100%); }
+.monitor-keys { top: 20%; left: 50%; width: min(24rem, 92vw); transform: translateX(-50%); }
+.monitor-drawer-head { display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2); }
+.monitor-drawer-close { min-width: 44px; min-height: 44px; font-size: var(--di-text-6); }
+.monitor-keys-row { display: flex; align-items: center; gap: var(--di-space-3); }
+.monitor-keys-row kbd { min-width: 4rem; padding: var(--di-space-1) var(--di-space-2); background: var(--di-surface); border: 1px solid var(--pref-border-active); font-family: var(--di-mono); font-size: var(--di-text-3); text-align: center; }
+
+/* work: the ask bar, big agent cards, report freshness */
+.monitor-ask-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--di-space-2); align-items: stretch; }
+.monitor-ask-text { grid-column: 1; min-height: 4.5rem; padding: var(--di-space-3); background: var(--di-surface); color: var(--di-text); border: 1px solid var(--pref-border-active); border-radius: 0; font: inherit; font-size: var(--di-text-5); }
+.monitor-ask-text:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 0; }
+.monitor-ask-send { grid-column: 2; min-width: 8rem; min-height: 44px; padding: var(--di-space-2) var(--di-space-4); background: var(--di-cyan); color: var(--di-black); border: none; border-radius: 0; font: inherit; font-size: var(--di-text-5); font-weight: 600; cursor: pointer; }
+.monitor-ask-send:disabled { background: var(--di-surface-3); color: var(--ui-text-muted); cursor: default; }
+.monitor-ask-hint, .monitor-ask-form .monitor-note { grid-column: 1 / -1; }
+.monitor-ask.is-sending { animation: monitor-enter 0.8s ease-out 1; }
+.monitor-agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: var(--di-space-2); }
+.monitor-agent {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    min-width: 0;
+    min-height: 44px;
+    padding: var(--di-space-3) var(--di-space-4);
+    color: var(--di-text);
+    background: rgba(var(--tone-rgb), 0.1);
+    border: none;
+    border-radius: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    /* state is a 4px leading edge, drawn inset, not a shadow */
+    box-shadow: inset 4px 0 0 rgb(var(--tone-rgb));
+}
+.monitor-agent:hover { background: rgba(var(--tone-rgb), 0.18); }
+.monitor-agent .monitor-name { font-size: var(--di-text-5); }
+.monitor-agent-head { display: flex; align-items: center; gap: var(--di-space-2); min-width: 0; }
+.monitor-live-square { flex: none; display: inline-block; width: 0.75rem; height: 0.75rem; background: rgb(var(--di-live-rgb)); animation: monitor-live 1.4s steps(2, jump-none) infinite; }
+.monitor-live-square.is-off { background: rgba(255, 255, 255, 0.2); animation: none; }
+@keyframes monitor-live { 50% { opacity: 0.25; } }
+/* Chats on the Work tab: filter chips, then one card per chat (asks first, the cards fill the row) */
+.monitor-chips { display: flex; flex-wrap: wrap; gap: var(--di-space-1); margin-bottom: var(--di-space-2); }
+.monitor-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--di-space-2);
+    min-height: 44px;
+    padding: var(--di-space-1) var(--di-space-3);
+    color: var(--ui-text-muted);
+    background: var(--di-surface);
+    border: none;
+    border-radius: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+.monitor-chip:hover { background: rgba(255, 255, 255, 0.06); }
+.monitor-chip:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 0; }
+/* The pressed chip's 2px underline, inset so it takes no layout; not a shadow. */
+.monitor-chip[aria-pressed="true"] { color: var(--di-text); box-shadow: inset 0 -2px 0 var(--di-cyan); }
+.monitor-chip.tone-warning .monitor-chip-count { color: var(--di-warning); }
+.monitor-chip-count { color: var(--di-text); font-variant-numeric: tabular-nums; }
+.monitor-chat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--di-space-2); }
+.monitor-chat {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    min-width: 0;
+    padding: var(--di-space-3) var(--di-space-4);
+    color: var(--di-text);
+    background: rgba(var(--tone-rgb), 0.1);
+    border-radius: 0;
+    /* state is a 4px leading edge, drawn inset, not a shadow */
+    box-shadow: inset 4px 0 0 rgb(var(--tone-rgb));
+}
+.monitor-chat[data-chat-group="ask"] { background: rgba(var(--tone-rgb), 0.18); }
+.monitor-chat-head { display: flex; align-items: center; gap: var(--di-space-2); min-width: 0; }
+.monitor-chat-title { flex: 1 1 auto; min-width: 0; font-size: var(--di-text-5); font-weight: 600; overflow-wrap: anywhere; }
+.monitor-chat-tag { flex: none; color: rgb(var(--tone-rgb)); font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.1em; text-transform: uppercase; }
+.monitor-chat-ask { margin: 0; font-size: var(--di-text-4); font-weight: 600; overflow-wrap: anywhere; }
+.monitor-chat-says { margin: 0; color: var(--ui-text-muted); font-size: var(--di-text-3); overflow-wrap: anywhere; }
+.monitor-report { gap: var(--di-space-1); }
+.monitor-fresh { display: block; height: 4px; background: var(--pref-border); }
+.monitor-fresh i { display: block; height: 100%; background: var(--pref-tone); transition: width var(--di-motion-base) ease-out; }
+
+/* Every tab: the tier and count tiles are one strip of chips (same colours, same clicks) and the status line
+   is one slim row, so the tab's own content gets the screen (owner 2026-11-19: too much scrolling). */
+.monitor-page .monitor-frame {
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+    grid-template-areas:
+        "hero hero"
+        "strip strip"
+        "main feed";
+    gap: var(--di-space-2) var(--di-space-3);
+}
+.monitor-page .monitor-area-strip { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--di-space-2); grid-area: strip; min-width: 0; }
+.monitor-page .monitor-area-tiers, .monitor-page .monitor-area-counts { display: contents; }
+.monitor-page .monitor-overview, .monitor-page .monitor-counts { display: contents; }
+.monitor-page .monitor-tier, .monitor-page .monitor-count {
+    flex-direction: row; align-items: center; gap: var(--di-space-2);
+    padding: 0 var(--di-space-3);
+}
+/* The chip strip is one row on every tab: the tier meta, sparkline and dots stay in the hover tip (a measured picture with them on shows words cut mid-way). */
+.monitor-page .monitor-tier > .monitor-meta, .monitor-page .monitor-tier .monitor-spark, .monitor-page .monitor-tier .monitor-dots { display: none; }
+@media (min-width: 901px) { .monitor-page .monitor-count .monitor-dots { display: none; } }
+/* On a narrow screen the chips wrap as whole chips; a word is never broken inside one. */
+.monitor-page .monitor-tier > *, .monitor-page .monitor-count > * { white-space: nowrap; }
+.monitor-page .monitor-hero { padding: var(--di-space-2) var(--di-space-4); }
+.monitor-page .monitor-map-section { padding: 0; background: none; border: 0; }
+.monitor-page .monitor-map-section > .preferences-module-header { display: none; }
+@media (max-width: 600px) {
+    .monitor-page .monitor-tier-commit { display: none; }
+    .monitor-page .monitor-tier, .monitor-page .monitor-count { padding: 0 var(--di-space-2); }
+}
+@media (max-width: 900px) {
+    .monitor-page .monitor-frame { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "strip" "main" "feed"; }
+}
+@media (max-width: 900px) {
+    .monitor-frame {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "hero" "feed" "tiers" "counts" "main";
+    }
+    .monitor-changes { position: static; max-height: 14rem; }
+    .monitor-hero-text { font-size: var(--di-text-6); }
+}
+@media (max-width: 600px) {
+    .monitor-page.is-full { padding: var(--di-space-3); }
+    .monitor-drawer { top: auto; left: 0; width: 100%; max-height: 70vh; border-width: 1px 0 0; }
+    .monitor-tab-key { display: none; }
+    .monitor-ask-form { grid-template-columns: minmax(0, 1fr); }
+    .monitor-ask-send { grid-column: 1; }
+    .monitor-bar-actions .monitor-filter { flex: 1 1 100%; }
+    .monitor-row { min-height: 44px; }
+    /* four chips fill the phone row, none wraps alone */
+    .monitor-chip { flex: 1 1 auto; justify-content: center; padding: var(--di-space-1) var(--di-space-2); letter-spacing: 0.04em; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .monitor-live-mark.is-beat, .monitor-live-square, .monitor-event, .monitor-ask.is-sending { animation: none; }
+    .monitor-tier, .monitor-count, .monitor-fresh i { transition: none; }
+}
+
+/* ─── Filter row: one line of compact chips, not a 2-column wall of buttons ─── */
+.preferences-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--di-space-1);
+    margin: var(--di-space-2) 0;
+}
+
+.preferences-filter-row .toggle-button {
+    width: auto;
+    min-height: 36px;
+    padding: 0 var(--di-space-3);
+    text-transform: capitalize;
+}
+
+@media (pointer: coarse) {
+    .preferences-filter-row .toggle-button { min-height: 44px; }
+}
+
+/* Phone: one row names the section you are in; a tap opens all of them as a two-column list, a pick closes it.
+   Nothing scrolls sideways and the work starts on the first screen. */
+.preferences-nav-toggle { display: none; }
+@media (max-width: 880px) {
+    .preferences-nav-toggle {
+        display: flex; align-items: center; justify-content: space-between; gap: var(--di-space-2);
+        box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 var(--di-space-3);
+        background: var(--di-surface); border: 1px solid var(--pref-border); color: inherit;
+        font: inherit; text-align: left; cursor: pointer;
+    }
+    .preferences-nav-toggle-label { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .preferences-nav-toggle-hint { color: var(--ui-text-muted); font-size: var(--di-text-3); flex: none; }
+    .preferences-nav[data-open='false'] { display: none; }
+}
+.preferences-topbar-metrics:empty { display: none; }
+
+/* A value is one token (a date, a count): it never breaks mid-word; the label gives way instead. */
+.preferences-metric-value { white-space: nowrap; flex: none; }
+.preferences-metric-label { min-width: 0; }
+
+/* A long name gives way (ellipsis); the status tag beside it stays inside the row. */
+.preferences-tree-row .preferences-tree-name { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preferences-tree-row .preferences-tree-tag { flex: none; }
+.preferences-tree, .preferences-tree-group { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.preferences-tree-row { box-sizing: border-box; min-width: 0; }
+
+/* Phone: header counters sit two per row, so the work starts higher on the first screen. */
+@media (max-width: 760px) {
+    .preferences-topbar-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Pull requests in Monitor › Work: each row is a link, so it must not look underlined. */
+a.monitor-row { text-decoration: none; }
+a.monitor-row .monitor-name { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* full data: chats, asks, reports and parts are buttons that open the one detail drawer */
+button.monitor-chat, button.monitor-ask {
+    border: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+}
+button.monitor-chat:hover, button.monitor-ask:hover, button.monitor-chat.is-selected { background: rgba(var(--tone-rgb), 0.24); }
+button.monitor-chat:focus-visible, button.monitor-ask:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+.monitor-ask.tone-accent, .monitor-ask.tone-danger { --tone-rgb: 130, 130, 140; }
+.monitor-filter-count { font-family: var(--di-mono); font-size: var(--di-text-3); color: var(--di-text-muted); white-space: nowrap; }
+.monitor-hero-open { border: none; background: transparent; color: inherit; font: inherit; text-align: left; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.monitor-hero-open:focus-visible, .monitor-issue-open:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 2px; }
+.monitor-issue-open { border: none; background: transparent; color: inherit; font: inherit; padding: 0; cursor: pointer; text-align: left; }
+
+/* "live · heard 4 s ago" per panel: success when current, amber at twice its interval, muted-danger when old */
+.monitor-panel-live { display: inline-flex; align-items: center; gap: var(--di-space-2); font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-text-muted); }
+.monitor-panel-live i { width: 8px; height: 8px; background: var(--di-success); }
+.monitor-panel-live.is-late { color: var(--di-warning); }
+.monitor-panel-live.is-late i { background: var(--di-warning); }
+.monitor-panel-live.is-old { color: var(--di-danger); }
+.monitor-panel-live.is-old i { background: var(--di-danger); }
+.monitor-panel-live.is-waiting i, .monitor-panel-live.is-paused i { background: var(--pref-border); }
+
+/* the detail drawer: every field, exact and copyable */
+.monitor-drawer-kind { font-family: var(--di-mono); font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.06em; color: var(--di-text-muted); }
+.monitor-drawer-title { overflow-wrap: anywhere; }
+.monitor-fields { display: flex; flex-direction: column; margin: 0; }
+.monitor-field { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: var(--di-space-3); padding: var(--di-space-2) 0; border-bottom: 1px solid var(--pref-border); }
+.monitor-field dt { font-family: var(--di-mono); font-size: var(--di-text-2); text-transform: uppercase; letter-spacing: 0.04em; color: var(--di-text-muted); overflow-wrap: anywhere; }
+.monitor-field dd { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--di-space-1) var(--di-space-2); min-width: 0; }
+.monitor-field-age { grid-column: 1; }
+.monitor-field dd.is-empty { color: var(--di-text-muted); }
+.monitor-field-value { font-family: var(--di-mono); font-size: var(--di-text-3); overflow-wrap: anywhere; white-space: pre-wrap; min-width: 0; }
+.monitor-field .monitor-copy { grid-column: 2; grid-row: 1; }
+.monitor-field-age { font-size: var(--di-text-2); color: var(--di-cyan); white-space: nowrap; }
+.monitor-copy { padding: 0 var(--di-space-2); min-height: 24px; background: transparent; color: var(--di-text-muted); border: 1px solid var(--pref-border); border-radius: 0; font-family: var(--di-mono); font-size: var(--di-text-2); cursor: pointer; }
+.monitor-copy:hover { color: var(--di-text); border-color: var(--pref-border-active); }
+.monitor-copy:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+.monitor-related { display: flex; flex-direction: column; gap: var(--di-space-1); }
+/* a 2px leading edge, inset so it takes no layout; not a shadow */
+.monitor-related-item { display: grid; grid-template-columns: minmax(6rem, 9rem) minmax(0, 1fr); gap: var(--di-space-3); padding: var(--di-space-1) var(--di-space-3); font-size: var(--di-text-3); background: var(--di-surface); color: var(--di-text); border: none; border-radius: 0; box-shadow: inset 2px 0 0 var(--di-cyan); font: inherit; text-align: left; cursor: pointer; }
+.monitor-related-item:hover { background: color-mix(in srgb, var(--di-text) 8%, transparent); }
+.monitor-related-item:focus-visible { outline: 1px solid var(--di-cyan); outline-offset: 0; }
+.monitor-related-label { font-family: var(--di-mono); font-size: var(--di-text-2); color: var(--di-text-muted); }
+.monitor-related-text { overflow-wrap: anywhere; }
+.monitor-raw summary { cursor: pointer; font-family: var(--di-mono); font-size: var(--di-text-3); padding: var(--di-space-2) 0; }
+.monitor-raw-bar { display: flex; justify-content: flex-end; }
+@media (max-width: 700px) {
+    .monitor-field, .monitor-related-item { grid-template-columns: minmax(0, 1fr); gap: var(--di-space-1); }
+}
+
+
+/* Monitor → Tasks: the owner's open asks, and the change form in the drawer */
+.monitor-task-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.monitor-tasks-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-2); margin-bottom: var(--di-space-2); }
+.monitor-tasks-bar .monitor-meta { margin-right: auto; }
+.monitor-task-actions { display: flex; flex-direction: column; gap: var(--di-space-2); margin-top: var(--di-space-3); }
+.monitor-task-buttons { display: flex; flex-wrap: wrap; gap: var(--di-space-2); }
+.monitor-task-form { display: flex; flex-direction: column; gap: var(--di-space-2); }
+.monitor-task-form label { display: flex; flex-direction: column; gap: var(--di-space-1); color: var(--ui-text-muted); font-size: var(--di-text-2); }
+.monitor-task-form textarea { background: var(--di-surface); color: var(--di-text); border: 1px solid var(--pref-border); border-radius: 0; font: inherit; padding: var(--di-space-2); resize: vertical; }
+.monitor-task-history { padding: var(--di-space-2); background: var(--di-surface); font-size: var(--di-text-2); overflow-wrap: anywhere; }
+.monitor-row.tone-warning { --pref-tone: var(--di-warning); }
+
+/* Selected node's card inside a full-screen map: the detail page is hidden, so the card carries the way to it */
+.monitor-map-card {
+    position: absolute; right: var(--di-space-3); bottom: var(--di-space-3); z-index: 2; max-width: 20rem;
+    display: grid; gap: var(--di-space-1); padding: var(--di-space-3);
+    background: var(--di-surface); border: 1px solid var(--pref-border);
+}
+.monitor-map-card-name { color: var(--di-text); font-size: var(--di-text-5); overflow-wrap: anywhere; }
+.monitor-map-card-meta { color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-3); }
+/* Spaces and users: view switch + live chip above the list or the world */
+.preferences-manage-world { display: grid; gap: var(--di-space-3); min-width: 0; }
+.preferences-manage-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-3); }
+.preferences-live-chip {
+    font-family: var(--di-mono); font-size: var(--di-text-3); color: var(--ui-text-muted);
+    text-transform: uppercase; letter-spacing: 0.08em;
+}
+.preferences-live-chip[data-live="on"]::before {
+    content: ''; display: inline-block; width: 8px; height: 8px; margin-right: var(--di-space-2);
+    background: rgb(var(--di-live-rgb));
+}
+.preferences-person-spaces { display: flex; flex-wrap: wrap; gap: var(--di-space-2); margin-top: var(--di-space-3); }
+/* Spaces world: the map takes the width, the picked space's detail sits beside it (stacked under 1100 px) */
+.preferences-manage-world-body { display: grid; gap: var(--di-space-4); grid-template-columns: minmax(0, 1fr); align-items: start; }
+.preferences-manage-world-body.has-detail { grid-template-columns: minmax(0, 1fr) minmax(340px, 460px); }
+.preferences-manage-world-body > * { min-width: 0; }
+.monitor-map-views.is-solo .monitor-map-fs { margin-left: 0; }
+@media (max-width: 1100px) {
+    .preferences-manage-world-body.has-detail { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Spaces world: one shape and colour per kind in 2D and 3D (space = cyan square, person = amber diamond, link = granted), the selection is a white ring */
+.monitor-map-stage.is-world .monitor-node.kind-space { --pref-tone: var(--di-cyan); }
+.monitor-map-stage.is-world .monitor-node.kind-person { --pref-tone: var(--di-warning); }
+.monitor-map-stage.is-world .monitor-node.tone-muted .monitor-node-state { fill: var(--ui-text-muted); }
+.monitor-map-stage.is-world .monitor-node-glyph { fill: var(--pref-tone); }
+.monitor-map-stage.is-world .monitor-node-ring { fill: none; stroke: var(--di-text); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.monitor-map-stage.is-world .monitor-node.is-selected .monitor-node-box, .monitor-map-stage.is-world .monitor-node:focus-visible .monitor-node-box { stroke: var(--di-text); }
+.monitor-map-stage.is-world .monitor-edge.is-lit { stroke: var(--di-text); stroke-width: 3; }
+.monitor-legend {
+    position: absolute; bottom: var(--di-space-2); left: var(--di-space-2); z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: var(--di-space-3);
+    max-width: calc(100% - 2 * var(--di-space-2)); padding: var(--di-space-1) var(--di-space-2); background: var(--di-black); border: 1px solid var(--pref-border);
+    color: var(--ui-text-muted); font-family: var(--di-mono); font-size: var(--di-text-3); pointer-events: none;
+}
+.monitor-legend-item { display: inline-flex; align-items: center; gap: var(--di-space-1); white-space: nowrap; }
+.monitor-legend-mark { display: inline-block; flex: none; }
+.monitor-legend-mark.is-link { width: 18px; height: 2px; background: var(--ui-text-muted); }
+/* a command row with an odd count ends full: the last button takes both columns (the detail strip is full width in Mixed) */
+.preferences-command-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+/* kinds look (Spaces world and Monitor map): a glyph per kind, a quiet hairball until a node is picked, packets only on the picked node's lines */
+.monitor-map-stage.is-kinds .monitor-node-glyph { stroke: none; }
+.monitor-map-stage.is-kinds .monitor-node-ring { fill: none; stroke: var(--di-text); stroke-width: 2; stroke-dasharray: 6 4; pointer-events: none; }
+.monitor-map-stage.is-kinds .monitor-node.is-selected .monitor-node-box, .monitor-map-stage.is-kinds .monitor-node:focus-visible .monitor-node-box { stroke: var(--di-text); }
+.monitor-map-stage.is-kinds .monitor-edge.is-lit { stroke: var(--di-text); stroke-width: 3; }
+.monitor-edge.is-faint { opacity: 0.28; stroke-width: 1; }
+.monitor-map-stage.is-kinds .monitor-map-hint { bottom: 2.75rem; }
+/* Mixed view: 3D room large on the left, 2D map top right, live list under it; the detail is a full-width strip below.
+   Under 1100 px the panes stack (3D, 2D, list) and the detail follows the tapped node. */
+.preferences-manage-world-body.is-mixed, .preferences-manage-world-body.is-mixed.has-detail { grid-template-columns: minmax(0, 1fr); }
+.spaces-mixed {
+    --mixed-h: clamp(32rem, calc(100vh - 21rem), 54rem);
+    display: grid; gap: var(--di-space-2); height: var(--mixed-h); min-width: 0;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1.25fr) minmax(0, 0.75fr);
+}
+.spaces-mixed-pane { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--di-black); border: 1px solid var(--pref-border); overflow: hidden; }
+.spaces-mixed-pane.is-3d { grid-row: 1 / span 2; }
+.spaces-mixed-pane > div { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.spaces-mixed .monitor-map-stage { height: auto; flex: 1; min-height: 0; border: 0; }
+.spaces-mixed-pane.is-list { overflow: auto; padding: var(--di-space-2); }
+.spaces-mixed-pane.is-list .monitor-map-list { gap: var(--di-space-2); }
+.spaces-mixed-pane .monitor-map-hint { display: none; }
+@media (max-width: 1099px) {
+    .spaces-mixed { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+    .spaces-mixed-pane.is-3d { grid-row: auto; height: clamp(22rem, 60vh, 32rem); }
+    .spaces-mixed-pane.is-2d { height: clamp(20rem, 50vh, 28rem); }
+    .spaces-mixed-pane.is-list { max-height: 24rem; }
+}
+
+/* Scene header: six counters in ONE row on a wide screen (they made two half-empty rows) */
+@media (min-width: 1280px) {
+    .preferences-topbar-metrics:has(> :nth-child(6)) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+/* Phone (<= 880 px): the menu row already says which section is open, so the title above it is read out, not drawn twice */
+@media (max-width: 880px) {
+    .preferences-topbar-title-row h1 {
+        position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+}
+.spaces-mixed-hint { margin: var(--di-space-1) 0 0; color: var(--ui-text-muted); font-size: var(--di-text-3); }
+
+/* Monitor look, brand "tool" register (di-brand SYSTEM.md): 1px hairlines, fills .06, a 2px inset bar carries state,
+   mono eyebrows tracked open, square, no glow. One slim status row, one chip strip, one tab row, then the content. */
+.monitor-page .monitor-hero {
+    padding: var(--di-space-2) var(--di-space-3);
+    gap: var(--di-space-1) var(--di-space-3);
+    background: rgba(var(--tone-rgb), 0.06);
+    border: 1px solid var(--pref-border);
+    border-left: 1px solid var(--pref-border);
+    /* The 2px inset bar carries the state (di-brand tool register: no glow, no shadow). */
+    box-shadow: inset 2px 0 0 rgb(var(--tone-rgb));
+}
+.monitor-page .monitor-hero-text { flex: 1 1 14rem; font-size: var(--di-text-5); font-weight: 700; letter-spacing: -0.01em; }
+.monitor-page .monitor-hero-live { font-size: var(--di-text-2); letter-spacing: 0.14em; text-transform: uppercase; }
+.monitor-page .monitor-live-mark { width: 0.5rem; height: 0.5rem; }
+.monitor-page .monitor-hero-issues { flex-wrap: wrap; }
+.monitor-page .monitor-hero-issues li {
+    flex: 0 1 auto; max-width: 30rem; min-width: 8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    background: transparent; border: 1px solid var(--pref-border); color: var(--ui-text-muted);
+    font-size: var(--di-text-2); padding: var(--di-space-1) var(--di-space-2);
+}
+.monitor-page .monitor-hero-issues li button { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.monitor-page .monitor-tier, .monitor-page .monitor-count {
+    min-height: 36px; border: 1px solid var(--pref-border); border-top-width: 1px;
+    /* The 2px inset bar carries the state (di-brand tool register: no glow, no shadow). */
+    background: rgba(var(--tone-rgb), 0.06); box-shadow: inset 2px 0 0 rgb(var(--tone-rgb));
+}
+.monitor-page .monitor-tier:hover, .monitor-page .monitor-count:hover { background: rgba(var(--tone-rgb), 0.1); }
+.monitor-page .monitor-tier-name, .monitor-page .monitor-count-label {
+    font-family: var(--di-mono); font-size: var(--di-text-2); font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ui-text-muted);
+}
+.monitor-page .monitor-count-value, .monitor-page .monitor-tier-commit { font-family: var(--di-mono); font-size: var(--di-text-4); }
+.monitor-page .monitor-tier-note { font-size: var(--di-text-2); font-weight: 400; }
+.monitor-page .monitor-tabs .monitor-tab, .monitor-page .monitor-tab {
+    min-height: 36px; font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.14em; text-transform: uppercase;
+}
+.monitor-bar-actions .preferences-inline-action, .monitor-bar-actions .monitor-filter { min-height: 36px; }
+.monitor-page .monitor-bar-title h2 { font-size: var(--di-text-5); }
+.monitor-page .monitor-changes { border-left: 1px solid var(--pref-border); padding-left: var(--di-space-3); }
+.monitor-map-views { min-height: 0; }
+.monitor-map-view { min-height: 32px; padding-block: 0; font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.14em; text-transform: uppercase; }
+.monitor-map-tool { font-family: var(--di-mono); font-size: var(--di-text-2); letter-spacing: 0.1em; text-transform: uppercase; }
+.monitor-bar { flex-wrap: nowrap; }
+.monitor-bar-tabs { margin: 0; flex: 1 1 auto; min-width: 0; }
+.monitor-bar-actions { flex-wrap: nowrap; flex: none; }
+.monitor-page .monitor-map:not(.is-fullscreen) { position: relative; } /* full screen stays fixed over the page */
+.monitor-page .monitor-map-views { position: absolute; top: var(--di-space-2); left: var(--di-space-2); z-index: 3; }
+.monitor-page .monitor-map[data-monitor-map-view="list"] .monitor-map-views { position: static; }
+@media (min-width: 601px) { .monitor-page.tab-map .monitor-map-key { display: none; } }
+@media (max-width: 1500px) { .monitor-bar { flex-wrap: wrap; } .monitor-bar-actions { flex-wrap: wrap; } }
+@media (max-width: 600px) { .monitor-page .monitor-map-views { position: static; } }
+/* Board: the panels flow in two columns on a wide screen instead of one long stack */
+.monitor-page.tab-board .monitor-main { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--di-space-3); align-items: start; }
+.monitor-page.tab-board .monitor-main .monitor-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
+/* Work: chat cards read as a dense board, state on the 2px inset bar, ask and answer clamped */
+.monitor-chat-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); }
+/* The 2px inset bar carries the state (di-brand tool register: no glow, no shadow). */
+.monitor-chat { padding: var(--di-space-2) var(--di-space-3); background: rgba(var(--tone-rgb), 0.06); border: 1px solid var(--pref-border); box-shadow: inset 2px 0 0 rgb(var(--tone-rgb)); }
+.monitor-chat:hover { background: rgba(var(--tone-rgb), 0.1); }
+.monitor-chat[data-chat-group="ask"] { background: rgba(var(--tone-rgb), 0.1); }
+.monitor-chat-title { font-size: var(--di-text-4); }
+.monitor-chat-ask { font-size: var(--di-text-3); font-weight: 600; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.monitor-chat-says { font-size: var(--di-text-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.monitor-map-hint { z-index: 30; padding: var(--di-space-1) var(--di-space-2); background: var(--di-surface); font-family: var(--di-mono); letter-spacing: 0.04em; }
+/* A phone: issue chips and the filter never run past the screen edge. */
+@media (max-width: 600px) {
+    .monitor-page .monitor-hero-issues, .monitor-page .monitor-hero-issues li { max-width: 100%; min-width: 0; }
+    .monitor-page .monitor-hero-issues li { overflow: hidden; text-overflow: ellipsis; }
+    .monitor-page .monitor-bar-actions { flex: 1 1 100%; max-width: 100%; min-width: 0; }
+    .monitor-page .monitor-bar-actions input, .monitor-page .monitor-bar-actions .monitor-filter { max-width: 100%; min-width: 0; width: 100%; }
+}
+
+/* Versions tab: machines against dev on top, then one card per part with its past versions.
+   Cards fill the width (auto-fit), state is the 2px inset edge; no shadow, square corners. */
+.monitor-versions { display: flex; flex-direction: column; gap: var(--di-space-3); }
+.monitor-grid-machines { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+.monitor-machine-version { cursor: default; }
+.monitor-versions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); gap: var(--di-space-2); align-items: start; }
+.monitor-version-card {
+    --pref-tone: var(--pref-border);
+    display: flex; flex-direction: column; gap: var(--di-space-1); min-width: 0;
+    padding: var(--di-space-2) var(--di-space-3);
+    background: var(--di-surface); border-radius: 0;
+    /* A 2px tone line on the leading edge, inset so it takes no layout; not a shadow. */
+    box-shadow: inset 2px 0 0 var(--pref-tone);
+}
+.monitor-version-card.tone-success { --pref-tone: var(--di-success); }
+.monitor-version-card.tone-danger { --pref-tone: var(--di-danger); }
+.monitor-version-card p { margin: 0; }
+.monitor-version-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--di-space-2); min-width: 0; }
+.monitor-works { flex: none; font-size: var(--di-text-1); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ui-text-muted); }
+.monitor-works.tone-success { color: var(--di-success); }
+.monitor-works.tone-danger { color: var(--di-danger); }
+.monitor-version-list { list-style: none; margin: var(--di-space-1) 0 0; padding: 0; display: flex; flex-direction: column; }
+.monitor-version-item {
+    display: grid; grid-template-columns: 5.5rem 5.5rem minmax(0, 1fr) auto; align-items: start; gap: var(--di-space-2);
+    padding: var(--di-space-1) 0; border-top: 1px solid var(--pref-border); font-size: var(--di-text-2);
+}
+.monitor-version-item.is-running { background: rgba(255, 255, 255, 0.05); }
+.monitor-version-date, .monitor-version-hash { color: var(--ui-text-muted); font-variant-numeric: tabular-nums; }
+.monitor-version-title { min-width: 0; overflow-wrap: anywhere; } /* wraps: no title is cut; the full text is also its tooltip */
+.monitor-version-marks { display: inline-flex; gap: var(--di-space-2); align-items: baseline; justify-content: flex-end; }
+.monitor-version-marks a { color: var(--di-cyan); text-decoration: none; }
+.monitor-version-marks a:hover, .monitor-version-marks a:focus-visible { text-decoration: underline; outline: none; }
+.monitor-mark { font-weight: 600; font-size: var(--di-text-1); letter-spacing: 0.04em; text-transform: uppercase; }
+.monitor-mark.is-running { color: var(--di-cyan); }
+.monitor-mark.is-proven { color: var(--di-success); }
+@media (max-width: 640px) {
+    .monitor-version-item { grid-template-columns: 5.8rem minmax(0, 1fr) auto; }
+    .monitor-version-hash { display: none; }
+}
+
+/* Shared tab: one picture from dev. Boxes fill the width (auto-fit); an old picture (dev not answering) is dimmed, not hidden. */
+.monitor-shared { display: flex; flex-direction: column; gap: var(--di-space-3); }
+.monitor-shared-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--di-space-3); align-items: start; }
+.monitor-shared-box { min-width: 0; }
+.monitor-shared.is-old .monitor-shared-grid { opacity: 0.7; }
+.monitor-this-machine { grid-column: 1 / -1; }
+/* titles in the Shared boxes wrap instead of being cut: the picture is for reading, not scanning */
+.monitor-shared .monitor-name { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* Map overlays never collide (owner 2026-11-22, N6184): buttons keep one line; the camera tools wrap from the right;
+   hint + legend share one foot; the view bar sits over the stage only when the map is wide enough for both bars. */
+.monitor-map { container: monitor-map / inline-size; }
+/* the stage keeps its card labels (z up to 1000) inside it; the bars sit above them, never under a card */
+.monitor-map-stage { isolation: isolate; }
+.monitor-map-view, .monitor-map-tool { white-space: nowrap; }
+.monitor-map-tools { flex-wrap: wrap; justify-content: flex-end; max-width: calc(100% - 2 * var(--di-space-2)); z-index: 1100; }
+.monitor-map-foot { position: absolute; left: var(--di-space-2); right: var(--di-space-2); bottom: var(--di-space-2); z-index: 1100; display: flex; flex-direction: column; align-items: flex-start; gap: var(--di-space-1); pointer-events: none; }
+.monitor-map-foot .monitor-map-hint, .monitor-map-foot .monitor-legend { position: static; max-width: 100%; }
+.monitor-map-foot .monitor-map-hint { padding: var(--di-space-1) var(--di-space-2); background: var(--di-black); }
+@container monitor-map (max-width: 960px) {
+    .monitor-page .monitor-map-views { position: static; }
+}
+/* Map tab below 1200 px: the map takes the full width and "What changed" goes under it (a 425 px map beside an empty column, 11-22) */
+@media (max-width: 1200px) {
+    .monitor-page.tab-map .monitor-frame { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hero" "strip" "main" "feed"; }
+    .monitor-page.tab-map .monitor-changes { position: static; max-height: 14rem; border-left: 0; padding-left: 0; }
+}
+
+/* Slim header (owner 11-22, N6201: "so big and useless, there is no info almost"). ONE row: where you are (small eyebrow +
+   title + space), the counts as inline facts, small buttons at the end. It wraps only when the row truly does not fit. */
+.preferences-topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-2) var(--di-space-3);
+    padding: var(--di-space-2) var(--di-space-3);
+}
+.preferences-topbar-main { display: flex; align-items: center; gap: var(--di-space-3); flex: 0 1 auto; }
+.preferences-topbar .preferences-eyebrow { margin: 0; font-size: var(--di-text-2); letter-spacing: 0.16em; white-space: nowrap; }
+.preferences-topbar h1 { font-size: var(--di-text-5); white-space: nowrap; }
+.preferences-topbar .preferences-inline-chip { padding: 0 var(--di-space-2); font-size: var(--di-text-2); white-space: nowrap; }
+.preferences-topbar .preferences-collapse-toggle { margin-left: 0; }
+.preferences-topbar-metrics,
+.preferences-topbar-metrics:has(> :nth-child(6)) {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    gap: var(--di-space-1);
+    min-width: 0;
+}
+/* Each count draws its own hairline, so a wrapped strip never paints its empty end. */
+.preferences-topbar .preferences-topbar-metrics { background: none; border: none; }
+.preferences-topbar .preferences-metric-card { flex: 0 1 auto; padding: var(--di-space-1) var(--di-space-3); border: 1px solid var(--pref-border-active); }
+.preferences-topbar .preferences-metric-value { font-size: var(--di-text-5); }
+.preferences-topbar-actions { flex: 0 0 auto; flex-wrap: nowrap; max-width: none; margin-left: auto; gap: var(--di-space-1); }
+.preferences-topbar-actions .toggle-button { min-height: 28px; padding: var(--di-space-1) var(--di-space-3); font-size: var(--di-text-3); }
+.preferences-topbar.is-collapsed .preferences-topbar-main { flex: 1 1 auto; }
+@media (max-width: 760px) {
+    .preferences-topbar-metrics { flex-basis: auto; }
+    .preferences-topbar-actions { margin-left: 0; flex-wrap: wrap; }
 }

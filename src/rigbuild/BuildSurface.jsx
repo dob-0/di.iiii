@@ -1,6 +1,9 @@
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import LiveProjectScene from '../components/LiveProjectScene.jsx'
 import { isTypingTarget } from '../components/walkKeyboard.js'
+import { resolveHeadLight } from '../components/headLight.js'
+import { walkKeyHintText } from '../components/walkKeys.js'
+import { physicalKey, shortcutLetter } from '../components/physicalKey.js'
 import { useProjectDocumentSync } from '../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../project/hooks/useOpHistory.js'
 import { useProjectStore } from '../project/state/projectStore.js'
@@ -145,7 +148,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     const store = useProjectStore()
     const { state, dispatch } = store
     const { applyLocalOps: syncOps } = useProjectDocumentSync({ projectId, store, clientIdPrefix: crew ? 'crew-client' : 'build-client', opIdPrefix: crew ? 'crew-op' : 'build-op' })
-    const { applyLocalOps, undo, redo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
+    const { applyLocalOps, undo, redo, canUndo, canRedo, edits } = useOpHistory({ projectId, document: state.document, applyLocalOps: syncOps })
     const projectDocument = state.document
     const entities = useMemo(() => projectDocument?.entities || [], [projectDocument?.entities])
     // The library with the show's own types (RIG_BUILD.md §13), one object per list.
@@ -276,7 +279,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
         if (!inventory) return undefined
         const hold = (e) => {
             if (isTypingTarget(e.target)) return
-            const k = e.key.toLowerCase()
+            const k = physicalKey(e)
             if (k === 'e' || k === 'escape') { e.preventDefault(); openInventory(false) }
             if (!(e.ctrlKey || e.metaKey)) e.stopPropagation()
         }
@@ -290,9 +293,11 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     useEffect(() => {
         const onKey = (e) => {
             if (isTypingTarget(e.target)) return
-            const k = e.key.toLowerCase()
-            if ((e.ctrlKey || e.metaKey) && k === 'z' && !crew) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return }
-            if ((e.ctrlKey || e.metaKey) && k === 'y' && !crew) { e.preventDefault(); redo(); return }
+            const k = physicalKey(e)
+            // A shortcut follows the letter the layout types (as the browser's own do); a layout with no Latin letter falls back to the place.
+            const letter = shortcutLetter(e)
+            if ((e.ctrlKey || e.metaKey) && letter === 'z' && !crew) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return }
+            if ((e.ctrlKey || e.metaKey) && letter === 'y' && !crew) { e.preventDefault(); redo(); return }
             if (e.ctrlKey || e.metaKey || e.altKey) return
             if (k === 'h' && !crew) { if (legend) closeLegend(); else setLegend(true); return }
             if (k === 'e') { openInventory(true); return }
@@ -426,7 +431,7 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
     }, [crew, projectTitle])
     const hint = building && !crew
         ? <>WASD · move &nbsp;·&nbsp; mouse · aim &nbsp;·&nbsp; click · place &nbsp;·&nbsp; right-click · remove &nbsp;·&nbsp; 1–0 / wheel · pieces &nbsp;·&nbsp; R · turn &nbsp;·&nbsp; Q/Z · up/down &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; B · walk &nbsp;·&nbsp; ESC · release</>
-        : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}F · fly &nbsp;·&nbsp; ESC · release</>
+        : <>WASD · move &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; click / I · the patch of a lamp &nbsp;·&nbsp; E · inventory &nbsp;·&nbsp; {crew ? '' : <>B · build &nbsp;·&nbsp; </>}{walkKeyHintText({ headLight: resolveHeadLight(shownDocument?.worldState).available })} &nbsp;·&nbsp; ESC · release</>
 
     return (
         <main className={`rigbuild has-rigbar${phone ? ' is-phone' : ''}${building ? ' is-building' : ''}${crew ? ' is-crew' : ''}`} ref={wrapRef} data-space-id={spaceId || ''}>
@@ -527,6 +532,12 @@ export default function BuildSurface({ spaceId, projectId, crew = false, library
                         orderHref={`${buildEquipmentPath(spaceId, projectId)}?view=order`}
                         header={<h2 className="rigcards-h">inventory · E</h2>}
                     />
+                </div>
+            ) : null}
+            {!crew ? (
+                <div className="rigbuild-undo" role="group" aria-label="Undo and redo">
+                    <button type="button" onClick={undo} disabled={!canUndo()} title="Undo the last change (Ctrl/Cmd+Z)">Undo</button>
+                    <button type="button" onClick={redo} disabled={!canRedo()} title="Redo (Ctrl/Cmd+Shift+Z)">Redo</button>
                 </div>
             ) : null}
             {!crew ? (

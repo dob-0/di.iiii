@@ -345,6 +345,90 @@ describe('project contracts', () => {
         expect(repeatDelete.status).toBe(404)
     })
 
+    // A map "visual" is a single-file HTML page. It is the one document type
+    // served inline, and only because the server sandboxes it itself.
+    it('accepts HTML project assets and serves them inline under a CSP sandbox', async () => {
+        const server = await startServer()
+        const create = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Html Project', slug: 'html-project' })
+        })
+        expect(create.status).toBe(201)
+        const upload = (blob, name) => {
+            const form = new FormData()
+            form.append('asset', blob, name)
+            return fetch(`${server.baseUrl}/api/projects/html-project/assets`, { method: 'POST', body: form })
+        }
+        const page = '<!doctype html><title>v</title><script>document.title="x"</script>'
+
+        const direct = await upload(new Blob([page], { type: 'text/html' }), 'index.html')
+        expect(direct.status).toBe(200)
+        const directAsset = (await direct.json()).asset
+        expect(directAsset.mimeType).toBe('text/html')
+
+        const served = await fetch(new URL(directAsset.url, server.baseUrl))
+        expect(served.status).toBe(200)
+        expect(served.headers.get('content-type')).toBe('text/html; charset=utf-8')
+        expect(served.headers.get('content-disposition')).toBe('inline')
+        expect(served.headers.get('content-security-policy')).toBe('sandbox allow-scripts allow-pointer-lock')
+        expect(served.headers.get('x-content-type-options')).toBe('nosniff')
+        expect(served.headers.get('referrer-policy')).toBe('no-referrer')
+        // Served with the frame relay added at the end (no </body> here), so
+        // the mapper can bend it; everything the artist wrote comes first,
+        // byte for byte, and the asset id still names those bytes.
+        const body = await served.text()
+        expect(body.startsWith(page)).toBe(true)
+        expect(body).toContain('data-di-frame-relay')
+        expect(body.match(/data-di-frame-relay/g)).toHaveLength(1)
+
+        const octet = await upload(new Blob([page + '<!-- b -->'], { type: 'application/octet-stream' }), 'visual.HTM')
+        expect(octet.status).toBe(200)
+        const octetAsset = (await octet.json()).asset
+        expect(octetAsset.mimeType).toBe('text/html')
+        const octetServed = await fetch(new URL(octetAsset.url, server.baseUrl))
+        expect(octetServed.headers.get('content-security-policy')).toBe('sandbox allow-scripts allow-pointer-lock')
+
+        // everything else script-capable keeps today's download behaviour
+        const svg = await upload(new Blob(['<svg xmlns="http://www.w3.org/2000/svg"><script>1</script></svg>'], { type: 'image/svg+xml' }), 'p.svg')
+        const svgServed = await fetch(new URL((await svg.json()).asset.url, server.baseUrl))
+        expect(svgServed.headers.get('content-disposition')).toBe('attachment')
+        expect(svgServed.headers.get('content-security-policy')).toBe(null)
+        const txt = await upload(new Blob(['<script>1</script>'], { type: 'text/plain' }), 'n.txt')
+        const txtServed = await fetch(new URL((await txt.json()).asset.url, server.baseUrl))
+        expect(txtServed.headers.get('content-security-policy')).toBe(null)
+        expect(txtServed.headers.get('content-disposition')).toBe(null)
+
+        const big = await upload(new Blob([new Uint8Array(10 * 1024 * 1024 + 1)], { type: 'text/html' }), 'big.html')
+        expect(big.status).toBe(413)
+    })
+
+    // The page goes out byte for byte: a latin-1 page (no charset) must not be
+    // turned into U+FFFD by a text round trip, and a U+0130 in the text must not
+    // move the relay out of place.
+    it('serves an HTML visual with its own bytes unchanged and the relay before the real </body>', async () => {
+        const server = await startServer()
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Bytes Project', slug: 'bytes-project' })
+        })
+        const upload = (bytes, name) => {
+            const form = new FormData()
+            form.append('asset', new Blob([bytes], { type: 'text/html' }), name)
+            return fetch(`${server.baseUrl}/api/projects/bytes-project/assets`, { method: 'POST', body: form })
+        }
+        const head = Buffer.from('<html><body><h1>\u0130\u0130\u0130\u0130\u0130</h1>', 'utf8')
+        const bad = Buffer.from([0xe9, 0xff, 0xc3])
+        const tail = Buffer.from('</body></html>', 'utf8')
+        const res = await upload(Buffer.concat([head, bad, tail]), 'latin.html')
+        expect(res.status).toBe(200)
+        const served = Buffer.from(await (await fetch(new URL((await res.json()).asset.url, server.baseUrl))).arrayBuffer())
+        expect(served.subarray(0, head.length + bad.length).equals(Buffer.concat([head, bad]))).toBe(true)
+        expect(served.subarray(served.length - tail.length).equals(tail)).toBe(true)
+        expect(served.toString('latin1')).toContain('data-di-frame-relay')
+    })
+
     // A published project is a public URL, so an asset that still carries the
     // photographer's GPS is a leak. The scrubber handles the formats sharp can
     // re-encode; anything else must be refused rather than stored verbatim,
@@ -1663,5 +1747,83 @@ describe('a plane that is a screen (components.surface)', () => {
         expect(document.mappingState.surfaces.map((surface) => surface.id)).toContain('srf-wall')
         const screen = document.entities.find((entity) => entity.id === 'screen-1')
         expect(screen.components.surface).toEqual({ surfaceId: 'srf-wall' })
+    })
+})
+
+// ── A project name is unique only inside its own space ──
+// Added 2026-10-29 (ux-fix S21, finding F061; decision
+// docs/ai/decisions/2026-10-29-project-names-per-space.md). At a camp twenty
+// children, in twenty spaces, all type "my scene". Project ids stay global (every
+// /api/projects/:id link and every follow keys on them), so a person who types only
+// a name gets a free id when another space already holds it, and the name as the
+// project's short name, so /{space}/my-scene still opens it. A caller that names the
+// id (`slug`, `carried`) keeps the old answer: that id or a 409.
+describe('POST /api/spaces/:spaceId/projects — names per space', () => {
+    const json = { 'Content-Type': 'application/json' }
+    const post = (server, spaceId, body) => fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+        method: 'POST', headers: json, body: JSON.stringify(body)
+    })
+    const makeSpace = async (server, slug) => {
+        const made = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: json, body: JSON.stringify({ label: slug, slug })
+        })
+        expect(made.status).toBe(201)
+    }
+
+    it('lets two spaces each make "my scene" and an empty name, with no 409, and keeps the first id', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        await makeSpace(server, 'camp-aram')
+
+        const first = await post(server, 'camp-ani', { title: 'my scene', source: 'studio-v3' })
+        expect(first.status).toBe(201)
+        const firstProject = (await first.json()).project
+        expect(firstProject.id).toBe('my-scene')
+
+        const second = await post(server, 'camp-aram', { title: 'my scene', source: 'studio-v3' })
+        expect(second.status).toBe(201)
+        const secondProject = (await second.json()).project
+        expect(secondProject.id).toBe('my-scene-2')
+        expect(secondProject.title).toBe('my scene')
+        expect(secondProject.slug).toBe('my-scene')
+
+        // The first one's id and address are untouched; each space's address opens its own.
+        const byId = await (await fetch(`${server.baseUrl}/api/projects/my-scene`)).json()
+        expect(byId.project?.spaceId ?? byId.spaceId ?? byId.project?.space_id).toBe('camp-ani')
+        const ani = await (await fetch(`${server.baseUrl}/api/resolve/camp-ani/my-scene`)).json()
+        const aram = await (await fetch(`${server.baseUrl}/api/resolve/camp-aram/my-scene`)).json()
+        expect(JSON.stringify(ani)).toContain('"my-scene"')
+        expect(JSON.stringify(aram)).toContain('"my-scene-2"')
+
+        // An empty name is a real name in each space, never a clash.
+        for (const spaceId of ['camp-ani', 'camp-aram']) {
+            const untitled = await post(server, spaceId, { title: '', source: 'studio-v3' })
+            expect(untitled.status, spaceId).toBe(201)
+            expect((await untitled.json()).project.title).toBe('Untitled')
+            const again = await post(server, spaceId, { title: '', source: 'studio-v3' })
+            expect(again.status, spaceId).toBe(201)
+            expect((await again.json()).project.title).toBe('Untitled 2')
+        }
+    })
+
+    it('refuses the same name twice in one space, in plain words that name it', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        expect((await post(server, 'camp-ani', { title: 'My Scene' })).status).toBe(201)
+        const twice = await post(server, 'camp-ani', { title: 'my scene' })
+        expect(twice.status).toBe(409)
+        const body = await twice.json()
+        expect(body.code).toBe('name-taken-in-space')
+        expect(body.error).toBe('This space already has a project called "My Scene". Pick another name.')
+    })
+
+    it('keeps the exact-id door as it was: a slug taken in another space is still a 409', async () => {
+        const server = await startServer()
+        await makeSpace(server, 'camp-ani')
+        await makeSpace(server, 'camp-aram')
+        expect((await post(server, 'camp-ani', { title: 'Copy', slug: 'copy-of-it' })).status).toBe(201)
+        const copied = await post(server, 'camp-aram', { title: 'Copy', slug: 'copy-of-it' })
+        expect(copied.status).toBe(409)
+        expect((await copied.json()).error).toBe('that name is taken on this di.iiii — try another')
     })
 })

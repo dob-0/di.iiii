@@ -25,6 +25,7 @@ const OLD = 'di-studio\\.xyz'
 // Whole files and folders that are dated logs or retired runbooks.
 const HISTORY = [
     'PROGRESS.md',                     // the dated log
+    'CURRENT.md',                      // its digest: the "Last session" title list session-land.mjs rewrites from the notes (2026-10-29: a note title named the old zone and the dev deploy's fold-mode run went red)
     'docs/ai/known-fixes.md',          // dated defect log
     'docs/ai/sessions/',               // notes that fold into PROGRESS.md
     'docs/ai/audit-',                  // dated audits (2026-06-22, 2026-06-24)
@@ -96,7 +97,8 @@ const ALLOWED = {
     'docs/ECOSYSTEM.md': [1, 'a query dated 2026-08-10'],
     'docs/moxir/BUILD_REHEARSAL_2026-10-07.md': [1, 'dated rehearsal record'],
     'docs/testing/FESTIVAL_MACHINE_2026-09-06.md': [1, 'dated test record: the QR then pointed there'],
-    'nginx.conf': [1, 'the incident the og rule fixed'],
+    'nginx.conf': [3, 'the incident the og rule fixed, and the 301 of the old name\'s pages to diiii.xyz (its comment and its pattern)'],
+    'src/legacyHostRedirect.test.js': [10, 'test of the old-name 301: the host it redirects from'],
     'src/deploy-compose.test.js': [2, 'the incidents these cases guard'],
     'src/copyVocabulary.test.js': [1, 'example of a hit the vocabulary guard catches'],
     'spaces/network/network-pages.test.js': [1, 'the 2026-09-28 incident the case guards'],
@@ -109,7 +111,8 @@ const ALLOWED = {
     'src/works/works.js': [1, 'links already printed with the old name still work'],
     'vite.config.js': [1, 'quotes the message the slim install printed'],
     'src/raw/director/DirectorPanel.jsx': [1, 'how the timeline used to fail on the hosted site'],
-    'src/timeline/timingOverlay.js': [1, 'how the timeline used to fail on the hosted site']
+    'src/timeline/timingOverlay.js': [1, 'how the timeline used to fail on the hosted site'],
+    'docs/ai/team-sync-by-network-name.md': [1, 'the 2026-10-29 decision that dropped the old zone']
 }
 
 const counts = () => {

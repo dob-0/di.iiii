@@ -62,7 +62,7 @@ export default function EstateSection() {
 
     return (
         <ModuleSection
-            title="Estate"
+            title="Machines"
             subtitle="Every machine, address and store — read from the private atlas, admin only"
             actions={(
                 <button type="button" className="toggle-button" onClick={load} disabled={status === 'loading'}>
@@ -78,7 +78,7 @@ export default function EstateSection() {
                         <MetricCard label="Size" value={formatBytes(map.bytes)} />
                     </div>
                     <iframe
-                        title="Estate map"
+                        title="Machines map"
                         className="preferences-estate-frame"
                         sandbox=""
                         srcDoc={asDarkDocument(map.html)}

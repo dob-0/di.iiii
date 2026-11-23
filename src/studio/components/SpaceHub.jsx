@@ -51,6 +51,7 @@ import '../styles/studio-space-hub.css'
 import { SPACE_BLURB_MAX } from '../utils/spaceBlurb.js'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 import { spaceAddressOf } from '../../utils/spaceAddress.js'
+import { spaceCardPreviewMode } from '../utils/spaceCardMode.js'
 
 // Every space card embeds the SAME app at a different route, and browsers
 // coalesce overlapping requests for the same module: twelve cards booting
@@ -151,7 +152,7 @@ const PREVIEW_VIEWPORT_HEIGHT = 576
 // loop). The iframe only mounts while the card is near the viewport so
 // off-screen spaces cost nothing, and unmounts again when scrolled away to
 // free its WebGL context. Boots are queued through requestPreviewBoot above.
-function SpaceCardPreview({ doorPath, label }) {
+function SpaceCardPreview({ doorPath, label, blurb }) {
     const hostRef = useRef(null)
     const frameRef = useRef(null)
     const [visible, setVisible] = useState(false)
@@ -166,6 +167,10 @@ function SpaceCardPreview({ doorPath, label }) {
     const [hovered, setHovered] = useState(false)
     const [hoverPainted, setHoverPainted] = useState(false)
     const releaseRef = useRef(null)
+    // Default: a calm still, no hidden app per card (see spaceCardMode.js).
+    // The stored poster of the 'live' mode still wins when there is one.
+    const [mode] = useState(() => spaceCardPreviewMode())
+    const stillOnly = mode !== 'live' && !poster
 
     useEffect(() => {
         const node = hostRef.current
@@ -194,7 +199,7 @@ function SpaceCardPreview({ doorPath, label }) {
     }, [])
 
     useEffect(() => {
-        if (!visible || stub || poster) {
+        if (!visible || stub || poster || stillOnly) {
             setBooted(false)
             return undefined
         }
@@ -204,7 +209,7 @@ function SpaceCardPreview({ doorPath, label }) {
             releaseRef.current = null
             release()
         }
-    }, [visible, stub, poster])
+    }, [visible, stub, poster, stillOnly])
 
     // The embedded app posts dii:preview-ready once it has painted, or
     // dii:preview-stub when there is nothing to paint (a work left out of a
@@ -268,6 +273,13 @@ function SpaceCardPreview({ doorPath, label }) {
         <div ref={hostRef} className={`ssh-card-preview-fill${stub ? ' ssh-card-preview-fill--stub' : ''}`} aria-hidden="true">
             {stub ? (
                 <p className="ssh-card-preview-empty-line">not in this copy — this piece lives on {WORKS_HOST}</p>
+            ) : null}
+            {!stub && stillOnly ? (
+                <div className="ssh-card-still" data-card-still="">
+                    <span className="ssh-card-still-name">{label}</span>
+                    {blurb ? <span className="ssh-card-still-blurb">{blurb}</span> : null}
+                    <span className="ssh-card-still-hint">press to look inside</span>
+                </div>
             ) : null}
             {!stub && poster ? <img className="ssh-card-poster" src={poster} alt="" draggable={false} /> : null}
             {stub ? null : visible && (poster ? hovered : booted) ? (
@@ -514,14 +526,21 @@ export default function SpaceHub() {
     // Both routes out of a card go through the entry transition: the page
     // pushes toward the card, and it holds until the destination has painted
     // instead of cutting to black.
-    const openCard = (space, element = null) => {
-        const href = !canEnter(space) && space.isPublic
-            ? buildSpaceFacePath(space)
-            : buildStudioHubPath(space.id)
+    // A card OPENS THE SPACE (the address it prints). The Studio is the card's
+    // "Edit" button, kept as its own named route (UX S10, F012). A sandbox has
+    // no front page, only its Studio, so it still opens there.
+    const goFromCard = (href, element) => {
         enterFromElement(null, href, {
             element: element?.querySelector?.('.ssh-card-preview') || element
         })
     }
+    const openCard = (space, element = null) => {
+        goFromCard(
+            space.kind === 'sandbox' ? buildStudioHubPath(space.id) : buildSpaceFacePath(space),
+            element
+        )
+    }
+    const editCard = (space, element = null) => goFromCard(buildStudioHubPath(space.id), element)
 
     // One creation, two doors. `born` decides where the new space OPENS, and
     // nothing else differs: a space made to be scanned is an ordinary space, and
@@ -1652,10 +1671,8 @@ export default function SpaceHub() {
                                     key={space.id}
                                     data-space-id={space.id}
                                     className="ssh-space-card"
+                                    role="presentation"
                                     onClick={(event) => openCard(space, event.currentTarget)}
-                                    role="button"
-                                    tabIndex={0}
-                                    onKeyDown={e => e.key === 'Enter' && openCard(space, e.currentTarget)}
                                 >
                                     {/* One name per space (utils/spaceNames.js). The header
                                         used to open with the id in mono — "drum-rhythms"
@@ -1736,12 +1753,25 @@ export default function SpaceHub() {
                                                 ) : isEmptySandbox ? (
                                                     <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
                                                 ) : (
-                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} />
+                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} blurb={space.blurb} />
                                                 )}
                                             </div>
                                         )
                                     })()}
-                                    <p className="ssh-space-label">{spaceName(space)}</p>
+                                    <p className="ssh-space-label">
+                                        {/* The card's one link (keyboard and screen reader).
+                                            A click anywhere else on the card is a mouse bonus. */}
+                                        <a
+                                            className="ssh-space-open"
+                                            href={space.kind === 'sandbox' ? buildStudioHubPath(space.id) : buildSpaceFacePath(space)}
+                                            onClick={e => {
+                                                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                openCard(space, e.currentTarget.closest('.ssh-space-card'))
+                                            }}
+                                        >{spaceName(space)}</a>
+                                    </p>
                                     {/* What the space is, in its owner's words. 10 of 11
                                         public cards said nothing about what was inside
                                         (audit 2026-10-21, G23). */}
@@ -1830,8 +1860,18 @@ export default function SpaceHub() {
                                         </div>
                                     )}
 
-                                    {canManage(space) && (
+                                    {(canManage(space) || (canEnter(space) && space.kind !== 'sandbox')) && (
                                         <div className="ssh-card-manage" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            {canEnter(space) && space.kind !== 'sandbox' && (
+                                                <button
+                                                    className="ssh-card-btn"
+                                                    title="Open the Studio for this space to change what is in it"
+                                                    onClick={e => editCard(space, e.currentTarget.closest('.ssh-space-card'))}
+                                                >
+                                                    Edit
+                                                </button>
+                                            )}
+                                            {canManage(space) && (
                                             <button
                                                 className={`ssh-card-btn${manageId === space.id ? ' ssh-card-btn--active' : ''}`}
                                                 aria-expanded={manageId === space.id}
@@ -1839,6 +1879,7 @@ export default function SpaceHub() {
                                             >
                                                 {manageId === space.id ? 'Done' : 'Manage'}
                                             </button>
+                                            )}
                                         </div>
                                     )}
                                 {renderManage(space)}
@@ -1873,6 +1914,7 @@ export default function SpaceHub() {
                         <span className="ssh-tools-label">On this machine</span>
                         <a className="ssh-tools-link" href={lightingDeskPath()} target="_blank" rel="noreferrer">
                             Light
+                            <span className="ssh-tools-newtab"> (opens in a new tab)</span>
                         </a>
                         <span className="ssh-tools-hint">— the lighting desk, for the rig in the room</span>
                     </p>

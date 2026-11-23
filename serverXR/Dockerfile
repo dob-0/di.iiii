@@ -2,7 +2,7 @@
 # Pinned by digest (audit #26): a floating tag can silently change under us on
 # rebuild; re-pin deliberately (see docs/deploy/VPS_DOCKER_DEPLOY.md) rather than
 # letting the base image drift. Tag kept alongside the digest for readability.
-FROM node:24-alpine@sha256:d32cdf619f63fe0471182d08996dd516c6275bb5fd31ae06e55a570bd9e1ad43
+FROM node:24-alpine@sha256:a34ab6d7f6f4813f4d0c5469d74685604b962fbdbf5793a7bc7b4998ecb867c8
 
 # Run as non-root user
 RUN addgroup -S app && adduser -S app -G app

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Head light lab</title>
+<script type="importmap">{ "imports": { "three": "__THREE_URL__", "head-light": "/components/headLight.js" } }</script>
+</head>
+<body style="margin:0;background:#000;color:#cde;font:12px/1.4 monospace">
+<canvas id="c" width="192" height="192"></canvas>
+<pre id="out">running ...</pre>
+<script type="module">
+// HEAD LIGHT LAB -- what does the head light do at a wall, in a test scene?
+// Served to the browser by scripts/head-light/lab-run.cjs (importmap filled in there); not part of the app.
+//
+// THRESHOLDS, written down on 2026-10-28 BEFORE the first measurement:
+//   T1  What the walker sees. The same view of the same scene (a wall, two pillars in front of it) rendered with the
+//       shadow (High) and without (Low). Share of pixels that differ by more than 2 % of the brightest pixel <= 1 %,
+//       and mean absolute difference <= 0.5 % of the brightest pixel. Pass = the shadow changes nothing the visitor sees.
+//   T2  Light behind a wall ("x-ray": the wall is drawn invisible but still casts or not, so the camera can see what the
+//       wall hides). leak = luminance of a white target 1 m behind the wall / the same target with no wall at all.
+//       The path that claims to stop at walls (High, with the shadow) must have leak <= 0.05.
+//       Low (no shadow) is reported with its number and no pass is claimed for it.
+//   T3  The clamp that was built first and thrown away (light.distance = distance to the wall + 0.35 m): the lit wall must
+//       keep >= 90 % of its luminance, or the clamp dims the very wall it was meant to protect.
+import * as THREE from 'three'
+import { HEAD_LIGHT } from 'head-light'
+
+const THRESHOLDS = Object.freeze({ t1OverPct: 1, t1MeanPct: 0.5, t2Leak: 0.05, t3Keep: 0.9 })
+const W = 192
+const H = 192
+const deg = THREE.MathUtils.degToRad
+const out = document.getElementById('out')
+
+try {
+    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: false })
+    renderer.setSize(W, H, false)
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFShadowMap
+    const gl = renderer.getContext()
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info')
+    const gpu = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'unknown'
+    const rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.FloatType, format: THREE.RGBAFormat })
+
+    const std = (hex) => new THREE.MeshStandardMaterial({ color: hex, roughness: 1, metalness: 0 })
+    // The eye: light and camera at the same place, pointing the same way (what HeadLight.jsx does every frame).
+    const EYE = new THREE.Vector3(0, 1.6, 0)
+    const WALL_Z = -2.0
+    const WALL_T = 0.2
+
+    const build = ({ wall = false, wallVisible = true, target = false, pillars = false, variant = 'low' }) => {
+        const scene = new THREE.Scene()
+        scene.background = new THREE.Color(0x000000)
+        const mesh = (geometry, material, { cast = true } = {}) => {
+            const m = new THREE.Mesh(geometry, material)
+            m.castShadow = cast
+            m.receiveShadow = true
+            scene.add(m)
+            return m
+        }
+        mesh(new THREE.PlaneGeometry(40, 40), std(0x808080), { cast: false }).rotation.x = -Math.PI / 2
+        let wallMesh = null
+        if (wall) {
+            const material = std(0x808080)
+            if (!wallVisible) { material.colorWrite = false; material.depthWrite = false }
+            wallMesh = mesh(new THREE.BoxGeometry(4, 3, WALL_T), material)
+            wallMesh.position.set(0, 1.5, WALL_Z)
+        }
+        if (target) mesh(new THREE.PlaneGeometry(2, 2), std(0xffffff), { cast: false }).position.set(0, 1.6, -3.0)
+        if (pillars) {
+            for (const [x, w] of [[-0.35, 0.22], [0.12, 0.2]]) mesh(new THREE.BoxGeometry(w, 1.2, w), std(0xb0b0b0)).position.set(x, 0.6, -1.0)
+        }
+        const light = new THREE.SpotLight(HEAD_LIGHT.color, HEAD_LIGHT.intensity, HEAD_LIGHT.range, deg(HEAD_LIGHT.coneDeg / 2), HEAD_LIGHT.penumbra, HEAD_LIGHT.decay)
+        light.position.copy(EYE)
+        light.target.position.set(0, 1.6, -1)
+        scene.add(light, light.target)
+        scene.updateMatrixWorld(true)
+        if (variant === 'high') {
+            light.castShadow = true
+            light.shadow.mapSize.set(HEAD_LIGHT.shadowMapSize, HEAD_LIGHT.shadowMapSize)
+            light.shadow.bias = -0.0008
+            light.shadow.normalBias = 0.02
+            light.shadow.camera.near = HEAD_LIGHT.shadowNear
+        }
+        if (variant === 'clamp' && wallMesh) {
+            // The first version's reachToSurface(): distance to the first surface along the view + 0.35 m, at least 0.8 m.
+            const hit = new THREE.Raycaster(EYE, new THREE.Vector3(0, 0, -1)).intersectObject(wallMesh)[0]
+            light.distance = Math.min(HEAD_LIGHT.range, Math.max(0.8, hit.distance + 0.35))
+        }
+        return { scene, light }
+    }
+
+    const camera = new THREE.PerspectiveCamera(60, 1, 0.05, 60)
+    camera.position.copy(EYE)
+    camera.lookAt(0, 1.6, -1)
+    camera.updateMatrixWorld(true)
+
+    const shoot = (config) => {
+        const { scene, light } = build(config)
+        renderer.setRenderTarget(rt)
+        renderer.info.reset()
+        renderer.render(scene, camera)
+        const calls = renderer.info.render.calls
+        const buffer = new Float32Array(W * H * 4)
+        renderer.readRenderTargetPixels(rt, 0, 0, W, H, buffer)
+        renderer.setRenderTarget(null)
+        const image = new Float32Array(W * H)
+        for (let p = 0; p < W * H; p += 1) image[p] = 0.2126 * buffer[p * 4] + 0.7152 * buffer[p * 4 + 1] + 0.0722 * buffer[p * 4 + 2]
+        scene.traverse((o) => { o.geometry?.dispose?.(); o.material?.dispose?.() })
+        light.dispose()
+        return { image, calls }
+    }
+    const cropMean = (image, fraction) => {
+        const size = Math.round(W * fraction)
+        const start = Math.floor((W - size) / 2)
+        let sum = 0
+        for (let y = start; y < start + size; y += 1) for (let x = start; x < start + size; x += 1) sum += image[y * W + x]
+        return sum / (size * size)
+    }
+    const compare = (a, b) => {
+        let peak = 0
+        for (let i = 0; i < a.length; i += 1) peak = Math.max(peak, a[i], b[i])
+        let sum = 0
+        let over = 0
+        for (let i = 0; i < a.length; i += 1) {
+            const d = Math.abs(a[i] - b[i])
+            sum += d
+            if (d > 0.02 * peak) over += 1
+        }
+        return { peak, meanAbsPct: (100 * sum) / a.length / peak, overPct: (100 * over) / a.length }
+    }
+
+    // T2: what lights a target behind the wall
+    const reference = cropMean(shoot({ target: true }).image, 0.3)
+    const leak = {}
+    for (const variant of ['high', 'low', 'clamp']) leak[variant] = cropMean(shoot({ wall: true, wallVisible: false, target: true, variant }).image, 0.3) / reference
+
+    // T1: what the walker sees, with and without the shadow
+    const hi = shoot({ wall: true, pillars: true, variant: 'high' })
+    const lo = shoot({ wall: true, pillars: true, variant: 'low' })
+    const t1 = compare(hi.image, lo.image)
+
+    // T3: the clamp dims the wall
+    const wallLow = cropMean(shoot({ wall: true, variant: 'low' }).image, 0.2)
+    const wallClamp = cropMean(shoot({ wall: true, variant: 'clamp' }).image, 0.2)
+
+    const result = {
+        gpu,
+        three: THREE.REVISION,
+        head: { ...HEAD_LIGHT },
+        thresholds: THRESHOLDS,
+        t1_walker_sees_high_vs_low: { ...t1, pass: t1.overPct <= THRESHOLDS.t1OverPct && t1.meanAbsPct <= THRESHOLDS.t1MeanPct },
+        t2_leak_behind_wall: {
+            referenceLuminance: reference,
+            high: { leak: leak.high, pass: leak.high <= THRESHOLDS.t2Leak },
+            low: { leak: leak.low },
+            clamp: { leak: leak.clamp }
+        },
+        t3_clamp_dims_wall: { noClamp: wallLow, clamp: wallClamp, keep: wallClamp / wallLow, pass: wallClamp / wallLow >= THRESHOLDS.t3Keep },
+        draw_calls_one_frame: { high: hi.calls, low: lo.calls }
+    }
+    window.__labResult = result
+    out.textContent = JSON.stringify(result, null, 1)
+} catch (error) {
+    window.__labError = String((error && error.stack) || error)
+    out.textContent = window.__labError
+}
+</script>
+</body>
+</html>

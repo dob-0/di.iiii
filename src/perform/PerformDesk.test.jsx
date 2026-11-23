@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { normalizeProjectDocument } from '../shared/projectSchema.js'
 import { ShowClockContext } from './useShowClock.js'
@@ -53,8 +53,15 @@ beforeEach(() => {
 afterEach(() => window.localStorage.clear())
 
 describe('the Perform desk', () => {
-    it('opens the VJ preset: the deck (as its perform placement), out, clock, master — and no canvas', () => {
+    it('opens the VJ preset: the deck alone, as its perform placement, filling the room — and no canvas', () => {
         renderDesk()
+        expect(windowTitles()).toEqual(['VJ Deck'])
+        expect(screen.getByTestId('node-window').dataset.placement).toBe('perform')
+        expect(document.querySelector('.raw-graph-surface, .raw-canvas')).toBe(null)
+    })
+
+    it('opens VJ windows, today’s four: the deck (as its perform placement), out, clock, master — and no canvas', () => {
+        renderDesk({ perform: { preset: 'vj-windows', from: 'raw' } })
         expect(windowTitles()).toEqual(['VJ Deck', 'Out', 'Clock', 'Master · Blackout'])
         expect(screen.getByTestId('node-window').dataset.placement).toBe('perform')
         expect(document.querySelector('.raw-graph-surface, .raw-canvas')).toBe(null)
@@ -92,7 +99,7 @@ describe('the Perform desk', () => {
     })
 
     it('closing a window marks the preset changed; "+ window" brings any window back, and Nodes is the last line', () => {
-        renderDesk()
+        renderDesk({ perform: { preset: 'vj-windows', from: 'raw' } })
         const clockWindow = screen.getByRole('dialog', { name: 'Clock' })
         fireEvent.click(within(clockWindow).getByRole('button', { name: 'Close' }))
         expect(windowTitles()).toEqual(['VJ Deck', 'Out', 'Master · Blackout'])
@@ -106,14 +113,14 @@ describe('the Perform desk', () => {
     })
 
     it('save as mine writes the presets slot and opens the saved preset', () => {
-        const { layout } = renderDesk()
+        const { layout } = renderDesk({ perform: { preset: 'vj-windows', from: 'raw' } })
         fireEvent.click(screen.getByRole('button', { name: /VJ/ }))
         fireEvent.click(screen.getByRole('menuitem', { name: 'Save as mine…' }))
         fireEvent.change(screen.getByLabelText('Name for your preset'), { target: { value: 'friday, small room' } })
         fireEvent.click(screen.getByRole('button', { name: 'Save' }))
         expect(layout.setPresets).toHaveBeenCalledTimes(1)
         const saved = layout.setPresets.mock.calls[0][0][0]
-        expect(saved).toMatchObject({ name: 'friday, small room', source: 'mine', base: 'vj' })
+        expect(saved).toMatchObject({ name: 'friday, small room', source: 'mine', base: 'vj-windows' })
         expect(saved.windows.map((item) => item.kind)).toEqual(['deck', 'out', 'clock', 'master'])
         expect(screen.getByText(/Saved as “friday, small room” on this device/)).toBeTruthy()
     })
@@ -128,6 +135,21 @@ describe('the Perform desk', () => {
         expect(op.type).toBe('upsertPerformPreset')
         expect(op.payload.preset).toMatchObject({ name: 'sunday', source: 'show' })
         expect(op.payload.preset.id).toMatch(/^show:/)
+    })
+
+    it('a show preset can be made the show default, and a show with a default opens it without an address', () => {
+        const doc = normalizeProjectDocument({
+            projectMeta: { id: 'show', spaceId: 'lab', title: 'show' },
+            nodes: [{ id: 'deck-1', typeId: 'vj.deck', label: 'VJ Deck', values: {} }],
+            performState: { presets: [{ id: 'show:nolaser', name: 'no laser', windows: [{ id: 'deck', kind: 'deck' }], wide: { deck: [0, 0, 100, 100] } }] }
+        })
+        const { applyLocalOps } = renderDesk({ document: doc, perform: { preset: null, from: 'raw' } })
+        fireEvent.click(screen.getByRole('button', { name: /VJ/ }))
+        fireEvent.click(screen.getByRole('button', { name: 'Set no laser as the show default' }))
+        expect(applyLocalOps.mock.calls.at(-1)[0]).toEqual({ type: 'setPerformDefaultPreset', payload: { presetId: 'show:nolaser' } })
+        cleanup()
+        renderDesk({ document: { ...doc, performState: { ...doc.performState, defaultPreset: 'show:nolaser' } }, perform: { preset: null, from: 'raw' } })
+        expect(document.querySelector('[data-preset]').getAttribute('data-preset')).toBe('show:nolaser')
     })
 
     it('a preset kept on this device cannot be shared as a link — it says why', () => {
@@ -196,7 +218,7 @@ describe('the strip menus close the way menus close', () => {
 // read by every screen reader. The four beat dots are one picture with a name.
 describe('the clock window', () => {
     it('names the beat as an image, not as a bare div', () => {
-        renderDesk()
+        renderDesk({ perform: { preset: 'vj-windows', from: 'raw' } })
         const beats = document.querySelector('.perform-beats')
         expect(beats.getAttribute('role')).toBe('img')
         expect(beats.getAttribute('aria-label')).toMatch(/^Beat \d of 4$/)
@@ -213,5 +235,34 @@ describe('the save box', () => {
         const placeholder = screen.getByLabelText('Name for your preset').getAttribute('placeholder')
         expect(placeholder).toBeTruthy()
         expect(placeholder).not.toMatch(/MOCT|MOXIR|Dilijan|Hayfilm/i)
+    })
+})
+
+describe('the way back to a window', () => {
+    it('a preset without a deck, in a project that has one: a notice with "Open VJ Deck" adds it', () => {
+        renderDesk({ perform: { preset: 'wall', from: 'raw' } })
+        expect(windowTitles()).not.toContain('VJ Deck')
+        fireEvent.click(screen.getByRole('button', { name: 'Open VJ Deck' }))
+        expect(windowTitles()).toContain('VJ Deck')
+        expect(screen.queryByRole('button', { name: 'Open VJ Deck' })).toBe(null)
+    })
+
+    it('no notice when the project has no deck node', () => {
+        renderDesk({ perform: { preset: 'wall', from: 'raw' }, document: normalizeProjectDocument({ projectMeta: { id: 'show', spaceId: 'lab', title: 'show' }, nodes: [] }) })
+        expect(screen.queryByRole('button', { name: 'Open VJ Deck' })).toBe(null)
+    })
+
+    it('the Windows menu lists every kind with aria-checked, toggles, and Reset layout restores the preset', () => {
+        renderDesk()
+        fireEvent.click(screen.getByRole('button', { name: 'Windows' }))
+        const items = screen.getAllByRole('menuitemcheckbox')
+        expect(items.length).toBeGreaterThanOrEqual(10)
+        const deck = screen.getByRole('menuitemcheckbox', { name: /VJ Deck/ })
+        expect(deck.getAttribute('aria-checked')).toBe('true')
+        fireEvent.click(deck)
+        expect(windowTitles()).not.toContain('VJ Deck')
+        expect(screen.getByRole('menuitemcheckbox', { name: /VJ Deck/ }).getAttribute('aria-checked')).toBe('false')
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Reset layout' }))
+        expect(windowTitles()).toEqual(['VJ Deck'])
     })
 })

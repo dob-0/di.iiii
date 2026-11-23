@@ -58,3 +58,20 @@ describe('who is the owner here', () => {
     it('through the wifi door: no', () => expect(isOwnerRequest(req({ host: 'diiii.localhost' }, { diWifiDoor: true }), owner)).toBe(false))
     it('not at the machine: no', () => expect(isOwnerRequest(req({ host: 'diiii.localhost' }), () => false)).toBe(false))
 })
+
+describe('the install token (the CLI, by the certificate name)', () => {
+    const here = () => true
+    const req = (headers, extra = {}) => ({ headers, ...extra })
+    it('the token from this machine opens it even with the certificate name as Host', () =>
+        expect(isOwnerRequest(req({ host: 'local.thedi.studio', authorization: 'Bearer s3cret' }), here, 's3cret')).toBe(true))
+    it('no token and a certificate-name Host: still no (403)', () =>
+        expect(isOwnerRequest(req({ host: 'local.thedi.studio' }), here, 's3cret')).toBe(false))
+    it('a wrong token and a foreign Host: still no', () =>
+        expect(isOwnerRequest(req({ host: 'evil.example', authorization: 'Bearer nope' }), here, 's3cret')).toBe(false))
+    it('the right token but not at the machine: no', () =>
+        expect(isOwnerRequest(req({ host: 'local.thedi.studio', authorization: 'Bearer s3cret' }), () => false, 's3cret')).toBe(false))
+    it('the right token through the wifi door: no', () =>
+        expect(isOwnerRequest(req({ host: 'local.thedi.studio', authorization: 'Bearer s3cret' }, { diWifiDoor: true }), here, 's3cret')).toBe(false))
+    it('no token configured: a bearer opens nothing', () =>
+        expect(isOwnerRequest(req({ host: 'local.thedi.studio', authorization: 'Bearer ' }), here, '')).toBe(false))
+})

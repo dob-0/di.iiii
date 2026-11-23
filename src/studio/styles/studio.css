@@ -187,20 +187,24 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(var(--di-cyan-rgb), 0.55);
+    color: rgba(var(--di-cyan-rgb), 0.85);
 }
 
 .sfp-close {
     appearance: none;
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--di-text-muted);
     cursor: pointer;
     font-size: var(--di-text-5);
     padding: 0 var(--di-space-1);
     line-height: 1;
     border-radius: var(--di-radius);
     transition: color 0.1s, background 0.1s;
+    /* UX audit F021/F087: a target of its own (24 px floor, WCAG 2.5.8), and a gap from the fold button. */
+    min-width: 28px;
+    min-height: 28px;
+    margin-left: var(--di-space-3);
 }
 
 .sfp-close:hover {
@@ -214,6 +218,14 @@
     overflow-x: hidden;
     min-height: 60px;
     max-height: 70vh;
+}
+
+/* The Code window: its body is a column, so the editor takes the height left inside the window.
+   It keeps its own scroll (overflow-y: auto from .sfp-content): when the window is too short for the
+   editor's 220 px floor plus the buttons and the library list, those stay reachable by scrolling. */
+.sfp-shell[data-window-key="files"] .sfp-content {
+    display: flex;
+    flex-direction: column;
 }
 
 .sfp-resizer {
@@ -346,6 +358,8 @@
     padding: var(--di-space-1) var(--di-space-1);
     border-radius: var(--di-radius);
     line-height: 1;
+    min-width: 28px;
+    min-height: 28px;
 }
 
 .scc-collapse-btn:hover {
@@ -367,7 +381,7 @@
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.22);
+    color: var(--di-text-muted);
     margin-bottom: var(--di-space-1);
 }
 
@@ -376,6 +390,13 @@
     flex-wrap: wrap;
     gap: var(--di-space-1);
     align-items: center;
+}
+
+.scc-keys-note {
+    flex: 1 1 140px;
+    font-size: var(--di-text-1);
+    line-height: 1.35;
+    color: var(--di-text-muted);
 }
 
 .scc-sep {
@@ -398,6 +419,7 @@
     white-space: nowrap;
     transition: background 0.1s, border-color 0.1s, color 0.1s;
     line-height: 1.4;
+    min-height: 28px;
 }
 
 .scc-btn:hover {
@@ -410,6 +432,33 @@
     background: var(--di-line);
     border-color: var(--di-cyan-line);
     color: var(--di-cyan);
+}
+
+/* Undo and Redo sit in the cluster's header, so they are there even when it is collapsed. Words, 12 px. */
+.scc-undo-btn {
+    font-size: var(--di-text-3);
+    min-height: 28px;
+}
+
+.scc-undo-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* "Saved 14:32" / "Saving..." / "Not saved: ...": the state in words, never only a colour. */
+.di-save-line {
+    font-size: var(--di-text-3);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.scc-save-line {
+    padding: var(--di-space-1) var(--di-space-3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.di-save-line--error {
+    color: var(--di-danger);
+    font-weight: 600;
 }
 
 .scc-btn--icon {
@@ -485,7 +534,7 @@
     font-weight: 700;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     margin-bottom: var(--di-space-2);
 }
 
@@ -543,7 +592,7 @@
 
 .sfp-empty {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
     padding: var(--di-space-2) 0 var(--di-space-1);
     margin: 0;
 }
@@ -562,6 +611,7 @@
 .spa-btn-wide {
     width: 100%;
     display: flex;
+    align-items: center;
     justify-content: center;
     text-align: center;
     box-sizing: border-box;
@@ -622,9 +672,35 @@
 
 .spa-type {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--di-text-muted);
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+/* A row shown, not clicked (made in Nodes): no hand, no hover, so it does not
+   promise a click; its Edit in Nodes button is the way in. */
+.spa-item--static,
+.spa-item--static:hover {
+    cursor: default;
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+.spa-node-edit {
+    appearance: none;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--di-radius);
+    color: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+    font-size: var(--di-text-2);
+    padding: var(--di-space-1) var(--di-space-2);
+}
+
+.spa-node-edit:hover {
+    background: rgba(255, 255, 255, 0.09);
 }
 
 .spa-item--space {
@@ -773,7 +849,7 @@
 
 .spa-activity-time {
     font-size: var(--di-text-1);
-    color: rgba(255, 255, 255, 0.22);
+    color: var(--di-text-muted);
 }
 
 .spa-activity-msg {
@@ -911,7 +987,7 @@
 .insp-subtitle {
     display: block;
     font-size: var(--di-text-1);
-    color: rgba(255, 255, 255, 0.32);
+    color: var(--di-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.12em;
 }
@@ -943,7 +1019,7 @@
 
 .insp-arrow {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.28);
+    color: var(--di-text-muted);
 }
 
 .insp-section-body {
@@ -961,7 +1037,7 @@
 
 .insp-label {
     font-size: var(--di-text-2);
-    color: rgba(255, 255, 255, 0.38);
+    color: var(--di-text-muted);
     letter-spacing: 0.04em;
     cursor: default;
 }
@@ -1394,7 +1470,7 @@
     font-size: var(--di-text-2);
     font-weight: 500;
     letter-spacing: 0.04em;
-    color: rgba(255,255,255,0.35);
+    color: var(--di-text-muted);
     pointer-events: none;
     user-select: none;
 }
@@ -1670,6 +1746,8 @@
     color: var(--di-text-muted);
     padding: var(--di-space-1) var(--di-space-2);
 }
+/* A name clash is read, not missed: the danger colour, not the muted grey. */
+.spp-status-error { color: var(--di-danger); }
 
 /* The cue strip's key badge. A cue that is not up is not news, so the number
    sits dimmer than the name it belongs to and never takes the eye off the
@@ -1679,7 +1757,7 @@
     display: inline-block;
     min-width: 8px;
     margin-right: var(--di-space-1);
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--di-text-muted);
     font-variant-numeric: tabular-nums;
 }
 
@@ -1778,4 +1856,40 @@
 
 .scene-picker .spa-item.active .scene-picker__intent {
     color: rgba(var(--di-cyan-rgb), 0.8);
+}
+
+/* UX audit F021 (2026-10-29): on a finger the window controls are 44 px (--di-touch-target). */
+@media (pointer: coarse) {
+    .sfp-close,
+    .scc-collapse-btn,
+    .scc-btn {
+        min-width: var(--di-touch-target);
+        min-height: var(--di-touch-target);
+    }
+}
+
+/* Scene -> Move, "Mouse in Edit" (MoveSettings.jsx): two equal buttons, 44 px on touch. */
+.move-edit-mouse .scc-btn {
+    flex: 1;
+}
+
+@media (pointer: coarse) {
+    .move-edit-mouse .scc-btn {
+        min-height: 44px;
+    }
+}
+
+/* The Studio's heading and landmark for screen readers and the tab (F125, S19).
+   The main region adds no box of its own: the shell lays out as before. */
+.studio-page-main {
+    display: contents;
+}
+
+.studio-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }

@@ -13,5 +13,9 @@ User-agent: *
 Allow: /
 Disallow: /admin
 Disallow: /preferences
+Disallow: /hy/admin
+Disallow: /ru/admin
+Disallow: /hy/preferences
+Disallow: /ru/preferences
 
 Sitemap: https://diiii.xyz/sitemap.xml

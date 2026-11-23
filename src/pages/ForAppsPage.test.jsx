@@ -11,6 +11,7 @@ import { APP_PAGE_FOR_APPS, getAppLocationState, isReservedAppSegment } from '..
 
 const require = createRequire(import.meta.url)
 const server = require('../../serverXR/src/appVisitors.js')
+const languageTable = require('../../shared/i18n/languages.cjs')
 const repoDir = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (path) => readFileSync(join(repoDir, path), 'utf8')
 
@@ -60,7 +61,10 @@ describe('/for-apps — the door sign for programs', () => {
         expect(robots).toContain('/for-apps')
         expect(robots).toContain('/llms.txt')
         const rules = robots.split('\n').filter((line) => line && !line.startsWith('#'))
+        // /admin and /preferences, then the same two under every prefixed language of the table.
+        const expectedDisallow = ['', ...languageTable.PREFIXED_CODES.map((code) => `/${code}`)]
+            .flatMap((prefix) => [`Disallow: ${prefix}/admin`, `Disallow: ${prefix}/preferences`])
         expect(rules.filter((line) => /^User-agent:/i.test(line))).toEqual(['User-agent: *'])
-        expect(rules.filter((line) => /^Disallow:/i.test(line))).toEqual(['Disallow: /admin', 'Disallow: /preferences'])
+        expect(rules.filter((line) => /^Disallow:/i.test(line)).sort()).toEqual([...expectedDisallow].sort())
     })
 })

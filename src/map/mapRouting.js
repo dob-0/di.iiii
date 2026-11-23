@@ -50,3 +50,14 @@ export const getMapLocationState = (locationLike = null) => {
 }
 
 export const isMapLocation = (locationState = null) => Boolean(locationState?.isMap)
+
+// Opens (or re-uses) the ONE stage window of a project. `noopener` in the features string
+// makes the browser ignore the window name, so every click made another window (another
+// engine); the name is kept and the opener cut by hand instead.
+export const openMapOutput = (spaceId, projectId, open = (...args) => window.open(...args)) => {
+    const opened = open(buildMapOutputPath(spaceId, projectId), `di-map-out-${projectId}`)
+    if (opened) {
+        try { opened.opener = null } catch { /* a cross-origin window: nothing to cut */ }
+    }
+    return opened
+}
