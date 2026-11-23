@@ -137,9 +137,11 @@ describe('signatures', () => {
   })
   it('refuses a timestamp outside ±120 s', async () => {
     const body = JSON.stringify({ name: '_acme-challenge', value: 'a' })
-    const old = await signHeaders(key, label, 'PUT', txtPath(), body, Math.floor(Date.now() / 1000) - 121)
+    // 125, not 121: the worker reads the clock a moment later; across a second boundary
+    // "+121" became 120 inside the window and a slow CI runner got 204 (2026-11-23).
+    const old = await signHeaders(key, label, 'PUT', txtPath(), body, Math.floor(Date.now() / 1000) - 125)
     expect((await world.send('PUT', txtPath(), { headers: old, body })).status).toBe(401)
-    const ahead = await signHeaders(key, label, 'PUT', txtPath(), body, Math.floor(Date.now() / 1000) + 121)
+    const ahead = await signHeaders(key, label, 'PUT', txtPath(), body, Math.floor(Date.now() / 1000) + 125)
     expect((await world.send('PUT', txtPath(), { headers: ahead, body })).status).toBe(401)
   })
   it('refuses a replayed signature with 401', async () => {
