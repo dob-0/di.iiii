@@ -16,9 +16,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
-  issues: write
 
 concurrency:
   group: uptime
@@ -28,6 +26,11 @@ jobs:
   check:
     runs-on: ubuntu-24.04
     timeout-minutes: 8
+    # Reads its own earlier runs, opens and comments on the outage issue.
+    permissions:
+      actions: read
+      contents: read
+      issues: write
     steps:
       - name: Check the public addresses
         id: probe
