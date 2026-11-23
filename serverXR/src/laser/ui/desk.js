@@ -48,6 +48,17 @@
     let selected = null // the id of the look open in Edit
     let firstState = true // the first answer from the desk: Edit opens the look on the laser, once
     const editing = () => desk?.looks.find((l) => l.id === selected) || null
+    // The layer open in Edit (2026-11-07, the owner: "we are adding + and opening same pattern copy and alll the
+    // paraamamtres"): 0 is the look itself, 1… its layers (shared/laserLook.cjs LAYERS_PASS_MOST). Every setting edits the
+    // open one; the name and the cubes are the look's. layersDrawn: how many layers the last Preview frame had room for.
+    let layer = 0
+    let layersDrawn = null
+    const part = () => {
+        const look = editing()
+        if (!look) return null
+        if (layer > 0 && !(look.layers && look.layers[layer - 1])) layer = 0
+        return layer > 0 ? look.layers[layer - 1] : look
+    }
 
     // ---- talking to the server
     const notice = (text) => {
@@ -122,16 +133,48 @@
         g.lineCap = 'round'
         g.lineJoin = 'round'
         g.globalAlpha = dim ? 0.45 : 1
+        // Laser light adds where beams meet (a Split's red and green make yellow), so the lines are added, not painted
+        // over; each run of one colour is one path, and runs end flat (a Rainbow changes colour at every point), so a
+        // line never brightens where its own pieces join.
+        g.globalCompositeOperation = 'lighter'
+        g.lineCap = 'butt'
+        let run = ''
+        const flush = () => { if (run) g.stroke(); run = '' }
         for (let i = 1; i < points.length; i += 1) {
             const a = points[i - 1]
             const b = points[i]
-            if (!(b[2] > 0 || b[3] > 0 || b[4] > 0)) continue
-            g.strokeStyle = `rgb(${Math.round(b[2] * 255)},${Math.round(b[3] * 255)},${Math.round(b[4] * 255)})`
-            g.beginPath()
-            g.moveTo(X(a[0]), Y(a[1]))
+            if (!(b[2] > 0 || b[3] > 0 || b[4] > 0)) { flush(); continue }
+            const rgb = `rgb(${Math.round(b[2] * 255)},${Math.round(b[3] * 255)},${Math.round(b[4] * 255)})`
+            if (rgb !== run || !(a[2] > 0 || a[3] > 0 || a[4] > 0)) {
+                flush()
+                g.strokeStyle = rgb
+                g.beginPath()
+                g.moveTo(X(a[0]), Y(a[1]))
+                run = rgb
+            }
             g.lineTo(X(b[0]), Y(b[1]))
-            g.stroke()
         }
+        flush()
+        // Point dots (2026-11-07, phyllotaxis: the beam resting on one spot): a run of lit points that goes nowhere has no
+        // line to draw, so it is drawn as a dot.
+        let from = -1
+        for (let i = 0; i <= points.length; i += 1) {
+            const on = i < points.length && (points[i][2] > 0 || points[i][3] > 0 || points[i][4] > 0)
+            if (on && from < 0) from = i
+            if (on || from < 0) continue
+            const xs = points.slice(from, i).map((p) => X(p[0]))
+            const ys = points.slice(from, i).map((p) => Y(p[1]))
+            if (Math.max(...xs) - Math.min(...xs) < 1.5 && Math.max(...ys) - Math.min(...ys) < 1.5) {
+                const p = points[from]
+                g.fillStyle = `rgb(${Math.round(p[2] * 255)},${Math.round(p[3] * 255)},${Math.round(p[4] * 255)})`
+                g.beginPath()
+                g.arc(xs[0], ys[0], Math.max(1.5, 1.6 * dpr), 0, 2 * Math.PI)
+                g.fill()
+            }
+            from = -1
+        }
+        g.globalCompositeOperation = 'source-over'
+        g.lineCap = 'round'
         g.globalAlpha = 1
     }
 
@@ -147,7 +190,7 @@
         if (!held('master')) master.value = desk.master
         $('masterVal').textContent = Math.round(Number(master.value) * 100) + '%'
         $('blackoutBtn').classList.toggle('is-on', desk.blackout)
-        $('releaseBtn').disabled = !desk.live
+        $('releaseBtn').disabled = !desk.live && !Object.keys(desk.liveBy || {}).length
         const pill = $('safetyPill')
         pill.className = 'pill'
         if (!engine) { pill.textContent = 'Laser engine: no answer'; pill.classList.add('is-warn'); return }
@@ -290,6 +333,35 @@
         })
     }
 
+    // ---- Send to (2026-11-07, the owner: "i want send differnet signals to each laser"): pick lasers, then a tile's
+    // picture plays on those only; the others keep what they play. None picked is All: the look goes on every laser.
+    const sendTo = new Set()
+    // A laser's short name for the tiles: the number its name ends in (Laser 2 → 2), else its name.
+    const shortName = (id) => { const n = nameOf(id); const m = /(\d+)\s*$/.exec(n); return m ? m[1] : n }
+    // The look on all draws only on the lasers its Cubes pick; a laser's own look comes first.
+    const liveOn = (id) => Boolean(desk.live && (!Array.isArray(desk.live.cubes) || desk.live.cubes.includes(id)))
+    const lookOnCube = (id) => desk.liveBy?.[id] || (liveOn(id) ? { id: desk.liveId, name: desk.live.name } : null)
+    // Lasers playing different looks (or some dark): the page names each laser's look.
+    const lasersSplit = () => Object.keys(desk.liveBy || {}).length > 0 || Boolean(desk.live && Array.isArray(desk.live.cubes))
+    const renderSendTo = () => {
+        const box = $('sendTo')
+        box.hidden = desk.cubes.length < 2
+        if (box.hidden) { sendTo.clear(); return }
+        const ids = desk.cubes.map((c) => c.id).join(',')
+        if (box.dataset.ids !== ids) {
+            box.dataset.ids = ids
+            for (const id of [...sendTo]) if (!desk.cubes.some((c) => c.id === id)) sendTo.delete(id)
+            box.replaceChildren(
+                el('span', { class: 'label', text: 'Send to' }),
+                el('button', { class: 'chip', 'data-cube': '', text: 'All', title: 'A picture goes to every laser', onclick: () => { sendTo.clear(); renderSendTo() } }),
+                ...desk.cubes.map((c) => el('button', {
+                    class: 'chip', 'data-cube': c.id, text: nameOf(c.id), title: `Pick ${nameOf(c.id)}: a picture then goes to the picked lasers only`,
+                    onclick: () => { if (sendTo.has(c.id)) sendTo.delete(c.id); else sendTo.add(c.id); renderSendTo() }
+                })))
+        }
+        for (const chip of box.querySelectorAll('.chip')) chip.classList.toggle('is-on', chip.dataset.cube ? sendTo.has(chip.dataset.cube) : sendTo.size === 0)
+    }
+
     // ---- the bank
     let dragId = null
     const renderTiles = () => {
@@ -325,8 +397,15 @@
                 return tile
             }))
         }
+        renderSendTo()
         for (const tile of box.children) {
-            tile.classList.toggle('is-live', tile.dataset.id === desk.liveId)
+            // The lasers playing this look, as numbers on its picture.
+            const on = desk.cubes.filter((c) => lookOnCube(c.id)?.id === tile.dataset.id).map((c) => shortName(c.id))
+            let badge = tile.querySelector('.onlasers')
+            if (!badge) { badge = el('span', { class: 'onlasers' }); tile.append(badge) }
+            const text = desk.cubes.length > 1 && lasersSplit() ? on.join(' ') : ''
+            if (badge.textContent !== text) badge.textContent = text
+            tile.classList.toggle('is-live', on.length > 0 || tile.dataset.id === desk.liveId)
             tile.classList.toggle('is-selected', tile.dataset.id === selected)
             tile.classList.toggle('is-changed', [...(desk.changed || []), ...(desk.added || [])].includes(tile.dataset.id))
             const look = desk.looks.find((l) => l.id === tile.dataset.id)
@@ -335,9 +414,12 @@
         }
         const live = desk.live
         const where = desk.cubes.length <= 1 ? 'laser' : 'cubes'
-        $('liveName').textContent = live
-            ? `On the ${where}: ${live.name}${desk.blackout ? ' · blackout' : ''}`
-            : `Nothing on the ${where}. Click a picture to send it; click a name to edit it.`
+        const own = desk.cubes.length > 1 && lasersSplit()
+        $('liveName').textContent = own
+            ? desk.cubes.map((c) => `${nameOf(c.id)}: ${lookOnCube(c.id)?.name || 'dark'}`).join(' · ') + (desk.blackout ? ' · blackout' : '')
+            : live
+                ? `On the ${where}: ${live.name}${desk.blackout ? ' · blackout' : ''}`
+                : `Nothing on the ${where}. Click a picture to send it; click a name to edit it.`
     }
     // The tiles PLAY their looks (2026-10-29, the owner: "cant see animations"), drawn here with the desk's own code
     // (lib/laser.js: shared/laserLook.cjs) on the desk's clock, as often as the desk draws the cubes. A page whose
@@ -366,7 +448,11 @@
         const look = editing()
         const preview = $('preview')
         if (look && preview.offsetParent) {
-            drawFrame(preview, window.DiLaser.lookPointsAt(look, { t, clock: tileClock, index: 0, cube: desk.cubes[0] }), { zone: engine?.zone })
+            const shown = window.DiLaser.lookPointsAt(look, { t, clock: tileClock, index: 0, cube: desk.cubes[0] })
+            drawFrame(preview, shown, { zone: engine?.zone })
+            const fit = look.layers && look.layers.length ? (shown.layersDrawn ?? null) : null
+            if (fit !== layersDrawn) { layersDrawn = fit; renderLayers() }
+            updateLfoMarks(t)
         }
     }
 
@@ -387,6 +473,7 @@
         { key: 'level', label: 'Level', min: 0, max: 1, step: 0.01, fmt: (v) => Math.round(v * 100) + '%' }
     ]
     const MOVES = [
+        { key: 'speed', label: 'Speed', min: 0.25, max: 4, step: 0.25, fmt: (v) => `${+Number(v).toFixed(2)}×`, title: 'How fast the shape moves by itself: 1 is on the beat, 2 twice as fast, 0.5 half' },
         { key: 'spin', label: 'Spin', min: -1, max: 1, step: 1 / 64, fmt: (v) => (v ? `${+v.toFixed(3)}/b` : 'off'), title: 'Turns per beat' },
         { key: 'pulse', label: 'Pulse', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The size breathes down by this much' },
         { key: 'pulseBeats', label: 'Pulse every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
@@ -400,12 +487,20 @@
         { key: 'phase', label: 'Chase', min: 0, max: 4, step: 0.125, fmt: (v) => (v ? `${v} b` : 'off'), title: 'Beats each cube runs behind the one before it', multi: true }
     ]
     const CYCLE = { key: 'cycle', label: 'Each shape', min: 0.5, max: 32, step: 0.5, fmt: (v) => `${v} b` }
+    // Beam (2026-11-06 evening, from the owner's laser.html): Split draws the picture again in the split colour, a little
+    // apart, as a laser whose colours are misaligned; where the two meet the light adds (red + green = yellow). Flicker
+    // dips the brightness at random every frame.
+    const BEAM = [
+        { key: 'split', label: 'Split', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The picture again in the split colour, a little apart: where the two meet, the light adds (red + green = yellow)' },
+        { key: 'splitFar', label: 'Distance', min: 0, max: 1, step: 0.01, fmt: (v) => (v <= 0 ? 'near' : v >= 1 ? 'far' : Math.round(v * 100) + '%'), title: 'How far below the first the split beam sits: near, as a laser’s misaligned colours, to far, a second picture of its own (with Split on)' },
+        { key: 'flicker', label: 'Flicker', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The brightness dips at random every frame, by up to half at 100%' }
+    ]
 
     // Changes are gathered and sent at most every SEND_MS: a dragged slider is one request per step, not per pixel.
     // An edit changes the look open in Edit, in the bank (the laser shows it when that look is on it).
     let pending = {}
     let sendTimer = null
-    const edit = (fields) => {
+    const editLook = (fields) => {
         const look = editing()
         if (!look) return
         for (const k of Object.keys(fields)) touched.set(k, Date.now())
@@ -416,6 +511,154 @@
         desk.unsaved = true
         renderSaveState()
         if (!sendTimer) sendTimer = setTimeout(flush, SEND_MS)
+    }
+    // An edit goes to the open layer: its settings change inside the look's layers (the name and cubes stay the look's).
+    const edit = (fields) => {
+        const look = editing()
+        if (!look) return
+        if (!(layer > 0 && look.layers && look.layers[layer - 1])) return editLook(fields)
+        const top = {}
+        const own = {}
+        for (const [k, v] of Object.entries(fields)) (k === 'name' || k === 'cubes' ? top : own)[k] = v
+        for (const k of Object.keys(own)) touched.set(k, Date.now())
+        const layers = look.layers.map((l, i) => (i === layer - 1 ? { ...l, ...own } : l))
+        return editLook(Object.keys(own).length ? { ...top, layers } : top)
+    }
+    // The Layers strip: 1 (the look), 2… (its layers), + (a copy of the open one as a new layer, opened here), × (the open
+    // layer away). Rebuilt only when what it shows changes, so a click never lands on a swapped-out button.
+    const MAX_LAYERS = 3
+    const renderLayers = () => {
+        const look = editing()
+        const box = $('layerStrip')
+        if (!look) { box.replaceChildren(); box.dataset.key = ''; return }
+        const n = (look.layers || []).length
+        const key = `${look.id}:${n}:${layer}:${layersDrawn}`
+        if (box.dataset.key === key) return
+        box.dataset.key = key
+        const off = (i) => i > 0 && layersDrawn !== null && i > layersDrawn
+        const tab = (i) => el('button', {
+            class: 'chip' + (i === layer ? ' is-on' : '') + (off(i) ? ' is-off' : ''),
+            text: String(i + 1),
+            title: i === 0 ? `${look.name}: the pattern itself` : off(i) ? 'Too much for one pass of the laser with the layers before it: not drawn now' : `Layer ${i + 1}: a pattern of its own, in the same signal`,
+            onclick: async () => { await flush(); layer = i; touched.clear(); renderEditor(true) }
+        })
+        box.replaceChildren(
+            ...Array.from({ length: n + 1 }, (_, i) => tab(i)),
+            ...(n < MAX_LAYERS ? [el('button', { class: 'chip', text: '+', title: 'A copy of the open pattern as a new layer, every setting with it: change its height or anything; it plays in the same signal', onclick: () => addLayer() })] : []),
+            ...(layer > 0 ? [el('button', { class: 'chip', text: '×', title: `Remove layer ${layer + 1}`, onclick: () => removeLayer() })] : [])
+        )
+    }
+    const addLayer = async () => {
+        const look = editing()
+        if (!look || (look.layers || []).length >= MAX_LAYERS) return
+        await flush()
+        const copy = { ...part() }
+        for (const k of ['id', 'name', 'cubes', 'layers']) delete copy[k]
+        const layers = [...(look.layers || []), copy]
+        layer = layers.length
+        editLook({ layers })
+        await flush()
+        renderEditor(true)
+    }
+    const removeLayer = async () => {
+        const look = editing()
+        if (!look || layer < 1) return
+        await flush()
+        const layers = (look.layers || []).filter((_, i) => i !== layer - 1)
+        layer = 0
+        editLook({ layers })
+        await flush()
+        renderEditor(true)
+    }
+
+    // LFO (2026-11-07, the owner: "add lfo paramatre for laser desk"; she chose "on every slider", as Resolume's BPM-synced
+    // parameter animation): the ~ beside a slider switches its LFO on, opening Wave, Every and Depth under it, or off (its
+    // settings kept for next time). An amount's slider is the LFO's top and Depth how far down it goes; a place swings
+    // round its slider (shared/laserLook.cjs LFO_FIELDS). The thin mark on the slider is where the LFO has it now.
+    const LFO_FIELDS = window.DiLaser?.LFO_FIELDS || {}
+    const LFO_DEFAULT = window.DiLaser?.LFO_DEFAULT || { on: true, wave: 'sine', beats: 4, depth: 0.5 }
+    const LFO_WAVE_NAMES = { sine: 'Sine', tri: 'Tri', saw: 'Saw', square: 'Square', random: 'Random' }
+    const LFO_EVERY = [0.25, 0.5, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64] // beats, as Resolume's ×2 and /2
+    const LFO_THUMB = 16 // px: a range's thumb, which runs from half of it in to half of it short of the end
+    const lfoRows = {}
+    const lfoOfPart = (key) => part()?.lfo?.[key] || null
+    const setLfo = (key, changes) => {
+        const cur = part()
+        if (!cur) return
+        const all = { ...(cur.lfo || {}) }
+        all[key] = { ...LFO_DEFAULT, ...(all[key] || {}), ...changes }
+        edit({ lfo: all })
+    }
+    const lfoRow = (spec, row, range) => {
+        const key = spec.key
+        const place = LFO_FIELDS[key].kind === 'place'
+        const btn = el('button', {
+            class: 'lfo-btn quiet small',
+            type: 'button',
+            text: '~',
+            'aria-label': `${spec.label} LFO`,
+            'aria-pressed': 'false',
+            title: place
+                ? `LFO: ${spec.label} swings round where you set it, on the beat`
+                : `LFO: ${spec.label} moves by itself on the beat, from where you set it down by Depth` + (key === 'size' ? ' (never under 0.15, where a picture is a still beam)' : '')
+        })
+        const mark = el('i', { class: 'lfo-mark', hidden: true })
+        row.append(btn, mark)
+        const waveBtns = {}
+        const waves = el('div', { class: 'chips lfo-waves' })
+        for (const [w, name] of Object.entries(LFO_WAVE_NAMES)) {
+            waveBtns[w] = el('button', { class: 'chip', type: 'button', text: name, onclick: () => { setLfo(key, { wave: w }); show(lfoOfPart(key)) } })
+            waves.append(waveBtns[w])
+        }
+        const every = el('input', { type: 'range', min: 0, max: LFO_EVERY.length - 1, step: 1, 'aria-label': `${spec.label} LFO every` })
+        const everyOut = el('output')
+        const depth = el('input', { type: 'range', min: 0, max: 1, step: 0.01, 'aria-label': `${spec.label} LFO depth` })
+        const depthOut = el('output')
+        const panel = el('div', { class: 'lfo', hidden: true },
+            waves,
+            el('div', { class: 'field', title: 'Beats for the LFO to go once round' }, el('label', { text: 'Every' }), every, everyOut),
+            el('div', { class: 'field', title: place ? 'How far it swings: 100% is the whole field (Rotation: half a turn each way)' : 'How far down from the slider it goes: 100% is down to nothing' }, el('label', { text: 'Depth' }), depth, depthOut))
+        row.after(panel)
+        const nearest = (beats) => LFO_EVERY.reduce((best, v, i) => (Math.abs(Math.log(v / beats)) < Math.abs(Math.log(LFO_EVERY[best] / beats)) ? i : best), 0)
+        const show = (one, force = false) => {
+            const on = Boolean(one && one.on)
+            btn.classList.toggle('is-on', on)
+            btn.setAttribute('aria-pressed', String(on))
+            panel.hidden = !on
+            mark.hidden = !on || !(one.depth > 0)
+            if (!on) return
+            for (const [w, b] of Object.entries(waveBtns)) b.classList.toggle('is-on', one.wave === w)
+            if (force || document.activeElement !== every) every.value = String(nearest(one.beats))
+            everyOut.textContent = `${+Number(one.beats).toFixed(2)} b`
+            if (force || document.activeElement !== depth) depth.value = String(one.depth)
+            depthOut.textContent = Math.round(one.depth * 100) + '%'
+        }
+        btn.addEventListener('click', () => {
+            const one = lfoOfPart(key)
+            setLfo(key, { on: !(one && one.on) })
+            show(lfoOfPart(key), true)
+        })
+        every.addEventListener('input', () => { setLfo(key, { beats: LFO_EVERY[Number(every.value)] }); show(lfoOfPart(key)) })
+        depth.addEventListener('input', () => { setLfo(key, { depth: Number(depth.value) }); show(lfoOfPart(key)) })
+        // Where the LFO has the slider now, as a mark on its track (a turned Rotation comes back in from the other end).
+        const markAt = (value) => {
+            const lo = Number(range.min)
+            const hi = Number(range.max)
+            let p = (value - lo) / (hi - lo)
+            if (key === 'rotation') p -= Math.floor(p)
+            p = Math.min(1, Math.max(0, p))
+            mark.style.left = `${range.offsetLeft + LFO_THUMB / 2 + (range.offsetWidth - LFO_THUMB) * p - 1}px`
+        }
+        lfoRows[key] = { show, markAt }
+    }
+    const updateLfoMarks = (t) => {
+        const cur = part()
+        if (!cur || !cur.lfo || !window.DiLaser?.lfoValueAt) return
+        const b = window.DiLaser.beatsAt(tileClock, t)
+        for (const [key, row] of Object.entries(lfoRows)) {
+            const one = cur.lfo[key]
+            if (one && one.on && one.depth > 0) row.markAt(window.DiLaser.lfoValueAt(key, cur[key], one, b))
+        }
     }
 
     const fieldRow = (spec, parent) => {
@@ -447,6 +690,7 @@
             num.select()
         })
         parent.append(row)
+        if (LFO_FIELDS[spec.key]) lfoRow(spec, row, range)
         return { set: (v, force = false) => { if (force || (!held(spec.key) && document.activeElement !== range)) { range.value = String(v); show() } } }
     }
 
@@ -454,13 +698,59 @@
     for (const spec of PICTURE) fields[spec.key] = fieldRow(spec, $('pictureFields'))
     for (const spec of MOVES) fields[spec.key] = fieldRow(spec, $('moveFields'))
     fields.cycle = fieldRow(CYCLE, $('cycleField'))
+    // Beam: Split, how far apart (Distance), its colour (any colour, as the Colour picker), Flicker.
+    fields.split = fieldRow(BEAM[0], $('beamFields'))
+    fields.splitFar = fieldRow(BEAM[1], $('beamFields'))
+    const splitColour = el('input', { type: 'color', id: 'f-colour2', value: '#14ff28', 'aria-label': 'Split colour' })
+    const splitHex = el('output', { text: '#14ff28' })
+    splitColour.addEventListener('input', () => { splitHex.textContent = splitColour.value; edit({ colour2: splitColour.value }) })
+    $('beamFields').append(el('div', { class: 'field', title: 'The split beam’s colour, and a shape’s second part (Vortex’s dot)' }, el('label', { for: 'f-colour2', text: 'Second colour' }), splitColour, splitHex))
+    fields.colour2 = {
+        set: (v, force = false) => {
+            if (!force && (held('colour2') || document.activeElement === splitColour)) return
+            if (/^#[0-9a-f]{6}$/i.test(v || '')) splitColour.value = v
+            splitHex.textContent = splitColour.value
+        }
+    }
+    fields.flicker = fieldRow(BEAM[2], $('beamFields'))
+
+    // Reset (2026-11-07, the owner: "reset parameters option so we will come back to 0 point for each scene how it was
+    // from the beginning"): the look in Edit back to how its scene started: its seed look (for a saved copy such as
+    // "Magma 2", the seed of its shape), every other setting at the desk's defaults. Its name, size, place and cubes stay,
+    // as they are where it sits on the mapping. It is one edit, so Ctrl+Z takes it back, and Save keeps it as any change.
+    const KEEP_ON_RESET = ['id', 'name', 'size', 'height', 'x', 'cubes']
+    $('resetLook').addEventListener('click', async () => {
+        await flush()
+        const look = editing()
+        if (!look || !desk.defaults) return
+        const seeds = Array.isArray(desk.seeds) ? desk.seeds : []
+        const first = (shape) => String(shape || '').split(',')[0]
+        const seed = seeds.find((s) => s.id === look.id) || seeds.find((s) => first(s.shape) === first(look.shape)) || { shape: look.shape }
+        const start = { ...desk.defaults, ...seed }
+        const changes = {}
+        for (const [k, v] of Object.entries(start)) {
+            if (KEEP_ON_RESET.includes(k)) continue
+            if (JSON.stringify(look[k]) !== JSON.stringify(v)) changes[k] = v
+        }
+        if (!Object.keys(changes).length) { notice(`${look.name} is already as it started`); return }
+        layer = 0
+        edit(changes)
+        pending.step = true
+        renderEditor(true)
+        $('rainbow').checked = Boolean(look.rainbow)
+        $('mirror').checked = Boolean(look.mirror)
+        $('cycleMode').checked = look.shape.includes(',') || look.cycle > 0
+        $('cycleField').hidden = !$('cycleMode').checked
+        renderShapes()
+        renderSwatches()
+    })
 
     $('cycleMode').addEventListener('change', (e) => {
         touched.set('shape', Date.now())
         $('cycleField').hidden = !e.target.checked
         if (!editing()) return
-        const first = editing().shape.split(',')[0]
-        edit(e.target.checked ? { cycle: editing().cycle || 4 } : { shape: first, cycle: 0 })
+        const first = part().shape.split(',')[0]
+        edit(e.target.checked ? { cycle: part().cycle || 4 } : { shape: first, cycle: 0 })
         renderEditor()
     })
     $('rainbow').addEventListener('change', (e) => edit({ rainbow: e.target.checked }))
@@ -476,7 +766,7 @@
             box.append(...desk.shapes.map((s) => el('button', {
                 class: 'chip', 'data-shape': s, text: s[0].toUpperCase() + s.slice(1),
                 onclick: () => {
-                    const picked = editing() ? editing().shape.split(',') : []
+                    const picked = part() ? part().shape.split(',') : []
                     let next = [s]
                     if ($('cycleMode').checked) {
                         next = picked.includes(s) ? picked.filter((x) => x !== s) : [...picked, s]
@@ -487,7 +777,7 @@
                 }
             })))
         }
-        const picked = editing() ? editing().shape.split(',') : []
+        const picked = part() ? part().shape.split(',') : []
         for (const chip of box.children) chip.classList.toggle('is-on', picked.includes(chip.dataset.shape))
     }
     const pickColour = (c) => { edit({ colour: c, rainbow: false }); $('rainbow').checked = false; renderSwatches() }
@@ -501,7 +791,7 @@
                 onclick: () => pickColour(c)
             })), picker)
         }
-        const live = editing()
+        const live = part()
         for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
         const picker = $('colourPicker')
         if (live && document.activeElement !== picker) picker.value = live.colour
@@ -540,7 +830,7 @@
         $('myColours').querySelector('.addcolour')?.classList.toggle('is-on', on)
         if (on) {
             renderChooser()
-            const c = editing()?.colour
+            const c = part()?.colour
             if (c) { $('chooserPicker').value = c; $('chooserHex').value = c }
         }
     }
@@ -572,7 +862,7 @@
             $('myColours').querySelector('.addcolour').classList.toggle('is-on', !$('colourChooser').hidden)
             $('myColoursHint').hidden = list.length > 0
         }
-        const live = editing()
+        const live = part()
         for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
     }
     const renderLookCubes = () => {
@@ -614,7 +904,7 @@
         const box = $('page-control').querySelector('.editor')
         box.classList.toggle('is-empty', !live)
         $('previewPane').classList.toggle('is-empty', !live)
-        const onLaser = Boolean(live && desk.live && desk.liveId === live.id)
+        const onLaser = Boolean(live && ((desk.live && desk.liveId === live.id) || Object.values(desk.liveBy || {}).some((m) => m.id === live.id)))
         const note = $('previewNote')
         note.classList.toggle('is-live', onLaser)
         const changed = Boolean(live && (desk.changed || []).includes(live.id))
@@ -623,13 +913,16 @@
                 ? 'On the laser: your changes show there at once'
                 : 'Preview only. Click the look’s picture to send it to the laser')
             + (changed ? `. Save keeps your changes as a new scene; the saved ${live.name} stays as it was` : '')
+        renderLayers()
         if (!live) return
         if (!held('name') && document.activeElement !== $('lookName')) $('lookName').value = live.name
-        if (!held('shape')) $('cycleMode').checked = live.shape.includes(',') || live.cycle > 0
+        const cur = part()
+        if (!held('shape')) $('cycleMode').checked = cur.shape.includes(',') || cur.cycle > 0
         $('cycleField').hidden = !$('cycleMode').checked
-        if (!held('rainbow')) $('rainbow').checked = live.rainbow
-        if (!held('mirror')) $('mirror').checked = live.mirror
-        for (const [k, f] of Object.entries(fields)) f.set(live[k], force)
+        if (!held('rainbow')) $('rainbow').checked = cur.rainbow
+        if (!held('mirror')) $('mirror').checked = cur.mirror
+        for (const [k, f] of Object.entries(fields)) f.set(cur[k], force)
+        if (force || !held('lfo')) for (const [k, row] of Object.entries(lfoRows)) row.show(cur.lfo?.[k] || null, force)
         if (!held('shape')) renderShapes()
         if (!held('colour')) renderSwatches()
         if (!held('cubes')) renderLookCubes()
@@ -639,6 +932,7 @@
     const selectLook = async (id) => {
         await flush()
         selected = id
+        layer = 0
         touched.clear()
         renderTiles()
         renderEditor()
@@ -648,8 +942,8 @@
     // selected. Its NAME still opens it in Edit alone, the laser keeping what it has.
     const sendLook = async (id) => {
         await flush()
-        await post('desk/api/go', { look: id })
-        if (selected !== id) { selected = id; touched.clear() }
+        await post('desk/api/go', sendTo.size ? { look: id, to: [...sendTo] } : { look: id })
+        if (selected !== id) { selected = id; layer = 0; touched.clear() }
         await refreshDesk()
         renderTiles()
         renderEditor(true)
@@ -708,7 +1002,10 @@
             const view = stageCanvases.get(c.id)
             if (!view) continue
             const e = engine?.cubes.find((x) => x.id === c.id)
-            view.name.textContent = nameOf(c.id)
+            const playing = lookOnCube(c.id)
+            // With lasers on looks of their own, each card says which (its number and the look, short enough to fit).
+            view.name.textContent = playing && Object.keys(desk.liveBy || {}).length ? `${shortName(c.id)} · ${playing.name}` : nameOf(c.id)
+            view.name.title = playing ? `${nameOf(c.id)}: ${playing.name}` : nameOf(c.id)
             view.card.classList.toggle('is-off', !c.on)
             let text = 'disarmed'
             let cls = ''
