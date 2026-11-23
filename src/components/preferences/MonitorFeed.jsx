@@ -42,6 +42,7 @@ export default function MonitorFeed({ row, kind, query = '', ago }) {
                         <thead><tr>{feed.table.columns.map((c) => <th key={c} scope="col">{c}</th>)}</tr></thead>
                         <tbody>{shownTable.map((r, i) => <tr key={`${r[0]}-${i}`}>{r.map((c, j) => <td key={j} title={c}>{c}</td>)}</tr>)}</tbody>
                     </table>
+                    {(feed.table.notes || []).map((n, i) => <div key={i} className="monitor-feed-summary" data-feed-note>{n}</div>)}
                 </div>
             ) : null}
             {row.ok ? sections.map((s, si) => (

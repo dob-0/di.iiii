@@ -73,12 +73,14 @@ export function readFeed(lines) {
     const list = (Array.isArray(lines) ? lines : []).map((l) => String(l ?? '')).filter((l) => l.trim())
     const out = { title: '', summary: '', table: null, sections: [] }
     if (!list.length) return out
-    // a table: the first line is a header and most lines line up under it
-    const cols = tableColumns(list[0])
+    // a table: the first line is a header (no ' · ', not a bullet or heading) and most lines line up under it
+    const cols = /^\s*([-*•#]|\S+ · )/.test(list[0]) || list[0].includes(' · ') ? null : tableColumns(list[0])
     if (cols) {
         const rows = list.slice(1).filter((l) => linesUp(l, cols))
         if (rows.length && rows.length >= (list.length - 1) * 0.8) {
-            out.table = { columns: cols.map((c) => c.name), rows: rows.map((l) => cutRow(l, cols).map(plainText)) }
+            // a line that does not line up (a footer, a wrapped note) is kept as a note under the table, never dropped
+            const notes = list.slice(1).filter((l) => !linesUp(l, cols)).map(plainText)
+            out.table = { columns: cols.map((c) => c.name), rows: rows.map((l) => cutRow(l, cols).map(plainText)), notes }
             return out
         }
     }

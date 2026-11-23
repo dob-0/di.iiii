@@ -35,4 +35,13 @@ describe('readFeed: a feed is rows, not a text dump (owner 11-24)', () => {
         expect(feedSubtitle('Left open — 22 Nov 15:52', 'Left open')).toBe('22 Nov 15:52')
         expect(feedSubtitle('Other', 'Left open')).toBe('Other')
     })
+    it('a line that does not line up under a table stays as a note: no line is ever dropped (review 11-24)', () => {
+        const rows = ['N1     OPEN    one', 'N2     OPEN    two', 'N3     OPEN    three', 'N4     OPEN    four']
+        const feed = readFeed(['ID     STATE   ASK', ...rows, 'active 9 (shown 4) · rest: ledger-open'])
+        expect(feed.table.rows).toHaveLength(4)
+        expect(feed.table.notes).toEqual(['active 9 (shown 4) · rest: ledger-open'])
+    })
+    it('a status line with a dot separator is never read as a table header', () => {
+        expect(readFeed(['02:04 · Chats     6      open', '  a     b      c']).table).toBe(null)
+    })
 })

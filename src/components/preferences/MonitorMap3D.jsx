@@ -289,8 +289,11 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
     // A drag that starts on a card turns the camera like a drag on empty map: past DRAG_PX the press is handed to the
     // camera control and the card's click is dropped. A press that does not move stays a click on the card.
     const dragged = useRef(false)
+    const pressEnd = useRef(null) // removes a card press's window listeners; also run on unmount
+    useEffect(() => () => pressEnd.current?.(), [])
     const onCardDown = useCallback((ev) => {
         if (ev.button !== 0 && ev.button !== 2) return
+        pressEnd.current?.()
         dragged.current = false
         const start = { x: ev.clientX, y: ev.clientY, id: ev.pointerId, button: ev.button, type: ev.pointerType }
         const move = (m) => {
@@ -299,9 +302,16 @@ function MonitorMap3D({ layout: incoming, selectedId, onPick, fullscreen = false
             const target = api.current?.controlsElement?.()
             target?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: start.x, clientY: start.y, pointerId: start.id, button: start.button, buttons: m.buttons, pointerType: start.type, isPrimary: true }))
         }
-        const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+        const end = () => {
+            window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', end)
+            pressEnd.current = null
+        }
+        // the click that follows a drag reads dragged first; then the flag clears, wherever the press ended
+        const up = () => { end(); setTimeout(() => { dragged.current = false }, 0) }
         window.addEventListener('pointermove', move)
         window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', end)
+        pressEnd.current = end
     }, [])
     const preset = START
     const [plan, setPlan] = useState(() => new Map())
