@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import MapTestPattern, { DEFAULT_TEST_PATTERN } from './mapTestPattern.jsx'
 import { startMotionGlow } from './motionGlow.js'
 import { startLiveAiRestyle } from './liveAiRestyle.js'
+import { resolveAlias } from '../project/tops/vjDeck.js'
+import { openSharedCamera } from '../project/tops/cameraPool.js'
 import { useTopNetwork } from '../project/tops/useTopNetwork.js'
 import { buildPublicProjectPath } from '../utils/spaceRouting.js'
 import { createPreviewBootQueue } from '../utils/previewBootQueue.js'
@@ -52,17 +54,32 @@ const requestSurfaceBoot = createPreviewBootQueue()
 // way; a slow page keeps loading, it just stops blocking its neighbours.
 const BOOT_SLOT_TIMEOUT_MS = 15000
 
-export default function MapSourceView({ surface, spaceId = '', live = true, network = null, assets = null, projectId = null, label = '' }) {
+// The widest a Pictures surface (a Picture Out or a VJ deck) is drawn.
+export const PICTURE_MAX_WIDTH = 1920
+
+// Kinds that take a moment before they have a picture. Everything else is
+// ready as soon as it mounts. `onReady` is how a crossfade (MapCrossfade.jsx)
+// knows when the next visual can start to come up over the last one.
+const LOADING_KINDS = new Set(['image', 'video', 'url', 'html', 'project'])
+
+export default function MapSourceView({ surface, spaceId = '', live = true, network = null, assets = null, projectId = null, label = '', onReady = null }) {
     const [width, height] = surface.resolution
     const kind = surface.source?.kind || 'test'
     const ref = surface.source?.ref || ''
+    const readyRef = useRef(onReady)
+    useEffect(() => { readyRef.current = onReady })
+    const ready = useCallback(() => readyRef.current?.(), [])
+    const waits = LOADING_KINDS.has(kind) && Boolean(ref) && (live || kind === 'image' || kind === 'video')
+    useEffect(() => {
+        if (!waits) readyRef.current?.()
+    }, [waits, kind, ref])
 
     if (kind === 'colour') {
         return <div className="map-source-fill" style={{ background: ref || '#ffffff' }} />
     }
 
     if (kind === 'network') {
-        if (!ref) return <MapSourcePlaceholder label={label} detail="no Picture Out chosen" width={width} height={height} />
+        if (!ref) return <MapSourcePlaceholder label={label} detail="no Picture Out or deck chosen" width={width} height={height} />
         // Off the output, a network runs only when Live is on — the desk and
         // the wall would otherwise each open the camera and run every operator.
         if (!live) return <MapSourcePlaceholder label={label} detail="pictures — turn Live on to run them here" width={width} height={height} />
@@ -113,11 +130,32 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
     }
 
     if (kind === 'image') {
-        return <MapImageSource fileRef={ref} />
+        return <MapImageSource fileRef={ref} onReady={ready} />
     }
 
     if (kind === 'video') {
-        return <MapVideoSource fileRef={ref} />
+        return <MapVideoSource fileRef={ref} onReady={ready} />
+    }
+
+    // A brought-in HTML page: one file, uploaded to the project, served by
+    // serverXR under its own `Content-Security-Policy: sandbox allow-scripts`
+    // (serverXR/src/spaceStore.js). The frame here is sandboxed the same way
+    // and WITHOUT allow-same-origin: the file lives on our own origin, and
+    // allow-same-origin would hand it our session. It runs as nobody, which is
+    // all a visual needs.
+    if (kind === 'html') {
+        if (!live) return <MapSourcePlaceholder label={label} detail="page — turn Live on to run it here" width={width} height={height} />
+        return (
+            <MapPageSource
+                src={resolveMapSourceRef(ref)}
+                isProject={false}
+                sandbox="allow-scripts allow-pointer-lock"
+                label={label}
+                width={width}
+                height={height}
+                onReady={ready}
+            />
+        )
     }
 
     if (kind === 'project' && !ref) {
@@ -141,6 +179,7 @@ export default function MapSourceView({ surface, spaceId = '', live = true, netw
                 label={label}
                 width={width}
                 height={height}
+                onReady={ready}
             />
         )
     }
@@ -169,6 +208,7 @@ export const matchStreamDevice = (devices = [], name = '') => pickByLabel(
 
 function MapStreamSource({ name, effect = null, label, width, height }) {
     const [state, setState] = useState({ deviceId: '', problem: '' })
+    const resolveRef = useRef(null)
 
     useEffect(() => {
         let cancelled = false
@@ -181,37 +221,61 @@ function MapStreamSource({ name, effect = null, label, width, height }) {
             setState({ deviceId: '', problem: 'no camera access in this browser' })
             return undefined
         }
-        const resolve = async () => {
+        // A miss is retried on its own timer, because a loopback device that is
+        // restarting may never fire `devicechange` when it returns.
+        let timer = null
+        let tries = 0
+        let foundId = ''
+        let probed = false
+        const retry = () => {
+            if (cancelled || timer) return
+            timer = setTimeout(() => { timer = null; resolve() }, REOPEN_MS[Math.min(tries++, REOPEN_MS.length - 1)])
+        }
+        async function resolve() {
             try {
                 let devices = await media.enumerateDevices()
                 // Before permission every label is '', so nothing can match yet.
-                if (!devices.some((device) => device.kind === 'videoinput' && device.label)) {
+                // The throwaway stream that unlocks them is opened at most once
+                // per mount; a retry must never open a camera as a side effect.
+                if (!probed && !devices.some((device) => device.kind === 'videoinput' && device.label)) {
+                    probed = true
                     const probe = await media.getUserMedia({ video: true, audio: false })
                     probe.getTracks().forEach((track) => track.stop())
                     devices = await media.enumerateDevices()
                 }
                 if (cancelled) return
                 const found = matchStreamDevice(devices, name)
-                setState(found
-                    ? { deviceId: found.deviceId, problem: '' }
-                    : { deviceId: '', problem: `no input called "${name}" on this machine` })
+                if (found) {
+                    foundId = found.deviceId
+                    clearTimeout(timer)
+                    timer = null
+                    tries = 0
+                    setState({ deviceId: found.deviceId, problem: '' })
+                    return
+                }
+                // Once an id was found, a transient miss keeps the mounted camera.
+                if (!foundId) setState({ deviceId: '', problem: `no input called "${name}" on this machine` })
+                retry()
             } catch (error) {
                 if (!cancelled) setState({ deviceId: '', problem: error?.name === 'NotAllowedError' ? 'camera not permitted' : 'inputs unavailable' })
             }
         }
+        resolveRef.current = resolve
         resolve()
         // An input that appears later (the bridge starting after the page, a
         // capture card plugged in mid-show) is picked up without a reload.
         media.addEventListener?.('devicechange', resolve)
         return () => {
             cancelled = true
+            clearTimeout(timer)
+            resolveRef.current = null
             media.removeEventListener?.('devicechange', resolve)
         }
     }, [name])
 
     if (state.problem) return <MapSourcePlaceholder label={label} detail={state.problem} width={width} height={height} />
     if (!state.deviceId) return <MapSourcePlaceholder label={label} detail={`looking for "${name}"…`} width={width} height={height} />
-    return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} />
+    return <MapCameraSource deviceId={state.deviceId} effect={effect} label={label} width={width} height={height} onStale={() => resolveRef.current?.()} />
 }
 
 // NDI® in, on the machine that draws. The same problem the `stream` surface
@@ -299,7 +363,7 @@ function MapNdiSource({ name, label, width, height }) {
 // ask again. Nothing else changes while it is failing — no placeholder, no
 // text — the element itself is what MapSourceView already shows for a source
 // that has not loaded yet, and a wall must never go white or gain new text.
-function MapImageSource({ fileRef }) {
+function MapImageSource({ fileRef, onReady = null }) {
     const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
     return (
         <img
@@ -309,7 +373,7 @@ function MapImageSource({ fileRef }) {
             alt=""
             draggable="false"
             onError={onError}
-            onLoad={onLoaded}
+            onLoad={() => { onLoaded(); onReady?.() }}
         />
     )
 }
@@ -317,7 +381,7 @@ function MapImageSource({ fileRef }) {
 // A brought-in video. Same retry as the image above. muted is not a style
 // choice: a wall plays several things at once and autoplay is refused
 // outright for anything with sound.
-function MapVideoSource({ fileRef }) {
+function MapVideoSource({ fileRef, onReady = null }) {
     const { attempt, onError, onLoaded } = useRetryingMedia(fileRef)
     return (
         <video
@@ -330,7 +394,7 @@ function MapVideoSource({ fileRef }) {
             playsInline
             disablePictureInPicture
             onError={onError}
-            onLoadedData={onLoaded}
+            onLoadedData={() => { onLoaded(); onReady?.() }}
         />
     )
 }
@@ -342,12 +406,28 @@ function MapVideoSource({ fileRef }) {
 // track is stopped on unmount. A refused or missing camera shows the reason on
 // the surface instead of going black, because a black rectangle on a wall is
 // indistinguishable from a mapping mistake.
-function MapCameraSource({ deviceId, effect = null, label, width, height }) {
+//
+// 2026-11-10 (owner row N3522): the output went black for good when a phone
+// feed hiccuped and the track ended, until someone reloaded the page. A track
+// that ends, or a device that is busy / not up yet, is now re-opened by itself
+// with a back-off; a refused permission is not retried.
+const REOPEN_MS = [500, 1000, 2000, 3000]
+// A feed that stays live this long is healthy: only then does the back-off start over.
+const STABLE_MS = 5000
+const RECONNECTING = 'camera reconnecting…'
+const REOPEN_ERRORS = ['NotReadableError', 'TrackStartError', 'NotFoundError', 'OverconstrainedError', 'AbortError']
+
+function MapCameraSource({ deviceId, effect = null, label, width, height, onStale = null }) {
+    const staleRef = useRef(onStale)
+    useEffect(() => { staleRef.current = onStale })
     const videoRef = useRef(null)
     const canvasRef = useRef(null)
     const glowRef = useRef(null)
     const restyleRef = useRef(null)
     const [problem, setProblem] = useState('')
+    // A retry is pending: the <video> stays mounted (the stream needs it when it
+    // comes back) and the surface says so over it.
+    const [waiting, setWaiting] = useState(false)
     const motion = effect?.kind === 'motion'
     const ai = effect?.kind === 'ai'
     // The AI picture replaces the placeholder only once a frame has actually
@@ -358,30 +438,82 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     useEffect(() => {
         let stream = null
         let cancelled = false
+        let timer = null
+        let stable = null
+        let tries = 0
+        let wasLive = false
         const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : null
         if (!media?.getUserMedia) {
             setProblem('no camera access in this browser')
             return undefined
         }
         setProblem('')
-        media.getUserMedia({
-            video: deviceId ? { deviceId: { exact: deviceId } } : true,
-            audio: false
-        })
-            .then((result) => {
-                if (cancelled) {
-                    result.getTracks().forEach((track) => track.stop())
-                    return
-                }
-                stream = result
-                if (videoRef.current) videoRef.current.srcObject = result
+        setWaiting(false)
+        // Stop and forget the open stream, so two are never open at once. The
+        // stream is this view's own clone from the shared camera pool: stopping
+        // its tracks only gives back this view's share (the pool stops the
+        // device when the last view is done), never another view's picture.
+        const drop = () => {
+            if (!stream) return
+            stream.removeEventListener?.('inactive', lost)
+            stream.getTracks().forEach((track) => { track.removeEventListener?.('ended', lost); track.stop() })
+            stream = null
+        }
+        const later = () => {
+            if (cancelled || timer) return
+            timer = setTimeout(() => { timer = null; open() }, REOPEN_MS[Math.min(tries++, REOPEN_MS.length - 1)])
+        }
+        // The device may have come back under another id: ask the lookup again.
+        function lost() {
+            clearTimeout(stable)
+            drop()
+            setWaiting(true)
+            later()
+            staleRef.current?.()
+        }
+        function open() {
+            // Through the pool, so two views of one camera do not open it twice;
+            // the pool does not serve a capture whose track has ended, so a
+            // retry after lost() really re-opens the device.
+            openSharedCamera(media, {
+                video: deviceId ? { deviceId: { exact: deviceId } } : true,
+                audio: false
             })
-            .catch((error) => {
-                if (!cancelled) setProblem(error?.name === 'NotAllowedError' ? 'camera not permitted' : 'camera unavailable')
-            })
+                .then((result) => {
+                    if (cancelled) {
+                        result.getTracks().forEach((track) => track.stop())
+                        return
+                    }
+                    drop()
+                    stream = result
+                    wasLive = true
+                    setWaiting(false)
+                    clearTimeout(stable)
+                    stable = setTimeout(() => { tries = 0 }, STABLE_MS)
+                    if (videoRef.current) videoRef.current.srcObject = result
+                    result.getVideoTracks().forEach((track) => track.addEventListener('ended', lost))
+                    result.addEventListener?.('inactive', lost)
+                    if (result.getVideoTracks().some((track) => track.readyState === 'ended')) lost()
+                })
+                .catch((error) => {
+                    if (cancelled) return
+                    const failure = error?.name
+                    if (failure !== 'NotAllowedError' && (deviceId || wasLive) && REOPEN_ERRORS.includes(failure)) {
+                        // Say so on the surface: a black rectangle reads as a mapping mistake.
+                        setWaiting(true)
+                        later()
+                        if (failure === 'NotFoundError' || failure === 'OverconstrainedError') staleRef.current?.()
+                        return
+                    }
+                    setProblem(failure === 'NotAllowedError' ? 'camera not permitted' : 'camera unavailable')
+                })
+        }
+        open()
         return () => {
             cancelled = true
-            if (stream) stream.getTracks().forEach((track) => track.stop())
+            clearTimeout(timer)
+            clearTimeout(stable)
+            drop()
         }
     }, [deviceId])
 
@@ -447,43 +579,48 @@ function MapCameraSource({ deviceId, effect = null, label, width, height }) {
     const processed = motion || ai
     return (
         <>
-            <video className={processed ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
+            <video className={processed || waiting ? 'map-source-hidden-video' : 'map-source-media'} ref={videoRef} autoPlay muted playsInline />
             {processed ? (
                 <canvas
                     // Keyed by effect: the glow takes a WebGL context and the AI
                     // picture a 2D one, and a canvas can only ever give one kind.
                     key={ai ? 'ai' : 'motion'}
-                    className={ai && !aiPainted ? 'map-source-hidden-video' : 'map-source-media'}
+                    className={(ai && !aiPainted) || waiting ? 'map-source-hidden-video' : 'map-source-media'}
                     ref={canvasRef}
                     width={Math.max(1, Math.round(width * scale))}
                     height={Math.max(1, Math.round(height * scale))}
                 />
             ) : null}
-            {ai && !aiPainted ? <MapSourcePlaceholder label={label} detail={aiStatus} width={width} height={height} /> : null}
+            {waiting ? <MapSourcePlaceholder label={label} detail={RECONNECTING} width={width} height={height} /> : null}
+            {ai && !aiPainted && !waiting ? <MapSourcePlaceholder label={label} detail={aiStatus} width={width} height={height} /> : null}
         </>
     )
 }
 
 // The project's picture operators, run on this page and drawn from one Picture
-// Out. Processed at up to 640 wide like the camera glow; the corner-pin scales
-// the result onto the wall.
+// Out, at the surface's own size; the corner-pin places it on the wall.
 const NO_NETWORK = { nodes: [], wires: [] }
 
 function MapNetworkSource({ network, spaceId, assets, projectId, outNodeId, label, width, height }) {
     const [canvas, setCanvas] = useState(null)
-    const scale = Math.min(1, 640 / width)
+    // Drawn at the surface's own size, up to PICTURE_MAX_WIDTH: this IS the
+    // picture on the wall, and 640 stretched to a 1920 screen is soft.
+    const scale = Math.min(1, PICTURE_MAX_WIDTH / width)
     const w = Math.max(1, Math.round(width * scale))
     const h = Math.max(1, Math.round(height * scale))
-    const present = Boolean(network?.nodes?.some((node) => node.id === outNodeId))
+    // A VJ deck is expanded into operators; its picture is its master's. A
+    // surface that names the deck reads the master (alias comes from toTopNetwork).
+    const shown = resolveAlias(outNodeId, network?.alias)
+    const present = Boolean(network?.nodes?.some((node) => node.id === shown))
     // Nothing to show → nothing to run; an empty network starts no engine.
-    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: outNodeId, width: w, height: h })
-    if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out is gone" width={width} height={height} />
+    const { error } = useTopNetwork({ network: present ? network : NO_NETWORK, spaceId, assets, projectId, canvas, show: shown, width: w, height: h })
+    if (!present) return <MapSourcePlaceholder label={label} detail="that Picture Out or deck is gone" width={width} height={height} />
     if (error) return <MapSourcePlaceholder label={label} detail={error} width={width} height={height} />
     return <canvas className="map-source-media" ref={setCanvas} width={w} height={h} />
 }
 
 // One page surface: waits for a boot slot, then mounts its iframe.
-function MapPageSource({ src, isProject, label, width, height }) {
+function MapPageSource({ src, isProject, label, width, height, sandbox = 'allow-scripts allow-same-origin', onReady = null }) {
     const [booting, setBooting] = useState(true)
     const releaseRef = useRef(null)
     const frameRef = useRef(null)
@@ -499,10 +636,11 @@ function MapPageSource({ src, isProject, label, width, height }) {
             if (event.data?.type !== PREVIEW_READY_MESSAGE) return
             if (event.source !== frameRef.current?.contentWindow) return
             releaseRef.current?.()
+            onReady?.()
         }
         window.addEventListener('message', onMessage)
         return () => window.removeEventListener('message', onMessage)
-    }, [booting, isProject])
+    }, [booting, isProject, onReady])
 
     useEffect(() => {
         setBooting(true)
@@ -527,7 +665,7 @@ function MapPageSource({ src, isProject, label, width, height }) {
             ref={frameRef}
             src={src}
             title={label || 'Surface source'}
-            onLoad={isProject ? undefined : () => releaseRef.current?.()}
+            onLoad={isProject ? undefined : () => { releaseRef.current?.(); onReady?.() }}
                 // A PROJECT surface is our own page on our own origin, and it
                 // is not sandboxed. `allow-scripts allow-same-origin` on a
                 // same-origin frame is the combination the browser itself
@@ -540,7 +678,7 @@ function MapPageSource({ src, isProject, label, width, height }) {
                 // allow-same-origin there hands THAT page its own origin back,
                 // never ours, and without it a three.js page cannot read its
                 // own assets and projects black.
-            sandbox={isProject ? undefined : 'allow-scripts allow-same-origin'}
+            sandbox={isProject ? undefined : sandbox}
             referrerPolicy={isProject ? 'same-origin' : 'no-referrer'}
             allow="autoplay; fullscreen; xr-spatial-tracking"
             scrolling="no"

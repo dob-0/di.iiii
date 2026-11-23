@@ -46,6 +46,7 @@ beforeAll(async () => {
     window.DiLaserDraw = require('./drawRuns.js')
     window.DiLaserCalm = require('./drawCalm.js')
     window.DiLaser = laserLook
+    new Function(fs.readFileSync(path.join(here, 'listen.js'), 'utf8'))() // desk.js reads window.DeskListen at load
     new Function(fs.readFileSync(path.join(here, 'desk.js'), 'utf8'))()
     await sleep(300)
 })

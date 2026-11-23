@@ -8,7 +8,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import {
-    HEAT_LIMIT_C, enable, disable, logFile, parsePackageTemp, readPackageTemp, refreshTimer, runAutoUpdate, statusLines, statusOf, unitTexts
+    HEAT_LIMIT_C, HUB_DOWN_LOUD_AFTER, isHubDown, enable, disable, logFile, parsePackageTemp, readPackageTemp, refreshTimer, runAutoUpdate, statusLines, statusOf, unitTexts
 } from './autoupdate.mjs'
 import { readState, writeState } from './state.mjs'
 
@@ -162,6 +162,104 @@ describe('one log line per run, failures included', () => {
         expect(logLines(home)[0]).toContain('Unknown system error -122')
         expect(logLines(home)[0]).not.toContain('update failed')
         expect(readState(home).autoupdate.lastError.message).toBe('Unknown system error -122: Unknown system error -122, cp')
+    })
+    it('a hub that is down (5xx / no network) is "hub-down", a logged wait with exit 0 - not a failure of this install', async () => {
+        const home = await makeHome({ channel: 'dev' })
+        const hubDown = ['could not read the hub\'s health (https://dev.diiii.xyz: 503; server cloudflare; after 3 retries; no body)', 'fetch failed', 'getaddrinfo ENOTFOUND dev.diiii.xyz']
+        for (const output of hubDown) {
+            const out = await runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output }) })
+            expect(out.outcome).toBe('hub-down')
+            expect(out.failed).toBe(false)
+        }
+        expect(logLines(home)[0]).toContain('hub-down')
+        expect(logLines(home)[0]).toContain('503')
+        expect(readState(home).autoupdate.lastError.message).toContain('ENOTFOUND')
+    })
+    it('a hub answer that is NOT an outage (404, checksum, EACCES) stays a failure', async () => {
+        const home = await makeHome({ channel: 'dev' })
+        for (const output of ['could not read the hub\'s health (https://dev.diiii.xyz: 404; no body)', 'checksum mismatch', 'EACCES: permission denied']) {
+            const out = await runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output }) })
+            expect(out.outcome).toBe('failed')
+            expect(out.failed).toBe(true)
+        }
+    })
+    it('a hub down for 12 runs in a row (one hour) turns loud: failed, with the count', async () => {
+        const home = await makeHome({ channel: 'dev' })
+        const down = () => runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output: 'fetch failed' }) })
+        for (let i = 1; i < HUB_DOWN_LOUD_AFTER; i++) expect((await down()).failed).toBe(false)
+        const loud = await down()
+        expect(loud.outcome).toBe('failed')
+        expect(loud.failed).toBe(true)
+        expect(loud.detail).toContain(`hub unreachable for ${HUB_DOWN_LOUD_AFTER} runs`)
+    })
+    it('one good run resets the hub-down count', async () => {
+        const home = await makeHome({ channel: 'dev' })
+        await runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output: 'fetch failed' }) })
+        await runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 0, output: 'already the newest' }) })
+        expect(readState(home).autoupdate.hubDownRuns).toBe(0)
+    })
+    it.each([['a string', 'abc'], ['a numeric string', '5'], ['null (NaN is stored as null)', null], ['a negative number', -50], ['a float', 2.5], ['an object', { x: 1 }], ['an array', [3]]])(
+        'a garbage hubDownRuns in the state file (%s) still turns loud at the limit', async (_name, garbage) => {
+            const home = await makeHome({ channel: 'dev', autoupdate: { hubDownRuns: garbage } })
+            const down = () => runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output: 'fetch failed' }) })
+            for (let i = 1; i < HUB_DOWN_LOUD_AFTER; i++) expect((await down()).failed).toBe(false)
+            expect(Number.isInteger(readState(home).autoupdate.hubDownRuns)).toBe(true)
+            const loud = await down()
+            expect(loud.failed).toBe(true)
+            expect(loud.detail).toContain(`hub unreachable for ${HUB_DOWN_LOUD_AFTER} runs`)
+        })
+    it('a heat skip does not reset the hub-down count: down, hot, down ... still reaches the limit', async () => {
+        const home = await makeHome({ channel: 'dev' })
+        const down = () => runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output: 'fetch failed' }) })
+        const hot = () => runAutoUpdate({ home, now: () => at, temp: () => HEAT_LIMIT_C + 5, update: async () => { throw new Error('must not run while hot') } })
+        for (let i = 0; i < 6; i++) await down()
+        expect((await hot()).outcome).toBe('skipped-heat')
+        expect(readState(home).autoupdate.hubDownRuns).toBe(6)
+        for (let i = 0; i < 4; i++) await down()
+        await hot()
+        const eleventh = await down()
+        expect(eleventh.failed).toBe(false)
+        expect((await down()).failed).toBe(true)
+    })
+    // The classifier, every branch. Table: [reason text, outcome]. Choices that are not obvious are commented.
+    const health = (code) => `could not read the hub's health (https://dev.diiii.xyz: ${code}; no body)`
+    it.each([
+        // status codes inside the hub-health message: 429 (rate limit) and every 5xx are the hub's state
+        [health(429), 'hub-down'],
+        // 500 is hub-down ON PURPOSE here (regex 5\d\d): a deploy restarts the hub, so a 500 is an outage for a few ticks; the 12-run limit keeps it loud if it lasts
+        [health(500), 'hub-down'],
+        [health(502), 'hub-down'],
+        [health(503), 'hub-down'],
+        [health(504), 'hub-down'],
+        [health(530), 'hub-down'], // Cloudflare: origin unreachable
+        // network errors: the machine cannot reach the hub right now (no network, DNS, refused, reset, timeout)
+        ['fetch failed', 'hub-down'],
+        ['getaddrinfo ENOTFOUND dev.diiii.xyz', 'hub-down'], // DNS name not found: no network or DNS is down on this machine, a wait like EAI_AGAIN
+        ['getaddrinfo EAI_AGAIN dev.diiii.xyz', 'hub-down'], // DNS temporary failure
+        ['connect ECONNREFUSED 127.0.0.1:4000', 'hub-down'],
+        ['read ECONNRESET', 'hub-down'],
+        ['connect ETIMEDOUT 1.2.3.4:443', 'hub-down'],
+        // everything else is a real fault of this install or of the request and stays loud at once
+        [health(401), 'failed'], // we are not allowed: needs a person, never a wait
+        [health(403), 'failed'],
+        [health(404), 'failed'], // the hub answers but the thing is gone: not an outage
+        [health(400), 'failed'],
+        [health(200), 'failed'],
+        ['checksum mismatch', 'failed'],
+        ['EACCES: permission denied', 'failed'],
+        ['something unexpected', 'failed']
+    ])('classifies "%s" as %s', async (output, expected) => {
+        const home = await makeHome({ channel: 'dev' })
+        const out = await runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output }) })
+        expect(out.outcome).toBe(expected)
+        expect(out.failed).toBe(expected === 'failed')
+        expect(isHubDown(output)).toBe(expected === 'hub-down')
+    })
+    it('status shows how many hub-down runs are counted', async () => {
+        const home = await makeHome({ channel: 'dev' })
+        for (let i = 0; i < 3; i++) await runAutoUpdate({ home, now: () => at, temp: () => 50, update: async () => ({ code: 1, output: 'fetch failed' }) })
+        const text = statusLines(statusOf({ home, dir: home, run: () => ({ ok: false, output: '' }) })).join('\n')
+        expect(text).toContain(`hub-down, 3 of ${HUB_DOWN_LOUD_AFTER} runs`)
     })
     it('says so when it could not read the temperature', async () => {
         const home = await makeHome()

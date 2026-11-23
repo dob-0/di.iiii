@@ -58,7 +58,7 @@ const rowToPublic = (row) => row && ({
 
 // Mint a key for an already-existing, canonical spaceId. Returns the plaintext
 // token ONCE plus the public record. The caller must have verified ownership.
-const mintSyncKey = ({ spaceId, ownerUserId = null, label = '', ttlMs = null, scope = 'edit' }) => {
+const mintSyncKey = ({ spaceId, ownerUserId = null, label = '', ttlMs = null, scope = 'edit', connect = false, machineTag = null }) => {
   const keyId = normalizeScope(scope) === 'manage'
     ? `${MANAGE_ID_MARK}${crypto.randomBytes(8).toString('hex')}` // 'm' + 16 hex chars
     : crypto.randomBytes(8).toString('hex')                       // 16 hex chars
@@ -67,9 +67,9 @@ const mintSyncKey = ({ spaceId, ownerUserId = null, label = '', ttlMs = null, sc
   const now = Date.now()
   const expiresAt = ttlMs ? now + ttlMs : null
   getDb().prepare(
-    `INSERT INTO space_sync_keys (id, space_id, owner_user_id, secret_hash, label, created_at, last_used_at, expires_at, revoked, scope)
-     VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 0, ?)`
-  ).run(keyId, spaceId, ownerUserId, sha256(secret), String(label || '').slice(0, 80), now, expiresAt, normalizeScope(scope))
+    `INSERT INTO space_sync_keys (id, space_id, owner_user_id, secret_hash, label, created_at, last_used_at, expires_at, revoked, scope, connect, machine_tag)
+     VALUES (?, ?, ?, ?, ?, ?, NULL, ?, 0, ?, ?, ?)`
+  ).run(keyId, spaceId, ownerUserId, sha256(secret), String(label || '').slice(0, 80), now, expiresAt, normalizeScope(scope), connect ? 1 : 0, connect ? String(machineTag || '') : null)
   const row = getDb().prepare('SELECT * FROM space_sync_keys WHERE id = ?').get(keyId)
   return { token, key: rowToPublic(row) }
 }
@@ -96,7 +96,7 @@ const resolveSyncKey = (token = '') => {
   if (!row.last_used_at || now - row.last_used_at > LAST_USED_SAMPLE_MS) {
     try { getDb().prepare('UPDATE space_sync_keys SET last_used_at = ? WHERE id = ?').run(now, keyId) } catch {}
   }
-  return { keyId, spaceId: row.space_id, label: row.label || '', scope: normalizeScope(row.scope), ownerUserId: row.owner_user_id || null, expiresAt: row.expires_at || null }
+  return { keyId, spaceId: row.space_id, label: row.label || '', scope: normalizeScope(row.scope), ownerUserId: row.owner_user_id || null, expiresAt: row.expires_at || null, connect: Boolean(row.connect), machineTag: row.machine_tag || null }
 }
 
 const listSyncKeys = (spaceId) => {

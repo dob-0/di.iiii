@@ -1,4 +1,4 @@
-// `di show <go | checkpoint | profile | mark>`: the router. It parses its own argv because the shared
+// `di show <go | checkpoint | count | profile | mark>`: the router. It parses its own argv because the shared
 // di parser (scripts/di/args.mjs) knows only its own value flags; this keeps the show flags in one place.
 import fs from 'node:fs'
 import os from 'node:os'
@@ -7,9 +7,10 @@ import { DEFAULTS, Refusal, expandHome, listVenues, loadProfile } from './lib/pr
 import { makeTransport } from './lib/transport.mjs'
 import { runCheckpoint } from './checkpoint.mjs'
 import { runGo } from './go.mjs'
+import { runCount } from './count.mjs'
 import { usage } from './usage.mjs'
 
-const VALUE_FLAGS = new Set(['venue', 'host', 'user', 'api', 'di-home', 'backups', 'marker', 'soak', 'interval', 'temp-nogo', 'venues-dir', 'session', 'why'])
+const VALUE_FLAGS = new Set(['venue', 'host', 'user', 'api', 'di-home', 'backups', 'marker', 'soak', 'interval', 'temp-nogo', 'venues-dir', 'session', 'why', 'data-dir'])
 
 export function parseShowArgs(argv) {
     const args = { _: [], flags: {} }
@@ -65,6 +66,7 @@ export async function main(argv, deps = {}) {
             print(all.length ? all.map((v) => `${v.venue}  ${v.file}`).join('\n') : 'no venue profiles found')
             return 0
         }
+        if (sub === 'count') return await runCount(args, { env, print, home, transportFactory: deps.transportFactory ?? makeTransport, ...(deps.count || {}) })
         const profile = loadProfile({ flags: args.flags, env, home })
         if (sub === 'profile') { print(JSON.stringify(profile, null, 2)); return 0 }
         if (sub !== 'go' && sub !== 'checkpoint') { print(`!! no such show command: ${sub}`); print(usage()); return 2 }

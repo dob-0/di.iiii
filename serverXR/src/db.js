@@ -457,6 +457,37 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_auth_tokens_user ON auth_tokens (user_id, kind);
 
+  -- Agent mail: one agent (a Claude Code chat) telling another, through this
+  -- server, across accounts. Plain text, capped, addressed to a person and
+  -- optionally to one of their agents. 'state' is 'delivered' (the receiver
+  -- sees it in the inbox) or 'pending' (a stranger's first message: held as a
+  -- request until the receiver allows that sender). 'request' marks the rows
+  -- that counted against a sender's new-stranger quota. Method and threat
+  -- model: docs/ai/decisions/2026-11-12-agent-mail.md.
+  CREATE TABLE IF NOT EXISTS agent_messages (
+    id TEXT PRIMARY KEY,
+    from_user TEXT NOT NULL,
+    from_agent TEXT,
+    to_user TEXT NOT NULL,
+    to_agent TEXT,
+    body TEXT NOT NULL,
+    thread_id TEXT NOT NULL,
+    reply_to TEXT,
+    state TEXT NOT NULL DEFAULT 'delivered',
+    request INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    read_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_agent_messages_to ON agent_messages (to_user, created_at);
+  CREATE INDEX IF NOT EXISTS idx_agent_messages_from ON agent_messages (from_user, created_at);
+  CREATE TABLE IF NOT EXISTS agent_contacts (
+    owner_user TEXT NOT NULL,
+    other_user TEXT NOT NULL,
+    state TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (owner_user, other_user)
+  );
+
   CREATE TABLE IF NOT EXISTS telegram_login_tokens (
     id TEXT PRIMARY KEY,
     secret_hash TEXT NOT NULL,
@@ -746,6 +777,14 @@ function initDb(dbPath) {
   ensureColumn(db, 'ai_chats', 'claude_session_id', 'TEXT')
   // A sync key's scope: 'edit' (every key before 2026-10-07) or 'manage' (SPEC_space_sync_keys.md §13).
   ensureColumn(db, 'space_sync_keys', 'scope', "TEXT NOT NULL DEFAULT 'edit'")
+  // `di connect` keys: a server-set flag (never the label, which a person can write) and the machine they came with.
+  // One key per (machine, space) ever: a revoked row stays, so a per-space revoke is not re-minted and parallel syncs cannot double-mint.
+  ensureColumn(db, 'space_sync_keys', 'connect', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'space_sync_keys', 'machine_tag', 'TEXT')
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_keys_machine_space ON space_sync_keys(machine_tag, space_id) WHERE machine_tag IS NOT NULL')
+  // `di connect` (docs/architecture/CLI_LOGIN.md, "Connecting a machine"): a device code asks for 'login' (a terminal token, as before) or 'connect' (one editor key per ticked space); `spaces` is the JSON list the person ticked.
+  ensureColumn(db, 'cli_device_codes', 'scope', "TEXT NOT NULL DEFAULT 'login'")
+  ensureColumn(db, 'cli_device_codes', 'spaces', 'TEXT')
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
   ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')

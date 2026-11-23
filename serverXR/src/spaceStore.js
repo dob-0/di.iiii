@@ -70,6 +70,22 @@ const applyAssetSafetyHeaders = (res, mimeType) => {
   }
 }
 
+// Project assets that are single-file HTML pages (a map "visual") are the one
+// document type served inline. The protection is the CSP `sandbox` directive
+// WITHOUT allow-same-origin: even opened directly in a tab the page gets an
+// opaque origin, so it cannot read this origin's cookies/storage or make
+// credentialed API calls. No default-src etc. — visuals load fonts, CDNs and
+// talk to local tools on loopback.
+const isHtmlAssetMime = (mimeType) =>
+  String(mimeType || '').toLowerCase().split(';')[0].trim() === 'text/html'
+const applyHtmlAssetHeaders = (res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Content-Disposition', 'inline')
+  res.setHeader('Content-Security-Policy', 'sandbox allow-scripts allow-pointer-lock')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Referrer-Policy', 'no-referrer')
+}
+
 // Parses a `Range` header for a single byte range against a known file size.
 // Returns:
 //   - { start, end } (inclusive) for a satisfiable single range
@@ -1370,4 +1386,4 @@ function createSpaceStore({
   }
 }
 
-module.exports = { createSpaceStore, applyAssetSafetyHeaders, parseByteRange }
+module.exports = { createSpaceStore, applyAssetSafetyHeaders, applyHtmlAssetHeaders, isHtmlAssetMime, parseByteRange }

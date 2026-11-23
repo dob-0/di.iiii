@@ -1,5 +1,8 @@
 # Making a light show travel
 
+> **2026-11-19: the home of a show is decided: its project** (`docs/ai/decisions/2026-11-19-a-show-lives-in-its-project.md`).
+> This page stays the truth of what is built until the steps of `docs/architecture/SHOW_IN_THE_PROJECT.md` land.
+
 Written 2026-09-03 as a plan; trimmed on 2026-09-23 to what is built, when the owner
 answered decisions 2 and 3 of `di-atlas/decisions/2026-09-23-connect-everything.md`:
 **one show per space, carried in the space's `.diiii` file.** His sentence that day:

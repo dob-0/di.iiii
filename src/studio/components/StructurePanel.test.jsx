@@ -163,3 +163,20 @@ describe('StructurePanel lists what the scene shows (UX audit F026)', () => {
         expect(onEdit).toHaveBeenCalledTimes(1)
     })
 })
+
+describe('StructurePanel "Edit in Nodes"', () => {
+    it('hands the node id to the opener, so Nodes can open on that node', () => {
+        const onEditNodeRowInNodes = vi.fn()
+        render(
+            <StructurePanel
+                entities={[]}
+                nodeRows={[{ id: 'node-7', name: 'Tunnel', type: 'geo.tunnel' }]}
+                onEditNodeRowInNodes={onEditNodeRowInNodes}
+                onSelectEntity={() => {}}
+                onToggleSelectEntity={() => {}}
+            />
+        )
+        fireEvent.click(screen.getByRole('button', { name: 'Edit Tunnel in Nodes' }))
+        expect(onEditNodeRowInNodes).toHaveBeenCalledWith('node-7')
+    })
+})
