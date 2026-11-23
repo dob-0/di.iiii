@@ -127,12 +127,60 @@ guards: serverXR/src/cliLoginStore.test.js, serverXR/src/cliTokenGate.test.js, s
         (real HTTP, auth on), scripts/di/login.test.js, src/pages/DeviceLoginPage.test.jsx
 ```
 
+## Connecting a machine — `di connect` (2026-11-22)
+
+**Why.** Keys were one per space (`di invite` on the host, a four-word join code). A person with six spaces on dev had a machine that
+followed one. Measured on studio-mac 2026-11-22: local Main had 0 projects, dev's Main had 6, only one space followed.
+
+**Method.** The same device grant (RFC 8628) with a `scope`: `POST /api/auth/device/start` takes `{ scope: 'connect' }` (default `login`).
+No second flow: the same codes, limits, ten minutes, `/device` page.
+
+1. The terminal shows the code. The person opens `/device` in the browser they are signed in with and types it.
+2. `lookup` answers `{ scope: 'connect', spaces: [{ id, label, role }] }`: only spaces the account **owns or is a trusted editor of**
+   (an admin gets no more than that). The page shows them all ticked; "Connect this machine" sends `decision { approve: true, spaceIds }`;
+   the server cuts the list to what the account may connect (none left: 400 `no_spaces`).
+3. The terminal's next poll gets `{ scope: 'connect', user, keys: [{ spaceId, name, key, expiresAt }] }` **once**: one `edit`-scoped
+   sync key per ticked space, label `connect <machine label> <date>`, a year. Minted at the poll (only a hash is stored, so there is
+   nothing to hand over later). The log says how many, never a key. A second poll answers `expired_token`.
+4. `di connect` follows each space (`followSpace`, from now on). **A space of that name already here is followed INTO only when the host
+   holds every project this copy holds**; otherwise it is skipped and named, nothing changed (then `di follow SPACE --take-host|--take-mine`
+   decides). The follower's own "this copy is ahead" check (SPEC_follow.md) stays the second lock for what a project list cannot show.
+   Keys are in memory and follows.json only: never argv, never printed.
+5. `di disconnect [--from URL]` ends each connect key (`POST /api/auth/connect/revoke`, the key authenticates itself; a key not made by
+   connect is refused 404 and its follow is left alone) and removes the follow. It deletes no space or project. `connect.json` in the data
+   folder lists what connect did (space ids, no keys).
+
+6. **Stays connected.** Each key's label ends with a machine tag (`connect <machine> <date> ~<8 hex>`); every key one connect made shares it.
+   `POST /api/auth/connect/sync` (bearer = one of the machine's live connect keys, nothing else) answers `{ scope: 'connect', keys }` for the
+   spaces the person gained since, minted under the same label (so the same consent and the same Disconnect). 404 when the key is not a live
+   connect key. `di connect --sync`, the end of `di up` and `di autoupdate run` call it, quietly when nothing is new; a refusal is said, never
+   swallowed. macOS has no autoupdate timer: it syncs at `di up` or by hand. Spaces the person lost are not touched (their key stops with the role).
+7. **Machines list.** `GET /api/auth/connect/machines` (account session) lists the person's machines (keys grouped by tag, with space labels);
+   `DELETE /api/auth/connect/machines/:id` ends every key of that machine (404 when not theirs). Shown at `/device` (right column from 1100 px)
+   and in `diiii.localhost/admin` (Spaces and users). No work is deleted by either.
+8. **`di login` offers it.** After a sign-in on a terminal, one Enter runs `di connect` (`n` or `--no-connect` skips; no terminal, no question).
+   Nothing in connect needs a login: an install without one works alone as before.
+
+9. **A connect key lives on its person's right** (review 2026-11-22). Connect keys carry a server-set `connect` flag and a `machine_tag` column
+   (the label is display only; a hand-made key labelled like one gets nothing from sync, revoke or the machines list). At every use the account
+   must exist and still own or trusted-edit the (untrashed) space, else the key answers as no key. One key per (machine, space) ever (unique index):
+   a revoked row stays, so ending one space's key is not undone by the next sync, and parallel syncs cannot double-mint; an expired row is cleared
+   first. Approving a connect needs a positive sign-in cookie (`via: signin`) and a separate session secret, like minting a manage key.
+   Not done: the same use-time check for hand-made user-owned keys, and a "blocked account" state (none exists in `users`).
+
+**What did not change.** `cliTokenGate.js`: a `dii_cli_` login still cannot mint a key or approve a code (`not_through_cli`); the consent
+is the signed-in browser's. Tests: `serverXR/src/connectContracts.test.js`, `scripts/di/connect.test.js`,
+`src/pages/DeviceLoginPage.test.jsx` ("di connect" block).
+
+**Not validated.** Not run against dev.diiii.xyz or on a second machine (no deploy, no merge in this change). Keys are one per space and
+last a year; there is no per-key expiry choice yet.
+
 ## Not validated, and owed
 
 - **Not seen on Taron's machine, or on any machine but this one.** Windows file permissions for the credentials file are
   not tested. Marked unvalidated until a person has used it for real.
 - Terminals are not ended by a password reset or "sign out everywhere" (that bump does not reach `cli_tokens`).
-- `di follow` still asks for a sync key. The follower could use the login; it is in flight elsewhere and not touched here.
+- `di follow` still asks for a sync key by itself; `di connect` (above) is the one-login way to get them.
 - Spec §6's "a list of spaces" and "choose a shorter expiry" per key are not built: one default, stated above.
 - The catalogue's `reach` is per route. A body flag that opens a door through a route marked `private` is the catalogue's debt,
   not new here.

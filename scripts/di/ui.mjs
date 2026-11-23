@@ -969,6 +969,26 @@ export const ui = {
         '',
         style.dim(`waiting for you to approve it there — the code runs out in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} · Ctrl-C to stop`)
     ].join('\n'),
+    connectAsk: ({ host, address, code, minutes, opening }) => [
+        `connect this machine to ${host}`,
+        '',
+        `  1. open  ${style.cyan(address)}${opening ? style.dim('   (opening it for you)') : ''}`,
+        `  2. type  ${style.bold(code)}   then tick your spaces and press "Connect this machine"`,
+        '',
+        style.dim(`waiting for you to approve it there — the code runs out in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} · Ctrl-C to stop`)
+    ].join('\n'),
+    connectFollowed: (spaceId) => `  ${style.bold(spaceId)} — following (from now on)`,
+    connectSkippedWork: (spaceId, count) => `  ${style.bold(spaceId)} — skipped: this copy holds ${count} ${count === 1 ? 'project' : 'projects'} the host lacks. nothing was changed. choose: ${CMD} follow ${spaceId} --from HOST --take-host (host wins) or --take-mine (this copy wins)`,
+    connectSkippedWhy: (spaceId, reason) => `  ${style.bold(spaceId)} — skipped: ${reason}. nothing was changed.`,
+    connectDone: (host, name, followed, skipped) => `connected to ${host} as ${style.bold(name)}: following ${followed} ${followed === 1 ? 'space' : 'spaces'}${skipped ? `, skipped ${skipped}` : ''}. undo: ${CMD} disconnect`,
+    connectNone: (host) => `nothing to connect on ${host}: this account owns or edits no space there.`,
+    syncNothingNew: () => 'connected: no new spaces since the last check.',
+    syncNoKey: () => `could not stay connected: no live connect key is kept here. run ${CMD} connect again.`,
+    syncRefused: (host, status) => `could not check ${host} for new spaces (${status ? `answered ${status}` : 'no answer'}). nothing changed; ${CMD} connect --sync tries again.`,
+    loginOfferConnect: () => `press Enter to connect this machine to all your spaces now (${CMD} connect), or type n to skip.`,
+    connectNotInstalled: () => 'connect needs an installed di on this machine — run di install first.',
+    disconnectDone: (stopped, kept) => `disconnected: stopped ${stopped} ${stopped === 1 ? 'follow' : 'follows'} and ended their keys. your work on this machine was not touched.${kept ? ` ${kept} left as they were (their key is not a connect key).` : ''}`,
+    disconnectNothing: () => 'nothing was connected here — nothing changed.',
     loginDone: (host, name) => [
         `signed in as ${style.bold(name)} on ${host}.`,
         style.dim('this terminal can read and edit your spaces and projects. it cannot publish or delete a space, or change who owns or edits one — those stay in the browser.')
@@ -1011,6 +1031,19 @@ export const ui = {
     logoutNotRemoved: (host, why) => `could not remove the login for ${host} from this machine (${why}) — it is still there.`,
 
     // `di login --help`, `di logout --help`, `di whoami --help` and `di help login`.
+    connectUsage: () => [
+        style.bold(`${CMD} connect`) + style.dim(' — one sign-in, every space of yours on this machine'),
+        '',
+        `same sign-in as ${CMD} login (no stored login needed). the terminal shows a short code; you type it in the browser you are signed in with,`,
+        'see the spaces you own or edit (all ticked), and press "Connect this machine". this machine then follows each one.',
+        'a space that already exists here with work the host lacks is skipped and named — never overwritten.',
+        '',
+        `  ${CMD} connect              connect to dev.diiii.xyz`,
+        `  ${CMD} disconnect           stop every follow connect made and end its keys; your work is not touched`,
+        '',
+        '  --from URL   another di.iiii (default: the dev host, as for login)',
+        '  --no-open    do not open the browser for you'
+    ].join('\n'),
     loginUsage: () => [
         style.bold(`${CMD} login`) + style.dim(' — sign in once on this machine, from the terminal'),
         '',
@@ -1035,7 +1068,7 @@ export const ui = {
         '90 days unused (a year at most). DI_TOKEN, when set, still wins — for CI.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), show: () => 'di show <command>: the show tools, read from a venue profile. Full help: di show help', service: () => ui.serviceUsage(), login: () => ui.loginUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), show: () => 'di show <command>: the show tools, read from a venue profile. Full help: di show help', service: () => ui.serviceUsage(), login: () => ui.loginUsage(), connect: () => ui.connectUsage(), disconnect: () => ui.connectUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -1064,6 +1097,7 @@ export const ui = {
         '',
         `  ${CMD} login         sign in from the terminal, once — then ${CMD} and Claude act as you`,
         `  ${CMD} whoami        who this terminal is signed in as · ${CMD} logout ends it`,
+        `  ${CMD} connect       one sign-in, then follow every space you own or edit · ${CMD} disconnect undoes it`,
         `  ${CMD} name          this install's network name and its own certificate (after ${CMD} login) · --status --renew --forget`,
         '',
         `  ${CMD} stage join SPACE --from URL   make this machine the one under the projector`,
