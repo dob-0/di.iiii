@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { parseArgs, COMMANDS } from './cli.mjs'
-import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, launchdPlist, installLaunchAgent, stableCliPath, runMonitor, sendOnce } from './monitorReport.mjs'
+import { repoRoot, parseMonitorArgs, parseLedgerOpen, buildBody, systemdQuote, timerUnits, installTimer, launchdPlist, installLaunchAgent, stableCliPath, runMonitor, sendOnce, localBase } from './monitorReport.mjs'
 import { writeLogin } from './loginStore.mjs'
 
 const homes = []
@@ -311,5 +311,14 @@ describe('repoRoot', () => {
     it('finds serverXR from the installed layout (cli)', () => {
         const base = make(['cli'])
         expect(repoRoot(path.join(base, 'cli'))).toBe(base)
+    })
+})
+
+describe('localBase (11-24)', () => {
+    it('is the di command\'s own address from di.env, or null when di is not installed', () => {
+        const home = tmpHome()
+        expect(localBase({ home })).toBe(null)
+        fs.writeFileSync(path.join(home, 'di.env'), 'PORT=4321\n')
+        expect(localBase({ home })).toBe('http://localhost:4321')
     })
 })

@@ -174,12 +174,42 @@ describe('hub snapshot', () => {
     const ids = new Set(snap.map.nodes.map((n) => n.id))
     expect(ids).toContain('machine:aylmo')
     expect(ids).toContain('tier:dev')
-    expect(ids).toContain('space:dev:alpha')
+    expect(ids).toContain('space:alpha')
     expect(ids).toContain('show:aylmo:s1')
     for (const e of snap.map.edges) { expect(ids.has(e.from) && ids.has(e.to)).toBe(true) }
     expect(snap.map.edges.some((e) => e.kind === 'serves' && e.to === 'machine:aylmo')).toBe(true)
     expect(snap.map.edges.some((e) => e.kind === 'works-on')).toBe(true)
     expect(snap.map.edges.some((e) => e.kind === 'shows-on')).toBe(true)
+  })
+
+  it('lends the other machines\' own spaces; the map is the same whichever machine draws it (11-24)', async () => {
+    const agentRows = (n, host) => Array.from({ length: n }, (_, i) => ({ sessionId: `${String(i).padStart(3, "0")}${host}`, title: `${host} ${i}`, status: 'busy' }))
+    const mac = { host: 'studio', panels: { spaces: { ok: true, rows: [{ slug: 'alpha', visibility: 'public' }, { slug: 'hayfilm', visibility: 'private' }] }, agents: { ok: true, rows: agentRows(30, 'studio') } } }
+    const aylmo = { host: 'aylmo', panels: { spaces: { ok: true, rows: [{ slug: 'alpha', visibility: 'public' }, { slug: 'platina', visibility: 'private' }, { slug: '', visibility: 'x' }] }, agents: { ok: true, rows: agentRows(30, 'aylmo') } } }
+    const draw = async (self, other) => {
+      const viewStore = { getMonitor: async () => ({ generatedAt: 'now', host: self.host, configured: true, panels: { ...panels, ...self.panels } }) }
+      const { hub } = build({ store: viewStore, hostname: () => self.host, listSpaces: async () => [] })
+      return hub.getSnapshot({ account: { state: 'ok', reports: [{ ...other, reportedAt: Date.now() }] } })
+    }
+    const onMac = await draw(mac, aylmo)
+    const onAylmo = await draw(aylmo, mac)
+    // the other machine's spaces arrive as its local tier; a row without a name is dropped
+    expect(onMac.spaces.rows).toEqual(expect.arrayContaining([
+      { tier: 'local:aylmo', slug: 'alpha', visibility: 'public' },
+      { tier: 'local:aylmo', slug: 'platina', visibility: 'private' }
+    ]))
+    expect(onMac.spaces.rows.some((r) => r.slug === '')).toBe(false)
+    expect(onMac.spaces.lentFrom).toEqual(['aylmo'])
+    // one node per space name, held by every tier that has it
+    const spaceNodes = (snap) => snap.map.nodes.filter((n) => n.kind === 'space').map((n) => n.id).sort()
+    expect(spaceNodes(onMac)).toContain('space:platina')
+    expect(onMac.map.edges.filter((e) => e.to === 'space:alpha' && e.kind === 'holds').map((e) => e.from)).toContain('tier:local:aylmo')
+    // agents: each machine gets its share (40 over 2 machines = 20 each), the viewer is not first
+    const agentNodes = (snap) => snap.map.nodes.filter((n) => n.kind === 'agent').map((n) => n.id).sort()
+    expect(agentNodes(onMac).filter((id) => id.startsWith('agent:aylmo:')).length).toBe(20)
+    expect(agentNodes(onMac).filter((id) => id.startsWith('agent:studio:')).length).toBe(20)
+    expect(agentNodes(onMac)).toEqual(agentNodes(onAylmo))
+    for (const e of onMac.map.edges) { expect(onMac.map.nodes.some((n) => n.id === e.from) && onMac.map.nodes.some((n) => n.id === e.to)).toBe(true) }
   })
 
   it('getShared: machines with versions, freshest good PR list, spaces, asks, feeds tagged by machine; no chats or credits', async () => {

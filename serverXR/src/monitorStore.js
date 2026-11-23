@@ -24,6 +24,8 @@ const CACHE_TTL_MS = 5000
 const PR_LIST_LIMIT = 300
 const PANEL_TIMEOUT_MS = 4000
 const PANEL_CAP_MS = 9000
+// the spaces a machine reports for the map: a safety limit (aylmo holds 36)
+const SPACES_MAX = 200
 const FEED_MAX_LINES = 60
 const LINE_MAX_CHARS = 200
 
@@ -479,6 +481,21 @@ function createMonitorStore({
     return { configured: 1, source }
   }
 
+  // this machine's own spaces (slug + public/private), read from its own server: the Monitor of the owner's OTHER machines
+  // shows them on the map, so every machine draws the same map (11-24: studio-mac drew 6 spaces, aylmo 36)
+  async function spaces(selfBase) {
+    if (!fetchImpl || !selfBase) throw new Error('no local address to read from')
+    const res = await fetchImpl(`${selfBase}/serverXR/api/spaces`, { signal: AbortSignal.timeout(3000) })
+    if (!res.ok) throw new Error(`/serverXR/api/spaces answered ${res.status}`)
+    const body = await res.json()
+    const list = Array.isArray(body) ? body : (Array.isArray(body?.spaces) ? body.spaces : [])
+    const rows = list
+      .filter((s) => s && s.kind !== 'sandbox' && (s.slug || s.id))
+      .map((s) => ({ slug: String(s.slug || s.id).slice(0, 80), visibility: s.isPublic ? 'public' : 'private' }))
+      .slice(0, SPACES_MAX)
+    return { rows, total: list.length }
+  }
+
   async function panel(name, fn, capMs = PANEL_CAP_MS) {
     const started = now()
     try {
@@ -509,6 +526,7 @@ function createMonitorStore({
       panel('presence', presence),
       panel('connected', () => connected(selfBase)),
       panel('services', services),
+      panel('spaces', () => spaces(selfBase)),
       panel('pullRequests', () => pullRequests(config)),
       panel('tasks', () => feeds(config, 'tasks')),
       panel('shows', () => feeds(config, 'shows')),
