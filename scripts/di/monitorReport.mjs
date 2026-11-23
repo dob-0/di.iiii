@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url'
 import { readLogin } from './loginStore.mjs'
 import { resolveTarget } from './login.mjs'
 import { diHome, paths } from './paths.mjs'
-import { publicUrl, resolvePort } from './state.mjs'
+import { apiBase, resolvePort } from './state.mjs'
 import { runFeed } from './monitorFeed.mjs'
 
 export const USAGE = [
@@ -99,7 +99,7 @@ export const repoRoot = (start = here()) => {
 // then say "no local address", never a guess
 export const localBase = ({ home = diHome() } = {}) => {
     if (!fs.existsSync(paths(home).env)) return null
-    try { return publicUrl(home, resolvePort(home)) } catch { return null }
+    try { return apiBase(home, resolvePort(home)) } catch { return null }
 }
 
 export const collectSnapshot = async ({ root = repoRoot(), selfBase = localBase() } = {}) => {
@@ -109,7 +109,7 @@ export const collectSnapshot = async ({ root = repoRoot(), selfBase = localBase(
     // This process lives for one snapshot, so it has no earlier credits list to show while a slow check runs on: it waits for the
     // credits command's whole limit (the server's page does not, it shows the last list). Without this the one-shot report would
     // say "checking" for ever on the hour the command is slow.
-    const store = createMonitorStore({ connections: { spaces: new Map(), projects: new Map() }, repoDir: root, creditsWaitMs: CREDITS_COMMAND_MS + 2000 })
+    const store = createMonitorStore({ connections: { spaces: new Map(), projects: new Map() }, repoDir: root, creditsWaitMs: CREDITS_COMMAND_MS + 2000, reportSpaces: true })
     return store.getMonitor({ selfBase })
 }
 

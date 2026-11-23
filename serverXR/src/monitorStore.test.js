@@ -168,11 +168,14 @@ describe('monitor snapshot', () => {
     const fetchImpl = async (url) => (url === 'http://self/serverXR/api/spaces'
       ? { ok: true, status: 200, json: async () => ({ spaces: [{ slug: 'alpha', isPublic: true }, { id: 'b', isPublic: false }, { slug: 'sb', kind: 'sandbox' }] }) }
       : { ok: false, status: 404 })
-    const store = createMonitorStore({ home, runCommand: fakeRun(), fetchImpl })
-    const { panels } = await store.getMonitor({ selfBase: 'http://self' })
+    const store = createMonitorStore({ home, runCommand: fakeRun(), fetchImpl, reportSpaces: true })
+    const { panels } = await store.getMonitor({ selfBase: 'http://self/serverXR' })
     expect(panels.spaces).toMatchObject({ ok: true, total: 3, rows: [{ slug: 'alpha', visibility: 'public' }, { slug: 'b', visibility: 'private' }] })
-    const bare = createMonitorStore({ home, runCommand: fakeRun(), fetchImpl })
+    const bare = createMonitorStore({ home, runCommand: fakeRun(), fetchImpl, reportSpaces: true })
     expect((await bare.getMonitor({ selfBase: null })).panels.spaces).toMatchObject({ ok: false, error: 'no local address to read from' })
+    // the server's own scan has no spaces panel: it never turns its machine yellow
+    const server = createMonitorStore({ home, runCommand: fakeRun(), fetchImpl })
+    expect((await server.getMonitor({ selfBase: 'http://self/serverXR' })).panels.spaces).toBeUndefined()
   })
 
   it('serves a cached snapshot for 5 seconds', async () => {

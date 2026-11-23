@@ -160,7 +160,9 @@ function createMonitorStore({
   now = () => Date.now(),
   // how long a snapshot waits for the credits command when no list is known yet; the one-shot `di monitor report`
   // has no memory between runs and passes the command's whole limit, so a report always carries the real list or the command's error
-  creditsWaitMs = CREDITS_WAIT_MS
+  creditsWaitMs = CREDITS_WAIT_MS,
+  // `di monitor report` sets it: the report carries this machine's own spaces for the other machines' map
+  reportSpaces = false
 } = {}) {
   const boardStores = new Map()
   const hub = () => connections || (() => {
@@ -485,8 +487,8 @@ function createMonitorStore({
   // shows them on the map, so every machine draws the same map (11-24: studio-mac drew 6 spaces, aylmo 36)
   async function spaces(selfBase) {
     if (!fetchImpl || !selfBase) throw new Error('no local address to read from')
-    const res = await fetchImpl(`${selfBase}/serverXR/api/spaces`, { signal: AbortSignal.timeout(3000) })
-    if (!res.ok) throw new Error(`/serverXR/api/spaces answered ${res.status}`)
+    const res = await fetchImpl(`${selfBase}/api/spaces`, { signal: AbortSignal.timeout(3000) })
+    if (!res.ok) throw new Error(`/api/spaces answered ${res.status}`)
     const body = await res.json()
     const list = Array.isArray(body) ? body : (Array.isArray(body?.spaces) ? body.spaces : [])
     const rows = list
@@ -526,7 +528,9 @@ function createMonitorStore({
       panel('presence', presence),
       panel('connected', () => connected(selfBase)),
       panel('services', services),
-      panel('spaces', () => spaces(selfBase)),
+      // the server's own Monitor lists its spaces itself (monitorHub); only a machine REPORT carries them (11-24: the server's
+      // own scan of this panel failed and turned its machine yellow on its own map)
+      ...(reportSpaces ? [panel('spaces', () => spaces(selfBase))] : []),
       panel('pullRequests', () => pullRequests(config)),
       panel('tasks', () => feeds(config, 'tasks')),
       panel('shows', () => feeds(config, 'shows')),
