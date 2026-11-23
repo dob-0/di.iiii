@@ -1,5 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { readTopReport } from './topReports.js'
 import { clipNodesOf, useClipVideos } from './useClipVideos.js'
 
 // A fake engine and a fake clip player: the hook's whole job is the
@@ -22,6 +23,18 @@ const fakeEngine = () => {
 }
 const network = (...nodes) => ({ nodes, wires: [] })
 const clipNode = (id, values = {}) => ({ id, type: 'top.clip', values })
+
+describe('useClipVideos reports', () => {
+    it('hands each clip an onError that lands in the node report', () => {
+        let given
+        const spy = (values, options) => { given = options; return create(values, options) }
+        renderHook(() => useClipVideos(network(clipNode('rep1', { asset: 'a' })), { engine: fakeEngine(), create: spy }))
+        given.onError('Clip file failed: x')
+        expect(readTopReport('rep1').error).toBe('Clip file failed: x')
+        given.onError(null)
+        expect(readTopReport('rep1').error).toBeNull()
+    })
+})
 
 describe('useClipVideos', () => {
     it('finds only Clip In nodes, from a network or a node list', () => {

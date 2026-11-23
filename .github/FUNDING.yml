@@ -1,9 +1,12 @@
 # di.iiii is AGPL-3.0 and free to use. These are the ways to support the work.
-#
-# GitHub Sponsors takes 0% — GitHub covers the card fees, so the whole amount arrives.
-# Polar is the card rail for anyone without a GitHub account.
-# Both are also on the support page, with what the money pays for.
+# Both entries answer 200 (checked 2026-11-10 with curl -L).
+# The same ways, with what the money pays for, are on https://diiii.xyz/support.
+custom:
+  - "https://diiii.xyz/support"
+  - "https://buy.polar.sh/polar_cl_x4xohCpb2L1eEac3FW1bURvFwdtQvtvDZS6BY2WtUm1"
 
-github: dob-0
-polar: di-iiii
-custom: ["https://diiii.xyz/support"]
+# Removed 2026-11-10, because each entry led to a dead page (curl, 2026-11-10):
+#   github: dob-0     -> https://github.com/sponsors/dob-0 answers 302 to the profile: the account is not enrolled in GitHub Sponsors.
+#                        Put it back when the account is enrolled (GitHub Sponsors takes 0%: GitHub covers the card fees).
+#   polar: di-iiii    -> https://polar.sh/di-iiii answers 404: the Polar storefront page does not exist, only checkout links do.
+#                        The `polar:` key can only point at that storefront, so the working Polar checkout link is a `custom:` URL above.

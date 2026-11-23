@@ -3,6 +3,7 @@
 const entries = {
   access: require("./access"),
   accounts: require("./accounts"),
+  agentMail: require("./agentMail"),
   agents: require("./agents"),
   assets: require("./assets"),
   chat: require("./chat"),

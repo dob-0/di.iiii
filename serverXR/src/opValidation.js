@@ -16,6 +16,7 @@ const ID_BEARING_CREATE_OPS = {
   createEntity: 'entity',
   createNode: 'node',
   createEdge: 'edge',
+  createMappingVisual: 'visual',
   upsertAsset: 'asset'
 }
 

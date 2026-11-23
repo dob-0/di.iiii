@@ -1,0 +1,5 @@
+/* A visual's effects on the CSS path (MapFxDom.jsx): loaded wherever a stage
+   draws, the output route included. */
+.map-fx { position: absolute; inset: 0; transform-origin: 50% 50%; }
+.map-fx-wash,
+.map-fx-flash { position: absolute; inset: 0; pointer-events: none; }

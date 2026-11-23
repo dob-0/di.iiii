@@ -37,7 +37,7 @@ di autoupdate  on | off | status — keep it on its channel every 5 minutes (Lin
 di doctor      what this machine can and cannot do
 di keeper get  a small model on this machine — works with no internet
 di ndi get     video in and out over the network — OBS, Resolume, a projector
-di login       sign in once from the terminal — then di and Claude act as you
+di login       sign in once from the terminal — then di and Claude act as you (needs a di newer than 0.4.3)
 di whoami      who this terminal is signed in as · di logout ends it
 di help        the rest
 ```
@@ -598,6 +598,11 @@ looked nothing like a real install — see below.
   `.zshenv` for zsh, `.bash_profile` before `.bashrc` on macOS.
 
 ## Signing in from the terminal
+
+`di login` needs a di newer than 0.4.3: the released 0.4.3 answers
+`no such command: login`, and no stable release has it yet. `di --version` shows
+which you have. On 0.4.3, everything above works without signing in; see
+`docs/ai/public/join.md`.
 
 `di login` signs this machine in once, so `di` and the agents started from it
 (`di mcp`, Claude) act as the person in their own spaces — no trip to the

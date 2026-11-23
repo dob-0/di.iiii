@@ -114,6 +114,12 @@ describe('content-addressed asset uploads', () => {
         await expect(hashFileSha256(makeFile('hello', 'hello.txt'))).resolves.toBe(HELLO_SHA256)
     })
 
+    it('skips hashing (and reading into memory) above 256 MB', async () => {
+        const huge = { size: 257 * 1024 * 1024, arrayBuffer: vi.fn() }
+        await expect(hashFileSha256(huge)).resolves.toBe('')
+        expect(huge.arrayBuffer).not.toHaveBeenCalled()
+    })
+
     it('skips the byte upload when the server already has the content', async () => {
         apiFetch.mockResolvedValueOnce({
             ok: true,

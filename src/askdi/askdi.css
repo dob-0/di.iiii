@@ -1,0 +1,77 @@
+/* "Ask di" — di.iiii's frame: near-black ground, one cyan that marks meaning
+   (focus, the link), 1px lines, square corners, mono for facts, no shadow.
+   Tokens only (src/styles/base.css); spec in docs/ai/sessions/feat-ask-di.md. */
+
+.askdi {
+    position: relative;
+    z-index: 2;
+    max-width: 720px;
+    margin-top: var(--di-space-6);
+    padding: var(--di-space-5);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: var(--di-cyan-wash);
+    color: var(--di-text);
+    font-family: var(--di-sans);
+}
+
+.askdi-title {
+    margin: 0 0 var(--di-space-3);
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--di-text);
+}
+
+.askdi-note { margin: 0 0 var(--di-space-4); font-size: var(--di-text-4); color: var(--di-text-muted); }
+
+.askdi-form { display: flex; gap: var(--di-space-3); flex-wrap: wrap; }
+.askdi-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+.askdi-input {
+    flex: 1 1 260px;
+    min-height: 44px;
+    padding: var(--di-space-3) var(--di-space-4);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: var(--di-black);
+    color: var(--di-text);
+    font: inherit;
+    outline: none;
+}
+.askdi-input:focus { border-color: var(--di-cyan); }
+.askdi-input:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px; }
+
+.askdi-go,
+.askdi-example {
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-text);
+    font-family: var(--di-mono);
+    cursor: pointer;
+    transition: border-color 0.12s, background-color 0.12s;
+}
+.askdi-go { min-height: 44px; padding: 0 var(--di-space-5); font-size: var(--di-text-4); font-weight: 700; }
+.askdi-go:hover, .askdi-example:hover { border-color: var(--di-cyan); background: var(--di-cyan-dim); }
+.askdi-go:focus-visible, .askdi-example:focus-visible { outline: 2px solid var(--di-cyan); outline-offset: 2px; }
+
+.askdi-examples { display: flex; flex-wrap: wrap; gap: var(--di-space-3); margin-top: var(--di-space-4); }
+.askdi-example { min-height: 36px; padding: 0 var(--di-space-4); font-size: var(--di-text-3); color: var(--di-text-muted); }
+
+.askdi-answer { margin-top: var(--di-space-4); }
+.askdi-empty { margin: 0; color: var(--di-text-muted); font-size: var(--di-text-4); }
+
+.askdi-results { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--di-space-4); }
+.askdi-result { padding-top: var(--di-space-4); border-top: 1px solid var(--di-cyan-border); }
+.askdi-result:first-child { border-top: 0; padding-top: 0; }
+.askdi-link { color: var(--di-cyan); font-size: var(--di-text-5); font-weight: 700; text-decoration: underline; text-underline-offset: 0.18em; }
+.askdi-snippet { margin: var(--di-space-3) 0 0; font-size: var(--di-text-4); line-height: 1.5; }
+.askdi-source { margin: var(--di-space-3) 0 0; font-family: var(--di-mono); font-size: var(--di-text-3); letter-spacing: 0.06em; color: var(--di-text-muted); overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+    .askdi { padding: var(--di-space-4); }
+    .askdi-go { flex: 1 1 100%; }
+}

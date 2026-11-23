@@ -16,20 +16,22 @@ const RESIZE_DIRS = ['n', 's', 'e', 'w', 'ne', 'nw', 'sw']
 const KEY_STEP = 16
 const KEY_STEP_FINE = 1
 
-const resizeFrame = (origin, dir, dx, dy) => {
+const resizeFrame = (origin, dir, dx, dy, floor = {}) => {
+    const minWidth = floor.width || RAW_WINDOW_MIN_WIDTH
+    const minHeight = floor.height || RAW_WINDOW_MIN_HEIGHT
     let { x, y, width, height } = origin
     if (dir.includes('e')) width = origin.width + dx
     if (dir.includes('w')) { width = origin.width - dx; x = origin.x + dx }
     if (dir.includes('s')) height = origin.height + dy
     if (dir.includes('n')) { height = origin.height - dy; y = origin.y + dy }
     // The floor holds the edge that is NOT being dragged still.
-    if (width < RAW_WINDOW_MIN_WIDTH) {
-        if (dir.includes('w')) x = origin.x + origin.width - RAW_WINDOW_MIN_WIDTH
-        width = RAW_WINDOW_MIN_WIDTH
+    if (width < minWidth) {
+        if (dir.includes('w')) x = origin.x + origin.width - minWidth
+        width = minWidth
     }
-    if (height < RAW_WINDOW_MIN_HEIGHT) {
-        if (dir.includes('n')) y = origin.y + origin.height - RAW_WINDOW_MIN_HEIGHT
-        height = RAW_WINDOW_MIN_HEIGHT
+    if (height < minHeight) {
+        if (dir.includes('n')) y = origin.y + origin.height - minHeight
+        height = minHeight
     }
     return { x, y, width, height }
 }
@@ -57,6 +59,8 @@ export default function DesktopWindow({
     onToggleMinimize,
     onToggleMaximize,
     onTogglePin,
+    // Right-click on the title bar: (event) => void. The caller opens its window menu.
+    onTitleContextMenu = undefined,
     // A desk with no canvas (Perform) has nothing to pin a window against:
     // every window is on the screen, and a pin that does nothing is a lie.
     pinnable = true,
@@ -66,6 +70,16 @@ export default function DesktopWindow({
     canvasZoom = 1,
     // 'screen' | 'world' — see the note at the top of the file.
     space = 'screen',
+    // Where a screen window may stand, when it is not the Nodes default
+    // (a padding and a bottom reserve): { minLeft, viewportPadding,
+    // bottomReserve, minWidth, minHeight }. Perform fills the area edge to edge.
+    bounds = null,
+    // A unit grid the window snaps to while it is dragged or resized (Perform):
+    // { snap(frame) -> frame, unit: { width, height } }. null = free placement,
+    // which is what the Nodes desk keeps.
+    grid = null,
+    // What the window is, for a stylesheet or a measurement: data-block on the frame.
+    blockKind = undefined,
     // The canvas viewport a world window is placed through:
     // { panX, panY, zoom, originLeft, originTop }. originLeft/Top is where the
     // graph surface's own box starts in the page, so a world point lands at
@@ -87,8 +101,11 @@ export default function DesktopWindow({
             allowOverflowTop,
             viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
             viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined,
+            ...(bounds || {}),
             ...extra
         })
+    const floor = bounds ? { width: bounds.minWidth, height: bounds.minHeight } : {}
+    const onGrid = (frame) => (grid?.snap ? grid.snap(frame) : frame)
 
     // `minimized` rides along in the draft on purpose. The clamp places a
     // collapsed window by its bar rather than by the panel it would open to,
@@ -138,7 +155,8 @@ export default function DesktopWindow({
                 allowOverflowLeft,
                 allowOverflowTop,
                 viewportWidth: window.innerWidth,
-                viewportHeight: window.innerHeight
+                viewportHeight: window.innerHeight,
+                ...(bounds || {})
             }))
         }
         window.addEventListener('resize', reclamp)
@@ -147,7 +165,7 @@ export default function DesktopWindow({
             window.removeEventListener('resize', reclamp)
             window.removeEventListener('orientationchange', reclamp)
         }
-    }, [allowOverflowLeft, allowOverflowTop, minTop, inWorld])
+    }, [allowOverflowLeft, allowOverflowTop, minTop, inWorld, bounds])
 
     useEffect(() => {
         if (!dragMode) return undefined
@@ -157,17 +175,17 @@ export default function DesktopWindow({
             const dx = (event.clientX - state.startX) / dragZoom
             const dy = (event.clientY - state.startY) / dragZoom
             if (state.mode === 'drag') {
-                setDraft((current) => settle({
+                setDraft((current) => onGrid(settle({
                     ...current,
                     x: state.origin.x + dx,
                     y: state.origin.y + dy
-                }))
+                })))
             }
             if (state.mode === 'resize') {
-                setDraft((current) => settle({
+                setDraft((current) => onGrid(settle({
                     ...current,
-                    ...resizeFrame(state.origin, state.dir, dx, dy)
-                }, { resizing: true }))
+                    ...resizeFrame(state.origin, state.dir, dx, dy, floor)
+                }, { resizing: true })))
             }
         }
         const handlePointerUp = (event) => {
@@ -175,7 +193,7 @@ export default function DesktopWindow({
             if (!state || (event && event.pointerId !== state.pointerId)) return
             interactionRef.current = null
             setDragMode(null)
-            const nextFrame = settle(draftRef.current, state.mode === 'resize' ? { resizing: true } : {})
+            const nextFrame = onGrid(settle(draftRef.current, state.mode === 'resize' ? { resizing: true } : {}))
             setDraft(nextFrame)
             // A resize from the east/south edges leaves x/y alone. Any gesture
             // that moved the top-left corner writes a position.
@@ -229,16 +247,18 @@ export default function DesktopWindow({
     // Keyboard: arrows on the title bar move, arrows on the SE grip resize.
     // Shift steps by one pixel. The grip and the header are focusable for it.
     const keyDelta = (event) => {
-        const step = event.shiftKey ? KEY_STEP_FINE : KEY_STEP
-        const dx = event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0
-        const dy = event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0
+        // On a unit grid a key moves one unit; free placement keeps its pixel steps.
+        const stepX = grid ? grid.unit.width : (event.shiftKey ? KEY_STEP_FINE : KEY_STEP)
+        const stepY = grid ? grid.unit.height : (event.shiftKey ? KEY_STEP_FINE : KEY_STEP)
+        const dx = event.key === 'ArrowLeft' ? -stepX : event.key === 'ArrowRight' ? stepX : 0
+        const dy = event.key === 'ArrowUp' ? -stepY : event.key === 'ArrowDown' ? stepY : 0
         if (!dx && !dy) return null
         event.preventDefault()
         event.stopPropagation()
         return { dx, dy }
     }
     const commit = (nextFrame, movedOrigin) => {
-        const settled = settle(nextFrame, movedOrigin ? {} : { resizing: true })
+        const settled = onGrid(settle(nextFrame, movedOrigin ? {} : { resizing: true }))
         setDraft(settled)
         callbacksRef.current.onPatch?.(movedOrigin
             ? { x: settled.x, y: settled.y, width: settled.width, height: settled.height }
@@ -252,7 +272,7 @@ export default function DesktopWindow({
     const handleGripKeyDown = (event) => {
         const delta = keyDelta(event)
         if (!delta) return
-        commit({ ...draft, ...resizeFrame(draft, 'se', delta.dx, delta.dy) }, false)
+        commit({ ...draft, ...resizeFrame(draft, 'se', delta.dx, delta.dy, floor) }, false)
     }
 
     const sectionCursor = dragMode === 'drag' ? 'grabbing' : dragMode === 'resize' ? 'nwse-resize' : undefined
@@ -270,6 +290,7 @@ export default function DesktopWindow({
         <section
             className={`raw-window ${windowState.minimized ? 'is-minimized' : ''} ${windowState.pinned ? 'is-pinned' : ''} ${windowState.maximized ? 'is-maximized' : ''} ${inWorld ? 'is-world' : ''}`}
             role="dialog"
+            data-block={blockKind}
             aria-label={title}
             tabIndex={-1}
             style={{
@@ -297,6 +318,7 @@ export default function DesktopWindow({
                 className="raw-window-header"
                 onPointerDown={startDrag}
                 onKeyDown={handleHeaderKeyDown}
+                onContextMenu={onTitleContextMenu}
                 tabIndex={0}
                 aria-label={`${title} — drag or use arrow keys to move`}
                 style={{ cursor: dragMode === 'drag' ? 'grabbing' : undefined }}

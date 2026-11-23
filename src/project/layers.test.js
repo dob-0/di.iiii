@@ -9,6 +9,7 @@ import {
     describeProjectLayers,
     isProjectLoaded,
     LAMP_OBJECT_TYPES,
+    openLayersFromCounts,
     readProjectLayers,
     STANDING_NODE_KINDS,
     WINDOW_NODE_KINDS
@@ -239,6 +240,50 @@ describe('layers — the holds line says what the project holds (P1, 2026-10-13)
         expect(describeProjectLayers({ files: 1, fileBytes: 2048 })).toBe('1 file · 2 kB')
         expect(describeProjectLayers({ files: 2, fileBytes: 1024 * 1024 * 1024 })).toBe('2 files · 1.0 GB')
         expect(describeProjectLayers({ page: true })).toBe('page')
+    })
+})
+
+describe('layers — openLayersFromCounts, the rule for a list row', () => {
+    const ALL_SHUT = { space: true, things: true, connections: false, wall: false, lamps: false, handover: false }
+
+    it('a rig row (the real sample of a lamp rig): connections, wall, lamps and hand-over are open', () => {
+        const counts = { things: 132, nodes: 1, wires: 1, surfaces: 1, lamps: 52, joinedLamps: 52, lightCues: 36 }
+        expect(openLayersFromCounts(counts)).toEqual({ space: true, things: true, connections: true, wall: true, lamps: true, handover: true })
+    })
+
+    it('an empty counts object (the list drops every zero): only the space and the room', () => {
+        expect(openLayersFromCounts({})).toEqual(ALL_SHUT)
+    })
+
+    it('a lamp that stands in the room opens lamps; a light cue alone opens it too', () => {
+        expect(openLayersFromCounts({ lamps: 1 })).toMatchObject({ lamps: true, wall: false })
+        expect(openLayersFromCounts({ lightCues: 1 })).toMatchObject({ lamps: true })
+    })
+
+    it('a surface or a Picture Out opens the wall; a node or a wire opens connections', () => {
+        expect(openLayersFromCounts({ surfaces: 1 })).toMatchObject({ wall: true, connections: false })
+        expect(openLayersFromCounts({ pictureOuts: 1 })).toMatchObject({ wall: true })
+        expect(openLayersFromCounts({ wires: 1 })).toMatchObject({ connections: true, wall: true })
+    })
+
+    it('says "not known" (null) when there are no counts', () => {
+        expect(openLayersFromCounts(null)).toBeNull()
+        expect(openLayersFromCounts(undefined)).toBeNull()
+    })
+
+    it('is the very rule readProjectLayers runs: the counts of each fixture give the same open layers', () => {
+        for (const [name, document] of Object.entries(FIXTURES)) {
+            const layers = readProjectLayers(document)
+            expect({ name, open: openLayersFromCounts(layers.counts) }).toEqual({ name, open: layers.open })
+        }
+    })
+
+    it('works from a list row, where zero fields are missing: the wire form of a document gives the same answer', () => {
+        for (const [name, document] of Object.entries(FIXTURES)) {
+            const layers = readProjectLayers(document)
+            const wire = Object.fromEntries(Object.entries(layers.counts).filter(([, value]) => value))
+            expect({ name, open: openLayersFromCounts(wire) }).toEqual({ name, open: layers.open })
+        }
     })
 })
 

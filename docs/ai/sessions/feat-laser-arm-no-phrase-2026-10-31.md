@@ -11,3 +11,5 @@
   refused); routes click default and phrase via the env; `laserOps` and `laserOut` suites, which test the phrase
   itself, run in phrase mode. Laser + routes + wiki: 307 passed. Not tested: the desk page in a browser, a real cube.
 - Built for the Projector Room Mac as a test copy on top of the archive branch it runs (0.4.4-look.9e2028c7).
+
+- DI_LASER_SIGN_OFF accepts only the exact strings click or phrase; anything else falls back to phrase with a warning, and the active mode is logged once at start. Default unchanged. 6 new tests in laserRoutes.test.js.

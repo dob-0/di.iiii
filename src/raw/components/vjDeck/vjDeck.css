@@ -3,10 +3,17 @@
    On the spine — tokens from base.css, no colour literals (spine.test.js). */
 
 .vj-deck {
-    --vj-head: 156px;
+    --vj-head: 190px;
     --vj-tile: 64px;
     --vj-tile-height: 48px;
     --vj-control: 26px;
+    --vj-row-min: 96px;
+    /* One row height for every list row (Sources, Clip, Effects): never under 28px. */
+    --vj-list-row: max(var(--vj-control), 28px);
+    /* The monitor column: S / M / L is this viewer's choice (data-monitor-size). */
+    --vj-monitor-w: 300px;
+    --vj-monitor-w-row: 1 1 0;
+    --vj-layers: 3;
     container-type: inline-size;
     container-name: vjdeck;
     display: flex;
@@ -26,8 +33,18 @@
     font-size: var(--di-text-3);
 }
 
+.vj-deck[data-monitor-size='s'] {
+    --vj-monitor-w: 140px;
+    --vj-monitor-w-row: 0 1 128px;
+}
+
+.vj-deck[data-monitor-size='m'] {
+    --vj-monitor-w: 210px;
+    --vj-monitor-w-row: 0 1 200px;
+}
+
 .vj-deck--inside {
-    --vj-head: 184px;
+    --vj-head: 210px;
     --vj-tile: 112px;
     --vj-tile-height: 72px;
     --vj-control: 32px;
@@ -37,12 +54,14 @@
 }
 
 .vj-deck--perform {
-    --vj-head: 164px;
-    --vj-tile: 96px;
+    --vj-head: 198px;
+    --vj-tile: 64px;
     --vj-tile-height: 64px;
-    --vj-control: 30px;
-    gap: var(--di-space-3);
-    padding: var(--di-space-3);
+    /* One control height with every other block on Perform (perform.css sets
+       --perform-control on .perform-shell: 24px, 44px on touch). */
+    --vj-control: var(--perform-control);
+    gap: var(--di-space-2);
+    padding: var(--di-space-2);
 }
 
 .vj-deck-label {
@@ -91,25 +110,18 @@
     width: 110px;
 }
 
-.vj-deck-out {
+/* The crossfader sits between the tempo and the master: A, the fader, B. */
+.vj-deck-crossfader {
     display: flex;
+    flex: 1 1 160px;
     align-items: center;
     gap: var(--di-space-2);
-    margin-left: auto;
+    min-width: 0;
+    max-width: 320px;
 }
 
-.vj-deck-out-picture {
-    display: block;
-    width: 80px;
-    height: 45px;
-    background: var(--di-black);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.vj-deck--inside .vj-deck-out-picture,
-.vj-deck--perform .vj-deck-out-picture {
-    width: 160px;
-    height: 90px;
+.vj-deck-crossfader input {
+    flex: 1 1 auto;
 }
 
 /* --- controls ------------------------------------------------------------- */
@@ -117,8 +129,10 @@
 .vj-deck-button,
 .vj-deck-chip {
     box-sizing: border-box;
-    min-height: var(--vj-control);
+    /* Never under 28px, and a label is never cut mid-word. */
+    min-height: max(var(--vj-control), 28px);
     padding: 0 var(--di-space-2);
+    white-space: nowrap;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: var(--di-radius);
@@ -165,11 +179,113 @@
     accent-color: var(--di-ink);
 }
 
+/* --- main: the grid beside the monitors ------------------------------------ */
+
+.vj-deck-main {
+    display: grid;
+    /* Takes the height the bottom panels leave. The layer grid scrolls inside its own
+       box (.vj-deck-scroll), so many layers never push the panels off the frame. */
+    flex: 1 1 0;
+    grid-template-columns: minmax(0, 1fr) var(--vj-monitor-w);
+    grid-template-rows: minmax(0, 1fr);
+    gap: var(--di-space-3);
+    min-height: 220px;
+}
+
+.vj-deck-monitors {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-2);
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+/* S / M / L, hide Preview, and Take (Preview only) above the two monitors. */
+.vj-deck-monitor-tools {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--di-space-1) var(--di-space-2);
+    min-width: 0;
+}
+
+.vj-deck-sizes {
+    display: flex;
+    gap: var(--di-space-1);
+}
+
+.vj-deck-size {
+    min-width: 28px;
+}
+
+/* State by text and a mark, not by colour alone. */
+.vj-deck-button[aria-pressed='true'].vj-deck-size,
+.vj-deck-button[aria-pressed='true'].vj-deck-preview-only {
+    border-color: var(--di-ink);
+    box-shadow: inset 0 0 0 1px var(--di-ink);
+}
+
+.vj-deck-preview-only .vj-deck-state {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.vj-deck-take {
+    border-color: var(--di-ink);
+    box-shadow: inset 0 0 0 1px var(--di-ink);
+}
+
+.vj-deck-monitor-caption {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--di-space-2);
+}
+
+.vj-deck-monitor {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    margin: 0;
+    min-width: 0;
+}
+
+.vj-deck-monitor-caption {
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.vj-deck-monitor-screen {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--di-black);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.vj-deck-monitor-picture {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 /* --- the grid ------------------------------------------------------------- */
 
 .vj-deck-scroll {
     flex: 1 1 auto;
+    /* A short frame keeps the column row and one layer row in view; the grid scrolls inside. */
     min-height: 0;
+    min-width: 0;
     overflow: auto;
 }
 
@@ -209,7 +325,6 @@
 }
 
 .vj-deck-layer-line .vj-deck-chip {
-    flex: 1 1 auto;
     min-width: 0;
 }
 
@@ -225,14 +340,49 @@
     text-overflow: ellipsis;
 }
 
-.vj-deck-layer-clear {
+.vj-deck-layer-clear,
+.vj-deck-toggle {
     flex: none;
+    min-width: var(--vj-control);
+    padding: 0;
+}
+
+/* B and S: off is a hairline button; on is a fill. Bypass takes the
+   warning of the semantic triple, solo the deck's one marker (ink). */
+.vj-deck-toggle[aria-pressed='true'] {
+    color: var(--di-bg);
+}
+
+.vj-deck-bypass[aria-pressed='true'] {
+    background: var(--di-warning);
+    border-color: var(--di-warning);
+}
+
+.vj-deck-solo[aria-pressed='true'] {
+    background: var(--di-ink);
+    border-color: var(--di-ink);
+}
+
+/* A bypassed layer stays in its place, dimmed: opacity, not a colour. */
+.vj-deck-row[data-bypass='true'] .vj-deck-tile,
+.vj-deck-row[data-bypass='true'] .vj-deck-layer-name,
+.vj-deck-row[data-bypass='true'] .vj-deck-layer .vj-deck-chip,
+.vj-deck-row[data-bypass='true'] .vj-deck-layer .vj-deck-number {
+    opacity: 0.4;
+}
+
+.vj-deck-side {
+    flex: none;
+    /* "A/B –" must read whole inside the 28px chip: the old 4.2ch box, with
+       its padding and the native arrow, left no room for any text. */
+    width: auto;
+    min-width: 8ch;
 }
 
 /* The blend has its line to itself: the longest name, Difference, must read
    whole at the narrowest head (128px on a phone). */
 .vj-deck-layer-line .vj-deck-blend {
-    width: 100%;
+    flex: 1 1 auto;
 }
 
 .vj-deck-leader {
@@ -324,6 +474,123 @@
     text-align: center;
 }
 
+/* --- bottom: sources and the selected clip ------------------------------- */
+
+.vj-deck-monitor-idle {
+    position: relative;
+    padding: var(--di-space-2);
+    text-align: center;
+}
+
+.vj-deck-tile-fail,
+.vj-deck-monitor-fail {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--di-space-2);
+    text-align: center;
+    /* The words wrap inside the tile instead of being cut with no dots. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.vj-deck-camera {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: none;
+}
+
+.vj-deck-bottom {
+    display: grid;
+    /* Always visible at the foot of the deck: at least 160px, at most 40% of it; each panel scrolls. */
+    flex: 0 1 auto;
+    min-height: 160px;
+    max-height: 40%;
+    overflow-y: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--di-space-3);
+}
+
+/* --- effects: the stack of one layer or of the master ----------------------- */
+
+.vj-deck-fx-top,
+.vj-deck-fx-head {
+    min-height: var(--vj-list-row);
+}
+
+.vj-deck-fx-scope {
+    display: flex;
+    gap: var(--di-space-1);
+}
+
+.vj-deck-fx-button {
+    min-width: 36px;
+    min-height: 28px;
+}
+
+.vj-deck-fx input[type='range'],
+.vj-deck-fx-layer,
+.vj-deck-fx-add {
+    min-height: 28px;
+    max-width: 100%;
+    /* Room for the caret: it must not be drawn over "LAYER 1" / "+ ADD EFFECT". */
+    min-width: 9ch;
+    padding-right: calc(var(--di-space-4) + var(--di-space-3));
+    text-overflow: ellipsis;
+}
+
+/* Beats `.vj-deck-chip` and the Nodes page's select rules by one class. */
+.vj-deck-fx select.vj-deck-fx-layer,
+.vj-deck-fx select.vj-deck-fx-add {
+    padding-right: calc(var(--di-space-4) + var(--di-space-3));
+}
+
+.vj-deck-fx .vj-deck-toggle[aria-pressed='true'] {
+    background: var(--di-ink);
+    border-color: var(--di-ink);
+}
+
+.vj-deck-fx-effect {
+    display: flex;
+    flex-direction: column;
+    gap: var(--di-space-1);
+    padding: var(--di-space-2);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.vj-deck-fx-effect[data-on='false'] {
+    opacity: 0.55;
+}
+
+.vj-deck-fx-head {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-1);
+}
+
+.vj-deck-fx-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.vj-deck-fx-colour {
+    width: 100%;
+    min-height: 28px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    background: none;
+}
+
 /* --- add a clip, clip settings -------------------------------------------- */
 
 .vj-deck-panel {
@@ -331,7 +598,7 @@
     flex: none;
     flex-direction: column;
     gap: var(--di-space-2);
-    max-height: 45%;
+    min-width: 0;
     overflow: auto;
     padding: var(--di-space-2) var(--di-space-3);
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -395,40 +662,52 @@
     pointer-events: none;
 }
 
+.vj-deck-list,
 .vj-deck-settings {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--di-space-2) var(--di-space-4);
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
+/* A list row: label left, control right, one height everywhere. */
+.vj-deck-list-row,
 .vj-deck-setting {
     display: grid;
-    grid-template-columns: 52px minmax(0, 1fr) auto;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--di-space-2);
+    box-sizing: border-box;
+    min-height: var(--vj-list-row);
+    min-width: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vj-deck-list-row > .vj-deck-list-value {
+    grid-column: span 2;
+}
+
+.vj-deck-list-value {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.vj-deck-list-row input[type='range'] {
+    min-height: var(--vj-list-row);
+    min-width: 0;
+    max-width: 100%;
 }
 
 .vj-deck-modes {
     display: flex;
     grid-column: span 2;
+    min-width: 0;
     gap: var(--di-space-1);
 }
 
 .vj-deck-modes .vj-deck-button {
     flex: 1 1 0;
-}
-
-.vj-deck-selected {
-    display: flex;
-    flex: none;
-    align-items: center;
-    gap: var(--di-space-2);
-    min-width: 0;
-}
-
-.vj-deck-selected .vj-deck-clip-name {
-    flex: 1 1 auto;
-    min-width: 0;
 }
 
 .vj-deck-hint {
@@ -438,28 +717,182 @@
     font-size: var(--di-text-2);
 }
 
+/* The perform and inside placements have the room: the layer rows share the
+   free height between the top bar and the bottom panels (each at least today's
+   row, at most 200px), tiles fill their row and keep the picture cover-cropped. */
+.vj-deck--perform .vj-deck-grid,
+.vj-deck--inside .vj-deck-grid {
+    display: grid;
+    grid-template-rows: auto repeat(var(--vj-layers), minmax(var(--vj-row-min), 1fr));
+    align-content: start;
+    min-height: 100%;
+    box-sizing: border-box;
+}
+
+.vj-deck--perform .vj-deck-row,
+.vj-deck--inside .vj-deck-row {
+    max-height: 200px;
+}
+
+/* --- sources: one line per source, scrolling inside the panel ------------- */
+
+.vj-deck-sources {
+    --vj-source-row: 24px;
+    max-height: 240px;
+}
+
+/* A panel never squeezes its own rows (the Effects head wrapped to two lines and lay
+   over the first effect): the panel scrolls. Only the source list gives way. */
+.vj-deck-panel > :not(.vj-deck-source-list) {
+    flex-shrink: 0;
+}
+
+.vj-deck-source-list {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: calc(var(--vj-source-row) * 2);
+    overflow: auto;
+}
+
+.vj-deck-source-group {
+    display: flex;
+    flex-direction: column;
+}
+
+/* One compact line per source: the kind as a small tag, then the name. */
+.vj-deck-source {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+    gap: var(--di-space-1);
+    box-sizing: border-box;
+    min-height: var(--vj-source-row);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: grab;
+}
+
+.vj-deck-source-kind {
+    overflow: hidden;
+    color: var(--di-dim);
+    font-size: var(--di-text-1);
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.vj-deck-source-name {
+    min-height: var(--vj-source-row);
+    max-width: 100%;
+    padding-block: 0;
+    overflow: hidden;
+    line-height: 1;
+    text-align: left;
+    text-overflow: ellipsis;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+    border-color: transparent;
+}
+
+.vj-deck-source--upload {
+    cursor: default;
+}
+
+.vj-deck-source--upload .vj-deck-upload {
+    min-height: var(--vj-source-row);
+    padding-block: 0;
+    line-height: 1;
+}
+
+.vj-deck-source-name:disabled {
+    cursor: grab;
+}
+
+/* A slot a drag is over: the one place it would land. */
+.vj-deck-tile.is-drop-target {
+    border-color: var(--di-ink);
+    border-style: solid;
+    box-shadow: inset 0 0 0 2px var(--di-ink);
+}
+
+.vj-deck-fx-open {
+    min-height: var(--vj-list-row);
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    text-transform: none;
+    letter-spacing: 0;
+    white-space: nowrap;
+    border: 0;
+    background: transparent;
+    color: var(--di-ink);
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.vj-deck-fx-params[hidden] {
+    display: none;
+}
+
+.vj-deck-fx-params {
+    display: flex;
+    flex-direction: column;
+}
+
 /* --- a narrow deck: a phone, or a small window ---------------------------- */
+
+@container vjdeck (max-width: 900px) {
+    /* The monitors move under the grid, side by side. */
+    .vj-deck-main {
+        grid-template-columns: minmax(0, 1fr);
+        /* The grid keeps the column row and about three layers (it scrolls inside), the
+           monitors keep their strip; the deck scrolls when the frame is shorter. */
+        grid-template-rows: minmax(300px, 1fr) auto;
+        min-height: 520px;
+    }
+
+    .vj-deck-monitors {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .vj-deck-monitor-tools {
+        flex: 1 0 100%;
+    }
+
+    .vj-deck-monitor {
+        flex: var(--vj-monitor-w-row);
+    }
+}
 
 @container vjdeck (max-width: 560px) {
     .vj-deck-grid {
-        --vj-head: 128px;
-        --vj-tile: 60px;
+        --vj-head: 176px;
+        /* 6 columns fit a 568px window: 176 + 6 x 52 + gaps stays under the 543px column. */
+        --vj-tile: 52px;
         --vj-tile-height: 52px;
     }
 
-    .vj-deck-out {
-        margin-left: 0;
+    /* Both monitors stay (Preview only needs Preview) but as a small strip;
+       the viewer can still hide Preview. The bottom panels stack. */
+    .vj-deck[data-monitor-size='l'] {
+        --vj-monitor-w-row: 0 1 128px;
     }
 
-    /* The header gave the grid almost nothing on a phone (walked 09-14):
-       a smaller Out, a tighter bar, and at least two layer rows kept. */
+    /* Stacked panels take their own height and the deck scrolls: squeezed into 40% they
+       showed half a source row and one cut effect. */
+    .vj-deck-bottom {
+        grid-template-columns: minmax(0, 1fr);
+        flex: 0 0 auto;
+        max-height: none;
+        overflow-y: visible;
+    }
+
     .vj-deck-top {
         gap: var(--di-space-1) var(--di-space-2);
-    }
-
-    .vj-deck .vj-deck-out-picture {
-        width: 96px;
-        height: 54px;
     }
 
     .vj-deck-master input {
@@ -468,7 +901,6 @@
 
     .vj-deck-scroll {
         flex-shrink: 0;
-        min-height: calc(var(--vj-tile-height) * 2 + var(--vj-control) + var(--di-space-2) * 3);
     }
 
     .vj-deck-pick {
@@ -489,6 +921,10 @@
 
     .vj-deck-grid {
         --vj-tile: 64px;
+    }
+
+    .vj-deck-sources {
+        --vj-source-row: 44px;
     }
 
     .vj-deck-tile,

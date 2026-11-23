@@ -18,6 +18,11 @@ export const PRIMITIVES = [
     { key: 'portal', label: 'portal', icon: '◎' },
 ]
 
+// A Screen is a plane that shows the live deck (made by studio/utils/screenOps.js).
+// Not in PRIMITIVES: Raw's palettes and cards read that list and a Screen is a
+// Studio-room object (it needs the mapping surface the room shares).
+export const SCREEN_ENTRY = { key: 'screen', label: 'Screen', icon: '▭' }
+
 export const LIGHTS = [
     { key: 'pointLight', label: 'Point', icon: '·' },
     { key: 'spotLight', label: 'Spot', icon: '▽' },
