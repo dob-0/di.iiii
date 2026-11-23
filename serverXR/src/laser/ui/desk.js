@@ -10,6 +10,7 @@
     const POLL_DESK_MS = 500
     const POLL_ENGINE_MS = 1000
     const VIEW_MS = 80
+    const BRIGHT_SEND_MS = 60 // a brightness slider being dragged reaches the cube this often
     // The desk's colours (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): the hue
     // wheel a laser draws well, full colours, then two whites. Green is here to pick; it is no seed look's colour.
     const SWATCHES = [
@@ -51,6 +52,18 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     let selected = null // the id of the look open in Edit
     let firstState = true // the first answer from the desk: Edit opens the look on the laser, once
     const editing = () => desk?.looks.find((l) => l.id === selected) || null
+    // The layer open in Edit (2026-11-07, the owner: "we are adding + and opening same pattern copy and alll the
+    // paraamamtres"): 0 is the look itself, 1… its layers (shared/laserLook.cjs LAYERS_PASS_MOST). Every setting edits the
+    // open one; the name is the look's, the Cubes are the open layer's (pickCube). layersDrawn: how many layers the last
+    // Preview frame had room for.
+    let layer = 0
+    let layersDrawn = null
+    const part = () => {
+        const look = editing()
+        if (!look) return null
+        if (layer > 0 && !(look.layers && look.layers[layer - 1])) layer = 0
+        return layer > 0 ? look.layers[layer - 1] : look
+    }
 
     // ---- talking to the server
     const notice = (text) => {
@@ -125,7 +138,30 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         g.lineCap = 'round'
         g.lineJoin = 'round'
         g.globalAlpha = dim ? 0.45 : 1
+        // Laser light adds where beams meet (a Split's red and green make yellow), so the lines are added, not painted over.
+        g.globalCompositeOperation = 'lighter'
+        g.lineCap = 'butt'
         window.DiLaserDraw.strokeLitRuns(g, points, X, Y)
+        // Point dots (2026-11-07, phyllotaxis: the beam resting on one spot): a run of lit points that goes nowhere has no
+        // line to draw, so it is drawn as a dot.
+        let from = -1
+        for (let i = 0; i <= points.length; i += 1) {
+            const on = i < points.length && (points[i][2] > 0 || points[i][3] > 0 || points[i][4] > 0)
+            if (on && from < 0) from = i
+            if (on || from < 0) continue
+            const xs = points.slice(from, i).map((p) => X(p[0]))
+            const ys = points.slice(from, i).map((p) => Y(p[1]))
+            if (Math.max(...xs) - Math.min(...xs) < 1.5 && Math.max(...ys) - Math.min(...ys) < 1.5) {
+                const p = points[from]
+                g.fillStyle = `rgb(${Math.round(p[2] * 255)},${Math.round(p[3] * 255)},${Math.round(p[4] * 255)})`
+                g.beginPath()
+                g.arc(xs[0], ys[0], Math.max(1.5, 1.6 * dpr), 0, 2 * Math.PI)
+                g.fill()
+            }
+            from = -1
+        }
+        g.globalCompositeOperation = 'source-over'
+        g.lineCap = 'round'
         g.globalAlpha = 1
     }
 
@@ -143,7 +179,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         $('masterVal').textContent = Math.round(Number(master.value) * 100) + '%'
         $('blackoutBtn').classList.toggle('is-on', desk.blackout)
         if ($('blackoutKeepsArm') && !held('keepArm')) $('blackoutKeepsArm').checked = Boolean(desk.blackoutKeepsArm)
-        $('releaseBtn').disabled = !desk.live && !desk.blackout
+        $('releaseBtn').disabled = !desk.live && !desk.blackout && !Object.keys(desk.liveBy || {}).length
         // Setup > Safety says the engine's two modes in plain words (the setting names belong in the wiki, not on the operator's screen).
         const signOffLine = $('safetySignOff'), darkLine = $('safetyDark')
         if (engine && signOffLine) signOffLine.textContent = engine.signOff === 'phrase' ? "on (the laser safety officer's phrase is asked)" : 'off (On is one click)'
@@ -168,6 +204,105 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
 
     $('bpm').addEventListener('change', (e) => { touched.set('bpm', Date.now()); post('desk/api/bpm', { bpm: Number(e.target.value) }).then(refreshDesk) })
     $('tapBtn').addEventListener('click', () => post('desk/api/bpm', { tap: true }).then(refreshDesk))
+
+    // ---- the music (2026-10-31, the owner: "add audio analyze fully bpm sync as well"), as Resolume's Auto BPM. This page
+    // listens (listen.js) and posts the bass and the kicks to the desk about 20 times a second, for looks with Audio; with
+    // Auto on, every tempo the listener has locked to moves the desk's clock (desk/api/sync), its beat on the music's.
+    // Only a page with Audio on sends anything. The input, Auto and the offset stay in this browser.
+    const AUDIO_POST_MS = 50
+    const KEY_INPUT = 'laserDesk.audioInput'
+    const KEY_OFFSET = 'laserDesk.audioOffset'
+    const KEY_AUTO = 'laserDesk.auto'
+    const remembered = (key, fallback) => { try { return localStorage.getItem(key) ?? fallback } catch { return fallback } }
+    const remember_ = (key, value) => { try { localStorage.setItem(key, value) } catch { /* a private window forgets */ } }
+    let auto = remembered(KEY_AUTO, '0') === '1'
+    // 40 ms: what the listener's beat ran behind the kicks of a 128 BPM test track (2026-10-31); the laser's own delay comes on top.
+    let offsetMs = Number(remembered(KEY_OFFSET, '40'))
+    if (!Number.isFinite(offsetMs)) offsetMs = 40
+    let audioPostAt = 0
+    let kickPending = false
+    let heard = null // the listener's last word: { bpm, locked } or { status }
+    // Fire-and-forget, as the light desk sends its levels: post() is for a person's clicks (its notices, its waits).
+    const firePost = (url, body) => {
+        try { fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}) } catch { /* a lost level costs nothing */ }
+    }
+    const setMeter = (id, v) => { const bar = $(id)?.querySelector('i'); if (bar) bar.style.width = Math.round(Math.max(0, Math.min(1, v)) * 100) + '%' }
+    const renderAudio = () => {
+        const on = window.DeskListen.on
+        $('audioBtn').classList.toggle('is-on', on)
+        $('autoBtn').disabled = !on
+        $('autoBtn').classList.toggle('is-on', on && auto)
+        const text = $('heard')
+        text.classList.toggle('is-locked', Boolean(on && heard?.locked))
+        text.textContent = !on ? '' : heard?.bpm ? `${heard.bpm.toFixed(1)} ${heard.locked ? (auto ? '· following' : '· locked') : '· finding'}` : heard?.status || 'listening…'
+        if (!on) for (const id of ['audioMeter', 'mLow', 'mMid', 'mHigh', 'mLevel']) setMeter(id, 0)
+    }
+    const onLevels = ({ low, level, mid, high }) => {
+        const t = performance.now()
+        if (t - audioPostAt < AUDIO_POST_MS) return
+        audioPostAt = t
+        firePost('desk/api/audio', { low, level, kick: kickPending })
+        kickPending = false
+        setMeter('audioMeter', level)
+        setMeter('mLow', low); setMeter('mMid', mid); setMeter('mHigh', high); setMeter('mLevel', level)
+    }
+    const onKick = () => {
+        kickPending = true
+        const dot = $('beatDot')
+        dot.classList.add('hit')
+        setTimeout(() => dot.classList.remove('hit'), 120)
+    }
+    const onTempo = ({ bpm, lastBeat, locked }) => {
+        heard = { bpm, locked }
+        if (auto && locked) firePost('desk/api/sync', { bpm: Math.round(bpm * 100) / 100, beatAt: lastBeat - offsetMs })
+        renderAudio()
+    }
+    const onStatus = ({ state, seconds }) => {
+        heard = { status: state === 'listening' ? `listening… ${Math.round(seconds)} s` : state === 'quiet' ? 'quiet' : 'no beat heard' }
+        renderAudio()
+    }
+    const fillInputs = async () => {
+        const list = (await window.DeskListen.inputs()).filter((d) => d.deviceId && d.deviceId !== 'default')
+        const want = remembered(KEY_INPUT, '')
+        $('audioInput').replaceChildren(
+            el('option', { value: '', text: 'This computer\'s default input' }),
+            ...list.map((d, i) => el('option', { value: d.deviceId, text: d.label || `Input ${i + 1}` })))
+        $('audioInput').value = list.some((d) => d.deviceId === want) ? want : ''
+    }
+    const startAudio = async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            notice('This browser will not open a microphone here: open the desk at http://127.0.0.1 or localhost (or HTTPS).')
+            return
+        }
+        try {
+            const label = await window.DeskListen.start({ deviceId: remembered(KEY_INPUT, '') || undefined, onLevels, onKick, onTempo, onStatus })
+            heard = null
+            $('audioStatus').textContent = `Listening: ${label}`
+            fillInputs()
+        } catch (error) {
+            notice(`The desk could not listen (${error.message}). Allow the microphone for this page, or pick another input in Setup → Audio.`)
+        }
+        renderAudio()
+    }
+    const stopAudio = () => {
+        window.DeskListen.stop()
+        heard = null
+        $('audioStatus').textContent = 'Not listening.'
+        renderAudio()
+    }
+    $('audioBtn').addEventListener('click', () => (window.DeskListen.on ? stopAudio() : startAudio()))
+    $('autoBtn').addEventListener('click', () => { auto = !auto; remember_(KEY_AUTO, auto ? '1' : '0'); renderAudio() })
+    $('resyncBtn').addEventListener('click', () => post('desk/api/sync', { resync: true }).then(refreshDesk))
+    $('audioInput').addEventListener('change', (e) => { remember_(KEY_INPUT, e.target.value); if (window.DeskListen.on) startAudio() })
+    $('audioOffset').value = String(offsetMs)
+    $('audioOffsetVal').textContent = `${offsetMs} ms`
+    $('audioOffset').addEventListener('input', (e) => {
+        offsetMs = Number(e.target.value)
+        remember_(KEY_OFFSET, String(offsetMs))
+        $('audioOffsetVal').textContent = `${offsetMs} ms`
+    })
+    fillInputs()
+    renderAudio()
     let masterTimer = null
     $('master').addEventListener('input', (e) => {
         touched.set('master', Date.now())
@@ -192,8 +327,37 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             $('page-control').hidden = page !== 'control'
             $('page-setup').hidden = page !== 'setup'
             if (page === 'setup') renderSetup()
-            else renderStage(true)
+            else { mapTestOff(); renderStage(true) }
         })
+    }
+
+    // ---- Send to (2026-11-07, the owner: "i want send differnet signals to each laser"): pick lasers, then a tile's
+    // picture plays on those only; the others keep what they play. None picked is All: the look goes on every laser.
+    const sendTo = new Set()
+    // A laser's short name for the tiles: the number its name ends in (Laser 2 → 2), else its name.
+    const shortName = (id) => { const n = nameOf(id); const m = /(\d+)\s*$/.exec(n); return m ? m[1] : n }
+    // The look on all draws only on the lasers its Cubes pick; a laser's own look comes first.
+    const liveOn = (id) => Boolean(desk.live && (!Array.isArray(desk.live.cubes) || desk.live.cubes.includes(id)))
+    const lookOnCube = (id) => desk.liveBy?.[id] || (liveOn(id) ? { id: desk.liveId, name: desk.live.name } : null)
+    // Lasers playing different looks (or some dark): the page names each laser's look.
+    const lasersSplit = () => Object.keys(desk.liveBy || {}).length > 0 || Boolean(desk.live && Array.isArray(desk.live.cubes))
+    const renderSendTo = () => {
+        const box = $('sendTo')
+        box.hidden = desk.cubes.length < 2
+        if (box.hidden) { sendTo.clear(); return }
+        const ids = desk.cubes.map((c) => c.id).join(',')
+        if (box.dataset.ids !== ids) {
+            box.dataset.ids = ids
+            for (const id of [...sendTo]) if (!desk.cubes.some((c) => c.id === id)) sendTo.delete(id)
+            box.replaceChildren(
+                el('span', { class: 'label', text: 'Send to' }),
+                el('button', { class: 'chip', 'data-cube': '', text: 'All', title: 'A picture goes to every laser', onclick: () => { sendTo.clear(); renderSendTo() } }),
+                ...desk.cubes.map((c) => el('button', {
+                    class: 'chip', 'data-cube': c.id, text: nameOf(c.id), title: `Pick ${nameOf(c.id)}: a picture then goes to the picked lasers only`,
+                    onclick: () => { if (sendTo.has(c.id)) sendTo.delete(c.id); else sendTo.add(c.id); renderSendTo() }
+                })))
+        }
+        for (const chip of box.querySelectorAll('.chip')) chip.classList.toggle('is-on', chip.dataset.cube ? sendTo.has(chip.dataset.cube) : sendTo.size === 0)
     }
 
     // ---- the bank
@@ -234,8 +398,15 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 return tile
             }))
         }
+        renderSendTo()
         for (const tile of box.children) {
-            tile.classList.toggle('is-live', tile.dataset.id === desk.liveId)
+            // The lasers playing this look, as numbers on its picture.
+            const on = desk.cubes.filter((c) => lookOnCube(c.id)?.id === tile.dataset.id).map((c) => shortName(c.id))
+            let badge = tile.querySelector('.onlasers')
+            if (!badge) { badge = el('span', { class: 'onlasers' }); tile.append(badge) }
+            const text = desk.cubes.length > 1 && lasersSplit() ? on.join(' ') : ''
+            if (badge.textContent !== text) badge.textContent = text
+            tile.classList.toggle('is-live', on.length > 0 || tile.dataset.id === desk.liveId)
             tile.classList.toggle('is-selected', tile.dataset.id === selected)
             tile.classList.toggle('is-changed', [...(desk.changed || []), ...(desk.added || [])].includes(tile.dataset.id))
             const look = desk.looks.find((l) => l.id === tile.dataset.id)
@@ -244,9 +415,12 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         }
         const live = desk.live
         const where = desk.cubes.length <= 1 ? 'laser' : 'cubes'
-        $('liveName').textContent = live
-            ? `On the ${where}: ${live.name}${desk.blackout ? ' · blackout' : ''}`
-            : `Nothing on the ${where}. Click a picture to send it; click a name to edit it.`
+        const own = desk.cubes.length > 1 && lasersSplit()
+        $('liveName').textContent = own
+            ? desk.cubes.map((c) => `${nameOf(c.id)}: ${lookOnCube(c.id)?.name || 'dark'}`).join(' · ') + (desk.blackout ? ' · blackout' : '')
+            : live
+                ? `On the ${where}: ${live.name}${desk.blackout ? ' · blackout' : ''}`
+                : `Nothing on the ${where}. Click a picture to send it; click a name to edit it.`
     }
     // The tiles PLAY their looks (2026-10-29, the owner: "cant see animations"), drawn here with the desk's own code
     // (lib/laser.js: shared/laserLook.cjs) on the desk's clock, as often as the desk draws the cubes. A page whose
@@ -374,7 +548,11 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         const look = editing()
         const preview = $('preview')
         if (look && preview.offsetParent) {
-            drawFrame(preview, window.DiLaser.lookPointsAt(look, { t, clock: tileClock, index: 0, cube: desk.cubes[0] }), { zone: engine?.zone })
+            const shown = window.DiLaser.lookPointsAt(look, { t, clock: tileClock, index: 0, cube: desk.cubes[0] })
+            drawFrame(preview, shown, { zone: engine?.zone })
+            const fit = look.layers && look.layers.length ? (shown.layersDrawn ?? null) : null
+            if (fit !== layersDrawn) { layersDrawn = fit; renderLayers() }
+            updateLfoMarks(t)
         }
     }
 
@@ -395,20 +573,34 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         { key: 'level', label: 'Level', min: 0, max: 1, step: 0.01, fmt: (v) => Math.round(v * 100) + '%' }
     ]
     const MOVES = [
+        { key: 'speed', label: 'Speed', min: 0.25, max: 4, step: 0.25, fmt: (v) => `${+Number(v).toFixed(2)}×`, title: 'How fast the shape moves by itself: 1 is on the beat, 2 twice as fast, 0.5 half' },
         { key: 'spin', label: 'Spin', min: -1, max: 1, step: 1 / 64, fmt: (v) => (v ? `${+v.toFixed(3)}/b` : 'off'), title: 'Turns per beat' },
         { key: 'pulse', label: 'Pulse', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The size breathes down by this much' },
         { key: 'pulseBeats', label: 'Pulse every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
         { key: 'sweep', label: 'Sweep', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? v.toFixed(2) : 'off'), title: 'The picture swings across the field' },
         { key: 'sweepBeats', label: 'Sweep every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b` },
+        { key: 'displace', label: 'Displace', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The lines bend through a smooth field that drifts once round every 8 beats' },
+        { key: 'wobble', label: 'Wobble', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'A ripple runs along every line' },
+        { key: 'wobbleBeats', label: 'Wobble every', min: 0.25, max: 16, step: 0.25, fmt: (v) => `${v} b`, title: 'Beats for the ripple to go once round' },
+        { key: 'strobe', label: 'Strobe', min: 0, max: 2, step: 0.25, fmt: (v) => (v ? `${v}/b` : 'off'), title: 'Flashes per beat, on the desk’s beat: the picture is on for the first half of each' },
+        { key: 'react', label: 'Audio', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The size rides on the music: the bass swells it, each kick punches it to full (Audio on, in the top bar)' },
         { key: 'phase', label: 'Chase', min: 0, max: 4, step: 0.125, fmt: (v) => (v ? `${v} b` : 'off'), title: 'Beats each cube runs behind the one before it', multi: true }
     ]
     const CYCLE = { key: 'cycle', label: 'Each shape', min: 0.5, max: 32, step: 0.5, fmt: (v) => `${v} b` }
+    // Beam (2026-11-06 evening, from the owner's laser.html): Split draws the picture again in the split colour, a little
+    // apart, as a laser whose colours are misaligned; where the two meet the light adds (red + green = yellow). Flicker
+    // dips the brightness at random every frame.
+    const BEAM = [
+        { key: 'split', label: 'Split', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The picture again in the split colour, a little apart: where the two meet, the light adds (red + green = yellow)' },
+        { key: 'splitFar', label: 'Distance', min: 0, max: 1, step: 0.01, fmt: (v) => (v <= 0 ? 'near' : v >= 1 ? 'far' : Math.round(v * 100) + '%'), title: 'How far below the first the split beam sits: near, as a laser’s misaligned colours, to far, a second picture of its own (with Split on)' },
+        { key: 'flicker', label: 'Flicker', min: 0, max: 1, step: 0.01, fmt: (v) => (v ? Math.round(v * 100) + '%' : 'off'), title: 'The brightness dips at random every frame, by up to half at 100%' }
+    ]
 
     // Changes are gathered and sent at most every SEND_MS: a dragged slider is one request per step, not per pixel.
     // An edit changes the look open in Edit, in the bank (the laser shows it when that look is on it).
     let pending = {}
     let sendTimer = null
-    const edit = (fields) => {
+    const editLook = (fields) => {
         const look = editing()
         if (!look) return
         for (const k of Object.keys(fields)) touched.set(k, Date.now())
@@ -419,6 +611,156 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         desk.unsaved = true
         renderSaveState()
         if (!sendTimer) sendTimer = setTimeout(flush, SEND_MS)
+    }
+    // An edit goes to the open layer: its settings change inside the look's layers (the name stays the look's; Cubes go
+    // through pickCube).
+    const edit = (fields) => {
+        const look = editing()
+        if (!look) return
+        if (!(layer > 0 && look.layers && look.layers[layer - 1])) return editLook(fields)
+        const top = {}
+        const own = {}
+        for (const [k, v] of Object.entries(fields)) (k === 'name' ? top : own)[k] = v
+        for (const k of Object.keys(own)) touched.set(k, Date.now())
+        const layers = look.layers.map((l, i) => (i === layer - 1 ? { ...l, ...own } : l))
+        return editLook(Object.keys(own).length ? { ...top, layers } : top)
+    }
+    // The Layers strip: 1 (the look), 2… (its layers), + (a copy of the open one as a new layer, opened here), × (the open
+    // layer away). Rebuilt only when what it shows changes, so a click never lands on a swapped-out button.
+    const MAX_LAYERS = 3
+    const renderLayers = () => {
+        const look = editing()
+        const box = $('layerStrip')
+        if (!look) { box.replaceChildren(); box.dataset.key = ''; return }
+        const n = (look.layers || []).length
+        const key = `${look.id}:${n}:${layer}:${layersDrawn}`
+        if (box.dataset.key === key) return
+        box.dataset.key = key
+        const off = (i) => i > 0 && layersDrawn !== null && i > layersDrawn
+        const tab = (i) => el('button', {
+            class: 'chip' + (i === layer ? ' is-on' : '') + (off(i) ? ' is-off' : ''),
+            text: String(i + 1),
+            title: i === 0 ? `${look.name}: the pattern itself` : off(i) ? 'Too much to show with the layers before it in the Preview' : `Layer ${i + 1}: a pattern of its own, on the lasers it picks`,
+            onclick: async () => { await flush(); layer = i; touched.clear(); renderEditor(true) }
+        })
+        box.replaceChildren(
+            ...Array.from({ length: n + 1 }, (_, i) => tab(i)),
+            ...(n < MAX_LAYERS ? [el('button', { class: 'chip', text: '+', title: 'A copy of the open pattern as a new layer, every setting with it: pick its lasers, change its height or anything. Each laser draws one layer, never two', onclick: () => addLayer() })] : []),
+            ...(layer > 0 ? [el('button', { class: 'chip', text: '×', title: `Remove layer ${layer + 1}`, onclick: () => removeLayer() })] : [])
+        )
+    }
+    const addLayer = async () => {
+        const look = editing()
+        if (!look || (look.layers || []).length >= MAX_LAYERS) return
+        await flush()
+        const copy = { ...part() }
+        for (const k of ['id', 'name', 'layers']) delete copy[k]
+        copy.cubes = [] // on no laser until its lasers are picked: it never takes one from the pattern by itself
+        const layers = [...(look.layers || []), copy]
+        layer = layers.length
+        editLook({ layers })
+        await flush()
+        renderEditor(true)
+    }
+    const removeLayer = async () => {
+        const look = editing()
+        if (!look || layer < 1) return
+        await flush()
+        const layers = (look.layers || []).filter((_, i) => i !== layer - 1)
+        layer = 0
+        editLook({ layers })
+        await flush()
+        renderEditor(true)
+    }
+
+    // LFO (2026-11-07, the owner: "add lfo paramatre for laser desk"; she chose "on every slider", as Resolume's BPM-synced
+    // parameter animation): the ~ beside a slider switches its LFO on, opening Wave, Every and Depth under it, or off (its
+    // settings kept for next time). An amount's slider is the LFO's top and Depth how far down it goes; a place swings
+    // round its slider (shared/laserLook.cjs LFO_FIELDS). The thin mark on the slider is where the LFO has it now.
+    const LFO_FIELDS = window.DiLaser?.LFO_FIELDS || {}
+    const LFO_DEFAULT = window.DiLaser?.LFO_DEFAULT || { on: true, wave: 'sine', beats: 4, depth: 0.5 }
+    const LFO_WAVE_NAMES = { sine: 'Sine', tri: 'Tri', saw: 'Saw', square: 'Square', random: 'Random' }
+    const LFO_EVERY = [0.25, 0.5, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64] // beats, as Resolume's ×2 and /2
+    const LFO_THUMB = 16 // px: a range's thumb, which runs from half of it in to half of it short of the end
+    const lfoRows = {}
+    const lfoOfPart = (key) => part()?.lfo?.[key] || null
+    const setLfo = (key, changes) => {
+        const cur = part()
+        if (!cur) return
+        const all = { ...(cur.lfo || {}) }
+        all[key] = { ...LFO_DEFAULT, ...(all[key] || {}), ...changes }
+        edit({ lfo: all })
+    }
+    const lfoRow = (spec, row, range) => {
+        const key = spec.key
+        const place = LFO_FIELDS[key].kind === 'place'
+        const btn = el('button', {
+            class: 'lfo-btn quiet small',
+            type: 'button',
+            text: '~',
+            'aria-label': `${spec.label} LFO`,
+            'aria-pressed': 'false',
+            title: place
+                ? `LFO: ${spec.label} swings round where you set it, on the beat`
+                : `LFO: ${spec.label} moves by itself on the beat, from where you set it down by Depth` + (key === 'size' ? ' (never under 0.15, where a picture is a still beam)' : '')
+        })
+        const mark = el('i', { class: 'lfo-mark', hidden: true })
+        row.append(btn, mark)
+        const waveBtns = {}
+        const waves = el('div', { class: 'chips lfo-waves' })
+        for (const [w, name] of Object.entries(LFO_WAVE_NAMES)) {
+            waveBtns[w] = el('button', { class: 'chip', type: 'button', text: name, onclick: () => { setLfo(key, { wave: w }); show(lfoOfPart(key)) } })
+            waves.append(waveBtns[w])
+        }
+        const every = el('input', { type: 'range', min: 0, max: LFO_EVERY.length - 1, step: 1, 'aria-label': `${spec.label} LFO every` })
+        const everyOut = el('output')
+        const depth = el('input', { type: 'range', min: 0, max: 1, step: 0.01, 'aria-label': `${spec.label} LFO depth` })
+        const depthOut = el('output')
+        const panel = el('div', { class: 'lfo', hidden: true },
+            waves,
+            el('div', { class: 'field', title: 'Beats for the LFO to go once round' }, el('label', { text: 'Every' }), every, everyOut),
+            el('div', { class: 'field', title: place ? 'How far it swings: 100% is the whole field (Rotation: half a turn each way)' : 'How far down from the slider it goes: 100% is down to nothing' }, el('label', { text: 'Depth' }), depth, depthOut))
+        row.after(panel)
+        const nearest = (beats) => LFO_EVERY.reduce((best, v, i) => (Math.abs(Math.log(v / beats)) < Math.abs(Math.log(LFO_EVERY[best] / beats)) ? i : best), 0)
+        const show = (one, force = false) => {
+            const on = Boolean(one && one.on)
+            btn.classList.toggle('is-on', on)
+            btn.setAttribute('aria-pressed', String(on))
+            panel.hidden = !on
+            mark.hidden = !on || !(one.depth > 0)
+            if (!on) return
+            for (const [w, b] of Object.entries(waveBtns)) b.classList.toggle('is-on', one.wave === w)
+            if (force || document.activeElement !== every) every.value = String(nearest(one.beats))
+            everyOut.textContent = `${+Number(one.beats).toFixed(2)} b`
+            if (force || document.activeElement !== depth) depth.value = String(one.depth)
+            depthOut.textContent = Math.round(one.depth * 100) + '%'
+        }
+        btn.addEventListener('click', () => {
+            const one = lfoOfPart(key)
+            setLfo(key, { on: !(one && one.on) })
+            show(lfoOfPart(key), true)
+        })
+        every.addEventListener('input', () => { setLfo(key, { beats: LFO_EVERY[Number(every.value)] }); show(lfoOfPart(key)) })
+        depth.addEventListener('input', () => { setLfo(key, { depth: Number(depth.value) }); show(lfoOfPart(key)) })
+        // Where the LFO has the slider now, as a mark on its track (a turned Rotation comes back in from the other end).
+        const markAt = (value) => {
+            const lo = Number(range.min)
+            const hi = Number(range.max)
+            let p = (value - lo) / (hi - lo)
+            if (key === 'rotation') p -= Math.floor(p)
+            p = Math.min(1, Math.max(0, p))
+            mark.style.left = `${range.offsetLeft + LFO_THUMB / 2 + (range.offsetWidth - LFO_THUMB) * p - 1}px`
+        }
+        lfoRows[key] = { show, markAt }
+    }
+    const updateLfoMarks = (t) => {
+        const cur = part()
+        if (!cur || !cur.lfo || !window.DiLaser?.lfoValueAt) return
+        const b = window.DiLaser.beatsAt(tileClock, t)
+        for (const [key, row] of Object.entries(lfoRows)) {
+            const one = cur.lfo[key]
+            if (one && one.on && one.depth > 0) row.markAt(window.DiLaser.lfoValueAt(key, cur[key], one, b))
+        }
     }
 
     const fieldRow = (spec, parent) => {
@@ -452,6 +794,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             num.select()
         })
         parent.append(row)
+        if (LFO_FIELDS[spec.key]) lfoRow(spec, row, range)
         return { set: (v, force = false) => { if (force || (!held(spec.key) && document.activeElement !== range)) { range.value = String(v); show() } } }
     }
 
@@ -459,13 +802,59 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     for (const spec of PICTURE) fields[spec.key] = fieldRow(spec, $('pictureFields'))
     for (const spec of MOVES) fields[spec.key] = fieldRow(spec, $('moveFields'))
     fields.cycle = fieldRow(CYCLE, $('cycleField'))
+    // Beam: Split, how far apart (Distance), its colour (any colour, as the Colour picker), Flicker.
+    fields.split = fieldRow(BEAM[0], $('beamFields'))
+    fields.splitFar = fieldRow(BEAM[1], $('beamFields'))
+    const splitColour = el('input', { type: 'color', id: 'f-colour2', value: '#14ff28', 'aria-label': 'Split colour' })
+    const splitHex = el('output', { text: '#14ff28' })
+    splitColour.addEventListener('input', () => { splitHex.textContent = splitColour.value; edit({ colour2: splitColour.value }) })
+    $('beamFields').append(el('div', { class: 'field', title: 'The split beam’s colour, and a shape’s second part (Vortex’s dot)' }, el('label', { for: 'f-colour2', text: 'Second colour' }), splitColour, splitHex))
+    fields.colour2 = {
+        set: (v, force = false) => {
+            if (!force && (held('colour2') || document.activeElement === splitColour)) return
+            if (/^#[0-9a-f]{6}$/i.test(v || '')) splitColour.value = v
+            splitHex.textContent = splitColour.value
+        }
+    }
+    fields.flicker = fieldRow(BEAM[2], $('beamFields'))
+
+    // Reset (2026-11-07, the owner: "reset parameters option so we will come back to 0 point for each scene how it was
+    // from the beginning"): the look in Edit back to how its scene started: its seed look (for a saved copy such as
+    // "Magma 2", the seed of its shape), every other setting at the desk's defaults. Its name, size, place and cubes stay,
+    // as they are where it sits on the mapping. It is one edit, so Ctrl+Z takes it back, and Save keeps it as any change.
+    const KEEP_ON_RESET = ['id', 'name', 'size', 'height', 'x', 'cubes']
+    $('resetLook').addEventListener('click', async () => {
+        await flush()
+        const look = editing()
+        if (!look || !desk.defaults) return
+        const seeds = Array.isArray(desk.seeds) ? desk.seeds : []
+        const first = (shape) => String(shape || '').split(',')[0]
+        const seed = seeds.find((s) => s.id === look.id) || seeds.find((s) => first(s.shape) === first(look.shape)) || { shape: look.shape }
+        const start = { ...desk.defaults, ...seed }
+        const changes = {}
+        for (const [k, v] of Object.entries(start)) {
+            if (KEEP_ON_RESET.includes(k)) continue
+            if (JSON.stringify(look[k]) !== JSON.stringify(v)) changes[k] = v
+        }
+        if (!Object.keys(changes).length) { notice(`${look.name} is already as it started`); return }
+        layer = 0
+        edit(changes)
+        pending.step = true
+        renderEditor(true)
+        $('rainbow').checked = Boolean(look.rainbow)
+        $('mirror').checked = Boolean(look.mirror)
+        $('cycleMode').checked = look.shape.includes(',') || look.cycle > 0
+        $('cycleField').hidden = !$('cycleMode').checked
+        renderShapes()
+        renderSwatches()
+    })
 
     $('cycleMode').addEventListener('change', (e) => {
         touched.set('shape', Date.now())
         $('cycleField').hidden = !e.target.checked
         if (!editing()) return
-        const first = editing().shape.split(',')[0]
-        edit(e.target.checked ? { cycle: editing().cycle || 4 } : { shape: first, cycle: 0 })
+        const first = part().shape.split(',')[0]
+        edit(e.target.checked ? { cycle: part().cycle || 4 } : { shape: first, cycle: 0 })
         renderEditor()
     })
     $('rainbow').addEventListener('change', (e) => edit({ rainbow: e.target.checked }))
@@ -481,7 +870,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             box.append(...desk.shapes.map((s) => el('button', {
                 class: 'chip', 'data-shape': s, text: s[0].toUpperCase() + s.slice(1),
                 onclick: () => {
-                    const picked = editing() ? editing().shape.split(',') : []
+                    const picked = part() ? part().shape.split(',') : []
                     let next = [s]
                     if ($('cycleMode').checked) {
                         next = picked.includes(s) ? picked.filter((x) => x !== s) : [...picked, s]
@@ -492,7 +881,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 }
             })))
         }
-        const picked = editing() ? editing().shape.split(',') : []
+        const picked = part() ? part().shape.split(',') : []
         for (const chip of box.children) chip.classList.toggle('is-on', picked.includes(chip.dataset.shape))
     }
     const pickColour = (c) => { edit({ colour: c, rainbow: false }); $('rainbow').checked = false; renderSwatches() }
@@ -506,7 +895,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 onclick: () => pickColour(c)
             })), picker)
         }
-        const live = editing()
+        const live = part()
         for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
         const picker = $('colourPicker')
         if (live && document.activeElement !== picker) picker.value = live.colour
@@ -545,7 +934,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         $('myColours').querySelector('.addcolour')?.classList.toggle('is-on', on)
         if (on) {
             renderChooser()
-            const c = editing()?.colour
+            const c = part()?.colour
             if (c) { $('chooserPicker').value = c; $('chooserHex').value = c }
         }
     }
@@ -577,33 +966,85 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             $('myColours').querySelector('.addcolour').classList.toggle('is-on', !$('colourChooser').hidden)
             $('myColoursHint').hidden = list.length > 0
         }
-        const live = editing()
+        const live = part()
         for (const b of box.querySelectorAll('.swatch')) b.classList.toggle('is-on', Boolean(live && !live.rainbow && live.colour === b.dataset.colour))
     }
-    const renderLookCubes = () => {
-        const box = $('lookCubes')
+    // Cubes = the lasers the OPEN layer draws on (2026-11-07, the owner, picking "copy on other lasers": a copy must not
+    // double a laser's signal). Each laser draws one picture: the last layer that picks it, else the pattern itself
+    // (shared/laserLook.cjs lookPointsAt), so picking a laser for one layer takes it from the others. A layer on no laser
+    // is seen only in the Preview. The same chips show in the Layers group (once there are layers) and under Cubes.
+    const cubeOwner = (look, id) => {
+        const layers = look.layers || []
+        for (let i = layers.length - 1; i >= 0; i -= 1) {
+            const c = layers[i].cubes
+            if (c === 'all' || (Array.isArray(c) && c.includes(id))) return i + 1
+        }
+        return look.cubes === 'all' || (Array.isArray(look.cubes) && look.cubes.includes(id)) ? 0 : -1
+    }
+    const pickCube = (id) => {
+        const look = editing()
+        if (!look) return
+        const ids = desk.cubes.map((c) => c.id)
+        const open = layer > 0 && look.layers && look.layers[layer - 1] ? layer : 0
+        const listOf = (c) => (c === 'all' ? [...ids] : Array.isArray(c) ? [...c] : [])
+        let own = look.cubes
+        let layers = (look.layers || []).map((l) => ({ ...l, cubes: listOf(l.cubes) }))
+        const without = (c) => { layers = layers.map((l) => ({ ...l, cubes: l.cubes.filter((x) => x !== c) })) }
+        if (id === null) {
+            // All: every laser draws the open one.
+            layers = layers.map((l, i) => ({ ...l, cubes: i === open - 1 ? [...ids] : [] }))
+            if (open === 0) own = 'all'
+        } else if (cubeOwner(look, id) === open) {
+            // Off again: the laser goes back to the pattern itself (a layer), or stops drawing this look (the pattern).
+            if (open > 0) layers[open - 1].cubes = layers[open - 1].cubes.filter((x) => x !== id)
+            else {
+                const left = listOf(own).filter((x) => x !== id)
+                own = left.length && left.length < ids.length ? left : 'all'
+            }
+        } else {
+            without(id)
+            if (open > 0) layers[open - 1].cubes.push(id)
+            else if (own !== 'all') {
+                const next = [...listOf(own), id]
+                own = next.length >= ids.length ? 'all' : next
+            }
+        }
+        editLook(layers.length ? { cubes: own, layers } : { cubes: own })
+        renderLookCubes()
+    }
+    const cubeChips = (box) => {
         const ids = desk.cubes.map((c) => c.id)
         if (box.dataset.ids !== ids.join(',')) {
             box.dataset.ids = ids.join(',')
-            const pick = (id) => {
-                const cur = editing()?.cubes
-                const all = cur === 'all'
-                const picked = all ? [] : (cur || [])
-                let next = id === null ? 'all' : all ? [id] : picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]
-                if (next !== 'all' && (!next.length || next.length === ids.length)) next = 'all'
-                edit({ cubes: next })
-                renderLookCubes()
-            }
             box.replaceChildren(
-                el('button', { class: 'chip', 'data-cube': '', text: 'All', onclick: () => pick(null) }),
-                ...ids.map((id) => el('button', { class: 'chip', 'data-cube': id, text: nameOf(id), onclick: () => pick(id) }))
+                el('button', { class: 'chip', 'data-cube': '', text: 'All', onclick: () => pickCube(null) }),
+                ...ids.map((id) => el('button', { class: 'chip', 'data-cube': id, onclick: () => pickCube(id) }))
             )
         }
-        const cur = editing()?.cubes
+        const look = editing()
+        if (!look) return
+        const open = layer > 0 && look.layers && look.layers[layer - 1] ? layer : 0
+        const many = (look.layers || []).length > 0
         for (const chip of box.children) {
             const id = chip.dataset.cube
-            chip.classList.toggle('is-on', id === '' ? cur === 'all' : Array.isArray(cur) && cur.includes(id))
+            if (id === '') { chip.classList.toggle('is-on', ids.length > 0 && ids.every((c) => cubeOwner(look, c) === open)); continue }
+            const owner = cubeOwner(look, id)
+            chip.classList.toggle('is-on', owner === open)
+            // With layers, a laser another layer draws says which one ("Laser 3 · 2").
+            chip.textContent = nameOf(id) + (many && owner >= 0 && owner !== open ? ` · ${owner + 1}` : '')
+            chip.title = owner < 0 ? 'Not on this look' : `Draws ${owner === 0 ? `layer 1 (${look.name} itself)` : `layer ${owner + 1}`}`
         }
+    }
+    const renderLookCubes = () => {
+        cubeChips($('lookCubes'))
+        const look = editing()
+        const many = Boolean(look && (look.layers || []).length)
+        $('layerCubesRow').hidden = !many
+        if (!many) return
+        cubeChips($('layerCubes'))
+        const open = layer > 0 && look.layers[layer - 1] ? layer : 0
+        const none = desk.cubes.every((c) => cubeOwner(look, c.id) !== open)
+        $('layerCubesNote').textContent = none ? `Layer ${open + 1} is on no laser: only seen in the Preview. Pick its lasers.` : ''
     }
     const renderSaveState = () => {
         $('undoBtn').disabled = !desk?.canUndo
@@ -618,21 +1059,26 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         const live = editing()
         const box = $('page-control').querySelector('.editor')
         box.classList.toggle('is-empty', !live)
-        const onLaser = Boolean(live && desk.live && desk.liveId === live.id)
+        $('previewPane').classList.toggle('is-empty', !live)
+        const onLaser = Boolean(live && ((desk.live && desk.liveId === live.id) || Object.values(desk.liveBy || {}).some((m) => m.id === live.id)))
         const note = $('previewNote')
         note.classList.toggle('is-live', onLaser)
         const changed = Boolean(live && (desk.changed || []).includes(live.id))
-        note.textContent = (onLaser
-            ? 'On the laser: your changes show there at once'
-            : 'Preview only. Click the look’s picture to send it to the laser')
+        note.textContent = !live ? 'Click a look’s NAME to see it here before it goes to the laser'
+            : (onLaser
+                ? 'On the laser: your changes show there at once'
+                : 'Preview only. Click the look’s picture to send it to the laser')
             + (changed ? `. Save keeps your changes as a new scene; the saved ${live.name} stays as it was` : '')
+        renderLayers()
         if (!live) return
         if (!held('name') && document.activeElement !== $('lookName')) $('lookName').value = live.name
-        if (!held('shape')) $('cycleMode').checked = live.shape.includes(',') || live.cycle > 0
+        const cur = part()
+        if (!held('shape')) $('cycleMode').checked = cur.shape.includes(',') || cur.cycle > 0
         $('cycleField').hidden = !$('cycleMode').checked
-        if (!held('rainbow')) $('rainbow').checked = live.rainbow
-        if (!held('mirror')) $('mirror').checked = live.mirror
-        for (const [k, f] of Object.entries(fields)) f.set(live[k], force)
+        if (!held('rainbow')) $('rainbow').checked = cur.rainbow
+        if (!held('mirror')) $('mirror').checked = cur.mirror
+        for (const [k, f] of Object.entries(fields)) f.set(cur[k], force)
+        if (force || !held('lfo')) for (const [k, row] of Object.entries(lfoRows)) row.show(cur.lfo?.[k] || null, force)
         if (!held('shape')) renderShapes()
         if (!held('colour')) renderSwatches()
         if (!held('cubes')) renderLookCubes()
@@ -642,15 +1088,21 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     const selectLook = async (id) => {
         await flush()
         selected = id
+        layer = 0
         touched.clear()
         renderTiles()
         renderEditor()
     }
-    // A tile's PICTURE: the look, with its kept changes, onto the laser.
+    // A tile's PICTURE (or keys 1–9): the look, with its kept changes, onto the laser, and into Edit too (2026-11-01, the
+    // owner: "i want also that be when im clicking on pattern for output"), as a clip played in Resolume is the one
+    // selected. Its NAME still opens it in Edit alone, the laser keeping what it has.
     const sendLook = async (id) => {
         await flush()
-        await post('desk/api/go', { look: id })
+        await post('desk/api/go', sendTo.size ? { look: id, to: [...sendTo] } : { look: id })
+        if (selected !== id) { selected = id; layer = 0; touched.clear() }
         await refreshDesk()
+        renderTiles()
+        renderEditor(true)
     }
     // Save: each changed look becomes a new scene and the look goes back as it was saved; Edit follows the new scene.
     const saveAll = async () => {
@@ -699,6 +1151,11 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     // darkOff 'never': a plain hint on the cube's card while it is On with nothing to draw (no countdown, no Off). A cube
     // the desk holds with nothing live has nothing to draw too, though the desk keeps a Release's blank frame fresh.
     const idleHint = (e) => (e && engine && !engine.sim && !darkAuto() && e.armed && !e.stop && (e.nothingToDraw || (e.claimedBy === OUT && !desk?.live)) ? `On, nothing to draw.${desk?.live ? '' : ' Pick a look.'}` : null)
+    // Why a dot look stops the cube while laser.json `dots` is off (the default): its dots rest on a spot, which the
+    // still-beam guard stops. Shown as a plain line in the cube row; shapes as shared/laserShapes.cjs DOT_SHAPES.
+    const DOT_LOOKS = ['phyllotaxis', 'phyllochaos']
+    const dotNote = (e) => (e && e.stop?.reason === 'still-beam' && engine?.guard?.dots === false && DOT_LOOKS.includes(desk?.live?.shape)
+        ? 'Dot looks (Phyllotaxis, Phyllo chaos) are off: the beam rests on each dot, so the cube stops. Turn them on with "dots": true in laser.json.' : null)
     const renderCubeNote = () => {
         const notes = (engine?.cubes || []).map((e) => [e, darkNote(e)]).filter(([, text]) => text)
         $('cubeNote').hidden = notes.length === 0
@@ -727,7 +1184,10 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             const view = stageCanvases.get(c.id)
             if (!view) continue
             const e = engine?.cubes.find((x) => x.id === c.id)
-            view.name.textContent = nameOf(c.id)
+            const playing = lookOnCube(c.id)
+            // With lasers on looks of their own, each card says which (its number and the look, short enough to fit).
+            view.name.textContent = playing && Object.keys(desk.liveBy || {}).length ? `${shortName(c.id)} · ${playing.name}` : nameOf(c.id)
+            view.name.title = playing ? `${nameOf(c.id)}: ${playing.name}` : nameOf(c.id)
             view.card.classList.toggle('is-off', !c.on)
             let text = 'disarmed'
             let cls = ''
@@ -847,6 +1307,21 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 box.addEventListener('change', () => setCube(c.id, { [key]: box.checked }))
                 return box
             }
+            // Brightness (2026-11-01, the owner: "i want laser brighntess controll in setup"): the cube follows the slider
+            // while it moves, at most every BRIGHT_SEND_MS, and the last value always lands.
+            const brightness = () => {
+                const value = Number.isFinite(c.brightness) ? c.brightness : 1
+                const r = el('input', { type: 'range', min: 0, max: 1, step: 0.01, value, 'aria-label': `${nameOf(c.id)} brightness` })
+                const out = el('b', { class: 'mono brightval', text: Math.round(value * 100) + '%' })
+                let timer = null
+                const send = () => { timer = null; post('desk/api/cube', { id: c.id, brightness: Number(r.value) }) }
+                r.addEventListener('input', () => {
+                    out.textContent = Math.round(Number(r.value) * 100) + '%'
+                    if (!timer) timer = setTimeout(send, BRIGHT_SEND_MS)
+                })
+                r.addEventListener('change', () => { if (timer) clearTimeout(timer); timer = null; setCube(c.id, { brightness: Number(r.value) }) })
+                return el('span', { class: 'bright' }, r, out)
+            }
             const link = engine.sim ? el('span', { class: 'muted', text: 'sim' })
                 : e.connected ? el('span', { class: 'ok', text: 'answering' })
                     : el('span', { class: 'bad', text: e.ip ? 'no answer' : 'no address' })
@@ -860,7 +1335,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 ? el('button', { class: 'danger', text: 'On · turn off', onclick: () => post('api/arm', { armed: false, cube: c.id, out: OUT }).then(refreshEngine) })
                 : el('button', { text: 'On', disabled: !e.ip, title: e.ip ? 'Arm this cube (in phrase mode the first On of a run asks for the phrase)' : 'No address: Find cubes, then Use these', onclick: () => arm(c.id) })
             const now = c.held ? el('span', { class: 'warn', text: 'held by another Out', title: c.held })
-                : e.stop && !engine.sim ? el('span', { class: 'warn', text: `${e.stop.text || e.stop.reason}${e.armed && desk.live ? ' — press Go' : ''}` })
+                : e.stop && !engine.sim ? el('span', { class: 'warn', text: `${e.stop.text || e.stop.reason}${e.armed && desk.live ? ' — press Go' : ''}`, title: dotNote(e) || '' }, dotNote(e) ? el('div', { class: 'muted', text: dotNote(e) }) : null)
                     : darkNote(e) ? el('span', { class: 'warn', text: darkNote(e) })
                     : c.driving ? el('span', { text: `${c.lit} lit points` })
                         : c.dark ? el('span', { class: 'warn', text: desk.blackout ? 'dark · blackout' : c.offPercent > 0 ? `dark · ${c.offPercent} % off the field` : 'dark' })
@@ -871,6 +1346,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
                 el('td', { class: 'mono' }, e.ip || '—', el('div', { class: 'muted', text: e.serial || '' })),
                 el('td', {}, link),
                 el('td', {}, output),
+                el('td', {}, brightness()),
                 el('td', {}, check('on')),
                 el('td', {}, check('flipX')),
                 el('td', {}, slider('size', 0.3, 3, 0.05)),
@@ -880,8 +1356,359 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
             )
         })
         $('cubeRows').replaceChildren(...rows)
+        renderMap()
     }
     $('allOnBtn').addEventListener('click', () => arm(null))
+
+    // ---- mapping (2026-10-31, the owner: "i need to mapp laser"): a cube's whole field pinned to four corners, dragged
+    // on its field as Resolume's corner pin. Test picture puts the square, cross and diagonals on the cube through the
+    // map, so each corner can be laid on the wall; it goes off when Setup is left, so a show never starts on it.
+    const FULL = [[-1, -1], [1, -1], [1, 1], [-1, 1]]
+    const CORNER_NAMES = ['bottom left', 'bottom right', 'top right', 'top left']
+    const MAP_SEND_MS = 60
+    let mapId = null
+    let mapSel = null // the corner the arrow keys move
+    let mapDrag = null // the corner under the pointer
+    let mapLocal = null // { id, corners } while the person moves them, until the desk has them
+    let mapTouchedAt = 0
+    let mapSendTimer = null
+    const clampField = (v) => Math.max(-1, Math.min(1, v))
+    const mapCube = () => desk?.cubes.find((c) => c.id === mapId) || desk?.cubes[0] || null
+    const mapCorners = (c) => (mapLocal && mapLocal.id === c.id ? mapLocal.corners : (c.corners || FULL))
+    const mapGeom = (canvas) => {
+        const w = canvas.clientWidth
+        const h = canvas.clientHeight
+        return { cx: w / 2, cy: h / 2, s: (Math.min(w, h) / 2) * 0.9 }
+    }
+    const fieldToPx = (canvas, [x, y]) => { const { cx, cy, s } = mapGeom(canvas); return [cx + x * s, cy - y * s] }
+    const pxToField = (canvas, px, py) => { const { cx, cy, s } = mapGeom(canvas); return [clampField((px - cx) / s), clampField((cy - py) / s)] }
+    const sendCorners = (now) => {
+        if (mapSendTimer) { clearTimeout(mapSendTimer); mapSendTimer = null }
+        const fire = () => { mapSendTimer = null; if (mapLocal) post('desk/api/cube', { id: mapLocal.id, corners: mapLocal.corners }) }
+        if (now) fire()
+        else mapSendTimer = setTimeout(fire, MAP_SEND_MS)
+    }
+    const moveCorner = (c, i, at) => {
+        const corners = mapCorners(c).map((p) => [...p])
+        corners[i] = [Math.round(clampField(at[0]) * 1000) / 1000, Math.round(clampField(at[1]) * 1000) / 1000]
+        mapLocal = { id: c.id, corners }
+        mapTouchedAt = Date.now()
+        drawMap()
+    }
+    const drawMap = () => {
+        const canvas = $('mapCanvas')
+        const c = mapCube()
+        if (!canvas || !c || page !== 'setup') return
+        const dpr = Math.min(2, window.devicePixelRatio || 1)
+        const w = Math.max(1, Math.round(canvas.clientWidth * dpr))
+        const h = Math.max(1, Math.round(canvas.clientHeight * dpr))
+        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
+        const g = canvas.getContext('2d')
+        g.setTransform(dpr, 0, 0, dpr, 0, 0)
+        g.clearRect(0, 0, w, h)
+        const corners = mapCorners(c)
+        const pin = window.DiLaser?.cornerPin ? window.DiLaser.cornerPin(corners) : null
+        const at = (x, y) => fieldToPx(canvas, pin ? pin(x, y) : [x, y])
+        const stroke = (pts, colour, width = 1, dash = []) => {
+            g.beginPath()
+            pts.forEach(([x, y], k) => { const [px, py] = at(x, y); if (k) g.lineTo(px, py); else g.moveTo(px, py) })
+            g.strokeStyle = colour; g.lineWidth = width; g.setLineDash(dash); g.stroke(); g.setLineDash([])
+        }
+        // The cube's whole field, unmapped: where the corners can go.
+        g.strokeStyle = '#26262a'; g.lineWidth = 1
+        const [fx0, fy0] = fieldToPx(canvas, [-1, 1])
+        const [fx1, fy1] = fieldToPx(canvas, [1, -1])
+        g.strokeRect(fx0, fy0, fx1 - fx0, fy1 - fy0)
+        // The mapped field: a grid through the map, then the test picture's square, cross and diagonals.
+        const line = (x0, y0, x1, y1, n = 24) => Array.from({ length: n + 1 }, (_, k) => [x0 + ((x1 - x0) * k) / n, y0 + ((y1 - y0) * k) / n])
+        for (let k = 1; k < 4; k += 1) {
+            const v = -1 + k * 0.5
+            stroke(line(v, -1, v, 1), '#2c3a3c')
+            stroke(line(-1, v, 1, v), '#2c3a3c')
+        }
+        stroke(line(-1, -1, 1, 1), '#4a5a5c')
+        stroke(line(-1, 1, 1, -1), '#4a5a5c')
+        stroke([...line(-1, -1, 1, -1), ...line(1, -1, 1, 1), ...line(1, 1, -1, 1), ...line(-1, 1, -1, -1)], '#35d2dd', 2)
+        // The corners: a hard square each, the chosen one filled.
+        corners.forEach((p, i) => {
+            const [px, py] = fieldToPx(canvas, p)
+            const r = 7
+            g.fillStyle = i === mapSel ? '#35d2dd' : '#060607'
+            g.strokeStyle = i === mapDrag || i === mapSel ? '#fff' : '#35d2dd'
+            g.lineWidth = 2
+            g.fillRect(px - r, py - r, r * 2, r * 2)
+            g.strokeRect(px - r, py - r, r * 2, r * 2)
+        })
+        if (!pin && corners.some((p, i) => p[0] !== FULL[i][0] || p[1] !== FULL[i][1])) {
+            g.fillStyle = '#e0a84a'; g.font = '12px system-ui, sans-serif'
+            g.fillText('These corners cross or line up: the cube keeps its whole field.', 10, 18)
+        }
+        $('mapReadout').textContent = mapSel === null ? ''
+            : `${CORNER_NAMES[mapSel]} ${corners[mapSel][0].toFixed(3)}, ${corners[mapSel][1].toFixed(3)}`
+    }
+    const renderMap = () => {
+        const c = mapCube()
+        $('mapPane').hidden = !c
+        if (!c) return
+        mapId = c.id
+        // The desk has the corners once it says the same: then its copy is the one drawn.
+        if (mapLocal && !mapDrag && !mapSendTimer && Date.now() - mapTouchedAt > HOLD_MS) mapLocal = null
+        const select = $('mapCube')
+        const ids = desk.cubes.map((x) => x.id).join(',')
+        if (select.dataset.ids !== ids) {
+            select.dataset.ids = ids
+            select.replaceChildren(...desk.cubes.map((x) => el('option', { value: x.id, text: nameOf(x.id) })))
+        }
+        select.value = c.id
+        $('mapFlipY').checked = Boolean(c.flipY)
+        const testing = (desk.mapTest || []).includes(c.id)
+        $('mapTestBtn').classList.toggle('is-on', testing)
+        $('mapTestBtn').textContent = testing ? 'Test picture · on' : 'Test picture'
+        drawMap()
+    }
+    const mapCanvas = $('mapCanvas')
+    mapCanvas.addEventListener('pointerdown', (e) => {
+        const c = mapCube()
+        if (!c) return
+        const rect = mapCanvas.getBoundingClientRect()
+        const px = e.clientX - rect.left
+        const py = e.clientY - rect.top
+        let best = null
+        mapCorners(c).forEach((p, i) => {
+            const [cx, cy] = fieldToPx(mapCanvas, p)
+            const d = Math.hypot(cx - px, cy - py)
+            if (d <= 28 && (best === null || d < best.d)) best = { i, d }
+        })
+        mapSel = best ? best.i : null
+        mapDrag = best ? best.i : null
+        if (best) { mapCanvas.setPointerCapture(e.pointerId); e.preventDefault() }
+        mapCanvas.focus()
+        drawMap()
+    })
+    mapCanvas.addEventListener('pointermove', (e) => {
+        const c = mapCube()
+        if (mapDrag === null || !c) return
+        const rect = mapCanvas.getBoundingClientRect()
+        moveCorner(c, mapDrag, pxToField(mapCanvas, e.clientX - rect.left, e.clientY - rect.top))
+        sendCorners(false)
+    })
+    const endDrag = () => { if (mapDrag === null) return; mapDrag = null; sendCorners(true); drawMap() }
+    mapCanvas.addEventListener('pointerup', endDrag)
+    mapCanvas.addEventListener('pointercancel', endDrag)
+    // The arrow keys move the chosen corner (1–4 choose one) and stay here: the desk's own keys (1–9 send a look, the
+    // arrows open looks) must not fire while a corner is being placed.
+    mapCanvas.addEventListener('keydown', (e) => {
+        const c = mapCube()
+        if (!c) return
+        if (['1', '2', '3', '4'].includes(e.key)) { mapSel = Number(e.key) - 1; drawMap() }
+        else if (e.key in { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1 } && mapSel !== null) {
+            const step = e.shiftKey ? 0.02 : 0.002
+            const [x, y] = mapCorners(c)[mapSel]
+            const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
+            const dy = e.key === 'ArrowDown' ? -step : e.key === 'ArrowUp' ? step : 0
+            moveCorner(c, mapSel, [x + dx, y + dy])
+            sendCorners(false)
+        } else if (e.key === 'Escape') { mapSel = null; drawMap() }
+        else return
+        e.preventDefault()
+        e.stopPropagation()
+    })
+    $('mapCube').addEventListener('change', (e) => { mapId = e.target.value; mapSel = null; mapLocal = null; renderMap() })
+    $('mapFlipY').addEventListener('change', (e) => { const c = mapCube(); if (c) setCube(c.id, { flipY: e.target.checked }).then(renderMap) })
+    $('mapResetBtn').addEventListener('click', () => {
+        const c = mapCube()
+        if (!c) return
+        mapLocal = { id: c.id, corners: FULL.map((p) => [...p]) }
+        mapTouchedAt = Date.now()
+        sendCorners(true)
+        drawMap()
+    })
+    $('mapTestBtn').addEventListener('click', () => {
+        const c = mapCube()
+        if (!c) return
+        post('desk/api/maptest', { id: c.id, on: !(desk.mapTest || []).includes(c.id) }).then(refreshDesk).then(renderMap)
+    })
+    const mapTestOff = () => { for (const id of desk?.mapTest || []) post('desk/api/maptest', { id, on: false }).then(refreshDesk) }
+
+    // ---- Window (2026-11-10): the bar window's 16 cubes in the laser's picture. The data lives in the bar show engine
+    // (its own app, HTTP); this panel only reads /state every 2 s and writes the corners back, throttled, like the mapping.
+    const BAR = (new URLSearchParams(location.search).get('barEngine') || 'http://127.0.0.1:4780').replace(/\/+$/, '')
+    const BAR_HEAD = { 'Content-Type': 'application/json', 'X-Bar': 'pad' }
+    const WIN_RESET = [[-0.6, 0.144], [0.6, 0.144], [0.6, -0.144], [-0.6, -0.144]]
+    const WIN_NAMES = ['top left', 'top right', 'bottom right', 'bottom left']
+    let winState = null // the engine's last /state, or null while it is not there
+    let winTried = false
+    let winSel = -1 // -1 = all four corners, else the corner the arrow keys move
+    let winDrag = null
+    let winLocal = null // corners while the person moves them, until the engine says the same
+    let winTouchedAt = 0
+    let winSendTimer = null
+    let winBusy = false
+    const winCorners = () => winLocal || winState?.calib?.corners || WIN_RESET
+    // unit square (u right, v down) -> the quad TL TR BR BL (Heckbert's projective map)
+    const winQuadMap = (q) => {
+        const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q
+        const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3
+        const dy1 = y1 - y2, dy2 = y3 - y2, dy3 = y0 - y1 + y2 - y3
+        let g = 0, h = 0
+        if (Math.abs(dx3) > 1e-12 || Math.abs(dy3) > 1e-12) {
+            const det = dx1 * dy2 - dx2 * dy1
+            g = (dx3 * dy2 - dx2 * dy3) / det; h = (dx1 * dy3 - dx3 * dy1) / det
+        }
+        const a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3
+        return (u, v) => { const w = g * u + h * v + 1; return [(a * u + b * v + x0) / w, (d * u + e * v + y0) / w] }
+    }
+    const barPost = (path, body) => fetch(BAR + path, { method: 'POST', headers: BAR_HEAD, body: JSON.stringify(body) }).catch(() => null)
+    const sendWin = (now) => {
+        if (winSendTimer) { clearTimeout(winSendTimer); winSendTimer = null }
+        const fire = () => {
+            winSendTimer = null
+            if (winLocal) barPost('/api/set', { patch: { calib: { corners: winLocal } } })
+        }
+        if (now) fire()
+        else winSendTimer = setTimeout(fire, MAP_SEND_MS)
+    }
+    const setWin = (corners) => {
+        winLocal = corners.map(([x, y]) => [Math.round(clampField(x) * 10000) / 10000, Math.round(clampField(y) * 10000) / 10000])
+        winTouchedAt = Date.now()
+        drawWin()
+    }
+    const drawWin = () => {
+        const canvas = $('winCanvas')
+        if (!canvas || !winState || page !== 'setup') return
+        const dpr = Math.min(2, window.devicePixelRatio || 1)
+        const w = Math.max(1, Math.round(canvas.clientWidth * dpr))
+        const h = Math.max(1, Math.round(canvas.clientHeight * dpr))
+        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
+        const g = canvas.getContext('2d')
+        g.setTransform(dpr, 0, 0, dpr, 0, 0)
+        g.clearRect(0, 0, w, h)
+        const corners = winCorners()
+        g.strokeStyle = '#26262a'; g.lineWidth = 1
+        const [fx0, fy0] = fieldToPx(canvas, [-1, 1])
+        const [fx1, fy1] = fieldToPx(canvas, [1, -1])
+        g.strokeRect(fx0, fy0, fx1 - fx0, fy1 - fy0)
+        const { cols, rows, frame, paneAspect } = { cols: 8, rows: 2, frame: 0.12, paneAspect: 1, ...(winState.window || {}) }
+        const wt = cols + (cols - 1) * frame
+        const ht = rows * paneAspect + (rows - 1) * frame
+        const map = winQuadMap(corners)
+        const at = (x, y) => fieldToPx(canvas, map(x / wt, y / ht))
+        const poly = (pts) => { g.beginPath(); pts.forEach(([x, y], k) => { const [px, py] = at(x, y); if (k) g.lineTo(px, py); else g.moveTo(px, py) }); g.closePath() }
+        g.font = '11px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'
+        for (let r = 0; r < rows; r += 1) {
+            for (let c = 0; c < cols; c += 1) {
+                const x0 = c * (1 + frame), y0 = r * (paneAspect + frame)
+                poly([[x0, y0], [x0 + 1, y0], [x0 + 1, y0 + paneAspect], [x0, y0 + paneAspect]])
+                g.fillStyle = '#16282a'; g.fill()
+                g.strokeStyle = '#2c3a3c'; g.lineWidth = 1; g.stroke()
+                const [tx, ty] = at(x0 + 0.5, y0 + paneAspect / 2)
+                g.fillStyle = '#8fb9bd'; g.fillText(String(r * cols + c + 1), tx, ty)
+            }
+        }
+        poly([[0, 0], [wt, 0], [wt, ht], [0, ht]])
+        g.strokeStyle = '#35d2dd'; g.lineWidth = 2; g.stroke()
+        corners.forEach((p, i) => {
+            const [px, py] = fieldToPx(canvas, p)
+            const r = 7
+            g.fillStyle = i === winSel ? '#35d2dd' : '#060607'
+            g.strokeStyle = i === winDrag || i === winSel || winSel === -1 ? '#fff' : '#35d2dd'
+            g.lineWidth = 2
+            g.fillRect(px - r, py - r, r * 2, r * 2)
+            g.strokeRect(px - r, py - r, r * 2, r * 2)
+        })
+        $('winReadout').textContent = winSel === -1 ? 'whole window'
+            : `${WIN_NAMES[winSel]} ${corners[winSel][0].toFixed(4)}, ${corners[winSel][1].toFixed(4)}`
+    }
+    const renderWin = () => {
+        $('winNote').hidden = Boolean(winState) || !winTried
+        $('winEditor').hidden = !winState
+        if (!winState) return
+        for (const b of $('winSel').querySelectorAll('button')) b.classList.toggle('is-on', (b.dataset.sel === 'all' ? -1 : Number(b.dataset.sel)) === winSel)
+        $('winTestBtn').classList.toggle('is-on', Boolean(winState.laserTest))
+        $('winTestBtn').textContent = winState.laserTest ? 'Test · on' : 'Test'
+        drawWin()
+    }
+    const pollWin = async () => {
+        if (page !== 'setup' || winBusy) return
+        winBusy = true
+        try {
+            const res = await fetch(BAR + '/state', { cache: 'no-store' })
+            if (!res.ok) throw new Error(String(res.status))
+            const s = await res.json()
+            if (!Array.isArray(s?.calib?.corners) || s.calib.corners.length !== 4) throw new Error('no corners')
+            winState = s
+            // The engine has the corners once it says the same: then its copy is the one drawn.
+            if (winLocal && winDrag === null && !winSendTimer && Date.now() - winTouchedAt > HOLD_MS) winLocal = null
+        } catch { winState = null }
+        winBusy = false
+        winTried = true
+        renderWin()
+    }
+    setInterval(pollWin, 2000)
+    for (const tab of document.querySelectorAll('.page-tab')) tab.addEventListener('click', () => { if (tab.dataset.page === 'setup') pollWin() })
+    const winCanvas = $('winCanvas')
+    winCanvas.addEventListener('pointerdown', (e) => {
+        if (!winState) return
+        const rect = winCanvas.getBoundingClientRect()
+        const px = e.clientX - rect.left
+        const py = e.clientY - rect.top
+        let best = null
+        winCorners().forEach((p, i) => {
+            const [cx, cy] = fieldToPx(winCanvas, p)
+            const d = Math.hypot(cx - px, cy - py)
+            if (d <= 28 && (best === null || d < best.d)) best = { i, d }
+        })
+        if (best) { winSel = best.i; winDrag = best.i; winCanvas.setPointerCapture(e.pointerId); e.preventDefault() }
+        winCanvas.focus()
+        renderWin()
+    })
+    winCanvas.addEventListener('pointermove', (e) => {
+        if (winDrag === null || !winState) return
+        const rect = winCanvas.getBoundingClientRect()
+        const next = winCorners().map((p) => [...p])
+        next[winDrag] = pxToField(winCanvas, e.clientX - rect.left, e.clientY - rect.top)
+        setWin(next)
+        sendWin(false)
+    })
+    const endWinDrag = () => { if (winDrag === null) return; winDrag = null; sendWin(true); drawWin() }
+    winCanvas.addEventListener('pointerup', endWinDrag)
+    winCanvas.addEventListener('pointercancel', endWinDrag)
+    // Arrow keys stay in the panel while its canvas has the focus, so the desk's own keys do not fire.
+    winCanvas.addEventListener('keydown', (e) => {
+        if (!winState) return
+        if (!(e.key in { ArrowLeft: 1, ArrowRight: 1, ArrowUp: 1, ArrowDown: 1 })) return
+        const step = e.shiftKey ? 0.025 : 0.005
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0
+        const dy = e.key === 'ArrowDown' ? -step : e.key === 'ArrowUp' ? step : 0
+        setWin(winCorners().map(([x, y], i) => (winSel === -1 || winSel === i ? [x + dx, y + dy] : [x, y])))
+        sendWin(false)
+        e.preventDefault()
+        e.stopPropagation()
+    })
+    for (const b of $('winSel').querySelectorAll('button')) {
+        b.addEventListener('click', () => { winSel = b.dataset.sel === 'all' ? -1 : Number(b.dataset.sel); renderWin(); winCanvas.focus() })
+    }
+    for (const b of $('winEditor').querySelectorAll('[data-scale]')) {
+        b.addEventListener('click', (e) => {
+            if (!winState) return
+            const [sx, sy] = b.dataset.scale.split(',').map(Number)
+            const n = e.shiftKey ? 5 : 1
+            const q = winCorners()
+            const cx = q.reduce((a, p) => a + p[0], 0) / 4
+            const cy = q.reduce((a, p) => a + p[1], 0) / 4
+            setWin(q.map(([x, y]) => [cx + (x - cx) * sx ** n, cy + (y - cy) * sy ** n]))
+            sendWin(true)
+        })
+    }
+    $('winResetBtn').addEventListener('click', () => { if (winState) { setWin(WIN_RESET); sendWin(true) } })
+    $('winTestBtn').addEventListener('click', async () => {
+        if (!winState) return
+        winState.laserTest = !winState.laserTest
+        renderWin()
+        await barPost('/api/laser/test', { on: winState.laserTest })
+        pollWin()
+    })
+    window.addEventListener('resize', () => { if (page === 'setup') drawMap() })
     let found = []
     $('findBtn').addEventListener('click', async () => {
         const b = $('findBtn')
@@ -1495,6 +2322,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
         }
         if (inField(e.target)) return // a slider's arrows move the slider
         if (key === 't') { $('tapBtn').click(); return }
+        if (key === 'r' && !mod && !e.altKey) { $('resyncBtn').click(); return }
         if (!control) return
         if (/^[1-9]$/.test(key)) {
             const look = desk.looks[Number(key) - 1]
@@ -1562,6 +2390,7 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
     const refreshDesk = async () => {
         try {
             desk = await get('desk/api/state')
+            watchVersion(desk.version)
             if (desk.loadMessage) notice(desk.loadMessage)
             syncTileClock()
             // A page opened while a look plays opens that look in Edit; a look deleted elsewhere closes.
@@ -1736,6 +2565,51 @@ const BLACKOUT_GAP_MS = 400 // a second B inside this is ignored (audit rows 30,
 
     startRemoveAsk()
     startSetAsk()
+
+    // ---- updates (2026-11-01, the owner: "how can we do not after any changes refresh window i want work also in thime
+    // of show"). The desk says its version with every state (the server's start and its page files). A new one reloads
+    // this page by itself, once it has held for two polls and no hand is on a control, the look being edited sent first.
+    // The page comes back where it was: the same page, the same look in Edit, Audio listening again if it was. The laser
+    // does not notice: the server draws it, not this page.
+    const RESUME_KEY = 'laserDesk.resume'
+    let loadedVersion = null
+    let newVersion = null
+    let reloading = false
+    const handOnControl = () => [...touched.values()].some((at) => Date.now() - at < HOLD_MS)
+        || Boolean(document.querySelector('input[type=range]:active'))
+        || Boolean(document.activeElement && document.activeElement.matches('input:not([type=range]):not([type=checkbox]), textarea, select'))
+    function watchVersion (version) {
+        if (!version || reloading) return
+        if (loadedVersion === null) { loadedVersion = version; return }
+        if (version === loadedVersion) { newVersion = null; return }
+        if (newVersion !== version) { newVersion = version; return }
+        if (handOnControl()) return
+        reloading = true
+        flush().catch(() => {}).finally(() => {
+            try { sessionStorage.setItem(RESUME_KEY, JSON.stringify({ page, selected, audio: window.DeskListen.on, at: Date.now() })) } catch { /* it reloads where the desk opens */ }
+            location.reload()
+        })
+    }
+    const resume = (() => {
+        try {
+            const r = JSON.parse(sessionStorage.getItem(RESUME_KEY) || 'null')
+            sessionStorage.removeItem(RESUME_KEY)
+            return r && Date.now() - r.at < 60000 ? r : null
+        } catch { return null }
+    })()
+    if (resume) {
+        if (resume.selected) { selected = resume.selected; firstState = false }
+        if (resume.page === 'setup') document.querySelector('.page-tab[data-page="setup"]')?.click()
+        if (resume.audio) {
+            startAudio().then(() => {
+                if (!window.DeskListen.on || window.DeskListen.running) return
+                // The browser holds audio started without a click: the next click anywhere lets it hear again.
+                notice('The desk was updated. Click anywhere to let Audio listen again.')
+                document.addEventListener('pointerdown', () => { window.DeskListen.resume(); notice('') }, { once: true, capture: true })
+            })
+        }
+    }
+
     refreshThumbs()
     loop(refreshEngine, POLL_ENGINE_MS)
     loop(refreshDesk, POLL_DESK_MS)

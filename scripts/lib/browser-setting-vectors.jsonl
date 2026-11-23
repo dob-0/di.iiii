@@ -1,0 +1,30 @@
+{"id": "no-file", "env": null, "file": null, "want": "org.chromium.Chromium", "note": "no env, no file"}
+{"id": "empty-file", "env": null, "file": "", "want": "org.chromium.Chromium", "note": "empty file"}
+{"id": "file-ungoogled", "env": null, "file": "app=ungoogled\n", "want": "io.github.ungoogled_software.ungoogled_chromium", "note": ""}
+{"id": "file-chromium", "env": null, "file": "app=chromium\n", "want": "org.chromium.Chromium", "note": ""}
+{"id": "file-uc-id", "env": null, "file": "app=io.github.ungoogled_software.ungoogled_chromium\n", "want": "io.github.ungoogled_software.ungoogled_chromium", "note": ""}
+{"id": "file-chromium-id", "env": null, "file": "app=org.chromium.Chromium\n", "want": "org.chromium.Chromium", "note": ""}
+{"id": "comment-then-app", "env": null, "file": "# the browser for di tools\napp=ungoogled\n", "want": "io.github.ungoogled_software.ungoogled_chromium", "note": ""}
+{"id": "last-wins", "env": null, "file": "app=ungoogled\napp=chromium\n", "want": "org.chromium.Chromium", "note": "last app= line wins"}
+{"id": "last-empty", "env": null, "file": "app=ungoogled\napp=\n", "want": "org.chromium.Chromium", "note": "the last line is empty: default"}
+{"id": "spaces-around", "env": null, "file": "app = ungoogled  \n", "want": "io.github.ungoogled_software.ungoogled_chromium", "note": "spaces around = and the value are dropped"}
+{"id": "leading-spaces", "env": null, "file": "   app=ungoogled\n", "want": "io.github.ungoogled_software.ungoogled_chromium", "note": ""}
+{"id": "crlf", "env": null, "file": "app=ungoogled\r\n", "want": "io.github.ungoogled_software.ungoogled_chromium", "note": "a CRLF line"}
+{"id": "no-newline", "env": null, "file": "app=ungoogled", "want": "io.github.ungoogled_software.ungoogled_chromium", "note": "no newline at the end"}
+{"id": "commented-app", "env": null, "file": "#app=ungoogled\n", "want": "org.chromium.Chromium", "note": "a commented line is not read"}
+{"id": "other-key", "env": null, "file": "other=1\n", "want": "org.chromium.Chromium", "note": ""}
+{"id": "apps-key", "env": null, "file": "apps=ungoogled\n", "want": "org.chromium.Chromium", "note": "a longer key is not app"}
+{"id": "upper-key", "env": null, "file": "APP=ungoogled\n", "want": "org.chromium.Chromium", "note": "keys are case-sensitive"}
+{"id": "file-unknown", "env": null, "file": "app=firefox\n", "want": "REFUSE", "note": "set but unknown: refused"}
+{"id": "file-inline-comment", "env": null, "file": "app=ungoogled # mine\n", "want": "REFUSE", "note": "no inline comments: refused"}
+{"id": "file-upper-value", "env": null, "file": "app=Ungoogled\n", "want": "REFUSE", "note": "values are case-sensitive: refused"}
+{"id": "unreadable", "env": null, "file": {"unreadable": "app=ungoogled\n"}, "want": "org.chromium.Chromium", "note": "an unreadable file reads as empty"}
+{"id": "env-ungoogled", "env": "ungoogled", "file": null, "want": "io.github.ungoogled_software.ungoogled_chromium", "note": ""}
+{"id": "env-uc-id", "env": "io.github.ungoogled_software.ungoogled_chromium", "file": null, "want": "io.github.ungoogled_software.ungoogled_chromium", "note": ""}
+{"id": "env-over-file", "env": "chromium", "file": "app=ungoogled\n", "want": "org.chromium.Chromium", "note": "the env wins over the file"}
+{"id": "env-empty", "env": "", "file": "app=ungoogled\n", "want": "io.github.ungoogled_software.ungoogled_chromium", "note": "an empty env counts as unset"}
+{"id": "env-leading-space", "env": " ungoogled", "file": null, "want": "REFUSE", "note": "the env is not trimmed: refused"}
+{"id": "env-trailing-space", "env": "ungoogled ", "file": null, "want": "REFUSE", "note": "refused"}
+{"id": "env-only-spaces", "env": "  ", "file": "app=ungoogled\n", "want": "REFUSE", "note": "set but wrong: refused, no fallback"}
+{"id": "env-upper", "env": "Ungoogled", "file": null, "want": "REFUSE", "note": "refused"}
+{"id": "env-unknown", "env": "firefox", "file": "app=ungoogled\n", "want": "REFUSE", "note": "refused, no fallback to the file"}

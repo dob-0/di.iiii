@@ -11,8 +11,12 @@ describe('upload policy', () => {
 
   it('still refuses what it refused before', () => {
     expect(isAllowedUpload({ mimetype: 'application/octet-stream', originalname: 'run.exe' })).toBe(false)
-    expect(isAllowedUpload({ mimetype: 'text/html', originalname: 'page.html' })).toBe(false)
     expect(isAllowedUpload({ mimetype: '', originalname: 'noext' })).toBe(false)
+  })
+
+  it('takes single-file HTML visuals for Mapping screens (stored and served sandboxed)', () => {
+    expect(isAllowedUpload({ mimetype: 'text/html', originalname: 'page.html' })).toBe(true)
+    expect(isAllowedUpload({ mimetype: '', originalname: 'page.htm' })).toBe(true)
   })
 
   it('keeps the kinds it already took', () => {

@@ -105,6 +105,20 @@ describe('assets-reid: what is an older file, and where is it named', () => {
     })
 })
 
+describe('assets-reid: the mapping visuals bank', () => {
+    it('rewrites a visual that points at an old asset through setMappingVisual, not setMappingState', () => {
+        const visual = { id: 'v1', name: 'Loop', source: { kind: 'video', ref: `/api/projects/p1/assets/${UUID_A}` }, thumb: `/api/projects/p1/assets/${UUID_A}`, opacity: 1, effects: [] }
+        const before = { ...projectDoc(), mappingState: { surfaces: [], cues: [], visuals: [visual] } }
+        const after = rewriteIds(before, { [UUID_A]: 'a'.repeat(64) })
+        const { ops } = planRewriteOps({ ...before, assets: [] }, { ...after, assets: [] })
+        const v = ops.filter((o) => o.type === 'setMappingVisual')
+        expect(v).toHaveLength(1)
+        expect(v[0].payload.visualId).toBe('v1')
+        expect(JSON.stringify(v[0].payload.patch)).toContain('a'.repeat(64))
+        expect(ops.some((o) => o.type === 'setMappingState')).toBe(false)
+    })
+})
+
 describe('assets-reid: a run against a fake install', () => {
     it('--dry-run counts and writes nothing, downloads nothing', async () => {
         const inst = fakeInstall({ p1: projectDoc() }, { bytes: BYTES })

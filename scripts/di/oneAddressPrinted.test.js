@@ -68,6 +68,8 @@ const installedHome = ({ cert = false, port = null } = {}) => {
     fs.symlinkSync(path.join(home, 'versions', '1.0.0'), path.join(home, 'current'))
     fs.writeFileSync(path.join(home, 'state.json'), JSON.stringify({ mode: 'node', version: '1.0.0' }))
     if (port) fs.writeFileSync(path.join(home, 'di.env'), `PORT=${port}\n`)
+    // the server these tests start lives in this very process: it is this install's own (a stranger's is not, see heldPortCommands.test.js)
+    if (port) { fs.mkdirSync(path.join(home, 'run'), { recursive: true }); fs.writeFileSync(path.join(home, 'run', 'server.pid'), String(process.pid)) }
     if (cert) {
         fs.mkdirSync(path.join(home, 'tls'))
         fs.writeFileSync(path.join(home, 'tls', 'cert.pem'), CERT_PEM)
@@ -286,6 +288,9 @@ describe('the real `di status` and `di up` on an install', () => {
 
     it('di up on a running install prints the one address too', async () => {
         const { home, port } = await install()
+        // a running install of THIS di: its pid file names a live process (a server that only answers the port is a stranger's, see portTaken.test.js)
+        fs.mkdirSync(path.join(home, 'run'), { recursive: true })
+        fs.writeFileSync(path.join(home, 'run', 'server.pid'), String(process.pid))
         answers.door = { status: 200, config: config('aaa') }
         const lines = await run(home, 'up', '--no-open')
         expect(lines[0]).toMatch(/^already running — http:\/\/diiii\.localhost\//)

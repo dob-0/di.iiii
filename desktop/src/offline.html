@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+<title>di.iiii</title>
+<style>
+    /* Tokens copied from the web app's src/styles/base.css (the brand's one
+       source in code): --di-cyan :31, --di-cyan-dim :32, --di-cyan-border :33,
+       --di-black :34, --di-text :36, --di-text-muted :44, --di-mono :45,
+       --di-sans :53, --di-cyan-wash :124. The fonts are NOT fetched: the page
+       works with the internet cut, so Inter and JetBrains Mono show only where
+       installed and the stack falls back as the web app's does. */
+    :root {
+        --di-cyan: #4df9ff;
+        --di-cyan-dim: rgba(77, 249, 255, 0.1);
+        --di-cyan-border: rgba(77, 249, 255, 0.3);
+        --di-cyan-wash: rgba(77, 249, 255, 0.06);
+        --di-black: #000;
+        --di-text: #fff;
+        --di-text-muted: rgba(255, 255, 255, 0.5);
+        --di-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        --di-sans: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    * { border-radius: 0; box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+        background: var(--di-black);
+        color: var(--di-text);
+        font: 16px/1.5 var(--di-sans);
+        display: grid;
+        place-items: center;
+        padding: 24px;
+    }
+    main { width: min(560px, 100%); border: 1px solid var(--di-cyan-border); padding: 32px; }
+    h1 { margin: 0 0 8px; font-size: 24px; font-weight: 700; }
+    p { margin: 0 0 16px; color: var(--di-text-muted); }
+    code { display: block; margin: 0 0 24px; padding: 8px 12px; background: var(--di-cyan-wash); color: var(--di-cyan); font: 14px var(--di-mono); overflow-wrap: anywhere; }
+    a.retry { display: inline-block; padding: 10px 20px; border: 1px solid var(--di-cyan); color: var(--di-cyan); text-decoration: none; }
+    a.retry:hover, a.retry:focus-visible { background: var(--di-cyan-dim); outline: none; }
+</style>
+</head>
+<body>
+<main>
+    <h1>di.iiii cannot be reached</h1>
+    <p>Your connection may be down, or this address is not answering.</p>
+    <code id="address">-</code>
+    <a class="retry" id="retry" href="#">Try again</a>
+</main>
+<script src="offline.js"></script>
+</body>
+</html>

@@ -14,6 +14,7 @@ One index of every skill under `.claude/skills/`. A skill is a recipe: when to u
 | `venue-integrate` | the result is put into the place's project |
 | `venue-review` | the result is shown back and reviewed |
 | `venue-gear-check` | a rental list arrives: makers verified, each code confirmed / probable / equivalent / unknown |
+| `venue-plot-measure` | a venue sends a light plot (PDF or picture) and a size must be read from it |
 | `venue-paper` | the patch, the crew's paper and the rental order draft are made |
 | `venue-safety-packet` | the rigging safety packet and site checklist are drafted for the humans who sign |
 | `show-scenes-job` | a show's light scenes are designed or rebuilt (safe `epic-build` flags by default) |

@@ -319,3 +319,53 @@
         transition: none;
     }
 }
+
+/* `di connect`: the spaces the machine may follow. Two columns where there is room, one on a phone. */
+.device-spaces {
+    margin: var(--di-space-4) 0 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+}
+
+.device-space-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: var(--di-space-2);
+    margin: var(--di-space-2) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.device-space label {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-3);
+    min-height: 2.75rem;
+    padding: var(--di-space-2) var(--di-space-4);
+    border: 1px solid var(--di-line);
+    border-radius: var(--di-radius);
+    cursor: pointer;
+}
+
+.device-space-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.device-spaces + .device-warning {
+    margin-top: var(--di-space-4);
+}
+
+/* Use the width: the request and the terminals on the left, the connected machines on the right (>= 1100 px).
+   Below that it is one column, phone first. The page shell is lifted from the 720 px reading column to the screen. */
+.device-cols { display: grid; gap: var(--di-space-6); min-width: 0; }
+.device-col { display: grid; gap: var(--di-space-6); align-content: start; min-width: 0; }
+
+@media (min-width: 1100px) {
+    .device-root .legal-nav,
+    .device-root .legal-header,
+    .device-root .legal-content.device-main { max-width: min(1600px, 92vw); }
+    .device-cols { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--di-space-7); }
+}

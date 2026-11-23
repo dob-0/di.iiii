@@ -41,17 +41,32 @@ async function getJson(path, { fetchImpl, signal } = {}) {
     }
 }
 
-const postLaser = (path, body, { fetchImpl } = {}) => {
+// A send that gets no answer in this time counts as failed (false), so a hung engine can never
+// leave a cue or the Blackout button waiting for ever (review 2026-11-12, N3876 #4).
+export const LASER_POST_TIMEOUT_MS = 4000
+
+const postLaser = (path, body, { fetchImpl, timeoutMs = LASER_POST_TIMEOUT_MS } = {}) => {
     const call = resolveFetch(fetchImpl)
     if (!call) return Promise.resolve(false)
-    return Promise.resolve()
+    const controller = typeof AbortController === 'function' ? new AbortController() : null
+    let timer = null
+    // The race answers even when a fetch ignores the abort signal.
+    const timedOut = new Promise((resolve) => {
+        timer = setTimeout(() => {
+            controller?.abort()
+            resolve(false)
+        }, timeoutMs)
+    })
+    const sent = Promise.resolve()
         .then(() => call(laserApiUrl(path), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            ...(controller ? { signal: controller.signal } : {})
         }))
         .then((response) => Boolean(response?.ok))
         .catch(() => false)
+    return Promise.race([sent, timedOut]).finally(() => clearTimeout(timer))
 }
 
 // GET api/state → what the engine says, or { reachable: false }.
