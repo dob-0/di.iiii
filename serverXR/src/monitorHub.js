@@ -666,6 +666,38 @@ function createHub({
   // machine has under the same id, stays this machine's own), and of two machines with the same id the newest report wins.
   // Lent rows keep `machine`, so the page names where each was read; `lentFrom` lists those machines. The page only: the
   // machine's own report to dev carries its own panel, so a lent row is never reported back as its own.
+  // Network probes and services are each machine's own, but the Monitor is the account's (owner 11-23: "it still not the same",
+  // "make that be synced"): every machine shows the same list, its own rows first, then each other machine's from that
+  // machine's fresh report (the reports the hub already holds, nothing probed here). Every row is tagged `machine` and gets an
+  // `id` "<machine>/<probe id or unit>", so two machines' "dev" probe or "di-server.service" never collide. A stale report,
+  // a failed panel or a row without its key is skipped; at most MACHINE_ROWS_MAX rows per other machine.
+  const MACHINE_ROWS_MAX = 80
+  const machineRowsFor = (base, sources, name, keyOf) => {
+    const mine = base.panels?.[name]
+    const self = machineName(String(base.host || os.hostname()))
+    const selfKey = self.toLowerCase()
+    const tag = (r, machine) => { const k = keyOf(r); return typeof k === 'string' && k ? { ...r, machine, id: `${machine}/${k}` } : null }
+    const lent = []
+    const from = []
+    const seenHosts = new Set([selfKey])
+    for (const src of sources) {
+      if (!src || typeof src.host !== 'string' || src.stale === true) continue
+      const host = machineName(src.host)
+      if (seenHosts.has(host.toLowerCase())) continue
+      const p = src.panels?.[name]
+      if (!isPlainObject(p) || p.ok !== true || !Array.isArray(p.rows)) continue
+      const rows = p.rows.filter(isPlainObject).map((r) => tag(r, host)).filter(Boolean).slice(0, MACHINE_ROWS_MAX)
+      if (!rows.length) continue
+      seenHosts.add(host.toLowerCase())
+      from.push(host)
+      lent.push(...rows)
+    }
+    if (!lent.length) return mine
+    const ownOk = isPlainObject(mine) && mine.ok === true && Array.isArray(mine.rows)
+    const own = ownOk ? mine.rows.filter(isPlainObject).map((r) => tag(r, self)).filter(Boolean) : []
+    return { ...(isPlainObject(mine) ? mine : { ms: 0, at: now() }), ok: true, rows: [...own, ...lent], lentFrom: from.sort(), ...(ownOk ? {} : { ownError: (isPlainObject(mine) && mine.error) || 'not read on this machine' }) }
+  }
+
   const FEED_LENT_MAX = 40
   const feedFor = (base, shared, name) => {
     const mine = base.panels?.[name]
@@ -719,12 +751,18 @@ function createHub({
       : null
     const tasks = feedFor(base, shared, 'tasks')
     const shows = feedFor(base, shared, 'shows')
+    const network = machineRowsFor(base, [...own, ...extra], 'network', (r) => r.id ?? r.target)
+    const servicesAll = machineRowsFor(base, [...own, ...extra], 'services', (r) => r.unit)
+    const services = servicesAll === base.panels?.services ? servicesAll
+      : { ...servicesAll, running: servicesAll.rows.filter((r) => r.active === 'active').length, failed: servicesAll.rows.filter((r) => r.active === 'failed').length }
     const lent = {
       ...(credits !== base.panels?.credits ? { credits } : {}),
       ...(agents !== base.panels?.agents ? { agents } : {}),
       ...(prs ? { pullRequests: prs } : {}),
       ...(tasks !== base.panels?.tasks ? { tasks } : {}),
-      ...(shows !== base.panels?.shows ? { shows } : {})
+      ...(shows !== base.panels?.shows ? { shows } : {}),
+      ...(network !== base.panels?.network ? { network } : {}),
+      ...(services !== base.panels?.services ? { services } : {})
     }
     return {
       ...base,

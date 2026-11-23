@@ -262,6 +262,41 @@ describe('hub snapshot', () => {
 
   // Credits belong to the account, not to one machine: a machine with no credits list of its own shows the list another
   // of the owner's machines reported (marked `from` and `reportedAt`). Nothing is probed: a probe is a real model call.
+  describe('network and services on every machine (owner 11-23: "make that be synced")', () => {
+    const svc = (unit, active = 'active') => ({ unit, active, sub: 'running' })
+    const probe = (id, ok = true) => ({ id, name: id, ok, status: ok ? 200 : 0, ms: 5 })
+    const mk = (services, network) => build({ store: { getMonitor: async () => ({ host: 'studio-mac.tail', configured: true, panels: { services, network } }) } })
+    const at = () => ({ subject: 'o', ledger: true })
+
+    it('lists every fresh machine\'s rows, own first, each tagged and with an id that never collides', async () => {
+      const { hub, reports } = mk({ ok: true, rows: [svc('di-server.service')], running: 1, failed: 0 }, { ok: true, rows: [probe('https://dev.diiii.xyz')] })
+      reports.put({ host: 'aylmo', panels: { services: { ok: true, rows: [svc('di-server.service'), svc('wivrn.service', 'failed')] }, network: { ok: true, rows: [probe('https://dev.diiii.xyz'), probe('http://127.0.0.1:4790/', false)] } } }, at())
+      const snap = await hub.getSnapshot()
+      expect(snap.panels.services.rows.map((r) => r.id)).toEqual(['studio-mac/di-server.service', 'aylmo/di-server.service', 'aylmo/wivrn.service'])
+      expect(snap.panels.services).toMatchObject({ running: 2, failed: 1, lentFrom: ['aylmo'] })
+      expect(snap.panels.network.rows.map((r) => [r.machine, r.id])).toEqual([['studio-mac', 'studio-mac/https://dev.diiii.xyz'], ['aylmo', 'aylmo/https://dev.diiii.xyz'], ['aylmo', 'aylmo/http://127.0.0.1:4790/']])
+    })
+
+    it('skips stale, failed or keyless lists and itself; nothing to add returns the same object', async () => {
+      const own = { ok: true, rows: [svc('a.service')] }
+      const { hub, reports } = build({ store: { getMonitor: async () => ({ host: 'studio-mac', configured: true, panels: { services: own } }) } })
+      reports.put({ host: 'broken', panels: { services: { ok: false, error: 'no systemctl', rows: [] } } }, at())
+      reports.put({ host: 'keyless', panels: { services: { ok: true, rows: [{ active: 'active' }] } } }, at())
+      reports.put({ host: 'studio-mac', panels: { services: { ok: true, rows: [svc('dup.service')] } } }, at())
+      const account = { state: 'ok', reports: [{ host: 'old', stale: true, reportedAt: '2026-11-01T00:00:00.000Z', panels: { services: { ok: true, rows: [svc('x.service')] } } }] }
+      const snap = await hub.getSnapshot({ account })
+      expect(snap.panels.services).toBe(own)
+    })
+
+    it('lists the other machines when this one could not read its own, and says so', async () => {
+      const { hub, reports } = mk({ ok: false, error: 'systemctl timed out', rows: [] }, undefined)
+      reports.put({ host: 'aylmo', panels: { services: { ok: true, rows: [svc('di-server.service')] } } }, at())
+      const s = (await hub.getSnapshot()).panels.services
+      expect(s).toMatchObject({ ok: true, ownError: 'systemctl timed out', lentFrom: ['aylmo'] })
+      expect(s.rows.map((r) => r.id)).toEqual(['aylmo/di-server.service'])
+    })
+  })
+
   describe('tasks and shows on every machine', () => {
     const feed = (id, extra = {}) => ({ id, title: `T ${id}`, ok: true, lines: ['a line'], ...extra })
     const own = (tasks, shows) => build({ store: { getMonitor: async () => ({ host: 'studio-mac.tail', configured: true, panels: { tasks, shows } }) } }).hub

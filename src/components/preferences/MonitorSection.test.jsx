@@ -10,7 +10,7 @@ vi.mock('../../services/apiClient.js', () => ({
 }))
 
 import { getMonitor, postMonitorAsk } from '../../services/apiClient.js'
-import MonitorSection, { feedsSubtitle, formatBytes, nextBackoff, timeAgo } from './MonitorSection.jsx'
+import MonitorSection, { feedsSubtitle, machinesSubtitle, formatBytes, nextBackoff, timeAgo } from './MonitorSection.jsx'
 import { tierState, heroState } from './MonitorOverview.jsx'
 
 const snapshot = (over = {}) => ({
@@ -989,5 +989,13 @@ describe('feedsSubtitle: whose tasks and shows the box holds', () => {
         expect(feedsSubtitle({ tasks: { lentFrom: ['aylmo'] }, shows: { lentFrom: ['aylmo', 'r-di'] } })).toBe("This machine's feeds and your account's from aylmo, r-di")
         expect(feedsSubtitle({ tasks: { rows: [] } })).toBe('Your feeds from ~/.di/monitor.json')
         expect(feedsSubtitle(undefined)).toBe('Your feeds from ~/.di/monitor.json')
+    })
+})
+
+describe('machinesSubtitle', () => {
+    it('names the other machines when the list holds theirs, else keeps the text', () => {
+        expect(machinesSubtitle({ lentFrom: ['aylmo', 'r-di'] }, 'Tiers')).toBe('Tiers · this machine and aylmo, r-di')
+        expect(machinesSubtitle({ rows: [] }, 'Tiers')).toBe('Tiers')
+        expect(machinesSubtitle(undefined, 'Tiers')).toBe('Tiers')
     })
 })
