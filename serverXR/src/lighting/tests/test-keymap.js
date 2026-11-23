@@ -1,4 +1,5 @@
 'use strict';
+/* global document, location, deskKeymap, bankView, page, keyLearnTarget, sceneHotkeys, unbindDeskKey, setBankView, bindDeskKey -- the page's globals, inside page.evaluate() */
 // Keyboard mappings (the ⌨ panel): open it, press a control, press a key, and from then on
 // the key IS that control — on the server, not just on screen. Real mouse and key presses
 // through the repo's playwright with the installed Chrome (no browser download). Ported from

@@ -259,11 +259,11 @@ check('scene containers: tab rows, tile grid and chase item are in the page and 
 check('colour palettes: the Color tab posts to api/colors, the desk has the route, and the built-ins stay out of the show', () => {
   if (!js.includes(`'api/colors'`)) throw new Error('app.js never posts to api/colors');
   if (!server.includes(`'POST /api/colors'`)) throw new Error('the desk has no POST /api/colors');
-  if ((js.match(/^  \['[^']+', \['#/gm) || []).length !== 16) throw new Error('PALETTES is not the sixteen built-in palettes');
+  if ((js.match(/^ {2}\['[^']+', \['#/gm) || []).length !== 16) throw new Error('PALETTES is not the sixteen built-in palettes');
   if (!/s\.colors = sanitizeColors\(disk\.colors\)/.test(server)) throw new Error('colours are not sanitised on load');
   for (const fn of ['paletteBlock', 'paletteMenuHtml', 'wirePalette']) if (!js.includes(`function ${fn}`)) throw new Error(`${fn} is missing`);
   if (!/lastColor = hexColor/.test(js)) throw new Error('applyColor does not remember the last colour for "+"');
-  if (/HUES/.test(js)) throw new Error('the quick-hue strip is back beside the palette');
+  if (/\bHUES\b/.test(js)) throw new Error('the quick-hue strip is back beside the palette');
   // Auto white moved out of the picker column into the attribute header (the Color tab is
   // budgeted to fit without scrolling); it must still exist, and app.js must still wire it.
   if (!/id="autoWhite"/.test(html)) throw new Error('Auto white left the desk');

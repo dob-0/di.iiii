@@ -1,4 +1,5 @@
 'use strict';
+/* global S, $, $$, say, post, esc, pullState, askThen, paintKeyPanel, sceneHotkeys:writable, deskKeymap:writable -- defined by app.js, loaded first */
 // The Show file panel (from the studio desk, 2026-09-24; ported 2026-11-23) — her ask: "the show
 // file option to save show and then export". Export the whole show as one file, import one back
 // (with a preview of what changes, and Undo), and named snapshots kept beside the show.
