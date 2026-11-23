@@ -6731,7 +6731,7 @@ $$('.circleBtn').forEach((b) => b.addEventListener('click', () => arrange('circl
 // viewport centre for the buttons. Without this, zooming in walks the rig off-screen.
 function zoomAt(stage, cx, cy, nz) {
   const v = viewOf(stage);
-  nz = clamp(nz, 0.01, 4);
+  nz = clamp(nz, 0.01, stage.closest('#touchStage') ? 16 : 4);   // same ceiling as fitStage
   const r = stage.getBoundingClientRect();
   const mx = cx - r.left, my = cy - r.top;
   v.x = mx - (mx - v.x) * (nz / v.zoom);
@@ -6752,7 +6752,10 @@ function fitStage(stage) {
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   const { sc, ox, oy } = stageMap(r.width, r.height);
   const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;
-  v.zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, 4), 0.01, 4);
+  // The Touch pane has no zoom slider and is a small glance at the rig: a compact rig (her
+  // lights 0.1 apart) needs more than 4x there, or every light lands on one spot.
+  const maxZoom = stage.closest('#touchStage') ? 16 : 4;
+  v.zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, maxZoom), 0.01, maxZoom);
   v.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * v.zoom;
   v.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * v.zoom;
   slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });

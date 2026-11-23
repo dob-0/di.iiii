@@ -1823,12 +1823,19 @@ body.dragscene .bankrow { cursor: grabbing; }
 .touchstage .fx-node { transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1))); }
 .touchstage .fx-body { width: calc(16px * var(--ns, 1)); height: calc(16px * var(--ns, 1)); font-size: calc(8px * var(--ns, 1)); font-weight: 500; cursor: grab; }
 .touchstage .fx-label { display: none; }
+/* A window onto the rig shows the lights, not the video box's words: the tag and grip sit
+   inside the zoomed layer, so at the Touch pane's zoom they were drawn huge over the lights. */
+.stage.viewonly .video-tag, .stage.viewonly .video-grip { display: none; }
 .touchstage .stage-empty { font-size: 11px; padding: 0 8px; text-align: center; }
 .touchstage.folded .stage { display: none; }
 @media (min-width: 1101px) {
-  /* "so small, just to see": a 220px box in the corner, as tall as the filter + tabs rows. */
-  .touchhead { grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: auto auto; }
-  .touchstage { grid-column: 1; grid-row: 1 / 3; }
+  /* "so small, just to see" — then "a little bigger, and the lights should be visible"
+     (2026-11-23): 340px wide and 200px tall, so the head is one row and the stage under
+     it is ~165px, not the 47px left when the head wrapped in a 220px box. The tabs row
+     stays at the top of its cell. */
+  .touchhead { grid-template-columns: 340px minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  .touchstage { grid-column: 1; grid-row: 1 / 3; height: 200px; }
+  .touchtabs { align-self: start; }
   .touchsearch, .touchtabs { grid-column: 2; }
   .touchhead.stage-folded { grid-template-columns: auto minmax(0, 1fr); }
   .touchhead.stage-folded .touchstage .stage-tools { flex-direction: column; border-bottom: 0; height: 100%; }
