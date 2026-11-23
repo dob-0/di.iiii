@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="objects.css"><!-- stage objects (from the studio desk) -->
 <link rel="stylesheet" href="markers.css"><!-- stage labels (from the studio desk) -->
 <link rel="stylesheet" href="video.css"><!-- video pixel-mapping (from the studio desk) -->
+<link rel="stylesheet" href="showfile.css"><!-- show file: export, import, snapshots (from the studio desk) -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='9' fill='%2335d2dd'/></svg>">
 </head>
 <body>
@@ -48,6 +49,7 @@
   <nav class="pages">
     <button class="page-tab is-active" data-page="setup">Setup</button>
     <button class="page-tab" data-page="control">Control</button>
+    <button class="page-tab" data-page="stage" title="The whole stage on one page — lights, objects, video">Stage</button>
     <button class="page-tab" data-page="touch">Touch</button>
     <button class="page-tab" data-page="fader">Fader</button>
     <!-- MIDI was a separate midi.html with its own stylesheet and its own map in one
@@ -72,6 +74,8 @@
     <button id="inPill" class="wirepill" hidden title="Input — a console driving this desk"></button>
   </div>
   <div class="topright">
+    <button id="keysBtn" class="keysbtn" title="Keyboard mappings — click any button on the desk, then press a key" aria-label="Keyboard mappings">⌨</button>
+    <button id="showBtn" class="sfbtn sfOpen" title="Export the show, import one, snapshots">Show file</button>
     <button id="topBlackout" class="blackout topbo" title="Blackout (B) — reaches every page">Blackout</button>
     <button id="goBtn" class="go" title="Step to the next desk scene">Next scene</button>
     <div class="bpm"><span>BPM</span><div class="bpmbar"><i id="bpmBar"></i></div></div>
@@ -96,6 +100,24 @@
 
 <div id="statusStrip" class="statusstrip" hidden></div>
 <div id="renderNote" class="statusstrip bad" hidden></div>
+
+<!-- Keyboard mappings (the studio desk's panel): while this is open the desk is in learn
+     mode — click any button, press a key, that key is now that button. Bindings live in
+     this browser (localStorage), like the scene keys they extend; Export/Import move them
+     between machines as a JSON file. -->
+<aside id="keyPanel" class="keypanel" hidden aria-label="Keyboard mappings">
+  <div class="keyhead"><h2>Keyboard mappings</h2><button id="keyClose" class="sq" title="Close (Esc)">✕</button></div>
+  <div class="keytools">
+    <button id="keyNew" class="sq" title="Start again with no mappings">New</button>
+    <button id="keyImport" class="sq" title="Load mappings from a file">Import</button>
+    <input type="file" id="keyImportFile" accept="application/json,.json" hidden>
+    <button id="keyExport" class="sq" title="Save these mappings to a file">Export</button>
+  </div>
+  <div id="keyHint" class="keyhint">Click any button on the desk, then press a key.</div>
+  <div id="keyLearn" class="keylearn-line" hidden></div>
+  <div class="keylist" id="keyList"></div>
+  <p class="muted keynote">B is always blackout, and it only turns blackout on. Keys fire on every page; typing in a field keeps its letters.</p>
+</aside>
 
 <!-- ===================== SETUP ===================== -->
 <main class="page is-active" data-page="setup">
@@ -273,7 +295,7 @@
     <div class="splitter v" data-split="setup-lib" title="Drag to resize — double-click to reset"></div>
 
     <div class="pane patch">
-      <div class="pane-head"><h2>Patch</h2></div>
+      <div class="pane-head"><h2>Patch</h2><button id="showBtnSetup" class="sq sfOpen" title="Export the show, import one, snapshots">Show file…</button></div>
       <div class="patch-tools">
         <select id="gridUniverse" aria-label="Universe shown in the grid"></select>
         <button class="sq" id="uniPrev">‹</button>
@@ -297,13 +319,17 @@
   <section class="bottom-split">
     <div class="pane stagepane">
       <div class="stage-tools">
-        <button class="tool is-active" data-tool="select" title="Select">▭</button>
+        <button class="tool is-active" data-tool="select" title="Select — drag a box around lights, drag a light to move it">▭</button>
+        <button class="tool" data-tool="hand" title="Hand — drag the stage to move around it; drag a light to move it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12h1V3.5a1.5 1.5 0 0 1 3 0V12h1V5.5a1.5 1.5 0 0 1 3 0V14h1V9.5a1.5 1.5 0 0 1 3 0V16c0 3.9-3.1 7-7 7h-1.6c-1.9 0-3.6-.8-4.9-2.1L4 15.3a1.6 1.6 0 0 1 2.3-2.3L8 14.6"/></svg></button>
         <span class="sep"></span>
-        <button class="tool snapBtn" title="Snap to grid">▦</button>
-        <button class="tool rowBtn" title="Arrange selection in a row">⇥</button>
-        <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
-        <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
-        <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <button class="tool snapBtn" title="Snap to grid — lights, labels and objects land on the grid lines (not an arrange tool)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01"/></svg></button>
+        <button class="tool rowBtn" title="Arrange the selected lights in a row, evenly spaced">⇥</button>
+        <button class="tool colBtn" title="Arrange the selected lights in a column, evenly spaced">⇵</button>
+        <button class="tool gridBtn" title="Arrange the selected lights in a grid of rows and columns">⊞</button>
+        <button class="tool circleBtn" title="Arrange the selected lights in a circle">◎</button>
+        <span class="sep"></span>
+        <button class="tool nodeSmaller" title="Lights smaller on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8"/></svg></button>
+        <button class="tool nodeBigger" title="Lights bigger on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/></svg></button>
         <span class="sep"></span>
         <span class="toolnote">Objects</span>
         <button class="tool objBtn" data-obj="line" title="Line — a bar that sweeps across the lights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></button>
@@ -311,9 +337,9 @@
         <button class="tool objBtn" data-obj="ring" title="Ring — a circle growing out of a point"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg></button>
         <button class="tool objBtn" data-obj="spot" title="Spot — lights what is under it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor" fill-opacity=".35"/></svg></button>
         <span class="sep"></span>
-        <button class="tool zoomOut" aria-label="Zoom out">⊖</button>
-        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100">
-        <button class="tool zoomIn" aria-label="Zoom in">⊕</button>
+        <button class="tool zoomOut" aria-label="Zoom out" title="Zoom out">⊖</button>
+        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100" title="Zoom — or the wheel over the stage">
+        <button class="tool zoomIn" aria-label="Zoom in" title="Zoom in">⊕</button>
         <button class="tool fitBtn" aria-label="Fit everything in view" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
       </div>
       <div class="stage">
@@ -376,8 +402,10 @@
 <main class="page" data-page="control">
 
   <section class="ctl-top">
-    <!-- scene bank -->
-    <div class="pane bankpane">
+    <!-- Scene containers (from the studio desk): a tab row, one tile grid at a time, each
+         container with its own +. .scenearea is the grid's flex pane — the stack splitter
+         resizes against it. -->
+    <div class="pane scenearea bankpane bankcols-pane">
       <!-- The cue list the desk plays (cuerun.js) — a project's looks on their holds, one
            clock for every page. Shown only while the desk holds a list. -->
       <div class="cuestrip" id="cueStrip" hidden>
@@ -389,46 +417,33 @@
           <button class="sq toggle" id="cueLoop" aria-pressed="false" title="Loop off — after the last cue, cue 1 again">Loop</button>
         </div>
       </div>
-      <!-- With no desk scenes (a show of looks and cues) the Scenes and Chase panes are empty
-           and three cyan buttons: they give way to one muted line (MOXIR UI audit, 2026-10-01). -->
+      <!-- With no desk scenes (a show of looks and cues) the Scenes pane is empty
+           and a few cyan buttons: it gives way to one muted line (MOXIR UI audit, 2026-10-01). -->
       <p class="muted noscenes" id="ctlNoScenes" hidden>No desk scenes in this show — looks and the cue list are on Touch.</p>
-      <div id="ctlScenes">
-      <div class="pane-head"><h2>Scenes</h2></div>
-      <div class="transport">
-        <button class="sq" id="chasePause" title="Stop the chase">❚❚</button>
-        <button class="sq" id="scenePrev" title="Previous scene">|◀</button>
-        <button class="sq" id="sceneNext" title="Next scene">▶|</button>
-        <button class="sq accent" id="saveScene" title="Save the current look as a scene">+</button>
+      <div id="ctlScenes" class="ctlscenes">
+      <div class="bankbar">
+        <div class="transport">
+          <button class="sq" id="chasePause" title="Stop the chase">❚❚</button>
+          <button class="sq" id="scenePrev" title="Previous scene">|◀</button>
+          <button class="sq" id="sceneNext" title="Next scene">▶|</button>
+        </div>
+        <div class="chasebar" id="ctlChase" title="The chase steps through the scenes marked 'Add to chase' in the right-click menu">
+          <span class="muted">Chase</span><span class="muted" id="chaseCount"></span>
+          <label>Hold <input type="number" id="chaseHold" min="0.05" step="0.1" value="2">s</label>
+          <label>Fade <input type="number" id="chaseFade" min="0" step="0.1" value="0.8">s</label>
+          <button class="sq accent" id="chaseToggle">Start</button>
+        </div>
+        <!-- At a few hundred scenes the bank is unfindable without this. Filters as you type. -->
+        <div class="search scenesearch">
+          <input type="text" id="sceneFilter" placeholder="filter scenes" autocomplete="off">
+          <button id="sceneFilterClear" title="Clear">✕</button>
+        </div>
       </div>
-      <!-- At a few hundred scenes the bank is unfindable without this. Filters as you type. -->
-      <div class="search scenesearch">
-        <input type="text" id="sceneFilter" placeholder="filter scenes" autocomplete="off">
-        <button id="sceneFilterClear" title="Clear">✕</button>
-        <button class="kindbtn is-active" data-kind="all" title="Show all scenes">All</button>
-        <button class="kindbtn" data-kind="anim" title="Only › animations">›</button>
-        <button class="kindbtn" data-kind="static" title="Only · static looks">·</button>
+      <!-- Container tabs (coloured): each container = a tile grid she fills by dragging scenes
+           onto its tab or with its own +. -->
+      <div class="banktabs bankrow-tabs" id="bankTabs"></div>
+      <div class="bankcols" id="bankList"></div>
       </div>
-      <div class="banklist" id="bankList"></div>
-      <div class="inline pad">
-        <input type="text" id="sceneName" placeholder="name the next save" maxlength="40">
-      </div>
-      </div>
-      <div id="ctlChase">
-      <div class="pane-head"><h2>Chase</h2><span class="muted" id="chaseCount"></span></div>
-      <div class="railchase">
-        <label>Hold <input type="number" id="chaseHold" min="0.05" step="0.1" value="2">s</label>
-        <label>Fade <input type="number" id="chaseFade" min="0" step="0.1" value="0.8">s</label>
-        <button class="sq accent" id="chaseToggle">Start</button>
-      </div>
-      </div>
-    </div>
-
-    <div class="splitter v" data-split="ctl-bank" title="Drag to resize — double-click to reset"></div>
-
-    <!-- scene detail -->
-    <div class="pane scenearea">
-      <div class="pane-head"><h2 id="sceneTitle">No scene selected</h2></div>
-      <div class="scenedetail" id="sceneDetail"></div>
     </div>
 
     <div class="splitter v" data-split="ctl-stack" title="Drag to resize — double-click to reset"></div>
@@ -471,7 +486,7 @@
     <!-- right rail -->
     <div class="pane railpane">
       <div class="pane-head"><h2>Master</h2></div>
-      <div class="railmaster">
+      <div class="railmaster" id="railMaster">
         <div class="vwrap tall">
           <input type="range" id="master" min="0" max="255" value="255">
         </div>
@@ -482,6 +497,8 @@
       <!-- FX ride on top of the master: one level multiplier per fixture. -->
       <div class="pane-head"><h2>FX</h2><span class="muted" id="fxState">Off</span></div>
       <div class="fxbox">
+        <!-- who the pads act on: the whole rig, or only the selected lights -->
+        <div class="inline pad" id="fxTarget"></div>
         <div class="fxpads" id="fxPads"></div>
         <div class="inline pad" id="fxSpatial">
           <span class="muted">Follow</span>
@@ -656,12 +673,17 @@
     <!-- the same light imitation as SETUP -->
     <div class="pane stagepane">
       <div class="stage-tools">
-        <button class="tool is-active" data-tool="select" title="Select">▭</button>
+        <button class="tool is-active" data-tool="select" title="Select — drag a box around lights, drag a light to move it">▭</button>
+        <button class="tool" data-tool="hand" title="Hand — drag the stage to move around it; drag a light to move it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12h1V3.5a1.5 1.5 0 0 1 3 0V12h1V5.5a1.5 1.5 0 0 1 3 0V14h1V9.5a1.5 1.5 0 0 1 3 0V16c0 3.9-3.1 7-7 7h-1.6c-1.9 0-3.6-.8-4.9-2.1L4 15.3a1.6 1.6 0 0 1 2.3-2.3L8 14.6"/></svg></button>
         <span class="sep"></span>
-        <button class="tool rowBtn" title="Arrange selection in a row">⇥</button>
-        <button class="tool colBtn" title="Arrange selection in a column">⇵</button>
-        <button class="tool gridBtn" title="Arrange selection in a grid">⊞</button>
-        <button class="tool circleBtn" title="Arrange selection in a circle">◎</button>
+        <button class="tool snapBtn" title="Snap to grid — lights, labels and objects land on the grid lines (not an arrange tool)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01"/></svg></button>
+        <button class="tool rowBtn" title="Arrange the selected lights in a row, evenly spaced">⇥</button>
+        <button class="tool colBtn" title="Arrange the selected lights in a column, evenly spaced">⇵</button>
+        <button class="tool gridBtn" title="Arrange the selected lights in a grid of rows and columns">⊞</button>
+        <button class="tool circleBtn" title="Arrange the selected lights in a circle">◎</button>
+        <span class="sep"></span>
+        <button class="tool nodeSmaller" title="Lights smaller on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8"/></svg></button>
+        <button class="tool nodeBigger" title="Lights bigger on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/></svg></button>
         <span class="sep"></span>
         <span class="toolnote">Objects</span>
         <button class="tool objBtn" data-obj="line" title="Line — a bar that sweeps across the lights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></button>
@@ -669,9 +691,9 @@
         <button class="tool objBtn" data-obj="ring" title="Ring — a circle growing out of a point"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg></button>
         <button class="tool objBtn" data-obj="spot" title="Spot — lights what is under it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor" fill-opacity=".35"/></svg></button>
         <span class="sep"></span>
-        <button class="tool zoomOut" aria-label="Zoom out">⊖</button>
-        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100">
-        <button class="tool zoomIn" aria-label="Zoom in">⊕</button>
+        <button class="tool zoomOut" aria-label="Zoom out" title="Zoom out">⊖</button>
+        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100" title="Zoom — or the wheel over the stage">
+        <button class="tool zoomIn" aria-label="Zoom in" title="Zoom in">⊕</button>
         <button class="tool fitBtn" aria-label="Fit everything in view" title="Fit everything in view — pan with the middle button or Space + drag, zoom with the wheel">⤢</button>
       </div>
       <div class="stage">
@@ -698,6 +720,7 @@
     <div class="pane attrpane">
       <div class="attr-head">
         <span class="who" id="attrWho">nothing selected</span>
+        <label class="autowhite" id="autoWhiteWrap" title="Move the shared colour onto the W channel" hidden><input type="checkbox" id="autoWhite"> Auto white</label>
         <button class="sq" id="attrOn">On</button>
         <button class="sq" id="attrOff">Off</button>
       </div>
@@ -709,6 +732,89 @@
   </section>
 </main>
 
+<!-- ===================== STAGE — the big workspace (2026-09-24) ===================== -->
+<!-- The stage view as a whole page, for designing with it: lights, objects, the video
+     layer. The small stages stay on Setup and Control. The stage here is an ordinary
+     .stagepane .stage, so app.js, objects.js (and the video layer) wire it like the others;
+     it keeps its own pan/zoom (views.stage). Code: stagepage.js. -->
+<main class="page stagepage" data-page="stage">
+  <div class="sp-body">
+    <div class="pane stagepane bigstage">
+      <div class="stage-tools sp-rail" aria-label="Stage tools">
+        <button class="tool is-active" data-tool="select" title="Select — drag a box around lights, drag a light to move it">▭</button>
+        <button class="tool" data-tool="hand" title="Hand — drag the stage to move around it; drag a light to move it"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12h1V3.5a1.5 1.5 0 0 1 3 0V12h1V5.5a1.5 1.5 0 0 1 3 0V14h1V9.5a1.5 1.5 0 0 1 3 0V16c0 3.9-3.1 7-7 7h-1.6c-1.9 0-3.6-.8-4.9-2.1L4 15.3a1.6 1.6 0 0 1 2.3-2.3L8 14.6"/></svg></button>
+        <span class="sep"></span>
+        <button class="tool snapBtn" title="Snap to grid — lights, labels and objects land on the grid lines (not an arrange tool)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h.01M12 5h.01M19 5h.01M5 12h.01M12 12h.01M19 12h.01M5 19h.01M12 19h.01M19 19h.01"/></svg></button>
+        <button class="tool rowBtn" title="Arrange the selected lights in a row, evenly spaced">⇥</button>
+        <button class="tool colBtn" title="Arrange the selected lights in a column, evenly spaced">⇵</button>
+        <button class="tool gridBtn" title="Arrange the selected lights in a grid of rows and columns">⊞</button>
+        <button class="tool circleBtn" title="Arrange the selected lights in a circle">◎</button>
+        <span class="sep"></span>
+        <button class="tool nodeSmaller" title="Lights smaller on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8"/></svg></button>
+        <button class="tool nodeBigger" title="Lights bigger on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/></svg></button>
+        <span class="sep"></span>
+        <span class="toolnote">Objects</span>
+        <button class="tool objBtn" data-obj="line" title="Line — a bar that sweeps across the lights"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8l-3 4 3 4M17 8l3 4-3 4"/></svg></button>
+        <button class="tool objBtn" data-obj="radar" title="Radar — a beam turning round its centre"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l6.4-6.4"/><path d="M12 12V3"/></svg></button>
+        <button class="tool objBtn" data-obj="ring" title="Ring — a circle growing out of a point"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/></svg></button>
+        <button class="tool objBtn" data-obj="spot" title="Spot — lights what is under it"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6" fill="currentColor" fill-opacity=".35"/></svg></button>
+        <span class="sep"></span>
+        <!-- VIDEO SLOT (rail): the video layer's control goes here. -->
+        <div class="sp-slot" data-slot="video-rail"></div>
+        <span class="flex"></span>
+        <button class="tool zoomIn" aria-label="Zoom in" title="Zoom in">⊕</button>
+        <input type="range" class="zoom" aria-label="Zoom" min="25" max="400" value="100" title="Zoom — or the wheel over the stage">
+        <button class="tool zoomOut" aria-label="Zoom out" title="Zoom out">⊖</button>
+        <button class="tool fitBtn" aria-label="Fit everything in view" title="Fit the rig in view (F) — pan with the hand tool, the middle button or Space + drag">⤢</button>
+        <span class="sep"></span>
+        <button class="tool spFull" title="Full screen — the stage page fills the monitor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <button class="tool spPop" title="Pop out — the stage in its own window, for a second monitor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>
+      </div>
+      <div class="stage">
+        <div class="stage-inner"></div>
+        <div class="marquee" hidden></div>
+        <p class="stage-empty">Patch some fixtures on Setup — they appear here and light up live.</p>
+      </div>
+    </div>
+    <div class="splitter v sp-split" data-split="sp-insp" title="Drag to resize — double-click to reset"></div>
+    <aside class="pane sp-insp" aria-label="Inspector" data-obj-keep>
+      <div class="pane-head"><h2 id="spInspTitle">Inspector</h2><span class="flex"></span><button class="sq" id="spInspClose" title="Hide the inspector — the stage gets the width">⟩</button></div>
+      <!-- The sections flow into columns when the inspector is dragged wide (style.css .sp-insp-cols). -->
+      <div class="sp-insp-cols">
+      <div class="sp-insp-body" id="spInspBody"></div>
+      <!-- Effects (her ask, 2026-09-26: "like colours, I want effects there too"): the Control
+           rail's pads — brightness effects act on the selected lights, or the whole rig when
+           none or all are selected; the colour effect (colorfxui.js mounts #spCfx) is rig-wide. -->
+      <section class="sp-sec sp-fx" id="spFx">
+        <div class="sp-fxhead"><h3>Effects</h3><span class="flex"></span><span class="sp-fxstate muted" id="spFxState">Off</span></div>
+        <div class="sp-fxtarget" id="spFxTarget"></div>
+        <div class="fxpads sp-fxpads" id="spFxPads"></div>
+        <div class="sp-slider" title="How far the effect dips the lights — the same depth for the whole rig"><span class="sp-lab">Depth</span><input type="range" id="spFxDepth" min="0" max="255"><b class="sp-v" id="spFxDepthOut"></b></div>
+        <div class="sp-fxhead"><h3>Colour effect</h3><span class="flex"></span><span class="muted sp-fxnote">whole rig</span></div>
+        <div id="spCfx"></div>
+      </section>
+      <!-- VIDEO SLOT (inspector): the video layer's properties go here. -->
+      <section class="sp-sec sp-slot" data-slot="video-inspector" hidden></section>
+      </div>
+    </aside>
+    <button class="sp-insp-open" id="spInspOpen" title="Show the inspector" hidden>⟨ Inspector</button>
+    <div class="sp-msg" id="spMsg" aria-live="polite"></div>
+  </div>
+  <div class="sp-strip">
+    <div class="sp-scenes">
+      <div class="sp-tabs" id="spTabs"></div>
+      <div class="sp-tiles" id="spTiles"></div>
+    </div>
+    <div class="sp-live">
+      <label class="sp-field" title="What drives the effects across the rig — the patch, or where the lights stand">Follow <select id="spFollow"></select></label>
+      <label class="sp-field sp-mfield" title="Master — scales every light">Master <input type="range" id="spMaster" min="0" max="255"><b id="spMasterOut">100%</b></label>
+      <label class="sp-field" title="Tempo for the effects and the chase">BPM <input type="number" id="spBpm" min="20" max="300"></label>
+      <button class="sq" id="spTap" title="Tap tempo">Tap</button>
+      <button class="blackout sp-bo" id="spBlackout" title="Blackout (B)">Blackout</button>
+    </div>
+  </div>
+</main>
+
 <!-- ===================== TOUCH ===================== -->
 <!-- The live performance desk: scene tiles + a thumb-edge LIVE STRIP with everything a
      set needs mid-song — FX, audio-reactive, the set player, and the master — so the
@@ -716,12 +822,33 @@
 <main class="page" data-page="touch">
   <div class="touchwrap">
     <!-- same filter, same state, as the Control bank — the grid runs to hundreds of tiles -->
+    <div class="touchhead">
     <div class="search scenesearch touchsearch">
       <input type="text" id="tSceneFilter" placeholder="filter scenes" autocomplete="off">
       <button id="tSceneFilterClear" title="Clear">✕</button>
-      <button class="kindbtn is-active" data-kind="all" title="Show all scenes">All</button>
-      <button class="kindbtn" data-kind="anim" title="Only › animations">›</button>
-      <button class="kindbtn" data-kind="static" title="Only · static looks">·</button>
+    </div>
+    <!-- same containers, same state, as the Control bank -->
+    <div class="banktabs touchtabs" id="tBankTabs"></div>
+    <!-- The same light imitation as Setup and Control, view only: a finger pans, two fingers
+         or the wheel zoom, and nothing here re-plots the rig. A 220px corner box beside the
+         filter and tabs on a wide screen, a band above the pads on a phone; folds to its
+         head row (remembered, like the live strip). Its own pan/zoom (views.touch). -->
+    <div class="pane stagepane touchstage" id="touchStage">
+      <div class="stage-tools">
+        <span class="ts-title">Stage</span>
+        <button class="tool zoomOut" aria-label="Zoom out" title="Zoom out">⊖</button>
+        <button class="tool zoomIn" aria-label="Zoom in" title="Zoom in">⊕</button>
+        <button class="tool fitBtn" aria-label="Fit every light in view" title="Fit every light in view">⤢</button>
+        <button class="tool nodeSmaller" title="Lights smaller on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8"/></svg></button>
+        <button class="tool nodeBigger" title="Lights bigger on this view"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16"/></svg></button>
+        <button class="tool tsFold" id="tsFold" title="Collapse the stage">▾</button>
+      </div>
+      <div class="stage viewonly">
+        <div class="stage-inner"></div>
+        <div class="marquee" hidden></div>
+        <p class="stage-empty">Patch some fixtures on Setup — they appear here and light up live.</p>
+      </div>
+    </div>
     </div>
     <div class="touchbody">
       <!-- The cue list the desk plays (cuerun.js), for a performer with a tablet and no
@@ -740,11 +867,6 @@
       <section class="tlooks" id="tLooks" hidden>
         <div class="bankhead">Looks</div>
         <div class="touchgrid" id="touchLooks"></div>
-      </section>
-      <!-- The live stage: a dot per lamp where it stands, coloured from what the output sends (view only) -->
-      <section class="tstage" id="tStage" hidden>
-        <div class="bankhead">Stage</div>
-        <div class="tstagebox" id="tStageBox"></div>
       </section>
       <!-- Pixel strips: a line of live pixels per strip (the desk's /api/strips) -->
       <section class="tstrips" id="touchStrips" hidden>
@@ -773,6 +895,9 @@
                  every FX mode and every LFO — so this fader IS the speed of the room, and
                  halve/double are here because that is the move you make on a drop. -->
             <label class="ls-fader"><span>Speed</span><input type="range" id="tSpeed" min="20" max="300" value="120"><output id="tSpeedOut">120</output></label>
+            <!-- The same master as the Master tab and the Control rail, here beside Speed so a
+                 drop never needs a tab change (Emily, 2026-11-23). -->
+            <label class="ls-fader master"><span>Master</span><input type="range" id="tFxMaster" min="0" max="255" value="255"><output id="tFxMasterOut">100%</output></label>
             <button class="ls-big" id="tHalf" title="Half tempo">÷2</button>
             <button class="ls-big" id="tDouble" title="Double tempo">×2</button>
             <div class="ls-bpm"><b id="tBpm">120</b><span>BPM</span></div>
@@ -1060,6 +1185,7 @@
     <button class="popitem" id="miRename">Rename…</button>
     <button class="popitem" id="miFade">Fade…</button>
     <button class="popitem" id="miRestage">Overwrite with current look</button>
+    <button class="popitem" id="miChase">Add to chase</button>
     <button class="popitem danger" id="miDelete">Delete scene</button>
   </div>
   <div class="bindhint" id="bindHint" hidden>Press a key to bind — Esc to cancel</div>
@@ -1084,8 +1210,10 @@
 <script src="objects.js"></script><!-- stage objects: Line, Radar, Ring, Spot -->
 <script src="markers.js"></script><!-- stage labels: names on the stage, no DMX -->
 <script src="video.js"></script><!-- video pixel-mapping on the stage -->
+<script src="showfile.js"></script><!-- show file: export, import, snapshots -->
 <script src="cuecore.js"></script><!-- where a follow goes on to: shared with the server's cues.js -->
 <script src="cueui.js"></script><!-- follow times: the Follow… editor, badges, the running step -->
 <script src="colorfxui.js"></script><!-- colour effect pads -->
+<script src="stagepage.js"></script><!-- the Stage page: stage, inspector, effects, container strip -->
 </body>
 </html>

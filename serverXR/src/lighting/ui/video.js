@@ -1,5 +1,5 @@
 'use strict';
-/* global S, $$, clamp, post, say, stageMap, viewOf, spaceHeld, tool, deskNow, ObjCore -- defined by app.js and objects.js, loaded first */
+/* global S, $$, clamp, post, say, stageMap, viewOf, spaceHeld, tool, deskNow, ObjCore, snap, snapv, GRID, WORLD -- defined by app.js and objects.js, loaded first */
 // [video] Video pixel-mapping on the stage (from the studio desk, viz.di.formal branch studio,
 // 2026-09-24; ported to di.iiii's light desk 2026-11-06).
 //
@@ -918,7 +918,10 @@
       layer.hidden = false;
       const { sc, ox, oy } = stageMap(inner.clientWidth || 0, inner.clientHeight || 0);
       const stage = inner.closest('.stage');
-      const editable = stripOpen && !(stage && stage.classList.contains('viewonly'));
+      // The Stage page always shows the video controls in its inspector, so its box is always
+      // movable there (Emily, 2026-11-23: "I can't move it"). Elsewhere the Video tool opens it.
+      const onStagePage = !!(stage && stage.closest('[data-page="stage"]'));
+      const editable = (stripOpen || onStagePage) && !(stage && stage.classList.contains('viewonly'));
       // [anim] While the strip is open the box shows at A, where its grip edits it, with B as a
       // dashed ghost; closed, it shows where it is on its way from A to B.
       const box = editable ? V : curBox();
@@ -1010,11 +1013,13 @@
   function onLayerMove(e) {
     if (!drag || e.pointerId !== drag.id) return;
     const dx = (e.clientX - drag.sx) * drag.k, dy = (e.clientY - drag.sy) * drag.k;
+    // One grid with the lights, labels and objects: with Snap on the box lands on it.
+    const sn = (v) => (snap ? snapv(v) : v);
     if (drag.resize) {
-      const w = clamp(drag.w + dx, 0.05, 3);
+      const w = clamp(sn(drag.w + dx), 0.05, 2 * WORLD);
       postVideo({ w, h: w * (drag.h / drag.w) });
     } else {
-      postVideo({ x: clamp(drag.x + dx, -1, 2), y: clamp(drag.y + dy, -1, 2) });
+      postVideo({ x: clamp(sn(drag.x + dx), -WORLD, WORLD), y: clamp(sn(drag.y + dy), -WORLD, WORLD) });
     }
     place();
   }
@@ -1059,6 +1064,10 @@
         <input type="range" class="vSample" min="1" max="30" step="1"><span class="vSampleV mono"></span></label>
       <button class="vFit" title="Fit the video over the lights">Fit</button>
       <button class="vStop" title="Stop the video — the lights go back to the look">Stop</button>
+      <span class="vs-group vs-move" title="Move the video box one grid step (Shift: five) — the lights under it follow"><b>Move</b>
+        <button data-vmove="-1,0" aria-label="Move the video left">←</button><button data-vmove="1,0" aria-label="Move the video right">→</button><button data-vmove="0,-1" aria-label="Move the video up">↑</button><button data-vmove="0,1" aria-label="Move the video down">↓</button>
+        <button data-vsize="-1" aria-label="Make the video box smaller" title="Smaller (Shift: five steps)">−</button><button data-vsize="1" aria-label="Make the video box bigger" title="Bigger (Shift: five steps)">+</button>
+      </span>
       <button class="vAnimBtn" title="Move the box from A to B, breathe the mix, tune the picture, loop a file">Animate ▸</button>
       <span class="vStatus"></span>
       <button class="vClose" title="Close — the video keeps running">×</button>
@@ -1119,6 +1128,18 @@
       } else if (b.classList.contains('vFit')) {
         postVideo(fitRect(aspect()), true);
         flash('Video fitted over the lights', false, 3000);
+        place();
+      } else if (b.dataset.vmove || b.dataset.vsize) {
+        // One grid step, the same grid the lights snap to; Shift = five. The box lands on
+        // the grid, so a few presses line it up with the rig exactly.
+        const n = (e.shiftKey ? 5 : 1) * GRID;
+        if (b.dataset.vmove) {
+          const [mx, my] = b.dataset.vmove.split(',').map(Number);
+          postVideo({ x: clamp(snapv(V.x + mx * n), -WORLD, WORLD), y: clamp(snapv(V.y + my * n), -WORLD, WORLD) }, true);
+        } else {
+          const w = clamp(snapv(V.w + Number(b.dataset.vsize) * n), GRID, 2 * WORLD);
+          postVideo({ w, h: w * (V.h / V.w || 1) }, true);
+        }
         place();
       } else if (b.classList.contains('vStop')) {
         stop();
@@ -1246,11 +1267,13 @@
     place(); paintStrip();
   }
 
-  // The Stage page's inspector section shows while the strip is open or the video is on.
+  // The Stage page's inspector always has its Video section once the strip is built in it.
+  // It used to show only while the strip was open or the video on, so with the video off
+  // the Stage page seemed to have no video at all (Emily, 2026-11-23: "there's no NDI video
+  // place"). Showing it starts nothing: a source starts only when one is picked or On pressed.
   function paintSlots() {
-    const show = stripOpen || !!V.on || running() || !!waiting;
     for (const slot of $$('.sp-slot[data-slot="video-inspector"]')) {
-      if (slot.querySelector('.videostrip')) slot.hidden = !show;
+      if (slot.querySelector('.videostrip')) slot.hidden = false;
     }
   }
 

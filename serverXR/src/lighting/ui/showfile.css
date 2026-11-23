@@ -1,0 +1,66 @@
+/* The Show file panel (showfile.js): export, import, snapshots — from the studio desk. Near-black, squared, one cyan accent, flat colour, no glow. */
+
+.sfbtn {
+  background: none; border: 1px solid var(--line); border-radius: 0; color: var(--muted);
+  font-size: 12px; padding: 0 10px; min-height: 32px;
+}
+.sfbtn:hover, .sfbtn.is-active { color: var(--accent); border-color: var(--accent); }
+.pane.patch .pane-head #showBtnSetup { margin-left: auto; padding: 3px 10px; font-size: 12px; }
+
+.sfpanel {
+  position: fixed; top: 52px; right: 8px; bottom: 8px; width: 460px; max-width: calc(100vw - 16px); z-index: 65;
+  background: var(--pane); border: 1px solid var(--accent);
+  display: flex; flex-direction: column; min-height: 0;
+}
+.sfpanel[hidden] { display: none; }
+.sf-top { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-bottom: 1px solid var(--line); flex: none; }
+.sf-top h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.sf-top .sq { padding: 4px 9px; }
+.sf-body { flex: 1; min-height: 0; overflow-y: auto; }
+
+.sf-undo { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); border-left: 3px solid var(--accent); font-size: 12px; }
+.sf-undo[hidden] { display: none; }
+.sf-undo .sf-undo-text { flex: 1; min-width: 0; }
+
+.sf-sec { padding: 10px 12px 12px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.sf-sec:last-child { border-bottom: 0; }
+.sf-sec h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.sf-hint { margin: 0; font-size: 11px; line-height: 1.45; color: var(--muted); }
+.sf-done { margin: 0; font-size: 11px; line-height: 1.45; }
+.sf-done:empty { display: none; }
+.sf-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+.sf-row .sq { padding: 5px 12px; }
+.sf-row input[type=text] { flex: 1 1 160px; min-width: 0; }
+.sf-row .muted { font-size: 11px; }
+.sf-check { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--text); flex-wrap: wrap; line-height: 1.4; }
+
+.sf-preview { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid var(--line); background: var(--pane2); }
+.sf-preview[hidden] { display: none; }
+.sf-file { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.sf-file .muted { font-size: 11px; }
+.sf-mode { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; padding: 6px; border: 1px solid var(--line); cursor: pointer; }
+.sf-mode:has(input:checked) { border-color: var(--accent); }
+.sf-mode input { margin-top: 2px; }
+.sf-mode b { font-weight: 600; }
+.sf-mode .muted { font-size: 11px; }
+.sf-lines { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-size: 11px; color: var(--muted); line-height: 1.4; }
+.warn { color: #f0a94f; font-size: 11px; line-height: 1.4; }
+.sf-refused { font-size: 12px; border-left: 3px solid var(--danger); padding: 4px 8px; }
+.sf-refused p { margin: 4px 0 0; color: var(--danger); }
+
+.sf-snaps { display: flex; flex-direction: column; gap: 3px; }
+.sf-snap { display: flex; align-items: center; gap: 6px; padding: 4px 6px; background: var(--pane2); border: 1px solid var(--line); border-left: 3px solid var(--accent); font-size: 12px; min-width: 0; }
+.sf-snap.auto { border-left-color: var(--line); }
+.sf-snap-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sf-snap-txt b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sf-snap-txt .muted { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sf-snap .sq { padding: 3px 8px; font-size: 11px; text-decoration: none; }
+.sf-snap .sq.danger { color: var(--danger); border-color: var(--danger); }
+.sf-empty, .sf-dir { margin: 0; font-size: 11px; }
+.sf-dir:empty { display: none; }
+
+@media (max-width: 700px) {
+  .sfpanel { top: 96px; left: 8px; width: auto; }
+}
+.sf-snap a.sq { color: var(--text); display: inline-flex; align-items: center; align-self: stretch; }
+.sf-snap a.sq:hover { color: var(--accent); border-color: var(--accent); }
