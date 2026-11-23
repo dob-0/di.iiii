@@ -27,6 +27,7 @@
 // Everything else is the same entry as in K2 (39 equal, 57 in all). Which console a deck uses is node.values.midiConsole.
 
 import sheet from './xone-k2-default.json'
+import { APC40_CONSOLE, APC40_CONSOLE_ID, isApc40 } from './apc40.js'
 
 export const K2_NAME = 'XONE:K2'
 export const K2_CHANNEL = 15
@@ -93,8 +94,10 @@ export const K2_CONSOLES = [
     { id: 'k2', name: 'K2', map: XONE_K2_MAP, free: XONE_K2_FREE },
     { id: 'k2-1.9', name: 'K2 (1.9)', map: XONE_K2_19_MAP, free: XONE_K2_19_FREE }
 ]
+/** Every console a deck can be set to: the two K2 ones, then the Akai APC40 mkII (apc40.js). K2_CONSOLES itself stays the K2s only. */
+export const CONSOLES = [...K2_CONSOLES, APC40_CONSOLE]
 /** The console for a stored id; missing or unknown is K2. */
-export const consoleOf = (id) => K2_CONSOLES.find((item) => item.id === id) || K2_CONSOLES[0]
+export const consoleOf = (id) => CONSOLES.find((item) => item.id === id) || K2_CONSOLES[0]
 
 /** note number → { red, amber, green } LED notes, from the sheet's led_notes. */
 export const XONE_K2_LEDS = Object.fromEntries(
@@ -109,9 +112,9 @@ export const XONE_K2_CONTROLS = sheet
 /** The map with the display name dropped, as applyMidi takes it. */
 export const defaultMap = (consoleId) => consoleOf(consoleId).map.map(({ match, action, args, relative }) => ({ match, action, args, ...(relative ? { relative: true } : {}) }))
 
-/** The input to listen on: the K2 by name, else the first one, else ''. */
-export const pickInputId = (devices = []) => {
-    const k2 = devices.find((device) => String(device.name || '').toUpperCase().includes(K2_NAME))
-    return (k2 || devices[0])?.id || ''
+/** The input to listen on: the console's own controller by name (the K2 unless the console is apc40), else the first one, else ''. */
+export const pickInputId = (devices = [], consoleId = K2_CONSOLE_DEFAULT) => {
+    const own = devices.find(consoleId === APC40_CONSOLE_ID ? isApc40 : (device) => String(device.name || '').toUpperCase().includes(K2_NAME))
+    return (own || devices[0])?.id || ''
 }
 export const isK2 = (device) => String(device?.name || '').toUpperCase().includes(K2_NAME)

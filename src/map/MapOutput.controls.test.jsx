@@ -29,3 +29,13 @@ describe('the output page controls', () => {
         expect(screen.getByText('Exit full screen')).toBeTruthy()
     })
 })
+
+describe('the clean wall (?clean=1)', () => {
+    it('is asked for by ?clean=1 only', async () => {
+        const { isCleanRequest } = await import('./MapOutput.jsx')
+        expect(isCleanRequest('?clean=1')).toBe(true)
+        expect(isCleanRequest('?preview=1&clean=1')).toBe(true)
+        expect(isCleanRequest('?clean=0')).toBe(false)
+        expect(isCleanRequest('')).toBe(false)
+    })
+})
