@@ -34,7 +34,10 @@ const AGENTS_PER_MACHINE_MAX = 50
 const AGENTS_MAX = 150
 // the Claude homes named in the Agents box (the union over the machines in the list): a safety limit, a machine has 1 to 4
 const ACCOUNTS_MAX = 20
-const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'pullRequests', 'tasks', 'shows', 'chats', 'credits']
+// the map's safety limits: space names and agents drawn (the Spaces and Agents boxes list them all)
+const MAP_SPACES_MAX = 80
+const MAP_AGENTS_MAX = 40
+const PANEL_NAMES = ['machines', 'network', 'agents', 'presence', 'connected', 'services', 'spaces', 'pullRequests', 'tasks', 'shows', 'chats', 'credits']
 const HOST_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,62}$/
 const COMMIT_RE = /^[0-9a-f]{7,40}$/
 
@@ -474,15 +477,26 @@ function createHub({
       if (!self.startsWith('local:')) edge(`tier:${self}`, `machine:${r.host}`, 'serves')
     }
 
-    for (const s of spaceBlock.rows.slice(0, 60)) {
-      const id = `space:${s.tier}:${s.slug}`
-      node(id, 'space', s.slug, 'ok')
-      edge(`tier:${s.tier}`, id, 'holds')
+    // one node per space name, held by every tier that has it, in name order: the same picture whichever machine draws it
+    // (11-24: each machine listed its own spaces first and the cut at 60 kept a different set)
+    const holders = new Map()
+    for (const s of spaceBlock.rows) {
+      if (!holders.has(s.slug)) holders.set(s.slug, new Set())
+      holders.get(s.slug).add(s.tier)
+    }
+    for (const slug of [...holders.keys()].sort().slice(0, MAP_SPACES_MAX)) {
+      const id = `space:${slug}`
+      node(id, 'space', slug, 'ok')
+      for (const tier of [...holders.get(slug)].sort()) if (nodes.has(`tier:${tier}`)) edge(`tier:${tier}`, id, 'holds')
     }
 
+    // machines in name order, each with at most its share of the agents: the viewer's own machine is not first
     const sources = [{ host: selfHost, panels: base.panels }, ...reportRows.map((r) => ({ host: r.host, panels: r.panels }))]
+      .sort((a, b) => String(a.host).localeCompare(String(b.host)))
+    const agentShare = Math.max(1, Math.floor(MAP_AGENTS_MAX / Math.max(1, sources.length)))
     let agentCount = 0
     for (const src of sources) {
+      let mine = 0
       for (const [i, show] of (src.panels?.shows?.rows || []).slice(0, 12).entries()) {
         if (!isPlainObject(show)) continue
         const id = `show:${src.host}:${show.id ?? i}`
@@ -491,8 +505,9 @@ function createHub({
       }
       for (const agent of (src.panels?.agents?.rows || []).slice(0, 30)) {
         if (!isPlainObject(agent)) continue
-        if (agentCount >= 40) break
+        if (agentCount >= MAP_AGENTS_MAX || mine >= agentShare) break
         agentCount += 1
+        mine += 1
         const id = `agent:${src.host}:${String(agent.sessionId || agentCount).slice(0, 8)}`
         node(id, 'agent', agent.title || agent.sessionId || `agent ${agentCount}`, agent.status === 'busy' ? 'ok' : 'warn')
         edge(`machine:${src.host}`, id, 'runs')
@@ -726,6 +741,38 @@ function createHub({
     }
   }
 
+  // a machine seen only through the account (it reports to dev, not here) is a tier row like a machine that reports here
+  function tiersFor(tierBlock, machines) {
+    const rows = [...tierBlock.rows]
+    for (const m of machines) {
+      const id = `local:${m.host}`
+      if (rows.some((x) => x.id === id)) continue
+      rows.push({ id, url: '', source: 'report', status: null, ms: null, state: m.stale ? 'warn' : 'ok', commit: m.commit || null, builtAt: m.builtAt || null, behindDev: null })
+    }
+    return rows.length === tierBlock.rows.length ? tierBlock : { ...tierBlock, rows }
+  }
+
+  // the other machines' own spaces as rows of their local tier; a machine's report without the panel adds nothing
+  function spacesFor(spaceBlock, machines) {
+    const rows = [...spaceBlock.rows]
+    const seen = new Set(rows.map((r) => `${r.tier}\n${r.slug}`))
+    const lentFrom = []
+    for (const m of machines) {
+      const p = m.panels?.spaces
+      if (!isPlainObject(p) || p.ok === false || !Array.isArray(p.rows)) continue
+      const tier = `local:${m.host}`
+      for (const r of p.rows.filter(isPlainObject)) {
+        const slug = typeof r.slug === 'string' ? r.slug.slice(0, 80) : ''
+        if (!slug || seen.has(`${tier}\n${slug}`)) continue
+        seen.add(`${tier}\n${slug}`)
+        rows.push({ tier, slug, visibility: r.visibility === 'public' ? 'public' : 'private' })
+      }
+      lentFrom.push(m.host)
+    }
+    if (!lentFrom.length) return spaceBlock
+    return { ...spaceBlock, rows, lentFrom: [...new Set(lentFrom)].sort() }
+  }
+
   /** The whole contract object for GET /api/monitor and the stream. */
   // `subjects`: dev lists only the owners' machines. `account`: the local Monitor's signed-in extras
   // ({ state, name, reports } from monitorAccount.js): this account's other machines, marked via:'dev',
@@ -755,6 +802,11 @@ function createHub({
     const servicesAll = machineRowsFor(base, [...own, ...extra], 'services', (r) => r.unit)
     const services = servicesAll === base.panels?.services ? servicesAll
       : { ...servicesAll, running: servicesAll.rows.filter((r) => r.active === 'active').length, failed: servicesAll.rows.filter((r) => r.active === 'failed').length }
+    // spaces: this machine's tiers plus each of the account's other machines' own spaces (its local tier), so the
+    // Spaces box and the map are the same on every machine
+    const spacesAll = spacesFor(spaceBlock, [...own, ...extra])
+    // the account's other machines are tiers too (their own local di), as on dev: same tiers on every machine
+    const tiersAll = tiersFor(tierBlock, extra)
     const lent = {
       ...(credits !== base.panels?.credits ? { credits } : {}),
       ...(agents !== base.panels?.agents ? { agents } : {}),
@@ -770,12 +822,12 @@ function createHub({
       shared: shared ? { state: shared.state, at: shared.at || null, lastGoodAt: shared.lastGoodAt || null, data: shared.data || null } : null,
       account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
-      tiers: tierBlock,
+      tiers: tiersAll,
       parts: partsBlock(base),
       chats: chatsFor(base, extra, subjects),
-      spaces: spaceBlock,
+      spaces: spacesAll,
       asks: asksBlock(subjects),
-      map: buildMap({ base, reportRows, tierBlock, spaceBlock })
+      map: buildMap({ base, reportRows, tierBlock: tiersAll, spaceBlock: spacesAll })
     }
   }
 

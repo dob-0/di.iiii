@@ -163,6 +163,18 @@ describe('monitor snapshot', () => {
     expect(by.visitors.detail).toMatch(/browsers 7/)
   })
 
+  it('spaces panel: this machine\'s own spaces, sandboxes left out; no local address says so (11-24)', async () => {
+    const home = tmp()
+    const fetchImpl = async (url) => (url === 'http://self/serverXR/api/spaces'
+      ? { ok: true, status: 200, json: async () => ({ spaces: [{ slug: 'alpha', isPublic: true }, { id: 'b', isPublic: false }, { slug: 'sb', kind: 'sandbox' }] }) }
+      : { ok: false, status: 404 })
+    const store = createMonitorStore({ home, runCommand: fakeRun(), fetchImpl })
+    const { panels } = await store.getMonitor({ selfBase: 'http://self' })
+    expect(panels.spaces).toMatchObject({ ok: true, total: 3, rows: [{ slug: 'alpha', visibility: 'public' }, { slug: 'b', visibility: 'private' }] })
+    const bare = createMonitorStore({ home, runCommand: fakeRun(), fetchImpl })
+    expect((await bare.getMonitor({ selfBase: null })).panels.spaces).toMatchObject({ ok: false, error: 'no local address to read from' })
+  })
+
   it('serves a cached snapshot for 5 seconds', async () => {
     const home = tmp()
     let calls = 0

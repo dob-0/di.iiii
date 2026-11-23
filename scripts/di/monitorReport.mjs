@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 import { readLogin } from './loginStore.mjs'
 import { resolveTarget } from './login.mjs'
 import { diHome, paths } from './paths.mjs'
+import { publicUrl, resolvePort } from './state.mjs'
 import { runFeed } from './monitorFeed.mjs'
 
 export const USAGE = [
@@ -93,7 +94,15 @@ export const repoRoot = (start = here()) => {
 }
 
 /** This machine's panels, from the server's own collectors. */
-export const collectSnapshot = async ({ root = repoRoot() } = {}) => {
+// this machine's own di server, the address the di command itself uses (di.env port, its certificate name when it has one),
+// so a report carries what the page reads from it (spaces, connected); null when di is not installed here: those panels
+// then say "no local address", never a guess
+export const localBase = ({ home = diHome() } = {}) => {
+    if (!fs.existsSync(paths(home).env)) return null
+    try { return publicUrl(home, resolvePort(home)) } catch { return null }
+}
+
+export const collectSnapshot = async ({ root = repoRoot(), selfBase = localBase() } = {}) => {
     const require = createRequire(import.meta.url)
     const { createMonitorStore, CREDITS_COMMAND_MS } = require(path.join(root, 'serverXR', 'src', 'monitorStore.js'))
     // no realtime hub in this process: nobody is "connected" here
@@ -101,7 +110,7 @@ export const collectSnapshot = async ({ root = repoRoot() } = {}) => {
     // credits command's whole limit (the server's page does not, it shows the last list). Without this the one-shot report would
     // say "checking" for ever on the hour the command is slow.
     const store = createMonitorStore({ connections: { spaces: new Map(), projects: new Map() }, repoDir: root, creditsWaitMs: CREDITS_COMMAND_MS + 2000 })
-    return store.getMonitor({ selfBase: null })
+    return store.getMonitor({ selfBase })
 }
 
 export const readRelease = async ({ root = repoRoot() } = {}) => {

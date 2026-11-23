@@ -2062,3 +2062,12 @@ Guard:
 Guard:
 - `scripts/address-guard.mjs` (`npm run address-guard`), run before and after any change to DNS, redirects, callbacks or env. It fails when a sign-in returns to a host other than the page's, or on a permanent cross-host jump that is not settled. Names are in `scripts/address-guard.names.json`.
 - `scripts/address-guard.test.mjs` (`node --test`): 7 tests, including the 11-22 case.
+
+### 2026-11-24 — The Monitor's map was different on each machine
+
+**Symptom:** the admin Monitor's Map showed 58 nodes on studio-mac and 85 on aylmo; the Spaces box listed 6 spaces on one and 36 on the other.
+**Cause:** each machine drew only its OWN local spaces (the other machines' reports carried no spaces), the space cut at 60 kept a different set per machine, the agent cut at 40 filled with the viewer's own agents first, and a machine seen only through the account was not a tier.
+**Fix:** a machine's report carries a `spaces` panel (read from its own server at the di command's address); the hub lends the account's other machines' spaces and tiers; the map draws one node per space name in name order and an equal share of agents per machine, in machine-name order.
+Guard:
+- `serverXR/src/monitorHub.test.js` "lends the other machines' own spaces; the map is the same whichever machine draws it": the same two machines drawn from each side give the same agent nodes.
+- `serverXR/src/monitorStore.test.js` spaces panel; `scripts/di/monitorReport.test.js` localBase.
