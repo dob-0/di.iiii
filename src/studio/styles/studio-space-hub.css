@@ -491,6 +491,37 @@
     padding: 16px;
 }
 
+/* The calm still of a card with no picture: its name, nothing booting behind it. */
+.ssh-card-still {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--di-space-2);
+    padding: var(--di-space-4);
+    text-align: center;
+    background: var(--di-bg);
+}
+
+.ssh-card-still-name {
+    font-size: 1.1rem;
+    color: var(--di-text);
+}
+
+.ssh-card-still-blurb {
+    font-size: 0.85rem;
+    color: var(--di-text);
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+
+.ssh-card-still-hint {
+    font-size: 0.8rem;
+    color: var(--di-text-muted);
+}
+
 .ssh-card-live-frame {
     position: absolute;
     inset: 0;

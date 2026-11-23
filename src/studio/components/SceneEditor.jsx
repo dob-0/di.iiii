@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import {
     HEX, MOTION_MODES, MOTION_SPATIAL, HEAD_PATTERNS, HEAD_SPATIAL, FLASH,
     modeAllowed, bpmRange, clampBpm, flashLine, headsWarning, partRows, changeSceneOps, cueOps, withSource, SHOW_ID_OF
@@ -37,13 +37,41 @@ const Select = ({ value, options, onChange, label, disabled = () => false, testI
 
 const num = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v)))
 
+// `onPlay(cue)` is the first GO. When Light runs another project's cue list it answers `{ asked: true, replace }` and nothing was
+// loaded; the editor then asks, and the confirm calls that answer's `replace(document, cue)` with what the editor shows at that
+// moment, so an edit made while the question was open is what Light gets. One GO at a time: a press while Light has not answered
+// sends nothing (a late answer could otherwise reopen the question, or send the list twice).
 export default function SceneEditor({ document, scene, onApplyOps, onPlay, onClose }) {
     const [playState, setPlayState] = useState('')
+    const [asking, setAsking] = useState(null)
+    const busy = useRef(false)
     const uid = useId()
     const show = SHOW_ID_OF(document)
     const look = show?.components?.rigLooks?.looks.find((l) => l.id === scene.lookId)
     const cue = (document?.mappingState?.cues || []).find((c) => c.id === scene.cueId)
     if (!look || !cue) return null
+    const go = async () => {
+        if (busy.current) return
+        busy.current = true
+        setPlayState('…')
+        setAsking(null)
+        try {
+            const answer = await onPlay(cue)
+            if (answer && answer.asked === true) {
+                if (typeof answer.replace !== 'function') { setPlayState("not sent: this GO cannot replace Light's list here"); return }
+                setPlayState(''); setAsking({ replace: answer.replace }); return
+            }
+            setPlayState('Light is on this scene')
+        } catch (e) { setPlayState(`not sent: ${e.message}`) } finally { busy.current = false }
+    }
+    const confirmReplace = async () => {
+        const replace = asking?.replace
+        if (busy.current || typeof replace !== 'function') return
+        busy.current = true
+        setAsking(null)
+        setPlayState('…')
+        try { await replace(document, cue); setPlayState('Light is on this scene') } catch (e) { setPlayState(`not sent: ${e.message}`) } finally { busy.current = false }
+    }
     const sourced = withSource(document, look)
     const rows = partRows(document, sourced)
     const change = (patch) => onApplyOps(changeSceneOps(document, look.id, patch))
@@ -69,10 +97,17 @@ export default function SceneEditor({ document, scene, onApplyOps, onPlay, onClo
             <div className="scene-editor__row">
                 <label htmlFor={`${uid}-title`}>Title <Field id={`${uid}-title`} testId="scene-title" value={look.title} onCommit={(v) => change({ title: v.slice(0, 60) })} valid={(v) => v.trim().length > 0} width={170} /></label>
                 <label htmlFor={`${uid}-act`}>Act <Field id={`${uid}-act`} type="number" value={look.act ?? ''} onCommit={(v) => change({ act: num(v, 0, 99) })} valid={(v) => v !== '' && Number.isFinite(Number(v))} width={48} /></label>
-                <button type="button" className="scc-btn scene-editor__play" data-testid="scene-play" title="The desk's GO on this scene" onClick={async () => { setPlayState('…'); try { await onPlay?.(cue); setPlayState('playing on the desk') } catch (e) { setPlayState(`not played: ${e.message}`) } }}>Play</button>
+                {onPlay && <button type="button" className="scc-btn scene-editor__play" data-testid="scene-play" title="The real lights go to this scene's look; Light runs this project's cue list" onClick={go}>GO on Light</button>}
                 <button type="button" className="scc-btn" aria-label="Close the editor" onClick={onClose}>Close</button>
             </div>
             {playState && <div className="scene-editor__line" data-testid="play-state">{playState}</div>}
+            {asking && (
+                <div className="scene-editor__row" data-testid="go-replace-question">
+                    <span>Light runs another cue list. GO replaces it.</span>
+                    <button type="button" className="scc-btn" data-testid="go-replace-confirm" onClick={confirmReplace}>GO</button>
+                    <button type="button" className="scc-btn" data-testid="go-replace-cancel" onClick={() => setAsking(null)}>Cancel</button>
+                </div>
+            )}
             <label className="scene-editor__row" htmlFor={`${uid}-intent`}>Intent <Field id={`${uid}-intent`} value={look.intent} onCommit={(v) => change({ intent: v.slice(0, 480) })} width={300} /></label>
 
             <div className="scene-editor__title">Parts{show?.components?.rigParts ? '' : ' (each lamp its own: this project keeps no parts)'}</div>

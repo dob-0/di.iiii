@@ -138,3 +138,18 @@ describe('import --replace keeps the rig\'s night and opening shot', async () =>
         expect(ops.some((o) => o.type === 'createEntity')).toBe(true)
     })
 })
+
+describe('continue, never recreate (N1880)', async () => {
+    const { continueTarget, continueAdvice } = await import('./import.mjs')
+    const spaces = [{ id: 'cinema-house', label: 'Cinema House' }, { id: 'moxir', label: 'MOXIR' }]
+    it('a sibling name finds the existing space; an exact id or an unrelated name does not', () => {
+        expect(continueTarget(spaces, 'cinema-house-3d', 'Cinema House 3D')?.id).toBe('cinema-house')
+        expect(continueTarget(spaces, 'cinema-house', 'Cinema House')).toBeNull()
+        expect(continueTarget(spaces, 'hayfilm', 'Hayfilm')).toBeNull()
+    })
+    it('the advice names the space and the project command', () => {
+        const line = continueAdvice(spaces[0], { work: '/w', hallProject: 'cinema-house-hall' })
+        expect(line).toContain('continue: cinema-house (Cinema House) — use it; to add this work as a project:')
+        expect(line).toContain('--name cinema-house --project cinema-house-hall')
+    })
+})

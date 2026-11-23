@@ -191,6 +191,11 @@ jobs:
       - name: Check AI docs
         run: npm run docs:ai:check
 
+      # docs/ai/vocabulary.md as a gate by its own name (tools/lint-words.sh: node, not Vale --
+      # see its header). Also runs inside the vitest shards; this step names the rule when it fails.
+      - name: Check words (vocabulary)
+        run: npm run lint:words
+
       - name: Check wiki / user-facing docs
         run: npm run docs:wiki:check
 

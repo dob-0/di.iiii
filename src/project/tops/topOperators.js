@@ -238,14 +238,417 @@ void main() {
 }`
     },
 
+    // --- the Platina look wave (2026-11-10): the screen effects the artist's
+    // reference clips need that Level / Tint / Blur / Edge / Feedback / Reframe
+    // cannot make. Recipes: PROGRESS.md (the feat-deck-ref-effects entry).
+    // The picture pipeline carries no alpha (8-bit RGB, opaque canvas), so
+    // "transparent" is black: put a layer with a black background on a layer
+    // below with blend Add or Screen and the lower layer shows through.
+
+    'top.freeze': {
+        label: 'Freeze',
+        family: 'time',
+        inputs: ['a'],
+        params: [toggle('hold', 'Hold', 1)],
+        // Stateful like Feedback: `self` is this operator's own last frame. A
+        // freshly made target is cleared to alpha 0, and every frame this
+        // operator draws is alpha 1 — so alpha 0 in `self` means "nothing held
+        // yet": the first frame passes the live picture through and from then
+        // on `self` holds it. Effects that are off have no node (vjDeck.js
+        // runStack), so switching Freeze ON starts a fresh target and freezes
+        // the frame on screen at that moment; switching it off drops it.
+        fragment: `
+uniform sampler2D self;
+uniform float p_hold;
+void main() {
+    vec4 held = texture2D(self, uv);
+    vec3 live = texture2D(a, uv).rgb;
+    gl_FragColor = vec4((p_hold > 0.5 && held.a > 0.5) ? held.rgb : live, 1.0);
+}`
+    },
+
+    'top.silhouette': {
+        label: 'Silhouette',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            param('threshold', 'Threshold', 0.5, 0, 1),
+            param('soft', 'Softness', 0.05, 0, 0.5),
+            toggle('invert', 'Invert'),
+            colour('colour', 'Subject', '#ffffff'),
+            colour('back', 'Background', '#000000')
+        ],
+        // Luma against a threshold with a smooth edge: the bright part of the
+        // picture becomes the Subject colour, the rest the Background colour
+        // (Invert swaps which is which, for a dark figure on a light wall).
+        // Background black + the layer's blend Add/Screen lets what is below show.
+        fragment: `
+${LUMA}
+uniform float p_threshold;
+uniform float p_soft;
+uniform float p_invert;
+uniform vec3 p_colour;
+uniform vec3 p_back;
+void main() {
+    float l = luma(texture2D(a, uv).rgb);
+    float s = max(p_soft, 0.0005);
+    float m = smoothstep(p_threshold - s, p_threshold + s, l);
+    if (p_invert > 0.5) m = 1.0 - m;
+    gl_FragColor = vec4(mix(p_back, p_colour, m), 1.0);
+}`
+    },
+
+    'top.lineart': {
+        label: 'Line art',
+        family: 'analyse',
+        inputs: ['a'],
+        params: [
+            param('bands', 'Contours', 8, 1, 40, 1),
+            param('width', 'Line width', 1.5, 0.5, 6, 0.1),
+            param('edges', 'Outline', 0.5, 0, 1),
+            colour('colour', 'Line', '#4da6ff'),
+            colour('back', 'Background', '#000000')
+        ],
+        // Thin lines in one colour: the iso-lines of brightness (where luma
+        // crosses k / Contours — the nested contour stripes of a lit body)
+        // plus a Sobel outline. Line width is measured in pixels: the distance
+        // to the nearest iso-level divided by the local brightness gradient.
+        fragment: `
+${LUMA}
+uniform float p_bands;
+uniform float p_width;
+uniform float p_edges;
+uniform vec3 p_colour;
+uniform vec3 p_back;
+float at(vec2 o) { return luma(texture2D(a, uv + o * texel).rgb); }
+void main() {
+    float gx = -at(vec2(-1.0, 1.0)) - 2.0 * at(vec2(-1.0, 0.0)) - at(vec2(-1.0, -1.0))
+               + at(vec2( 1.0, 1.0)) + 2.0 * at(vec2( 1.0, 0.0)) + at(vec2( 1.0, -1.0));
+    float gy = -at(vec2(-1.0, -1.0)) - 2.0 * at(vec2(0.0, -1.0)) - at(vec2(1.0, -1.0))
+               + at(vec2(-1.0,  1.0)) + 2.0 * at(vec2(0.0,  1.0)) + at(vec2(1.0,  1.0));
+    float grad = length(vec2(gx, gy)) * 0.25;
+    float v = at(vec2(0.0)) * p_bands;
+    float d = abs(fract(v + 0.5) - 0.5);
+    float px = d / max(grad * p_bands, 0.02);
+    float iso = 1.0 - smoothstep(p_width - 0.5, p_width + 0.5, px);
+    float edge = clamp(grad * 6.0, 0.0, 1.0) * p_edges;
+    gl_FragColor = vec4(mix(p_back, p_colour, clamp(max(iso, edge), 0.0, 1.0)), 1.0);
+}`
+    },
+
+    'top.glitch': {
+        label: 'Glitch',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the burst pattern changes `speed` times a second).
+        animated: true,
+        params: [
+            param('amount', 'Amount', 0.4, 0, 1),
+            param('speed', 'Speed', 8, 0, 30, 0.5),
+            param('blocks', 'Blocks', 14, 2, 64, 1),
+            param('split', 'RGB split', 0.3, 0, 1),
+            param('scan', 'Scanlines', 0.3, 0, 1)
+        ],
+        // Deterministic: every value is a hash of the block and floor(time *
+        // speed), never a random call, so the same time gives the same frame.
+        // A block row/column cell is shoved sideways when its hash is under
+        // Amount; the colour channels are read apart by RGB split; scanlines
+        // darken every second pixel row.
+        fragment: `
+uniform float p_amount;
+uniform float p_speed;
+uniform float p_blocks;
+uniform float p_split;
+uniform float p_scan;
+float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+void main() {
+    float step_ = floor(time * p_speed);
+    float aspect = texel.y / texel.x;
+    vec2 cell = floor(uv * vec2(p_blocks * aspect, p_blocks));
+    float on = step(hash21(cell + vec2(step_, 3.0)), p_amount);
+    float row = floor(uv.y * p_blocks);
+    float rowShove = (hash21(vec2(row, step_ + 7.0)) - 0.5) * 0.5 * step(hash21(vec2(row, step_)), p_amount * 0.5);
+    float shove = on * (hash21(cell + vec2(step_, 9.0)) - 0.5) * 0.3 * p_amount + rowShove * p_amount;
+    vec2 p = vec2(uv.x + shove, uv.y);
+    float sp = p_split * 0.03 * (0.3 + on);
+    float r = texture2D(a, vec2(p.x + sp, p.y)).r;
+    float g = texture2D(a, p).g;
+    float b = texture2D(a, vec2(p.x - sp, p.y)).b;
+    float line = mod(floor(uv.y / texel.y), 2.0);
+    vec3 c = vec3(r, g, b) * (1.0 - p_scan * 0.5 * line);
+    gl_FragColor = vec4(c, 1.0);
+}`
+    },
+
+    'top.pixelate': {
+        label: 'Pixelate',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            param('size', 'Block size', 12, 1, 128, 1),
+            param('levels', 'Posterize', 0, 0, 16, 1),
+            toggle('grey', 'Grey')
+        ],
+        // A mosaic of Block size pixels, optionally posterised to Posterize
+        // grey/colour steps (0 or 1 = off) and desaturated.
+        fragment: `
+${LUMA}
+uniform float p_size;
+uniform float p_levels;
+uniform float p_grey;
+void main() {
+    vec2 cell = texel * max(p_size, 1.0);
+    vec2 p = (floor(uv / cell) + 0.5) * cell;
+    vec3 c = texture2D(a, min(p, vec2(1.0))).rgb;
+    if (p_grey > 0.5) c = vec3(luma(c));
+    if (p_levels > 1.5) c = floor(c * p_levels + 0.5) / p_levels;
+    gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+}`
+    },
+
+    // --- TouchDesigner look operators (2026-11-10, feat-deck-td-effects.md):
+    // the ones his own .toe files use most that di.iiii lacked. Spec table and
+    // the TD operator each one answers: PROGRESS.md (the feat-deck-td-effects entry).
+
+    'top.displace': {
+        label: 'Displace',
+        family: 'adjust',
+        inputs: ['a', 'b'],
+        animated: true,
+        params: [
+            choice('source', 'Map', ['Picture', 'Noise', 'Input B']),
+            param('amountX', 'Amount X', 0, -0.5, 0.5, 0.005),
+            param('amountY', 'Amount Y', 0, -0.5, 0.5, 0.005),
+            param('scale', 'Noise scale', 4, 0.5, 40, 0.5),
+            param('speed', 'Speed', 0.5, 0, 4, 0.05)
+        ],
+        // Moves each pixel by a map's red (x) and green (y), centred on 0.5, so a
+        // flat mid-grey map moves nothing. The map is the picture itself, built-in
+        // moving value noise (two decorrelated channels), or the second input.
+        // Amounts are a fraction of the frame; 0 = no change. 2 map taps + 1 picture tap.
+        fragment: `
+uniform float p_source;
+uniform float p_amountX;
+uniform float p_amountY;
+uniform float p_scale;
+uniform float p_speed;
+float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+void main() {
+    vec2 m = vec2(0.5);
+    if (p_source < 0.5) m = texture2D(a, uv).rg;
+    else if (p_source < 1.5) {
+        vec2 q = uv * p_scale + vec2(time * p_speed, time * p_speed * 0.7);
+        m = vec2(vnoise(q), vnoise(q + vec2(17.3, 5.1)));
+    } else m = texture2D(b, uv).rg;
+    vec2 o = (m - 0.5) * 2.0 * vec2(p_amountX, p_amountY);
+    gl_FragColor = vec4(texture2D(a, clamp(uv + o, 0.0, 1.0)).rgb, 1.0);
+}`
+    },
+
+    'top.hsvadj': {
+        label: 'Colour shift',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            param('hue', 'Hue', 0, -180, 180, 1),
+            param('sat', 'Saturation', 1, 0, 2, 0.01),
+            param('value', 'Value', 1, 0, 2, 0.01)
+        ],
+        // Rotate hue (degrees), scale saturation and value. Defaults = no change.
+        fragment: `
+uniform float p_hue;
+uniform float p_sat;
+uniform float p_value;
+vec3 rgb2hsv(vec3 c) {
+    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+    float d = q.x - min(q.w, q.y);
+    float e = 1.0e-10;
+    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+vec3 hsv2rgb(vec3 c) {
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+void main() {
+    vec3 hsv = rgb2hsv(texture2D(a, uv).rgb);
+    hsv.x = fract(hsv.x + p_hue / 360.0);
+    hsv.y = clamp(hsv.y * p_sat, 0.0, 1.0);
+    hsv.z = clamp(hsv.z * p_value, 0.0, 1.0);
+    gl_FragColor = vec4(hsv2rgb(hsv), 1.0);
+}`
+    },
+
+    'top.mirror': {
+        label: 'Mirror',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            choice('mode', 'Mirror', ['Off', 'Left to right', 'Right to left', 'Top to bottom', 'Bottom to top', 'Quad']),
+            toggle('flipX', 'Flip X'),
+            toggle('flipY', 'Flip Y')
+        ],
+        // Flip first, then fold: "Left to right" shows the left half twice, the
+        // right one reflected. Quad folds both axes (a four-way kaleidoscope-like
+        // look). One picture tap. Off + no flip = no change.
+        fragment: `
+uniform float p_mode;
+uniform float p_flipX;
+uniform float p_flipY;
+void main() {
+    vec2 p = uv;
+    if (p_flipX > 0.5) p.x = 1.0 - p.x;
+    if (p_flipY > 0.5) p.y = 1.0 - p.y;
+    bool lr = p_mode > 0.5 && p_mode < 1.5;
+    bool rl = p_mode > 1.5 && p_mode < 2.5;
+    bool tb = p_mode > 2.5 && p_mode < 3.5;
+    bool bt = p_mode > 3.5 && p_mode < 4.5;
+    bool quad = p_mode > 4.5;
+    if ((lr || quad) && p.x > 0.5) p.x = 1.0 - p.x;
+    if (rl && p.x < 0.5) p.x = 1.0 - p.x;
+    // uv is bottom-up: "top" is y > 0.5.
+    if (tb && p.y < 0.5) p.y = 1.0 - p.y;
+    if ((bt || quad) && p.y > 0.5) p.y = 1.0 - p.y;
+    gl_FragColor = vec4(texture2D(a, p).rgb, 1.0);
+}`
+    },
+
+    'top.key': {
+        label: 'Key',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            choice('mode', 'Mode', ['Chroma', 'Luma']),
+            colour('colour', 'Key colour', '#00ff00'),
+            param('tolerance', 'Tolerance', 0.3, 0, 1),
+            param('soft', 'Softness', 0.1, 0, 0.5)
+        ],
+        // There is no alpha in the pipeline (canvas alpha: false), so a key goes
+        // to BLACK: pair it with the Add / Screen / Lighten layer blend and the
+        // keyed part shows what is below. Chroma: distance of the Cb/Cr pair from
+        // the key colour (ignores how bright it is). Luma: pixels darker than
+        // Tolerance go to black (Key colour unused). 1 picture tap.
+        fragment: `
+${LUMA}
+uniform float p_mode;
+uniform vec3 p_colour;
+uniform float p_tolerance;
+uniform float p_soft;
+vec2 cbcr(vec3 c) { return vec2(dot(c, vec3(-0.169, -0.331, 0.5)), dot(c, vec3(0.5, -0.419, -0.081))); }
+void main() {
+    vec3 c = texture2D(a, uv).rgb;
+    float s = max(p_soft, 0.0001);
+    float keep;
+    if (p_mode < 0.5) keep = smoothstep(p_tolerance, p_tolerance + s, length(cbcr(c) - cbcr(p_colour)));
+    else keep = smoothstep(p_tolerance - s, p_tolerance + s, luma(c));
+    gl_FragColor = vec4(c * keep, 1.0);
+}`
+    },
+
+    'top.lookup': {
+        label: 'Grade',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            colour('shadows', 'Shadows', '#0b1033'),
+            colour('mids', 'Mids', '#b0306a'),
+            colour('highs', 'Highlights', '#ffd9a0'),
+            param('amount', 'Amount', 1, 0, 1)
+        ],
+        // The picture's brightness looked up in a three-colour ramp (TD lookup with
+        // a ramp): 0 -> Shadows, 0.5 -> Mids, 1 -> Highlights. Amount 0 = no change.
+        fragment: `
+${LUMA}
+uniform vec3 p_shadows;
+uniform vec3 p_mids;
+uniform vec3 p_highs;
+uniform float p_amount;
+void main() {
+    vec3 src = texture2D(a, uv).rgb;
+    float l = clamp(luma(src), 0.0, 1.0);
+    vec3 ramp = l < 0.5 ? mix(p_shadows, p_mids, l * 2.0) : mix(p_mids, p_highs, (l - 0.5) * 2.0);
+    gl_FragColor = vec4(mix(src, ramp, p_amount), 1.0);
+}`
+    },
+
+    'top.slope': {
+        label: 'Emboss',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            param('strength', 'Strength', 1, 0, 4),
+            param('angle', 'Light angle', 135, 0, 360, 1),
+            param('size', 'Depth px', 1.5, 0.5, 8, 0.5),
+            param('keep', 'Keep colour', 0, 0, 1)
+        ],
+        // Brightness slope along the light direction (two taps either side) added
+        // to mid grey: a relief. Keep colour mixes the original back under it.
+        fragment: `
+${LUMA}
+uniform float p_strength;
+uniform float p_angle;
+uniform float p_size;
+uniform float p_keep;
+void main() {
+    float r = radians(p_angle);
+    vec2 o = vec2(cos(r), sin(r)) * texel * p_size;
+    float d = luma(texture2D(a, clamp(uv + o, 0.0, 1.0)).rgb) - luma(texture2D(a, clamp(uv - o, 0.0, 1.0)).rgb);
+    vec3 relief = vec3(clamp(0.5 + d * p_strength * 2.0, 0.0, 1.0));
+    vec3 src = texture2D(a, uv).rgb;
+    gl_FragColor = vec4(mix(relief, clamp(src + (relief - 0.5), 0.0, 1.0), p_keep), 1.0);
+}`
+    },
+
+    'top.glow': {
+        label: 'Glow',
+        family: 'adjust',
+        inputs: ['a'],
+        params: [
+            param('threshold', 'Threshold', 0.6, 0, 0.95),
+            param('radius', 'Radius px', 12, 1, 64, 1),
+            param('amount', 'Amount', 1, 0, 4)
+        ],
+        // Bloom in one pass: 12 taps on a golden-angle disc plus the centre (13
+        // picture taps) keep only what is brighter than Threshold, average it and
+        // add it back. Few taps means grain at large Radius; Amount 0 = no change.
+        fragment: `
+${LUMA}
+uniform float p_threshold;
+uniform float p_radius;
+uniform float p_amount;
+vec3 bright(vec3 c) { return max(c - vec3(p_threshold), 0.0) / max(1.0 - p_threshold, 0.05); }
+void main() {
+    vec3 src = texture2D(a, uv).rgb;
+    vec3 acc = bright(src);
+    for (int i = 0; i < 12; i++) {
+        float fi = float(i);
+        float ang = fi * 2.39996;
+        float rad = sqrt((fi + 0.5) / 12.0) * p_radius;
+        vec2 o = vec2(cos(ang), sin(ang)) * rad * texel;
+        acc += bright(texture2D(a, clamp(uv + o, 0.0, 1.0)).rgb);
+    }
+    gl_FragColor = vec4(clamp(src + acc / 13.0 * p_amount, 0.0, 1.0), 1.0);
+}`
+    },
+
     'top.blend': {
         label: 'Blend',
         family: 'combine',
         inputs: ['a', 'b'],
         params: [
-            choice('mode', 'Mode', ['Mix', 'Add', 'Screen', 'Multiply', 'Difference']),
+            choice('mode', 'Mode', ['Mix', 'Add', 'Screen', 'Multiply', 'Difference', 'Subtract', 'Lighten', 'Darken', 'Overlay']),
             param('mix', 'Amount', 1, 0, 1)
         ],
+        // a = what is below, b = what is blended in. Subtract is a - b; Overlay
+        // multiplies the dark parts of a and screens the light ones.
         fragment: `
 uniform float p_mode;
 uniform float p_mix;
@@ -256,7 +659,11 @@ void main() {
     if (p_mode > 0.5 && p_mode < 1.5) c = x + y;
     else if (p_mode > 1.5 && p_mode < 2.5) c = 1.0 - (1.0 - x) * (1.0 - y);
     else if (p_mode > 2.5 && p_mode < 3.5) c = x * y;
-    else if (p_mode > 3.5) c = abs(x - y);
+    else if (p_mode > 3.5 && p_mode < 4.5) c = abs(x - y);
+    else if (p_mode > 4.5 && p_mode < 5.5) c = x - y;
+    else if (p_mode > 5.5 && p_mode < 6.5) c = max(x, y);
+    else if (p_mode > 6.5 && p_mode < 7.5) c = min(x, y);
+    else if (p_mode > 7.5) c = mix(2.0 * x * y, 1.0 - 2.0 * (1.0 - x) * (1.0 - y), step(0.5, x));
     gl_FragColor = vec4(clamp(mix(x, c, p_mix), 0.0, 1.0), 1.0);
 }`
     },

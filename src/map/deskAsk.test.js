@@ -129,7 +129,7 @@ describe('the desk has one confirm path', () => {
         expect(code.slice(at, at + 600)).not.toMatch(/ids\.length > 1 &&/)
     })
     it('every destructive step asks through deskAsk, and the page loads ask.js before app.js', () => {
-        expect((code.match(/deskAsk\.ask\(/g) || []).length).toBe(8)  // unpatch, release others, set all, clear MIDI map, whiteout, delete set, askThen's own, nodeAsk's own
+        expect((code.match(/deskAsk\.ask\(/g) || []).length).toBe(9)  // switch the live driver (#1231), unpatch, release others, set all, clear MIDI map, whiteout, delete set, askThen's own, nodeAsk's own
         expect((code.match(/askThen\(/g) || []).length).toBe(7)       // its definition + scene overwrite/delete (detail and popover), layer, look
         const html = ui('index.html')
         expect(html.indexOf('src="ask.js"')).toBeGreaterThan(0)

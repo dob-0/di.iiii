@@ -20,8 +20,9 @@ Each word does exactly one job. If you need a second job done, use a different w
 
 | Word | Means, and only this |
 | --- | --- |
-| **space** | A place that is yours: an address, a guest list, and everything in it. |
+| **space** | A place that is yours: an address, a guest list, and everything in it. A real place is ONE space; coming back to a job continues its project, it never makes a sibling ("continue, never recreate", 2026-11-02, `docs/ai/decisions/2026-11-02-continue-never-recreate.md`). |
 | **project** | One thing you make inside a space. |
+| **shelf** | A named group of projects inside a space. It groups work without becoming a place of its own; deleting a shelf never deletes the work on it, and a project on no shelf is listed under "Not on a shelf". Made and filled in Studio, shown as a heading in the Studio and Nodes project lists and, for members, on the space page. In the data it is a collection; the word a person reads is shelf. Added 2026-11-12. |
 | **canvas** | The surface your nodes sit on. |
 | **node** | One card on the canvas. |
 | **object** | One thing standing in the scene. |
@@ -34,9 +35,11 @@ Each word does exactly one job. If you need a second job done, use a different w
 | **work** | What the public meets: a title, an author, an address. The same object a **project** names backstage. |
 | **Nodes** | The node canvas: the tool where a project's nodes are wired together. Opens at `/{space}/raw/projects/{project}` — the route stays `raw`, the word a person reads is Nodes. Added 2026-09-23. |
 | **Projection** | The tool that puts a project on a wall: drag its surfaces onto the shapes there. Opens at `/{space}/map/{project}` — the route stays `map`, the word a person reads is Projection. |
+| **Perform** | The tool that runs a project as a show: the VJ deck, the wall and the lights on screen, and nothing else. Opens at `/{space}/perform/{project}`. A door to it never names a layout: the show's default or the last one used on the device opens (`src/perform/presets.js`). The capital is the tool; to perform is the verb. Added 2026-11-12. |
 | **Light** | The lighting desk: patch, looks, cues, Art-Net out. Runs only on your own machine (a local install), at `/light/`. Added 2026-09-23. The capital is the tool; a light in a scene and a stage fixture have their own words, **light** and **lamp** below (settled 2026-10-13). |
 | **lamp** | A stage fixture: the real device on the rig (a moving head, a par, a strip). In a scene it is a light that carries a fixture: a typed one from the rig builder, or a join to a fixture of the lighting desk. A project's card counts these: "74 lamps". Owner, 2026-10-13: *"lamp" = a stage fixture.* Added 2026-10-13. |
 | **light** | A 3D scene light: the sun, a point, a spot, an ambient light, joined to nothing on the rig. Written with a small l; the lighting desk is **Light** with a capital. A project's card counts these: "2 lights". Owner, 2026-10-13: *"light" = a 3D scene light (sun, point…).* Added 2026-10-13. |
+| **Rows · Upright** | The two arrangements of the Show desk's fader bank: a switch in its bottom line beside **Touch · Compact**, kept in that browser. **Rows**: one row for each lamp, lying faders, the cubes in one line (the default). **Upright**: the console posture, a tall strip for each lamp. Labels for a layout, not things: choosing one makes, saves and sends nothing. Owner, 2026-10-31: *"the faders area is not used right."* Added 2026-10-31. |
 | **head light** | A flashlight that follows a visitor's view while they walk in a scene. A project turns it on; the visitor switches it on and off with L (on a phone, the Head light button) and it starts off, never saved. Two words; the button says Head light. Not **Light** (the lighting desk), not a **light** (a 3D scene light that belongs to the scene, lit for everyone) and not a **lamp** (a stage fixture): only the visitor who walks sees it. Added 2026-10-28. |
 | **scan** | Collecting a **place** with a camera so a space can be built from it — the walk, the photographs, and the measured wall. Opens at `/{space}/scan`. Added 2026-09-22. |
 | **mesh** | serverXR's live hub at `/serverXR/mesh`, where every screen and phone in one **group** hears what the others publish on a **channel**. Spoken in Nodes through Mesh In and Mesh Out. The hub's own protocol calls a group a `room`; copy says **group**, because Room is banned copy. Added 2026-10-21. |
@@ -609,6 +612,9 @@ the singular; a heading that lists them takes the plural (Տարածքներ, п
 | place | ru | площадка | unverified | machine:claude-opus-5-5@2026-10-29 | What Russian theatre and events call a venue; "место" is heard as a seat or a spot. |
 | production | hy | Բեմադրություն | unverified | machine:claude-opus-5-5@2026-10-29 | A staged work with its place and run; not Արտադրություն, which is a factory's output. Narrower for a light show: owner's call. |
 | production | ru | постановка | unverified | machine:claude-opus-5-5@2026-10-29 | The theatre word for a staged work and its run; not "производство" (a factory) or "продакшн" (a film company's slang). |
+| play | hy | ԽԱՂԱԼ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The standard infinitive, same form as ԽՈՍԵԼ and ԱՎԵԼԱՑՆԵԼ beside it in Make; for the Play button (Studio, Make). |
+| playing | hy | ԽԱՂՈՒՄ ԵՍ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The bar's state while a project is walked: "you are playing", second person like Make's other words; the form of address is for a speaker to confirm. |
+| stop | hy | ԿԱՆԳՆԵՑՆԵԼ | unverified | machine:claude-sonnet-5-5@2026-10-29 | The standard infinitive of "to stop" (causative); ԿԱՆԳ is the short sign form a speaker may prefer on a small button. |
 <!-- i18n-core-words:end -->
 
 **Where earlier guesses differ** (read 2026-10-29, nothing in them was changed):

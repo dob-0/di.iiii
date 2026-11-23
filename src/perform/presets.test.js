@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     BUILT_IN_PRESETS,
+    GRID,
     WINDOW_KINDS,
     choosePreset,
     framesFromRects,
@@ -10,13 +11,16 @@ import {
     normalizePresetList,
     presetFromArrangement,
     presetGroups,
+    rectForAddedWindow,
     rectsFromFrames,
+    snapFrame,
+    unitSize,
     widthClassOf
 } from './presets.js'
 
-describe('the seven built-in presets', () => {
-    it('are the seven he was shown, in his order', () => {
-        expect(BUILT_IN_PRESETS.map((preset) => preset.name)).toEqual(['VJ', 'Wall', 'Light', 'Caller', 'Unattended', 'Guest', 'Remote'])
+describe('the built-in presets', () => {
+    it('are the seven he was shown, in his order, with VJ windows beside VJ, then Show (picture + light + laser)', () => {
+        expect(BUILT_IN_PRESETS.map((preset) => preset.name)).toEqual(['VJ', 'VJ windows', 'Wall', 'Light', 'Caller', 'Unattended', 'Guest', 'Remote', 'Show'])
     })
 
     it('are data a normalizer keeps whole: every window a known kind, every rect on the workspace', () => {
@@ -35,12 +39,54 @@ describe('the seven built-in presets', () => {
         }
     })
 
+    it('every preset names every one of its windows in the narrow layout too, and no two blocks overlap (wide or narrow)', () => {
+        for (const preset of BUILT_IN_PRESETS) {
+            const ids = preset.windows.map((item) => item.id).sort()
+            expect(Object.keys(preset.wide).sort(), `${preset.id} wide`).toEqual(ids)
+            expect(Object.keys(preset.narrow).sort(), `${preset.id} narrow`).toEqual(ids)
+            for (const widthClass of ['wide', 'narrow']) {
+                const entries = Object.entries(preset[widthClass])
+                for (let i = 0; i < entries.length; i += 1) {
+                    for (let j = i + 1; j < entries.length; j += 1) {
+                        const [idA, [ax, ay, aw, ah]] = entries[i]
+                        const [idB, [bx, by, bw, bh]] = entries[j]
+                        // 0.01 pct slack: rects are rounded to two decimals
+                        const apart = ax + aw <= bx + 0.01 || bx + bw <= ax + 0.01 || ay + ah <= by + 0.01 || by + bh <= ay + 0.01
+                        expect(apart, `${preset.id} ${widthClass}: ${idA} overlaps ${idB}`).toBe(true)
+                    }
+                }
+            }
+        }
+    })
+
+    it('a bar block (master, clock) is never given less than one unit of height it cannot wrap in: master is at least two rows tall on every preset', () => {
+        for (const preset of BUILT_IN_PRESETS) {
+            for (const item of preset.windows.filter((entry) => entry.kind === 'master')) {
+                for (const widthClass of ['wide', 'narrow']) {
+                    const rows = (preset[widthClass][item.id][3] / 100) * GRID[widthClass].rows
+                    expect(rows, `${preset.id} ${widthClass} master rows`).toBeGreaterThanOrEqual(2)
+                }
+            }
+        }
+    })
+
+    it('VJ gives the deck the room; the four windows stay as VJ windows, and out, clock and master stay in the catalogue', () => {
+        const vj = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj')
+        const windows = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj-windows')
+        expect(vj.windows.map((item) => item.kind)).toEqual(['deck'])
+        expect(vj.wide.deck[2]).toBeGreaterThanOrEqual(95)
+        expect(windows.windows.map((item) => item.kind)).toEqual(['deck', 'out', 'clock', 'master'])
+        for (const kind of ['out', 'clock', 'master']) expect(isKnownKind(kind)).toBe(true)
+    })
+
     it('VJ and Wall open only native windows (phase 1 works); the others say what is coming', () => {
         const coming = (id) => BUILT_IN_PRESETS.find((preset) => preset.id === id).windows.filter((item) => isComingKind(item.kind)).map((item) => item.kind)
         expect(coming('vj')).toEqual([])
+        expect(coming('vj-windows')).toEqual([])
         expect(coming('wall')).toEqual([])
         expect(coming('caller')).toEqual([])
         expect(coming('remote')).toEqual([])
+        expect(coming('show')).toEqual([])
         expect(coming('light')).toEqual(['scenes', 'looks', 'audio'])
         expect(coming('unattended')).toEqual(['status'])
         expect(coming('guest')).toEqual(['footage', 'mysurface', 'now'])
@@ -56,15 +102,17 @@ describe('the built-ins on the real screens', () => {
     // grew over the deck. Every built-in, laid out and held to the window
     // floor, must leave no two windows overlapping, on the desk and the phone.
     const screens = {
-        wide: { left: 12, top: 88, width: 1440 - 24, height: 900 - 88 - 12 - 40 },
-        narrow: { left: 12, top: 96, width: 390 - 24, height: 844 - 96 - 12 - 120 }
+        // The whole viewport under the strip: no side padding, bottom reserve 0.
+        wide: { left: 0, top: 88, width: 1440, height: 900 - 88 },
+        narrow: { left: 0, top: 96, width: 390, height: 844 - 96 }
     }
     const overlap = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y
     for (const preset of BUILT_IN_PRESETS) {
         for (const widthClass of ['wide', 'narrow']) {
             it(`${preset.name}, ${widthClass}: no two windows overlap`, () => {
-                const frames = Object.values(framesFromRects(preset[widthClass], screens[widthClass]))
-                    .map((frame) => ({ ...frame, width: Math.max(200, frame.width), height: Math.max(120, frame.height) }))
+                const unit = unitSize(screens[widthClass], GRID[widthClass])
+                const frames = Object.values(framesFromRects(preset[widthClass], screens[widthClass], { grid: GRID[widthClass] }))
+                    .map((frame) => ({ ...frame, width: Math.max(unit.width, frame.width), height: Math.max(unit.height, frame.height) }))
                 for (let i = 0; i < frames.length; i += 1) {
                     for (let j = i + 1; j < frames.length; j += 1) expect(overlap(frames[i], frames[j])).toBe(false)
                 }
@@ -111,6 +159,11 @@ describe('choosing which preset opens', () => {
     it('no address: this device’s last one, else the desk’s default', () => {
         expect(choosePreset({ lastActive: 'mine:fri', mine }).preset.id).toBe('mine:fri')
         expect(choosePreset({ from: 'map' }).preset.id).toBe('wall')
+        // the show's default sits between the address and this device's last one
+        const show = [{ id: 'show:nolaser', name: 'no laser', windows: [{ id: 'deck', kind: 'deck' }], wide: { deck: [0, 0, 100, 100] } }]
+        expect(choosePreset({ showDefault: 'show:nolaser', lastActive: 'mine:fri', mine, show }).preset.id).toBe('show:nolaser')
+        expect(choosePreset({ requested: 'wall', showDefault: 'show:nolaser', show }).preset.id).toBe('wall')
+        expect(choosePreset({ showDefault: 'show:gone', lastActive: 'mine:fri', mine, show }).preset.id).toBe('mine:fri')
         expect(choosePreset({}).preset.id).toBe('vj')
     })
 
@@ -122,11 +175,48 @@ describe('choosing which preset opens', () => {
 describe('rectangles and frames', () => {
     const area = { left: 0, top: 40, width: 1440, height: 860 }
 
-    it('a preset comes out the shape of the window it opens in', () => {
-        const frames = framesFromRects({ deck: [1, 2, 66, 95] }, area)
+    it('a preset comes out the shape of the window it opens in, on unit lines', () => {
+        const frames = framesFromRects({ deck: [0, 0, 50, 50], out: [50, 0, 50, 50] }, area)
         expect(frames.deck.pinned).toBe(true)
-        expect(frames.deck.x).toBe(Math.round(14.4 + 3))
-        expect(frames.deck.width).toBe(Math.round(950.4 - 6))
+        expect(frames.deck).toMatchObject({ x: 0, y: 40, width: 720, height: 430 })
+        // The same pixel is one block's right edge and the next one's left: no gutter.
+        expect(frames.out.x).toBe(frames.deck.x + frames.deck.width)
+    })
+
+    it('a rect that is off the unit lines snaps to them', () => {
+        const frames = framesFromRects({ a: [1, 2, 66, 95] }, area)
+        const unit = unitSize(area, GRID.wide)
+        expect(frames.a.x % unit.width).toBe(0)
+        expect(frames.a.width % unit.width).toBe(0)
+    })
+
+    it('every built-in fills the wide area exactly, with no empty unit', () => {
+        for (const preset of BUILT_IN_PRESETS.filter((p) => ['vj', 'vj-windows', 'show'].includes(p.id))) {
+            const filled = new Set()
+            for (const rect of Object.values(preset.wide)) {
+                const f = framesFromRects({ r: rect }, { left: 0, top: 0, width: 12, height: 8 }).r
+                for (let x = f.x; x < f.x + f.width; x += 1) for (let y = f.y; y < f.y + f.height; y += 1) filled.add(`${x},${y}`)
+            }
+            expect(filled.size, preset.id).toBe(96)
+        }
+    })
+
+    it('snapFrame puts a dragged frame on unit lines, and a fine drag cannot leave one', () => {
+        const unit = unitSize(area, GRID.wide)
+        const snapped = snapFrame({ x: 130, y: 70, width: 300, height: 200, zIndex: 3 }, area, GRID.wide)
+        expect(snapped.zIndex).toBe(3)
+        expect((snapped.x - area.left) % unit.width).toBeLessThan(2)
+        expect(snapped.width).toBeGreaterThanOrEqual(unit.width)
+    })
+
+    it('a window added by hand takes the first free unit area, else opens on top', () => {
+        const first = rectForAddedWindow('wide', 'cues', {})
+        expect(first.slice(0, 2)).toEqual([0, 0])
+        const used = { deck: [0, 0, 100, 100] }
+        const onTop = rectForAddedWindow('wide', 'cues', used)
+        expect(onTop[2]).toBeGreaterThan(0)
+        const half = rectForAddedWindow('wide', 'cues', { deck: [0, 0, 50, 100] })
+        expect(half[0]).toBeGreaterThanOrEqual(50)
     })
 
     it('frames → rects → frames is the same arrangement to the pixel', () => {
@@ -141,19 +231,19 @@ describe('rectangles and frames', () => {
     })
 
     it('saving what is on screen keeps the other width class of the preset it came from', () => {
-        const vj = BUILT_IN_PRESETS[0]
+        const vj = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj-windows')
         const frames = framesFromRects(vj.wide, area)
         const saved = presetFromArrangement({ name: 'friday', source: 'mine', windows: vj.windows, frames, area, widthClass: 'wide', previous: vj, now: 5 })
         expect(saved.id).toMatch(/^mine:/)
-        expect(saved.base).toBe('vj')
+        expect(saved.base).toBe('vj-windows')
         expect(saved.narrow).toEqual(vj.narrow)
         expect(Object.keys(saved.wide)).toEqual(['deck', 'out', 'clock', 'master'])
-        // master has no phone place in VJ, and still has none in the copy
-        expect(Object.keys(saved.narrow).sort()).toEqual(['clock', 'deck', 'out'])
+        // every window has a phone place, and the copy keeps them
+        expect(Object.keys(saved.narrow).sort()).toEqual(['clock', 'deck', 'master', 'out'])
     })
 
     it('a window closed before saving is not in the saved preset', () => {
-        const vj = BUILT_IN_PRESETS[0]
+        const vj = BUILT_IN_PRESETS.find((preset) => preset.id === 'vj-windows')
         const frames = framesFromRects(vj.wide, area)
         frames.clock = { ...frames.clock, visible: false }
         const saved = presetFromArrangement({ name: 'x', source: 'show', windows: vj.windows, frames, area, previous: vj })

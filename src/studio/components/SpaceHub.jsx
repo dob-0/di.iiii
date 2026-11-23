@@ -51,6 +51,7 @@ import '../styles/studio-space-hub.css'
 import { SPACE_BLURB_MAX } from '../utils/spaceBlurb.js'
 import LoadingScreen from '../../components/LoadingScreen.jsx'
 import { spaceAddressOf } from '../../utils/spaceAddress.js'
+import { spaceCardPreviewMode } from '../utils/spaceCardMode.js'
 
 // Every space card embeds the SAME app at a different route, and browsers
 // coalesce overlapping requests for the same module: twelve cards booting
@@ -151,7 +152,7 @@ const PREVIEW_VIEWPORT_HEIGHT = 576
 // loop). The iframe only mounts while the card is near the viewport so
 // off-screen spaces cost nothing, and unmounts again when scrolled away to
 // free its WebGL context. Boots are queued through requestPreviewBoot above.
-function SpaceCardPreview({ doorPath, label }) {
+function SpaceCardPreview({ doorPath, label, blurb }) {
     const hostRef = useRef(null)
     const frameRef = useRef(null)
     const [visible, setVisible] = useState(false)
@@ -166,6 +167,10 @@ function SpaceCardPreview({ doorPath, label }) {
     const [hovered, setHovered] = useState(false)
     const [hoverPainted, setHoverPainted] = useState(false)
     const releaseRef = useRef(null)
+    // Default: a calm still, no hidden app per card (see spaceCardMode.js).
+    // The stored poster of the 'live' mode still wins when there is one.
+    const [mode] = useState(() => spaceCardPreviewMode())
+    const stillOnly = mode !== 'live' && !poster
 
     useEffect(() => {
         const node = hostRef.current
@@ -194,7 +199,7 @@ function SpaceCardPreview({ doorPath, label }) {
     }, [])
 
     useEffect(() => {
-        if (!visible || stub || poster) {
+        if (!visible || stub || poster || stillOnly) {
             setBooted(false)
             return undefined
         }
@@ -204,7 +209,7 @@ function SpaceCardPreview({ doorPath, label }) {
             releaseRef.current = null
             release()
         }
-    }, [visible, stub, poster])
+    }, [visible, stub, poster, stillOnly])
 
     // The embedded app posts dii:preview-ready once it has painted, or
     // dii:preview-stub when there is nothing to paint (a work left out of a
@@ -268,6 +273,13 @@ function SpaceCardPreview({ doorPath, label }) {
         <div ref={hostRef} className={`ssh-card-preview-fill${stub ? ' ssh-card-preview-fill--stub' : ''}`} aria-hidden="true">
             {stub ? (
                 <p className="ssh-card-preview-empty-line">not in this copy — this piece lives on {WORKS_HOST}</p>
+            ) : null}
+            {!stub && stillOnly ? (
+                <div className="ssh-card-still" data-card-still="">
+                    <span className="ssh-card-still-name">{label}</span>
+                    {blurb ? <span className="ssh-card-still-blurb">{blurb}</span> : null}
+                    <span className="ssh-card-still-hint">press to look inside</span>
+                </div>
             ) : null}
             {!stub && poster ? <img className="ssh-card-poster" src={poster} alt="" draggable={false} /> : null}
             {stub ? null : visible && (poster ? hovered : booted) ? (
@@ -1741,7 +1753,7 @@ export default function SpaceHub() {
                                                 ) : isEmptySandbox ? (
                                                     <p className="ssh-card-preview-empty-line">nothing in it yet — open it and put something in</p>
                                                 ) : (
-                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} />
+                                                    <SpaceCardPreview doorPath={buildSpaceFacePath(space)} label={space.label || space.id} blurb={space.blurb} />
                                                 )}
                                             </div>
                                         )

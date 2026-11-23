@@ -14,6 +14,8 @@ import { appNavigate } from '../utils/appNavigate.js'
 import { buildChatPath, buildPrivateChatPath } from './chatRouting.js'
 import { listRememberedConversations, readRoomSeen } from './privateChatIndex.js'
 import { claimManifest } from './claimManifest.js'
+import useDocumentTitle from '../hooks/useDocumentTitle.js'
+import { pageTitle } from '../hooks/pageTitles.js'
 
 // The list the app opens on.
 //
@@ -176,10 +178,11 @@ export default function ChatHomeSurface() {
     }, [people, filter])
 
     const loading = rooms === null
+    useDocumentTitle(pageTitle('chat'))
 
     return (
         <ThemeProvider theme={diTheme}>
-            <Box sx={{
+            <Box component="main" sx={{
                 position: 'fixed',
                 inset: 0,
                 display: 'flex',
@@ -187,6 +190,7 @@ export default function ChatHomeSurface() {
                 background: 'var(--ui-bg)',
                 color: 'var(--ui-text-primary)'
             }}>
+                <Box component="h1" sx={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>Chat</Box>
                 <Stack
                     direction="row"
                     alignItems="center"

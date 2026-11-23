@@ -2,6 +2,8 @@
 
 Canonical reference. Keep in sync with `SHORTCUT_SECTIONS` in `src/studio/components/StudioViewport.jsx` (the Shift+? overlay).
 
+Walk and fly keys (WASD, E/Q, F, L; physical keys): `docs/ai/keys.md`.
+
 **Rule:** Add every new shortcut to both this file AND the overlay. See `golden_rules.md` → "Shortcuts: every new shortcut goes in two places."
 
 ---

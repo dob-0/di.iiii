@@ -5,13 +5,15 @@
 import { MOVE_HINT, MOVE_LABEL, SPEED_LABEL, TURN_LABELS, autoLabel, metresText, useMoveSettings, useSpeedField } from '../navigation/useMoveSettings.js'
 import { TURN_MODES } from '../navigation/freeMove.js'
 import { MOVES, moveFor } from '../navigation/moves.js'
+import { FLY_KEYS, FLY_KEYS_LABEL, flyKeysFor } from '../navigation/flyKeys.js'
 import { EDIT_MOUSES, EDIT_MOUSE_LABEL, normalizeEditMouse } from '../navigation/editMouse.js'
 
 // `moves` is the list of named moves (moves.js); a test passes a second one. With one move: a heading line, no picker.
 export default function MoveSettings({ moves = MOVES }) {
-    const { speed, turn, move, editMouse, setSpeed, setTurn, setMove, setEditMouse, isAuto, auto } = useMoveSettings()
+    const { speed, turn, move, editMouse, flyKeys, setSpeed, setTurn, setMove, setEditMouse, setFlyKeys, isAuto, auto } = useMoveSettings()
     const field = useSpeedField({ speed, setSpeed })
     const current = moveFor(move, moves)
+    const flyChoice = flyKeysFor(flyKeys)
     const mouse = EDIT_MOUSES.find((m) => m.id === normalizeEditMouse(editMouse))
     return (
         <>
@@ -44,6 +46,18 @@ export default function MoveSettings({ moves = MOVES }) {
                     ))}
                 </div>
                 <div className="insp-label">{mouse.about}</div>
+            </div>
+            {/* The fly keys (navigation/flyKeys.js): E up / Q down (default) or Q up / E down (the old pair, kept as a mode). */}
+            <div className="insp-field move-fly-keys" data-testid="fly-keys-row">
+                <span className="insp-label">{FLY_KEYS_LABEL}</span>
+                <div className="scc-buttons" role="group" aria-label={FLY_KEYS_LABEL}>
+                    {FLY_KEYS.map((f) => (
+                        <button key={f.id} type="button" className={`scc-btn${flyChoice.id === f.id ? ' active' : ''}`} aria-pressed={flyChoice.id === f.id} onClick={() => setFlyKeys(f.id)}>
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
+                <div className="insp-label">{flyChoice.about}</div>
             </div>
             <div className="insp-field">
                 <label className="insp-label" htmlFor="studio-move-speed">{SPEED_LABEL}</label>

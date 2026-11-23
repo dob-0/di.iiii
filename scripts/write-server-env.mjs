@@ -55,6 +55,9 @@ const optionalValues = {
     SHARED_ROOT: process.env.SHARED_ROOT || '',
     SPACE_TTL_MS: process.env.SPACE_TTL_MS || '',
     SANDBOX_TTL_MS: process.env.SANDBOX_TTL_MS || '',
+    // A space file sent in parts (`di open --to`): total cap and part size, in MB.
+    MAX_BUNDLE_MB: process.env.MAX_BUNDLE_MB || '',
+    BUNDLE_PART_MB: process.env.BUNDLE_PART_MB || '',
     SPACES_DIR: process.env.SPACES_DIR || '',
     UPLOADS_DIR: process.env.UPLOADS_DIR || '',
     // One-click GitHub space-sync (dii-space-sync App). Sourced from the

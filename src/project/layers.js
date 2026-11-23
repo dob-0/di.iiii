@@ -134,6 +134,47 @@ const ZERO_COUNTS = Object.freeze({
     page: false
 })
 
+// The one rule: from a project's counts to what each layer holds and which
+// layers are open. A missing field reads as 0 / false, so it takes the counts
+// of a document (readProjectLayers) and the counts of a project LIST row alike
+// (GET /api/spaces/:id/projects drops every zero, serverXR projectRoutes.js
+// readLayerCounts), and answers the same for both.
+const layerRulesOf = (counts) => {
+    const n = (key) => Number(counts?.[key]) || 0
+    const holds = {
+        things: n('things') > 0,
+        connections: n('nodes') > 0 || n('wires') > 0,
+        wall: n('surfaces') > 0 || n('pictureOuts') > 0,
+        lamps: n('joinedLamps') > 0 || n('lightCues') > 0,
+        handover: Boolean(counts?.shared || counts?.exported)
+    }
+    const open = {
+        space: true,
+        things: true,
+        connections: holds.things || holds.connections,
+        wall: holds.connections || holds.wall,
+        lamps: n('lamps') > 0 || holds.lamps,
+        handover: holds.things || holds.handover
+    }
+    return { holds, open }
+}
+
+/**
+ * The layers a project has reached, from its counts: exactly the object the top
+ * bar receives as its `layers` prop while that project is open (the `open` of
+ * readProjectLayers; SurfaceBar.jsx layerReached reads it). Pure; no document,
+ * no request. For a list row: `openLayersFromCounts(row.layers)`.
+ *
+ * @param {object|null|undefined} counts  the fields of countProjectLayers; a
+ *                           missing field is 0 or false
+ * @returns {null | Record<'space'|'things'|'connections'|'wall'|'lamps'|'handover', boolean>}
+ *                           null when `counts` is not an object ("not known")
+ */
+export function openLayersFromCounts(counts) {
+    if (!counts || typeof counts !== 'object') return null
+    return layerRulesOf(counts).open
+}
+
 /**
  * What each layer of a project holds, and which layers are open.
  *
@@ -214,22 +255,7 @@ export function readProjectLayers(document, { loaded = true } = {}) {
         pageBytes: page ? pageSize(presentation) : 0
     }
 
-    const holds = {
-        things: counts.things > 0,
-        connections: counts.nodes > 0 || counts.wires > 0,
-        wall: counts.surfaces > 0 || counts.pictureOuts > 0,
-        lamps: counts.joinedLamps > 0 || counts.lightCues > 0,
-        handover: counts.shared || counts.exported
-    }
-
-    const open = {
-        space: true,
-        things: true,
-        connections: holds.things || holds.connections,
-        wall: holds.connections || holds.wall,
-        lamps: counts.lamps > 0 || holds.lamps,
-        handover: holds.things || holds.handover
-    }
+    const { holds, open } = layerRulesOf(counts)
 
     const empty = !Object.values(holds).some(Boolean) && !counts.page
 

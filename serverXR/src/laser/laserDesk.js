@@ -1,0 +1,1193 @@
+// THE LASER DESK (2026-10-29) — the light desk's twin for the LaserCubes.
+//
+// The owner's ask: "lets create laser soft like how is lighting one" — inside di. The light desk (serverXR/src/lighting)
+// is a bank of scenes, a live state you edit, a master and a clock, all run by the server so the rig keeps going when a
+// browser tab sleeps. This is the same for the cubes: a bank of LOOKS (a shape, its colour and its movement on the
+// beat), one LIVE look you edit, a MASTER level, a BPM clock with tap, and per-cube setup (on, mirror, size, offset).
+//
+// What it is to the laser engine: one more sender, the Laser Out `desk` (laserEngine.js rule 10), exactly like the show
+// player (laserShow.js). Every tick it draws each cube's frame and keeps it in the engine (setFrame) when it changed,
+// keep-alive (alive) when it did not. NOTHING of the engine's safety moves: the cubes are DISARMED at every start, the
+// sign-off phrase is a person's to type, the keep-in zone, the galvo and still-beam guards and the signal-loss stop all
+// apply to the desk's frames as to any other. A cube another Out holds (a Nodes editor's Laser Out, the show player)
+// refuses the desk's frames; the desk says so per cube and draws nothing there.
+//
+// The pictures are the Laser node's own (shared/laserShapes.cjs: circle … grid, and the owner's four TouchDesigner
+// scenes galaxy, sunflower, noisy, grid), flattened the way Laser Out flattens a Laser shape's points
+// (shared/laserFrame.cjs flattenLaserPaths, no budget: the shape's own points, capped to what the cube takes).
+//
+// Nothing is on the cubes until someone presses a look (Go), and a restart comes back RELEASED: the bank, the clock
+// and the setup are kept in <data>/laser/desk.json, the live look is not.
+'use strict'
+
+const fs = require('fs')
+const path = require('path')
+const { LASER_SHAPES, shapeListOf, parseLaserColour } = require('../../../shared/laserShapes.cjs')
+const { flattenLaserPaths, FRAME_MAX_POINTS } = require('../../../shared/laserFrame.cjs')
+// A look drawn at a moment lives in shared/ (2026-10-29): the page's tiles play the looks with the same code.
+const { CUBE_DEFAULTS, normaliseCorners, beatsAt, lookPointsAt, LFO_WAVES, LFO_FIELDS, LFO_DEFAULT, LFO_BEATS_MIN, LFO_BEATS_MAX } = require('../../../shared/laserLook.cjs')
+// Follow the light desk (2026-10-31): the pure part and the origin rule live in sceneLink.js.
+const { sceneIdOf, fillLinks, mayDrive } = require('./sceneLink')
+
+const TICK_MS = 50 // as the show player: well inside the engine's signal-loss stop (FRAME_TIMEOUT_MS 200)
+const OUT = 'desk' // the desk's Laser Out name in the engine (one sender per cube)
+const FILE = 'desk.json'
+const SAVE_DELAY_MS = 400
+// Undo keeps this many steps of the bank; edits to one look closer than UNDO_JOIN_MS apart are one step (a slider drag).
+const UNDO_DEPTH = 100
+const UNDO_JOIN_MS = 1500
+const MAX_LOOKS = 128
+const BLANK = [0, 0, 0, 0, 0]
+// What one frame may be at the cube's rate when the engine has no plan yet (LaserOutPanelWindow.jsx cubeCap: 67 ms of
+// points, a 25 % margin for the galvo guards' extra points).
+const FRAME_CAP_S = 0.067
+const TAP_GAP_MS = 2000 // a tap more than this after the last one starts a new count
+// The music, heard by a desk page (ui/listen.js) and posted here about 20 times a second. Older than this, the desk
+// hears nothing: looks with Audio draw at their own size again.
+const AUDIO_STALE_MS = 600
+const KICK_FALL_MS = 140 // a kick swells the picture at once and lets go over this
+const SYNC_REACH_MS = 10000 // a beat the page reports must be this close to now
+const BPM_MIN = 20
+const BPM_MAX = 300
+
+const num = (v, d) => (typeof v === 'number' && Number.isFinite(v) ? v : typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v)) ? Number(v) : d)
+const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v)
+const round3 = (v) => Math.round(v * 1000) / 1000
+const bool = (v, d = false) => (v === true || v === 'true' || v === 1 ? true : v === false || v === 'false' || v === 0 ? false : d)
+const isLit = (p) => p[2] > 0 || p[3] > 0 || p[4] > 0
+
+// ---- looks (pure) --------------------------------------------------------------------------------------------------
+
+/** A look's every field, in range. A shape is one of LASER_SHAPES or a comma list of them (played in turn, `cycle`). */
+const LOOK_DEFAULTS = Object.freeze({
+    name: 'Look',
+    shape: 'circle',
+    colour: '#ff2030',
+    rainbow: false,
+    level: 1,
+    size: 0.45, // 0…1 of the field's half-width
+    height: 0.5, // the picture's centre up the field: 0.5 keeps a 0.45 picture inside the default keep-in zone (y ≥ 0)
+    x: 0, // the picture's centre across the field
+    rotation: 0, // turns
+    spin: 0, // turns per beat
+    copies: 0, // galaxy's spirals, noisy's rings (0 = the shape's own number)
+    points: 300,
+    cycle: 0, // beats each shape of a comma list plays (0 = the first only)
+    pulse: 0, // 0…1: the size breathes down by this much, once every pulseBeats
+    pulseBeats: 1,
+    sweep: 0, // 0…1: the picture swings across the field by this much, once every sweepBeats
+    sweepBeats: 4,
+    mirror: false, // every second cube mirrored (x → −x)
+    phase: 0, // beats each cube runs behind the one before it (a chase across the cubes)
+    react: 0, // 0…1: the size rides on the music's bass and kicks while the desk hears it (Audio, in the top bar)
+    displace: 0, // 0…1: the lines bend through a smooth field that drifts once round every 8 beats
+    wobble: 0, // 0…1: a ripple runs along every line, once round every wobbleBeats
+    wobbleBeats: 1,
+    strobe: 0, // flashes per beat, 0 (off) to 2: the picture is on for the first half of each
+    // From the owner's laser.html (2026-11-06 evening), shared/laserLook.cjs SPLIT_REACH:
+    speed: 1, // 0.25…4: how fast the shape moves by itself against the desk's beat
+    split: 0, // 0…1: the picture again in colour2, a little apart, as a laser's misaligned colours (red + green = yellow)
+    colour2: '#14ff28', // the split beam's colour
+    splitFar: 0, // 0…1: how far the split beam is from the first, near (0) to far (1) (shared/laserLook.cjs SPLIT_FAR)
+    flicker: 0, // 0…1: each beam's brightness dips at random every frame, by up to half
+    // Layers (2026-11-07, the owner: "we are adding + and opening same pattern copy and alll the paraamamtres"): more
+    // patterns, each with every setting of its own, drawn in the same signal (shared/laserLook.cjs LAYERS_PASS_MOST).
+    layers: [],
+    // LFO (2026-11-07, the owner: "add lfo paramatre for laser desk"): per slider, { on, wave, beats, depth }, the slider
+    // moving by itself on the desk's beat (shared/laserLook.cjs LFO_FIELDS).
+    lfo: {},
+    cubes: 'all', // 'all' or the cube ids this look draws on; the others are held dark
+    // The light scene this look follows (sceneLink.js): null = never set (the first fill may set it), '' = none, else the
+    // scene's id. A setting of the desk, not part of the picture: it is left out of samePicture and Save never copies it.
+    follows: null
+})
+
+const shapeOf = (v) => {
+    const names = shapeListOf(v).filter((s) => LASER_SHAPES.includes(s))
+    return names.length ? names.join(',') : LOOK_DEFAULTS.shape
+}
+const colourOf = (v, fallback = LOOK_DEFAULTS.colour) => {
+    const text = String(v ?? '').trim()
+    if (!/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(text)) return fallback
+    const rgb = parseLaserColour(text)
+    return '#' + rgb.map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
+}
+const idOf = (v) => String(v ?? '').trim().replace(/[^a-z0-9_-]/gi, '').slice(0, 40)
+const followsOf = (v) => (v === null || v === undefined ? null : sceneIdOf(v))
+/** Fields from a page's edit without the link: a link is set by setFollows only (one scene, one look). */
+const withoutFollows = (fields) => { const { follows: _link, ...rest } = fields && typeof fields === 'object' ? fields : {}; return rest }
+// "My colours" (2026-10-31, the owner: "on colos add color paleete and have new colors there as well"): the colours the
+// person keeps beside the desk's own swatches, as '#rrggbb', each once, at most PALETTE_MAX.
+const PALETTE_MAX = 24
+const paletteOf = (list) => [...new Set((Array.isArray(list) ? list : [])
+    .filter((c) => /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(c ?? '').trim()))
+    .map((c) => colourOf(c)))].slice(0, PALETTE_MAX)
+const clone = (v) => JSON.parse(JSON.stringify(v))
+/** Two looks draw the same picture: every field but the name (both normalised, so the fields come in one order). */
+const samePicture = (a, b) => {
+    const { name: _a, follows: _fa, ...pa } = a
+    const { name: _b, follows: _fb, ...pb } = b
+    return JSON.stringify(pa) === JSON.stringify(pb)
+}
+/** An id from a name that is not in `taken`: "star", "star-2"… */
+const freeId = (name, taken) => {
+    const stem = idOf(String(name || 'look').toLowerCase().replace(/\s+/g, '-')) || 'look'
+    let id = stem
+    for (let n = 2; taken.has(id); n += 1) id = `${stem}-${n}`
+    return id
+}
+/** The next free numbered name: "Star" → "Star 2", "Star 2" → "Star 3" when "Star 2" is taken. */
+const nextName = (name, taken) => {
+    const base = String(name).replace(/\s+\d+$/, '').trim() || 'Look'
+    for (let n = 2; ; n += 1) {
+        const candidate = `${base} ${n}`.slice(0, 40)
+        if (!taken.has(candidate)) return candidate
+    }
+}
+
+/** Any object as a look: unknown fields dropped, every known one clamped. `base` fills what `raw` leaves out. */
+// A look's layers: each a look of its own, every setting in range and its own lasers (cubes), without a name, an id or
+// layers of its own. Each laser draws ONE of them (2026-11-07, the owner, picking "copy on other lasers": the copy must
+// not double the signal): the last layer that picks it, else the look's own picture (shared/laserLook.cjs lookPointsAt).
+const MAX_LAYERS = 3
+const LAYER_SKIP = ['id', 'name', 'layers']
+// A layer's lasers default to NONE (not the look's 'all'): a copy is only seen in the Preview until its lasers are picked,
+// so a layer saved before it had Cubes never takes a laser from the pattern itself.
+const layersOf = (list) => (Array.isArray(list) ? list : []).filter((l) => l && typeof l === 'object').slice(0, MAX_LAYERS).map((l) => {
+    const look = normaliseLook({ ...l, layers: [], cubes: l.cubes === 'all' || Array.isArray(l.cubes) ? l.cubes : [] })
+    for (const k of LAYER_SKIP) delete look[k]
+    return look
+})
+// Every laser a look plays on: its own cubes and its layers', together ('all' when any is all).
+const cubesOf = (look) => {
+    const sets = [look.cubes, ...(Array.isArray(look.layers) ? look.layers.map((l) => l.cubes) : [])]
+    if (sets.some((s) => s === 'all' || !Array.isArray(s))) return 'all'
+    return [...new Set(sets.flat())]
+}
+const onCubes = (cubes, id) => cubes === 'all' || cubes.includes(id)
+// A look's LFOs: one per slider that may have one, every setting in range. One switched off keeps its settings, so
+// switching it back on brings back the wave it had.
+const lfoOf = (raw) => {
+    const out = {}
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out
+    for (const key of Object.keys(LFO_FIELDS)) {
+        const one = raw[key]
+        if (!one || typeof one !== 'object') continue
+        out[key] = {
+            on: one.on === undefined ? true : bool(one.on),
+            wave: LFO_WAVES.includes(one.wave) ? one.wave : LFO_DEFAULT.wave,
+            beats: clamp(num(one.beats, LFO_DEFAULT.beats), LFO_BEATS_MIN, LFO_BEATS_MAX),
+            depth: clamp(num(one.depth, LFO_DEFAULT.depth), 0, 1)
+        }
+    }
+    return out
+}
+const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
+    const r = raw && typeof raw === 'object' ? raw : {}
+    const pick = (k) => (r[k] !== undefined ? r[k] : base[k])
+    const cubes = pick('cubes')
+    return {
+        ...(idOf(r.id || base.id) ? { id: idOf(r.id || base.id) } : {}),
+        name: String(pick('name') ?? '').trim().slice(0, 40) || LOOK_DEFAULTS.name,
+        shape: shapeOf(pick('shape')),
+        colour: colourOf(pick('colour')),
+        rainbow: bool(pick('rainbow')),
+        level: clamp(num(pick('level'), 1), 0, 1),
+        size: clamp(num(pick('size'), LOOK_DEFAULTS.size), 0, 1),
+        height: clamp(num(pick('height'), LOOK_DEFAULTS.height), -1, 1),
+        x: clamp(num(pick('x'), 0), -1, 1),
+        rotation: clamp(num(pick('rotation'), 0), -1, 1),
+        spin: clamp(num(pick('spin'), 0), -4, 4),
+        copies: Math.round(clamp(num(pick('copies'), 0), 0, 24)),
+        points: Math.round(clamp(num(pick('points'), LOOK_DEFAULTS.points), 16, FRAME_MAX_POINTS - 8)),
+        cycle: clamp(num(pick('cycle'), 0), 0, 64),
+        pulse: clamp(num(pick('pulse'), 0), 0, 1),
+        pulseBeats: clamp(num(pick('pulseBeats'), 1), 0.25, 64),
+        sweep: clamp(num(pick('sweep'), 0), 0, 1),
+        sweepBeats: clamp(num(pick('sweepBeats'), 4), 0.25, 64),
+        mirror: bool(pick('mirror')),
+        phase: clamp(num(pick('phase'), 0), 0, 16),
+        react: clamp(num(pick('react'), 0), 0, 1),
+        displace: clamp(num(pick('displace'), 0), 0, 1),
+        wobble: clamp(num(pick('wobble'), 0), 0, 1),
+        wobbleBeats: clamp(num(pick('wobbleBeats'), 1), 0.25, 64),
+        strobe: clamp(num(pick('strobe'), 0), 0, 2),
+        speed: clamp(num(pick('speed'), 1), 0.25, 4),
+        split: clamp(num(pick('split'), 0), 0, 1),
+        colour2: colourOf(pick('colour2'), LOOK_DEFAULTS.colour2),
+        splitFar: clamp(num(pick('splitFar'), 0), 0, 1),
+        flicker: clamp(num(pick('flicker'), 0), 0, 1),
+        layers: layersOf(pick('layers')),
+        lfo: lfoOf(pick('lfo')),
+        cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all',
+        follows: followsOf(pick('follows'))
+    }
+}
+
+// Below this a cube's picture shrinks into still beams and the engine's still-beam guard stops it mid-show
+// (measured: 8 of 32 seed looks stop at 0.1, none at 0.3; review 1218 S3).
+const CUBE_SIZE_MIN = 0.3
+
+const CUBE_RANGE = Object.freeze({ size: [CUBE_SIZE_MIN, 3], x: [-1, 1], y: [-1, 1], order: [-999, 999] })
+
+/**
+ * A cube's place on the desk (CUBE_DEFAULTS, shared/laserLook.cjs), every field in range. `strict` (a person's change):
+ * a field that is not a number or lies outside its range is REFUSED with a RangeError and nothing changes, never pulled
+ * to the extreme (stage audit 2026-10-30, row 25). The file's own values are read without it (clamped, and said).
+ */
+const normaliseCube = (raw = {}, base = CUBE_DEFAULTS, { strict = false } = {}) => {
+    const r = raw && typeof raw === 'object' ? raw : {}
+    const pick = (k) => (r[k] !== undefined ? r[k] : base[k])
+    const field = (k, d) => {
+        const [lo, hi] = CUBE_RANGE[k]
+        if (strict && r[k] !== undefined) {
+            const n = num(r[k], NaN)
+            if (!Number.isFinite(n)) throw new RangeError(`${k}: "${String(r[k]).slice(0, 20)}" is not a number`)
+            if (n < lo || n > hi) throw new RangeError(`${k}: ${n} is outside ${lo} to ${hi}; nothing was changed`)
+        }
+        return clamp(num(pick(k), d), lo, hi)
+    }
+    return {
+        on: bool(pick('on'), true),
+        flipX: bool(pick('flipX')),
+        flipY: bool(pick('flipY')),
+        size: field('size', 1),
+        x: field('x', 0),
+        y: field('y', 0),
+        order: Math.round(field('order', 0)),
+        // Anything but a number keeps the brightness it had: a bad value never turns a cube up to full.
+        brightness: clamp(num(pick('brightness'), Number.isFinite(base.brightness) ? base.brightness : 1), 0, 1),
+        corners: normaliseCorners(pick('corners'), normaliseCorners(base.corners))
+    }
+}
+
+// The picture a cube shows while it is being mapped: the whole field's square, its cross and both diagonals (the
+// alignment picture, shape grid), so each corner and the middle can be laid on the wall. White, at the master.
+const MAP_TEST_LOOK = Object.freeze({ shape: 'grid', colour: '#ffffff', size: 1, height: 0, x: 0, points: 900 })
+
+// The first bank (an empty desk.json): the node's shapes and the owner's four TouchDesigner scenes, each with a move.
+// Colours as the owner's light desk keeps them: complementary pairs, no green (it can be picked, it is not a default).
+const SEED_LOOKS = [
+    { id: 'ring', name: 'Ring', shape: 'circle', colour: '#ff2030', pulse: 0.35, pulseBeats: 1 },
+    { id: 'star', name: 'Star', shape: 'star', colour: '#20d8ff', spin: 0.125 },
+    { id: 'fan', name: 'Fan', shape: 'fan', colour: '#ffffff', size: 0.5, height: 0.05, sweep: 0.25, sweepBeats: 8, mirror: true },
+    { id: 'wave', name: 'Wave', shape: 'wave', colour: '#3050ff', size: 0.6, phase: 0.25, sweep: 0.15, sweepBeats: 2 },
+    { id: 'triangle', name: 'Triangle', shape: 'triangle', colour: '#ff30c0', spin: -0.25 },
+    { id: 'square', name: 'Square', shape: 'square', colour: '#ffb020', size: 0.35, spin: 0.0625, phase: 0.5 },
+    { id: 'spiral', name: 'Spiral', shape: 'spiral', rainbow: true, spin: 0.25, points: 400 },
+    { id: 'scan', name: 'Scan', shape: 'line', colour: '#ff2030', size: 0.3, rotation: 0.25, sweep: 0.6, sweepBeats: 4, phase: 0.5 },
+    { id: 'galaxy', name: 'Galaxy', shape: 'galaxy', rainbow: true, spin: 0.0625, points: 600 },
+    { id: 'sunflower', name: 'Sunflower', shape: 'sunflower', colour: '#ffb020', spin: 0.03125, points: 600 },
+    { id: 'noisy', name: 'Noisy', shape: 'noisy', colour: '#20d8ff', points: 500 },
+    { id: 'grid', name: 'Grid', shape: 'grid', colour: '#ffffff', size: 0.45, points: 400 },
+    { id: 'td-cycle', name: 'TD cycle', shape: 'galaxy,sunflower,noisy,grid', cycle: 8, rainbow: true, spin: 0.0625, points: 600 },
+    { id: 'pairs', name: 'Pairs', shape: 'star', colour: '#ff30c0', spin: 0.25, mirror: true, pulse: 0.2, pulseBeats: 2 },
+    // 2026-10-29, the owner: "more minimalistic shapes and sparkle shapes".
+    { id: 'sparkle', name: 'Sparkle', shape: 'sparkle', colour: '#ffffff', size: 0.5 },
+    { id: 'twinkle', name: 'Twinkle', shape: 'twinkle', colour: '#20d8ff', size: 0.5 },
+    { id: 'glint', name: 'Glint', shape: 'glint', colour: '#ffffff', size: 0.3, spin: 0.125, pulse: 0.3, pulseBeats: 2 },
+    { id: 'ripple', name: 'Ripple', shape: 'rings', colour: '#ff2030', copies: 3, pulse: 0.25 },
+    { id: 'corners', name: 'Corners', shape: 'corners', colour: '#ffb020', size: 0.4, pulse: 0.15, pulseBeats: 2 },
+    { id: 'cross', name: 'Cross', shape: 'cross', colour: '#ff30c0', size: 0.35, spin: 0.125 },
+    // The same evening: "add animations of 5 vertcal lines, and to many spots, wobbling lines as well".
+    { id: 'lines', name: 'Lines', shape: 'lines', colour: '#ff2030', size: 0.5 },
+    { id: 'spots', name: 'Spots', shape: 'spots', colour: '#ffb020', size: 0.5 },
+    { id: 'wobble', name: 'Wobble', shape: 'wobble', colour: '#20d8ff', size: 0.5 },
+    // 2026-10-30: "more scenes like complex ones but minimalistic lines circle dots". Scenes plays five of them in turn,
+    // four bars each.
+    { id: 'planets', name: 'Planets', shape: 'planets', colour: '#20d8ff', size: 0.5, points: 400 },
+    { id: 'pendulum', name: 'Pendulum', shape: 'pendulum', colour: '#ffffff', size: 0.5, points: 400 },
+    { id: 'bounce', name: 'Bounce', shape: 'bounce', colour: '#ff2030', size: 0.5, points: 400 },
+    { id: 'radar', name: 'Radar', shape: 'radar', colour: '#ffb020', size: 0.5, points: 400 },
+    { id: 'constellation', name: 'Constellation', shape: 'constellation', colour: '#ff30c0', size: 0.5, points: 400 },
+    { id: 'clock', name: 'Clock', shape: 'clock', colour: '#ffffff', size: 0.5, points: 400 },
+    { id: 'horizon', name: 'Horizon', shape: 'horizon', colour: '#ffb020', size: 0.5, points: 400 },
+    { id: 'morse', name: 'Morse', shape: 'morse', colour: '#20d8ff', size: 0.5, points: 400 },
+    { id: 'scenes', name: 'Scenes', shape: 'planets,pendulum,radar,constellation,horizon', cycle: 16, colour: '#ff30c0', size: 0.5, points: 400 },
+    // 2026-10-31: a circle pulsing, winding into a spiral that runs out into the line round the whole square, and back.
+    { id: 'unfold', name: 'Unfold', shape: 'unfold', colour: '#20d8ff', size: 0.5, points: 900 },
+    // 2026-10-31, the owner: "more patterns for laser". Patterns plays five of them in turn, four bars each.
+    { id: 'lissajous', name: 'Lissajous', shape: 'lissajous', colour: '#ff30c0', size: 0.5, points: 600 },
+    { id: 'helix', name: 'Helix', shape: 'helix', colour: '#20d8ff', size: 0.5, points: 500 },
+    { id: 'tunnel', name: 'Tunnel', shape: 'tunnel', colour: '#ffffff', size: 0.5, points: 500 },
+    { id: 'echo', name: 'Echo', shape: 'echo', colour: '#ff2030', size: 0.5, points: 500 },
+    { id: 'sides', name: 'Sides', shape: 'sides', colour: '#ffb020', size: 0.5, points: 400 },
+    { id: 'count', name: 'Count', shape: 'count', colour: '#ff30c0', size: 0.5, points: 400 },
+    { id: 'rain', name: 'Rain', shape: 'rain', colour: '#20d8ff', size: 0.5, points: 400 },
+    { id: 'cube', name: 'Cube', shape: 'cube', colour: '#ffffff', size: 0.5, points: 500 },
+    { id: 'patterns', name: 'Patterns', shape: 'lissajous,tunnel,sides,cube,echo', cycle: 16, colour: '#ffb020', size: 0.5, points: 500 },
+    // The same night: "how laser dot can be small that much, too many dots".
+    { id: 'dust', name: 'Dust', shape: 'dust', colour: '#ffffff', size: 0.5, points: 400 },
+    // The same night: "pattern like heart cardiograma lines".
+    { id: 'heartbeat', name: 'Heartbeat', shape: 'heartbeat', colour: '#ff2030', size: 0.5, points: 600 },
+    // The same night: "one pattern smallest one point in middle".
+    { id: 'point', name: 'Point', shape: 'point', colour: '#ffffff', size: 0.5, points: 300 },
+    // The same night: "line line and grid becoming, also circle one then two three and mixing". Build plays the two in
+    // turn, each its own 16-beat loop.
+    { id: 'weave', name: 'Weave', shape: 'weave', colour: '#20d8ff', size: 0.5, points: 600 },
+    { id: 'venn', name: 'Venn', shape: 'venn', colour: '#ff30c0', size: 0.5, points: 500 },
+    { id: 'build', name: 'Build', shape: 'weave,venn', cycle: 16, colour: '#ffb020', size: 0.5, points: 600 },
+    // 2026-11-06, for the REA festival, four cubes: "it should be like lava concepts laser show". Lava's own colours, red
+    // to amber (the no-green rule holds: the green in an orange is part of the orange). Magma flows across the cubes (each
+    // half a beat behind the one before); Lava plays all six in turn, four bars each.
+    { id: 'lava', name: 'Lava lamp', shape: 'lava', colour: '#ff4000', size: 0.5, points: 600 },
+    { id: 'magma', name: 'Magma', shape: 'magma', colour: '#ff2010', size: 0.5, points: 600, phase: 0.5 },
+    { id: 'eruption', name: 'Eruption', shape: 'eruption', colour: '#ff7000', size: 0.5, points: 600 },
+    { id: 'bubble', name: 'Bubble', shape: 'bubble', colour: '#ff4000', size: 0.5, points: 500 },
+    { id: 'crack', name: 'Crack', shape: 'crack', colour: '#ffa000', size: 0.5, points: 500 },
+    { id: 'drip', name: 'Drip', shape: 'drip', colour: '#ff2010', size: 0.5, points: 600 },
+    { id: 'lava-show', name: 'Lava', shape: 'magma,lava,bubble,drip,crack,eruption', cycle: 16, colour: '#ff4000', size: 0.5, points: 600 },
+    // The same evening, "okay doing lava laser animation": the lava story in one line over four bars (a drop falls into
+    // the pool, the pool swells into a volcano, it erupts, it melts back).
+    { id: 'volcano', name: 'Volcano', shape: 'volcano', colour: '#ff4000', size: 0.5, points: 600 },
+    // Then the owner's laser.html: "organic, tangled, wandering strands", in its own colours, red split with green (its
+    // brief: "red + green beams slightly misaligned (they turn yellow where they overlap)"), and its flicker.
+    { id: 'strands', name: 'Strands', shape: 'strands', colour: '#ff190a', colour2: '#14ff28', split: 0.25, flicker: 0.4, size: 0.5, points: 600 },
+    // 2026-11-07, from the owner's references of solid-light pieces ("more line based stuff"): thin organic lines that
+    // flow, draw themselves, sweep and coil; and "Solid", the four in turn, 16 beats each.
+    { id: 'contour', name: 'Contour', shape: 'contour', colour: '#4060ff', size: 0.5, points: 600 },
+    { id: 'draw', name: 'Draw', shape: 'draw', colour: '#ffffff', size: 0.5, points: 600 },
+    { id: 'blade', name: 'Blade', shape: 'blade', colour: '#ffffff', copies: 3, size: 0.5, points: 600 },
+    { id: 'coil', name: 'Coil', shape: 'coil', colour: '#ffffff', size: 0.5, points: 600 },
+    { id: 'solid', name: 'Solid', shape: 'contour,draw,blade,coil', cycle: 16, colour: '#ffffff', size: 0.5, points: 600 },
+    // "flat 3 lines go down loop".
+    { id: 'down', name: 'Down', shape: 'down', colour: '#ffffff', size: 0.5, points: 600 },
+    // "spiral animation and inside of it … red dot scaning one point", then "spirall need to be red, dot white".
+    { id: 'vortex', name: 'Vortex', shape: 'vortex', colour: '#ff0020', colour2: '#ffffff', size: 0.5, points: 600 },
+    // 2026-11-07, the owner's TouchDesigner Phyllotaxis ("can we have the sameeee"): its dots, and its lines.
+    { id: 'phyllotaxis', name: 'Phyllotaxis', shape: 'phyllotaxis', colour: '#0090ff', size: 0.8, points: 600 },
+    { id: 'phyllolines', name: 'Phyllotaxis lines', shape: 'phyllolines', colour: '#0090ff', size: 0.6, points: 600 },
+    // "add pattern cross grid": down, crossed.
+    { id: 'crossgrid', name: 'Cross grid', shape: 'crossgrid', colour: '#ffffff', size: 0.5, points: 600 },
+    // "phylltaxis is starting one point which is slow from up going down and then it becoming chaotic and too many dots":
+    // centred (height 0), so the point starts at the very top of the picture. Points 600 = Phyllotaxis's dots, 27 at the peak.
+    { id: 'phyllochaos', name: 'Phyllo chaos', shape: 'phyllochaos', colour: '#0090ff', size: 0.8, height: 0, points: 600 },
+    // 2026-11-07, the REA show: "can you generate horse run animation in laser deck". Lava orange, one stride a beat.
+    { id: 'horse', name: 'Horse', shape: 'horse', colour: '#ff4000', size: 0.9, height: 0, points: 900 }
+].map((look) => normaliseLook(look))
+// The seed looks a bank saved before `seeded` was kept (2026-10-29 evening) had been offered: the first fourteen.
+const FIRST_SEEDS = ['ring', 'star', 'fan', 'wave', 'triangle', 'square', 'spiral', 'scan', 'galaxy', 'sunflower', 'noisy', 'grid', 'td-cycle', 'pairs']
+
+// ---- the frame (pure) ----------------------------------------------------------------------------------------------
+// beatsAt and lookPointsAt: shared/laserLook.cjs.
+
+/** What one frame may hold for this cube, from the engine's own figures (as Laser Out reads them), or null. */
+const capOf = (cubeState) => {
+    const path = cubeState?.path
+    const ratio = path?.pointsIn > 0 && path?.pointsOut > 0 ? Math.min(1, path.pointsIn / path.pointsOut) : 0.75
+    if (Number.isFinite(path?.budget) && path.budget > 0) return Math.floor(path.budget * ratio)
+    const rate = cubeState?.info?.dacRate
+    if (Number.isFinite(rate) && rate > 0) return Math.floor(rate * FRAME_CAP_S * 0.75)
+    return null
+}
+
+/** A numeric hash of a frame: the same picture is kept alive, not sent again. */
+const hashPoints = (points) => {
+    let h = 2166136261
+    for (const p of points) for (let i = 0; i < 5; i += 1) h = Math.imul(h ^ Math.round(p[i] * 4096), 16777619)
+    return `${points.length}:${h >>> 0}`
+}
+
+// ---- the desk ------------------------------------------------------------------------------------------------------
+
+/**
+ * @param {{ dataDir: string, getEngine: () => object, now?: () => number, setInterval?: Function,
+ *   clearInterval?: Function, log?: object }} opts
+ */
+const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: every = setInterval, clearInterval: stopEvery = clearInterval, log = null, lightScenes: scenesOfLight = null }) => {
+    const file = path.join(dataDir, FILE)
+    const show = { bpm: 120, master: 1, looks: SEED_LOOKS.map((l) => ({ ...l })), cubes: {}, blackoutKeepsArm: false, seeded: SEED_LOOKS.map((l) => l.id), followLight: false, palette: [] }
+    let seedsAdded = false
+    const clock = { bpm: 120, zero: now(), taps: [] }
+    let live = null // the look on the cubes (a copy: editing it never touches the bank until Store)
+    let liveId = null // the bank's look it came from
+    // Per laser (2026-11-07, the owner: "send differnet signals to each laser"): a look sent to some lasers only (go's
+    // `to`) plays on them over the look on all, as a lighting desk's selected fixtures take a palette; sending to all
+    // clears them. cubeId → { look: a copy, as `live`; id: the bank's look it came from, or null once that is deleted }.
+    const liveBy = new Map()
+    const copyOf = (look) => ({ ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' })
+    let blackout = false
+    let engineDark = false // the engine's dark latch is ours (keep-arm Blackout); only then is it lifted, and never by building an engine
+    let timer = null
+    let holding = false // the desk's own On with nothing live: it keeps its hold (N1591)
+    let ownOn = false // a cube's own On on the desk happened (the lane said so): Release switches such cubes off (review O1)
+    const sent = new Map() // cubeId → { key, end, held, points, at }
+    const mapTest = new Set() // cubes showing the mapping picture instead of the live look (not saved)
+    const testLook = normaliseLook(MAP_TEST_LOOK)
+    // The music a desk page last posted (hearAudio, below): the bass and the last kick, for looks with Audio.
+    let audio = { low: 0, level: 0, kickAt: -Infinity, at: -Infinity }
+    const audioAt = (t) => (t - audio.at > AUDIO_STALE_MS ? null : Math.max(audio.low, Math.exp(-(t - audio.kickAt) / KICK_FALL_MS)))
+    let saveTimer = null
+    let dirty = false // the bank changed since desk.json was last written (Save)
+    let loadMessage = null
+    // Follow the light desk (sceneLink.js). `lastFollow` is the newest scene the link was asked about, for the page.
+    let lastFollow = null
+
+    // ---- the file
+    try {
+        const raw = JSON.parse(fs.readFileSync(file, 'utf8'))
+        if (Array.isArray(raw.looks)) show.looks = raw.looks.slice(0, MAX_LOOKS).map((l) => normaliseLook(l)).filter((l) => l.id)
+        if (raw.cubes && typeof raw.cubes === 'object') for (const [id, c] of Object.entries(raw.cubes)) {
+            if (!idOf(id)) continue
+            try { normaliseCube(c, CUBE_DEFAULTS, { strict: true }) } catch (error) {
+                loadMessage = `${loadMessage ? loadMessage + '; ' : ''}desk.json: ${idOf(id)} placement ${error.message.replace('; nothing was changed', '')}; pulled to the nearest edge, check Setup`
+                log?.warn?.(`[laser desk] ${loadMessage}`)
+            }
+            show.cubes[idOf(id)] = normaliseCube(c)
+        }
+        show.master = clamp(num(raw.master, 1), 0, 1)
+        show.blackoutKeepsArm = raw.blackoutKeepsArm === true
+        show.followLight = raw.followLight === true
+        show.palette = paletteOf(raw.palette)
+        show.bpm = clamp(num(raw.bpm, 120), BPM_MIN, BPM_MAX)
+        clock.bpm = show.bpm
+        // A seed look added since this bank was saved joins it at the end, once: `seeded` lists the seeds it has been
+        // offered, so one the owner deleted is not offered again.
+        const offered = Array.isArray(raw.seeded) ? raw.seeded.map(idOf).filter(Boolean) : FIRST_SEEDS
+        const fresh = SEED_LOOKS.filter((l) => !offered.includes(l.id) && !show.looks.some((x) => x.id === l.id))
+        show.looks.push(...fresh.slice(0, Math.max(0, MAX_LOOKS - show.looks.length)).map((l) => ({ ...l })))
+        show.seeded = [...new Set([...offered, ...SEED_LOOKS.map((l) => l.id)])]
+        seedsAdded = fresh.length > 0
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            // A file that does not read is kept beside, never overwritten: the bank in it may be someone's evening.
+            loadMessage = `desk.json did not read (${error.message}); started from the first bank, the file kept as desk.json.bad`
+            try { fs.copyFileSync(file, file + '.bad') } catch { /* nothing to keep */ }
+            log?.warn?.(`[laser desk] ${loadMessage}`)
+        }
+    }
+    // The bank as last saved: what desk.json holds. Edits change show.looks; only Save (saveBank) and Store move them
+    // here. A write for the clock, the master or the setup writes this bank, never an edit Save has not seen.
+    let savedLooks = clone(show.looks)
+    const commit = () => { savedLooks = clone(show.looks); dirty = false }
+    const saveNow = () => {
+        saveTimer = null
+        try {
+            fs.mkdirSync(dataDir, { recursive: true })
+            const tmp = file + '.tmp'
+            fs.writeFileSync(tmp, JSON.stringify({ v: 1, bpm: show.bpm, master: show.master, blackoutKeepsArm: show.blackoutKeepsArm, followLight: show.followLight, looks: savedLooks, cubes: show.cubes, seeded: show.seeded, palette: show.palette }, null, 1))
+            fs.renameSync(tmp, file)
+            return true
+        } catch (error) {
+            log?.warn?.(`[laser desk] desk.json could not be written: ${error.message}`)
+            return false
+        }
+    }
+    const save = () => { if (!saveTimer) { saveTimer = setTimeout(saveNow, SAVE_DELAY_MS); saveTimer.unref?.() } }
+    if (seedsAdded) save()
+
+    // ---- the cubes: the engine's, in the desk's order
+    const cubeCfg = (id) => show.cubes[id] || CUBE_DEFAULTS
+    const orderedCubes = (engineCubes) => engineCubes
+        .map((c, i) => ({ c, i }))
+        .sort((a, b) => cubeCfg(a.c.id).order - cubeCfg(b.c.id).order || a.i - b.i)
+        .map(({ c }) => c)
+
+    // A person's Go (a look pressed, a blackout lifted) counts once: the first frame after it carries `go: true`, so the
+    // engine may light a cube it stopped (still beam, frame too long). Nothing else the desk sends can (review D1).
+    let goSeq = 0
+    // The Go a cube the desk has no record of counts as seen (null = none seen: its first frame is a Go). The scene link sets
+    // it to the newest Go, so the link's frames never carry go: true (a Go is a person's: stopResume "person").
+    let linkBase = null
+    let lastEngine = null
+    let seenBlackouts = 0
+    // The engine's Blackout (POST /laser/api/blackout, from any page) clears every frame. The desk must not draw
+    // them straight back: the engine counts its blackouts, and when the count rises the desk goes to its own
+    // blackout — lit on the page, kept until a person lifts it. Counted, not inferred from the frames, so it holds
+    // whatever the desk sent last, and a Go after a blackout met while released is dark too (review 1218 S1).
+    const watchEngine = () => {
+        const engine = getEngine()
+        const count = engine.frames().blackouts ?? 0
+        // A config reload (Use these) builds a new engine with no frames: everything is sent again, not kept alive.
+        if (engine !== lastEngine) { for (const s of sent.values()) s.key = null; lastEngine = engine; seenBlackouts = 0 }
+        // A new engine counts from 0, so a Blackout it already took is new to the desk (review 1224 F1).
+        if (count > seenBlackouts) {
+            seenBlackouts = count
+            if (!blackout) {
+                blackout = true
+                log?.warn?.('[laser desk] the laser engine was blacked out: the desk holds its blackout until it is lifted')
+            }
+        }
+        return engine
+    }
+    // The desk's own On with nothing live (N1591): in darkOff 'never' the desk keeps its hold on the cubes it armed (out
+    // 'desk'), so "its Out let go" does not switch them off after CLAIM_TTL_MS. alive() touches the hold; the only desk frame
+    // an idle desk can have left is the BLANK of a Release, so nothing is lit by it. The hold is this tick: a desk that stops
+    // (crash, restart, Release) stops holding, and the engine's Out-let-go rule switches the cube off as before. In 'auto'
+    // nothing is held (the 5 s rule decides, unchanged). The lane calls keepHold() after a desk On.
+    const holdIdle = () => {
+        if (!holding) return
+        const engine = getEngine()
+        const st = engine.state()
+        const mine = st.darkOff === 'never' ? st.cubes.filter((c) => c.armed && c.claimedBy === OUT) : []
+        for (const c of mine) engine.alive(c.id, OUT)
+        if (!mine.length) { holding = false; if (timer) { stopEvery(timer); timer = null } }
+    }
+    const keepHold = () => {
+        ownOn = true
+        // The hold runs only in darkOff 'never'; in 'auto' the desk starts nothing (the 5 s rule decides, unchanged: review O2).
+        if (getEngine().state().darkOff !== 'never') return { ok: true, holding: false }
+        holding = true
+        startTicking()
+        return { ok: true, holding: true }
+    }
+    const tickOnce = () => {
+        if (!live && !liveBy.size && !mapTest.size) return holdIdle()
+        const engine = watchEngine()
+        const st = engine.state()
+        const zone = st.zone
+        const cubes = orderedCubes(st.cubes).filter((c) => cubeCfg(c.id).on)
+        const t = now()
+        cubes.forEach((cube, index) => {
+            // A laser's own look first, else the look on all. No look for it: a cube the desk drew on goes dark (its look
+            // moved off it: the last picture must not stay frozen there); the others stay with whoever has them.
+            const own = liveBy.get(cube.id)?.look ?? null
+            const look = own || live
+            if (!look && !mapTest.has(cube.id) && !sent.has(cube.id)) return
+            const was = sent.get(cube.id) || { key: null, end: null, held: null, points: 0, at: 0, seq: linkBase }
+            const cfg = cubeCfg(cube.id)
+            const drawn = Boolean(own) || Boolean(live && onCubes(cubesOf(live), cube.id))
+            const stats = { lit: 0, off: 0 }
+            // Mapping: the alignment picture over the cube's whole field (its size and offset left out), through its map.
+            const raw = blackout ? [BLANK]
+                : mapTest.has(cube.id) ? lookPointsAt(testLook, { t, clock, index: 0, cube: { ...cfg, size: 1, x: 0, y: 0 }, master: show.master, stats })
+                    : !drawn ? [BLANK]
+                        : lookPointsAt(look, { t, clock, index, cube: cfg, cubeId: cube.id, master: show.master, audio: audioAt(t), stats })
+            // Lit points the look kept on the field but the engine's keep-in zone will blank (rows 19, 23, 36).
+            const zoneCut = zone ? raw.filter((p) => isLit(p) && (p[0] < zone.xMin || p[0] > zone.xMax || p[1] < zone.yMin || p[1] > zone.yMax)).length : 0
+            let points = [BLANK]
+            let end = was.end
+            if (raw.some(isLit)) {
+                const flat = flattenLaserPaths(raw, { budget: null, start: was.end, cap: capOf(cube) ?? FRAME_MAX_POINTS })
+                if (flat.points.length) { points = flat.points; end = flat.end }
+            }
+            const key = hashPoints(points)
+            // A keep-alive only while the engine still holds the desk's picture. One it no longer has (a Blackout from
+            // another page cleared it while the desk's picture was dark, so the key did not change) is posted again,
+            // never counted as sent: else the cube had no frame and the dark rule switched it off (N1585).
+            const alive = key === was.key && !was.held ? engine.alive(cube.id, OUT) : null
+            const res = alive && !(alive.ok && alive.kept === false) ? alive : engine.setFrame(cube.id, points, OUT, { go: was.seq !== goSeq })
+            const count = { lit: points.filter(isLit).length, blanked: zoneCut, offField: stats.off, source: stats.lit }
+            sent.set(cube.id, res.ok
+                ? { key, end, held: null, points: points.length, at: t, seq: goSeq, ...count }
+                : { key: null, end: was.end, held: res.error || 'refused', points: 0, at: t, seq: was.seq, lit: 0, blanked: 0, offField: 0, source: 0 })
+        })
+    }
+    // The 50 ms tick never throws: an error is logged once per distinct message and the next tick runs (audit row 29).
+    const tickErrors = new Set()
+    const tick = () => {
+        try { tickOnce() } catch (error) {
+            const message = String(error?.message || error)
+            if (!tickErrors.has(message)) {
+                if (tickErrors.size >= 50) tickErrors.clear()
+                tickErrors.add(message)
+                log?.warn?.(`[laser desk] tick failed: ${message} (the desk keeps ticking)`)
+            }
+        }
+    }
+
+    const startTicking = () => {
+        if (timer) return
+        timer = every(tick, TICK_MS)
+        timer?.unref?.()
+    }
+
+    // Every cube the desk drew on goes dark, and the desk stops sending: its hold on them runs out (CLAIM_TTL_MS),
+    // so a Nodes Laser Out or the show player can take them.
+    const liftEngineDark = () => { if (engineDark) { engineDark = false; getEngine().dark(false) } }
+    const release = () => {
+        const was = live !== null || liveBy.size > 0 || mapTest.size > 0
+        live = null
+        liveId = null
+        // Release also lifts the desk's blackout (the top-bar Blackout button only ever turns it on; audit row 30).
+        blackout = false
+        liftEngineDark()
+        holding = false
+        liveBy.clear()
+        mapTest.clear()
+        if (timer) { stopEvery(timer); timer = null }
+        // Only cubes the desk drew on or armed by its own On are touched: a desk that did neither must not build an engine to say so.
+        if (sent.size || ownOn) {
+            const engine = getEngine()
+            // Dark first, then the cube is switched OFF (never resumed): a cube the desk let go of must not stay armed with
+            // output on for the next Out to light (review E2, desk half). That includes a cube armed by its own On while
+            // nothing was live: the desk holds it but never drew on it, so it is not in `sent` (review O1, N1591).
+            const off = [...sent].filter(([, s]) => !s.held).map(([id]) => id)
+            for (const c of engine.state().cubes) if (c.armed && c.claimedBy === OUT && !off.includes(c.id)) off.push(c.id)
+            for (const id of off) { engine.setFrame(id, [BLANK], OUT); engine.arm({ armed: false, cube: id, out: OUT }) }
+        }
+        ownOn = false
+        sent.clear()
+        if (was) log?.info?.('[laser desk] released')
+        return { ok: true }
+    }
+
+    const knownCubes = () => getEngine().state().cubes.map((c) => c.id)
+    const resend = (c) => { const s = sent.get(c); if (s) s.key = null }
+    // The look on these lasers only; the other lasers keep what they play.
+    const playOn = (look, cubes) => { for (const c of cubes) { liveBy.set(c, { look: copyOf(look), id: look.id }); resend(c) } }
+    // The look on every laser.
+    const playOnAll = (look) => {
+        live = copyOf(look)
+        liveId = look.id
+        liveBy.clear()
+        for (const s of sent.values()) s.key = null
+    }
+
+    /**
+     * The look on the cubes: onto the lasers in `to` (Send to), else onto the lasers its Cubes pick, else onto every one.
+     * 2026-11-07, the owner, showing the editor's Cubes: "choose each liser and then going anorher pattern choosing laser":
+     * a look's Cubes are where it plays. The lasers it does not pick keep their own look (before, they went dark).
+     * `person`: a person's Go, which counts once (goSeq) and so may light a cube the engine stopped (stopResume "person").
+     * The scene link is not a person: it changes the live look and nothing else (followScene). Returns an error or null.
+     */
+    const putLive = (look, { person, to }) => {
+        const known = new Set(knownCubes())
+        if (Array.isArray(to) && to.length) {
+            const targets = [...new Set(to.map(idOf))].filter((c) => known.has(c))
+            if (!targets.length) return { ok: false, status: 400, error: 'to: none of those lasers is on this desk' }
+            playOn(look, targets)
+        } else {
+            const where = cubesOf(look)
+            const picked = Array.isArray(where) ? where.filter((c) => known.has(c)) : []
+            // Cubes naming no laser on this desk (an old setup): the look goes on all, drawn only where it picks, as before.
+            if (picked.length) playOn(look, picked)
+            else playOnAll(look)
+        }
+        if (person) goSeq += 1
+        else { linkBase = goSeq; for (const s of sent.values()) s.seq = goSeq } // the link is never a Go, also for a cube it has not drawn on
+        watchEngine()
+        tick()
+        startTicking()
+        return null
+    }
+    const go = (id, to) => {
+        const look = show.looks.find((l) => l.id === idOf(id))
+        if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
+        const bad = putLive(look, { person: true, to })
+        if (bad) return bad
+        return { ok: true, live: liveId, liveBy: liveByOut() }
+    }
+    // Each laser's own look, for the page: cubeId → { id, name }.
+    const liveByOut = () => Object.fromEntries([...liveBy].map(([c, m]) => [c, { id: m.id, name: m.look.name }]))
+    const cubeList = (cubes, all) => (cubes === 'all' ? all : cubes)
+    // A look of the bank changed (an edit, an undo): every laser playing it follows. `before` is the look as it was: when
+    // its Cubes changed while it plays, it moves onto the lasers it now picks and leaves the ones it dropped (they go back
+    // to the look on all, else dark). Picking All puts it on every laser.
+    const followLook = (look, before = null) => {
+        const onAll = Boolean(live && liveId === look.id)
+        const onSome = [...liveBy.values()].some((m) => m.id === look.id)
+        // Its lasers: its own Cubes and its layers' (cubesOf).
+        const beforeCubes = before ? cubesOf(before) : null
+        const nowCubes = cubesOf(look)
+        if ((onAll || onSome) && before && JSON.stringify(beforeCubes) !== JSON.stringify(nowCubes)) {
+            if (nowCubes === 'all') { playOnAll(look); return true }
+            const all = knownCubes()
+            const was = new Set(cubeList(beforeCubes, all))
+            const now = new Set(nowCubes)
+            for (const [c, m] of [...liveBy]) if (m.id === look.id && !now.has(c)) { liveBy.delete(c); resend(c) }
+            const added = nowCubes.filter((c) => !was.has(c) && all.includes(c))
+            if (onAll) {
+                // The look on all draws only where its Cubes pick: a laser just picked drops its own look to show it.
+                live = copyOf(look)
+                for (const c of added) if (liveBy.delete(c)) resend(c)
+                for (const c of all) resend(c)
+            }
+            if (onSome) playOn(look, added)
+            for (const [c, m] of liveBy) if (m.id === look.id) liveBy.set(c, { look: copyOf(look), id: look.id })
+            return true
+        }
+        let moved = false
+        if (onAll) { live = copyOf(look); moved = true }
+        for (const [c, m] of liveBy) if (m.id === look.id) { liveBy.set(c, { look: copyOf(look), id: look.id }); moved = true }
+        return moved
+    }
+
+    // ---- the bank as the page edits it (2026-10-29, the owner, after a Preview-and-Send try: "like in resolume … keep
+    // changes for each scene and add save bottom"). Each look keeps its own changes: an edit changes the look in the bank
+    // at once, and a look on the cubes shows it at once, like a playing clip. Bank changes (edit, copy, rename, delete,
+    // order) are kept here and written by Save (or by any other write, and by a clean stop); `unsaved` says so.
+
+    /** Change a look of the bank; the cubes follow when it is the one on them. */
+    const editLook = (id, fields = {}) => {
+        const i = show.looks.findIndex((l) => l.id === idOf(id))
+        if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+        // `step: true` (the editor's Reset) is a step of its own, never joined to the slider's edits just before it.
+        if (fields.step === true) lastStep = null
+        remember('edit', show.looks[i].id)
+        const before = show.looks[i]
+        show.looks[i] = normaliseLook({ ...withoutFollows(fields), id: before.id }, before)
+        dirty = true
+        if (followLook(show.looks[i], before)) tick()
+        return { ok: true, look: show.looks[i] }
+    }
+
+    /** A copy of a look as a new tile right after it (the page edits the copy). */
+    const copyLook = (id) => {
+        const i = show.looks.findIndex((l) => l.id === idOf(id))
+        if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+        if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
+        const name = `${show.looks[i].name} 2`.slice(0, 40)
+        const look = normaliseLook({ ...show.looks[i], id: newId(name), name, follows: null }) // a copy never takes the link
+        remember('copy')
+        show.looks.splice(i + 1, 0, look)
+        dirty = true
+        return { ok: true, id: look.id }
+    }
+
+    // ---- undo (2026-10-30, the owner: "add delete ctl z ctrl v ctrl c and other shortkeys"): the bank before each change
+    // (an edit, a copy, a paste, a delete, a rename, the order, Store, a Save's new scenes), at most UNDO_DEPTH steps.
+    // Edits to one look in a row are one step (a slider dragged) until another change comes or UNDO_JOIN_MS passes without
+    // an edit. Sending a look to the laser is not a change of the bank and is not undone; a look on the laser follows an
+    // undo, as it follows an edit. A Save already on disk stays there: after an undo, Save lights again.
+    const past = []
+    const future = []
+    let lastStep = null // { kind, id, at }: what the newest step was, to join a slider's edits
+    const snapshot = () => ({ looks: clone(show.looks), liveId })
+    const remember = (kind, id = null) => {
+        const t = now()
+        if (kind === 'edit' && lastStep?.kind === 'edit' && lastStep.id === id && t - lastStep.at < UNDO_JOIN_MS) {
+            lastStep.at = t
+            return
+        }
+        past.push(snapshot())
+        if (past.length > UNDO_DEPTH) past.shift()
+        future.length = 0
+        lastStep = { kind, id, at: t }
+    }
+    // The bank as it was; the look on the laser shows its picture there (or the cubes play on when it is gone).
+    const restore = (snap) => {
+        const was = new Map(show.looks.map((l) => [l.id, l]))
+        // The links are a setting of the desk, not part of the bank's history: an undo brings the pictures back and the links stay as they are now.
+        const links = new Map(show.looks.map((l) => [l.id, l.follows ?? null]))
+        show.looks = clone(snap.looks).map((l) => (links.has(l.id) ? { ...l, follows: links.get(l.id) } : l))
+        const has = (id) => id !== null && show.looks.some((l) => l.id === id)
+        if (!has(liveId)) liveId = has(snap.liveId) ? snap.liveId : null
+        dirty = JSON.stringify(show.looks) !== JSON.stringify(savedLooks)
+        lastStep = null
+        let moved = false
+        for (const look of show.looks) if (followLook(look, was.get(look.id) ?? null)) moved = true
+        if (moved) tick()
+    }
+    const undo = () => {
+        if (!past.length) return { ok: true, undone: false }
+        future.push(snapshot())
+        restore(past.pop())
+        return { ok: true, undone: true }
+    }
+    const redo = () => {
+        if (!future.length) return { ok: true, redone: false }
+        past.push(snapshot())
+        restore(future.pop())
+        return { ok: true, redone: true }
+    }
+
+    /** A copied look (Ctrl+V; from this desk or another) as a new tile after `after`, else at the end. */
+    const pasteLook = (raw, after) => {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, status: 400, error: 'look: the look to paste' }
+        if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
+        const base = normaliseLook({ ...raw, id: undefined })
+        const names = new Set(show.looks.map((l) => l.name))
+        const name = names.has(base.name) ? nextName(base.name, names) : base.name
+        const look = normaliseLook({ ...base, id: newId(name), name, follows: null })
+        remember('paste')
+        const i = show.looks.findIndex((l) => l.id === idOf(after))
+        show.looks.splice(i < 0 ? show.looks.length : i + 1, 0, look)
+        dirty = true
+        return { ok: true, id: look.id }
+    }
+
+    /** The saved looks whose picture changed since the last Save (Save makes each a new scene), and the looks new since. */
+    const changedIds = () => {
+        const before = new Map(savedLooks.map((l) => [l.id, l]))
+        return show.looks.filter((l) => before.has(l.id) && !samePicture(before.get(l.id), l)).map((l) => l.id)
+    }
+    const addedIds = () => {
+        const before = new Set(savedLooks.map((l) => l.id))
+        return show.looks.filter((l) => !before.has(l.id)).map((l) => l.id)
+    }
+
+    /**
+     * Save (2026-10-30, the owner: "it will be saved like new scene"): a look whose picture changed since the last
+     * Save becomes a NEW scene at the end of the bank ("Star 2", or the name it was given), and the look goes back to how
+     * it was saved, so nothing saved is ever overwritten. A new name alone renames it in place; a copy made since the
+     * last Save is kept as it is. The cubes play on: a look on them that became a new scene is that new scene now.
+     * Then the bank, the clock and the setup go into desk.json.
+     */
+    const saveBank = () => {
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null }
+        const before = new Map(savedLooks.map((l) => [l.id, l]))
+        const names = new Set(show.looks.map((l) => l.name))
+        const ids = new Set(show.looks.map((l) => l.id))
+        const kept = []
+        const made = []
+        const created = []
+        for (const look of show.looks) {
+            const was = before.get(look.id)
+            if (!was || samePicture(was, look)) { kept.push(look); continue }
+            const name = look.name !== was.name ? look.name : nextName(was.name, names)
+            names.add(name)
+            const id = freeId(name, ids)
+            ids.add(id)
+            kept.push(clone(was))
+            made.push(normaliseLook({ ...look, id, name, follows: null })) // the new scene does not take the saved one's link
+            created.push({ from: look.id, id })
+        }
+        if (kept.length + made.length > MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks): delete some, then Save` }
+        if (made.length) remember('save')
+        show.looks = [...kept, ...made]
+        const moved = created.find((c) => c.from === liveId)
+        if (moved) liveId = moved.id
+        for (const m of liveBy.values()) {
+            const to = created.find((c) => c.from === m.id)
+            if (to) m.id = to.id
+        }
+        commit()
+        return saveNow() ? { ok: true, created } : { ok: false, status: 500, error: 'desk.json could not be written (see the server log)', created }
+    }
+
+    /** Edit the live look (on the cubes at once). Refused when nothing is live: the defaults never reach a cube. */
+    const editLive = (fields = {}) => {
+        if (!live) return { ok: false, status: 409, error: 'nothing is live — press a look first' }
+        const base = live
+        live = normaliseLook({ ...withoutFollows(fields), id: undefined }, base)
+        delete live.id
+        tick()
+        startTicking()
+        return { ok: true }
+    }
+
+    const newId = (name) => freeId(name, new Set(show.looks.map((l) => l.id)))
+
+    /**
+     * Store a look: into `id` (its tile), or as a new tile when `id` is absent. The look is `look` when the page sends
+     * one (its Preview, stored without going to the cubes), else the live look.
+     */
+    const store = ({ id, name, look: raw } = {}) => {
+        const preview = raw && typeof raw === 'object' && !Array.isArray(raw)
+        const from = preview ? normaliseLook({ ...raw, id: undefined }) : live
+        if (!from) return { ok: false, status: 400, error: 'nothing is live to store — press a look first' }
+        let stored
+        if (id) {
+            const i = show.looks.findIndex((l) => l.id === idOf(id))
+            if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+            show.looks[i] = normaliseLook({ ...from, id: show.looks[i].id, name: name ?? show.looks[i].name, follows: show.looks[i].follows })
+            stored = show.looks[i].id
+        } else {
+            if (show.looks.length >= MAX_LOOKS) return { ok: false, status: 400, error: `the bank is full (${MAX_LOOKS} looks)` }
+            const look = normaliseLook({ ...from, id: newId(name || from.name), name: name || from.name, follows: null })
+            show.looks.push(look)
+            stored = look.id
+        }
+        if (!preview) liveId = stored
+        // Store writes the bank as it is (the look into its own tile), not as Save does.
+        commit()
+        save()
+        return { ok: true, id: stored }
+    }
+
+    const rename = (id, name) => {
+        const look = show.looks.find((l) => l.id === idOf(id))
+        if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
+        remember('rename')
+        look.name = String(name ?? '').trim().slice(0, 40) || look.name
+        dirty = true
+        return { ok: true }
+    }
+
+    const remove = (id) => {
+        const i = show.looks.findIndex((l) => l.id === idOf(id))
+        if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+        remember('delete')
+        show.looks.splice(i, 1)
+        if (liveId === idOf(id)) liveId = null
+        for (const m of liveBy.values()) if (m.id === idOf(id)) m.id = null
+        dirty = true
+        return { ok: true }
+    }
+
+    const reorder = (ids = []) => {
+        if (!Array.isArray(ids)) return { ok: false, status: 400, error: 'ids: the looks in their new order' }
+        const rank = new Map(ids.map((id, i) => [idOf(id), i]))
+        remember('order')
+        show.looks.sort((a, b) => (rank.get(a.id) ?? 1e6) - (rank.get(b.id) ?? 1e6))
+        dirty = true
+        return { ok: true }
+    }
+
+    /** My colours, as the page sends the whole list (add, remove, order); kept at once, not an undo step. */
+    const setPalette = (colours) => {
+        if (!Array.isArray(colours)) return { ok: false, status: 400, error: 'colours: the list of colours' }
+        show.palette = paletteOf(colours)
+        save()
+        return { ok: true, palette: show.palette }
+    }
+    const setMaster = (level) => { show.master = clamp(num(level, show.master), 0, 1); save(); return { ok: true, master: show.master } }
+    // `on` must be a boolean: a missing or unreadable one is refused, never a toggle that could light the cubes (review 1218 M1).
+    const setBlackout = (on) => {
+        if (typeof on !== 'boolean') return { ok: false, status: 400, error: 'on: true or false' }
+        blackout = on
+        if (!on) goSeq += 1
+        // Blackout reaches the engine itself, whether the desk is released or another Out drives a cube (audit row 10): it
+        // disarms every cube. The setting "Blackout keeps the arm" keeps the older desk blackout instead (dark, armed kept,
+        // Shift+B brings it back at once); default off, the owner's choice for the show (D3, nothing we have is lost).
+        // In keep-arm mode the engine is darkened too, every cube and every sender, the arm kept (review R5): the latch
+        // holds until Blackout is lifted or the desk is released.
+        if (on && !show.blackoutKeepsArm) { getEngine().blackout(); watchEngine() }
+        else if (on) { getEngine().dark(true); engineDark = true }
+        else liftEngineDark()
+        tick()
+        return { ok: true, blackout }
+    }
+
+    // A new tempo keeps the beat where it is (no jump in the picture); a tap lands the beat on the tap.
+    const setBlackoutKeepsArm = (on) => {
+        if (typeof on !== 'boolean') return { ok: false, status: 400, error: 'on: true or false' }
+        show.blackoutKeepsArm = on
+        save()
+        return { ok: true, blackoutKeepsArm: on }
+    }
+
+    const setBpm = (bpm) => {
+        const b = clamp(num(bpm, clock.bpm), BPM_MIN, BPM_MAX)
+        const t = now()
+        const beats = beatsAt(clock, t)
+        clock.bpm = b
+        clock.zero = t - (beats * 60000) / b
+        show.bpm = Math.round(b * 10) / 10
+        save()
+        return { ok: true, bpm: show.bpm }
+    }
+    const tap = () => {
+        const t = now()
+        if (clock.taps.length && t - clock.taps[clock.taps.length - 1] > TAP_GAP_MS) clock.taps = []
+        clock.taps.push(t)
+        clock.taps = clock.taps.slice(-6)
+        if (clock.taps.length >= 2) {
+            const gaps = clock.taps.slice(1).map((v, i) => v - clock.taps[i])
+            const bpm = clamp(60000 / (gaps.reduce((s, g) => s + g, 0) / gaps.length), BPM_MIN, BPM_MAX)
+            clock.bpm = bpm
+            show.bpm = Math.round(bpm * 10) / 10
+            save()
+        }
+        clock.zero = t
+        return { ok: true, bpm: show.bpm, taps: clock.taps.length }
+    }
+
+    // ---- the music (2026-10-31, the owner: "add audio analyze fully bpm sync as well"), as Resolume's Auto BPM: a desk
+    // page listens (ui/listen.js), posts the bass and the kicks for looks with Audio, and, with Auto on, the tempo it
+    // has locked to and when a beat fell. The clock takes that tempo and moves its zero so that beat lands on a whole
+    // beat, the one nearest the count it was at: the beat count runs on, so a 16-beat scene does not restart.
+    const hearAudio = ({ low, level, kick } = {}) => {
+        const t = now()
+        audio = { low: clamp(num(low, 0), 0, 1), level: clamp(num(level, 0), 0, 1), kickAt: kick === true ? t : audio.kickAt, at: t }
+        return { ok: true }
+    }
+    const followBeat = ({ bpm, beatAt } = {}) => {
+        const b = Number(bpm)
+        const at = Number(beatAt)
+        const t = now()
+        if (!Number.isFinite(b) || b < BPM_MIN || b > BPM_MAX) return { ok: false, status: 400, error: `bpm ${BPM_MIN}…${BPM_MAX}` }
+        if (!Number.isFinite(at) || Math.abs(at - t) > SYNC_REACH_MS) return { ok: false, status: 400, error: 'beatAt: the time a beat fell, in ms, within 10 s of now' }
+        const k = Math.round(beatsAt(clock, at))
+        clock.bpm = b
+        clock.zero = at - (k * 60000) / b
+        const shown = Math.round(b * 10) / 10
+        if (shown !== show.bpm) { show.bpm = shown; save() }
+        return { ok: true, bpm: show.bpm, beat: beatsAt(clock, t) }
+    }
+    // Resync: beat one is now (Resolume's Resync), every scene from its start.
+    const resync = () => {
+        clock.zero = now()
+        clock.taps = []
+        return { ok: true, bpm: show.bpm }
+    }
+
+    const setCube = (id, fields = {}) => {
+        const key = idOf(id)
+        if (!key) return { ok: false, status: 400, error: 'which cube' }
+        const known = getEngine().state().cubes.some((c) => c.id === key)
+        if (!known) return { ok: false, status: 404, error: `no cube "${id}"` }
+        const wasOn = cubeCfg(key).on
+        let next
+        try { next = normaliseCube(fields, cubeCfg(key), { strict: true }) } catch (error) {
+            if (error instanceof RangeError) return { ok: false, status: 400, error: `cube ${key}: ${error.message}` }
+            throw error
+        }
+        show.cubes[key] = next
+        // Switched off on the desk: dark now, then the desk lets go of it.
+        if (wasOn && !show.cubes[key].on && sent.has(key)) {
+            if (!sent.get(key).held) getEngine().setFrame(key, [BLANK], OUT)
+            sent.delete(key)
+        }
+        save()
+        tick()
+        return { ok: true, cube: show.cubes[key] }
+    }
+
+    // Mapping: the cube shows the alignment picture through its map while its corners are moved; off gives it back to
+    // the live look, or dark when there is none.
+    const setMapTest = (id, on) => {
+        const key = idOf(id)
+        if (!key) return { ok: false, status: 400, error: 'which cube' }
+        if (!getEngine().state().cubes.some((c) => c.id === key)) return { ok: false, status: 404, error: `no cube "${id}"` }
+        if (on) {
+            mapTest.add(key)
+            startTicking()
+        } else if (mapTest.delete(key)) {
+            const drawn = liveBy.has(key) || (live && onCubes(cubesOf(live), key))
+            if (!drawn && sent.has(key)) {
+                if (!sent.get(key).held) getEngine().setFrame(key, [BLANK], OUT)
+                sent.delete(key)
+            }
+        }
+        tick()
+        return { ok: true, mapTest: [...mapTest] }
+    }
+
+    /** A small picture of every look (first cube, at the beat's start), for the bank's tiles. */
+    const thumbs = () => {
+        const still = { bpm: clock.bpm, zero: 0 }
+        return Object.fromEntries(show.looks.map((l) => {
+            const pts = lookPointsAt({ ...l, points: Math.min(l.points, 240) }, { t: 0, clock: still, index: 0 })
+            return [l.id, pts.map((p) => [round3(p[0]), round3(p[1]), round3(p[2]), round3(p[3]), round3(p[4])])]
+        }))
+    }
+
+    /** What the engine holds for each cube right now (after the zone): the stage view. */
+    const view = () => {
+        const frames = getEngine().frames()
+        const of = (id) => frames.byCube[id] ?? frames.all ?? null
+        return {
+            armed: frames.armed,
+            sim: frames.sim,
+            stopped: frames.stopped,
+            cubes: Object.fromEntries(frames.cubes.map((id) => [id, (of(id) || []).map((p) => [round3(p[0]), round3(p[1]), round3(p[2]), round3(p[3]), round3(p[4])])]))
+        }
+    }
+
+    const state = () => {
+        const engine = getEngine().state()
+        return {
+            live,
+            liveId,
+            liveBy: liveByOut(),
+            blackout,
+            master: show.master,
+            blackoutKeepsArm: show.blackoutKeepsArm,
+            palette: show.palette,
+            bpm: show.bpm,
+            beat: beatsAt(clock, now()),
+            looks: show.looks,
+            shapes: LASER_SHAPES,
+            defaults: LOOK_DEFAULTS,
+            // The seed looks, for the editor's Reset (a look back to how its scene started).
+            seeds: SEED_LOOKS,
+            loadMessage,
+            unsaved: dirty,
+            changed: changedIds(),
+            added: addedIds(),
+            canUndo: past.length > 0,
+            canRedo: future.length > 0,
+            follow: followState(),
+            mapTest: [...mapTest],
+            hearing: now() - audio.at <= AUDIO_STALE_MS,
+            cubes: orderedCubes(engine.cubes).map((c) => {
+                const s = sent.get(c.id)
+                const sending = Boolean((live || liveBy.has(c.id) || mapTest.has(c.id)) && s && !s.held)
+                // What the ENGINE plays decides `driving`, not what the desk sent: a stopped or disarmed cube is dark (D2).
+                const plays = engine.sim || (c.armed && !c.stop)
+                const lit = sending ? s.lit : 0
+                const cut = sending ? s.offField + s.blanked : 0
+                return {
+                    id: c.id, ...cubeCfg(c.id),
+                    // `driving` is true only while something is LIT; a cube the desk feeds a dark picture is `dark` (rows 19, 24).
+                    driving: lit > 0 && plays, dark: sending && (lit === 0 || !plays), engineDark: sending && lit > 0 && !plays ? (c.stop ? 'stopped' : 'off') : null, held: s?.held ?? null, points: s?.points ?? 0,
+                    lit, blanked: sending ? s.blanked : 0, offField: sending ? s.offField : 0,
+                    offPercent: sending && s.source > 0 ? Math.min(100, Math.round((100 * cut) / s.source)) : 0
+                }
+            })
+        }
+    }
+
+    // ---- Follow the light desk (2026-10-31, the owner: "one scene drives both"; sceneLink.js has the rules)
+    const lightScenes = () => {
+        try {
+            const list = scenesOfLight ? scenesOfLight() : []
+            return Array.isArray(list) ? list.map((s) => ({ id: sceneIdOf(s?.id), name: String(s?.name ?? '').slice(0, 80) })).filter((s) => s.id) : []
+        } catch { return [] }
+    }
+    // A link is a setting of the desk, written in the bank AND in what was last saved: never an unsaved change, never a new scene at Save.
+    const writeFollows = (id, scene) => {
+        for (const list of [show.looks, savedLooks]) { const l = list.find((x) => x.id === id); if (l) l.follows = scene }
+        if (live && liveId === id) live.follows = scene
+    }
+    const fillFollows = () => {
+        const found = fillLinks(show.looks, lightScenes())
+        for (const f of found) writeFollows(f.look, f.scene)
+        if (found.length) save()
+        return found
+    }
+    const setFollowLight = (on) => {
+        if (typeof on !== 'boolean') return { ok: false, status: 400, error: 'on: true or false' }
+        show.followLight = on
+        const filled = on ? fillFollows().length : 0
+        save()
+        return { ok: true, followLight: on, filled }
+    }
+    const setFollows = (id, scene) => { // one scene, one look; '' = none (never refilled)
+        const look = show.looks.find((l) => l.id === idOf(id))
+        if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
+        if (typeof scene !== 'string') return { ok: false, status: 400, error: 'scene: the id of a light scene, or "" for none' }
+        const want = sceneIdOf(scene)
+        const moved = []
+        if (want) for (const other of show.looks) if (other.id !== look.id && other.follows === want) { writeFollows(other.id, ''); moved.push(other.id) }
+        writeFollows(look.id, want)
+        save()
+        return { ok: true, id: look.id, follows: want, moved }
+    }
+    // A light scene became active (sceneLink.js linkLightToLaser): the look that follows it goes live, and that is all.
+    // No arm, no Go (putLive person: false), no Blackout lifted, Master and BPM untouched. A person's Release does not pause
+    // it (the lead, 2026-10-31): Release switched the cubes off, and nothing reaches a cube until a person presses On.
+    const followScene = (scene) => { // scene = { id, name, origin }
+        if (!show.followLight) return { ok: true, followed: false, why: 'off' }
+        const id = sceneIdOf(scene?.id)
+        const name = String(scene?.name ?? '').slice(0, 80)
+        const miss = (why) => { lastFollow = { scene: { id, name }, look: null, name: null, why, at: now() }; return { ok: true, followed: false, why } }
+        // The hand is checked again here (sceneLink.js refuses first): only di's own page or the local token move the live look.
+        if (!mayDrive(scene?.origin)) return miss('origin')
+        if (!id) return miss('no scene')
+        let look = show.looks.find((l) => l.follows === id)
+        if (!look) { fillFollows(); look = show.looks.find((l) => l.follows === id) }
+        if (!look) return miss('no look')
+        // The look already live stays as it is (a change made to it live is kept).
+        if (!(live && liveId === look.id)) putLive(look, { person: false })
+        lastFollow = { scene: { id, name }, look: look.id, name: look.name, why: null, at: now() }
+        return { ok: true, followed: true, look: look.id }
+    }
+    // What a recall would follow now: the links set, and those the first fill would set (shown, not written: a GET writes
+    // nothing). `links` is for the light desk's page and is empty while the switch is off (that page shows a scene's laser look
+    // only then). `table` is the same map whatever the switch says: the laser desk's Scenes row plays from it, so a press there
+    // works with "Follow light scenes" off as well as on (2026-10-31, N1612).
+    const followMap = () => {
+        const table = {}
+        const fill = new Map(fillLinks(show.looks, lightScenes()).map((f) => [f.look, f.scene]))
+        for (const l of show.looks) {
+            const scene = l.follows || fill.get(l.id)
+            if (scene && !Object.prototype.hasOwnProperty.call(table, scene)) table[scene] = { look: l.id, name: l.name }
+        }
+        return { ok: true, on: Boolean(show.followLight), links: show.followLight ? table : {}, table }
+    }
+    const followState = () => ({ on: show.followLight, scenes: lightScenes(), last: lastFollow })
+
+    // A clean stop keeps the work as Save would.
+    const close = () => {
+        release()
+        if (dirty) saveBank()
+        else if (saveTimer) { clearTimeout(saveTimer); saveNow() }
+    }
+
+    return { keepHold, state, go, setPalette, editLook, copyLook, pasteLook, undo, redo, saveBank, editLive, store, rename, remove, reorder, release, setMaster, setBlackout, setBlackoutKeepsArm, setBpm, tap, hearAudio, followBeat, resync, setCube, setMapTest, thumbs, view, tick, close, setFollowLight, setFollows, followScene, followMap }
+}
+
+module.exports = { createLaserDesk, normaliseLook, normaliseCube, lookPointsAt, capOf, hashPoints, beatsAt, SEED_LOOKS, LOOK_DEFAULTS, CUBE_DEFAULTS, TICK_MS, OUT }

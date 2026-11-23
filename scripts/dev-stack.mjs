@@ -16,6 +16,7 @@ import {
     formatFetchAgeNote,
     formatSpaceDriftWarning,
 } from './dev-stack-lib.mjs'
+import { devBrowserCommand } from './lib/browserApp.mjs'
 
 const require = createRequire(import.meta.url)
 const { evaluateDataRoot } = require('../serverXR/src/dataRootGuard.js')
@@ -162,21 +163,25 @@ if (headSha) {
     }
 }
 
-const CHROMIUM_PROFILE_DIR = path.join(
-    process.env.HOME || '',
-    '.var/app/org.chromium.Chromium/data/dev-profile'
-)
-
+// The browser is THE one di browser setting (scripts/lib/browserApp.mjs): Chromium unless
+// DI_BROWSER_APP or ~/.config/di/browser.conf says otherwise. Its dev profile is per app.
 const wipeAndLaunchBrowser = async (url) => {
     const { rm } = await import('node:fs/promises')
-    await rm(CHROMIUM_PROFILE_DIR, { recursive: true, force: true }).catch(() => {})
+    let plan
     try {
-        return spawn('flatpak', ['run', 'org.chromium.Chromium', `--user-data-dir=${CHROMIUM_PROFILE_DIR}`, url], {
+        plan = devBrowserCommand(url)
+    } catch (error) {
+        console.log(`[dev-stack] DEV_BROWSER: ${error.message} — skipping.`)
+        return null
+    }
+    await rm(plan.profile, { recursive: true, force: true }).catch(() => {})
+    try {
+        return spawn(plan.command, plan.args, {
             detached: false,
             stdio: 'ignore'
         })
     } catch {
-        console.log('[dev-stack] DEV_BROWSER requested but flatpak Chromium is not available — skipping.')
+        console.log(`[dev-stack] DEV_BROWSER requested but flatpak ${plan.app} is not available — skipping.`)
         return null
     }
 }
@@ -308,7 +313,7 @@ if (process.env.DEV_BROWSER) {
             console.log(`[dev-stack] DEV_BROWSER set but ${clientUrl} never became reachable — skipping browser launch.`)
             return
         }
-        console.log(`[dev-stack] DEV_BROWSER: wiping dev Chromium profile and opening ${clientUrl}`)
+        console.log(`[dev-stack] DEV_BROWSER: wiping the dev browser profile and opening ${clientUrl}`)
         browserChild = await wipeAndLaunchBrowser(clientUrl)
     })
 }

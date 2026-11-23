@@ -98,7 +98,7 @@ Objects meant to feel interactive should be placed 1.5–3 m from the user's ini
 The Walker component in both WccExhibition and LiveProjectScene implements the recommended smooth locomotion pattern:
 - **Joystick axis → forward/strafe** — standard FPS mapping
 - **Look via pointer lock (desktop) or right-half touch drag (mobile)** — consistent with every WebXR platform's 2D fallback pattern
-- **Fly mode** — pitch-based altitude when `fly=true`, Q/Space=up, C/E=down. Useful for exhibitions with tall or aerial artwork. Toggle with F key.
+- **Fly mode** — pitch-based altitude when `fly=true`, E/Space=up, Q/C=down. Useful for exhibitions with tall or aerial artwork. Toggle with F key.
 - **WALK_ACCEL = 14, WALK_FRICTION = 10** — gives responsive start (14 m/s² accel) and a quick stop (10 m/s² friction). These are tuned — do not reduce friction below 6 or the scene feels "slippery."
 - **Bounds** — `BOUNDS_HALF = RING_RADIUS + 50 = 88 m` for the ring exhibition (lets visitors walk beyond the ring perimeter); `local-floor` bounds should match so XR teleport targets stay inside.
 

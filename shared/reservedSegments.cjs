@@ -24,6 +24,8 @@
  * mirror-plus-contract-test shape as shared/projectSchema.cjs.
  */
 
+const { LANGUAGE_CODES } = require('./i18n/languages.cjs')
+
 // Top-level app routes. Mirrors src/utils/spaceRouting.js RESERVED_APP_SEGMENTS.
 const APP_SEGMENTS = [
     'admin', 'preferences', 'prefrenaces', 'preferances',
@@ -65,7 +67,11 @@ const APP_SEGMENTS = [
     // `/ai/setup` — how a person connects an assistant (src/pages/AiSetupPage.jsx);
     // the rest of /ai/ is serverXR's. NOT checked against the tiers before
     // reserving (2026-10-27): the session that added it could not reach them.
-    'ai'
+    'ai',
+    // The language codes (shared/i18n/languages.cjs): `/hy/…` and `/ru/…` are the
+    // language forms of an address, `/en/…` redirects to the bare one. Taken from
+    // the table, so a new language is reserved the day it is added.
+    ...LANGUAGE_CODES
 ]
 
 // Real directories under public/, plus the build's own output prefixes, served

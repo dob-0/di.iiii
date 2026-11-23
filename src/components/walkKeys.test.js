@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HEAD_LIGHT_KEY, isHeadLightKey } from './headLight.js'
-import { FLY_KEY, HINT_SEPARATOR, isFlyKey, walkKeyHintText } from './walkKeys.js'
+import { FLY_KEY, HINT_SEPARATOR, isFlyKey, walkKeyHintText, ALTITUDE_KEYS, LEGACY_ALTITUDE_KEYS, ALTITUDE_HINT_TEXT } from './walkKeys.js'
+import { physicalKey } from './physicalKey.js'
 
 const plain = (text) => text.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ')
 
@@ -47,5 +48,32 @@ describe('the walk hint words', () => {
 
     it('keeps the separator the hint line was always written with', () => {
         expect(walkKeyHintText({ headLight: true })).toContain(HINT_SEPARATOR)
+    })
+})
+
+
+describe('physical keys and the altitude pair (2026-10-29, N1445.1)', () => {
+    it('reads the place of the key: an Armenian "ց" on KeyW is W', () => {
+        expect(physicalKey({ key: 'ց', code: 'KeyW' })).toBe('w')
+        expect(physicalKey({ key: 'ы', code: 'KeyS' })).toBe('s')
+        expect(physicalKey({ key: ' ', code: 'Space' })).toBe(' ')
+        expect(physicalKey({ key: 'ArrowUp', code: 'ArrowUp' })).toBe('arrowup')
+    })
+    it('falls back to key when there is no code, and to "" for no event', () => {
+        expect(physicalKey({ key: 'W' })).toBe('w')
+        expect(physicalKey(null)).toBe('')
+    })
+    it('F flies and L lights on any layout; F stays F', () => {
+        expect(isFlyKey({ key: 'ա', code: 'KeyF' })).toBe(true)
+        expect(isFlyKey({ key: 'f' })).toBe(true)
+        expect(isFlyKey({ key: 'f', code: 'KeyG' })).toBe(false)
+        expect(isHeadLightKey({ key: 'լ', code: 'KeyL' })).toBe(true)
+    })
+    it('E is up and Q is down while flying; Space and C still work; the old pair is kept as an archive', () => {
+        expect(ALTITUDE_KEYS.up).toEqual([' ', 'e'])
+        expect(ALTITUDE_KEYS.down).toEqual(['q', 'c'])
+        expect(LEGACY_ALTITUDE_KEYS).toEqual({ up: [' ', 'q'], down: ['e', 'c'] })
+        expect(ALTITUDE_HINT_TEXT).toContain('Space/E')
+        expect(ALTITUDE_HINT_TEXT).toContain('C/Q')
     })
 })

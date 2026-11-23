@@ -280,7 +280,7 @@
     border-color: var(--di-cyan);
 }
 
-/* Fly mode altitude buttons (mobile only -- Space/Q/C/E have no touch
+/* Fly mode altitude buttons (mobile only -- Space/E/C/Q have no touch
    equivalent). Stacked above the Fly toggle so neither overlaps. */
 .live-scene-vert-controls {
     position: absolute;

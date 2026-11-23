@@ -159,6 +159,12 @@ export const ui = {
         ].filter(value => value !== null).join('\n')
     },
 
+    // The port answers, but not as this install: another program's server holds it.
+    portTaken: (port, free = 4171) => [
+        `port ${port} is held by another program — not by this di.iiii`,
+        style.dim(`start on a free port instead: ${CMD} up --port ${free}`)
+    ].join('\n'),
+
     alreadyRunning: (url, reach = null, wantedLan = false, { one = false, phones = null, why = null } = {}) => [
         `already running — ${style.cyan(url)}${reach ? style.dim(`  ${reach.lan ? 'on this network too' : 'this machine only'}`) : ''}`,
         one && phones ? phonesLine(phones, '  ') : null,
@@ -383,6 +389,27 @@ export const ui = {
     // The two reasons `open FILE` still stops a running di.iiii, said before
     // it happens: every tab on this machine is about to lose its connection.
     tooLargeForWire: (name) => style.dim(`${name} is more than the running di.iiii takes over the wire — stopping it to open the file directly.`),
+    // `open FILE --to URL`: the same file, into another di.iiii.
+    openToSignIn: (site) => `not signed in to ${site} — sign in first: ${CMD} login --to ${site}`,
+    openToTokenFrom: (what, host) => `sign-in: token from ${what}${host ? `, sent to ${host}` : ''}`,
+    openToBareToken: () => `a token on the command line is visible to every process on this machine — pipe it instead: --token -  (or set DI_TOKEN, or ${CMD} login)`,
+    openToNeedsFile: () => `which file? — ${CMD} open FILE --to https://dev.diiii.xyz`,
+    openToNeedsHttps: (site) => `${site} is not https — a token is never sent in clear text to another machine. use https://, or a localhost address.`,
+    openToSending: (bytes, host) => `sending ${(bytes / 1048576).toFixed(1)} MB to ${host}…`,
+    openToTimedOut: (host) => `${host} did not finish taking the file in time (a flat 30-minute cap for the whole upload, not an idle timeout — set DI_OPEN_TO_TIMEOUT_MS, in milliseconds, to change it).`,
+    openToBadTimeout: (value) => `DI_OPEN_TO_TIMEOUT_MS must be a whole number of milliseconds above 0, not "${value}" (unset it for the 30-minute default).`,
+    openToDropped: (host) => `the connection to ${host} was dropped; if the file is large, that di.iiii's upload cap may be the cause.`,
+    openToTryAs: (file, site) => `try: ${CMD} open ${file} --to ${site} --as NEW-ID`,
+    openToLoginFor: (host) => `sign-in: the login stored for ${host}`,
+    openToTooLarge: (name, host) => `${name} is bigger than ${host} takes over the wire (its MAX_UPLOAD_MB). there is no other way to open it on another di.iiii from here, and it was not opened on this machine instead.`,
+    openToPartSent: (n, parts, sent, total) => `part ${n}/${parts} sent (${(sent / 1048576).toFixed(0)} of ${(total / 1048576).toFixed(0)} MB)`,
+    openToPartFailed: (n, parts, host, why) => `part ${n}/${parts} did not reach ${host} after several tries (${why}). What was sent was removed there; run the same command again to start over.`,
+    openToOlderServer: (host, mb) => `this di.iiii (${host}) is older and takes only files up to ${mb} MB — it has no way to take a file in parts yet. Nothing was opened.`,
+    openToJob: (state, host) => state === 'joining' ? `all parts are on ${host}; it is joining them…` : `${host} is importing the file…`,
+    openToJobTimedOut: (host) => `${host} did not finish opening the file in time (set DI_OPEN_TO_FINISH_TIMEOUT_MS, in milliseconds, to wait longer). It may still be working there: look at its spaces before sending again.`,
+    openToPollLost: (host, why) => `lost touch with ${host} while it was opening the file (${why}). It may still be working there: look at its spaces before sending again.`,
+    openToNothing: (name, host) => `${name} was not opened on ${host} — see above. Nothing was opened on this machine either.`,
+    openToNeedsAddress: () => `--token - is for another di.iiii — add its address: ${CMD} open FILE --to https://dev.diiii.xyz`,
     forceStops: () => style.dim('--force replaces a space that may be open in a browser — stopping di.iiii for it.'),
     spacesHere: (ids) => ['in this di.iiii:', ...ids.map((id) => `  ${id}`)].join('\n'),
     noSpacesYet: () => `nothing here yet. make one with: ${CMD} new "my show"`,
@@ -942,6 +969,26 @@ export const ui = {
         '',
         style.dim(`waiting for you to approve it there — the code runs out in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} · Ctrl-C to stop`)
     ].join('\n'),
+    connectAsk: ({ host, address, code, minutes, opening }) => [
+        `connect this machine to ${host}`,
+        '',
+        `  1. open  ${style.cyan(address)}${opening ? style.dim('   (opening it for you)') : ''}`,
+        `  2. type  ${style.bold(code)}   then tick your spaces and press "Connect this machine"`,
+        '',
+        style.dim(`waiting for you to approve it there — the code runs out in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} · Ctrl-C to stop`)
+    ].join('\n'),
+    connectFollowed: (spaceId) => `  ${style.bold(spaceId)} — following (from now on)`,
+    connectSkippedWork: (spaceId, count) => `  ${style.bold(spaceId)} — skipped: this copy holds ${count} ${count === 1 ? 'project' : 'projects'} the host lacks. nothing was changed. choose: ${CMD} follow ${spaceId} --from HOST --take-host (host wins) or --take-mine (this copy wins)`,
+    connectSkippedWhy: (spaceId, reason) => `  ${style.bold(spaceId)} — skipped: ${reason}. nothing was changed.`,
+    connectDone: (host, name, followed, skipped) => `connected to ${host} as ${style.bold(name)}: following ${followed} ${followed === 1 ? 'space' : 'spaces'}${skipped ? `, skipped ${skipped}` : ''}. undo: ${CMD} disconnect`,
+    connectNone: (host) => `nothing to connect on ${host}: this account owns or edits no space there.`,
+    syncNothingNew: () => 'connected: no new spaces since the last check.',
+    syncNoKey: () => `could not stay connected: no live connect key is kept here. run ${CMD} connect again.`,
+    syncRefused: (host, status) => `could not check ${host} for new spaces (${status ? `answered ${status}` : 'no answer'}). nothing changed; ${CMD} connect --sync tries again.`,
+    loginOfferConnect: () => `press Enter to connect this machine to all your spaces now (${CMD} connect), or type n to skip.`,
+    connectNotInstalled: () => 'connect needs an installed di on this machine — run di install first.',
+    disconnectDone: (stopped, kept) => `disconnected: stopped ${stopped} ${stopped === 1 ? 'follow' : 'follows'} and ended their keys. your work on this machine was not touched.${kept ? ` ${kept} left as they were (their key is not a connect key).` : ''}`,
+    disconnectNothing: () => 'nothing was connected here — nothing changed.',
     loginDone: (host, name) => [
         `signed in as ${style.bold(name)} on ${host}.`,
         style.dim('this terminal can read and edit your spaces and projects. it cannot publish or delete a space, or change who owns or edits one — those stay in the browser.')
@@ -984,6 +1031,19 @@ export const ui = {
     logoutNotRemoved: (host, why) => `could not remove the login for ${host} from this machine (${why}) — it is still there.`,
 
     // `di login --help`, `di logout --help`, `di whoami --help` and `di help login`.
+    connectUsage: () => [
+        style.bold(`${CMD} connect`) + style.dim(' — one sign-in, every space of yours on this machine'),
+        '',
+        `same sign-in as ${CMD} login (no stored login needed). the terminal shows a short code; you type it in the browser you are signed in with,`,
+        'see the spaces you own or edit (all ticked), and press "Connect this machine". this machine then follows each one.',
+        'a space that already exists here with work the host lacks is skipped and named — never overwritten.',
+        '',
+        `  ${CMD} connect              connect to dev.diiii.xyz`,
+        `  ${CMD} disconnect           stop every follow connect made and end its keys; your work is not touched`,
+        '',
+        '  --from URL   another di.iiii (default: the dev host, as for login)',
+        '  --no-open    do not open the browser for you'
+    ].join('\n'),
     loginUsage: () => [
         style.bold(`${CMD} login`) + style.dim(' — sign in once on this machine, from the terminal'),
         '',
@@ -1008,7 +1068,7 @@ export const ui = {
         '90 days unused (a year at most). DI_TOKEN, when set, still wins — for CI.'
     ].join('\n'),
 
-    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), service: () => ui.serviceUsage(), login: () => ui.loginUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
+    usageFor: (name) => ({ mcp: () => ui.mcpUsage(), keeper: () => ui.keeperUsage(), ndi: () => ui.ndiUsage(), follow: () => ui.followUsage(), stage: () => ui.stageUsage(), show: () => 'di show <command>: the show tools, read from a venue profile. Full help: di show help', service: () => ui.serviceUsage(), login: () => ui.loginUsage(), connect: () => ui.connectUsage(), disconnect: () => ui.connectUsage(), logout: () => ui.loginUsage(), whoami: () => ui.loginUsage() })[name]?.() || null,
 
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
@@ -1021,7 +1081,11 @@ export const ui = {
         `  ${CMD} new NAME      start a new space`,
         `  ${CMD} save SPACE    save it as one file you can carry anywhere`,
         `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
+        `  ${CMD} open FILE --to URL   open it on another di.iiii, with your login there (--as ID names it)`,
         `  ${CMD} spaces        what is in this di.iiii`,
+        `  ${CMD} tell USER "TEXT"   message another person's agent (${CMD} inbox, ${CMD} contacts; ${CMD} agents remote on|off)`,
+        `  ${CMD} monitor report [--once]   send this machine to the overview (${CMD} monitor install-timer: every 30 s)`,
+        `  ${CMD} monitor feed add chats --command "..."   set where this machine's chats come from (${CMD} monitor feed remove chats: undo)`,
         `  ${CMD} move PROJECT --to SPACE   move a project into another space (--dry-run to look first)`,
         `  ${CMD} backup        every space and the light show, in one file`,
         `  ${CMD} restore FILE  read one back in`,
@@ -1033,6 +1097,7 @@ export const ui = {
         '',
         `  ${CMD} login         sign in from the terminal, once — then ${CMD} and Claude act as you`,
         `  ${CMD} whoami        who this terminal is signed in as · ${CMD} logout ends it`,
+        `  ${CMD} connect       one sign-in, then follow every space you own or edit · ${CMD} disconnect undoes it`,
         `  ${CMD} name          this install's network name and its own certificate (after ${CMD} login) · --status --renew --forget`,
         '',
         `  ${CMD} stage join SPACE --from URL   make this machine the one under the projector`,

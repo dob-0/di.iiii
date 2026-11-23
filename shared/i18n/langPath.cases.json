@@ -1,0 +1,54 @@
+{
+    "_note": "One case table for the language-address helpers. src/i18n/languages.test.js runs every row through shared/i18n/languages.cjs (server) and src/i18n/languages.js (client). Design: S13.",
+    "splitLang": [
+        ["/hy", { "lang": "hy", "path": "/" }],
+        ["/hy/", { "lang": "hy", "path": "/" }],
+        ["/hy/studio", { "lang": "hy", "path": "/studio" }],
+        ["/ru/wiki/intro?x=1#top", { "lang": "ru", "path": "/wiki/intro?x=1#top" }],
+        ["/ru?x=1", { "lang": "ru", "path": "/?x=1" }],
+        ["/", { "lang": "en", "path": "/" }],
+        ["/terms", { "lang": "en", "path": "/terms" }],
+        ["/en/terms", { "lang": "en", "path": "/en/terms" }],
+        ["/hyper/studio", { "lang": "en", "path": "/hyper/studio" }],
+        ["/ruby", { "lang": "en", "path": "/ruby" }],
+        ["/ru-ok", { "lang": "en", "path": "/ru-ok" }],
+        ["/HY/x", { "lang": "en", "path": "/HY/x" }],
+        ["/x/hy", { "lang": "en", "path": "/x/hy" }]
+    ],
+    "withLang": [
+        ["hy", "/", "/hy"],
+        ["hy", "/spaces", "/hy/spaces"],
+        ["ru", "/wiki/a?b=1", "/ru/wiki/a?b=1"],
+        ["ru", "?x=1", "/ru?x=1"],
+        ["en", "/spaces", "/spaces"],
+        ["xx", "/spaces", "/spaces"]
+    ],
+    "isLanguageFree": [
+        ["/wcc", true],
+        ["/wcc/landing", true],
+        ["/algovrithm", true],
+        ["/chat", true],
+        ["/light/api/x", true],
+        ["/ai/setup", true],
+        ["/fonts/Inter.woff2", true],
+        ["/og/x", true],
+        ["/robots.txt", true],
+        ["/studio/logo.png", true],
+        ["/", false],
+        ["/terms", false],
+        ["/spaces", false],
+        ["/myspace/myproject", false],
+        ["/wiki/intro", false]
+    ],
+    "isPreviewHost": [
+        ["dev.diiii.xyz", true],
+        ["diiii.localhost", true],
+        ["dev.diiii.xyz:443", true],
+        ["moxir-test.diiii.localhost:5173", true],
+        ["localhost", true],
+        ["diiii.xyz", false],
+        ["www.diiii.xyz", false],
+        ["device.example.com", false],
+        ["", false]
+    ]
+}

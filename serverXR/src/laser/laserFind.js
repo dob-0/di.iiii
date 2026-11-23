@@ -231,7 +231,23 @@ const findCubes = async ({ interfaces, targets, ...rest } = {}) => {
             : 'this computer has no private IPv4 network (10…, 172.16–31…, 192.168…) to search: plug the cable into the switch with the cubes, wait for an address, then Find cubes again.'
         return { ok: false, asked: 0, cubes: [], networks, skipped: skippedOf(networks), error }
     }
-    const out = await sweep({ targets: list, ...rest })
+    // One sweep, one socket per /24, all at the same time (2026-10-30). One flat list asked the venue wifi's 254 silent
+    // hosts first and a LaserCube on the laser network (10.42.1.0/24) behind them was not found (stage, real cube, ledger N1563).
+    // Concurrent beats "wired first": no guess about which network is the laser one, the sweep takes as long as its slowest
+    // network instead of the sum, and each network still gets its own gap between packets.
+    const groups = new Map()
+    for (const ip of list.filter(isIPv4)) {
+        const prefix = ip.split('.').slice(0, 3).join('.')
+        if (!groups.has(prefix)) groups.set(prefix, [])
+        groups.get(prefix).push(ip)
+    }
+    const parts = await Promise.all([...groups.values()].map((group) => sweep({ targets: group, ...rest })))
+    const byKey = new Map()
+    for (const part of parts) for (const cube of part.cubes) byKey.set(cube.serial || cube.ip, cube)
+    const cubes = [...byKey.values()].sort((a, b) => a.ip.localeCompare(b.ip, 'en', { numeric: true }))
+    const failed = parts.find((part) => !part.ok)
+    const asked = parts.reduce((n, part) => n + part.asked, 0)
+    const out = failed && cubes.length === 0 ? { ok: false, asked, cubes, error: failed.error, code: failed.code ?? null } : { ok: true, asked, cubes }
     return { ...out, networks: networks.map((n) => `${n.prefix}.0/24 (${n.name})`), skipped: skippedOf(networks) }
 }
 

@@ -136,6 +136,13 @@ const requireAuth = parseBool(process.env.REQUIRE_AUTH, isProduction)
 const corsOrigins = expandLoopbackOrigins(parseList(process.env.CORS_ORIGINS))
 const maxUploadMb = parseNumber(process.env.MAX_UPLOAD_MB, 100)
 const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
+// A space file sent in parts (POST /api/spaces/bundle/uploads): each part is a
+// request of its own, so each stays under the 100 MB a proxy such as
+// Cloudflare takes per body; the whole file is capped by MAX_BUNDLE_MB.
+const maxBundleMb = parseNumber(process.env.MAX_BUNDLE_MB, 4096)
+const maxBundleBytes = Math.max(1, maxBundleMb) * 1024 * 1024
+const bundlePartMb = parseNumber(process.env.BUNDLE_PART_MB, 64)
+const bundlePartBytes = Math.max(1, Math.floor(Math.min(bundlePartMb, maxUploadMb) * 1024 * 1024))
 // Floor of free disk below which state-changing requests get a 507 instead of
 // running the volume to ENOSPC mid-write (see diskGuard.js). 0 disables.
 const minFreeDiskMb = parseNumber(process.env.MIN_FREE_DISK_MB, 512)
@@ -302,9 +309,13 @@ const config = {
   mountPath: basePath || '/',
   apiToken,
   internalApiToken,
+  // The one account (or few) that may open the private Monitor on the dev tier. Empty = nobody.
+  monitorOwnerUserIds: parseList(process.env.MONITOR_OWNER_USER_IDS),
   requireAuth,
   corsOrigins,
   maxUploadBytes,
+  maxBundleBytes,
+  bundlePartBytes,
   minFreeDiskBytes,
   authSession: {
     cookieName: authSessionCookieName || 'dii_serverxr_session',
@@ -431,6 +442,11 @@ const config = {
     mastodon: {
       url: (process.env.SHARE_MASTODON_URL || '').trim().replace(/\/+$/, ''),
       token: (process.env.SHARE_MASTODON_TOKEN || '').trim()
+    },
+    instagram: {
+      token: (process.env.SHARE_INSTAGRAM_TOKEN || '').trim(),
+      accountId: (process.env.SHARE_INSTAGRAM_ACCOUNT || '').trim(),
+      apiBase: (process.env.SHARE_INSTAGRAM_API || 'https://graph.facebook.com/v23.0').replace(/\/+$/, '')
     }
   },
   // Human-approval gate for admin-level writes (see approvalGate.js). Unset

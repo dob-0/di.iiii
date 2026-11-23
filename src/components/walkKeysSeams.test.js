@@ -49,8 +49,8 @@ describe('Fly stays on F in every project; the head light never moves it', () =>
 describe('every hint line takes its key words from walkKeyHintText', () => {
     it('LiveProjectScene: the pointer-lock hint and the walk hint, with the head light when the project has one', () => {
         expect(SCENE.match(/walkKeyHintText\(/g)).toHaveLength(2)
-        expect(SCENE).toMatch(/walkKeyHintText\(\{ headLight: headLight\.available \}\)/)
-        expect(SCENE).toMatch(/walkKeyHintText\(\{ headLight: headLight\.available, flying: flyMode \}\)/)
+        expect(SCENE).toMatch(/lockHintKeys = walkKeyHintText\(\{ headLight: headLight\.available, fly: showModeControls \}\)/)
+        expect(SCENE).toMatch(/walkHintKeys = walkKeyHintText\(\{ headLight: headLight\.available, flying: flyMode, fly: showModeControls \}\)/)
     })
 
     it('the rig builder hint does the same from the project document', () => {
@@ -116,5 +116,21 @@ describe('the phone layout: the hint line has its own line, under every control'
 
     it('the up/down buttons clear the Head light button when the project has one', () => {
         expect(edge(phone, '.live-scene-vert-controls--above-head-light', 'bottom')).toBeGreaterThanOrEqual(edge(phone, '.live-scene-light-btn', 'bottom') + LIGHT_HEIGHT)
+    })
+})
+
+describe('the fly keys follow the saved choice (flyKeys.js), not a constant', () => {
+    it('the scene reads the preference and hands the Walker the chosen pair', () => {
+        expect(SCENE).toContain('altitudeKeysFor(flyKeysChoice)')
+        expect(SCENE).not.toContain('DEFAULT_ALTITUDE_KEYS')
+    })
+})
+
+describe('movement ignores a key held with Alt / Option, Ctrl or Cmd', () => {
+    it('the Walker key-down returns before it records the key (Mac Option+W must not walk)', () => {
+        expect(SCENE).toMatch(/const onKeyDown = \(e\) => \{\s*if \(isTypingTarget\(e\.target\)\) return\s*\/\/[^\n]*\n\s*if \(e\.altKey \|\| e\.ctrlKey \|\| e\.metaKey\) return\s*const key = physicalKey\(e\)/)
+    })
+    it('the builder\'s Ctrl / Cmd shortcuts read the letter', () => {
+        expect(BUILD).toContain('const letter = shortcutLetter(e)')
     })
 })
