@@ -42,6 +42,11 @@ const LASER_SHAPES = [
     // pool whose bubbles swell and pop), crack (a crust splitting open from the middle) and drip (drops falling from a
     // ceiling into a pool).
     'lava', 'magma', 'eruption', 'bubble', 'crack', 'drip',
+    // The same evening: "okay doing lava laser animation" — the lava story told by one line over four bars: a drop falls
+    // into the pool, the pool swells into a volcano, it erupts, and it melts back.
+    'volcano',
+    // Then, from the owner's laser.html and LASER_BRIEF.md: "organic, tangled, wandering strands drawn by laser beams".
+    'strands',
 ]
 // The shapes made of small marks. Below MARK_MIN_SIZE their smallest mark is inside the engine's still-beam window
 // (0.6°, about 0.032 of the field: laserEngine.js), and when every lit mark is, the frame is dots only: the engine blanks
@@ -296,6 +301,64 @@ const CRACK_STEPS = 10
 const DRIP_TOP = 0.8
 const DRIP_FLOOR = -0.8
 const DRIP_LANES = [0, 3, 5, 1, 4, 2]
+// Volcano's pool level; how high its cone grows over it; the cone's foot either side as it starts to rise, at its full
+// height and as it melts flat; and its crater: its half-width (of the foot) and its depth.
+const CONE_POOL = -0.55
+const CONE_PEAK = 0.85
+const CONE_FOOT = [0.5, 0.85, 0.95]
+const CONE_CRATER = 0.2
+const CONE_DEPTH = 0.1
+// The cone over the pool at x, grown to `rise` (0…1) with its foot `foot` either side and its crater `open` (0: shut, a
+// peak; 1: open). Its flanks curve in towards the top, as a volcano's do.
+const coneAt = (x, rise, foot, open) => {
+    const t = Math.abs(x) / foot
+    if (!(rise > 0) || t >= 1) return 0
+    const flank = (s) => (1 - s) ** 1.6
+    const peak = flank(t)
+    const crater = t < CONE_CRATER ? flank(CONE_CRATER) - (CONE_DEPTH / CONE_PEAK) * (1 - (t / CONE_CRATER) ** 4) : peak
+    return CONE_PEAK * rise * (peak + (crater - peak) * open)
+}
+// The drop's ripples: two waves running out from where it fell, one each way, dying away over RIPPLE_BEATS. Each is a
+// dip between two crests this deep, this wide and this long, running this fast (of the picture, a beat).
+const RIPPLE_DEPTH = 0.08
+const RIPPLE_WIDTH = 0.15
+const RIPPLE_WAVE = 0.3
+const RIPPLE_SPEED = 0.27
+const RIPPLE_BEATS = 4
+const rippleAt = (x, age) => {
+    if (!(age > 0) || age >= RIPPLE_BEATS) return 0
+    const wave = (s) => -Math.exp(-((s / RIPPLE_WIDTH) ** 2)) * Math.cos((TAU * s) / RIPPLE_WAVE)
+    return RIPPLE_DEPTH * Math.min(1, age / 0.1) * (1 - age / RIPPLE_BEATS) * (wave(x - RIPPLE_SPEED * age) + wave(x + RIPPLE_SPEED * age))
+}
+// 0 → 1 eased in and out over f = 0…1, held at either end.
+const easeOf = (f) => {
+    const c = clamp(f, 0, 1)
+    return c * c * (3 - 2 * c)
+}
+// Strands (the owner's laser.html): the beam runs along a path that is a sum of drifting sines. Its harmonics are drawn
+// as the page draws them, from hash01 here so the server, the twin and the tiles draw the same strand: each one's
+// frequency across and up, its two phases, how fast it drifts, and how much it adds. Copies takes the first 2 to 8 (the
+// page's Tangle; 5 is the page's own).
+const STRAND_HARMONICS = Array.from({ length: 8 }, (_, j) => ({
+    fx: (1 + 2.2 * hash01(j, 601)) * (j + 1) * 0.5,
+    fy: (1 + 2.2 * hash01(j, 602)) * (j + 1) * 0.5,
+    px: 7 * hash01(j, 603),
+    py: 7 * hash01(j, 604),
+    vx: (hash01(j, 605) - 0.5) * 0.5,
+    vy: (hash01(j, 606) - 0.5) * 0.5,
+    a: 1 / (1 + 0.7 * j),
+}))
+// The page at its own settings, read at 120 BPM: the beam runs STRAND_RUN radians of the path a beat and the tangle
+// drifts STRAND_DRIFT of its own time a beat. What shows is the path the beam ran over in the last STRAND_TRAIL beats
+// (the page's exposure keeps about half a second), so a faster look draws a longer strand, up to twice as long, the
+// page's fastest: longer would need more points than one pass of the cube. A slower look keeps the strand's length and
+// only crawls slower: a shorter strand curls into the engine's still-beam window (at size 0.15 a strand half as long put
+// 45 % of the frame in one window, this one 24 %). STRAND_REACH of the picture, as the page's 0.46 of the screen either
+// side of the middle.
+const STRAND_RUN = 5.8
+const STRAND_DRIFT = 0.3
+const STRAND_TRAIL = 1
+const STRAND_REACH = 0.92
 // The scale that keeps the cube inside the picture at every turn (it looks the same each quarter turn).
 const CUBE_FIT = 1 / Math.max(...Array.from({ length: 91 }, (_, i) => Math.max(...cubeView((i / 90) * (Math.PI / 2)).flat().map(Math.abs))))
 
@@ -1103,6 +1166,78 @@ const STROKES = {
         paths.push([[-0.95, DRIP_FLOOR], [0.95, DRIP_FLOOR]])
         return byLength(paths, n)
     },
+    // Volcano: the lava story in one line, on a 16-beat loop (four bars). Bar one: a drop of lava falls into the pool on
+    // the loop's first beat and its ripples run out to both sides. Bar two: the pool swells into a cone where the drop
+    // fell, a step on each beat. Bar three: the crater opens and the volcano throws a bomb to the left on each beat and one
+    // to the right a quarter beat later; each falls back onto the cone, where it is gone. Bar four: the volcano melts back
+    // into the pool, a step on each of three beats, and the next drop hangs and falls. The line only moves; the drop and
+    // the bombs are whole dots that move, appear and go.
+    volcano: (n, { beat = 0 } = {}) => {
+        const loop = Math.floor(beat / 16)
+        const u = beat - loop * 16
+        const stepped = (from, count) => (Math.floor(u - from) + glideOf(u - from)) / count
+        const rise = u < 4 ? 0 : u < 8 ? stepped(4, 4) : u < 12 ? 1 : Math.max(0, 1 - stepped(12, 3))
+        const foot = u < 12 ? CONE_FOOT[0] + (CONE_FOOT[1] - CONE_FOOT[0]) * rise : CONE_FOOT[2] + (CONE_FOOT[1] - CONE_FOOT[2]) * rise
+        const open = u < 8 ? 0 : u < 12 ? 1 : 1 - easeOf((u - 12) / 0.5)
+        const surface = Array.from({ length: 121 }, (_, s) => {
+            const x = -0.95 + (1.9 * s) / 120
+            return [x, CONE_POOL + rippleAt(x, u) + coneAt(x, rise, foot, open)]
+        })
+        const dots = []
+        // The drop hangs at the top through the last beat's first half, then falls faster and faster onto the pool.
+        if (u >= 15) {
+            const top = 0.95 - SPOT_R
+            dots.push([0, top + (CONE_POOL + SPOT_R - top) * clamp((u - 15.5) / 0.5, 0, 1) ** 2])
+        }
+        // A bomb leaves the open crater ERUPT_X from the middle, climbs for ERUPT_RISE beats, and is gone where it falls
+        // onto the full cone (so it never shows again over a cone that is melting under it).
+        const crater = CONE_POOL + coneAt(ERUPT_X, 1, CONE_FOOT[1], 1) + SPOT_R
+        for (let k = 8; k < 12 && u >= 8; k += 1) {
+            for (let j = 0; j < 2; j += 1) {
+                const age = u - k - 0.25 * j
+                if (age < 0) continue
+                const side = j ? 1 : -1
+                const h = (k % 2 ? 0.45 : 0.62) * (0.85 + 0.3 * hash01(loop, k, 500 + j))
+                const x = side * (ERUPT_X + 0.5 * (0.8 + 0.4 * hash01(loop, k, 510 + j)) * age)
+                const y = crater + h * (1 - (1 - age / ERUPT_RISE) ** 2)
+                if (age > ERUPT_RISE && y - SPOT_R <= CONE_POOL + coneAt(x, 1, CONE_FOOT[1], 1)) continue
+                if (Math.abs(x) > 0.95 - SPOT_R || y < -0.95 + SPOT_R) continue
+                dots.push([x, y])
+            }
+        }
+        dots.sort((a, b) => b[0] - a[0])
+        const paths = [surface]
+        let from = surface[surface.length - 1]
+        for (const dot of dots) {
+            const ring = dotFrom(dot, from)
+            paths.push(ring)
+            from = ring[ring.length - 1]
+        }
+        return byLength(paths, n)
+    },
+    // Strands: one line, the stretch of a tangle of drifting sines (STRAND_HARMONICS) that the beam has just run over, so
+    // it wanders on as the beam runs and the tangle drifts. Copies sets how tangled (2 to 8 harmonics; 5 its own). A look's
+    // Speed runs the beam faster and, as on the page, leaves a longer strand (up to twice as long, from Speed 2); slower,
+    // it only crawls slower.
+    strands: (n, { copies = 0, beat = 0, speed = 1 } = {}) => {
+        const harmonics = STRAND_HARMONICS.slice(0, countOf(copies, 5, 2, 8))
+        const sum = harmonics.reduce((s, k) => s + k.a, 0)
+        const drift = beat * STRAND_DRIFT
+        const head = beat * STRAND_RUN
+        const length = STRAND_RUN * STRAND_TRAIL * clamp(finite(speed, 1), 1, 2)
+        const steps = 360
+        const path = Array.from({ length: steps + 1 }, (_, i) => {
+            const u = head - length + (length * i) / steps
+            let x = 0
+            let y = 0
+            for (const k of harmonics) {
+                x += k.a * Math.sin(k.fx * u + k.px + drift * k.vx)
+                y += k.a * Math.cos(k.fy * u + k.py + drift * k.vy)
+            }
+            return [(STRAND_REACH * x) / sum, (STRAND_REACH * y) / sum]
+        })
+        return byLength([path], n)
+    },
 }
 
 /** Hue 0..1 (saturated, full value) to [r, g, b] in 0..1. */
@@ -1136,6 +1271,8 @@ const generateShape = ({
     // Beats since the clock's zero: sparkle and twinkle change on its half beats. The laser desk passes its own clock;
     // left out, it is `time` at 120 BPM.
     beat,
+    // The laser desk's Speed, already in `beat`: passed on for a shape whose picture changes with it (strands is longer).
+    speed = 1,
 } = {}) => {
     const names = shapeListOf(shape)
     const t = finite(time, 0)
@@ -1157,7 +1294,7 @@ const generateShape = ({
         clamp((x * sin + y * cos) * scale + lift, -1, 1),
     ]
     // `size` too, for a shape whose marks keep one size on the wall however big the picture is (dust).
-    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2), size: scale })
+    const strokes = build(n, { copies: finite(copies, 0), time: t, beat: finite(beat, t * 2), size: scale, speed: finite(speed, 1) })
     const total = strokes.reduce((sum, s) => sum + s.length, 0)
     const out = []
     let k = 0
