@@ -8,7 +8,9 @@ import { generateShape, LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE } from '../../.
 
 const require = createRequire(import.meta.url)
 const proto = require('./lasercubeProtocol')
-const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, GUARD } = require('./laserEngine')
+const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE, GUARD, CUSHION_MS } = require('./laserEngine')
+// What a cube is topped up to at a rate (2026-11-07, REA: one tick's worth a tick left the cubes 7 ms from empty).
+const cushionAt = (rate) => Math.ceil((rate * CUSHION_MS) / 1000)
 const guards = require('./laserGuards')
 
 const fakeSocket = () => {
@@ -262,7 +264,7 @@ describe('the laser engine', () => {
         expect(new Set(data.map((s) => s.ip))).toEqual(new Set(['10.0.0.51', '10.0.0.52']))
         for (const s of data) { expect(s.buf[0]).toBe(0xa9); expect((s.buf.length - 4) / 10).toBeLessThanOrEqual(140) }
     })
-    it('paces each cube to its own DAC rate, never above its maximum', () => {
+    it('fills each cube to the cushion at its own DAC rate (never above its maximum), then sends what it played, however late the tick', () => {
         const run = (info, config = ONE) => {
             const rig = engineWith(config)
             rig.answer('10.0.0.51', info)
@@ -271,28 +273,43 @@ describe('the laser engine', () => {
             rig.engine.setFrame('all', circle)
             rig.socket.sent.length = 0
             rig.engine.tick()
-            return pointsIn(dataTo(rig.socket))
+            const first = pointsIn(dataTo(rig.socket))
+            rig.socket.sent.length = 0
+            rig.at(35) // a late tick (the desk's look work, a Windows timer): the 35 ms played are all sent again
+            rig.engine.tick()
+            return [first, pointsIn(dataTo(rig.socket))]
         }
-        expect(run({ dac: 20000, max: 40000 })).toBe(400) // 20 ms of 20 kpps
-        expect(run({ dac: 60000, max: 35000 })).toBe(700) // the maximum is the ceiling
-        expect(run({ dac: 30000, max: 35000 }, { ...ONE, dacRate: 25000 })).toBe(600) // laser.json's dacRate is only a request: the cube plays 30 kpps
+        expect(run({ dac: 20000, max: 40000 })).toEqual([cushionAt(20000), 700]) // 35 ms of 20 kpps
+        expect(run({ dac: 60000, max: 35000 })).toEqual([cushionAt(35000), 1225]) // the maximum is the ceiling
+        expect(run({ dac: 30000, max: 35000 }, { ...ONE, dacRate: 25000 })).toEqual([cushionAt(30000), 1050]) // laser.json's dacRate is only a request: the cube plays 30 kpps
     })
     it('sends no more than a cube says it has room for', () => {
+        const rig = engineWith(ONE)
+        rig.answer('10.0.0.51', { size: 1000, free: 1000 }) // a small buffer: the cushion is more than it holds
+        expect(rig.engine.arm({ armed: true, confirm: ARM_PHRASE }).ok).toBe(true)
+        rig.hear('10.0.0.51', [0x8a, 0, 0xe8, 0x03]) // the clear confirmed: 1000 free
+        rig.engine.setFrame('all', [[0, 0.5, 1, 1, 1], [0.3, 0.5, 1, 1, 1]])
+        rig.hear('10.0.0.51', [0x8a, 0, 250, 0])
+        rig.socket.sent.length = 0
+        rig.engine.tick()
+        expect(pointsIn(dataTo(rig.socket))).toBe(50) // 250 free − the 200-sample margin
+    })
+    it('sends nothing to a cube already holding the cushion', () => {
         const { engine, socket, hear } = armedWith(ONE)
-        engine.setFrame('all', [[0, 0.5, 1, 1, 1], [0.3, 0.5, 1, 1, 1]])
-        hear('10.0.0.51', [0x8a, 0, 250, 0])
+        engine.setFrame('all', circle)
+        hear('10.0.0.51', [0x8a, 0, 250, 0]) // 5750 queued
         socket.sent.length = 0
         engine.tick()
-        expect(pointsIn(dataTo(socket))).toBe(50) // 250 free − the 200-sample margin
+        expect(pointsIn(dataTo(socket))).toBe(0)
     })
     it('counts what the cube has played since its last answer, at its DAC rate', () => {
         const { engine, socket, hear, at } = armedWith(ONE)
         engine.setFrame('all', circle)
-        hear('10.0.0.51', [0x8a, 0, 250, 0])
-        at(10) // 10 ms at 30 kpps: 300 more played
+        hear('10.0.0.51', [0x8a, 0, 0x88, 0x13]) // 5000 free: 1000 queued
+        at(10) // 10 ms at 30 kpps: 300 more played, 700 left
         socket.sent.length = 0
         engine.tick()
-        expect(pointsIn(dataTo(socket))).toBe(350)
+        expect(pointsIn(dataTo(socket))).toBe(cushionAt(30000) - 700)
     })
     it('disarming switches every cube off twice and stops the stream', () => {
         const { engine, socket } = armedWith()
@@ -329,26 +346,80 @@ describe('the laser engine', () => {
         expect(engine.frames().all).toEqual([[0, 0.5, 1, 1, 1]])
     })
     it('starts a new frame where the playing one ends, so a figure is never torn (both as the guards draw them)', () => {
-        const { engine, socket } = armedWith(ONE)
+        const { engine, socket, at } = armedWith(ONE)
         const long = Array.from({ length: 1000 }, (_, i) => [Math.cos(i / 100), 0.5, 1, 0, 0])
         const plan = guards.pathPlan(guards.DEFAULT_GUARDS, 30000)
         const longOut = guards.optimisePath(long, plan).points
         const circleOut = guards.optimisePath(circle, plan).points
         engine.setFrame('all', long)
-        engine.tick() // one tick at 30 kpps: the long frame's first 600 points (after the bridge from the centre)
+        engine.tick() // the first tick at 30 kpps fills the cushion: the long frame from its start (after the bridge from the centre)
         const first = dataTo(socket).flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))
         const bridgeIn = guards.bridgePath([0, 0], longOut[0], plan).length
         engine.setFrame('all', circle)
         socket.sent.length = 0
+        at(20) // 20 ms played: 600 points sent again
         engine.tick() // the long frame goes on to its end, then a bridge, then the circle
         const msgs = dataTo(socket)
         expect(pointsIn(msgs)).toBe(600)
         const xs = msgs.flatMap((s) => Array.from({ length: (s.buf.length - 4) / 10 }, (_, i) => s.buf.readUInt16LE(4 + i * 10)))
-        const rest = longOut.slice(600 - bridgeIn)
+        const done = (cushionAt(30000) - bridgeIn) % longOut.length // where in a pass of the long frame the first tick stopped
+        const rest = done === 0 ? [] : longOut.slice(done)
         const bridge = guards.bridgePath(longOut.at(-1), circleOut[0], plan)
         const want = [...rest, ...bridge, ...circleOut, ...circleOut].slice(0, 600).map((p) => proto.toDeviceCoord(p[0]))
-        expect(first.length).toBe(600)
+        expect(first.length).toBe(cushionAt(30000))
         expect(xs).toEqual(want)
+    })
+})
+
+describe('the cushion (2026-11-07, REA festival: the cubes blinked on cable; TouchDesigner, keeping ~5000 points queued, did not)', () => {
+    it('a Blackout empties every armed cube\'s queue at once, and streams nothing until the cube confirms', () => {
+        const { engine, socket, hear } = armedWith()
+        engine.setFrame('all', circle)
+        engine.tick()
+        expect(litIn(dataTo(socket))).toBeGreaterThan(0)
+        socket.sent.length = 0
+        engine.blackout()
+        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x8a], [0x8d], [0x8d], [0x8a]])
+        engine.tick()
+        expect(dataTo(socket)).toEqual([])
+        for (const ip of ['10.0.0.51', '10.0.0.52']) hear(ip, [0x8a, 0, 0x70, 0x17])
+        engine.tick()
+        expect(litIn(dataTo(socket))).toBe(0)
+    })
+    it('a dark frame after a lit one empties the cube\'s queue too, then streams dark', () => {
+        const { engine, socket, hear, at } = armedWith(ONE)
+        engine.setFrame('all', circle)
+        engine.tick()
+        socket.sent.length = 0
+        engine.setFrame('all', [[0, 0.5, 0, 0, 0]])
+        at(20)
+        engine.tick()
+        expect(cmds(socket)).toEqual([[0x8d], [0x8d], [0x8a]])
+        expect(dataTo(socket)).toEqual([])
+        hear('10.0.0.51', [0x8a, 0, 0x70, 0x17])
+        at(20)
+        engine.tick()
+        expect(pointsIn(dataTo(socket))).toBeGreaterThan(0)
+        expect(litIn(dataTo(socket))).toBe(0)
+        // Dark stays dark without clearing again.
+        socket.sent.length = 0
+        at(20)
+        engine.tick()
+        expect(cmds(socket)).toEqual([])
+    })
+    it('the state shows each cube\'s stream: the least queued before a top-up, the longest gap, dry spells and late ticks', () => {
+        const { engine, at } = armedWith(ONE)
+        engine.setFrame('all', circle)
+        engine.tick() // the first top-up after the clear counts no gap
+        at(20)
+        engine.tick()
+        at(CUSHION_MS + 30) // a stall longer than the cushion: it ran out
+        engine.tick()
+        const s = engine.state().cubes[0].stream
+        expect(s.cushionMs).toBe(CUSHION_MS)
+        expect(s.now).toMatchObject({ tops: 3, maxGapMs: CUSHION_MS + 30, dry: 1, late: 1 })
+        expect(s.now.lowMs).toBe(0)
+        expect(s.total).toEqual({ dry: 1, late: 1 })
     })
 })
 
