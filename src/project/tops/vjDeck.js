@@ -77,7 +77,7 @@ export const normalizeClip = (clip) => {
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
 // One of every effect fits on a stack (21 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 25
+export const MAX_EFFECTS = 26
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -85,6 +85,7 @@ export const EFFECT_TYPES = {
     'top.edge': { main: ['strength'] },
     'top.feedback': { main: ['trail'] },
     'top.transform': { main: ['scale', 'rotate', 'moveX'] },
+    'top.steady': { main: ['smooth', 'zoom', 'reach'] },
     'top.freeze': { main: ['hold'] },
     'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back', 'drift', 'flash'] },
     'top.lineart': { main: ['bands', 'width', 'colour'] },

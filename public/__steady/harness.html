@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>steady harness</title>
+<body style="margin:0;background:#000">
+<canvas id="c" width="1280" height="720"></canvas>
+<script type="module">
+// Scratch test page (not shipped): the real top engine plays a shaky clip through top.steady and records
+// what it shows, so ffmpeg's vidstabdetect can measure the shake left. ?steady=0 records the raw clip.
+import { createTopEngine } from '/project/tops/topEngine.js'
+const q = new URLSearchParams(location.search)
+const steady = q.get('steady') !== '0'
+const canvas = document.getElementById('c')
+const engine = createTopEngine({ canvas, width: 1280, height: 720 })
+const nodes = [{ id: 'clip', type: 'top.clip', values: {} }]
+const wires = []
+let out = 'clip'
+if (steady) {
+    nodes.push({ id: 'st', type: 'top.steady', values: { smooth: Number(q.get('smooth') ?? 0.5), zoom: Number(q.get('zoom') ?? 1.1), reach: Number(q.get('reach') ?? 0.06) } })
+    wires.push({ from: 'clip', to: 'st', port: 'a' })
+    out = 'st'
+}
+engine.setNetwork({ nodes, wires })
+const video = document.createElement('video')
+video.src = '/__steady/shaky.mp4'
+video.muted = true
+video.playsInline = true
+video.crossOrigin = 'anonymous'
+engine.setVideo('clip', video)
+const stream = canvas.captureStream(30)
+const rec = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 8e6 })
+const chunks = []
+rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data) }
+let frames = 0
+window.__dbg = () => ({ t: video.currentTime, ended: video.ended, paused: video.paused, ready: video.readyState, err: video.error && video.error.message, frames, rec: rec.state, error: engine.errorFor(out) })
+const step = () => {
+    engine.frame()
+    engine.show(out)
+    frames += 1
+    if (!video.ended) video.requestVideoFrameCallback(step)
+}
+video.addEventListener('ended', async () => {
+    rec.stop()
+    await new Promise((r) => { rec.onstop = r })
+    const blob = new Blob(chunks, { type: 'video/webm' })
+    const bytes = new Uint8Array(await blob.arrayBuffer())
+    let s = ''
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+    window.__result = { frames, error: engine.errorFor(out), webm: btoa(s) }
+})
+await video.play()
+rec.start(250)
+video.requestVideoFrameCallback(step)
+</script>
