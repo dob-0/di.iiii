@@ -51,7 +51,7 @@ const DEFAULT_PROBES = [
 
 function run(command, args, { timeout = PANEL_TIMEOUT_MS, cwd } = {}) {
   return new Promise((resolve, reject) => {
-    execFile(command, args, { timeout, cwd, maxBuffer: 4 * 1024 * 1024 }, (error, stdout) => {
+    execFile(command, args, { timeout, cwd, maxBuffer: 4 * 1024 * 1024, windowsHide: true }, (error, stdout) => {
       if (error) { Object.defineProperty(error, 'stdout', { value: String(stdout || ''), enumerable: false }); reject(error) }
       else resolve(String(stdout))
     })
