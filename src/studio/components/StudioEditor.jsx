@@ -1,3 +1,4 @@
+import { keepBottomOnScale } from '../utils/keepModelBottom.js'
 import { playScene } from '../utils/playScene.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
@@ -1076,7 +1077,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             }
             // A transform edit carries only what moved (transformDelta.js): a re-typed or re-spelled value writes nothing.
             const patch = component === 'transform'
-                ? transformChange(selectedEntity.components?.transform, nextValue)
+                ? keepBottomOnScale(selectedEntity, selectedEntity.components?.transform, transformChange(selectedEntity.components?.transform, nextValue))
                 : nextValue
             if (!patch) return
             applyLocalOps({
@@ -1100,8 +1101,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     useEffect(() => { entitiesRef.current = document.entities || [] }, [document.entities])
     const handleTransformCommit = useCallback((entityId, transform) => {
         if (!entityId) return
-        const stored = entitiesRef.current.find((entity) => entity.id === entityId)?.components?.transform
-        const patch = transformChange(stored, transform)
+        const entity = entitiesRef.current.find((candidate) => candidate.id === entityId)
+        const stored = entity?.components?.transform
+        const patch = keepBottomOnScale(entity, stored, transformChange(stored, transform))
         if (!patch) return
         applyLocalOps({
             type: 'updateComponent',
@@ -1159,10 +1161,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     // would prematurely unmount ModalTransform. Session ends via onCancel→handleTransformCancel.
     const handleTransformCommitMany = useCallback((list) => {
         const ops = movedTransforms(entitiesRef.current, (list || []).filter((entry) => entry?.id && entry.transform))
-            .map((entry) => ({
-                type: 'updateComponent',
-                payload: { entityId: entry.id, component: 'transform', patch: entry.transform }
-            }))
+            .map((entry) => {
+                const entity = entitiesRef.current.find((candidate) => candidate.id === entry.id)
+                return {
+                    type: 'updateComponent',
+                    payload: { entityId: entry.id, component: 'transform', patch: keepBottomOnScale(entity, entity?.components?.transform, entry.transform) }
+                }
+            })
         if (ops.length) applyLocalOps(ops)
     }, [applyLocalOps])
 
