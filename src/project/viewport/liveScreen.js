@@ -18,7 +18,7 @@ export const PLATE_KINDS = Object.freeze(['project', 'url'])
 // How often each kind's texture is re-uploaded to the GPU. An upload is a
 // full-frame copy; a 1280x720 video at 60 would cost more than the room around
 // it. A number is a cap on one shared clock (LiveScreens.jsx): the picture
-// network at 15 (it is already scaled to 640 wide and its operators run at
+// network at 30 (15 made a 15 Hz strobe one steady picture; its operators run at
 // their own pace), an NDI® <img> at 30, a still image and a test pattern once.
 // 'frame' is a <video>: three.js's VideoTexture uploads once per frame the
 // browser presents (requestVideoFrameCallback), never faster than the source's
@@ -29,7 +29,7 @@ export const LIVE_SCREEN_RATES = Object.freeze({
     camera: 'frame',
     stream: 'frame',
     ndi: 30,
-    network: 15,
+    network: 30,
     image: 0,
     test: 0
 })

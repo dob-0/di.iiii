@@ -33,8 +33,10 @@ export default function MapCueList({
     const [playing, setPlaying] = useState(false)
     const [editingId, setEditingId] = useState(null)
     const timerRef = useRef(null)
+    const startedRef = useRef(false)
 
     const stop = useCallback(() => {
+        startedRef.current = false
         setPlaying(false)
         clearTimeout(timerRef.current)
         timerRef.current = null
@@ -49,9 +51,18 @@ export default function MapCueList({
 
         const index = cues.findIndex((cue) => cue.id === liveCueId)
         const current = index === -1 ? null : cues[index]
-        if (!current || !(current.hold > 0)) {
+        if (!current) {
+            // SHOW FIX (audit risk 5): Play with no live cue (after a load or a reload) used to do nothing while the button said
+            // "Stop". Start from the first cue instead; its fire sets the live cue and the timer then takes over.
+            // Once per Play press (a ref), so a window that does not report the live cue back can never loop on cue 1.
+            const first = cues[0]
+            if (first && !startedRef.current) { startedRef.current = true; onFire?.(first) }
+            else if (!first || startedRef.current) setPlaying(false)
+            return undefined
+        }
+        if (!(current.hold > 0)) {
             // Standby: hold 0 waits for a person.
-            if (current) setPlaying(false)
+            setPlaying(false)
             return undefined
         }
         const next = cues[(index + 1) % cues.length]
@@ -78,7 +89,7 @@ export default function MapCueList({
                     <button
                         type="button"
                         className={`map-mini${playing ? ' is-on' : ''}`}
-                        onClick={() => (playing ? stop() : setPlaying(true))}
+                        onClick={() => { if (playing) stop(); else { startedRef.current = false; setPlaying(true) } }}
                         disabled={!cues.length}
                         title="Advance through the cues on their hold times"
                     >
