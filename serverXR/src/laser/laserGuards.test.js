@@ -398,6 +398,44 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
             }
         }
     })
+    // 2026-11-06 evening: volcano, the lava story in one line with a drop and bombs, held over two of its 16-beat loops
+    // (the bombs' heights change from loop to loop) at every eighth of a beat as sent, at 0.5 and 0.1 like the lava
+    // shapes. Measured worst in one window at 30 kpps: 8.3 % at 0.5 (the drop falling), 29.4 % at 0.1 (the crater
+    // bursting open). At 0.05 it is 40.0 % at 120 points, 48.4 % at 600 and 57.0 % at 900 with a still frame now and then, where
+    // the engine's own 50 % stop blanks the cube, as it does for the other lava shapes there.
+    it('volcano as sent is never still at any eighth of a beat over two loops, and never puts 40 % in one window', () => {
+        expect(LASER_SHAPES[52]).toBe('volcano')
+        const plan = at(30000)
+        for (const size of [0.5, 0.1]) {
+            for (const points of [120, 900]) {
+                for (let beat = 0; beat < 32; beat += 0.125) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape: 'volcano', size, height: 0.5, points, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                    const label = `volcano ${size} × ${points} beat ${beat}`
+                    expect(stillBeams(frame), label).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, label).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
+    // 2026-11-06 evening: strands (the owner's laser.html), one line wandering along a tangle of drifting sines: held at
+    // every eighth of a beat over 16 as sent, its least and most tangled, slow and fast, at 0.5 and MARK_MIN_SIZE. A strand
+    // is one stretch of line, not a figure across the picture, so a small picture can hold all of it in a few windows:
+    // measured worst at 30 kpps, 12.8 % at 0.5, 24.0 % at 0.15, 42.1 % at 0.1, and at 0.05 72.0 % with still frames, where
+    // the engine's own guards blank the cube, as they are there to.
+    it('strands as sent is never still at any eighth of a beat, and never puts 40 % in one window', () => {
+        expect(LASER_SHAPES[53]).toBe('strands')
+        const plan = at(30000)
+        for (const size of [0.5, MARK_MIN_SIZE]) {
+            for (const [points, copies, speed] of [[120, 2, 0.25], [900, 0, 1], [900, 8, 2]]) {
+                for (let beat = 0; beat < 16; beat += 0.125) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape: 'strands', size, height: 0.5, points, copies, beat: beat * speed, speed }), { budget: null }).points, normaliseZone()).points, plan).points
+                    const label = `strands ${size} × ${points} ×${copies} speed ${speed} beat ${beat}`
+                    expect(stillBeams(frame), label).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, label).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
     // 2026-11-01: point, one dot alone in the middle. All the frame is in it, so it is the shape nearest the 50 % stop: held
     // under 40 % at every point count, at 30 and 35 kpps, plain and through a corner pin like the owner's.
     it('point is never still and never puts 40 % in one window, at any size from 0.05, any points, plain or pinned', () => {
@@ -626,7 +664,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(52)
+        expect(LASER_SHAPES.length).toBe(54)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))
