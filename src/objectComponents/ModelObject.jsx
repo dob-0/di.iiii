@@ -70,6 +70,16 @@ export const disposeObject3D = (root, { materialsOnly = false } = {}) => {
 // scripts/place/hall.py names its zone tape `hall-zone-<id>` (dance, stage, backstage …).
 export const isPlanningMarker = (name) => /^hall-zone-/.test(String(name || ''))
 
+// "Tint the model": the colour multiplies what the material already paints, like a colour
+// filter, so a textured model keeps its painting (white = no change). Mutates and returns
+// the material it is given, which must already be a private clone. Null colour = untouched.
+export const tintMaterial = (material, color) => {
+    if (!material || color == null || !material.color?.isColor) return material
+    const resolved = asColor(color)
+    material.color.multiply(Array.isArray(resolved) ? new THREE.Color(...resolved) : new THREE.Color(resolved))
+    return material
+}
+
 export default function ModelObject({
     assetRef,
     data,
@@ -295,17 +305,10 @@ export default function ModelObject({
             // (MOXIR, 2026-10-01). The 2D plot still draws the zones from the venue plan.
             if (isPlanningMarker(child.name)) { child.visible = false; return }
             if (!child.isMesh) return
-            let nextMaterial
-            if (applyModelColor) {
-                const resolvedColor = asColor(modelColor)
-                nextMaterial = new THREE.MeshBasicMaterial({
-                    color: Array.isArray(resolvedColor) ? new THREE.Color(...resolvedColor) : new THREE.Color(resolvedColor)
-                })
-            } else if (Array.isArray(child.material)) {
-                nextMaterial = child.material.map((mat) => mat?.clone?.() || mat)
-            } else {
-                nextMaterial = child.material?.clone?.() || child.material
-            }
+            const cloneMaterial = (mat) => tintMaterial(mat?.clone?.() || mat, applyModelColor ? modelColor : null)
+            const nextMaterial = Array.isArray(child.material)
+                ? child.material.map(cloneMaterial)
+                : cloneMaterial(child.material)
 
             const applyCommonProps = (material) => {
                 if (!material) return

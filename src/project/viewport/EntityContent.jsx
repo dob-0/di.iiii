@@ -199,7 +199,7 @@ export default function EntityContent({ entity, assetMap, screens = null }) {
                 data={asset?.url || null}
                 materialsAssetRef={media.materialsAssetId ? assetMap?.get(media.materialsAssetId) || null : null}
                 modelColor={appearance.color}
-                applyModelColor={false}
+                applyModelColor={appearance.tint === true}
                 opacity={appearance.opacity}
                 playAnimations={media.playAnimations !== false}
                 animationSpeed={media.animationSpeed}

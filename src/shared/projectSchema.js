@@ -1087,6 +1087,9 @@ export const normalizeEntity = (entity = {}) => {
             color: ensureString(appearanceSource.color, defaultComponents.appearance.color),
             opacity: Math.min(1, Math.max(0, ensureNumber(appearanceSource.opacity, defaultComponents.appearance.opacity)))
         }
+        // Models only: "Tint the model" is opt-in and stays absent until set, so old documents are unchanged.
+        if (type === 'model' && appearanceSource.tint !== undefined) nextComponents.appearance.tint = appearanceSource.tint === true
+        else delete nextComponents.appearance.tint
     } else {
         delete nextComponents.appearance
     }

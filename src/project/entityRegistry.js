@@ -357,7 +357,17 @@ const DEFINITIONS = {
     model: {
         label: 'Model',
         sections: [
-            ...BASE_SECTIONS,
+            { id: 'transform', label: 'Transform', fields: TRANSFORM_FIELDS },
+            {
+                id: 'appearance',
+                label: 'Appearance',
+                fields: [
+                    ...APPEARANCE_FIELDS,
+                    // Off until chosen: the colour multiplies the model's own painting (ModelObject tintMaterial).
+                    { label: 'Tint the model', component: 'appearance', path: ['tint'], type: 'checkbox' }
+                ]
+            },
+            ANIMATION_SECTION,
             {
                 id: 'media',
                 label: 'Media',

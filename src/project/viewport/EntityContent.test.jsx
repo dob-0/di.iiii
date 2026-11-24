@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { describe, expect, it } from 'vitest'
 import EntityContent from './EntityContent.jsx'
+import ModelObject from '../../objectComponents/ModelObject.jsx'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
 import Text2DObject from '../../objectComponents/Text2DObject.jsx'
@@ -14,6 +15,18 @@ import { liveLightEntity } from '../../rigMirror/liveLight.js'
 const render = (entity, assetMap = new Map()) => EntityContent({ entity, assetMap })
 
 describe('EntityContent mapping', () => {
+    // Regression guard (2026-11-24): the model colour was saved but never shown because the tint was
+    // hard-wired off. It is opt-in per model, so a model without the flag renders exactly as before.
+    it('tints a model only when appearance.tint is on', () => {
+        const model = (appearance) => render({ type: 'model', components: { appearance, media: {} } })
+        expect(model({ color: '#ff3399', opacity: 1 }).type).toBe(ModelObject)
+        expect(model({ color: '#ff3399', opacity: 1 }).props.applyModelColor).toBe(false)
+        expect(model({ color: '#ff3399', opacity: 1, tint: false }).props.applyModelColor).toBe(false)
+        const on = model({ color: '#ff3399', opacity: 1, tint: true })
+        expect(on.props.applyModelColor).toBe(true)
+        expect(on.props.modelColor).toBe('#ff3399')
+    })
+
     it('maps box with appearance + primitive props', () => {
         const el = render({
             type: 'box',
