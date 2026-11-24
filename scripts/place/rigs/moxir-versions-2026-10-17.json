@@ -137,6 +137,19 @@
       "angleDeg": 45,
       "angleNote": "the 45 deg lens of the two the maker offers (60/45); photometry ASSUMED — fixtures.json",
       "fixtureNote": "one manifest kind for UP-COB200 (cob200) since the preview integration of 2026-09-30: the cut, the halo and the X each modelled it; the cut's body and ASSUMED photometry are kept"
+    },
+    "lasercube": {
+      "code": "EXT-LC-ULTRA-MK2",
+      "fixture": "lasercube",
+      "class": "LaserCube Ultra MK2 — 10 W RGB laser projector, class 4 (the owner's own)",
+      "angleDeg": 1.2,
+      "angleNote": "drawn as the narrowest cone di.iiii renders until the laser previs draws the streamed shapes; a real laser beam is millimetres wide and scanned into shapes",
+      "reach_m": 60,
+      "penumbra": 0,
+      "colour": "#27ff4a",
+      "airFixed": 1,
+      "intensity": 20,
+      "intensityNote": "no candela for a laser; never one of the real lamps (budget), so this is only the entity's value"
     }
   },
   "groups": {
@@ -651,6 +664,19 @@
       "aim": "laser-into-roof",
       "symmetric": "positions",
       "note": "2 UP-LA40WF standing on the top chord of the cut at u +-4.5 (lens above 4 m): FIXED devices, bolted, nothing on them pans or tilts (the scanner is a pair of mirrors inside); every beam rises into the roof over the house, never into the audience plane (>= 3 m over any floor a person can stand on). Not on the floor: a laser on the floor cannot keep its beams 3 m above the crowd. Class 4: needs a certified laser safety officer — OWNER SIGN-OFF, nothing here claims compliance."
+    },
+    "lasercube-cut": {
+      "class": "lasercube",
+      "count": 6,
+      "mount": "truss-top",
+      "dx_m": [
+        1,
+        3,
+        5
+      ],
+      "aim": "laser-into-roof",
+      "symmetric": "positions",
+      "note": "6 LaserCube Ultra MK2 standing on the top chord of the cut at u ±1, ±3, ±5 — PROVISIONAL positions, to be decided with the owner in the room (2026-10-04). FIXED devices, clamped; nothing on them pans or tilts. Every beam into the roof over the house, never into the audience plane (>= 3 m over any floor a person can stand on). Run OFF DMX: streamed over the wired network from di Raw. Class 4: needs a certified laser safety officer — OWNER SIGN-OFF, nothing here claims compliance."
     },
     "par-cut-curtain": {
       "class": "par",
@@ -1492,6 +1518,16 @@
           "name": "Smoke Factory Tour-Hazer II",
           "url": "https://www.tourhazer.de",
           "facts": "2 DMX ch (fan and haze), 1 ml/min at 40 %, 5 L (~83 h)"
+        }
+      ]
+    },
+    "EXT-LC-ULTRA-MK2": {
+      "label": "LaserCube Ultra MK2 (the owner's own)",
+      "options": [
+        {
+          "name": "Wicked Lasers LaserCube Ultra MK2",
+          "url": "https://www.laseros.com/lasercube-models/",
+          "facts": "10 W RGB, 155 x 150 x 155 mm, 3.7 kg, Ethernet + WiFi, DMX/Art-Net 16 ch, ILDA, battery 3-4 h — the owner's own cubes, no rental"
         }
       ]
     }
@@ -4335,14 +4371,15 @@
           "rule": "no fixture that pans, tilts, rotates or zooms by motor is mounted above 0.6 m (its mounting face); no ground mover's beam passes through the dance zone below 2.5 m in any look; the two lasers are fixed, and every laser beam stays >= 3 m over any floor a person can stand on.",
           "lasers": {
             "min_beam_height_m": 3,
-            "signoff": "Class 4 40 W: a certified laser safety officer must approve the positions and the show (owner sign-off, owed); nothing in this file claims compliance."
+            "signoff": "Class 4: 6 LaserCube Ultra MK2 at 10 W each — a certified laser safety officer must approve the positions and the show (owner sign-off, owed); nothing in this file claims compliance."
           }
         },
         "dmx": {
-          "owner": "2026-10-01: hazers and smoke run by hand, off DMX",
+          "owner": "2026-10-01: hazers and smoke run by hand, off DMX; 2026-10-04: the 6 LaserCube Ultra MK2 run off DMX, streamed from di Raw over the wired network",
           "offDmx": [
             "EXT-HAZER",
-            "UP-YZ31P"
+            "UP-YZ31P",
+            "EXT-LC-ULTRA-MK2"
           ]
         }
       },
@@ -4358,7 +4395,7 @@
         "beam380-backstage",
         "beam380-columns",
         "beam380-lighthouse",
-        "laser-cut"
+        "lasercube-cut"
       ],
       "effects": [
         "hazer-back",
@@ -4413,8 +4450,8 @@
           "count": 1,
           "pick": "even"
         },
-        "laser-cut": {
-          "count": 2,
+        "lasercube-cut": {
+          "count": 6,
           "pick": "even"
         }
       },
@@ -4439,7 +4476,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 1,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4465,7 +4502,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4497,7 +4534,7 @@
             "par-press-cut": 0.25,
             "beam380-backstage": 0.8,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4535,7 +4572,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0.9,
             "beam380-columns": 0.7,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4568,7 +4605,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0.8,
             "beam380-columns": 0.7,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4600,7 +4637,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0.4,
             "beam380-columns": 0.85,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4641,7 +4678,7 @@
             "par-press-cut": 0.6,
             "beam380-backstage": 0.4,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4688,7 +4725,7 @@
             "par-press-cut": 0.4,
             "beam380-backstage": 0.7,
             "beam380-columns": 0.9,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4705,14 +4742,14 @@
               "in_deg": 0,
               "solo": 3
             },
-            "laser-cut": {
+            "lasercube-cut": {
               "rule": "laser-into-roof",
               "a": 18
             }
           },
           "colours": {
             "beam380-backstage": "#ff1408",
-            "laser-cut": "#ff1408"
+            "lasercube-cut": "#ff1408"
           },
           "levels": {
             "par-cut-x": 0,
@@ -4721,7 +4758,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0.35,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4752,7 +4789,7 @@
             "par-press-cut": 0.1,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4788,7 +4825,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0.9,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4815,7 +4852,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0.95,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4852,7 +4889,7 @@
             "par-press-cut": 0.45,
             "beam380-backstage": 0.6,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4883,7 +4920,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4919,7 +4956,7 @@
             "par-press-cut": 1,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-cut-curtain": 0,
             "par-press-sides": 0,
             "par-vista": 0,
@@ -4943,7 +4980,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-press-sides": 0,
             "par-vista": 0,
             "par-neighbour": 0,
@@ -4966,7 +5003,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-press-sides": 0,
             "par-vista": 0,
             "par-neighbour": 0,
@@ -4993,7 +5030,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 0,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-press-sides": 0,
             "par-vista": 0,
             "par-neighbour": 0,
@@ -5041,7 +5078,7 @@
             "par-press-cut": 0.4,
             "beam380-backstage": 0.7,
             "beam380-columns": 0.9,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-press-sides": 0,
             "par-vista": 0,
             "par-neighbour": 0,
@@ -5069,7 +5106,7 @@
             "par-press-cut": 0,
             "beam380-backstage": 1,
             "beam380-columns": 0,
-            "laser-cut": 0,
+            "lasercube-cut": 0,
             "par-press-sides": 0,
             "par-vista": 0,
             "par-neighbour": 0,
@@ -5102,7 +5139,7 @@
             "beam380-backstage": 0,
             "beam380-columns": 0,
             "beam380-lighthouse": 1,
-            "laser-cut": 0
+            "lasercube-cut": 0
           }
         },
         "k-vista": {
@@ -5132,7 +5169,7 @@
             "beam380-backstage": 0.3,
             "beam380-columns": 0,
             "beam380-lighthouse": 1,
-            "laser-cut": 0
+            "lasercube-cut": 0
           }
         },
         "k-lightbox": {
@@ -5160,7 +5197,7 @@
             "beam380-backstage": 0,
             "beam380-columns": 1,
             "beam380-lighthouse": 0,
-            "laser-cut": 0
+            "lasercube-cut": 0
           }
         },
         "k-forest": {
@@ -5184,7 +5221,7 @@
             "beam380-backstage": 0,
             "beam380-columns": 0,
             "beam380-lighthouse": 0,
-            "laser-cut": 0
+            "lasercube-cut": 0
           }
         },
         "k-crown": {
@@ -5225,7 +5262,7 @@
             "beam380-backstage": 1,
             "beam380-columns": 1,
             "beam380-lighthouse": 1,
-            "laser-cut": 0
+            "lasercube-cut": 0
           }
         }
       },
