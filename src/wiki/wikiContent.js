@@ -1043,6 +1043,7 @@ export const WIKI_ARTICLES = [
                 'Videos can play sound: untick Muted and set Volume in the video’s Media section. Sound starts after the visitor’s first click or keypress (browser autoplay rules) — this works in the editor and on published pages.',
                 'Text objects have full type controls: six 2D font choices with weight, italic, and alignment; and for 3D text, four sculpted typefaces (Helvetiker, Helvetiker Bold, Optimer, Gentilis) with depth and bevel shaping.',
                 '3D models import as .glb/.gltf (including Draco-, Meshopt-, and KTX2-compressed exports), .obj (+.mtl via the Materials picker), .stl, and .fbx. Models with embedded animation clips play them automatically — pick a specific clip, toggle “Play animations”, or set “Animation speed” in the model’s Media section; rigged/skinned characters animate correctly.',
+                'A model can be tinted: select it, and in Appearance pick a Colour and switch on Tint the model. The colour multiplies what the model already shows, like a coloured filter over it, so a painted model keeps its painting and shifts hue or darkens; white changes nothing. It is off until you switch it on, so no existing space changes. It shows in the editor and on the published page. When you change a model’s Scale in the inspector or with the Scale tool, its bottom stays where it was, so a bigger model no longer sinks into the floor.',
                 'Import an .hdr/.exr panorama and pick it as the Environment map in the Scene window — image-based lighting and reflections apply in the editor and on published pages (this is what makes Metal and Glass presets shine).',
                 'Keyframe animation (Timeline, Objects window): move the playhead, pose the object, press ● Key — two keys make motion. Keys capture position, rotation, scale, and opacity; drag a key diamond to retime it, click to jump, ▶ previews right in the editor, and Duration/Loop shape the cycle. Timelines play automatically on published pages and replace the default idle motion. Every key edit is a normal undo step.',
                 'Select and lock: click picks one, Shift+click adds, A selects all and Alt+A (or Esc) none. Click a beam and you get its lamp; a lamp body in front of a beam wins. A locked object is never picked — the click goes through, and with only locked things under the pointer the selection clears. The Select tool (or B for one box) draws a box: a plain drag replaces the selection, Shift adds, Ctrl removes; locked and hidden objects never enter. L locks the selection and Alt+L unlocks everything (our own keys — Blender has no lock key), one Ctrl+Z puts it back. You can also lock with the Lock button in the Inspector, the padlock on an outliner row, or Lock the hall in the Objects window; whichever you use, the locked object leaves the selection. To deselect: click or tap empty floor, or press Escape (Alt+A clears everything). A right-drag pans and never deselects; one B box ends with its drag or with a click; Enter or Escape in a number field hands the keys back to the room.',
@@ -1056,7 +1057,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-10-29'
+        updated: '2026-11-24'
     },
     {
         id: 'studio-content-model',

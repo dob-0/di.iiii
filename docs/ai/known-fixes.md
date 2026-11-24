@@ -3,6 +3,13 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## A model's Colour saved but never showed; scaling a model up sank it into the floor (2026-11-24)
+
+Symptom: in Studio, Appearance > Colour on a model did nothing (it saved, the model looked the same, in the editor and on the published page). A model scaled up in the inspector sank below the floor.
+Cause: both render paths (`EntityContent.jsx`, `LiveProjectScene.jsx`) passed `applyModelColor={false}` to `ModelObject`, hard-wired off; when on, it replaced every material with a flat unlit `MeshBasicMaterial`, losing the texture, which is why it was off. A model's origin is its centre, so a bigger scale pushed its bottom below Y 0.
+Fix: `tintMaterial` in `ModelObject.jsx` clones each material and multiplies its colour by the chosen one (maps and surface settings kept, white = no change). Opt-in per model by `components.appearance.tint` (absent = off, so no existing space changes), set with "Tint the model" in the model's Appearance section (`entityRegistry.js`), normalised in `projectSchema.js`, read by both render paths. A scale change through the inspector, the Scale tool or the modal S keeps the model's bottom where it was (`keepBottomOnScale`, `src/studio/utils/keepModelBottom.js`, measured on the live bounding box; editor only, a stored space is never moved on load).
+Regression tests: `ModelObject.test.js` "tintMaterial", `EntityContent.test.jsx` "tints a model only when appearance.tint is on" (flag off renders as before), `projectSchema.modelTint.test.js`, `keepModelBottom.test.js`.
+
 ## Monitor 3D map card flickered under a resting pointer; a drag that started on a card did not turn the camera (2026-11-24, N6446.1)
 
 Symptom: resting the pointer on a 3D map card (Monitor map, Spaces world 3D) made it open and close about 20 times a second; a drag started on a card moved the camera −5 px instead of turning it. Measured headless (scratch flicker test, 12 one-second rests with a 1 px jiggle): 12541 DOM changes.
