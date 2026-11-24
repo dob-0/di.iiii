@@ -35,9 +35,9 @@ const MAX_SUMMARY_ROWS = 5000
 const signPayload = (secret, timestamp, rawBody) =>
   crypto.createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('hex')
 
-const ADDED = new Set(['addObject', 'createEntity', 'createNode', 'createEdge', 'createMappingSurface', 'createMappingCue'])
-const REMOVED = new Set(['deleteObject', 'deleteEntity', 'deleteNode', 'deleteEdge', 'deleteMappingSurface', 'deleteMappingCue'])
-const CHANGED = new Set(['updateObject', 'updateEntity', 'updateComponent', 'updateNode', 'reparentNode', 'updateEdge', 'setMappingSurface', 'setMappingCue'])
+const ADDED = new Set(['addObject', 'createEntity', 'createNode', 'createEdge', 'createMappingSurface', 'createMappingCue', 'createMappingVisual'])
+const REMOVED = new Set(['deleteObject', 'deleteEntity', 'deleteNode', 'deleteEdge', 'deleteMappingSurface', 'deleteMappingCue', 'deleteMappingVisual'])
+const CHANGED = new Set(['updateObject', 'updateEntity', 'updateComponent', 'updateNode', 'reparentNode', 'updateEdge', 'setMappingSurface', 'setMappingCue', 'setMappingVisual'])
 
 const kindOf = (op) => {
   const payload = op?.payload || {}
