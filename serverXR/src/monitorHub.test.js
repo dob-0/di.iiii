@@ -593,7 +593,7 @@ describe('hub snapshot', () => {
       // the machine's own panel is not written into, and a report keeps exactly what its machine sent
       expect(local.rows.map((r) => r.machine)).toEqual([undefined, undefined])
       expect(local.machines).toBeUndefined()
-      expect(snap.reports.find((r) => r.host === 'studio-mac').panels.agents).toEqual({ ...sent, layer: 'private' })
+      expect(snap.reports.find((r) => r.host === a.machines[2].host).panels.agents).toEqual({ ...sent, layer: 'private' })
     })
 
     it('this machine\'s own rows are named with it whatever the other machines do (a name that came and went would change the label of every agent of this machine each time)', async () => {

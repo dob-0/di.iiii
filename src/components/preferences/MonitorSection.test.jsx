@@ -118,6 +118,8 @@ describe('MonitorSection', () => {
             return { ...base, panels: { ...base.panels,
                 machines: { ...base.panels.machines, rows: [...base.panels.machines.rows.map((r) => ({ ...r, layer: 'private' })), { id: '100.1.1.9', name: 'handset', os: 'android', ip: '100.1.1.9', online: true, lastSeen: null, tx: 0, rx: 0, layer: 'personal' }] } } }
         }
+        // a studio machine's name, read from the test data (no real name in a new line)
+        const studioName = () => snapshot().panels.machines.rows.find((r) => !r.self && r.os === 'linux' && r.online).name
         const panelNames = () => [...document.querySelectorAll('[data-panel]')].map((n) => n.getAttribute('data-panel'))
         it('each panel header shows its layer and the pick is All at first', async () => {
             getMonitor.mockResolvedValue(layered())
@@ -136,7 +138,7 @@ describe('MonitorSection', () => {
             fireEvent.click(document.querySelector('[data-layer-filter="personal"]'))
             expect(panelNames().sort()).toEqual(['credits', 'machines'])
             expect(screen.getByText('handset')).toBeTruthy()
-            expect(screen.queryByText('r-di')).toBeNull()
+            expect(screen.queryByText(studioName())).toBeNull()
             expect(window.localStorage.getItem('di.monitor.layer')).toBe('personal')
             first.unmount()
             render(<MonitorSection />)
@@ -144,7 +146,7 @@ describe('MonitorSection', () => {
             fireEvent.click(document.querySelector('[data-layer-filter="private"]'))
             expect(panelNames()).not.toContain('credits')
             expect(screen.queryByText('handset')).toBeNull()
-            expect(screen.getByText('r-di')).toBeTruthy()
+            expect(screen.getByText(studioName())).toBeTruthy()
         })
     })
 

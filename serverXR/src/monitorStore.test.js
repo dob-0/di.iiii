@@ -47,7 +47,7 @@ describe('monitor snapshot', () => {
     expect(Object.entries(panels).map(([name, p]) => [name, p.layer])).toEqual(expect.arrayContaining([['machines', 'private'], ['chats', 'personal'], ['credits', 'personal'], ['services', 'private']]))
     for (const p of Object.values(panels)) expect(['personal', 'private']).toContain(p.layer)
     expect(panels.machines.rows.find((r) => r.name === 'handset').layer).toBe('personal')
-    expect(panels.machines.rows.find((r) => r.name === 'aylmo').layer).toBe('private')
+    expect(panels.machines.rows.find((r) => r.name === base.Self.HostName).layer).toBe('private')
   })
 
   it('a missing tool greys one panel, not the page', async () => {
