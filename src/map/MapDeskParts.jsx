@@ -3,6 +3,25 @@ import MapStage from './MapStage.jsx'
 import MapEditorOverlay from './MapEditorOverlay.jsx'
 import { describeMachine, unresolvedInputs } from './mapMachines.js'
 import { ndiScanLine } from './ndiLink.js'
+import { cornersToPixels } from './cornerPin.js'
+
+// The topmost visible surface under a stage point, for a visual tile dropped
+// on the wall. Even-odd ray test against the pinned quad.
+export const surfaceAtPoint = (surfaces = [], [px, py], width, height) => {
+    for (let index = surfaces.length - 1; index >= 0; index -= 1) {
+        const surface = surfaces[index]
+        if (!surface.enabled) continue
+        const quad = cornersToPixels(surface.corners, width, height)
+        let inside = false
+        for (let a = 0, b = quad.length - 1; a < quad.length; b = a, a += 1) {
+            const [ax, ay] = quad[a]
+            const [bx, by] = quad[b]
+            if ((ay > py) !== (by > py) && px < (((bx - ax) * (py - ay)) / (by - ay)) + ax) inside = !inside
+        }
+        if (inside) return surface
+    }
+    return null
+}
 
 // The Projection desk's panes as parts that stand on their own, so the same
 // pane can be a column of the desk (MapSurface.jsx) or a window of its own on
@@ -133,14 +152,32 @@ export function MapWallView({
     editable = true, selectedId = null, maskMode = false, snap = true,
     referenceUrl = '', reference = null,
     onSelectSurface = () => {}, onCornersChange = () => {}, onMaskChange = () => {},
+    onDropVisual = null,
     hint = true
 }) {
     const output = mapping?.output || { width: 1920, height: 1080 }
     const { frameRef, stage } = useMeasuredStage(output.width / output.height)
     return (
-        <main className="map-frame" ref={frameRef}>
+        <main className="map-frame" ref={frameRef} style={{ '--map-aspect': output.width / output.height }}>
             {stage.width > 0 ? (
-                <div className="map-stage-holder" style={{ width: stage.width, height: stage.height }}>
+                <div
+                    className="map-stage-holder"
+                    role="region"
+                    aria-label="Wall"
+                    style={{ width: stage.width, height: stage.height }}
+                    onDragOver={onDropVisual ? (event) => {
+                        if (event.dataTransfer.types.includes('application/x-di-visual')) event.preventDefault()
+                    } : undefined}
+                    onDrop={onDropVisual ? (event) => {
+                        const visualId = event.dataTransfer.getData('application/x-di-visual')
+                        if (!visualId) return
+                        event.preventDefault()
+                        event.stopPropagation()
+                        const rect = event.currentTarget.getBoundingClientRect()
+                        const hit = surfaceAtPoint(mapping?.surfaces || [], [event.clientX - rect.left, event.clientY - rect.top], stage.width, stage.height)
+                        onDropVisual(hit?.id || null, visualId)
+                    } : undefined}
+                >
                     <MapStage
                         mapping={mapping}
                         spaceId={spaceId}
@@ -175,7 +212,9 @@ export function MapWallView({
                 <p className="map-hint">
                     {maskMode
                         ? 'Mask: click inside the selected surface to add a point, drag to move it, shift-click to remove. Alt while dragging ignores snapping.'
-                        : 'Drag a corner to pin it. Arrow keys nudge, shift for ten. Alt while dragging ignores the grid and the guides. M masks, S snaps, 1-9 fire cues.'}
+                        : (onDropVisual
+                            ? 'Drag a corner to line a screen up. Arrow keys nudge, shift for ten. Alt ignores snapping. Drop a visual on a screen to play it there.'
+                            : 'Drag a corner to pin it. Arrow keys nudge, shift for ten. Alt while dragging ignores the grid and the guides. M masks, S snaps, 1-9 fire cues.')}
                 </p>
             ) : null}
         </main>

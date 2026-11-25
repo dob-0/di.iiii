@@ -58,7 +58,9 @@ on a flat wall, a corner-pin is exactly enough.
 Schema lives in `src/shared/projectSchema.js` as `mappingState`, mirrored in
 `shared/projectSchema.cjs`. Ops: `setMappingState`, `createMappingSurface`,
 `setMappingSurface`, `reorderMappingSurfaces`, `deleteMappingSurface`,
-`createMappingCue`, `setMappingCue`, `reorderMappingCues`, `deleteMappingCue` —
+`createMappingCue`, `setMappingCue`, `reorderMappingCues`, `deleteMappingCue`,
+`createMappingVisual`, `setMappingVisual`, `deleteMappingVisual`,
+`reorderMappingVisuals` —
 all with inverses, so undo restores a deleted surface or cue to its place in the
 order.
 
@@ -103,6 +105,125 @@ probe answers 200, so a hosted tab never offers a door that leads to a 404.
 
 The field is emitted only when it holds something, so every mapping written
 before cues could carry light round-trips byte-identical.
+
+## Screens and visuals (2026-10-25)
+
+A show used to be surfaces only. A surface was both a place on the wall and the
+thing playing there, so ten visuals meant ten surfaces stacked on one rectangle,
+switched by cues that copied every surface's source. That is how a cue recorded
+before a fix put an old visual back in the middle of a show. Now the two are
+apart.
+
+A screen is a surface whose source is `wall`. It shows its own piece of the wall
+picture: `input` is a rectangle `[x, y, w, h]` in the output's normalised space,
+and the corners are where that rectangle lands. With no `input`, the screen shows
+the box its corners make, so a screen nobody has warped shows exactly the pixels
+under it.
+
+`mapping.visuals` is the bank, and `mapping.playing` is the id of the visual on
+the wall. The wall picture is drawn at the output's own width and height, so a
+visual made for 3200x1440 lands pixel for pixel. A screen of kind `visual` is the
+exception: it plays one visual from the bank by itself, fitted to that screen.
+
+Unwarped plain screens (no mask, full opacity, no filter, no blend) share ONE
+copy of the playing visual, clipped to their rectangles. We do this because an
+HTML visual is an iframe, an iframe cannot be sampled and copied, and so every
+extra copy costs a full frame of its own. A warped screen, or one with a mask,
+dimming or a blend, has to be drawn bent or blended on its own, so it gets its
+own copy.
+
+Playing a visual goes through the performance path, never undo history. It is
+what a person does live, and Ctrl+Z in the middle of a show must not walk the
+wall back through every visual that was played.
+
+HTML visuals are uploaded project assets. The server serves them with
+`Content-Security-Policy: sandbox allow-scripts allow-pointer-lock`, and the
+desk frames them with the same sandbox and without `allow-same-origin`. The file
+lives on our own origin, and `allow-same-origin` would hand it our session. It
+runs as nobody, which is all a visual needs.
+
+Old surfaces and cues still work as they did. Cues are hidden on the desk when a
+project has none, so a screens-and-visuals show does not carry an empty cue panel.
+
+## The mapping window (2026-10-25)
+
+The Mapping button opens a window that copies Resolume Arena's Advanced Output
+button for button (`src/map/MapAdvancedOutput.jsx`). Two tabs: Input Selection
+(which piece of the composition each slice takes) and Output Transformation
+(where it lands on the wall and how it bends). A slice tree sits under its
+screen, front-first, with a Help box under it that explains whatever the mouse
+is over. The toolbar has zoom, undo and redo, hand, snap, grid, and the two
+tools, Transform (move, scale, rotate whole slices) and Edit Points (bend
+them). The right panel has typed values with a minus and a plus, flip, Is Key,
+Black BG, brightness, contrast, red, green, blue, Soft Edge and Warping.
+
+A slice is drawn in three steps, and the maths is in `src/map/sliceGeometry.js`:
+
+1. Input. `input` and `inputRotation` choose the piece of the wall picture.
+2. Warp. A grid of points bends the slice's own unit square.
+3. Pin. The unit square is corner-pinned onto the four `corners` by a
+   homography.
+
+`corners` stays the one source of truth for where a slice sits. We do this
+because the 3D screen link, the Perform desk and every older build still read
+only corners, and a slice must stay where it was for all of them.
+
+The numbers in Transform mode (X, Y, Left, Top, Width, Height, Rotation) are
+read from the corners and written back to them as an affine move: translate,
+scale along the slice's own axes, or rotate about its centre. A slice that is
+already keystoned keeps its keystone when you widen it, and a rotated slice
+widens along its length, not along the screen. The numbers for a keystoned quad
+are averages a person would call its size.
+
+Warp points are stored in the pre-pin local space, on `surface.warp`
+(`mode`, `divisionsX`, `divisionsY`, `points`), row-major, with
+(2^d + 1) points each way and the four corner points forced to the corners.
+Because they live before the pin, moving or rotating the whole slice carries
+its bends with it. Changing Subdivisions resamples the old surface at the new
+points, so the shape you already bent is kept. Three modes: linear (bilinear
+inside each cell), bezier (a Catmull-Rom patch through every point) and
+perspective (points ignored, corners only). A warp costs nothing until a point
+has actually moved (`isWarpActive`).
+
+The bent picture is drawn by a WebGL mesh (`MapMeshLayer.jsx`), a 32 by 32
+lattice textured with the source, and only for sources whose pixels a page may
+read: video, image, camera, test card and colour. A web page cannot be on that
+list. It is an iframe, a browser never lets the page around an iframe read its
+pixels, and so it cannot become a texture. A warped slice showing a web page
+keeps its four corners and the usual corner-pin transform, and the window says
+so beside the Subdivisions rows. The mesh keeps the canvas to the slice's own
+bounding box, and does not lose its context on unmount, because StrictMode
+mounts twice and a lost context stays lost.
+
+Soft edge is for the overlap of two projectors. It is Paul Bourke's edge-blend
+curve, and Power, Luminance and Gamma are his three numbers. Left, right, top
+and bottom say how far in from each edge the fade reaches. On the CSS path it
+is a `mask-image` of two linear gradients, intersected; on the mesh it is the
+same curve as a 256-pixel lookup texture.
+
+Colour (brightness, contrast, red, green, blue) is one SVG `feComponentTransfer`
+per slice, drawn into a hidden `svg.map-colour-defs` and pointed at by the
+slice's CSS filter. One filter per slice and not a pile of CSS filters, so
+brightness and contrast are not applied twice and each channel gets its own
+slope and intercept. At the defaults there is no filter at all.
+
+Is Key makes a slice a luma key: `grayscale(1)` plus `mix-blend-mode:
+multiply`, so where the slice is dark the slices under it disappear. Black BG
+off makes the slice's background transparent, so what is under it shows
+through.
+
+Every change in the window is made as it is clicked, so the wall follows live.
+Cancel puts back a snapshot taken when the window opened: it deletes slices
+that did not exist, sets or recreates the ones that did, restores the order
+and the output size, and closes. Save & Close just closes.
+
+Presets live in `localStorage` on that machine (`di.map.presets.v1`), by name,
+holding every slice and the output size. They are not part of the project and
+do not travel with it. The layouts in the same menu (`screenPresets`) replace
+all slices.
+
+Tests: `sliceGeometry.test.js`, `MapStage.slice.test.jsx`,
+`MapAdvancedOutput.test.jsx`.
 
 ## Snapping
 

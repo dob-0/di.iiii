@@ -225,7 +225,18 @@ const defaultMappingSurface = {
   hue: 0,
   blend: 'normal',
   // Mirror of src/shared/projectSchema.js — see the comment there.
-  effect: { kind: 'none', threshold: 0.08, trail: 0.88, gain: 4, prompt: '', strength: 0.5 }
+  effect: { kind: 'none', threshold: 0.08, trail: 0.88, gain: 4, prompt: '', strength: 0.5 },
+  // Advanced Output. `warp` (optional, absent = plain corner-pin) is a mesh warp
+  // inside the surface's own pre-pin unit square; see normalizeMappingWarp.
+  flip: 'none',
+  isKey: false,
+  // true = a black box behind the picture, which is how a surface has always looked.
+  blackBg: true,
+  red: 0,
+  green: 0,
+  blue: 0,
+  softEdge: { enabled: false, left: 0, right: 0, top: 0, bottom: 0, power: 2, gamma: 1, luminance: 0.5 },
+  inputRotation: 0
 }
 
 const defaultMappingCue = {
@@ -254,6 +265,10 @@ const defaultMappingState = {
   background: '#000000',
   surfaces: [],
   cues: [],
+  // The visuals bank: { id, name, source } entries any screen (or the wall) can play.
+  visuals: [],
+  // The id of the visual playing on the wall; '' = none.
+  playing: '',
   reference: defaultMappingReference,
   grid: 0,
   // Seconds a surface takes to reach a new opacity. 0 while somebody is
@@ -1656,7 +1671,65 @@ const normalizePerformState = (perform = {}) => {
 // could never name an input on the machine that actually shows it. See MapStreamSource.
 // Mirrors src/shared/projectSchema.js — read that one for what each kind means and for the
 // mixed-version trap a closed list carries (an unknown kind is rewritten to the default).
-const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream', 'ndi']
+// 'wall' / 'visual' / 'html' arrived with the visuals bank. 'wall' is "this screen's piece of
+// whatever is playing on the wall" (its ref is always ''), 'visual' plays one entry of
+// mappingState.visuals (ref = visual id), 'html' is an uploaded single-file page (ref = asset
+// path or URL). An older build rewrites all three to 'test' -- see the closed-list note above.
+const MAPPING_SOURCE_KINDS = ['project', 'url', 'video', 'image', 'colour', 'test', 'camera', 'network', 'stream', 'ndi', 'wall', 'visual', 'html']
+const MAPPING_VISUAL_LIMIT = 200
+const MAPPING_VISUAL_TEXT_MAX = 80
+
+// A ref is a string; 'wall' has none and a 'visual' ref is an id, so it is bounded like one.
+const normalizeMappingRef = (kind, ref) => {
+  if (kind === 'wall') return ''
+  const value = ensureString(ref, '')
+  return kind === 'visual' ? value.slice(0, MAPPING_VISUAL_TEXT_MAX) : value
+}
+
+const normalizeMappingSource = (raw) => {
+  const rawSource = raw && typeof raw === 'object' ? raw : {}
+  const kind = ensureString(rawSource.kind, defaultMappingSurface.source.kind)
+  const known = MAPPING_SOURCE_KINDS.includes(kind) ? kind : defaultMappingSurface.source.kind
+  return { kind: known, ref: normalizeMappingRef(known, rawSource.ref) }
+}
+
+// Which rectangle of the wall picture a screen shows: [x, y, w, h] in the output's normalised
+// space. Absent means absent -- anything that is not four finite numbers is omitted.
+const normalizeMappingInput = (input) => {
+  if (!Array.isArray(input) || input.length !== 4) return null
+  if (!input.every((value) => typeof value === 'number' && Number.isFinite(value))) return null
+  const x = Math.min(1, Math.max(0, input[0]))
+  const y = Math.min(1, Math.max(0, input[1]))
+  const w = Math.max(0.001, Math.min(1 - x, Math.min(1, Math.max(0.001, input[2]))))
+  const h = Math.max(0.001, Math.min(1 - y, Math.min(1, Math.max(0.001, input[3]))))
+  return [x, y, w, h].map((value) => Math.round(value * 1e6) / 1e6)
+}
+
+// One entry of the visuals bank. A visual cannot point at the wall or at another visual: it IS
+// what the wall and the screens play, and a loop of references would never resolve.
+const normalizeMappingVisual = (visual = {}, index = 0) => {
+  const source = visual && typeof visual === 'object' ? visual : {}
+  const fallback = { ...defaultMappingSurface.source }
+  const normalized = source.source && typeof source.source === 'object' ? normalizeMappingSource(source.source) : fallback
+  return {
+    id: ensureString(source.id, '').slice(0, MAPPING_VISUAL_TEXT_MAX),
+    name: ensureString(source.name, 'Visual ' + (index + 1)).slice(0, MAPPING_VISUAL_TEXT_MAX),
+    source: normalized.kind === 'wall' || normalized.kind === 'visual' ? fallback : normalized
+  }
+}
+
+const normalizeMappingVisuals = (visuals) => {
+  const seen = new Set()
+  const out = []
+  ;(Array.isArray(visuals) ? visuals : []).forEach((raw) => {
+    if (out.length >= MAPPING_VISUAL_LIMIT) return
+    const visual = normalizeMappingVisual(raw, out.length)
+    if (!visual.id || seen.has(visual.id)) return
+    seen.add(visual.id)
+    out.push(visual)
+  })
+  return out
+}
 const MAPPING_BLEND_MODES = ['normal', 'screen', 'multiply', 'lighten', 'add']
 const MAPPING_EFFECT_KINDS = ['none', 'motion', 'ai']
 const MAPPING_EFFECT_PROMPT_MAX = 300
@@ -1699,10 +1772,83 @@ const normalizeMask = (mask) => {
   return mask.map((point) => normalizePoint(point))
 }
 
+const MAPPING_WARP_MODES = ['linear', 'bezier', 'perspective']
+const MAPPING_FLIP_MODES = ['none', 'h', 'v', 'hv']
+const MAPPING_WARP_MAX_DIVISIONS = 4
+
+const roundTo = (value, places) => {
+  const factor = 10 ** places
+  return Math.round(value * factor) / factor + 0
+}
+
+// The regular grid of warp points: (2**dx + 1) columns by (2**dy + 1) rows, row-major, top row
+// first, in the surface's own pre-pin unit square.
+const regularWarpGrid = (divisionsX = 0, divisionsY = 0) => {
+  const dx = Math.min(MAPPING_WARP_MAX_DIVISIONS, Math.max(0, Math.round(ensureNumber(divisionsX, 0))))
+  const dy = Math.min(MAPPING_WARP_MAX_DIVISIONS, Math.max(0, Math.round(ensureNumber(divisionsY, 0))))
+  const cols = 2 ** dx + 1
+  const rows = 2 ** dy + 1
+  const points = []
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) points.push([col / (cols - 1), row / (rows - 1)])
+  }
+  return points
+}
+
+// Optional, like `input`: absent in, absent out. The four corner entries are forced because the
+// corners themselves live in `corners`; a points array of the wrong size or with a bad entry is
+// replaced whole by the regular grid rather than patched.
+const normalizeMappingWarp = (warp) => {
+  if (!warp || typeof warp !== 'object' || Array.isArray(warp)) return null
+  const mode = ensureString(warp.mode, 'linear')
+  const divisionsX = Math.min(MAPPING_WARP_MAX_DIVISIONS, Math.max(0, Math.round(ensureNumber(warp.divisionsX, 0))))
+  const divisionsY = Math.min(MAPPING_WARP_MAX_DIVISIONS, Math.max(0, Math.round(ensureNumber(warp.divisionsY, 0))))
+  const cols = 2 ** divisionsX + 1
+  const rows = 2 ** divisionsY + 1
+  const raw = warp.points
+  const valid = Array.isArray(raw) && raw.length === cols * rows && raw.every((point) => (
+    Array.isArray(point) && point.length >= 2 &&
+    typeof point[0] === 'number' && Number.isFinite(point[0]) &&
+    typeof point[1] === 'number' && Number.isFinite(point[1])
+  ))
+  const points = valid
+    ? raw.map((point) => [roundTo(Math.min(2, Math.max(-1, point[0])), 6), roundTo(Math.min(2, Math.max(-1, point[1])), 6)])
+    : regularWarpGrid(divisionsX, divisionsY)
+  points[0] = [0, 0]
+  points[cols - 1] = [1, 0]
+  points[(rows - 1) * cols] = [0, 1]
+  points[rows * cols - 1] = [1, 1]
+  return {
+    mode: MAPPING_WARP_MODES.includes(mode) ? mode : 'linear',
+    divisionsX,
+    divisionsY,
+    points
+  }
+}
+
+const normalizeMappingSoftEdge = (softEdge) => {
+  const source = softEdge && typeof softEdge === 'object' ? softEdge : {}
+  const fallback = defaultMappingSurface.softEdge
+  return {
+    enabled: ensureBoolean(source.enabled, fallback.enabled),
+    left: clampNumber(source.left, fallback.left, 0, 0.5),
+    right: clampNumber(source.right, fallback.right, 0, 0.5),
+    top: clampNumber(source.top, fallback.top, 0, 0.5),
+    bottom: clampNumber(source.bottom, fallback.bottom, 0, 0.5),
+    power: clampNumber(source.power, fallback.power, 0.1, 10),
+    gamma: clampNumber(source.gamma, fallback.gamma, 0.1, 4),
+    luminance: clampNumber(source.luminance, fallback.luminance, 0, 1)
+  }
+}
+
+// Degrees wrapped into (-180, 180].
+const normalizeInputRotation = (value) => {
+  const degrees = ensureNumber(value, defaultMappingSurface.inputRotation)
+  return roundTo(degrees - 360 * Math.ceil((degrees - 180) / 360), 4)
+}
+
 const normalizeMappingSurface = (surface = {}) => {
   const source = surface && typeof surface === 'object' ? surface : {}
-  const rawSource = source.source && typeof source.source === 'object' ? source.source : {}
-  const kind = ensureString(rawSource.kind, defaultMappingSurface.source.kind)
   const blend = ensureString(source.blend, defaultMappingSurface.blend)
   const resolution = Array.isArray(source.resolution) ? source.resolution : defaultMappingSurface.resolution
   return {
@@ -1711,10 +1857,7 @@ const normalizeMappingSurface = (surface = {}) => {
     enabled: ensureBoolean(source.enabled, defaultMappingSurface.enabled),
     corners: normalizeCorners(source.corners),
     mask: normalizeMask(source.mask),
-    source: {
-      kind: MAPPING_SOURCE_KINDS.includes(kind) ? kind : defaultMappingSurface.source.kind,
-      ref: ensureString(rawSource.ref, '')
-    },
+    source: normalizeMappingSource(source.source),
     resolution: [
       Math.max(1, ensureNumber(resolution[0], defaultMappingSurface.resolution[0])),
       Math.max(1, ensureNumber(resolution[1], defaultMappingSurface.resolution[1]))
@@ -1725,7 +1868,17 @@ const normalizeMappingSurface = (surface = {}) => {
     saturation: Math.max(0, ensureNumber(source.saturation, defaultMappingSurface.saturation)),
     hue: ensureNumber(source.hue, defaultMappingSurface.hue),
     blend: MAPPING_BLEND_MODES.includes(blend) ? blend : defaultMappingSurface.blend,
-    effect: normalizeMappingEffect(source.effect)
+    effect: normalizeMappingEffect(source.effect),
+    flip: MAPPING_FLIP_MODES.includes(source.flip) ? source.flip : defaultMappingSurface.flip,
+    isKey: ensureBoolean(source.isKey, defaultMappingSurface.isKey),
+    blackBg: ensureBoolean(source.blackBg, defaultMappingSurface.blackBg),
+    red: roundTo(clampNumber(source.red, defaultMappingSurface.red, -1, 1), 4),
+    green: roundTo(clampNumber(source.green, defaultMappingSurface.green, -1, 1), 4),
+    blue: roundTo(clampNumber(source.blue, defaultMappingSurface.blue, -1, 1), 4),
+    softEdge: normalizeMappingSoftEdge(source.softEdge),
+    inputRotation: normalizeInputRotation(source.inputRotation),
+    ...(normalizeMappingInput(source.input) ? { input: normalizeMappingInput(source.input) } : {}),
+    ...(normalizeMappingWarp(source.warp) ? { warp: normalizeMappingWarp(source.warp) } : {})
   }
 }
 
@@ -1737,7 +1890,7 @@ const normalizeCueSurface = (state = {}) => {
   if (source.source && typeof source.source === 'object') {
     const kind = ensureString(source.source.kind, '')
     if (MAPPING_SOURCE_KINDS.includes(kind)) {
-      patch.source = { kind, ref: ensureString(source.source.ref, '') }
+      patch.source = { kind, ref: normalizeMappingRef(kind, source.source.ref) }
     }
   }
   return patch
@@ -1827,6 +1980,8 @@ const normalizeMappingState = (mapping = {}) => {
   const surfaces = Array.isArray(source.surfaces) ? source.surfaces : []
   const seen = new Set()
   const seenCues = new Set()
+  const visuals = normalizeMappingVisuals(source.visuals)
+  const playing = ensureString(source.playing, '')
   const show = normalizeOutputShow(output.show)
   return {
     output: {
@@ -1850,6 +2005,9 @@ const normalizeMappingState = (mapping = {}) => {
         seenCues.add(cue.id)
         return true
       }),
+    visuals,
+    // A playing id that names no visual is cleared rather than left to point at nothing.
+    playing: visuals.some((visual) => visual.id === playing) ? playing : '',
     reference: normalizeMappingReference(source.reference),
     grid: Math.max(0, Math.min(200, Math.round(ensureNumber(source.grid, defaultMappingState.grid)))),
     fade: Math.max(0, Math.min(30, ensureNumber(source.fade, defaultMappingState.fade))),
@@ -2365,7 +2523,9 @@ const applyProjectOps = (document, ops = []) => {
           // A doc-level patch never rewrites the surfaces or the cues
           // wholesale; that is what the surface and cue ops are for.
           surfaces: nextDocument.mappingState.surfaces,
-          cues: nextDocument.mappingState.cues
+          cues: nextDocument.mappingState.cues,
+          // Nor the visuals bank; playing may come from a patch.
+          visuals: nextDocument.mappingState.visuals
         })
         break
       }
@@ -2453,6 +2613,69 @@ const applyProjectOps = (document, ops = []) => {
         nextDocument.mappingState = normalizeMappingState({
           ...nextDocument.mappingState,
           cues: [...reordered, ...rest]
+        })
+        break
+      }
+      case 'createMappingVisual': {
+        const visual = normalizeMappingVisual(payload.visual || {}, nextDocument.mappingState.visuals.length)
+        if (!visual.id) break
+        const visuals = [...nextDocument.mappingState.visuals]
+        if (visuals.some((existing) => existing.id === visual.id)) break
+        const at = Number.isInteger(payload.index) && payload.index >= 0 && payload.index <= visuals.length
+          ? payload.index
+          : visuals.length
+        visuals.splice(at, 0, visual)
+        nextDocument.mappingState = normalizeMappingState({ ...nextDocument.mappingState, visuals })
+        break
+      }
+      case 'setMappingVisual': {
+        const visualId = ensureString(payload.visualId)
+        if (!visualId) break
+        const index = nextDocument.mappingState.visuals.findIndex((visual) => visual.id === visualId)
+        if (index === -1) break
+        const patch = payload.patch && typeof payload.patch === 'object' ? payload.patch : {}
+        const visuals = [...nextDocument.mappingState.visuals]
+        const prev = visuals[index]
+        visuals[index] = normalizeMappingVisual({
+          ...prev,
+          ...(patch.name !== undefined ? { name: patch.name } : {}),
+          ...(patch.source && typeof patch.source === 'object' ? { source: { ...prev.source, ...patch.source } } : {}),
+          id: visualId
+        }, index)
+        nextDocument.mappingState = normalizeMappingState({ ...nextDocument.mappingState, visuals })
+        break
+      }
+      case 'deleteMappingVisual': {
+        const visualId = ensureString(payload.visualId)
+        const state = nextDocument.mappingState
+        if (!visualId || !state.visuals.some((visual) => visual.id === visualId)) break
+        // Whatever played this visual falls back to the wall's picture instead of
+        // pointing at nothing.
+        const toWall = (source) => (source && source.kind === 'visual' && source.ref === visualId ? { kind: 'wall', ref: '' } : source)
+        nextDocument.mappingState = normalizeMappingState({
+          ...state,
+          visuals: state.visuals.filter((visual) => visual.id !== visualId),
+          playing: state.playing === visualId ? '' : state.playing,
+          surfaces: state.surfaces.map((surface) => ({ ...surface, source: toWall(surface.source) })),
+          cues: state.cues.map((cue) => ({
+            ...cue,
+            surfaces: Object.fromEntries(Object.entries(cue.surfaces).map(([surfaceId, entry]) => (
+              entry.source ? [surfaceId, { ...entry, source: toWall(entry.source) }] : [surfaceId, entry]
+            )))
+          }))
+        })
+        break
+      }
+      case 'reorderMappingVisuals': {
+        const order = Array.isArray(payload.visualIds) ? payload.visualIds.map((id) => ensureString(id)) : []
+        if (!order.length) break
+        const byId = new Map(nextDocument.mappingState.visuals.map((visual) => [visual.id, visual]))
+        const reordered = order.map((id) => byId.get(id)).filter(Boolean)
+        const named = new Set(reordered.map((visual) => visual.id))
+        const rest = nextDocument.mappingState.visuals.filter((visual) => !named.has(visual.id))
+        nextDocument.mappingState = normalizeMappingState({
+          ...nextDocument.mappingState,
+          visuals: [...rest, ...reordered]
         })
         break
       }
@@ -2732,6 +2955,50 @@ const invertSingleOp = (document, op) => {
       return [{ type: 'upsertPerformPreset', payload: { preset: cloneValue(presets[index]), index } }]
     }
     case 'setMappingState': return patchInverse('setMappingState', document.mappingState)
+    case 'reorderMappingVisuals': {
+      const visuals = document.mappingState?.visuals || []
+      if (!Array.isArray(payload.visualIds) || !payload.visualIds.length || !visuals.length) break
+      return [{ type: 'reorderMappingVisuals', payload: { visualIds: visuals.map((visual) => visual.id) } }]
+    }
+    case 'createMappingVisual': {
+      const visualId = ensureString(payload.visual?.id).slice(0, MAPPING_VISUAL_TEXT_MAX)
+      if (!visualId) break
+      // Re-creating an id that exists is a no-op in apply, so its inverse is too.
+      if ((document.mappingState?.visuals || []).some((visual) => visual.id === visualId)) return []
+      return [{ type: 'deleteMappingVisual', payload: { visualId } }]
+    }
+    case 'setMappingVisual': {
+      const visualId = ensureString(payload.visualId)
+      const prev = (document.mappingState?.visuals || []).find((visual) => visual.id === visualId)
+      const patch = payload.patch && typeof payload.patch === 'object' ? payload.patch : {}
+      if (!visualId || !prev) break
+      const restore = {}
+      if (patch.name !== undefined) restore.name = prev.name
+      if (patch.source && typeof patch.source === 'object') restore.source = cloneValue(prev.source)
+      if (!Object.keys(restore).length) break
+      return [{ type: 'setMappingVisual', payload: { visualId, patch: restore } }]
+    }
+    case 'deleteMappingVisual': {
+      const visualId = ensureString(payload.visualId)
+      const state = document.mappingState || {}
+      const visuals = state.visuals || []
+      const index = visuals.findIndex((visual) => visual.id === visualId)
+      if (index === -1) break
+      const restore = [{ type: 'createMappingVisual', payload: { visual: cloneValue(visuals[index]), index } }]
+      if (state.playing === visualId) restore.push({ type: 'setMappingState', payload: { patch: { playing: visualId } } })
+      const pointsAt = (source) => Boolean(source) && source.kind === 'visual' && source.ref === visualId
+      ;(state.surfaces || []).forEach((surface) => {
+        if (pointsAt(surface.source)) {
+          restore.push({ type: 'setMappingSurface', payload: { surfaceId: surface.id, patch: { source: cloneValue(surface.source) } } })
+        }
+      })
+      ;(state.cues || []).forEach((cue) => {
+        if (Object.values(cue.surfaces || {}).some((entry) => pointsAt(entry.source))) {
+          restore.push({ type: 'setMappingCue', payload: { cueId: cue.id, patch: { surfaces: cloneValue(cue.surfaces) } } })
+        }
+      })
+      return restore
+    }
     case 'reorderMappingSurfaces': {
       const surfaces = document.mappingState?.surfaces || []
       if (!Array.isArray(payload.surfaceIds) || !payload.surfaceIds.length || !surfaces.length) break
@@ -2895,6 +3162,8 @@ module.exports = {
   normalizePerformPreset,
   normalizePerformRect,
   normalizeMappingSurface,
+  regularWarpGrid,
+  normalizeMappingVisual,
   normalizeMappingCue,
   normalizeMappingReference,
   normalizeOutputShow,
