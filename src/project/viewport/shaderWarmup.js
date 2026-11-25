@@ -20,8 +20,20 @@
 // One invisible triangle with an unclipped material is drawn first: that puts
 // the count back to zero. Materials that really are clipped (SmartView's walls)
 // still compile at first draw, as before.
+//
+// The hold always ends. A program three releases while it is waited on (its
+// material disposed — a look unmounting lamps) is gone from renderer.info.programs,
+// and asking a deleted program for its status answers null, which three 0.185's
+// isReady() then keeps forever: such a program counts as settled. And whatever
+// else goes wrong, the room never holds longer than HOLD_MAX_MS — past it, it
+// draws, and what is still compiling compiles at first draw (a hitch, never a
+// frozen room).
 
 import { BufferAttribute, BufferGeometry, Mesh, MeshBasicMaterial, Scene } from 'three'
+
+export const HOLD_MAX_MS = 8000
+
+const wallClock = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
 const lightKey = (object) => (object.isSpotLight ? 1 : object.isPointLight ? 2 : object.isDirectionalLight ? 3 : object.isHemisphereLight ? 4 : object.isRectAreaLight ? 5 : 6)
 
@@ -89,9 +101,10 @@ const listOf = (objects) => ({
  * Wrap `renderer.render` so new shaders compile in the background.
  *
  * @param {import('three').WebGLRenderer} renderer
+ * @param {{ now?: () => number, holdMaxMs?: number }} [options]
  * @returns {() => void} undo
  */
-export const installShaderWarmup = (renderer) => {
+export const installShaderWarmup = (renderer, { now = wallClock, holdMaxMs = HOLD_MAX_MS } = {}) => {
     const render = renderer.render
     const reset = new Scene()
     const resetGeometry = new BufferGeometry().setAttribute('position', new BufferAttribute(new Float32Array(9), 3))
@@ -112,13 +125,23 @@ export const installShaderWarmup = (renderer) => {
         render.call(renderer, reset, camera)
         renderer.autoClear = autoClear
     }
-    const stats = { holds: 0, heldRenders: 0, compiles: 0 }
+    const stats = { holds: 0, heldRenders: 0, compiles: 0, timeouts: 0 }
     let waiting = null
+    let waitingSince = 0
     let last = null
+    // Done compiling, failed, released or lost: anything but a plain "not yet".
+    const settled = (program) => {
+        const live = renderer.info?.programs
+        if (Array.isArray(live) && !live.includes(program)) return true
+        return program.isReady() !== false
+    }
 
     const warmRender = function (scene, camera) {
         if (waiting) {
-            if (!waiting.every((program) => program.isReady())) { stats.heldRenders++; return }
+            if (!waiting.every(settled)) {
+                if (now() - waitingSince <= holdMaxMs) { stats.heldRenders++; return }
+                stats.timeouts++
+            }
             waiting = null
         }
         if (scene?.isScene && camera) {
@@ -134,7 +157,7 @@ export const installShaderWarmup = (renderer) => {
                 }
                 // compile() itself bumps some versions (two-sided transparent materials)
                 last = shaderSignature(scene)
-                if (pending.length) { waiting = pending; stats.holds++; stats.heldRenders++; return }
+                if (pending.length) { waiting = pending; waitingSince = now(); stats.holds++; stats.heldRenders++; return }
             }
         }
         return render.call(this, scene, camera)
