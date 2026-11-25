@@ -38,6 +38,18 @@ describe('monitor snapshot', () => {
     expect(new Set(panels.machines.rows.map((r) => r.id)).size).toBe(3)
   })
 
+  it('every panel says its layer; a phone row is personal, a studio machine private (info layers)', async () => {
+    const home = tmp()
+    const base = JSON.parse(tailscale)
+    const phone = JSON.stringify({ ...base, Peer: { ...base.Peer, ph: { HostName: 'handset', OS: 'android', TailscaleIPs: ['100.9.9.9'], Online: true } } })
+    const store = createMonitorStore({ home, runCommand: fakeRun({ tailscale: () => phone }), fetchImpl: null })
+    const { panels } = await store.getMonitor()
+    expect(Object.entries(panels).map(([name, p]) => [name, p.layer])).toEqual(expect.arrayContaining([['machines', 'private'], ['chats', 'personal'], ['credits', 'personal'], ['services', 'private']]))
+    for (const p of Object.values(panels)) expect(['personal', 'private']).toContain(p.layer)
+    expect(panels.machines.rows.find((r) => r.name === 'handset').layer).toBe('personal')
+    expect(panels.machines.rows.find((r) => r.name === base.Self.HostName).layer).toBe('private')
+  })
+
   it('a missing tool greys one panel, not the page', async () => {
     const home = tmp()
     const store = createMonitorStore({ home, runCommand: fakeRun({ tailscale: () => tailscale }), fetchImpl: null })

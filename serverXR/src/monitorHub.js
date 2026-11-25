@@ -18,6 +18,7 @@ const PARTS = require('./parts.json').parts
 const { sanitizeCredits } = require('./monitorCredits')
 const { sanitizeChats, chatsBlock } = require('./monitorChats')
 const { checkWithRetry, createProbeTracker } = require('./monitorProbe')
+const { tagPanels, panelInLayers, machineRowLayer } = require('../../shared/infoLayers.cjs')
 
 const STALE_MS = 120 * 1000
 const KEEP_MS = 60 * 60 * 1000
@@ -157,7 +158,8 @@ function createReportStore({ now = () => Date.now() } = {}) {
       .filter((a) => a.id && a.text)
     const commit = typeof body.commit === 'string' && COMMIT_RE.test(body.commit.trim()) ? body.commit.trim() : null
     const builtAt = typeof body.builtAt === 'string' && !Number.isNaN(Date.parse(body.builtAt)) ? new Date(body.builtAt).toISOString() : null
-    byHost.set(key, { host, subject, ledger: !!ledger, reportedAt: now(), panels, asks, commit, builtAt })
+    // the server tags every stored panel by its own map (a sender's `layer` is never trusted); an unknown panel is personal
+    byHost.set(key, { host, subject, ledger: !!ledger, reportedAt: now(), panels: tagPanels(panels), asks, commit, builtAt })
     return { ok: true, host }
   }
 
@@ -798,7 +800,7 @@ function createHub({
       .filter((r) => r && typeof r.host === 'string' && !held.has(r.host) && !held.has(shortHost(r.host)))
       .map((r) => ({ ...r, via: 'dev' }))
     const reportRows = [...own, ...extra.map(({ panels, ...r }) => ({ ...r, panels: withoutChats(panels) }))]
-    // a new panels object only when something is lent (credits, agents): the store's own scan (cached, shared) is never written to
+    // a new panels object only when something is lent (credits, agents): the store's own scan (cached, shared) is never written to; the scan tags its own panels (monitorStore.js), a lent one is tagged here
     const credits = creditsFor(base, [...own, ...extra])
     const agents = agentsFor(base, [...own, ...extra])
     // PRs: this machine's own list when it has one; else the shared one from dev (no GitHub login needed here)
@@ -828,7 +830,7 @@ function createHub({
     }
     return {
       ...base,
-      ...(Object.keys(lent).length ? { panels: { ...base.panels, ...lent } } : {}),
+      ...(Object.keys(lent).length ? { panels: { ...base.panels, ...tagPanels(lent) } } : {}),
       shared: shared ? { state: shared.state, at: shared.at || null, lastGoodAt: shared.lastGoodAt || null, data: shared.data || null } : null,
       account: account ? { state: account.state, name: account.name || null, machines: extra.length } : null,
       reports: reportRows,
@@ -843,25 +845,29 @@ function createHub({
 
   // The SHARED picture (dev tier only, built from the owners' machine reports): one answer for every machine's Monitor.
   // Machines with the version each reports, the freshest good pull request list, spaces, the owner's asks, and each machine's
-  // tasks/shows feed lines tagged with the machine. Bounded; nothing is probed here. Chats and credits are NOT in it (personal).
+  // tasks/shows feed lines tagged with the machine. Bounded; nothing is probed here. It picks panels by LAYER (shared/infoLayers.cjs):
+  // a personal panel (chats, credits, any panel with no layer) and a personal machine (a phone) are NOT in it.
+  const SHARED_LAYERS = ['private', 'di.iiii']
+  const sharedPanel = (r, name) => (panelInLayers(name, SHARED_LAYERS) ? r.panels?.[name] : undefined)
+  const isPersonalMachine = (r) => (r.panels?.machines?.rows || []).some((m) => isPlainObject(m) && m.self === true && machineRowLayer(m) === 'personal')
   const SHARED_ROWS = 60
   // every open PR is sent on (gh lists up to 300); 40 cut the list (57 open, 11-23)
   const SHARED_PRS_MAX = 300
   const pickFeed = (raw, name) => {
     const rows = []
     for (const r of raw) {
-      const p = r.panels?.[name]
+      const p = sharedPanel(r, name)
       if (!isPlainObject(p) || p.ok === false || !Array.isArray(p.rows)) continue
-      for (const x of p.rows.filter(isPlainObject)) rows.push({ machine: r.host, stale: now() - r.reportedAt > STALE_MS, ...x })
+      for (const x of p.rows.filter((row) => isPlainObject(row) && row.layer !== 'personal')) rows.push({ machine: r.host, stale: now() - r.reportedAt > STALE_MS, ...x })
     }
     return rows.slice(0, SHARED_ROWS)
   }
   async function getShared({ subjects = null } = {}) {
     const [tierBlock, spaceBlock] = await Promise.all([tiers(subjects), spaces()])
-    const raw = reports.raw({ subjects }).sort((a, b) => b.reportedAt - a.reportedAt)
+    const raw = reports.raw({ subjects }).filter((r) => !isPersonalMachine(r)).sort((a, b) => b.reportedAt - a.reportedAt)
     const t = now()
     const prSources = raw
-      .map((r) => ({ host: r.host, at: r.reportedAt, p: r.panels?.pullRequests }))
+      .map((r) => ({ host: r.host, at: r.reportedAt, p: sharedPanel(r, 'pullRequests') }))
       .filter(({ p }) => isPlainObject(p) && p.ok !== false && Array.isArray(p.rows))
     const pr = prSources[0] || null // newest report first, so the freshest list wins
     return {

@@ -242,6 +242,33 @@ describe('hub snapshot', () => {
     expect(JSON.stringify(shared)).not.toContain('chats')
   })
 
+  it('info layers: reports are stored tagged, the shared picture leaves out personal panels and a phone', async () => {
+    const { hub, reports } = build()
+    const machines = (os) => ({ ok: true, rows: [{ id: 'x', name: 'x', os, self: true, online: true }, { id: 'y', name: 'y', os: 'android', online: true }] })
+    const pr = { ok: true, rows: [{ number: 5, title: 't', draft: false }] }
+    // a sender cannot choose its own layer: its `layer` is replaced by the server's map
+    reports.put({ host: 'studio', panels: { machines: machines('linux'), pullRequests: { ...pr, layer: 'personal' }, tasks: { ok: true, rows: [{ id: 't1' }, { id: 't2', layer: 'personal' }] }, chats: { ok: true, source: [] }, credits: { ok: true, rows: [] } } }, { subject: 'o', ledger: true })
+    reports.put({ host: 'handset', panels: { machines: machines('android'), shows: { ok: true, rows: [{ id: 'sh' }] }, pullRequests: pr } }, { subject: 'o', ledger: true })
+    const raw = reports.raw({ subjects: ['o'] }).find((r) => r.host === 'studio')
+    expect(raw.panels.pullRequests.layer).toBe('private')
+    expect(raw.panels.chats.layer).toBe('personal')
+    expect(raw.panels.credits.layer).toBe('personal')
+    expect(raw.panels.machines.rows.map((m) => m.layer)).toEqual(['private', 'personal'])
+    const shared = await hub.getShared({ subjects: ['o'] })
+    expect(shared.machines.map((m) => m.host)).toEqual(['studio'])
+    expect(shared.tasks.map((t) => t.id)).toEqual(['t1'])
+    expect(shared.shows).toEqual([])
+    expect(shared.pullRequests.from).toBe('studio')
+    expect(JSON.stringify(shared)).not.toContain('"layer":"personal"')
+  })
+
+  it('info layers: a panel the hub lends is tagged by the server map', async () => {
+    const { hub, reports } = build()
+    reports.put({ host: 'other', panels: { agents: { ok: true, rows: [{ sessionId: 'abcdef123456', title: 'w', status: 'busy', account: 'a' }] }, credits: { ok: true, rows: [] } } })
+    const snap = await hub.getSnapshot()
+    expect(snap.panels.agents.layer).toBe('private')
+  })
+
   it('getShared with no PR list says so; the snapshot lends the shared PR list only when its own failed', async () => {
     const { hub } = build()
     expect((await hub.getShared({ subjects: ['o'] })).pullRequests).toMatchObject({ ok: false, rows: [] })
@@ -566,7 +593,7 @@ describe('hub snapshot', () => {
       // the machine's own panel is not written into, and a report keeps exactly what its machine sent
       expect(local.rows.map((r) => r.machine)).toEqual([undefined, undefined])
       expect(local.machines).toBeUndefined()
-      expect(snap.reports.find((r) => r.host === 'studio-mac').panels.agents).toEqual(sent)
+      expect(snap.reports.find((r) => r.host === a.machines[2].host).panels.agents).toEqual({ ...sent, layer: 'private' })
     })
 
     it('this machine\'s own rows are named with it whatever the other machines do (a name that came and went would change the label of every agent of this machine each time)', async () => {

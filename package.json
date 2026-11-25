@@ -31,6 +31,7 @@
         "land": "node scripts/session-land.mjs",
         "land:branch": "node scripts/fold-notes-branch.mjs",
         "check:fallback-patterns": "node scripts/check-fallback-patterns.mjs",
+        "check:layers": "node scripts/check-layers.mjs",
         "docs:wiki:check": "node scripts/check-wiki-sync.mjs",
         "deploy": "node scripts/deploy.mjs",
         "deploy:status": "node scripts/deploy.mjs status",
