@@ -2092,3 +2092,10 @@ Guard: `serverXR/src/monitorHub.test.js` "the map is the same whichever machine 
 **Cause:** the heat guard skipped every tick above 85 C with no limit; both machines sit above it all day (studio-laptop 91-105 C, main-desk 91 C).
 **Fix:** after 6 heat skips in a row (30 minutes) the update runs anyway and says so in the log; the count starts again after any run that is not a heat skip.
 Guard: `scripts/di/autoupdate.test.js` "a machine that stays hot updates anyway after the heat wait".
+
+### 2026-11-25 — Fader page and Control window showed different values for one channel
+
+**Symptom:** on the lighting desk, green set to 244 on the Fader page still read 0 in the Control window; and after a channel had been touched on the Fader page, moving it in the Control window did nothing to the light.
+**Cause:** the Fader page held every channel in the raw layer, which renders on top of fixture values, while the Control window reads and writes the fixture's values. Two separate values for one channel; the raw one always won on the wire, and nothing on screen said so.
+**Fix:** a Control edit (`POST /api/fixture`, `/api/fixtures/all`) releases any hold on the channels it sets, and the fine channel paired with pan, tilt or dimmer. The Fader page sets a patched channel on its fixture (`setFaderChannel` in `ui/app.js`) and shows that fixture value, with the wire value under it when they differ. Unpatched channels are still held raw.
+Guard: `serverXR/src/lighting/tests/test-http.js` "a Control edit takes back the channel a Fader hold sat on, and only that one" and "the Fader page sets a patched channel on its fixture, so Control shows the same value".

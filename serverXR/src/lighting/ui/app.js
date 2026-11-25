@@ -2322,6 +2322,29 @@ function queueRaw(universe, channel, value) {
   }
 }
 
+// A channel that belongs to a patched fixture is that fixture's value on BOTH pages. A
+// Faders-page move sets the fixture's role — the same value the Control window shows and
+// edits — instead of holding the channel over it, and the desk lets go of any hold left
+// on that channel. Only unpatched channels are held raw. (2026-11-25: green set to 244 on
+// the Faders page still read 0 in Control, and a Control move did nothing to a held
+// channel.) faderOwners: channel -> [{id, role}] for the universe on screen, rebuilt by
+// buildFaders; a list, because two fixtures stacked on one address are both driven.
+let faderOwners = new Map();
+function setFaderChannel(universe, ch, value) {
+  const owners = universe === fUni ? faderOwners.get(ch) : null;
+  if (!owners || !owners.length) { queueRaw(universe, ch, value); return; }
+  for (const { id, role } of owners) {
+    const f = S.fixtures.find((x) => x.id === id);
+    if (!f) continue;
+    f.values[role] = value;
+    queueFixture(id, { values: { [role]: value }, on: true });
+  }
+  // The desk drops the hold when the fixture edit lands; drop it here as well, or the fader
+  // flicks back to the old held value until the next poll.
+  const key = `${universe}:${ch}`;
+  if (S.raw[key] != null) { delete S.raw[key]; if (S.rawOwners) delete S.rawOwners[key]; }
+}
+
 // Setting every channel at once is literal: it includes pan, tilt, shutter and macro,
 // which is what a preset desk does. On a patched rig that is violent — heads swing to one
 // extreme — so it names exactly what it will drive and asks first. With nothing patched
@@ -2340,12 +2363,13 @@ async function setAllFaders(value) {
   }
   const channels = [];
   for (let ch = 1; ch <= 512; ch++) {
+    if (faderOwners.has(ch)) { setFaderChannel(fUni, ch, value); continue; }
     channels.push({ universe: fUni, channel: ch, value });
     S.raw[`${fUni}:${ch}`] = value;
     if (S.rawOwners) S.rawOwners[`${fUni}:${ch}`] = 'owner';
   }
   syncFaders();
-  await post('api/raw', { channels });
+  if (channels.length) await post('api/raw', { channels });
   pullState();
 }
 
@@ -2361,12 +2385,17 @@ function buildFaders() {
   // the difference between a manual hold and a guess. So this DOES depend on the patch
   // now, and the signature has to carry it or a re-address would leave stale names.
   const owner = new Map();
+  faderOwners = new Map();
   for (const f of S.fixtures) {
     if (f.universe !== fUni) continue;
     const chans = (S.profiles[f.profile] || {}).channels || [];
     chans.forEach((role, i) => {
       const c = f.address + i;
-      if (c >= 1 && c <= 512) owner.set(c, { name: f.name, role, profile: f.profile });
+      if (c >= 1 && c <= 512) {
+        owner.set(c, { name: f.name, role, profile: f.profile });
+        if (!faderOwners.has(c)) faderOwners.set(c, []);
+        faderOwners.get(c).push({ id: f.id, role });
+      }
     });
   }
   const sig = fUni + '#' + S.fixtures
@@ -2404,17 +2433,19 @@ function buildFaders() {
       // undoing the master, so the light stays where it was and the fader takes over
       // from there.
       const preMaster = (v) => {
+        // a patched channel shows the fixture's own value, not the wire: nothing to undo
+        if (faderOwners.has(ch)) return v;
         const wasHeld = S.raw[`${fUni}:${ch}`] != null;
         if (wasHeld) return v;
         const m = (S.master == null ? 255 : S.master) / 255;
         return m > 0 ? clamp(Math.round(v / m), 0, 255) : v;
       };
-      input.addEventListener('input', () => { queueRaw(fUni, ch, preMaster(+input.value)); syncFaders(); });
+      input.addEventListener('input', () => { setFaderChannel(fUni, ch, preMaster(+input.value)); syncFaders(); });
       // typing a level is the same act as moving the fader — both hold the channel
       const typed = () => {
         const v = clamp(Math.round(+num.value || 0), 0, 255);
         num.value = v;
-        queueRaw(fUni, ch, v);
+        setFaderChannel(fUni, ch, v);
         syncFaders();
       };
       num.addEventListener('change', typed);
@@ -2422,7 +2453,7 @@ function buildFaders() {
       el.querySelector('.mf-rel').addEventListener('click', () => { queueRaw(fUni, ch, null); syncFaders(); });
       scrub(el, {
         get: () => +input.value,
-        set: (v) => { input.value = v; queueRaw(fUni, ch, preMaster(v)); syncFaders(); },
+        set: (v) => { input.value = v; setFaderChannel(fUni, ch, preMaster(v)); syncFaders(); },
         // No wheel here: this bank is 512 cells you scroll through, and the pointer is
         // always over one of them. Taking the wheel would trade scrolling the page for
         // moving a live channel by accident.
@@ -2437,10 +2468,16 @@ function buildFaders() {
 function syncFaders() {
   if (!S || !faderCells.length) return;
   const buf = DMX[fUni] || [];
+  const byId = new Map(S.fixtures.map((f) => [f.id, f]));
   for (const c of faderCells) {
     const held = S.raw[`${fUni}:${c.ch}`];
     const wire = buf[c.ch - 1] || 0;
     const isHeld = held != null;
+    // A patched channel shows its fixture's value — the number the Control window shows —
+    // with the wire value under it when the master, an effect or a hold makes them differ.
+    const own = faderOwners.get(c.ch);
+    const fv = own && byId.get(own[0].id);
+    const setV = fv && fv.values ? fv.values[own[0].role] : null;
     if (isHeld !== c.held) { c.el.classList.toggle('over', isHeld); c.held = isHeld; }
     // A channel somebody else holds says whose it is, so a fader that will not let go explains itself.
     const by = isHeld ? heldBy(`${fUni}:${c.ch}`) : 'owner';
@@ -2450,7 +2487,7 @@ function syncFaders() {
       c.by = by;
     }
     // an untouched fader follows what the fixtures are doing; grab it and it takes over
-    const want = isHeld ? held : wire;
+    const want = isHeld ? held : (setV != null ? setV : wire);
     if (document.activeElement !== c.input && +c.input.value !== want) c.input.value = want;
     if (document.activeElement !== c.num && +c.num.value !== want) c.num.value = want;
     // only show the wire value when the master has pulled it away from the fader

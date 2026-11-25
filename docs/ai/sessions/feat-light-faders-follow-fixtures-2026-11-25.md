@@ -1,0 +1,8 @@
+## 2026-11-25 — Lighting desk: Fader page and Control window show one value per channel
+
+- Found on a standalone copy of the desk driving a real rig (ENTTEC, one 36-channel moving head patched after the studio's 25 channels): green set to 244 on the Fader page read 0 in Control, and Control moves did nothing on channels the Fader page had touched.
+- Cause: the Fader page held every channel in the raw layer, which renders over fixture values; Control reads and writes the fixture's values. Two values for one channel, the raw one always won, nothing said so.
+- `desk.js`: `releaseHeldRoles` — `POST /api/fixture` and `/api/fixtures/all` let go of any hold on the channels they set (and the paired pan/tilt/dimmer fine channel). Same rule holds.js already states: setting a channel takes it.
+- `ui/app.js`: `setFaderChannel` — a Fader-page move on a patched channel sets that fixture's role (what Control shows) instead of holding it raw; the fader shows the fixture value, with the wire value under it when master/effects make them differ. Unpatched channels are held raw as before. "Set all" follows the same split.
+- Verified: lighting suites (test.js, test-holds.js, test-http.js, test-wiring.js, test-touch-colours.js, lint-api-contract.js) pass; a headless-Chrome run against an offline desk with the real show moved the page's own faders both ways (Fader 244 → Control 244, Control 100 → Fader 100, an RGB par both ways, an unpatched channel still held). Then loaded on the live desk by a page reload (no restart needed: the desk serves its page files fresh).
+- Regression guards in test-http.js; known-fixes entry; wiki lighting-desk article updated.

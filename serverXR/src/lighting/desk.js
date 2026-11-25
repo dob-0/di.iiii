@@ -1210,6 +1210,27 @@ function createDesk(opts = {}) {
     return null;
   }
 
+  // A fixture edit is the newest hand on that fixture's channels. The Faders page holds
+  // channels in the raw layer, and the raw layer renders ON TOP of fixture values — so once
+  // a channel had been touched there, the Control window's faders saved their value and the
+  // light never changed, with nothing on screen to say why (2026-11-25: the Cameo's pan,
+  // tilt, dimmer and red on 26–35). Setting a role through the fixture now lets go of
+  // whoever holds that role's channel, and the fine channel paired with it, so the edit
+  // reaches the wire. Same rule as holds.js: setting a channel takes it.
+  const FINE_OF = { pan: 'panFine', tilt: 'tiltFine', dimmer: 'dimmerFine' };
+  function releaseHeldRoles(f, roles) {
+    const ch = (PROFILES[f.profile] || PROFILES.rgb).channels;
+    let released = 0;
+    for (const role of roles) {
+      for (const r of [role, FINE_OF[role]]) {
+        const i = r ? ch.indexOf(r) : -1;
+        if (i < 0 || f.address + i > 512) continue;
+        if (holds.release(state, f.universe + ':' + (f.address + i), holds.DEFAULT_OWNER, true) === 'released') released++;
+      }
+    }
+    return released;
+  }
+
   function snapshot() {
     const out = {};
     for (const [u, buf] of engine.toBuffers()) out[u] = Array.from(buf);
@@ -1885,7 +1906,11 @@ function createDesk(opts = {}) {
       // a stage tidy mid-show snapped 21 crossfades and blanked the scene bank's highlight.
       const look = body.values != null || body.on != null || body.address != null
         || body.universe != null || body.profile != null || body.limits != null;
-      if (body.values) Object.assign(f.values, sanitizeValues(body.values));
+      if (body.values) {
+        const v = sanitizeValues(body.values);
+        Object.assign(f.values, v);
+        releaseHeldRoles(f, Object.keys(v));
+      }
       if (body.on != null) f.on = !!body.on;
       if (body.name != null) f.name = String(body.name).slice(0, 40);
       if (body.address != null) f.address = Math.max(1, Math.min(512, body.address | 0));
@@ -2256,7 +2281,7 @@ function createDesk(opts = {}) {
     'POST /api/fixtures/all': (req, res, body) => {
       const values = body.values ? sanitizeValues(body.values) : null;
       for (const f of state.fixtures) {
-        if (values) Object.assign(f.values, values);
+        if (values) { Object.assign(f.values, values); releaseHeldRoles(f, Object.keys(values)); }
         if (body.on != null) f.on = !!body.on;
       }
       state.activeScene = null;
