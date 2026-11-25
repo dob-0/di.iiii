@@ -29,7 +29,7 @@
 
 ## Unvalidated
 
-Nothing here has run. Each phase is accepted only after its tests and a look on the real wall (the two LaserCubes on aylmo, armed by the owner), as the design's phase table says. The flicker limit for point counts is to be judged on the wall.
+Nothing here has run. Each phase is accepted only after its tests and a look on the real wall (the two LaserCubes on main-desk, armed by the owner), as the design's phase table says. The flicker limit for point counts is to be judged on the wall.
 
 ## Words added
 

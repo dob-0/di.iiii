@@ -1,4 +1,4 @@
-# di.bo did not save the owner's texts (ledger N650) — findings, stopped early (aylmo power-off 15:40)
+# di.bo did not save the owner's texts (ledger N650) — findings, stopped early (main-desk power-off 15:40)
 
 ## Root cause: FOUND (in code, live build confirmed)
 - The Mac runs di-bo e0c5113 (/usr/local/di-bo/deploy/current.provenance, verified 2026-10-02). bot.mjs/lib/ are byte-identical between e0c5113 and origin/master b47ed68.
@@ -7,7 +7,7 @@
 - Second defect: `edited_message` updates are never handled (`msg = u.message || u.channel_post`) — edits are lost too.
 - Third defect: the forward origin is NOT kept for files: manifest n=126 says sender "dob", nothing about "Никита". observe.jsonl records fwd {type, chat_id, message_id} only, no user name/id/date.
 - Stickers, locations, contacts, polls are also dropped on the door (fileOf excludes stickers).
-- aylmo pull (sync/pull-inbox.sh) rsyncs the whole inbox -rt (excludes only .*.part, *.tmp, *.mismatch-*) and verifies every `saved` manifest line with a path + sha256 — so text files written into the inbox WITH manifest rows will be pulled and verified with no change to the pull.
+- main-desk pull (sync/pull-inbox.sh) rsyncs the whole inbox -rt (excludes only .*.part, *.tmp, *.mismatch-*) and verifies every `saved` manifest line with a path + sha256 — so text files written into the inbox WITH manifest rows will be pulled and verified with no change to the pull.
 
 ## Other causes tested
 - H: Telegram did not deliver / poll down — RULED OUT (nudge reply proves receipt; log clean at 10:57Z).
@@ -24,10 +24,10 @@ Branch: fix/keep-every-message in worktree ~/work/di-bo-texts (from origin/maste
 3. keepReply: "saved 1 file + 3 texts" (files-only wording unchanged: ":: got it — saved 3 files.").
 4. bot.mjs: `keepsText(msg)`; in handleUpdate save owner/KEEP_FROM texts before the nudge path, non-file non-text kinds in the !msg.text branch, and handle `u.edited_message` (save as edit); keepBackfill also runs the text backfill; observe() fwd gains sender user id/name and date.
 5. Tests: extend tests/keep-e2e.test.mjs with the 10-14 shape (forwarded video note + 3 forwarded texts + 1 edit) → 1 file + 3 texts + 1 edit on disk, manifest rows, ONE reply "saved 1 file + 3 texts"; unit tests in lib/fetch.test.mjs.
-6. r-di rehearsal: run `node test.mjs` (the e2e is the real bot vs a fake Telegram, no token) on r-di — NOT done.
-7. Mac: after merge, di-atlas PIN bump + `tools/dibo-mac-deploy.sh install` (no password needed once root half ran; undo = SHA=e0c5113… install) — NOT done. Note ~/work/di-atlas is another job's checkout (feat/aylmo-android, uncommitted files): use its own worktree.
+6. test-pi rehearsal: run `node test.mjs` (the e2e is the real bot vs a fake Telegram, no token) on test-pi — NOT done.
+7. Mac: after merge, di-atlas PIN bump + `tools/dibo-mac-deploy.sh install` (no password needed once root half ran; undo = SHA=e0c5113… install) — NOT done. Note ~/work/di-atlas is another job's checkout (feat/main-desk-android, uncommitted files): use its own worktree.
 
 ## State
 - Nothing deployed, nothing changed on the Mac, nothing running. PRs: none yet.
-- Cost: ~20 tool calls, stopped by the coordinator at the aylmo power-off.
+- Cost: ~20 tool calls, stopped by the coordinator at the main-desk power-off.
 - Sterile: worktree ~/work/di-bo-texts kept (the fix continues there); no processes started.

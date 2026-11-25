@@ -2,7 +2,7 @@
 
 - Built sketches A + C of `~/Downloads/di-sync-ui/sketches.html` (owner-approved, words kept). Spec section:
   `docs/architecture/SPEC_follow.md` "The sync light and joining with four words". Wiki: article `link-a-machine`.
-- **A, the light** (`src/sync/`, mounted in `SurfaceBar`): `SYNCED · PONYO · 0.1 S` / `PONYO NOT ANSWERING · 2 MIN`; a
+- **A, the light** (`src/sync/`, mounted in `SurfaceBar`): `SYNCED · show-laptop · 0.1 S` / `show-laptop NOT ANSWERING · 2 MIN`; a
   panel with the host, last edit, files still coming, clashes today (host's version kept), Invite a machine, Stop
   following. Text rules are one pure file (`syncLight.js`); "SYNCED" is said in one case only and the test walks all
   1,152 input combinations. Facts: `GET /api/spaces/:spaceId/sync` — owner/admin, or the person at the machine when
@@ -17,8 +17,8 @@
   local home) goes through this install's own server (`follow/join.js`), which refuses itself / already followed /
   same-named space (needs merge) BEFORE spending the code.
 - Seen on the real surface: two real servers (host :4361, joiner :4362, DI_LOCAL=1) + vite :5191, Chromium at 1280x800
-  and 390x844 DPR 3 under the browser lock: join form -> found -> joined; light "SYNCED · AYLMO · <0.1 S"; panel;
-  invite code with addresses; host killed -> "AYLMO NOT ANSWERING · 22 S" with the sketch's sentence. 390 px: chip
+  and 390x844 DPR 3 under the browser lock: join form -> found -> joined; light "SYNCED · main-desk · <0.1 S"; panel;
+  invite code with addresses; host killed -> "main-desk NOT ANSWERING · 22 S" with the sketch's sentence. 390 px: chip
   and buttons 44 px tall, no horizontal overflow (scrollWidth 390), `--sbar-h` follows the two-row bar.
 - Tests: joinCodeStore (17), followRoutes (10), join (9), syncStatus (5), hubFollowers (4), followerLight (4),
   joinIntegration (12, two real servers incl. auth-on and DI_LOCAL), syncLight (20), SyncLight (11), JoinMachine (4),
@@ -29,4 +29,4 @@
   log holds the gap. The first invite has a door on the space's card (Manage row), because the light itself only
   appears once something is shared.
 - Workaround named: `serverXR/node_modules` here is a symlink to `~/work/di.iiii/serverXR/node_modules` because
-  `di.iiii-pack-asuz` has none; the real fix is `npm --prefix serverXR ci` in this worktree.
+  `di.iiii-pack-team-laptop` has none; the real fix is `npm --prefix serverXR ci` in this worktree.

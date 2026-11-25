@@ -1,6 +1,6 @@
 # Inside a node: audit + one design for every node
 
-Worktree `/home/dob/work/di.iiii-asuz`, branch `feat/raw-picture-operators`, HEAD `10c5ed79`.
+Worktree `/home/dob/work/di.iiii-team-laptop`, branch `feat/raw-picture-operators`, HEAD `10c5ed79`.
 Read-only audit, 2026-09-14. All line numbers are at that HEAD.
 
 Owner, 2026-09-14: *"when I'm inside the Cube it's not the same as in Camera In and the
@@ -565,7 +565,7 @@ MADE OF read-only with the new virtual module + top shader/script/camera moved i
 **Wait:**
 - **Phase 2, script hook for number/signal/colour/geometry.** It changes the pure runtime that
   the room, `/out`, previews and the reading all share, and it widens where desk code runs.
-  Own PR, own review, walked on asuz + aylmo with `DI_DESK_SCRIPTS` on one and off on the
+  Own PR, own review, walked on team-laptop + main-desk with `DI_DESK_SCRIPTS` on one and off on the
   other.
 - Scripts in card previews.
 - Worker trial run of a new script (a timeout check before saving).

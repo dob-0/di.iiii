@@ -41,13 +41,13 @@ The brief said "venue name". In this file that is **the place address**.
 | mDNS `.local` is not in the secure-context list, so `http://x.local` is not a secure context. Two hosts that claim one `.local` name are renamed by conflict resolution. | Secure Contexts §3.1 (no `.local` step); [RFC 6762 §9](https://www.rfc-editor.org/rfc/rfc6762.html#section-9) |
 | `421 Misdirected Request` is the answer for a request to a name this server does not serve. | [RFC 9110 §15.5.20](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.20) |
 
-### Measured on aylmo, 2026-10-07
+### Measured on main-desk, 2026-10-07
 
 **Setup.** Headless Playwright browsers, no WebGL. A test server bound to **127.0.0.1 only**. It
 set a `Secure` cookie on its first response. Script:
 `/tmp/claude-1000/…/scratchpad/probe/localhost-probe.mjs`. The method is in the commit message.
 
-The OS resolver on aylmo answers **`::1` only** for `*.localhost`. Evidence: `getent ahosts
+The OS resolver on main-desk answers **`::1` only** for `*.localhost`. Evidence: `getent ahosts
 diiii.localhost` printed `::1`, and the nsswitch line is `hosts: … resolve … myhostname`. So a page
 that loaded from the 127.0.0.1-only server proves the browser mapped the name itself.
 
@@ -59,7 +59,7 @@ The same results held for all four names in both browsers: `localhost`, `diiii.l
 | Chromium 151 | yes | true | yes | yes | yes |
 | Firefox 153 | yes | true | yes | yes | **no** (Firefox desktop ships no WebXR; not a localhost effect) |
 
-So on aylmo:
+So on main-desk:
 - Chrome and Firefox reach `*.diiii.localhost` without DNS.
 - The page is a secure context.
 - The session cookie, which the installed di marks `Secure`, survives plain http on that name.
@@ -69,10 +69,10 @@ So on aylmo:
 | Who | Types | What answers |
 | --- | --- | --- |
 | Anyone at a machine with di | `http://diiii.localhost/` | That machine's installed di. |
-| — on aylmo (the dev-router holds :80) | same | `dev-router.service` forwards it to the installed di. It reads where the di listens from di's own files (https 127.0.0.1:443, verified as `local.thedi.studio`). It forwards **loopback clients only**. |
+| — on main-desk (the dev-router holds :80) | same | `dev-router.service` forwards it to the installed di. It reads where the di listens from di's own files (https 127.0.0.1:443, verified as `local.thedi.studio`). It forwards **loopback clients only**. |
 | — on a machine without the dev-router | same | The installed di's own **door**: a second listener on 127.0.0.1:80 and [::1]:80 that hands requests to the same server. It needs port 80 to be allowed (§6). |
-| A developer on aylmo | `http://<tree>.diiii.localhost/` | dev-router → that tree's vite (`di-dev up <tree>`). |
-| A developer on aylmo | `http://stacks.diiii.localhost/` | dev-router's index: every stack, its owner and its database. |
+| A developer on main-desk | `http://<tree>.diiii.localhost/` | dev-router → that tree's vite (`di-dev up <tree>`). |
+| A developer on main-desk | `http://stacks.diiii.localhost/` | dev-router's index: every stack, its owner and its database. |
 | A phone, headset or guest laptop in a place | the QR code → `https://<place address>/` | The host machine's di, on its certificate's name, under `di up --lan`. |
 | Anyone, anywhere | `https://dev.diiii.xyz/<space>` | The dev tier, which every install follows. |
 
@@ -93,7 +93,7 @@ phone itself. That is why devices without di need the place address.
 
 ## 5. The guest path (devices without di)
 
-**Today.** The installed di serves https on its certificate's name: `local.thedi.studio` on aylmo,
+**Today.** The installed di serves https on its certificate's name: `local.thedi.studio` on main-desk,
 Let's Encrypt, valid until 2026-12-07. `di up --lan` points that name at the address of the day
 through the owner's `~/.di/dns-update` hook (`scripts/di/name.mjs` `updateRoomName`). A phone that
 opens that name gets a padlock, a secure context, the camera and WebXR.
@@ -102,7 +102,7 @@ opens that name gets a padlock, a secure context, the camera and WebXR.
 
 1. **One name per place, or per host machine.** A certificate for a name we control, issued by
    DNS-01 so the machine needs no open port ([Let's Encrypt challenge types](https://letsencrypt.org/docs/challenge-types/)).
-   aylmo already does this for `*.thedi.studio` (`di-gateway-cert`).
+   main-desk already does this for `*.thedi.studio` (`di-gateway-cert`).
 2. **Name resolution in the place.**
    - (a) Public DNS points the name at the host machine's private address. That is today's hook.
      **Limit:** routers with DNS-rebind protection drop public answers that point at private
@@ -120,7 +120,7 @@ opens that name gets a padlock, a secure context, the camera and WebXR.
   `cap_net_bind_service` ([capabilities(7)](https://man7.org/linux/man-pages/man7/capabilities.7.html))
   or `net.ipv4.ip_unprivileged_port_start` ≤ 80
   ([kernel ip-sysctl](https://docs.kernel.org/networking/ip-sysctl.html)).
-  - On aylmo the installed di's pinned node already has the capability (`getcap`:
+  - On main-desk the installed di's pinned node already has the capability (`getcap`:
     `cap_net_bind_service=ep`, and it binds :443), and the sysctl is 1024.
   - On any other Linux machine the door stands aside with `EACCES` until the owner grants one of
     the two. The capability is lost when that node binary is replaced, for example by a node
@@ -150,7 +150,7 @@ opens that name gets a padlock, a secure context, the camera and WebXR.
   - The installed route is refused to anything but loopback. This is enforced and tested: a
     request from the wifi address gets 403 and never reaches the di.
   - Dev trees are still forwarded to the wifi. That was already so before this change. **Owed:**
-    bind the router to loopback, or firewall :80 (check `tools/aylmo-firewall.sh`).
+    bind the router to loopback, or firewall :80 (check `tools/main-desk-firewall.sh`).
 - **Firefox desktop has no WebXR at all.** Headset work uses Chromium-based browsers
   (Quest Browser).
 
@@ -200,7 +200,7 @@ opens that name gets a padlock, a secure context, the camera and WebXR.
 
 **F. One address in what di prints, one name before :80 (2026-10-13).** The owner, 2026-10-13:
 *"fix the di.iiii links here in my machine — mine is local.thedi.studio, in others other — fix mine too and
-make only one way to work."* Measured before the change: on aylmo `di status` printed
+make only one way to work."* Measured before the change: on main-desk `di status` printed
 `https://local.thedi.studio` (the certificate's name), while a normal install prints
 `http://di.localhost:4000` or `http://localhost:4000`: three names for one thing.
 - **D1. One address in `di status` and `di up`.** When `http://diiii.localhost/` is asked and answered
@@ -232,26 +232,26 @@ make only one way to work."* Measured before the change: on aylmo `di status` pr
 Privileged or tier-writing steps are the owner's. Agents never run them.
 
 1. **Land di-atlas #57.** *Status 2026-10-13: landed, and the router forwards.* Measured 2026-10-13 on
-   aylmo: `http://diiii.localhost/` and the install's own address return the same `machine.id`
-   (`c4e961c7…`) from `/serverXR/api/config`. Review, merge, then on aylmo:
+   main-desk: `http://diiii.localhost/` and the install's own address return the same `machine.id`
+   (`c4e961c7…`) from `/serverXR/api/config`. Review, merge, then on main-desk:
    ```
    git -C ~/work/di-atlas pull                       # the router's new code
    sudo systemctl restart dev-router                 # load it (system unit)
    journalctl -u dev-router -n 3                     # expect: bare address → installed
    di-show http://diiii.localhost/                   # look at it on your screen
    ```
-2. **On aylmo, before the di.iiii change arrives:** keep :80 for the router, with no race at boot.
-   *Status 2026-10-13: done. `DI_LOCAL_NAME=off` was set on aylmo by the lead (session dob-2e, 2026-10-13).*
+2. **On main-desk, before the di.iiii change arrives:** keep :80 for the router, with no race at boot.
+   *Status 2026-10-13: done. `DI_LOCAL_NAME=off` was set on main-desk by the lead (session dob-2e, 2026-10-13).*
    ```
    printf 'DI_LOCAL_NAME=off\n' >> ~/.di/di.env      # the router forwards the name; di's own door stays shut
    ```
-3. **Land the di.iiii PR** to `dev`. aylmo's install follows the dev channel and updates itself.
+3. **Land the di.iiii PR** to `dev`. main-desk's install follows the dev channel and updates itself.
    *Status 2026-10-13: carried to today's dev by `feat/one-local-address-carry-2026-10-13` (#825 + #826 +
    D1 + D2); the owner merges it and closes #825 and #826.* Then:
    ```
    di status                                         # expect: first line http://diiii.localhost/, then phones and headsets: https://local.thedi.studio
    ```
-4. **Every other Linux install** (Emilya, Kiara, asuz). This is privileged, once per machine,
+4. **Every other Linux install** (Emilya, Kiara, team-laptop). This is privileged, once per machine,
    and must be redone after the pinned node is replaced:
    ```
    getcap "$(jq -r .service.node ~/.di/state.json)"                                  # already granted?
@@ -277,7 +277,7 @@ Privileged or tier-writing steps are the owner's. Agents never run them.
   (`uqr`, see `docs/ai/dependency-decisions.md`) and one line on who it is for. The code is drawn only
   when the state is `ready` and the name does not point somewhere else. Every other state names the
   setting (`~/.di/tls/cert.pem`) or the command (`di up --lan`).
-- Measured on aylmo with its real certificate (read-only): `https://local.thedi.studio/`. Today the
+- Measured on main-desk with its real certificate (read-only): `https://local.thedi.studio/`. Today the
   name resolves to `127.0.0.1` there, because the hook pointed it at loopback for a start without
   `--lan`. So under `--lan` the panel shows no code until the hook moves the name.
 
@@ -316,7 +316,7 @@ owner should see the panel first.
 
 **What it is.**
 - MOXIR beta v0.9 is the project `moxir-known-full-stage-back`: slug `beta-v0-9`, title
-  "MOXIR beta v0.9", in the aylmo **scratch** tree `moxir-flip`, api `127.0.0.1:4323`.
+  "MOXIR beta v0.9", in the main-desk **scratch** tree `moxir-flip`, api `127.0.0.1:4323`.
 - Read 2026-10-07 21:2x: `documentVersion` 61, last touched 21:08 today. It is still moving.
 - Counts: 125 objects, 74 lamps, 10 cues.
 
@@ -324,7 +324,7 @@ owner should see the panel first.
 `http://diiii.localhost/moxir/beta-v0-9` opens it on every machine.
 
 **The proven route** is `scripts/rigbuild/copy-version.mjs --from-api`. It was used 2026-10-04 to
-bring PONYO's Known · full to dev.
+bring show-laptop's Known · full to dev.
 - It reads the source on another install, and **creates a new project** on dev under the same id.
   It replaces nothing, so it is not a whole-document write over existing work.
 - It uploads every asset again and remaps changed ids.
@@ -360,7 +360,7 @@ di follows                                        # moxir followed from dev?
 
 1. ~~**Owner:** merge #57, restart `dev-router`~~ — landed, forwarding (measured 2026-10-13).
    **Still owed, the owner:** look at `http://diiii.localhost/` on his screen.
-2. ~~`DI_LOCAL_NAME=off` on aylmo~~ — set by the lead 2026-10-13. **Owner:** merge the carry PR
+2. ~~`DI_LOCAL_NAME=off` on main-desk~~ — set by the lead 2026-10-13. **Owner:** merge the carry PR
    (it replaces #825 and #826).
 3. **Owner, per Linux machine:** grant :80 (`setcap`). **Product call:** should `di up` offer it?
 4. Measure macOS, Windows and Safari (§6).

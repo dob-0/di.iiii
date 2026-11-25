@@ -9,11 +9,11 @@
   code as it was (nothing lost): every tile on screen plays, the stage is asked every 80 ms.
 - Control: "Motion: calm | full" in the Looks header, kept per browser in localStorage (reads and writes in try/catch). The control is
   built by desk.js and sized to the header's own line (CSSOM): desk.css and the tile bank's height are unchanged (a taller control cost a row).
-- Measured on the agent screen (aylmo, RTX 3080 route; 1280x760 CSS px at 2x; the Mac's 72 looks in a scratch server; 60 s each; one cube; the
+- Measured on the agent screen (main-desk, RTX 3080 route; 1280x760 CSS px at 2x; the Mac's 72 looks in a scratch server; 60 s each; one cube; the
   live look open in Edit). Pictures drawn a second: 1435 -> 61 (css as is), 582 -> 42 (grid fix). Stroke calls a second: 23055 -> 306 and 15708 ->
-  209. Renderer + GPU process CPU, % of one aylmo core: 45.2 -> 23.0 and 24.5 -> 14.9; GPU-process main thread 18.8 -> 6.8 and 9.0 -> 4.0.
+  209. Renderer + GPU process CPU, % of one main-desk core: 45.2 -> 23.0 and 24.5 -> 14.9; GPU-process main thread 18.8 -> 6.8 and 9.0 -> 4.0.
   An idle desk costs 5.5 % (renderer 2.9, GPU 1.1, browser 1.0, utility 0.5), a blank page 0.1 %. Full in the new code = the old page
-  (50.4 vs 50.2 % and 1446 vs 1435 pictures a second). Not measured: the Mac itself (aylmo's cores are faster; the pictures a second are the
+  (50.4 vs 50.2 % and 1446 vs 1435 pictures a second). Not measured: the Mac itself (main-desk's cores are faster; the pictures a second are the
   hardware-free number). Tool and method: `scripts/audit/laser-desk-cpu.cjs`.
 - What is left in calm is the live look's Preview and stage canvases (big canvases: ~0.3 % of a core per picture a second against ~0.01 % for a tile).
   Next levers, not built (the owner's rules say only what was asked): a lower Preview rate when no slider moves, a 1x backing store for the Preview.

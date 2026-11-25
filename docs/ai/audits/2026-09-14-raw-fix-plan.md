@@ -63,7 +63,7 @@ Audits (read the one for your workstream first, cite rows):
 ### Rules for every workstream
 
 - Your own git worktree and branch, created from `origin/feat/raw-picture-operators`:
-  `git -C /home/dob/work/di.iiii-asuz worktree add -b fix/raw-<name> /home/dob/work/di.iiii-w-<name> origin/feat/raw-picture-operators`
+  `git -C /home/dob/work/di.iiii-team-laptop worktree add -b fix/raw-<name> /home/dob/work/di.iiii-w-<name> origin/feat/raw-picture-operators`
   then `npm ci` and `npm --prefix serverXR ci` in it. Work ONLY there.
 - Commit on your branch (end messages with the attribution lines already used on
   this branch) and `git push -u origin fix/raw-<name>`. Do not open a PR, do not

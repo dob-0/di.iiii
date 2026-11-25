@@ -48,7 +48,7 @@
 - Seen in a real browser (headless Chrome, `channel: 'chrome'`, desktop 1646 px and a 390 px
   phone): on a standalone desk the colour bars drove 4 lights at ~30 fps, a Radar and a label
   landed, Stop gave the look back, no sideways scroll on the phone; on a scratch serverXR with
-  `serverXR/src/ndi/devSender.js` as the source, the strip found "PONYO (di b9 harness)" by
+  `serverXR/src/ndi/devSender.js` as the source, the strip found "show-laptop (di b9 harness)" by
   itself, drew it natively, the lights took its colours on the wire, Stop released the receiver.
   Not yet tried: a real rig, and Resolume's own NDI output (the dev sender stood in for it).
 - Windows baseline seen here, not from this branch: `src/copyVocabulary.test.js` reports 19 hits in

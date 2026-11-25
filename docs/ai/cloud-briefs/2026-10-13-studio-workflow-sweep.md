@@ -26,7 +26,7 @@ behind it, a locked entity is never picked and only-locked-under-the-pointer cle
    undefined (ScenePicker's guard is `onRigLook` only, by the lead, 10-13). Wire the view bar on that surface or hide it
    there with a stated reason; test the prop contract.
 3. **Walk the Studio as the owner does** (Playwright, headless Chromium, software GL is fine for DOM and picking; `npm ci`
-   first; `di-dev` does not exist in the cloud — `npm run dev`-style local server is fine THERE only, never on aylmo):
+   first; `di-dev` does not exist in the cloud — `npm run dev`-style local server is fine THERE only, never on main-desk):
    open a project with a place model (box) + 3 spot lights; click a beam → its lamp selected; click the lamp body
    through another lamp's beam → that lamp; click the place when it is locked (Studio L key) → nothing selected; Esc and
    Alt+A; box-select; G/R/S then Esc cancels, click confirms; Edit/Select modes; the SCENES picker (Follow the show /

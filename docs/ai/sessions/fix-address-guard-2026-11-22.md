@@ -1,6 +1,6 @@
 # fix/address-guard-2026-11-22 — a check for every public address, before and after a change (2026-11-22)
 
-Base `origin/dev`. Made on studio-mac (`~/work/di.iiii-address-guard`), pushed from aylmo (lint needs node_modules).
+Base `origin/dev`. Made on studio-laptop (`~/work/di.iiii-address-guard`), pushed from main-desk (lint needs node_modules).
 
 ## Why
 

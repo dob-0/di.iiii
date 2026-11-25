@@ -2,7 +2,7 @@
 
 Why: the laser guard and shape tests sweep every shape over whole loops. On a busy CI runner single tests ran past
 vitest's 5 s default ("Test timed out in 5000ms"), so unrelated PRs (1179, 1185, 1271, 1297) failed at random and the
-lander skipped them. On studio-mac the same tests take 6-14 s each.
+lander skipped them. On studio-laptop the same tests take 6-14 s each.
 
 Change: `vi.setConfig({ testTimeout: 60_000 })` in serverXR/src/laser/laserGuards.test.js and
 src/project/nodes/laser.shape/laserShapes.test.js. No test logic changed.

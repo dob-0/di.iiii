@@ -201,12 +201,12 @@ Labels are proposals checked against vocabulary.md rules; each PR adds its rows 
 | Zone (safety), step limit, corners, dwell, blanking, still beam, temperature, pacing, stops | serverXR (#931) | never in the graph |
 
 **Budget (proposal, to be confirmed by measurement in Phase 1):** all laser work in the browser **≤ 8 ms per frame for
-6 cubes at 1000 points each** on aylmo (i7-11800H) at 25 fps: 20 % of the 40 ms frame, leaving the rest to the 3D
+6 cubes at 1000 points each** on main-desk (i7-11800H) at 25 fps: 20 % of the 40 ms frame, leaving the rest to the 3D
 viewport and the editor. Server: #931 review item 2 asks ≤ 5 ms per tick with a 2000-point frame on 6 cubes — that is
 #931's fix, not ours; our part is to send ≤ `budget` points and not to resend unchanged frames.
 
 **Measured now (prototype, not the product):** `raw-laser-trace-bench.mjs` (next to this file; Phase 1 lands it as
-`scripts/laser/trace-bench.mjs`). Node 22.23, three 0.185.1 (dev pins ^0.186.1), aylmo at 79 °C package, 300 frames,
+`scripts/laser/trace-bench.mjs`). Node 22.23, three 0.185.1 (dev pins ^0.186.1), main-desk at 79 °C package, 300 frames,
 dense primitives in `edges` mode (sphere 16×12, torus 12×32, cylinder/cone 24 sides, all edges over 20°: 2128 segments
 for 20 pieces), rotating every frame, NN order, resample to the budget:
 
@@ -222,7 +222,7 @@ on loopback — to be measured in Phase 6 against the batched route.
 What the numbers decide: (1) object-space caching is mandatory (6–8× faster); (2) dense wireframes cost too much and
 draw badly — **`outline` is the default** (a sphere is one ring, not 200 edges); (3) 6 Traces of 20 dense pieces is
 ~14 ms, over 8 ms, so if a real project exceeds the budget, the laser pass moves to a Web Worker (same pure code). The
-budget check is a test: the bench fixture (6 Traces × 20 outline pieces) must stay ≤ 8 ms median on aylmo, and Laser
+budget check is a test: the bench fixture (6 Traces × 20 outline pieces) must stay ≤ 8 ms median on main-desk, and Laser
 Out's status shows the live `performance.measure` of the laser pass.
 
 Limits of the measurement: one machine, hot CPU, a naive prototype (string keys, O(n²) NN); not in a browser; the
@@ -234,7 +234,7 @@ viewport's own cost not included.
 
 Every phase: own branch from `origin/dev`, vitest unit tests for each pure function (counted gate: `Tests N passed`,
 N > 0), the agent-screen browser check (`di-test-browser`, ends on `about:blank`), the fake-cube rehearsal from #931
-(`scripts/laser/fake-cube-rehearsal.mjs`), then **seen on the real surface**: the two LaserCubes on aylmo drawing on the
+(`scripts/laser/fake-cube-rehearsal.mjs`), then **seen on the real surface**: the two LaserCubes on main-desk drawing on the
 wall, armed by the owner in the Laser Out window, with a phone video kept in the PR. Vocabulary rows added in the same PR.
 Prerequisites for Phase 1: #931 merged with review items 1–2 fixed, and the laser-ops PR merged.
 

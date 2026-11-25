@@ -5,7 +5,7 @@
   the chosen project at exactly the document's addresses or exit 1, looks on, the document's cue list loaded
   with loop OFF and not started, OUTPUT never touched. `--gate` runs patch-sheet.mjs against the planned show;
   `--apply` (desk stopped) backs up to `~/di-backups/` and swaps the file; `--undo` restores.
-- Dry run on a copy of aylmo's moxir desk (sha256 1adeeb05…): 241 off (U1 62, U2 49, U3 36, U4 54, U5 40),
+- Dry run on a copy of main-desk's moxir desk (sha256 1adeeb05…): 241 off (U1 62, U2 49, U3 36, U4 54, U5 40),
   68 on (U1 57 / 512 ch, U2 11 / 176 ch); 25 looks; 10 cues, 114 s, loop off; gate PASS; negative control exit 1.
   Output in `~/Downloads/moxir-desk-plan-2026-10-05/`. The live desk was NOT changed: applying is the owner's.
 - Fixed: `planPatch` counted off-DMX lamps as "in no block" (Known · full has 16), so no sheet could pass.
