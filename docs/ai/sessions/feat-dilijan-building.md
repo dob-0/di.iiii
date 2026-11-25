@@ -2,7 +2,7 @@
 
 - The owner rejected the one-line Պատը (N1145.2): "look to map … 4 parts of the one building … full like building". Stacked on #1067
   (feat/dilijan-aren-one-view, merged in), since the page `spaces/dilijan/aren/yard.html` is not on dev yet.
-- Footprint: OSM API 0.6 way 457239427 (Overpass unreachable from aylmo; the OSM API answers), the building 13 m from the Apicius
+- Footprint: OSM API 0.6 way 457239427 (Overpass unreachable from main-desk; the OSM API answers), the building 13 m from the Apicius
   Armenia node 13296475769 inside its site (way 1447247415). `scripts/place/osm_footprint.py` -> `spaces/dilijan/building-footprint.json`.
 - `spaces/dilijan/aren/building.py`: pieces where the yard scan holds them (no layout); similarity fit of the scan's long face
   (main + wall_mid, bend and north corner) on the footprint's north-west face: 3.84 m/unit, 42.9 deg; facade->edge median 0.14/0.17 m,

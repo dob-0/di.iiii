@@ -2,7 +2,7 @@
 
     date        2026-09-14
     surface     https://local.thedi.studio/test-desk/raw/projects/design-audit
-    code        /home/dob/work/di.iiii-asuz @ 10c5ed79 (read only)
+    code        /home/dob/work/di.iiii-team-laptop @ 10c5ed79 (read only)
     browser     Playwright Chromium headless, swiftshader, DPR 2
     viewports   1440x900 desktop, 1024x768 laptop, 390x844 phone (touch)
     shots       scratchpad/design-audit/*.png (31, every one opened)

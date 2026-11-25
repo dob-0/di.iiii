@@ -94,7 +94,7 @@ The owner's ask: "lets create laser soft like how is lighting one" — inside di
   390×844 — Go, edit (shape, colour, spin, chase) and the poll agreeing after the hold, Setup, the phrase box (cancelled). 0 console
   errors. Found and fixed on the way: `display:grid` beat `[hidden]` (Setup drawn under Control), chips rebuilt by every poll (a
   click landed on a replaced button), panes shrinking on the phone.
-- Cost, measured in-process (PONYO): a moving look on 6 sim cubes 5–17 ms a 50 ms tick; ~2.4 ms of each new cube frame is the
+- Cost, measured in-process (show-laptop): a moving look on 6 sim cubes 5–17 ms a 50 ms tick; ~2.4 ms of each new cube frame is the
   engine's own guard work (the same the show player pays when tweening). A still look is keep-alives only.
 
 - The new shapes: measured as the desk sends them (flattened, zone, optimised at 30 and 35 kpps) over 80 half beats ×

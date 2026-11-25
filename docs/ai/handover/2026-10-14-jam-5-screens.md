@@ -19,21 +19,21 @@ Project: space `di-laser`, project id `jam-5-screens`, private, made on the inst
 1. No crop/slice: one source cannot be cut into 5 slices. Not needed for contiguous 3200 px: live content goes to the one full-width `live` surface. If the 5 screens ever become 5 separate outputs, this is missing.
 2. A cue's source ref for LIVE di/NDI/URL is empty until chosen at the venue (cues store kind+ref; ref unknown tonight). After choosing, re-save the cue from the desk.
 3. `data:` URL pages are not a di feature as such (works via the url source; edits to the pattern need new ops). Proper home: a page published into the space (owed).
-4. Project is private: a venue PC on dev.diiii.xyz must sign in (or the owner makes it visible). PONYO follows di-laser (follow showed ops queued, "in 0 out 3" earlier today: confirm PONYO really has jam-5-screens before leaving). Not checked on dev.
+4. Project is private: a venue PC on dev.diiii.xyz must sign in (or the owner makes it visible). show-laptop follows di-laser (follow showed ops queued, "in 0 out 3" earlier today: confirm show-laptop really has jam-5-screens before leaving). Not checked on dev.
 5. Not verified: real 3200x1440 hardware, Windows, other machines. Browser agent screen is 2561 wide; the shot used a 3200x1440 emulated viewport.
 6. Raw Picture Out / NDI-in not exercised tonight (no live source tried).
 
 ## Venue steps (untested on those machines; no lasers/cubes involved)
 Check first: set the display to 3200x1440 as ONE monitor, scaling 100 % (DPR 1). The test pattern prints "actual: 640x1440 @1x" per screen: if it differs, scaling is on.
-### A. aylmo (Linux, KDE)
+### A. main-desk (Linux, KDE)
 1. System Settings > Display: pick the 3200x1440 screen, scale 100 %, note its name. `kscreen-doctor -o   # list outputs`
 2. `di-show http://diiii.localhost/di-laser/map/jam-5-screens/out` puts it in the di browser; then drag that window to the 3200x1440 screen (Meta+Shift+Right moves a window to the next screen) and press F11 or the page's "Full screen" / per-display button (allow the permission).
 3. Kiosk alternative: `chromium --kiosk --user-data-dir=$HOME/.cache/jam-kiosk --window-position=X,0 http://diiii.localhost/di-laser/map/jam-5-screens/out` (X = left edge of the screen from kscreen-doctor).
 4. Sleep/screensaver: the /out page holds a wake lock, but also: System Settings > Power Management: turn off dim/screen off/sleep; Screen Locking: never. Or `systemd-inhibit --what=idle:sleep --why=jam sleep 6h   # in a terminal for the night`.
 5. Control from the laptop screen: desk page http://diiii.localhost/di-laser/map/jam-5-screens, keys 1-5 fire cues (output window listens by BroadcastChannel only on the same browser profile; if desk and output are in different browsers use `output.show`/stage or fire cues in the same browser).
-### B. PONYO (Windows)
+### B. show-laptop (Windows)
 1. Settings > System > Display: select the 3200x1440 monitor, "Extend", scale 100 %. Win+Shift+Arrow moves the window onto it.
-2. Chrome/Edge: open the address of the synced copy: `http://diiii.localhost/di-laser/map/jam-5-screens/out` if di runs on PONYO and followed di-laser, else the dev address (case C). F11, or kiosk: `chrome.exe --kiosk --user-data-dir=%TEMP%\jam --window-position=X,0 <url>` (X = left edge of that display in Display settings ordering).
+2. Chrome/Edge: open the address of the synced copy: `http://diiii.localhost/di-laser/map/jam-5-screens/out` if di runs on show-laptop and followed di-laser, else the dev address (case C). F11, or kiosk: `chrome.exe --kiosk --user-data-dir=%TEMP%\jam --window-position=X,0 <url>` (X = left edge of that display in Display settings ordering).
 3. Sleep: Settings > System > Power: Screen and sleep = Never (plugged in). Screen saver off: Settings > Personalization > Lock screen > Screen saver > None. Win+L lock disabled by not leaving it.
 ### C. Venue PC (browser, dev or local door)
 1. Browser to https://dev.diiii.xyz/di-laser/map/jam-5-screens/out after signing in (project is private) or a di door on the LAN (local.thedi.studio, not *.localhost: that only means "this machine").

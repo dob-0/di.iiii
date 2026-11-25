@@ -41,14 +41,14 @@ the screen (`ArScan.jsx`) only draws and uploads.
 - **Gate vs today's camera, on the synthetic walk** (120 s lap of an 8 × 6 × 3.2 m room with a planted 90 °/s turn, a
   0.35 m approach and a dark stretch; `src/scan/ar/ar.test.js`): one frame every 400 ms with no gate keeps **104 faulty of
   301** (35 %); the AR gate keeps **0 faulty of 45**. The camera walk's real number on 2026-10 was 75 blurry of 159 (47 %).
-  This proves the gate obeys its model; whether the model's 1/60 s exposure matches the S24 is not measured.
-- **Brain cost**: 0.23 ms per tick on aylmo (Node, 1201 ticks); the phone runs it at 10 Hz.
+  This proves the gate obeys its model; whether the model's 1/60 s exposure matches the a phone is not measured.
+- **Brain cost**: 0.23 ms per tick on main-desk (Node, 1201 ticks); the phone runs it at 10 Hz.
 - **Meshroom rotation order** (AliceVision 2025.1 `aliceVision_exportColmap` reading our SfMData back): rotation written
   row-major came back as its inverse; written column-major (Eigen order) it matches our COLMAP export to 1e-6. So the
   Meshroom route is checked for pose order; exportColmap stopped (`map::at`) after the first view of a featureless test
   file, so the route is not proven end to end.
-- **camera-access resolution: UNMEASURED.** No WebXR on aylmo. The AR screen prints `camera W×H` and every sidecar stores
-  `cameraImage`; the first S24 walk is the measurement.
+- **camera-access resolution: UNMEASURED.** No WebXR on main-desk. The AR screen prints `camera W×H` and every sidecar stores
+  `cameraImage`; the first a phone walk is the measurement.
 
 ## The known tension — camera-access vs 4K
 
@@ -61,5 +61,5 @@ the pose of that still is then interpolated, not tracked; (b) walk twice, AR fir
 ## Not done here
 
 - Not run on a phone. The camera texture's orientation (one vertical flip is applied), depth arriving as `cpu-optimized`,
-  and hit-test fallback are unproven until the S24 runs them.
-- No COLMAP on aylmo; the COLMAP export is checked by the format and its own round-trip test only.
+  and hit-test fallback are unproven until the a phone runs them.
+- No COLMAP on main-desk; the COLMAP export is checked by the format and its own round-trip test only.

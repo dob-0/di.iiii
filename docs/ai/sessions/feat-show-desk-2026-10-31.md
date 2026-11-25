@@ -192,7 +192,7 @@ show.js already reads both desks every 1 s (`POLL_MS = 1000`, show.js:23, while 
 the live look, lamps and status from it, so the poll rate is not the cause. Changed: `HOLD_MS` 1500 -> 1000 (a held fader
 follows the poll 1 s after it is let go). Test: a change on the fake server shows within 2.5 s with no press.
 Open hypotheses for the two machines: the other page hidden (the poll pauses while `document.hidden`); the two pages on
-two different servers (aylmo's own di vs the stage Mac); a guard refusing the other machine's reads.
+two different servers (main-desk's own di vs the stage Mac); a guard refusing the other machine's reads.
 
 ## Rows · Upright: the fader bank as rows (2026-10-31 22:3x-23:5x, branch feat/show-desk-gaps-2026-10-31 from c19a83534)
 The owner at 22:0x: "update the UI, fix all gaps, look: the faders area is not used right". Method: an audit of the page with its own

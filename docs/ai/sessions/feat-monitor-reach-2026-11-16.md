@@ -5,7 +5,7 @@
 - `GET /api/monitor` adds `reports`, `tiers` (health probe of dev/prod: commit, behindDev by `git rev-list --count`), `spaces`, `asks`, `map` (serverXR/src/monitorHub.js). `GET /api/monitor/stream` is SSE: `snapshot` on change, at most every 2 s, heartbeat 15 s as a NAMED event `event: heartbeat` with `{at}` (the client's "last heard from the server"). Open streams are ended on SIGTERM (`closeAll()` in installShutdown's `before`). A refused request calls `next('route')`, so the app's own unknown-route 404 answers (same status and body). Contract addition: each `tiers.rows[]` has `source: 'probe'|'self'|'report'`; a `report` row (machine that only reports) has `status: null`, `ms: null` and `state: 'ok'|'warn'` from report freshness (never an invented probe); its map edge is `reports`, not `runs`. A session minted from an API token (`session.via === 'token'`) is never the owner.
 - `POST /api/monitor/ask` (admin session only) stores the ask in table `monitor_asks`. It is NOT handed to agent mail: agentMailStore refuses a message to yourself and addresses people, not the owner's own chats. Open page asks are the inbox for the owner's agents (the `asks` list).
 - CLI: `di monitor report [--once] [--every N]`, `di monitor install-timer [--remove]` (user systemd timer, 30 s; scripts/di/monitorReport.mjs). A machine whose `ledger-open` has its own ledger sends its open rows as `asks` (source ledger).
-- Not done: the page (Part 2), running the timer on aylmo/studio-mac, a live run against the dev tier (needs this branch deployed there).
+- Not done: the page (Part 2), running the timer on main-desk/studio-laptop, a live run against the dev tier (needs this branch deployed there).
 
 ## 2026-11-16 — owner-only gate and the security findings (backend)
 

@@ -341,7 +341,7 @@ sync key and the ops travel in clear; say so in the CLI, or refuse unless `--ins
 ## What is owed
 
 - Runs on an auth-on host: F8, F11 (the harness here runs auth off).
-- A run between aylmo and dev.diiii.xyz after fixes; none of this was measured there (the spec already says so).
+- A run between main-desk and dev.diiii.xyz after fixes; none of this was measured there (the spec already says so).
 - ~~F9, F12, F13, F14 each need a controlled interleaving~~ done (`followRaces.test.js` C1, C2, F13, F14; F10 in
   `assets.test.js`). Still owed: the F13 fix (a log epoch, protocol change), and an F14 run of a `--replay` follow
   built to show a reverted value.

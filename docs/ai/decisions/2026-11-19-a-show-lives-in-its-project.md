@@ -45,7 +45,7 @@ Four things are kept twice, and what is changed on the desk has no road back to 
 - `src/rigbuild/autoPatch.js:14` "export const rigKeyOf = (projectId, entityId) =>" · `serverXR/src/lighting/rigpatch.js:10` "The desk allocates; the room records."
 - The two laser homes are the first and the third row of the table above.
 
-Counted by script on one machine (aylmo) on 2026-11-18; keys, counts and sizes only, no value was read:
+Counted by script on one machine (main-desk) on 2026-11-18; keys, counts and sizes only, no value was read:
 
 - 40 of its 342 project documents hold a show: 2,799 lamps, 1,062 designed looks, 1,017 cues.
 - Its three light desk files (the machine's own and those of two spaces) hold 218 looks. 217 are named as copies made from a
@@ -101,7 +101,7 @@ Why this one:
    (<https://qlab.app/docs/v5/lighting/light-patch-editor/>). Avolites Titan: "The Fixture Exchange function enables you to
    repatch fixtures in your show using alternative fixtures, retaining important elements such as cue times, shapes and
    legends." (<https://manual.avolites.com/docs/patching/changing-the-patch>). Both pages were opened on 2026-11-18.
-7. The join back is already built: `src/rigbuild/autoPatch.js:14` "export const rigKeyOf = (projectId, entityId) =>". On aylmo
+7. The join back is already built: `src/rigbuild/autoPatch.js:14` "export const rigKeyOf = (projectId, entityId) =>". On main-desk
    140 of 152 desk lamps carry that key.
 
 ## What this replaces, line by line
@@ -109,7 +109,7 @@ Why this one:
 | On record | What stands now |
 |---|---|
 | `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:8` "one show per space, carried in the space's" and `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:14` "A space owns its own light show." | Replaced as the aim. Both stay true of what is built until the steps of the plan land. |
-| The first reason of the plan of 2026-09-03: `495604454:docs/architecture/LIGHTING_SHOW_PORTABILITY.md:80` "The unit is the space, not the project." It feared two projects of one room owning two unrelated light libraries. | Already so. On aylmo 40 documents hold a show of their own (2,799 lamps, 1,062 designed looks and 1,017 cues in all); in moxir 39 projects carry 15 different lamp counts; and the one desk file of that space mixes the looks of nine projects. |
+| The first reason of the plan of 2026-09-03: `495604454:docs/architecture/LIGHTING_SHOW_PORTABILITY.md:80` "The unit is the space, not the project." It feared two projects of one room owning two unrelated light libraries. | Already so. On main-desk 40 documents hold a show of their own (2,799 lamps, 1,062 designed looks and 1,017 cues in all); in moxir 39 projects carry 15 different lamp counts; and the one desk file of that space mixes the looks of nine projects. |
 | Its second reason: `495604454:docs/architecture/LIGHTING_SHOW_PORTABILITY.md:83` "Weight, and who pays it." | The weight is already in the documents. In the largest one the designed looks take 1,293,897 characters and the laser objects 7,940,786; the desk file of that space is 1,507,376 bytes, and 175 of its 176 looks are named as copies. What a visitor's page is sent is not checked; step 1 of the plan measures it. |
 | `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:61` "A visitor never downloads it." | Changes. What is made on the desks would be in a project a visitor can open. No output and no cube address is among it. The owner is asked before the first step that writes it there (step 3 of the plan). |
 | `di-atlas/decisions/2026-09-23-connect-everything.md:136` "Recommendation: the space." | Replaced by this pick. |
@@ -137,7 +137,7 @@ The two notes in `di-atlas` are not edited by this record; a pointer there is ow
   Which side wins when both changed is not settled here.
 - Not solved by this pick: each project of a place carries its own copy of the rig. The cure is owed:
   `docs/architecture/LIGHTING_SHOW_PORTABILITY.md:89` "Rebinding a travelling show to a venue's rig"
-- The custom fixture types in the desk files (5, 5 and 17 on aylmo) need a home. Not read for this record.
+- The custom fixture types in the desk files (5, 5 and 17 on main-desk) need a home. Not read for this record.
 
 ## Not decided here
 
@@ -157,6 +157,6 @@ leaves the desks' own files in place, and each names its own undo of one command
 - Read by four readers on 2026-11-18 (lights, laser, project, records): 362 of their 362 quotes were found by script within
   three lines of the line named. Their report is kept with the job, outside the repo.
 - Every `path:line` "quote" in this record was checked by script against the branch that adds it; the count is in the pull request.
-- The real files were counted by script on aylmo on 2026-11-18: keys, counts and sizes only.
+- The real files were counted by script on main-desk on 2026-11-18: keys, counts and sizes only.
 - Not checked: the show files on the show machines; whether a hosted tier holds a light show file of any space; what a
   visitor's page is sent.

@@ -692,13 +692,13 @@ Cloud routine, base `fix/moxir-selection-box-and-scenes-2026-10-13`. Plan:
 
 ## 2026-10-14 — Jam hand-over: runbook, 5 screens, cube network modes, cloud hand-over
 
-Branch `docs/jam-handover-2026-10-14`, written on aylmo before it was powered off at 15:40 and handed to a cloud session.
+Branch `docs/jam-handover-2026-10-14`, written on main-desk before it was powered off at 15:40 and handed to a cloud session.
 
 - `docs/ai/handover/`: the jam runbook (2026-10-14, 20:00), the 5-screen spec (5 × 640×1440 = one 3200×1440 display) and its
   test pattern, the LaserCube network modes (2 × Ultra Mk2, discovery by unicast 0x27/0x77 only), the di.bo missed-messages
   root cause (the door bot keeps only messages with a file), and the cloud hand-over itself.
 - Undone and named there: the di.bo fix (repo di-bo, branch pushed empty), the network + screens sync design (N647).
-  aylmo off means the cube switch has no DHCP: plug the D-Link into the venue router.
+  main-desk off means the cube switch has no DHCP: plug the D-Link into the venue router.
 - The cloud session made the branch pass `npm run docs:ai:check` (this note was the one missing piece).
 
 ## 2026-10-14 — Laser research and the Nodes laser workflow decisions landed (ledger N645.4)
@@ -907,7 +907,7 @@ Hypotheses: (a) disarm never sends `0x80 0`; (b) it sends but the cube ignores i
 - (b) not testable without the real cube; the data point (armed-then-disarmed cube 2, never-armed cube 0) fits "output off".
   OPEN: why bit 1 ("interlock enabled" in the maker's naming) is set only after an arm.
 
-### Measured (2026-10-14, aylmo, fake cube 127.0.0.2, `node scripts/laser/fake-cube-rehearsal.mjs --runs 10`)
+### Measured (2026-10-14, main-desk, fake cube 127.0.0.2, `node scripts/laser/fake-cube-rehearsal.mjs --runs 10`)
 - stream: 29 387–29 610 points/s reach the cube (lit 27 919–28 147/s), the eight shapes switching every 40 ms; buffer overflow 0
 - longest step the cube was sent: lit 0.0254, blank 0.1001 field units (limits 0.025 / 0.1; the excess is the 12-bit rounding,
   one device step = 0.0005)
@@ -1144,7 +1144,7 @@ and no hand-edited JSON.
 
 Limits, owed:
 - Not run against a real cube or on Windows. Windows firewall behaviour (stateful UDP replies) is from the platform's
-  documented behaviour, not measured on PONYO.
+  documented behaviour, not measured on show-laptop.
 - A cube on a different /24 than the laptop is not found.
 - Through a dev proxy with xfwd (Vite, `di-dev up`) arming is refused by design; use the installed di's own address.
 
@@ -1313,7 +1313,7 @@ The owner at the wall: *"i need more robust scenes … its nothing its so boring
   whole motion is approved; 'fit' takes the box of the lit STRETCH the frame belongs to (fitting each picture on its own
   centre froze every sweep); `strokesAt`, `bboxOf`, `fitBoxOf`, `tweens` exported.
 - `moxir-scenes-50-2026-10-15.json`: beams 12 (comb, net), 18 (fan, fan-sweep, tunnel), sky segments 10 on 17 scenes.
-- Written into moxir-v2-11 on aylmo's di by `agent-reports-2026-10-17/apply_frames.mjs` (36 cube lines, full laser object
+- Written into moxir-v2-11 on main-desk's di by `agent-reports-2026-10-17/apply_frames.mjs` (36 cube lines, full laser object
   with `frames` replaced, backup `~/di-backups/moxir-v2-11-document-before-dense-lasers-20261017-0331.json`).
 Owed: the room (laserLine.js) still holds each keyframe 4.4 s — give it the shared `poseAt`; epic-build needs a cubes-only
 switch (it dies on the 40 W lines being in the project but not in a cubes-only rig); the 28 dark scenes are the owner's call;
@@ -1474,7 +1474,7 @@ Rule: "Nothing is left behind" (owner 2026-10-13). Ledger rows N811.2 (palette a
 | light-env-data/haze.mjs (+reg.mjs, json-loader.mjs) | `scripts/place/light_env_haze.mjs` | repo-relative import, JSON loader inline |
 | light-env-data/fetch.mjs | `scripts/place/light_env_fetch.mjs` | `--api --tag --out --token-file ID…` |
 
-Tests: `scripts/place/palette-tools.test.js`, `scripts/place/light-env-tools.test.js` (vitest, synthetic inputs). Real-data check: table and haze on the audit's documents give the same rows/lines as the old scripts (v2-11 row equal; v2-10 haze line identical). Not tested: fetch against a live server; palette_sample on the real teasers (clips stay on aylmo).
+Tests: `scripts/place/palette-tools.test.js`, `scripts/place/light-env-tools.test.js` (vitest, synthetic inputs). Real-data check: table and haze on the audit's documents give the same rows/lines as the old scripts (v2-11 row equal; v2-10 haze line identical). Not tested: fetch against a live server; palette_sample on the real teasers (clips stay on main-desk).
 Not migrated (not in these rows): scenes50.py / sheet.py that import the old `palette.py` — their job must switch to `palette_lib.load(...)`.
 
 # feat/migrate-scenes-2026-10-15
@@ -2256,7 +2256,7 @@ the portrait phone, the push).
   (`projectMeta` = id, spaceId, title, …): `StudioEditor` reads it from the project record (`getProject`), keyed by id, and
   falls back to `/p/{id}` until it arrives or when it cannot be read. "View live" is unchanged: it opens the SPACE and is drawn
   only on the space's live project, which is why a project being edited had no way across.
-- Not seen in a browser (heat 96-100 C, no browser tests on aylmo until the owner says): the look and the geometry are from
+- Not seen in a browser (heat 96-100 C, no browser tests on main-desk until the owner says): the look and the geometry are from
   the stylesheets and jsdom only.
 
 ## 2026-10-15 — three renders of one room: Studio, Tech, Show (feat/tech-show-render-2026-10-15)
@@ -2468,7 +2468,7 @@ Owner: "when I zoom back it is impossible to move" — measured on v2-9 (scripts
 - The look (physics first, item 3) now has a tool: `scripts/place/look_shots.cjs` (agent screen, `di-test-browser run`; finds the Studio's camera-controls through the React tree, sets each viewpoint, saves a picture; read-only, ends on about:blank). v1632, 4 views (outside left high, outside entrance high, floor entrance → DJ, floor → the left line in the chill zone): no light above or outside the hall; the side beams stop at the roof frame; the project stayed at v1632 (nothing written).
 - Wave C merged into the lead: #928 a version's number from its slug (vX-Y), #929 selecting writes nothing (every transform commit goes through `transformChange`), #930 beams stop at the rig's steel (`svSteel`, `--tag-steel-only`). known-fixes rows: both sides kept. Lead fix on #929: the tolerance back to 1e-4 (the brief's 1e-6 was the lead's mistake: the measured π re-spelling is 7.4e-6 rad, so 1e-6 still wrote it); its tests now assert that noise writes nothing and the edge sits at 1e-4. vitest 195 files / 2235 tests (one test fixed: the Many call kept each lamp's own position).
 
-## Hand-over 2026-10-14 15:45 (aylmo powers off 15:50)
+## Hand-over 2026-10-14 15:45 (main-desk powers off 15:50)
 
 - Code: lead branch `fix/moxir-selection-box-and-scenes-2026-10-13` (PR #891 into dev, the owner merges) and the served tree `~/work/di.iiii-moxir-one` (`feat/moxir-scene-bar-2026-10-12`) both at 614f95ef, pushed. dev and the owner's own di run 4a10bc1c (Move 1, #927).
 - Show data: project moxir-v2-9 v1632, 149 entities, on the scratch stack moxir-one; backed up to di-spaces `scratch/moxir-v2-9-2026-10-13` @e366047 (timer every 30 min; last run 15:30, unchanged at v1632). Stack stopped cleanly with `di-dev down moxir-one` before the power-off.
@@ -2797,7 +2797,7 @@ Branch `fix/version-name-one-source-2026-10-14`, from `fix/moxir-selection-box-a
 
 - **Why this branch exists:** #1009 (`feat/laser-play-2026-10-16`) was squash-merged by auto-merge at 2026-10-16 23:24 UTC, at the
   commit before the laser-safety work. Six more commits were pushed to that branch afterwards and sat in no pull request, so dev,
-  the dev release and the installed di on aylmo did not have them (measured 2026-10-17 06:1x: `own.dimmer != null` absent from
+  the dev release and the installed di on main-desk did not have them (measured 2026-10-17 06:1x: `own.dimmer != null` absent from
   the installed `engine.js`). This branch carries exactly those six, cherry-picked unchanged onto dev (`-x` lines name the sources).
 - **Laser safety:** `makeFixture` forced `values.dimmer = 255` for every patched lamp, so a DMX laser (UP-LA40WF, whose chart rests
   its output at 0) came up at full on every re-patch. It now takes the chart's own resting dimmer when there is one
@@ -3001,7 +3001,7 @@ Branch `test/standard-move-touch-2026-10-13`, from `fix/standard-move-review-202
 - The owner's decision of 2026-10-07, written as `docs/ai/one-local-address.md`: on every machine with di, the
   same link `http://diiii.localhost/` opens that machine's own installed di; joining is `di follow`; devices
   without di get one HTTPS place address shown as a QR code; dev trees stay at `<tree>.diiii.localhost`.
-- Measured on aylmo (headless Chromium 151 and Firefox 153, no WebGL): `*.diiii.localhost` reached a server bound
+- Measured on main-desk (headless Chromium 151 and Firefox 153, no WebGL): `*.diiii.localhost` reached a server bound
   to 127.0.0.1 only while the OS resolver answers ::1 only — the browser maps the name itself; `isSecureContext`
   true; a `Secure` cookie kept over plain http. Firefox desktop exposes no `navigator.xr` at all.
 - The server: `serverXR/src/localName.js`, a door on loopback :80 handing requests and upgrades to the main
@@ -3072,18 +3072,18 @@ Branch `test/standard-move-touch-2026-10-13`, from `fix/standard-move-review-202
 - Tests: unit (QR decoded back by jsQR; a mutation that corrupts modules fails it), server unit + a real-server
   contract (no cert → no address; self-signed cert → its name and port), page tests in jsdom (no WebGL).
   The screenshot run decoded the QR from the rendered page's pixels, desktop DPR 2 and phone 390×844 DPR 3.
-- Measured on aylmo, read-only, with its real certificate: `https://local.thedi.studio/`. The name resolves
+- Measured on main-desk, read-only, with its real certificate: `https://local.thedi.studio/`. The name resolves
   to 127.0.0.1 there today (the hook's loopback setting for a start without `--lan`).
 - Owed: scan with a real phone (padlock, camera, WebXR on the Quest); `/<space>` in the code; Light's phone
   panel on the same address and the same encoder (it still shows `http://<raw IP>`); a per-place name and
   certificate; the place router's DNS (rebind protection).
 
-## 2026-10-08 — the standby build runs on a Linux aarch64 host (r-di, a Raspberry Pi 3 B+)
+## 2026-10-08 — the standby build runs on a Linux aarch64 host (test-pi, a Raspberry Pi 3 B+)
 
 - scripts/standby/build-runtime.sh had a pinned Node hash for macOS only. Added a `Linux-aarch64` line (Node 24.19.0, hash from nodejs.org SHASUMS256.txt over HTTPS; the release-keys signature of that file is not yet checked for this line), and a portable sha256 (`shasum` or `sha256sum`).
 - New `CLIENT_DIST=<dir>`: use a dist built elsewhere at the same commit instead of the vite build, because a 905 MB Pi cannot run it. The SPA is plain files, identical on every platform.
-- Measured on r-di: the release for the Mac's prod commit builds in about 80 s (`npm ci --omit=dev`, sharp arm64 binary needs no compiler), 210 MB; the server starts with throwaway secrets and an empty data root, health 200, RSS 99 MB. Run by hand, not yet a service; no prod data yet.
-- Owed: systemd unit on r-di, prod data restore (secrets on the Pi need the owner's yes), cloudflared, failover decision, a test with real data under load.
+- Measured on test-pi: the release for the Mac's prod commit builds in about 80 s (`npm ci --omit=dev`, sharp arm64 binary needs no compiler), 210 MB; the server starts with throwaway secrets and an empty data root, health 200, RSS 99 MB. Run by hand, not yet a service; no prod data yet.
+- Owed: systemd unit on test-pi, prod data restore (secrets on the Pi need the owner's yes), cloudflared, failover decision, a test with real data under load.
 
 # feat/studio-lock-keys-2026-10-13
 
@@ -3476,7 +3476,7 @@ distance, or stop infinityDolly pulling the pivot to the 0.35 m clamp; then re-m
   `/home/nooo` commands and enabled MCP servers that `settings.local.json` disabled; `settings.local.json` was
   tracked-adjacent (not ignored), pinned `fable[1m]` and allowed `pkill -f`; `/live`, `/stack` and the run skill
   still said `npm run dev`, `localhost:5173` and `docker ps` against the di-dev / `diiii.localhost` hard rules.
-- Fix: AGENTS.md rewritten (121 → 113 lines, 10.1 → 9.3 kB) with grep-not-read rules, a "Local Run (aylmo)"
+- Fix: AGENTS.md rewritten (121 → 113 lines, 10.1 → 9.3 kB) with grep-not-read rules, a "Local Run (main-desk)"
   section and a compaction-preserve line; agents `tools:`; settings allow-list 44 → 39, MCP enable block removed
   (disabled list kept); `.claude/settings.local.json` ignored; `/live`, `/stack`, run skill on di-dev and
   `*.diiii.localhost`; sync template tells bridges to grep PROGRESS.md / known-fixes.md, never read them whole.
@@ -3530,7 +3530,7 @@ Sources: the nannou-org/lasercube `SPECIFICATION.md` (MIT, read 2026-10-09) — 
 | Still hold | 200 ms | the same 0.25 s base; lets a shape pass through a point (a size knob swept through 0) |
 | Link lost | 3 s | three missed info answers with no data answers either |
 
-### Measured (2026-10-09, aylmo, scratch stack `di-dev up laser-drive --api scratch`, the fake cube on 127.0.0.1:45457/45458)
+### Measured (2026-10-09, main-desk, scratch stack `di-dev up laser-drive --api scratch`, the fake cube on 127.0.0.1:45457/45458)
 
 Fake cube: `fake-cube.mjs` (answers 0x77 with a spec-layout info, plays a 6000-point buffer at 30 kpps, answers each data message with its free count, logs output on/off and lit points per 100 ms). Driver: `rehearse.mjs` (both in the session scratchpad, not in the repo). `laser.json`: cube-1 = the fake cube, cube-2 = 127.0.0.2 (nobody home). 10 runs:
 
@@ -3940,7 +3940,7 @@ line; the rental's PAR lens; the floor model's mirror-like beam streaks; the own
   linear values from a half-float target before tone mapping. Contract: `docs/architecture/MEASUREMENT_MODE.md`.
 - New code in `src/project/viewport/measure/`; small hooks in HdrBloom, atmosphereStore (`holdGlareVeil`),
   RenderSettingsEffect (mounts it), RigBodies (names the bounce light). No physics file changed.
-- T1 on the real GPU (aylmo RTX 3080, ANGLE/Vulkan, under the browser lock), twice with identical numbers: 15 of 15
+- T1 on the real GPU (main-desk RTX 3080, ANGLE/Vulkan, under the browser lock), twice with identical numbers: 15 of 15
   checks pass — inverse square and cosine law within 0.04 % (305.000 → 304.955 lx on axis), the fitted cone's 50 % point
   within 0.012 %, the beam probe's FWHM within 0.45 %, the mode's switches seen in the pipeline; the control (mode off,
   work light on) reads +4.36 % and fails as it must. Runner `scripts/measure/t1-gpu.cjs`, page
@@ -4044,7 +4044,7 @@ Cause: `lampsOf` lists only SpotLights; lasers are `LaserLines` ribbon meshes wi
 
 - Cause: a follow does not carry a space's `permanent` mark, and `pruneSpaces` hard-deletes every non-permanent,
   non-global space untouched for `SPACE_TTL_MS` (30 days). A follower whose hub was quiet for a month lost the space.
-- Measured on the owner's install (aylmo) the same morning, read-only from `di.db` + `follows.json`: 12 of 30 followed
+- Measured on the owner's install (main-desk) the same morning, read-only from `di.db` + `follows.json`: 12 of 30 followed
   spaces were not permanent; br-id-ge (74 projects) was within hours of deletion (marked permanent by hand at 07:50);
   cascade, di-laser and the-light-put-back were 9.3 days away, support 11.6.
 - Fix: `createSpaceStore({ keptSpaceIds })`; `pruneSpaces` skips those ids and returns the ids it removed. `index.js`
@@ -4415,7 +4415,7 @@ The reference `moxir-known-full-flip` is untouched: version 9, hall v6 `4e3420f4
 
 ## Findings
 
-- **The reference copy (PONYO 10-04) hangs the cut 0.2 m higher than git derives.** Its clamps sit at 8.0 m, inside
+- **The reference copy (show-laptop 10-04) hangs the cut 0.2 m higher than git derives.** Its clamps sit at 8.0 m, inside
   the 7.95 m girder of its own hall model: it was built on the old 8.15 m girder guess, before #772.
   - `stageLineOps` moves the cut rigidly by the offset its re-derived rigging gives, (0, −0.2, 19.2). The copy
     therefore matches git's Known · full: ends 3.24 / 6.35 m, bridles 26/42/119°.
@@ -4814,7 +4814,7 @@ gone lived only in tab memory (`pendingQueueRef`) and vanished on reload, tab cl
 
 ## 2026-10-02 — serverXR refuses a database inside the checkout (no more stray di.db)
 
-- 24 checkouts on aylmo each ran serverXR with the default relative `DATA_ROOT`, so work was saved into `<checkout>/serverXR/data/di.db` where nobody else sees it. Now `serverXR/src/dataRootGuard.js` (called from `index.js` after dotenv) exits 1 when `DATA_ROOT` is unset or relative, the repo root has a `.git`, and it is not under test. `DI_SCRATCH=1` prints `SCRATCH database at <path>` and goes on. On aylmo the supported start is `di-dev up <tree>` (di-atlas tools/di-dev).
+- 24 checkouts on main-desk each ran serverXR with the default relative `DATA_ROOT`, so work was saved into `<checkout>/serverXR/data/di.db` where nobody else sees it. Now `serverXR/src/dataRootGuard.js` (called from `index.js` after dotenv) exits 1 when `DATA_ROOT` is unset or relative, the repo root has a `.git`, and it is not under test. `DI_SCRATCH=1` prints `SCRATCH database at <path>` and goes on. On main-desk the supported start is `di-dev up <tree>` (di-atlas tools/di-dev).
 - `scripts/dev-stack.mjs` applies the same rule before spawning (scratch runs get `~/.cache/di-dev/<tree>/data`); vite stays on `strictPort`, and no process is killed by pattern. `scripts/self-host.mjs` writes an absolute `DATA_ROOT`; `serverXR/.env.example` no longer sets one.
 - Installed `di`, Docker (`DATA_ROOT=/data`), cPanel (absolute, required by `write-server-env`; prebuilt release has no `.git`) and tests are unchanged. Guard: `serverXR/src/dataRootGuard.test.js`.
 - Owed: the work that lives only in the 24 stray databases (backed up in `~/di-backups/stray-dev-dbs-2026-10-02/`) is not yet moved into the main tier.
@@ -4828,7 +4828,7 @@ gone lived only in tab memory (`pendingQueueRef`) and vanished on reload, tab cl
 
 ## 2026-10-08 — the device cap drops the earliest device, even within one millisecond
 
-- serverXR/src/dmDeviceStore.js ordered the cap's DELETE and listDevices by `last_seen_at` only. Devices published in the same millisecond tie and SQLite returned them in public-key order (random), so the cap dropped a random device. Found as a CI failure of batch #830 (test passed 15/15 on aylmo, failed on the faster CI runner).
+- serverXR/src/dmDeviceStore.js ordered the cap's DELETE and listDevices by `last_seen_at` only. Devices published in the same millisecond tie and SQLite returned them in public-key order (random), so the cap dropped a random device. Found as a CI failure of batch #830 (test passed 15/15 on main-desk, failed on the faster CI runner).
 - Fix: tie-break on `rowid` (arrival order) in both queries.
 - Guard: new test in serverXR/src/dmDeviceStore.test.js freezes `Date.now` and publishes keys in descending key order; failed 5/5 before the fix, whole file 10/10 after. Row added to docs/ai/known-fixes.md.
 
@@ -4847,13 +4847,13 @@ gone lived only in tab memory (`pendingQueueRef`) and vanished on reload, tab cl
 
 ## 2026-10-09 — a follow waits as one when the other di.iiii stops answering
 
-- Measured live on aylmo by the parent session (not re-measured here): dev.diiii.xyz answered 530 (Cloudflare 1033) from 06:28:36 while the live site moved to the Pi. di-server went from 0 "could not be carried" lines and 0 local asset GETs a minute (06:10, 06:20) to 463 + 1,710 (06:29) and 1,400 + 5,100 (06:40), 94 % CPU, RSS 277 → 666 MB.
+- Measured live on main-desk by the parent session (not re-measured here): dev.diiii.xyz answered 530 (Cloudflare 1033) from 06:28:36 while the live site moved to the Pi. studio-server went from 0 "could not be carried" lines and 0 local asset GETs a minute (06:10, 06:20) to 463 + 1,710 (06:29) and 1,400 + 5,100 (06:40), 94 % CPU, RSS 277 → 666 MB.
 - The loop, found in code and reproduced in a unit test before any fix: `reconcileOne()` stays due for every project it cannot finish and runs on every pass (the chase's own 2 s timer plus the op loop's kicks); each failed run still cleared the project's settled files and named every file again, and `name()` pulled files that had run out of tries out of `failed` with attempts 0, so the 5-minute rest never came. Per file: 4 tries (a `/meta` ask of each machine each) and one line every ~44 s. The loop grows for the first 10 minutes as each project's own 10-minute comparison comes due.
 - The parent's hypothesis held except for one part: no local file is downloaded while the other side answers 530 to everything — `carryOne`'s pair of `/meta` asks fails on the 530 before any download (0 downloads in the test, before and after). The local GETs measured live fit the `/meta` asks: 4 per line (live 3.7 and 3.6; test 4.2). One `journalctl … | grep -c '/meta '` would settle it.
 - Fix in `serverXR/src/follow/assets.js`: a circuit breaker for the whole chase. Three asks in a row of the other side with no answer of its own (none at all, 502/503/504, Cloudflare 520–530; a 500 stays per-file) → one warn line, then nothing asked, read or downloaded; one `GET /api/health` after 5 s doubling to 5 min (`followPlan.js` `failureDelay`, the same numbers as a refused write in the op loop); the first real answer after it → one info line. A comparison changes nothing until both documents answered. `follower.js` `refreshStreams` calls `chase.noteAnswered()` when the other side's project list answers, so the files go on that tick, never at the end of a 5-minute wait.
 - Numbers, same scenario (10 simulated minutes, 3 projects × 20 files, 530 to everything, default timings): warns 780 → 1, asks on this install's file routes 3,300 → 0, its documents read 1,260 → 3, asks of the other side 4,560 → 9, downloads 0 → 0; all 60 files carried once it answers.
 - Tests: `assets.test.js` "when the other di.iiii stops answering" (3 cases, two failed on the old code); `followIntegration.test.js` new describe with a stand-in edge answering 530 on the host's port, then the host back on it. Runs from the repo root: `npx vitest run serverXR/src/follow` 136 passed (12 files); the two integration suites again 53 passed (2 files); `serverXR/src/httpClient` 17 passed (3 files). With the follower's log printed, the both-up describe never opened the breaker; the one case that differed in time (20.2 s on unchanged code, 0.7 s with the change) is ~1.3 s on both when run alone — a race with the 20 s park, not the change.
-- Not done: seen on aylmo — needs this fix installed (dev deploy, then `di update --from` per the dev-and-local rule). Owed, not in this change: a project whose document one side refuses (401, 500) is still asked again every pass (2 s) — now silently and without naming files, but still two document reads every 2 s; and a full disk on the other side (507 on the PUT) still downloads each file here 4 times per 5 minutes.
+- Not done: seen on main-desk — needs this fix installed (dev deploy, then `di update --from` per the dev-and-local rule). Owed, not in this change: a project whose document one side refuses (401, 500) is still asked again every pass (2 s) — now silently and without naming files, but still two document reads every 2 s; and a full disk on the other side (507 on the PUT) still downloads each file here 4 times per 5 minutes.
 
 ## 2026-10-07 — The Keeper accepts the OpenAI base URL a local server prints, and the palette finds it by "local llm"
 
@@ -4903,7 +4903,7 @@ gone lived only in tab memory (`pendingQueueRef`) and vanished on reload, tab cl
 
 ## 2026-10-05 — MOXIR audit (Known · full) safety fixes: the measured crane, the tie-off, the walls, the circuits, the lasers
 
-- Owner (Gevorg) asked, via the aylmo audit (docs/ai/audits/moxir-2026-10-05, branch docs/moxir-audit-2026-10-05), to fix the four safety findings; Emily said yes.
+- Owner (the owner) asked, via the main-desk audit (docs/ai/audits/moxir-2026-10-05, branch docs/moxir-audit-2026-10-05), to fix the four safety findings; Emily said yes.
 - A-01: the 10-02 hall layer now carries the 09-29 photo-measured crane (girder underside 7.95 m, rail 8.1, depth 0.8, cab 2.1); hall.json rebuilt with hall.py; versions.mjs re-derived every hang — the cut 0.2 m lower (trim 4.86, ends 3.24 / 6.35 m), no bridle over 120° against the measured hall (bridle-limit's recorded list is now empty); the archived X's trim 6.15 → 5.96.
 - A-02: the house-right tie-off anchors at 4.6 m (was 5.5) and passes 0.23 m under the crane cab; new guard tieoff-clash.test.js.
 - A-10: an effect past an end wall stands on its column's stage side; new guard insideHall.test.js (catches exactly hazer-hall-4 and smoke-4 at z 55.2 on the old rule).
@@ -4914,7 +4914,7 @@ gone lived only in tab memory (`pendingQueueRef`) and vanished on reload, tab cl
 
 ## 2026-10-02 — two servers on one data folder no longer break a project: one carries the follows, every project write is one writer
 
-- **What broke (aylmo, 2026-10-02).** The installed di (:443) and a dev stack (:4000) share
+- **What broke (main-desk, 2026-10-02).** The installed di (:443) and a dev stack (:4000) share
   `~/.local/share/di.iiii/data` on purpose. Both read `follows.json`, so both ran a follower for
   `test-desk` (and machine links) into one di.db. Project `test` ended at document_version 809
   with ops 805–819; every write after that was a 500 (`UNIQUE constraint failed:
@@ -4952,7 +4952,7 @@ gone lived only in tab memory (`pendingQueueRef`) and vanished on reload, tab cl
 - **Owed**: space (scene) ops are still guarded in-process only — two servers editing one room's
   scene at once can still race. Both servers on a folder must run a build with this fix; the
   installed di (0.4.16-rigbuilder.14) does not yet, and an older build ignores the lock. The live
-  project `test` on aylmo will be healed by its first start on a fixed build (not touched here).
+  project `test` on main-desk will be healed by its first start on a fixed build (not touched here).
 
 ## 2026-10-07 — brought up to date with dev (merge notes, bug sweep)
 
@@ -4963,7 +4963,7 @@ gone lived only in tab memory (`pendingQueueRef`) and vanished on reload, tab cl
   - `src/wiki/wikiContent.js`: dev's two rewritten lines, then this branch's "TWO di.iiii ON ONE MACHINE" line; `updated` is 2026-10-07 because the article text changed again in this merge.
   - `serverXR/src/follow/follower.js`: both sides declared `refusals` for different things (dev: copies that disagree, a string per stream, set aside for a person to choose; this branch: a wait after a server error, `{ count, until, message }` per stream). Both are kept; this branch's map is now `writeBackoff`.
 - One break that git did not report. Dev's project move route (`POST /api/projects/:id/move`, added after this branch's base) calls `withProjectLock(projectId, fn)`, the signature this branch replaced with one that takes a project object. The merge was textually clean, and every move that reached the lock answered 500. Measured on the merged tree before the fix: `projectMoveContracts.test.js`, 5 of 6 tests failed. A move cannot hold the cross-process lock, because it renames the directory the lock file lives in (the lock would travel to the other space and stay there), so it now takes the in-process half only: `withProjectInProcessLock` in `projectWrite.js`, same key as the writes, so it still queues with this server's own writes. Guards: `projectMoveContracts.test.js` (red before, green after) and two new cases in `projectWrite.test.js` (the move queues with a write in both directions; no lock file is left in the directory it renames). With the move given a lock instance of its own, the first new case fails.
-- Measured after the merge: 8 files, 168 tests passed, 0 failed (`projectMoveContracts`, `projectWrite`, `projectContracts`, `projectVisibilityContracts`, `httpContracts`, `syncContracts`, `follow/oneDataFolder`, `follow/follower`), and eslint exits 0 on the five files touched by hand. Before the move fix, the wider batch (`serverXR/src/follow/`, `serverXR/src/machines/`, `scripts/di/`, the server contract tests, the store and database tests) was 69 files passed, 1 failed. With this branch's source files taken back to dev's in a throwaway copy, the guards go red: 16 of 43 tests fail in 5 of 6 files, including both `oneDataFolder` cases (no server ever becomes the one that carries the follow; a write at v809 answers 500 where the fixed build answers 200 and v810, the aylmo incident).
+- Measured after the merge: 8 files, 168 tests passed, 0 failed (`projectMoveContracts`, `projectWrite`, `projectContracts`, `projectVisibilityContracts`, `httpContracts`, `syncContracts`, `follow/oneDataFolder`, `follow/follower`), and eslint exits 0 on the five files touched by hand. Before the move fix, the wider batch (`serverXR/src/follow/`, `serverXR/src/machines/`, `scripts/di/`, the server contract tests, the store and database tests) was 69 files passed, 1 failed. With this branch's source files taken back to dev's in a throwaway copy, the guards go red: 16 of 43 tests fail in 5 of 6 files, including both `oneDataFolder` cases (no server ever becomes the one that carries the follow; a write at v809 answers 500 where the fixed build answers 200 and v810, the main-desk incident).
 - Undone / owed: a project move is guarded in this process only, so two servers on one data folder can still race a move against a write — the same kind of gap as the space (scene) ops listed above. Everything under the 2026-10-02 "Owed" still stands. The full suite was not run here; CI runs it on the PR. Nothing was seen on a real install: the installed di and a dev stack on one data folder, both on this build, is the check still owed by a person.
 
 ## 2026-10-07 — a proposal file can no longer plant bytes under another file's content address
@@ -5051,24 +5051,24 @@ Branch `fix/raw-usability-scale-2026-10-07`, built on `fix/raw-778-rework-2026-1
 ## 2026-10-02 — a camera on another machine reaches the page that asks
 
 - The owner's report: "can't see the asus camera in my raw". Reproduced headless before
-  any change: Raw opened from asuz's address (`http://100.72.53.77:4000/test-desk/raw/projects/test`)
+  any change: Raw opened from team-laptop's address (`http://100.x.y.z:4000/test-desk/raw/projects/test`)
   had `isSecureContext: false`, no `navigator.mediaDevices`, and the Camera In card stayed
-  black with no word. asuz's only browser (the projector kiosk) showed project `wall`, so
-  no page on asuz ever opened project `test`'s camera.
-- Four fixes, one branch (`docs/ai/known-fixes.md`, the row "A Camera In set to run on asuz
+  black with no word. team-laptop's only browser (the projector kiosk) showed project `wall`, so
+  no page on team-laptop ever opened project `test`'s camera.
+- Four fixes, one branch (`docs/ai/known-fixes.md`, the row "A Camera In set to run on team-laptop
   stayed black"): the camera's refusal is said on the card and inside the node
   (`cameraRefusal`); a tab's hello carries `projects` + `capture` and `runnerOn` asks a page
   that runs the project and can open a camera; a page whose browser is on another computer
   is AWAY (`serverXR/src/machines/onThisMachine.js`) and never acts as that machine; in dev
   the socket goes through the Vite proxy (page origin), not straight to :4000.
-- Seen, not only tested: with asuz's kiosk switched to `test-desk/map/test/out` (by its
+- Seen, not only tested: with team-laptop's kiosk switched to `test-desk/map/test/out` (by its
   debug port, for the session only — its saved address still says `wall`), a viewer on an
-  aylmo install received asuz's webcam picture over WebRTC (ICE connected, 181 previews in
+  main-desk install received team-laptop's webcam picture over WebRTC (ICE connected, 181 previews in
   30 s) and the owner saw it in his Chromium. The insecure page now shows the reason on
   the Camera In card (screenshot taken at DPR 2). Own-machine pages through loopback and
-  through aylmo's own tailnet address answer `away: false` on a live server.
+  through main-desk's own tailnet address answer `away: false` on a live server.
 - Not seen: `away: true` from a real second computer (no second browser on another host
-  was available); covered by `routes.test.js` and `onThisMachine.test.js`. asuz runs
+  was available); covered by `routes.test.js` and `onThisMachine.test.js`. team-laptop runs
   0.4.16 and drops the new hello fields until it is updated — the viewer then falls back
   to the old choice, which the live check above exercised.
 - Hosted tiers: every page there is AWAY (no browser runs on the server), so an operator
@@ -5090,7 +5090,7 @@ Branch `fix/raw-usability-scale-2026-10-07`, built on `fix/raw-778-rework-2026-1
   existed at the branch's base; its validation had run only `src/project`, `src/raw`, `src/hooks`, `src/wiki`
   and `src/map`. Now the paragraph says "Open Nodes from your own machine's di", the padding is
   `var(--di-space-2)` (7 px, the nearest step to 8), and the article's `updated` is 2026-10-07.
-- Still undone, as before: `away: true` from a real second computer has not been seen, and asuz (0.4.16) drops
+- Still undone, as before: `away: true` from a real second computer has not been seen, and team-laptop (0.4.16) drops
   the new hello fields until it is updated.
 
 ## 2026-10-07 — failed assets never cached; no-WebGL message; private spaces don't leak names
@@ -5287,7 +5287,7 @@ moxir-hall-known-ground was fog far 32 in a 108 m hall).
 
 ## 2026-10-02 — systemd supervises the installed di (`di service install`), so it is restarted if it dies
 
-- Step H8 of the local-hosting decision (di-atlas `decisions/2026-10-02-local-hosting.md`). Measured on aylmo: the
+- Step H8 of the local-hosting decision (di-atlas `decisions/2026-10-02-local-hosting.md`). Measured on main-desk: the
   installed di ran under a hand-written `di-up.service` (`Type=oneshot`, `ExecStart=di up --no-open`); the node server
   was nobody's main process, so when it was killed (three times in September) systemd noticed nothing.
 - New `scripts/di/service.mjs`: a user unit whose main process IS the server (`Type=exec`, `Restart=always`,
@@ -5297,7 +5297,7 @@ moxir-hall-known-ground was fog far 32 in a 108 m hall).
   `state.json` names one, its file exists and systemd is usable — otherwise the detached path, unchanged.
 - `cli.mjs`: `di service install [--name N] | remove | status`; `di status` names the supervisor and says when systemd
   gave up; `di uninstall` removes the unit first.
-- Proved on aylmo with a throwaway install (DI_HOME in the session scratchpad, unit `di-up-test`, port 4391, data in
+- Proved on main-desk with a throwaway install (DI_HOME in the session scratchpad, unit `di-up-test`, port 4391, data in
   scratch, DI_SCRATCH=1): kill -9 → restarted in 2 s, health 200; SIGTERM → restarted; down → flip `current` → up
   served the new version with the unit file untouched; `di down` → inactive 10 s later; `di service remove` left no
   unit file and no process. The owner's `di-up.service` and pid were not touched.
@@ -5305,9 +5305,9 @@ moxir-hall-known-ground was fog far 32 in a 108 m hall).
 - Pre-existing, not from this branch: `openFile.test.js` "di mcp from an install … release version" fails on
   origin/dev too.
 - Owed: the owner's switch-over is his go (commands in the PR body); it needs a build with this code installed on
-  aylmo first. launchd `KeepAlive` for macOS is not built (nothing to see it on here).
+  main-desk first. launchd `KeepAlive` for macOS is not built (nothing to see it on here).
 
-## 2026-10-05 — merged with dev, the unit keeps its node, installed on aylmo
+## 2026-10-05 — merged with dev, the unit keeps its node, installed on main-desk
 
 - Merged `origin/dev` (conflicts only in `cli.mjs`: `di status` now prints the supervisor line and the autoupdate lines).
 - #785 (autoupdate pins the node on PATH) applies here too. `di service install` records the node it ran with
@@ -5333,14 +5333,14 @@ project between spaces. Before: only `scripts/project-move.mjs`, offline, on the
 - `di move PROJECT --to SPACE [--from URL] [--token -] [--dry-run] [--unpublish]`.
 - `scripts/project-move.mjs` now calls the shared module (its 8 tests are unchanged and pass).
 
-## Measured (aylmo, 2026-10-05, only the touched files)
+## Measured (main-desk, 2026-10-05, only the touched files)
 projectMove.test.js 9, projectMoveContracts.test.js 6 (one real server), scripts/di/move.test.js 4,
 scripts/project-move.test.js 8, plus catalogueContracts, projectVisibilityContracts, cliRouting, copyVocabulary: all pass.
 Red first: with `projectMove.js` removed the new tests fail (module not found, server exits at start).
 
 ## Limits, owed
 - **Follow does not carry a move.** A follow carries op logs; a move is not an op, and a move/delete out of a followed
-  space is not carried. After moving on dev, each install that follows either space (aylmo, Emilya's, Kiara's) must run
+  space is not carried. After moving on dev, each install that follows either space (main-desk, Emilya's, Kiara's) must run
   the same `di move`, or the follow shows a project in the old space on one side. Owed: a carried move (a `moved` line
   in the follow stream, read from `project_moves`).
 - Not tried against the owner's real dev data (told not to): the contract test ran on a throwaway server.
@@ -5355,7 +5355,7 @@ Red first: with `projectMove.js` removed the new tests fail (module not found, s
 - Emily will NOT use DMX for the cubes: they are to be drawn live from di Raw and streamed over a wired network (laser previs and the Raw → server → cube path are the next work). So in Known · full they are `offDmx`, like the hazers; the chart is the reference.
 - Known · full: group `lasercube-cut`, 6 on the cut's top chord at u ±1, ±3, ±5 — PROVISIONAL, to be placed with Emily in the room; sign-off text now says 6 × 10 W class 4.
 - Plot: two laser types shared the letter L inside the diamond — the cube gets K (`LETTER_BY_TYPE`), so the key tells them apart.
-- `copy-version.mjs --from-api/--from-token-file`: read a room on another install, write the copy here (assets re-uploaded, the original only read). Checked end to end from PONYO's Tailscale address into a throwaway project and `--undo`ne. `scripts/place/rigs/moxir-ponyo-to-dev-siblings-2026-10-04.json` is the version row for putting PONYO's Known · full / Known · ground into dev's moxir space under new ids.
+- `copy-version.mjs --from-api/--from-token-file`: read a room on another install, write the copy here (assets re-uploaded, the original only read). Checked end to end from show-laptop's Tailscale address into a throwaway project and `--undo`ne. `scripts/place/rigs/moxir-show-laptop-to-dev-siblings-2026-10-04.json` is the version row for putting show-laptop's Known · full / Known · ground into dev's moxir space under new ids.
 - Not done: laser shapes in the room (cubes still drawn as one dark thin beam), placement, the Raw laser nodes and server output; `scripts/place/fixtures.test.js`'s script-hash check fails on a Windows checkout (CRLF) for every kind, this one included — LF hash recorded, as for the others.
 
 ## 2026-10-04 — add files to a sources project that already hangs
@@ -5463,7 +5463,7 @@ Owner, with a screenshot of a Raw project: the settings panel "comes from the ri
 ## 2026-10-05 — release channels: installs follow the build the hub serves, by themselves
 
 - **Why.** Owner: *"it would be better to have all places the same way, synced"*, *"main is always older than dev,
-  people start with the old version — fix that gap"*. aylmo was updated by hand; Releases' latest is v0.4.3.
+  people start with the old version — fix that gap"*. main-desk was updated by hand; Releases' latest is v0.4.3.
 - **What.** Decision with the cited practice (Chrome channels, VS Code Insiders, Debian suites, unattended-upgrades,
   systemd.timer): `docs/architecture/decisions/2026-10-05-release-channels.md`.
   - CI: job `publish-dev-channel` in `deploy-vps-dev.yml` publishes a `dev-<sha8>` prerelease (tarball + sha256),
@@ -5477,7 +5477,7 @@ Owner, with a screenshot of a Raw project: the settings panel "comes from the ri
   the modules and job do not exist); `updateSafety`, `updateCheck`, `releaseWorkflow`, `cliRouting` unchanged and green.
 - **Owed.** The CI job has not run on GitHub (runs after merge); Windows/macOS timers; a hold for installs running a
   show; the promotion-PR workflow and promote-the-exact-tarball for stable (design in the decision note); `di update`
-  on aylmo to enter the channel, then `di channel dev && di autoupdate on` (not run here, by rule).
+  on main-desk to enter the channel, then `di channel dev && di autoupdate on` (not run here, by rule).
 
 ## 2026-10-04 — the room gets a Lite output for phones and visitors; the work machine keeps Full
 
@@ -5490,9 +5490,9 @@ Owner, with a screenshot of a Raw project: the settings panel "comes from the ri
 - The DMX never depends on any screen: `serverXR/src/lighting/desk.js` sends at 40 Hz on its own timer.
 - Wiki: new entry "Lite and Full — a room light enough for a phone".
 - Still open: Lite's floor reads black (no surface model) — a cheap glow under the beams is the next step; not yet measured on a real phone.
-- Review fix (aylmo): the shader warm-up could hold the last frame forever — three 0.185 caches the `null` a released program answers, so waiting for `true` never ended. A released or non-`false` program now counts as settled and the hold is capped at 8 s; on the AMD 860M this was the "Full still blank after 60 s" and a Studio that stayed black.
+- Review fix (main-desk): the shader warm-up could hold the last frame forever — three 0.185 caches the `null` a released program answers, so waiting for `true` never ended. A released or non-`false` program now counts as settled and the hold is capped at 8 s; on the AMD 860M this was the "Full still blank after 60 s" and a Studio that stayed black.
 - Scope note: `<ShaderWarmup/>` in StudioViewport and spotLightSkip's patch of three's ShaderChunk reach the Studio editor too; checked on the 860M (writes blocked): Studio draws by 30 s and stays responsive, where untouched dev froze its page ~2 min. Studio's partly-drawn first view looks the same on dev — not this branch.
-- Open, Gevorg's call: dev.diiii.xyz and tailnet names (`*.ts.net`) count as non-local, so his own desktop sees Lite there by default (Full is one tap, and remembered).
+- Open, the owner's call: dev.diiii.xyz and tailnet names (`*.ts.net`) count as non-local, so his own desktop sees Lite there by default (Full is one tap, and remembered).
 
 ## 2026-10-04 — a fifth version status, `concept`
 
@@ -5523,7 +5523,7 @@ Owner, with a screenshot of a Raw project: the settings panel "comes from the ri
 
 ## 2026-10-05 — di autoupdate restarts di with the node it was installed with
 
-- Measured on aylmo: after each autoupdate (15:31 → 10b1e514) the installed di stayed down. server.log:
+- Measured on main-desk: after each autoupdate (15:31 → 10b1e514) the installed di stayed down. server.log:
   `listen EACCES: permission denied 127.0.0.1:443` under Node v26.10.0; autoupdate.log: `failed … pkexec setcap
   cap_net_bind_service=+ep /usr/bin/node` (a password prompt nobody was there to answer).
 - Cause: `di-autoupdate.service` set no PATH. systemd's user PATH puts /usr/bin first, so the shim's
@@ -5536,7 +5536,7 @@ Owner, with a screenshot of a Raw project: the settings panel "comes from the ri
 
 ## 2026-10-04 — follow carries projects that were made empty
 
-Seen on aylmo following dev.diiii.xyz (space `hayfilm`): six follower-only projects at documentVersion 0 never reached the host.
+Seen on main-desk following dev.diiii.xyz (space `hayfilm`): six follower-only projects at documentVersion 0 never reached the host.
 
 **Cause.** `refreshStreams` (follow/follower.js) made a project only when the host had it and the follower did not. The other direction relied on ops arriving, but a project that does not exist on the host answers 404 on its ops stream and is skipped, and an empty project has no ops. The follower also titled a made project with its id, not its title. Separately, creating a project woke no one, so a host-made empty project waited out the 20 s park.
 
@@ -5544,7 +5544,7 @@ Seen on aylmo following dev.diiii.xyz (space `hayfilm`): six follower-only proje
 
 **Test.** `followIntegration.test.js` "a project made empty on either side appears on both": 2 tests, both red on the base branch (fix/follow-wake-after-carry-2026-10-04), green after. `vitest run serverXR/src/follow` 73/73; `test:server-contracts` 193/193; eslint clean on the three changed files.
 
-**Owed.** Not seen on aylmo against dev.diiii.xyz yet; the six existing projects will be made on the host on its next tick once this is installed on aylmo.
+**Owed.** Not seen on main-desk against dev.diiii.xyz yet; the six existing projects will be made on the host on its next tick once this is installed on main-desk.
 
 **Review fix.** Making projects in both directions would have resurrected a project deleted on one side (deletes are not carried, and the create route restores a trashed id). `refreshStreams` reads each side's trash and skips trashed ids, warning once per id. Tests: 2 more integration cases (trashed on host, trashed on follower), red on 639d8684 (2 failed), now follow 75/75, server-contracts 193/193, eslint clean.
 
@@ -5564,7 +5564,7 @@ Files: `scripts/di/{follow,follows,cli,ui,stage}.mjs`, `serverXR/src/follow/foll
 
 ## 2026-10-04 — a follow starts from now, and never erases work only the follower has (audit F4)
 
-- **Why.** The owner's install (aylmo) is to follow space `moxir` from https://dev.diiii.xyz, whose projects hold
+- **Why.** The owner's install (main-desk) is to follow space `moxir` from https://dev.diiii.xyz, whose projects hold
   long local histories (876 / 2378 ops) already on dev. A first follow start had null cursors, so
   `readOps(local, …, null)` replayed this install's whole history onto the host, and `planConverge` then let the
   host win over any difference, silently erasing work only the follower had.
@@ -5619,11 +5619,11 @@ Decisions and limits:
 - CI failed a different followIntegration test on each of three PRs (#760 ×2, #763). Cause: since #757 a from-now follow took its starting point at its first pass over each stream, a moment after startFollowing() returned; an edit made in between was folded into the history and NEVER carried — a product race, not only a test problem.
 - Fix (follower.js): "now" is the moment the follow is started (startedAt). The first pass sets each cursor just before the first op stamped at or after startedAt (startCursorAt reads the latest version and the last 200 ops, never the whole log). No margin on either side: a margin replays history made just before the start. Remaining window: two clocks' skew (NTP).
 - The started() waits added to the tests earlier on this branch are removed: they hid the race.
-- Guard: 'an edit made the instant a follow starts is carried' — startCursorAt lands exactly between an op before and an op after the start; both sides' first edits are carried. Red on origin/dev (2 failed), green after. serverXR/src/follow: 8 files, 93 tests passed (aylmo, ≤ 81 °C, no load).
+- Guard: 'an edit made the instant a follow starts is carried' — startCursorAt lands exactly between an op before and an op after the start; both sides' first edits are carried. Red on origin/dev (2 failed), green after. serverXR/src/follow: 8 files, 93 tests passed (main-desk, ≤ 81 °C, no load).
 
 ## 2026-10-04 — a follow steps past whole-work ops once the copies agree
 
-- **Seen.** aylmo following dev.diiii.xyz, space `wcc`: every project had `replaceDocument` ops, equal on both
+- **Seen.** main-desk following dev.diiii.xyz, space `wcc`: every project had `replaceDocument` ops, equal on both
   sides, and `di follows` said "one side replaced a whole scene" for good; cursors stood at `{13, null}` in a log of
   124.
 - **Reproduced** (two real servers, `followIntegration.test.js`): a whole-work op with no opId in each log (what an
@@ -5636,15 +5636,15 @@ Decisions and limits:
   before the room's park. Host-wins converge unchanged.
 - **Measured.** Follow folder 76/76 pass (before: 3 of the 4 new tests red); `test:server-contracts` 193/193;
   eslint clean on the four changed files.
-- **Owed.** Run on aylmo against dev.diiii.xyz (real surface). `PUT /api/projects/:id/document` does not call
+- **Owed.** Run on main-desk against dev.diiii.xyz (real surface). `PUT /api/projects/:id/document` does not call
   `nudgeFollow`. `replaceScene` on the room is covered by the same code (scene stream has a documentPath) but has no
   integration test of its own.
 
 ## 2026-10-04 — a followed space carries the edit made right after another at once, not after 20 s
 
-- **What was wrong.** It was measured on aylmo following dev.diiii.xyz, in the `hayfilm` space. After a quiet
+- **What was wrong.** It was measured on main-desk following dev.diiii.xyz, in the `hayfilm` space. After a quiet
   spell an edit crossed in about 0.5 s. But an edit made right after another had crossed waited out the whole
-  20-second park, in both directions: aylmo→dev 652 / 21389 / 21482 ms, dev→aylmo 20789 / 20676 / 20697 ms.
+  20-second park, in both directions: main-desk→dev 652 / 21389 / 21482 ms, dev→main-desk 20789 / 20676 / 20697 ms.
   `di follows` said "following" with no error.
 - **Why.** Each tick reads every project's log first and parks on the scene's log last. An edit that landed
   between those two steps was lost on either machine:
@@ -5674,7 +5674,7 @@ Decisions and limits:
     reproduces both real failures.
   - With the fix: 745–1090 ms every time (two runs).
   - With only one half of the fix, the other direction returns to 20.7 s, so each half is needed.
-  - Not yet measured: aylmo ↔ dev on the real machines. That needs this branch on dev AND on aylmo's installed di.
+  - Not yet measured: main-desk ↔ dev on the real machines. That needs this branch on dev AND on main-desk's installed di.
 - **Tests.**
   - New `followIntegration.test.js` block "a followed space answers at once, edit after edit". It checks that all
     six crossings take less than 3 s and that a quiet space still parks (fewer than 12 proxy chunks in 3 s).
@@ -5687,7 +5687,7 @@ Decisions and limits:
   - Results: `vitest run serverXR/src/follow/` gives 71 passed (origin/dev code with the new tests: 1 failed, 66
     passed; follower→host 21117 / 20749 / 20756 ms, host→follower 20725 / 20782 / 20741 ms). `npm run test:server-contracts` gives 193 passed. `serverXR/src/machines/` with `statusRoutes` gives
     37 passed. eslint is clean.
-- **Owed.** A re-measure on aylmo ↔ dev.diiii.xyz once this has landed on dev and is installed on aylmo.
+- **Owed.** A re-measure on main-desk ↔ dev.diiii.xyz once this has landed on dev and is installed on main-desk.
 
 ## 2026-10-05 — /tools versions come from the lock files, so Dependabot bumps can pass
 
@@ -5797,12 +5797,12 @@ Measured with real pointer input (Playwright, 1568x882, DPR 1.25):
 
 - **What.** `deploy/secrets-backup.sh` pulled production's `.env` files from the VPS, which is offline (prod runs
   on the Mac since 09-26), so the nightly timer failed every night. It was rebuilt to pull from the Mac and keep
-  the encrypted bundle on aylmo and asuz, then — owner's word 10-05, "atlas" — moved to the private di-atlas repo:
+  the encrypted bundle on main-desk and team-laptop, then — owner's word 10-05, "atlas" — moved to the private di-atlas repo:
   `tools/secrets-backup/` (script, units, `install.sh` / `install.sh uninstall`). This repo keeps no copy, so
   the list of production's secret file paths is no longer public.
-- **Measured.** Installed unit run 10-05 15:17: 6 files, `age` to aylmo's key + di-mac's backup key, 8.0 KB,
-  second copy on asuz verified by sha256, `Result=success`.
-- **Limits.** asuz only over the LAN name; the Tailscale route is refused by the Tailscale SSH check.
+- **Measured.** Installed unit run 10-05 15:17: 6 files, `age` to main-desk's key + server-mac's backup key, 8.0 KB,
+  second copy on team-laptop verified by sha256, `Result=success`.
+- **Limits.** team-laptop only over the LAN name; the Tailscale route is refused by the Tailscale SSH check.
 - `docs/ai/known-fixes.md` keeps its row about the tar fix; the file it names now lives in di-atlas.
 
 ## 2026-10-04 — shelf routes keep to the caller's space (audit F8)
@@ -5860,9 +5860,9 @@ loosens its projects; it does not delete work.
 
 - PR #745 (Emilya's fork, head f4c18cf4, Emily's yes): Lite is the default for every viewer, the work machine included; Full by the button or ?quality=full; every lamp's footprint drawn in Lite; the floor keeps its finish.
 - Owner, 2026-10-04: "these are all high quality — make also a light version, and Lite is the default".
-- #745 was 31 commits behind dev; one conflict, docs/ai/known-fixes.md, kept both sides. src/project/viewport + src/wiki after the merge: 33 files, 303 tests passed (aylmo).
+- #745 was 31 commits behind dev; one conflict, docs/ai/known-fixes.md, kept both sides. src/project/viewport + src/wiki after the merge: 33 files, 303 tests passed (main-desk).
 - Her measurements (Known · full, 74 lamps, frame cap off): RTX 5060 Lite 343 / Full 110 fps; AMD 860M Lite 207 / Full 49 fps. Lite reads darker than Full (her screenshots).
-- Owed: the owner's look on his screen (aylmo) in Lite and Full; frame time measured on aylmo.
+- Owed: the owner's look on his screen (main-desk) in Lite and Full; frame time measured on main-desk.
 
 ## 2026-10-04 — land the Nodes stack (#740 #730 #731 #736 #742 #729 #727) in one batch
 
@@ -5883,14 +5883,14 @@ Owner, 2026-10-04: "lets work on di.iiii and moxir" after the order was named (R
 - #727. RawGraphSurface takes both prop sets. RawViewport uses #727's shared `buildSpatialChildMap` (it already holds the Constructor rule) plus dev's `sceneObjects`.
 
 **Also in this batch:**
-- **#735** (push gate looks at its own checkout only). The first push of this branch ran the old gate's `git status` over ~200 worktrees and held aylmo at 98–100 °C for minutes. With #735 merged here, the hook runs the new check. known-fixes conflict: union.
+- **#735** (push gate looks at its own checkout only). The first push of this branch ran the old gate's `git status` over ~200 worktrees and held main-desk at 98–100 °C for minutes. With #735 merged here, the hook runs the new check. known-fixes conflict: union.
 - **The fold.** The gate refused the push: CURRENT.md was 3 days behind, because dev's land job cannot push to protected dev (GH006) and 32 notes were stranded. `land/*` is a fold branch, so session-land-lib's three functions ran here (branch guard and worktree sweep skipped). 32 notes went into PROGRESS/CURRENT; CURRENT.md is 47 lines. This note stays for the gate and folds on the next landing.
 
 **One fix on the land branch.** The rhythm guard (`styles/spine.test.js`) caught two literals.
 - #729's card-row `padding-bottom: 3px` → `var(--di-space-1)` (also 3px).
 - #736's context-menu `gap: 1px` → named as a raw.css hairline exception, like the `-1px` already there.
 
-**Verified on aylmo** (node_modules linked from the nodes-ui worktree: same lockfiles):
+**Verified on main-desk** (node_modules linked from the nodes-ui worktree: same lockfiles):
 - eslint on the 76 changed JS files: 0 errors.
 - vitest on `src/raw src/project/graph src/studio src/wiki src/styles src/input`: 153 files, 1862 tests passed (after the fix).
 - `rawTestScope` 2/2.
@@ -5908,10 +5908,10 @@ date; #750 had already merged as 6615ffaa and put the rest BEHIND).
   cites), #753 (add-sources), #754 (6 LaserCube Ultra MK2; copy from another install), #756 (production version list).
 - **Conflicts resolved by keeping both sides:** `docs/ai/known-fixes.md` (new rows from #749, #750, #752) and
   `serverXR/src/follow/followIntegration.test.js` (#750's and #752's new describe blocks, joined at their shared close).
-  Follow suite after the join: 8 files, 80 tests passed (aylmo, 2026-10-04).
+  Follow suite after the join: 8 files, 80 tests passed (main-desk, 2026-10-04).
 - **Not in it:** #745 (Lite by default; waits for the owner's own merge word) and #757 (follow from now, F4; rebases on
   this batch once it lands — conflicts expected in follower.js / followStore.js / cli.mjs).
-- **After merge:** the six PRs close as merged; dev deploys; aylmo installs the same commit (owner's rule "dev and local stay one").
+- **After merge:** the six PRs close as merged; dev deploys; main-desk installs the same commit (owner's rule "dev and local stay one").
 
 ## 2026-10-05 — /tools versions come from the lock files; Dependabot bumps can pass again
 
@@ -5959,8 +5959,8 @@ iPhone 13: tap a look, GO twice, screenshots opened. Guard: `tests/test-wiring.j
 ## 2026-10-01 — a followed space stays one space: no lost edits, copies agree, restarts resume
 
 Owner: "we have di.iiii and we can't sync the works so lets fix that gap" → "ok it works, now fix the gaps".
-First real two-machine run (aylmo follows ponyo, `sync-test-1001`, before these fixes): aylmo→ponyo 202/877/109 ms,
-ponyo→aylmo 135/128/119 ms, both at v8 with the same 8 entities. Then the gaps found by reading `serverXR/src/follow/`:
+First real two-machine run (main-desk follows show-laptop, `sync-test-1001`, before these fixes): main-desk→show-laptop 202/877/109 ms,
+show-laptop→main-desk 135/128/119 ms, both at v8 with the same 8 entities. Then the gaps found by reading `serverXR/src/follow/`:
 
 - **Lost edit on a 409** — `carry()` marked the target's own new ops (the refusal's `pendingOps`) as seen; the next
   tick skipped them and moved the cursor past them. Fixed; guard `follower.test.js` (fails on the old code).
@@ -5977,7 +5977,7 @@ ponyo→aylmo 135/128/119 ms, both at v8 with the same 8 entities. Then the gaps
   `SPEC_di_sync.md`; three known-fixes rows; wiki line "WHEN BOTH CHANGE THE SAME THING".
 
 Tests: `serverXR/src/follow/` 8 files, 65 tests pass (2 new files, 2 new integration cases).
-Not done: a run of THESE fixes between two real machines (needs ponyo's di to host again, Emily's yes); intent-
+Not done: a run of THESE fixes between two real machines (needs show-laptop's di to host again, Emily's yes); intent-
 preserving merge (CRDT); one remote per space; deletes/renames/visibility not carried; no sync UI or discovery.
 
 ## 2026-10-02 — Studio stands inside a Geo
@@ -6030,7 +6030,7 @@ geoScopeAddress 7, RawGraphSurface +2; each seen failing with the change undone.
 
 ## 2026-10-02 — MOXIR: the area stage, the corrected hall, the realism renderer, and the audit fixes
 
-One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: "push what we did … push to dev"). It merges the local integration branch `moxir-local-2026-10-01` onto dev. The fork's dev merged it without a conflict.
+One branch for everything MOXIR built on show-laptop since #704–#712 landed (Emily: "push what we did … push to dev"). It merges the local integration branch `moxir-local-2026-10-01` onto dev. The fork's dev merged it without a conflict.
 
 - **The stage (Known · full, "the area").** 50 UP-PL5403 + 18 UP-B380F on their tested charts.
   - Blade curtain under the cut, vista PARs behind the press, a lighthouse B380F, neighbour-span red, the press sculpted.
@@ -6043,7 +6043,7 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 - **Desk and rig pages.** The audit passes: output badge, Touch strip, 44 px phone targets, Blackout says ON, the steps row folding under 1680 px, Touch forwarding.
 - **The realism renderer: #716 merged in**, with #719–#723.
   - Haze worked out from the hazers, real bloom, beam optics, the floor's worn concrete and the beams' reflections in it.
-  - The rooms' `renderSettings` turn it on; on PONYO, Known · full has `atmosphere.haze {}`, `bloom {enabled}` and `surfaces.floor` (reflect 0.5). That is data, not git.
+  - The rooms' `renderSettings` turn it on; on show-laptop, Known · full has `atmosphere.haze {}`, `bloom {enabled}` and `surfaces.floor` (reflect 0.5). That is data, not git.
 - **2026-10-02 audit fixes.** Each has a known-fixes row and a guard.
   - The occlusion cut-out never cuts above the roof's underside. It had opened a black disc of sky over the stage.
   - A depth-only roof cap: beams end at the cut roof in the Side view.
@@ -6053,11 +6053,11 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
   - `rigSteps.css` uses rhythm tokens.
   - `knownFullObjects.test.js` now selects the spot lights it meant to check; it had matched 0 lamps.
 
-**How it was checked.** In headless Chrome on PONYO's RTX 5060 (Playwright `channel: 'chrome'`): every view twice through the cue loop, desktop 1710×1630 and phone 390×844, console clean, 70–120 fps. The full suite was compared with clean dev: the four new failures are fixed here; the rest is dev's Windows baseline.
+**How it was checked.** In headless Chrome on show-laptop's RTX 5060 (Playwright `channel: 'chrome'`): every view twice through the cue loop, desktop 1710×1630 and phone 390×844, console clean, 70–120 fps. The full suite was compared with clean dev: the four new failures are fixed here; the rest is dev's Windows baseline.
 
 **Owed**
 - Four lamps stand inside permanent objects (`KNOWN_INSIDE` in `knownFullObjects.test.js`): `par-press-cut-03`, `par-press-sides-01/02`, `beam380-columns-02`. The owner chooses between moving the lamps and correcting the boxes.
-- Haze σ 0.02, bloom 0.03 and floor reflect 0.5 are not yet compared with the RIG_BUILD §20 photographs. The joint call with Gevorg is owed.
+- Haze σ 0.02, bloom 0.03 and floor reflect 0.5 are not yet compared with the RIG_BUILD §20 photographs. The joint call with the owner is owed.
 - Panorama 037 and full-resolution photos are owed: the walled bays and the shed.
 - A Top view with lamp markers was proposed, not built.
 
@@ -6070,7 +6070,7 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 - Schema (cjs + esm): `renderSettings.atmosphere.haze`, validated and clamped.
 - **Beam cross-section** (`beamAir.js beamProfile`): 50 % at the beam angle, exp(−ln2·ρ^p), p 8 (hard, a beam fixture) … 2 (soft, a wash's Gaussian); the hull reaches the 2 % point. The flat-top-plus-smoothstep profile clipped every beam to a solid white bar. The glare veil no longer counts throw below the floor.
 - **Real bloom** (`src/project/viewport/HdrBloom.jsx`, `bloom.js`): `renderSettings.bloom { enabled }`, off unless a room asks; half-float 4× MSAA target → UnrealBloomPass → OutputPass (three's own, no new dependency); plain rendering in XR, where the glare veil comes back. Default strength 0.03 with threshold 1 — the physical point-spread; three's 0.6 washed the hall white, and a high threshold with 0.3 went milky (both seen). Composer capped at DPR 1.5.
-- Measured on PONYO's **NVIDIA RTX 5060 Laptop** (headless Chrome, ANGLE D3D11, `--force_high_performance_gpu`; without it Chrome takes the AMD 860M iGPU and reads ~12 fps), MOXIR Known · full, shadows on (#711 merged in): floor view 61.4 fps → 58.8 with bloom; DJ view 65.2 → 67.7; phone 390×844 DPR 3: 82 fps with bloom. The haze field alone cost ~8 fps on the floor view.
+- Measured on show-laptop's **NVIDIA RTX 5060 Laptop** (headless Chrome, ANGLE D3D11, `--force_high_performance_gpu`; without it Chrome takes the AMD 860M iGPU and reads ~12 fps), MOXIR Known · full, shadows on (#711 merged in): floor view 61.4 fps → 58.8 with bloom; DJ view 65.2 → 67.7; phone 390×844 DPR 3: 82 fps with bloom. The haze field alone cost ~8 fps on the floor view.
 - Still owed: comparing beam peaks and the hall against the §20 photographs and luma numbers before any room turns `haze` or `bloom` on; entering/leaving VR with bloom on; PortalObject's fake bloom doubles in a bloom room (skip it when bloom is on); EntryGlide's captured still has no bloom (a pop at the end of the glide); per-look haze levels; the hall's real volume.
 - Stacked on #712 (feat/moxir-known-full) and #711 (feat/room-shadow-cap): lands after them.
 
@@ -6090,7 +6090,7 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 - Weighted by Schlick's Fresnel (F0 0.04) × `surfaces.floor.reflect`, and blurred by the floor's roughness where each ray lands (the same wear pattern as the lit floor): a sample h metres up keeps R / (R + 1.3·α·h) of its peak (`mirrorBlur`). Crisp where a beam meets the floor, gone high up, patchy with the wear.
 - The mirror program never discards (a discard turned off early stencil: 27 fps against ~100 on the RTX 5060) and runs 6 samples.
 - Not in a headset yet (the XR layer has no stencil; the mirrors hide while presenting). Only in a room with bloom on (the half-float path).
-- Seen in headless Chrome on PONYO's RTX 5060 (the owner's own visualiser tab held the GPU at 89–96 %, so the 24–26 fps read then is contention, not this — reflections on and off read the same): Known · full, the-x / tunnel / white-cathedral, Floor and DJ views.
+- Seen in headless Chrome on show-laptop's RTX 5060 (the owner's own visualiser tab held the GPU at 89–96 %, so the 24–26 fps read then is contention, not this — reflections on and off read the same): Known · full, the-x / tunnel / white-cathedral, Floor and DJ views.
 
 ## 2026-10-02 — the black square at the end of the DJ view
 
@@ -6119,7 +6119,7 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 
 ## 2026-10-01 — MOXIR "Known · full": every known fixture at stock on the cut, and new light forms for a real night
 
-- Owner and Gevorg on PONYO: "now lets use all knowns and make all possible stage design best light forms". Crane height approximate and strobe rates assumed for now ("we will correct in future"); charts for the rest come later.
+- Owner and the owner on show-laptop: "now lets use all knowns and make all possible stage design best light forms". Crane height approximate and strobe rates assumed for now ("we will correct in future"); charts for the rest come later.
 - New candidate `known-full` (candidateOf full) on the crane cut. Nothing that moves is hung:
   - The cut carries statics only: 6 UP-PL5403 in the X, 4 on the bridge, and 2 fixed UP-LA40WF, held dark until the laser sign-off.
   - The floor carries 17 UP-B380F: 7 behind the press and 10 at the nave column bases, plus 1 spare (18 of the 18 in stock).
@@ -6141,21 +6141,21 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 
 ## 2026-10-01 (later) — every lamp a real light; rebased on dev for the push
 
-- Emily, looking at the room: "i want real simulation of the light", then "no i want to 100% ident what we will have, you can optimize". Known · full (64 lamps) and Known (36) now carry `realLights` for every group: no picked few, no baked per-look stand-ins. Shadows ride on feat/room-shadow-cap-2026-10-01 (the twelve brightest lamps throw). Measured on PONYO, shadows on: Known · full 61–65 fps on the RTX 5060 (emily-41); 36–49 fps (Known · full) and 58–75 fps (Known) in Playwright Chrome, most likely on the AMD 860M iGPU.
+- Emily, looking at the room: "i want real simulation of the light", then "no i want to 100% ident what we will have, you can optimize". Known · full (64 lamps) and Known (36) now carry `realLights` for every group: no picked few, no baked per-look stand-ins. Shadows ride on feat/room-shadow-cap-2026-10-01 (the twelve brightest lamps throw). Measured on show-laptop, shadows on: Known · full 61–65 fps on the RTX 5060 (emily-41); 36–49 fps (Known · full) and 58–75 fps (Known) in Playwright Chrome, most likely on the AMD 860M iGPU.
 - The patch step counts devices run by hand apart ("36 of 36 addressed · 10 by hand"), carried here from the off-DMX work.
-- Room setup used on PONYO (data, not in git): both known rooms take their hall from `moxir-hall-minimal` (`load-version --hall-from moxir-hall-minimal`), whose glb has the nave crane parked over the DJ where the cut hangs. `moxir-hall`'s glb has it at the far end. They rest on a look with no solo (k-tunnel, gs-cross-beams), have work light 0.35, and carry authored Floor/DJ views looking down the hall.
+- Room setup used on show-laptop (data, not in git): both known rooms take their hall from `moxir-hall-minimal` (`load-version --hall-from moxir-hall-minimal`), whose glb has the nave crane parked over the DJ where the cut hangs. `moxir-hall`'s glb has it at the far end. They rest on a look with no solo (k-tunnel, gs-cross-beams), have work light 0.35, and carry authored Floor/DJ views looking down the hall.
 - This branch now stacks the whole MOXIR line: tested charts, Known, off-DMX, Known · full. Rebased on dev e244f802 without conflicts; `versions.mjs --check` is current after the rebase.
 
 ## 2026-10-01 (later) — one name per look on the desk; a swap clears the other room's looks
 
 - Found when emily-41 fired `rig-white-cathedral` (the set's hung-rig look) for the ground look of the same name. Emily chose: rename, keep both, and clear on swap.
-- Known and Known · full retitle the set's five looks "… · hung rig" (candidate `looks.<id>.title`; `looksWhy` says why). Gevorg's own rooms keep their titles.
+- Known and Known · full retitle the set's five looks "… · hung rig" (candidate `looks.<id>.title`; `looksWhy` says why). the owner's own rooms keep their titles.
 - show-loop.mjs: after adding this room's looks, it removes the desk's `rig-` looks this room does not have (`staleDeskLooks` in src/rigbuild/looks.js). Operator looks have no prefix and are kept. A layer left on a removed look is emptied by the desk, not deleted.
 - Tests: looks.test +1 (red on the old code); versions, ground-movers and bridle tests 459 passed.
 
 ## 2026-10-01 — MOXIR "Known · movers on the ground": only the fixtures whose DMX is known, plus haze and smoke
 
-- Owner, on PONYO with Gevorg present: "lets work only with the known ones and with hazer and smoke but keep them out of dmx".
+- Owner, on show-laptop with the owner present: "lets work only with the known ones and with hazer and smoke but keep them out of dmx".
 - New candidate `known-ground` in scripts/place/rigs/moxir-versions-2026-10-17.json, built from `full-ground`. It keeps the same truss (the cut), room and ground-only mover policy, and has 46 units:
   - 13 UP-B380F and 21 UP-PL5403 (channel maps TESTED on the rental units, branch feat/moxir-tested-charts-2026-10-01, which this is stacked on).
   - The 2 UP-LA40WF (held dark by the laser gate).
@@ -6170,7 +6170,7 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 
 ## 2026-10-01 — Devices kept off DMX: hazers and smoke run by hand, never patched
 
-- Owner on PONYO, with Gevorg present: "work only with the known ones and with hazer and smoke but keep them out of dmx". The known-ground version recorded this as `policy.dmx.offDmx` (EXT-HAZER, UP-YZ31P), but nothing read it, so a patch still gave them channels (audit: U1@441–456).
+- Owner on show-laptop, with the owner present: "work only with the known ones and with hazer and smoke but keep them out of dmx". The known-ground version recorded this as `policy.dmx.offDmx` (EXT-HAZER, UP-YZ31P), but nothing read it, so a patch still gave them channels (audit: U1@441–456).
 - New fixture field `dmx: false` ("kept off DMX"):
   - `src/shared/projectSchema.js` normalizeFixture keeps it, and its manual CJS mirror `shared/projectSchema.cjs` does the same. Before this, the schema silently dropped it.
   - `src/rigbuild/autoPatch.js` `isOffDmx`: `patchRequest` never sends such a device, so it takes no address, and a prune takes it off the desk if it was there.
@@ -6181,13 +6181,13 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
   - schemaSync.test: `dmx:false` survives through both schema copies; `dmx:'no'` is dropped.
   - New scripts/rigbuild/offDmx.test.js builds known-ground and patches it on a throwaway desk: 10 hazers and smoke carry dmx:false with no address, and 36 lights are patched.
 - Validation (Windows, Node 24.18):
-  - src/rigbuild, scripts/rigbuild, scripts/place, serverXR/src/lighting, src/shared and schemaSync: 1371 passed. The 22 failures are the known Windows baseline (CRLF/hash, Git Bash tar, C:\C:\ paths, controlsAreRectangles separators, wash-plan's pathname guard, which aylmo's PR #685 fixes).
+  - src/rigbuild, scripts/rigbuild, scripts/place, serverXR/src/lighting, src/shared and schemaSync: 1371 passed. The 22 failures are the known Windows baseline (CRLF/hash, Git Bash tar, C:\C:\ paths, controlsAreRectangles separators, wash-plan's pathname guard, which main-desk's PR #685 fixes).
   - eslint clean.
 - Stacked on feat/moxir-known-ground-2026-10-01.
 
 ## 2026-10-01 — MOXIR fixtures: real channel maps from the tested rental units (B380F, PL5403, laser)
 
-- Why: UPlight publishes no DMX chart for any MOXIR code (RIG_BUILD §13.8/§18.1), so every desk profile was generic or ASSUMED from another fixture's manual. The owner confirmed on PONYO that the same UPlight rental gear ran live at the Sevan festival (Dilijan camp) on the studio's own Art-Net desk. That desk's profiles are the real maps: "Beam 16ch" (from its manual), "Wash 8ch" and "Laser 32ch".
+- Why: UPlight publishes no DMX chart for any MOXIR code (RIG_BUILD §13.8/§18.1), so every desk profile was generic or ASSUMED from another fixture's manual. The owner confirmed on show-laptop that the same UPlight rental gear ran live at the Sevan festival (Dilijan camp) on the studio's own Art-Net desk. That desk's profiles are the real maps: "Beam 16ch" (from its manual), "Wash 8ch" and "Laser 32ch".
 - `src/rigbuild/fixtureTypes.js`: `TESTED_CHANNEL_LISTS` (basis `TESTED`, url null) fills the real modes UP-B380F 16ch, UP-PL5403 8ch and UP-LA40WF 32ch, taking precedence over OFL. The assumed modes stay after them. Meanings nobody wrote down stay plain channels (`aux`, `c<n>`); the laser's per-colour levels (0 = brightest) are deliberately not the r/g/b roles.
 - `scripts/place/fixtures/fixtures.json`: source `SEVAN`; the laser gets `dmx_channels` [32] (TESTED). `howToRead` defines TESTED. `src/rigbuild/types/moxir.json` was regenerated (`types.mjs --check` passes).
 - Effect: B380F, PL5403 and LA40WF are no longer "channels owed". The desk runs the real 16ch/8ch/32ch, and the laser is patchable for the first time. It is still held dark by the laser gate (every channel 0) until the IEC 60825-1 sign-off.
@@ -6250,7 +6250,7 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 
 - Owner on the NOPA To do card: "text in a row is invisible, it goes out of the window". Rows now wrap up to 6 lines, counted with the browser's text metrics before drawing (`textWrap.js`), so the card reserves exactly the lines it draws. Measured on NOPA: 0 of 51 lines clipped at 1440×900 (DPR 1 and 2) and 390×844 (DPR 3); before, 24 of 51 were cut.
 - Phone: the canvas opened with a blank band on top. The fit's clamp now centres any axis whose content fits the free band beside docked windows; the F7 docked-List test still holds.
-- The work was started by a session cut off by the aylmo reboot; finished and checked in session dob-96.
+- The work was started by a session cut off by the main-desk reboot; finished and checked in session dob-96.
 - Window resize: the canvas kept the fit of the size it opened at (a new window opened at 800×600, then tiled: 49 % instead of 82 %). An untouched view now re-fits when the surface changes size; a view the person has zoomed or panned is left alone (measured in a real browser: 49 % → 80 %, then 97 % kept).
 
 ## 2026-10-02 — Nodes right-click menu component
@@ -6261,16 +6261,16 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 
 ## 2026-10-01 — A room of many lamps keeps its shadows: the brightest twelve throw
 
-- Asked on MOXIR (PONYO): every lamp a real light, "100% ident what we will have, you can optimize". Known · full has 64 real lamps. Shadows were all-or-nothing: every spot light became a caster, and past ~12 the texture units run out and every lit material fails to compile, so rooms with more real lamps had shadows switched off entirely.
+- Asked on MOXIR (show-laptop): every lamp a real light, "100% ident what we will have, you can optimize". Known · full has 64 real lamps. Shadows were all-or-nothing: every spot light became a caster, and past ~12 the texture units run out and every lit material fails to compile, so rooms with more real lamps had shadows switched off entirely.
 - `src/project/viewport/shadowCasting.js`: `dressForShadows(root, mapSize, { maxLights })`. Past the cap, exactly `maxLights` lamps throw: the ones putting the most light into the room now (`shadowScore` = intensity × the cone's solid angle, as lightPool.js scores), with a 15 % hold for a lamp that already throws so near-equal lamps do not trade shadows back and forth. Exactly that many, lit or not, so the shader's count of shadowed lamps never changes when a look does (no recompile hitch). `shadowLampCap(maxTextures)` = min(12, units − 4).
 - `ShadowCasting.jsx` passes the GPU's cap (`gl.capabilities.maxTextures`). It already re-dresses every 30 frames, so shadows follow the look.
-- Measured on PONYO, 1440×900, Playwright Chrome (most likely on the AMD 860M iGPU, not confirmed): Known · full, 64 real lamps, shadows on: 36–49 fps; Known, 36 lamps: 58–75 fps; 12 casters, all lit, in every look tried. On the RTX 5060 (emily-41, Chrome): Known · full, shadows on: 61 fps floor view, 65 fps DJ view.
+- Measured on show-laptop, 1440×900, Playwright Chrome (most likely on the AMD 860M iGPU, not confirmed): Known · full, 64 real lamps, shadows on: 36–49 fps; Known, 36 lamps: 58–75 fps; 12 casters, all lit, in every look tried. On the RTX 5060 (emily-41, Chrome): Known · full, shadows on: 61 fps floor view, 65 fps DJ view.
 - Not changed: rig-lib `nightOps` / rig.mjs still write shadows OFF past 12 real lamps, because an older viewer without this cap would go black. Lift it once this has shipped.
 - Tests: shadowCasting.test +3 (2 red on the old code; the undress one is a guard). Wiki: the shadows paragraph says how a room of many lamps casts.
 
 ## 2026-10-01 (later) — the cap counts the units the materials use
 
-- emily-41 (haze work) saw MOXIR Known · full draw black on Chrome/ANGLE D3D11 (16 units): "FRAGMENT shader texture image units count exceeds MAX_TEXTURE_IMAGE_UNITS(16)". On their stack the cause was dev WITHOUT this branch: all 64 lamps cast. With this branch, PONYO under the same D3D11 limit measured 12 casters, no shader error. But the fixed 4-unit reserve was a guess: a lit material with more than 4 maps would still overflow at 12.
+- emily-41 (haze work) saw MOXIR Known · full draw black on Chrome/ANGLE D3D11 (16 units): "FRAGMENT shader texture image units count exceeds MAX_TEXTURE_IMAGE_UNITS(16)". On their stack the cause was dev WITHOUT this branch: all 64 lamps cast. With this branch, show-laptop under the same D3D11 limit measured 12 casters, no shader error. But the fixed 4-unit reserve was a guess: a lit material with more than 4 maps would still overflow at 12.
 - `dressForShadows(…, { maxTextures })` now counts each lit material's own samplers (`materialSamplers`: its maps, plus the scene environment on a standard material without its own), the other lights' shadows and the spot-light maps, and keeps one unit spare. The cap is min(12, what the busiest material leaves). `shadowLampCap` is gone; ShadowCasting.jsx passes `gl.capabilities.maxTextures`.
 - Tests: shadowCasting.test +3 (2 red on the old code; the third holds the 12 ceiling on a 32-unit GPU).
 
@@ -6305,7 +6305,7 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 
 ## 2026-10-01 (later, emily-9f review) — the Control page reads the same NOW
 
-- Seen in Chrome at 1440×900 on PONYO: the Touch page was right, but the Control page's cue strip still said "nothing fired · 8 cues" beside White cathedral fired by hand, and its "loop on" still had GO's fill.
+- Seen in Chrome at 1440×900 on show-laptop: the Touch page was right, but the Control page's cue strip still said "nothing fired · 8 cues" beside White cathedral fired by hand, and its "loop on" still had GO's fill.
 - Fixed: `paintCues` writes `touchHeadline()` (the desk's `state.now`), plus the clock only while the list runs. `#cueLoop` is the same `.toggle` as the Touch Loop.
 - Tried and reverted: hiding the empty scene-detail pane. The Control top row is a fixed grid with its splitters as items, so hiding one pane moved Layers and Master into the wrong columns and they drew blank. The guard now fails if that pane is ever hidden.
 - test-wiring +1 (red on the old code). All five desk suites pass: test-wiring, test-http, test-cues, test, test-tap.
@@ -6347,7 +6347,7 @@ One branch for everything MOXIR built on PONYO since #704–#712 landed (Emily: 
 
 ## 2026-10-02 — the push gate looks at its own checkout only
 
-- Found while chasing heat on aylmo during the local-hosting fix (di-atlas `decisions/2026-10-02-local-hosting.md`): every `git push` ran `start-check --code-only`, whose `checkCode` called `repo-state`'s `getState()`, which enriches all 204 worktrees and lists every unmerged branch. The CPU sat at 95-100 °C for minutes per push; two sessions pushing at once doubled it.
+- Found while chasing heat on main-desk during the local-hosting fix (di-atlas `decisions/2026-10-02-local-hosting.md`): every `git push` ran `start-check --code-only`, whose `checkCode` called `repo-state`'s `getState()`, which enriches all 204 worktrees and lists every unmerged branch. The CPU sat at 95-100 °C for minutes per push; two sessions pushing at once doubled it.
 - `getState({ currentOnly: true })` describes only the current checkout (promotion plan and unmerged branches come back null); `checkCode` uses it. `npm run state` is unchanged.
 - Measured after: the gate takes 0.9 s including the fetch. Guard test in `scripts/start-check.test.js` fails without the fix; start-check + repo-state tests pass. known-fixes row added.
 
@@ -6383,7 +6383,7 @@ Guards: `localSelection.test.js`, `windowCascade.test.js`, `RawGraphSurface.view
 
 ## 2026-10-01 — A lamp no derived slot holds is placed by the position its fixture names
 
-- Found on MOXIR (PONYO): every beam look stayed dark on the desk and in the room. Floor movers standing near, not on, a column base or behind the press sat on no derived slot (positionsOf), so lookPoses never posed them and deskLooksWithValues wrote them dark (Known · full: 0 of 17 UP-B380F in any look; Known: 7 of 13).
+- Found on MOXIR (show-laptop): every beam look stayed dark on the desk and in the room. Floor movers standing near, not on, a column base or behind the press sat on no derived slot (positionsOf), so lookPoses never posed them and deskLooksWithValues wrote them dark (Known · full: 0 of 17 UP-B380F in any look; Known: 7 of 13).
 - `src/rigbuild/looks.js` lookPoses: a lamp no slot holds is placed by the mount its `fixture.position` words name. The table is `src/rigbuild/mountPosition.js`, shared with the generator (scripts/rigbuild/looks.mjs re-exports it), so the two cannot drift. "booth back" (stage-back or stage-flanks) is never guessed.
 - Guard: looks.test "places a lamp no derived slot holds…" (red on the old code).
 
@@ -6398,18 +6398,18 @@ Guards: `localSelection.test.js`, `windowCascade.test.js`, `RawGraphSurface.view
 
 ## 2026-10-01 — The desk upgrades a placeholder profile when the room brings the known channel list
 
-- Found in the MOXIR human test on PONYO: with the Known rig patched (36 fixtures), every look fired and every DMX channel stayed at 0, so the room and the rig stayed dark. Gevorg's show file carried "UP-PL5403 8ch" and "UP-B380F 16ch" as owed placeholders (roles ch1..chN, labels "Ch N (list owed)"). rigpatch reused any existing profile with the same name and width, so the tested lists (dimmer, r, g, b … / pan, tilt …) never reached the desk.
+- Found in the MOXIR human test on show-laptop: with the Known rig patched (36 fixtures), every look fired and every DMX channel stayed at 0, so the room and the rig stayed dark. the owner's show file carried "UP-PL5403 8ch" and "UP-B380F 16ch" as owed placeholders (roles ch1..chN, labels "Ch N (list owed)"). rigpatch reused any existing profile with the same name and width, so the tested lists (dimmer, r, g, b … / pan, tilt …) never reached the desk.
 - `serverXR/src/lighting/rigpatch.js`:
   - A same-name, same-width profile whose roles are exactly ch1..chN is replaced (`addProfile … replace: true`) by the room's known list. Fixtures already on it keep their address and gain the new roles at their resting value.
   - Two different known lists produce a `profile-clash` flag, and the desk keeps its own.
 - Tests: tests/test-rigpatch.js +2 (12/14 on the old code, 14/14 after); test-http, test-cues, test-wiring and test.js pass; vitest serverXR/src/lighting 15/15; eslint clean.
-- Data on PONYO (serverXR/data-known): the two profiles were replaced by hand through `POST /api/profiles/add {replace:true}` before this fix. Looks now drive 112–123 channels.
+- Data on show-laptop (serverXR/data-known): the two profiles were replaced by hand through `POST /api/profiles/add {replace:true}` before this fix. Looks now drive 112–123 channels.
 
 ## 2026-10-01 — the rig's return off the hall uses the hall's envelope
 
 - Render audit E (emily-41's audit; this half is mine). The bounce (rigBounce.js, the integrating-sphere relation E = Φρ / (A(1−ρ))) took A from realism.mjs `enclosureOf`, which summed every triangle of the hall model: 82,640 m² for MOXIR's hall, against an envelope of 28,605 m². The return came out ~2.9× too dark.
 - `enclosureOf` now returns `area_m2` = the envelope of the model's world bounding box, 2(LW + LH + WH), and `surface_m2` = the old triangle sum, kept for the record. The reflectance is unchanged (area-weighted over every triangle, 0.163 for MOXIR). realism.mjs writes both, and its `method` says which.
-- Found on the way: the MOXIR Known and Known · full rooms had NO `rigBounce`. load-version builds a fresh show entity, so a rebuilt room loses it. On PONYO I re-ran realism.mjs on both, with Minimal's settings (σ 0.05, g 0.7, ACES × 3.5), then work-light.mjs at level 0.35. Gevorg's rooms are untouched: Minimal still carries the old 82,640 m².
+- Found on the way: the MOXIR Known and Known · full rooms had NO `rigBounce`. load-version builds a fresh show entity, so a rebuilt room loses it. On show-laptop I re-ran realism.mjs on both, with Minimal's settings (σ 0.05, g 0.7, ACES × 3.5), then work-light.mjs at level 0.35. the owner's rooms are untouched: Minimal still carries the old 82,640 m².
 - Seen in Chrome on the RTX 5060, Known from the floor: White cathedral now lifts the whole hall (roof frame, columns, crane, press), while Blackout + one shaft stays nearly black. The bounce follows the look. The floor still reads near-black; that is the hall model's floor albedo (audit item I, a hall.py change for Emily to approve).
 - Not done (audit E, second half): a hemisphere or down-light in place of the ambient work light. worldState has no hemisphere light yet, so it is a schema change.
 - Tests: scripts/rigbuild/realism.test.js (new; red on the old code: 704 against 700 m²).
@@ -6417,7 +6417,7 @@ Guards: `localSelection.test.js`, `windowCascade.test.js`, `RawGraphSurface.view
 
 ## 2026-10-01 — A hall's self-lit zone tape is not drawn in the 3D room
 
-- Found on MOXIR (PONYO), the owner's words: "still not visible ... i think it from the red green blue lines". The hall glb carries the planning zones as emissive tape meshes (`hall-zone-*`); in a dark show room they outshone the rig.
+- Found on MOXIR (show-laptop), the owner's words: "still not visible ... i think it from the red green blue lines". The hall glb carries the planning zones as emissive tape meshes (`hall-zone-*`); in a dark show room they outshone the rig.
 - `src/objectComponents/ModelObject.jsx`: `isPlanningMarker(name)`; such meshes are hidden when the model is cloned for the room. The plot and plan views still draw zones from `venuePlan`.
 - Guard: ModelObject.test (red on the old code). known-fixes row added.
 
@@ -6430,7 +6430,7 @@ Guards: `localSelection.test.js`, `windowCascade.test.js`, `RawGraphSurface.view
 - SpotLightObject takes `fitted`, which both renderers set for entities with `components.fixture`. Only the `<spotLight>` uses the fitted cone; the beam in the air (BeamInAir / the flat cone) keeps the datasheet angle. An authored spot is untouched.
 - The pools pass for beam-only lamps (the finding's second half) is parked as a joint call. The MOXIR known rooms have every lamp real.
 - Tests: spotBeam.test +2, SpotLightObject.cone.test +2 (the fitted case red on the old code); spotLightAim.test's renderer-parity list gains `fitted`. 291 passed in src/objectComponents + src/project/viewport.
-- Seen on PONYO (Chrome on the RTX 5060), Known, Red room from the floor: the roof pools and the column spill are wider and softer. Frame rate unchanged (~120 fps).
+- Seen on show-laptop (Chrome on the RTX 5060), Known, Red room from the floor: the roof pools and the column spill are wider and softer. Frame rate unchanged (~120 fps).
 
 ## 2026-10-01 — scene deck scrolls on phones; Studio view bar and split buttons are reachable
 
@@ -6450,36 +6450,36 @@ Owed: on a very narrow phone the seven-button bar scrolls sideways (X-ray touche
 
 ## 2026-10-01 — The smart view's rig core is the densest lamp cluster
 
-- Found on MOXIR Known · full (PONYO): the Crane and Rig cameras stood inside the hall's steel and no view framed the rig. 42 lamps on the nave columns outnumbered the 22 at the stage, the component-wise median of all lamps fell on the empty dance floor, the core came out empty (a ±Infinity box) and every preset aimed at the outline's centre.
+- Found on MOXIR Known · full (show-laptop): the Crane and Rig cameras stood inside the hall's steel and no view framed the rig. 42 lamps on the nave columns outnumbered the 22 at the stage, the component-wise median of all lamps fell on the empty dance floor, the core came out empty (a ±Infinity box) and every preset aimed at the outline's centre.
 - `smartViewGeometry.rigCore`: the centre is the lamp with most others within the radius, then that cluster's median.
 - Guard: smartViewGeometry.test "is the stage cluster when the lamps down the hall outnumber it" (red on the old code). An empty box passes `< 8` / `> -8` checks, so the test asserts finite.
 - `src/rigbuild/DmxProbe.jsx`: the `?probe=1` hooks also carry `camera` and `controls`, for view harnesses.
 
-## 2026-10-01 — land batch: the follow sync gaps (#700) + PONYO's MOXIR line (#704–#712)
+## 2026-10-01 — land batch: the follow sync gaps (#700) + show-laptop's MOXIR line (#704–#712)
 
 Owner: "merge 700 703 704 to 712". #703 merged on its own (clean). The other ten were all BEHIND dev, so they land as
-one batch (memory feedback_batch_land_behind_prs): `land/batch-ponyo-sync-2026-10-01` from dev, `--no-ff` merge of
-#700, #704, #705, #706, #707, #708, #709, #710, #711, #712 in that order (#711 before #712, as PONYO asked). The only
+one batch (memory feedback_batch_land_behind_prs): `land/batch-show-laptop-sync-2026-10-01` from dev, `--no-ff` merge of
+#700, #704, #705, #706, #707, #708, #709, #710, #711, #712 in that order (#711 before #712, as show-laptop asked). The only
 conflicts were new rows at the same spot in `docs/ai/known-fixes.md`; every row from both sides is kept. No code file
 conflicted. Each PR's own session note stays in place for the fold on dev.
 
-## 2026-10-03 — land PONYO's MOXIR line #739 (holds #716) so dev runs the newest MOXIR
+## 2026-10-03 — land show-laptop's MOXIR line #739 (holds #716) so dev runs the newest MOXIR
 
 Owner: "ok so now we the last one" after "I want the latest in dev". #739 (`emilyanikoghosyan:feat/moxir-area-realism-2026-10-02`,
 afe7e5ce, 105 commits not on dev, 138 files) already contains #716 (haze field), so both land here in one `--no-ff` merge onto
-`land/ponyo-739-2026-10-03` from dev 1541c38d. No conflicts. Each PR's own session note stays in place for the fold on dev.
+`land/show-laptop-739-2026-10-03` from dev 1541c38d. No conflicts. Each PR's own session note stays in place for the fold on dev.
 
 **One fix on the land branch:** #739's CI failed only `raw/rawTestScope.test.js` — the new
 `src/objectComponents/beamMirror.test.js` reaches into the node graph but `test:raw` did not run it. Added
 `objectComponents/beamMirror` to `test:raw` in `package.json`.
 
-**Verified on aylmo** (own `npm ci` in the worktree; the branch adds `three-mesh-bvh`): `npm run test` under the heat guard
+**Verified on main-desk** (own `npm ci` in the worktree; the branch adds `three-mesh-bvh`): `npm run test` under the heat guard
 (SIGSTOP ≥ 97 °C / SIGCONT ≤ 85 °C) — 726 files passed, 2 failed (`perform/useShowClock`, `wiki/WikiPage`); both pass run alone
 with the guard test (3 files, 13 tests), and both passed on #739's own CI — timing under the pauses, not the code.
 
 **Data, same day (not in git):** dev's `moxir` space got the 13 local-only versions by `tier-sync --changed` and a
 hand merge of `moxir-hall-minimal` (local DMX patch + dev's show clock; backup + undo in
-`~/di-backups/moxir-minimal-merge-2026-10-03/`). Still only on PONYO: the Known Full / Known Ground rooms (Emily's yes).
+`~/di-backups/moxir-minimal-merge-2026-10-03/`). Still only on show-laptop: the Known Full / Known Ground rooms (Emily's yes).
 
 ## 2026-10-01 — a canvas that asks for 'high-performance' must not go black when the browser refuses it
 
@@ -6526,7 +6526,7 @@ lands and deploys.
 
 ## 2026-10-01 — the hand-fold branch no longer has to leave a session note
 
-- The pre-push docs gate asked every branch for `docs/ai/sessions/<branch-slug>.md`, the fold branch `chore/fold-notes-after-686` included. That note then sat on `dev` after the merge, and the same gate refuses every push from a `dev` checkout while the directory is not empty — PONYO's tags-only push was refused with exactly that message. CI's `land` job cannot push to protected `dev` (GH006), so nothing folded it until the next hand fold.
+- The pre-push docs gate asked every branch for `docs/ai/sessions/<branch-slug>.md`, the fold branch `chore/fold-notes-after-686` included. That note then sat on `dev` after the merge, and the same gate refuses every push from a `dev` checkout while the directory is not empty — show-laptop's tags-only push was refused with exactly that message. CI's `land` job cannot push to protected `dev` (GH006), so nothing folded it until the next hand fold.
 - `chore/fold-notes-*` is now exempt from the "must have a note" rule (`isFoldNotesBranch` in `scripts/repo-state-lib.mjs`, used in `scripts/check-agent-docs.mjs`). `land/*` branches carry real notes and still need one. Tests: `scripts/check-agent-docs.fold-notes.test.js` (the name pattern, and the real checker on a throwaway checkout: a feature branch is asked for its note, a fold-notes branch is not).
 - Not changed: the tags-only-push idea (skip the docs check when only tags go). Owed if the owner wants it; the gate still checks docs for tag pushes from `dev`.
 
@@ -6537,9 +6537,9 @@ lands and deploys.
 - Left unfolded on purpose: `fix-docs-gate-fold-branches.md` (arrives from #675) and this note — the next land folds them.
 - Not checked: the dev deploy for the #679 merge commit was still running when this was written.
 
-# feat/moxir-work-light-2026-10-01 — the work light, and MOXIR handed to the PONYO laptop
+# feat/moxir-work-light-2026-10-01 — the work light, and MOXIR handed to the show-laptop laptop
 
-Branch cut from `fix/review-a-findings-2026-09-30` (f00e404a, the `.14` preview line). aylmo session, 2026-10-01.
+Branch cut from `fix/review-a-findings-2026-09-30` (f00e404a, the `.14` preview line). main-desk session, 2026-10-01.
 
 ## What this branch adds
 
@@ -6547,22 +6547,22 @@ Branch cut from `fix/review-a-findings-2026-09-30` (f00e404a, the `.14` preview 
   room with a `rig-show`, scene-referred (level ÷ the room's `toneMappingExposure`, default level 1.4), undo file
   first, local install only. Cause, numbers and the way back: RIG_BUILD §20.4.
 - Owner, on his screen: "ok so its to dark", then "let me see you fixed in all scenes". Applied to the 14 MOXIR rig
-  rooms on aylmo's install (`.14`). Measured on Minimal only (RTX 3080, desktop, 5 cues: mean luma 10.5 / 18.9 / 9.6 /
+  rooms on main-desk's install (`.14`). Measured on Minimal only (RTX 3080, desktop, 5 cues: mean luma 10.5 / 18.9 / 9.6 /
   13 / 32.9). The other 7 visible versions are applied but NOT measured: the run was stopped at CPU 100 °C.
 - The level is the owner's to judge by eye; he has not said yes yet.
 
 ## Found, not fixed here
 
-- The owner's browser (Flatpak Chromium on aylmo) renders on the **Intel iGPU**; the RTX 3080 sits at 0 %. The room
+- The owner's browser (Flatpak Chromium on main-desk) renders on the **Intel iGPU**; the RTX 3080 sits at 0 %. The room
   in his tab drove the CPU package to 98–100 °C with both fans at max. The Flatpak's NVIDIA GL extension
   (`GL.nvidia-615-71-09`) matches the driver, so the card is reachable; on 09-28 the PRIME env gave the Flatpak no
-  WebGL at all. Owed: a tested route (separate profile, check `UNMASKED_RENDERER`), aylmo-only.
+  WebGL at all. Owed: a tested route (separate profile, check `UNMASKED_RENDERER`), main-desk-only.
 
-## Handover — MOXIR work for the PONYO laptop (Emilya's)
+## Handover — MOXIR work for the show-laptop laptop (Emilya's)
 
-Owner, 2026-10-01: "we moved to emily laptop so move from moxir give them work". aylmo steps back from MOXIR.
+Owner, 2026-10-01: "we moved to emily laptop so move from moxir give them work". main-desk steps back from MOXIR.
 Everything below is on GitHub (`dob-0/di.iiii`, public). The MOXIR **data** (the local install's space, 16 projects)
-lives only on aylmo — restore file `~/di-backups/preview-rig-builder-2026-09-28/step-14b/moxir.diiii` (73 MB); the
+lives only on main-desk — restore file `~/di-backups/preview-rig-builder-2026-09-28/step-14b/moxir.diiii` (73 MB); the
 public view is https://dev.diiii.xyz/moxir (older Minimal). Code items need no data.
 
 Rules: one branch per item, cut from `fix/review-a-findings-2026-09-30` (or this branch); never commit to `dev`/`main`;
@@ -6580,52 +6580,52 @@ already fixed: `docs/ai/sessions/fix-review-a-findings-2026-09-30.md`.
 | 5 | **A5-5** — pool memoisation | review A | small |
 | 6 | `StudioViewport` `TOOLBAR_BTN` radius 6 px → 2 px (owner's rule: rectangles only, 0–2 px) | code | tiny |
 | 7 | The green "LOCAL local.thedi.studio" badge covers Undo / Restore on the scene deck (desktop) and "Mark this as good" (phone) | code | small |
-| 8 | **Crane + truss** — the owner has not said what looked wrong; do it on PONYO from the real render (truss / clamps / crane were last fixed in `fix/truss-hangs-from-the-crane`, in f00e404a) | owner + code | ? |
-| 9 | Phone Studio layout still draws 999 px pills (←, Nodes, Projection, Edit, cue chips) — found by PONYO | code | small |
+| 8 | **Crane + truss** — the owner has not said what looked wrong; do it on show-laptop from the real render (truss / clamps / crane were last fixed in `fix/truss-hangs-from-the-crane`, in f00e404a) | owner + code | ? |
+| 9 | Phone Studio layout still draws 999 px pills (←, Nodes, Projection, Edit, cue chips) — found by show-laptop | code | small |
 
-Done on PONYO (local, not pushed — Emily's call): item "TOOLBAR_BTN 6→2 px" as af874a2d on
+Done on show-laptop (local, not pushed — Emily's call): item "TOOLBAR_BTN 6→2 px" as af874a2d on
 `fix/studio-toolbar-rectangles-2026-10-01` (+ a Windows path fix in `controlsAreRectangles`).
 
 Already DONE on `f00e404a` (do not redo): A1-3 room-wide strobe grid, the runtime laser gate (`deskLookValues`), B6 pack/install
 scripts, A5 1–4, A2-4 a/c/d, A3 1–6, A4 1,2,3,5,6 (corrected 2026-10-01 by session dob-c9). The review line is landing
-through PR #679 (`land/rigbuilder-14-2026-10-01` → `dev`, dob-c9 on aylmo); cut new branches from `dev` after it merges,
-or from `fix/review-a-findings-2026-09-30` before. Return route (PONYO): branches pushed to `emilyanikoghosyan/di.iiii`
+through PR #679 (`land/rigbuilder-14-2026-10-01` → `dev`, dob-c9 on main-desk); cut new branches from `dev` after it merges,
+or from `fix/review-a-findings-2026-09-30` before. Return route (show-laptop): branches pushed to `emilyanikoghosyan/di.iiii`
 (auto-PR to `dev`).
 
-Not for PONYO: A2-3 (needs the maker's effect-distance figure), the crane + truss fix (the owner has not said what is wrong), the owner's look at `.14` and the work-light level,
-measuring the other 7 versions (aylmo's own check, on aylmo), the browser-on-3080 fix (aylmo).
+Not for show-laptop: A2-3 (needs the maker's effect-distance figure), the crane + truss fix (the owner has not said what is wrong), the owner's look at `.14` and the work-light level,
+measuring the other 7 versions (main-desk's own check, on main-desk), the browser-on-3080 fix (main-desk).
 
 Emilya's own, if she agrees: give `dob-0` read access to `viz.di.formal` and `viz.di.scenes`; the real DMX charts
 she has for the studio fixtures (the rental house's UP-* charts are still missing everywhere).
 
-## Handover part 2 — the owner looks at MOXIR on PONYO (2026-10-01)
+## Handover part 2 — the owner looks at MOXIR on show-laptop (2026-10-01)
 
-Owner: "i can see it now in machine of ponyo so move it all there"; to dob-c9 the same night: aylmo only pushes and lands
-MOXIR, the MOXIR work itself is on PONYO. Everything aylmo still owed on MOXIR moves to
-PONYO: the work light on PONYO's copy, the owner's look and his level, the measurement of the versions. Dropped:
-aylmo's browser-on-3080 fix (he no longer looks on aylmo). All of it only on Emily's yes, as before.
+Owner: "i can see it now in machine of show-laptop so move it all there"; to dob-c9 the same night: main-desk only pushes and lands
+MOXIR, the MOXIR work itself is on show-laptop. Everything main-desk still owed on MOXIR moves to
+show-laptop: the work light on show-laptop's copy, the owner's look and his level, the measurement of the versions. Dropped:
+main-desk's browser-on-3080 fix (he no longer looks on main-desk). All of it only on Emily's yes, as before.
 
 1. **Get the script:** in the MOXIR worktree (at f00e404a), `git fetch origin feat/moxir-work-light-2026-10-01` and
    check it out (it is f00e404a + `scripts/rigbuild/work-light.mjs` + its test + docs; no app code changes).
-2. **Restore point first** of PONYO's own moxir data (`di save moxir` or a copy of the data root).
-3. **Dry run, then write:** `node scripts/rigbuild/work-light.mjs --api <PONYO's local …/serverXR> --space moxir
+2. **Restore point first** of show-laptop's own moxir data (`di save moxir` or a copy of the data root).
+3. **Dry run, then write:** `node scripts/rigbuild/work-light.mjs --api <show-laptop's local …/serverXR> --space moxir
    --out <backup dir> --dry-run`, then without `--dry-run`. Token: `DI_API_TOKEN` env or `--token-file <env file with
    ADMIN_API_TOKEN=>`; it refuses any host but `local.thedi.studio` / `localhost` / `127.0.0.1`. It lists every rig
    room with the ambient it replaces; expect 14 rooms (archived ones skipped), realism rooms 0.4, older-night rooms 1.4.
-   **Checked by PONYO: its copy (exported 21:51Z, after the run) ALREADY carries the work light** (0.4 / 1.4) — skip
+   **Checked by show-laptop: its copy (exported 21:51Z, after the run) ALREADY carries the work light** (0.4 / 1.4) — skip
    the write; the dry run should show "was" equal to the new value in every room.
 4. **The owner's look:** open `/moxir` there, click through the version row and the scenes. His level:
    `--undo <dir>/work-light-undo.json`, then run again with `--level <n>` (1.4 now; 2 = brighter, 0.8 = darker).
    The level he picks goes back into RIG_BUILD §20.4 and `DEFAULT_LEVEL`.
-5. **Measure (optional, Emily's yes):** `scripts/rigbuild/look-probe.mjs --gpu --base <PONYO base> --path
+5. **Measure (optional, Emily's yes):** `scripts/rigbuild/look-probe.mjs --gpu --base <show-laptop base> --path
    /moxir/p/<project> --project <project> --out <dir> --tag <project> --viewports desktop` per version. Its CPU
-   temperature guard reads Linux `sensors` only — on Windows it runs WITHOUT that guard; keep PONYO's stop rule
-   (GPU above 85 °C or loud fans for a minute → stop). Aylmo's numbers for Minimal (RTX 3080, desktop): cue means
+   temperature guard reads Linux `sensors` only — on Windows it runs WITHOUT that guard; keep show-laptop's stop rule
+   (GPU above 85 °C or loud fans for a minute → stop). main-desk's numbers for Minimal (RTX 3080, desktop): cue means
    10.5 / 18.9 / 9.6 / 13 / 32.9.
 6. **Report** in ≤ 8 lines, once, to the owner and in this note (push to `emilyanikoghosyan/di.iiii`).
 
-aylmo's own install keeps its work light (undo file on aylmo `~/di-backups/preview-rig-builder-2026-09-28/step-14b/
-work-light/`); aylmo writes nothing more to MOXIR.
+main-desk's own install keeps its work light (undo file on main-desk `~/di-backups/preview-rig-builder-2026-09-28/step-14b/
+work-light/`); main-desk writes nothing more to MOXIR.
 
 ## 2026-10-01 — Studio viewport: a Blender mouse-navigation preference
 
@@ -6667,7 +6667,7 @@ selection" for Orbit Around Selection is not reproduced (no selection → Auto D
   raycast over visible meshes, skipping `userData.noPick`, `*Helper`, `TransformControls*`.
   The adapter passes only entity groups (`userData.svEntityId`), so grid and gizmo are never
   candidates. Cost: 2000 boxes, median 0.21 ms, p95 0.28 ms, max 1.19 ms (n=50, node/vitest on
-  aylmo). Boxes are 12 triangles; heavy GLTF meshes without a BVH will cost more — not measured.
+  main-desk). Boxes are 12 triangles; heavy GLTF meshes without a BVH will cost more — not measured.
 - `src/studio/navigation/useCameraNavigation.js` — camera-controls 2.10.1 has no modifier
   bindings, so a capture-phase document `pointerdown` sets `mouseButtons[button]` per gesture
   (camera-controls reads them on every pointermove), then picks the pivot once and calls
@@ -6689,7 +6689,7 @@ Only unit tests: `npx vitest run src/studio` 55 files / 371 tests pass; new test
 - A look in a real browser on the owner's screen: the Shortcuts tab layout (desktop + phone),
   a real middle-button mouse in the Blender preset (orbit, Shift/Ctrl+middle, wheel toward the
   surface), a trackpad with Alt+click-drag, and the studio preset feeling exactly as before.
-- KDE (aylmo) moves windows on Alt+drag by default, and macOS turns Ctrl+click into a right
+- KDE (main-desk) moves windows on Alt+drag by default, and macOS turns Ctrl+click into a right
   click; Alt-emulation may be taken by the desktop there. Not tested.
 - Keyboard access (WCAG 2.2): no keyboard orbit/pan/zoom of the viewport exists (2.1.1); orbit
   and pan are drag-only with no single-pointer alternative beyond the smart-view preset buttons
@@ -6738,9 +6738,9 @@ Source: static WCAG 2.2 AA audit of 2026-10-01. Its findings were hypotheses; ea
 - **F10 partly done.** `.preferences-collapse-toggle` got a 44 px `::before` hit area. **Needs a look:** `.insp-num-btn` (its parent has `overflow:hidden`, a pseudo-element would be clipped), the colour inputs (`<input>` cannot take a pseudo-element), `.rigequip-pick input` (already inside a 44 px `label`, so the label click target is 44 px; the bare 20 px input is unchanged).
 - Not touched: F1 F2 F5 F6 F8 F11 F13, StudioViewport/StudioEditor/studioGuide.
 
-## 2026-10-01 — the bridle limit guard: every built crane pick must stay within max_included_deg (PONYO audit finding)
+## 2026-10-01 — the bridle limit guard: every built crane pick must stay within max_included_deg (show-laptop audit finding)
 
-- PONYO's audit (2026-10-01) said the cut truss's high bridle is drawn at 119° against the 120° limit using the 09-28 girder GUESS (8.15 m), and that the 09-29 photo-fitted hall (7.95 m) would put it at ~144°. Checked here with `rig-lib.mjs` `pickGeometry`: confirmed (u 5.25, apex 7.56 m; 119.1° → 144.4°; clamps 0.44 → 0.24 m above the apex; leg tension 0.99 → 1.63 × the load by geometry, about 101 → 165 kg on their figure — the audit's 175 kg came from its own arithmetic). Same for `minimal`, `minimal-cut-movers`, `minimal-ground`, `full-ground`. The limit was used once, to derive the trim; nothing checked a built pick.
+- show-laptop's audit (2026-10-01) said the cut truss's high bridle is drawn at 119° against the 120° limit using the 09-28 girder GUESS (8.15 m), and that the 09-29 photo-fitted hall (7.95 m) would put it at ~144°. Checked here with `rig-lib.mjs` `pickGeometry`: confirmed (u 5.25, apex 7.56 m; 119.1° → 144.4°; clamps 0.44 → 0.24 m above the apex; leg tension 0.99 → 1.63 × the load by geometry, about 101 → 165 kg on their figure — the audit's 175 kg came from its own arithmetic). Same for `minimal`, `minimal-cut-movers`, `minimal-ground`, `full-ground`. The limit was used once, to derive the trim; nothing checked a built pick.
 - Added `scripts/rigbuild/bridle-limit.test.js` (10 tests): the four bridled rigs are found; each is within the limit against the hall it points at; against the measured hall the violations equal the recorded list (a stale list fails either way); the guard can fail (hall 0.2 m lower). Proven by hand: pointing `minimal-ground` at the measured hall without re-deriving its trim makes the guard fail with 144.4°. `docs/architecture/RIG_BUILD.md` §15.13 says what is owed.
 - NOT done, and not mine to do: measuring the girder underside on site, repointing the versions file to the measured hall, re-deriving the trims and bridles, re-checking the crane-clash rule for the lasers, and the rigging sign-off itself (geometry only here; no hardware rating). The 3/s strobe cap on raw DMX values 4–254 of the PL5403 / B380F has no known rate map until a real unit is read (also from the audit; not changed here).
 
@@ -6912,7 +6912,7 @@ collapses to a thin line after 4 s; the reserved strip stays (a constant 44 px g
 
 ## 2026-10-01 — Studio viewport toolbar: 6 px corners → 2 px (controls are rectangles)
 
-- Handover item (feat-moxir-work-light-2026-10-01.md, "TOOLBAR_BTN 6→2 px"), done on the PONYO laptop. Cut from `feat/moxir-work-light-2026-10-01` (4f7fd530, the `.14` review line + work light).
+- Handover item (feat-moxir-work-light-2026-10-01.md, "TOOLBAR_BTN 6→2 px"), done on the show-laptop laptop. Cut from `feat/moxir-work-light-2026-10-01` (4f7fd530, the `.14` review line + work light).
 - `src/studio/components/StudioViewport.jsx`: `TOOLBAR_BTN` 6px → 2px, and the two 30 px corner buttons in the same file (Fullscreen, the `?` above it) 6 → 2. `SmartViewBar.jsx` loses its "the toolbar's own 6 px corners are owed the same" note.
 - Guard: `src/rigbuild/controlsAreRectangles.test.js` now sweeps `StudioViewport.jsx`. Seen failing first, on exactly the three lines (838, 887, 1180), then passing.
 - The same test failed on Windows before this change: `relative()` gives `src\rigbuild\…` and the allow-list says `src/rigbuild/…`, so the recording dot in `RoomLookFollower.jsx` was flagged. Paths are now joined with `/` before matching. Linux CI was never affected.
@@ -6989,7 +6989,7 @@ installed in the shared node_modules (same failure without my change).
 
 ## 2026-10-01 — land batch: the tier chip clears the scene deck's bottom bar; main-script guards work on Windows
 
-- Two fixes made by parallel agents on 2026-10-01 from reports of this day, landed as one batch on current dev (e5d95ac9): (1) the scene deck's Undo / Restore / Mark buttons are no longer covered by the page-wide tier chip ("LOCAL local.thedi.studio") — `--di-mode-mark-clearance` in `src/components/modeMark.css`, reserved in `.rigscenes-foot`; asserted in CSS only, NOT seen on a screen (owed: a look at 1440 and 390 px). (2) `scripts/lib/isMainModule.mjs` replaces the `new URL(import.meta.url).pathname` "am I the main script" check in 32 scripts, which is always false on Windows (another session found it in `versions.mjs` on the PONYO laptop); `versions.mjs` is left to its own branch and allow-listed in `scripts/noPathnameMainGuard.test.js`.
+- Two fixes made by parallel agents on 2026-10-01 from reports of this day, landed as one batch on current dev (e5d95ac9): (1) the scene deck's Undo / Restore / Mark buttons are no longer covered by the page-wide tier chip ("LOCAL local.thedi.studio") — `--di-mode-mark-clearance` in `src/components/modeMark.css`, reserved in `.rigscenes-foot`; asserted in CSS only, NOT seen on a screen (owed: a look at 1440 and 390 px). (2) `scripts/lib/isMainModule.mjs` replaces the `new URL(import.meta.url).pathname` "am I the main script" check in 32 scripts, which is always false on Windows (another session found it in `versions.mjs` on the show-laptop laptop); `versions.mjs` is left to its own branch and allow-listed in `scripts/noPathnameMainGuard.test.js`.
 - Checked: 132 files / 1179 tests pass on the touched areas plus the scan test over the merged tree; docs checks pass. Packaging checked by hand: the scripts copied alone into the Docker images (`install-git-hooks`, `space-bundle`, `project-move`) and into the runtime pack (`space-bundle`, `install-bundle`) are not among the changed ones, so the new import cannot break an image. Not run: real Windows (asserted by construction, `fileURLToPath` with `windows: true`), most changed scripts (they write, call the API or open a browser), CI (runs on this PR).
 - Conflict: one pair of rows in `docs/ai/known-fixes.md`, both kept.
 
@@ -7067,8 +7067,8 @@ Clears the CI dependency audit (`npm --prefix serverXR audit --production --audi
 - engine.io 6.6.11 also drops the `base64id` dependency (visible in the lockfile diff).
 - No client bump: this is a patch release of the server transport, same Engine.IO protocol revision (v4) and same socket.io-client range; socket.io was not touched.
 - After: `npm --prefix serverXR audit --production --audit-level=high` prints "found 0 vulnerabilities", exit 0.
-- Targeted tests (`vitest run ... --maxWorkers=2`, after `npm ci`): `serverXR/src/socketHandlers.test.js`, `httpContracts.test.js`, `meshHub.test.js`, `src/hooks/useSpaceSocket.test.js`, `src/project/hooks/useProjectPresence.test.jsx`: 5 files, 135 tests, all passed. Full suite runs in CI only (aylmo fan fault).
-- Local note: on aylmo npm timed out against the registry until `NODE_OPTIONS=--network-family-autoselection-attempt-timeout=2000` was set (curl was fine). Workaround only; not a repo change.
+- Targeted tests (`vitest run ... --maxWorkers=2`, after `npm ci`): `serverXR/src/socketHandlers.test.js`, `httpContracts.test.js`, `meshHub.test.js`, `src/hooks/useSpaceSocket.test.js`, `src/project/hooks/useProjectPresence.test.jsx`: 5 files, 135 tests, all passed. Full suite runs in CI only (main-desk fan fault).
+- Local note: on main-desk npm timed out against the registry until `NODE_OPTIONS=--network-family-autoselection-attempt-timeout=2000` was set (curl was fine). Workaround only; not a repo change.
 
 ## 2026-09-30 — Controls are rectangles: the rig-line sweep
 
@@ -7436,7 +7436,7 @@ the stream: `LIGHTING_DESK.md` "The pushed frame".
   desk suites incl. new `test-stream.js` green; lint 0 errors.
 - Installed on the owner's machine as `0.4.16-rigbuilder.9` (preview branch = dev 3c7e79b8 + this);
   measured there: API → drawn lamp p50 33.8 / p95 34.8 ms, Art-Net → drawn lamp p50 37.8 / p95 39.4 ms.
-- Owed: the real channel lists; gobo/prism/haze drawn; base yaw per lamp; a real console; ponyo run by
+- Owed: the real channel lists; gobo/prism/haze drawn; base yaw per lamp; a real console; show-laptop run by
   the owner; iGPU numbers.
 
 ## 2026-09-30 — MOXIR: two versions with every moving head on the ground, and a policy guard for all future rigs
@@ -8157,7 +8157,7 @@ numbers carry a thermal error of the order of ±15 %.
   `src/kit/kitCatalogue.test.js` fail the same on untouched origin/dev in this machine's
   shared node_modules (version strings) — environmental, not this branch.
 - Owed: from far outside the hall reads small and dark (the cut works, but the rig is a few
-  pixels at maxDistance); a real phone (S24) has not been tried; seen on the scratch stack,
+  pixels at maxDistance); a real phone (a phone) has not been tried; seen on the scratch stack,
   not yet at https://local.thedi.studio/moxir (that runs the installed release).
 
 ## 2026-09-29 — one command to publish a space's update to dev
@@ -8363,7 +8363,7 @@ Batch landing into `dev`: #654 (fold notes after 651), #649 (inbox first run), #
 
 - One textual conflict: `docs/ai/known-fixes.md` (#660 vs #664/#667 rows) — both rows kept, additive.
 - `wikiContent.js`, `StudioViewport.jsx`, `RIG_BUILD.md` auto-merged with no conflict.
-- Full suite runs in GitHub CI only (aylmo fan fault: no local full test/build).
+- Full suite runs in GitHub CI only (main-desk fan fault: no local full test/build).
 - Semantic interaction fixed after CI: #663's `scripts/place/hall-crane.test.js` ("minimal rig under the measured crane")
   assumed the flat 8 m line (truss y 6 m, spreaders); #664 replaced that rig with the 15-degree "cut" (trim 5.06 m, bridled hoists
   with no spreader). Test now asserts the rig's own `trim_m`, bridle/chain parts. Intent (truss keeps its trim, room under the bridge) kept.
@@ -8457,7 +8457,7 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
 
 ## 2026-09-29 — the docs check passes on a Windows checkout
 
-- Emilya's agent found every push from ponyo refused once #612 put the push checks in a git hook:
+- Emilya's agent found every push from show-laptop refused once #612 put the push checks in a git hook:
   `docs:ai:check` read the CRLF checkout (core.autocrlf=true) raw — every bridge "out of sync", every
   SKILL.md "missing YAML frontmatter".
 - `toLf()` (sync-agent-docs.mjs): check-agent-docs reads every file through it and compares the
@@ -8533,9 +8533,9 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
   success via SuccessExitStatus=1), 2 = a repo could not be read (marks the unit failed).
 - Tests: 54/54 (`unsaved-lib.test.js` + `start-check.test.js`), including the age filter, the mtime
   reader (quoted, renamed, deleted paths) and the flags.
-- Seen on aylmo: installed over ~/work, run by `systemctl --user start di-unsaved` — 23 repos in 2.7 s,
+- Seen on main-desk: installed over ~/work, run by `systemctl --user start di-unsaved` — 23 repos in 2.7 s,
   16 hold work older than 24 h only here (log written, unit Result=success, timer next 18:00).
-- NOT yet run on Windows: install.ps1 is untested until it runs on ponyo — owed, via Emilya's agent.
+- NOT yet run on Windows: install.ps1 is untested until it runs on show-laptop — owed, via Emilya's agent.
 
 ## 2026-09-29 — dev deploys build again: the client image copies the hook installer before npm ci
 
@@ -8543,7 +8543,7 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
 
 ## 2026-09-29 — the git hooks reach every worktree, whatever its branch
 
-- Found on aylmo right after #612: with `core.hooksPath = scripts/git-hooks` (relative, shared by all
+- Found on main-desk right after #612: with `core.hooksPath = scripts/git-hooks` (relative, shared by all
   worktrees) the main checkout, parked on an older `dev`, had no hook files, and a test commit on `dev`
   went through (undone at once with `git reset --soft HEAD~1`; nothing pushed).
 - `scripts/install-git-hooks.mjs` now copies `scripts/git-hooks/*` into `<git common dir>/di-hooks`
@@ -8553,7 +8553,7 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
   gate defers whenever the installed pre-push runs push-checks.
 - Guard: `scripts/unsaved-lib.test.js` "covers a checkout whose branch predates the hooks" — real git,
   seen failing against the previous installer, passing now (50/50 with start-check's tests).
-- Applied on aylmo: `core.hooksPath` = `/home/dob/work/di.iiii/.git/di-hooks`; a commit on `dev` in the
+- Applied on main-desk: `core.hooksPath` = `/home/dob/work/di.iiii/.git/di-hooks`; a commit on `dev` in the
   main checkout is now REFUSED (seen).
 
 ## 2026-09-29 — /tools cards stand in even rows, a short last row centred
@@ -8562,7 +8562,7 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
 
 ## 2026-09-29 — the daily watch's log reads right in Windows PowerShell
 
-- First Windows run of #641 on ponyo (Emily ran install.ps1; task result 1 = findings, as designed):
+- First Windows run of #641 on show-laptop (Emily ran install.ps1; task result 1 = findings, as designed):
   the log is UTF-8 without a BOM, so Windows PowerShell 5.1's `Get-Content` shows every "—" as "â€”".
 - `unsaved.mjs` writes a UTF-8 BOM when it CREATES the log on win32 (`logPreamble`); other platforms and
   existing logs are unchanged. Test: `unsaved-lib.test.js` "the watch log on Windows".
@@ -8605,7 +8605,7 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
   re-sent on the protocol it arrived on (no loops); own CID / own Art-Net bytes are dropped.
 - Tests: `tests/test-dmxin.js` (39 checks incl. real loopback UDP), wired into `lighting.test.js`;
   `test-http.js` got the `/api/input` route check. All four desk suites green.
-- Measured on aylmo with `tests/bench-input.js` (sender `tests/dmx-send.js`): in-process packet→state
+- Measured on main-desk with `tests/bench-input.js` (sender `tests/dmx-send.js`): in-process packet→state
   p50 0.04 ms; through HTTP it equals one GET (~1.5 ms); 44 Hz × 3 universes × 60 s: sACN multicast
   7923/7923, Art-Net 7920/7920, 0 lost, 0 late, 1–2 % of one core. Lamp colour proven through
   `mirrorFixtures` + `liveLightEntity` against the running desk; desk UI seen in Chrome at 1707 and
@@ -8618,7 +8618,7 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
 
 ## 2026-09-28 — one flow for every hand: git hooks and an "only on this machine" check
 
-- Why: a collaborator's laptop (Emilya's, `ponyo`) held 22 commits and ~60 changed files on no remote,
+- Why: a collaborator's laptop (Emilya's, `show-laptop`) held 22 commits and ~60 changed files on no remote,
   the oldest 25 days old, and work in progress sat uncommitted on `dev`. Nothing flagged it — start-check
   answers "am I behind?", not "is my work anywhere but here?". Rules written only for Claude also don't
   reach someone typing git by hand or using another assistant.
@@ -8635,7 +8635,7 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
   checkout only, outside the LATEST verdict).
 - Tests: `scripts/unsaved-lib.test.js` runs real git in a temp dir (no mocks) and covers the hooks'
   refusals; start-check's existing tests still pass (49/49 across both files).
-- Measured on aylmo at the time of writing: 11 local branches with commits on no remote (oldest 25 days)
+- Measured on main-desk at the time of writing: 11 local branches with commits on no remote (oldest 25 days)
   and several worktrees with an untracked `.verify/` scratch folder, which the check reports as-is.
 - Owed: a Windows scheduled task on a collaborator's machine that runs `npm run unsaved` daily and raises
   a non-zero exit; not built in this branch.
@@ -8683,7 +8683,7 @@ own install before anything lands. It was made from `origin/dev` (37ca97b2) with
   where `beam.only` is dropped, bakes the other 82 beams into one mesh (`beams-glb.mjs`, a named
   workaround — not editable in the Studio). His tier now: 239.7 fps (vsync cap) median 4.2 ms p95 4.3 ms,
   51 calls, 53k tris, door/mid/stage/over; the branch's editable `beam.only` version measured the same.
-- SwiftShader runs of the full hall overheated aylmo (CPU 100 °C, load 23) — `rig-look.mjs` now refuses
+- SwiftShader runs of the full hall overheated main-desk (CPU 100 °C, load 23) — `rig-look.mjs` now refuses
   software rendering, runs one browser per view, waits for the CPU to cool. Headed Chromium reached the
   NVIDIA card only with ANGLE on Vulkan + PRIME variables for GL, EGL and Vulkan.
 - Seen, not fixed: on a phone-shaped viewport the opening shot faces an end wall, not down the nave, and
@@ -9136,9 +9136,9 @@ its own session note. Gate on the merged tree is in the PR body.
 ## 2026-09-28 — vitest capped at half the cores outside CI
 
 - `vite.config.js` `test.maxWorkers: '50%'` when `CI` is unset (vitest 4.1.10 option; default in
-  run mode was cores-1 = 15 on aylmo). CI keeps vitest's default. `--maxWorkers` and vitest's own
+  run mode was cores-1 = 15 on main-desk). CI keeps vitest's default. `--maxWorkers` and vitest's own
   `VITEST_MAX_WORKERS` env still override. Documented in `docs/ai/testing.md`.
-- Measured on aylmo (i7-11800H, 16 threads) with other agents already loading it (1-min load 17-31
+- Measured on main-desk (i7-11800H, 16 threads) with other agents already loading it (1-min load 17-31
   before each run): one run 98-115 s uncapped vs 121-127 s capped; two concurrent runs 178-179 s
   uncapped vs 170 s capped, 33 vs 19 vitest processes, 1-min load after 46 vs 27. All runs
   569 files / 6302 tests passed except one uncapped solo run: a 5 s timeout in
@@ -9655,7 +9655,7 @@ two bar tests. The mock now carries them. Gate on the batch: build ok; vitest 63
   "NDI on the network: N" in the map's Machines section and the Raw desk; the Raw desk
   lists NDI sources per machine (existing classes, no restyle).
 - CLI: `di ndi scan [--watch] [--url …]`.
-- Measured on aylmo (i7-11800H, libndi 6.3.2.0, same-machine sender, 10 runs): appeared
+- Measured on main-desk (i7-11800H, libndi 6.3.2.0, same-machine sender, 10 runs): appeared
   793/891/1008 ms (min/median/max after the sender existed); gone after SIGTERM
   1004/1007/1011 ms, after SIGKILL 1006/1013/1014 ms; browser readout 0→1 in 1.15 s, 1→0
   in 1.05 s, desktop and phone. Idle child 0.07 % of a core, 78 MB RSS.
@@ -9820,28 +9820,28 @@ two bar tests. The mock now carries them. Gate on the batch: build ok; vitest 63
 
 ## 2026-09-24 — a di.iiii the others cannot see now says so, and the others say it is there
 
-- Real case: aylmo (`di up --lan`) and win (`--lan`) paired on 192.168.88.x; `ponyo` at .125:4000
-  did not. Probed read-only: ponyo is not a `di up` start (`/api/config` `local: false`,
+- Real case: main-desk (`di up --lan`) and win (`--lan`) paired on 192.168.88.x; `show-laptop` at .125:4000
+  did not. Probed read-only: show-laptop is not a `di up` start (`/api/config` `local: false`,
   `listen.lan: true`, health `mode` from an unset NODE_ENV) — bound to every interface with
   `DI_ALLOW_LAN_DEVICES` unset, so no discovery and a 403 on every `/api/rig/*`, silently.
 - `serverXR/src/rig/visibility.js` works out visible/private once; `GET /api/rig/visibility`;
   `di status` prints a `rig:` line with the command; one boot warning; the Desk shows a hint row.
 - Private discovery mode for a network-bound copy with device routes closed: listens, and sends
   a `t:"private"` beacon with no top-level `id` (0.4.x readers drop it — verified live against
-  aylmo and win on 0.4.16-connect.4: no phantom member). Open copies list it as "a di.iiii at
+  main-desk and win on 0.4.16-connect.4: no phantom member). Open copies list it as "a di.iiii at
   <addr> is on this network but private". A loopback `di up` still puts nothing on the network.
   PROTOCOL-1.md amendment 2026-09-24.
 - Discovery now reads `t`: unknown kinds are counted and ignored instead of treated as `here`.
 - Seen: two dev copies on :4391 (private) and :4395 (open, room `agent-test` so it could not pair
   with the live rig), the Desk at 1440×900 DPR 2 and 390×844 DPR 3, all three row states.
-- Owed, owner's call: should a loopback copy LISTEN (never send)? ponyo's box needs
+- Owed, owner's call: should a loopback copy LISTEN (never send)? show-laptop's box needs
   `di up --lan` (or `DI_ALLOW_LAN_DEVICES=1`) by hand — nothing here changes it remotely.
 - Two identity files per machine, documented not merged: `DATA_ROOT/machine.json`
   (machines hub, follow, `output.show`) and `DATA_ROOT/rig/machine.json` (PROTOCOL-1 §1).
 
 ## 2026-09-24 — a copy behind a front door on its own machine reads as visible, not private
 
-- Real case: aylmo's gateway (di-atlas `machines/aylmo-gateway`) put Caddy on :443 of the wifi,
+- Real case: main-desk's gateway (di-atlas `machines/main-desk-gateway`) put Caddy on :443 of the wifi,
   mesh and tailnet addresses and di on 127.0.0.1:443, with `DI_ALLOW_LAN_DEVICES=1` in di.env so
   discovery keeps running. win paired with it through the door (signed hellos, 200 in the door's
   log), yet `di status` and `/api/rig/visibility` said "private — loopback": visibility.js judged
@@ -9897,7 +9897,7 @@ two bar tests. The mock now carries them. Gate on the batch: build ok; vitest 63
   (GH006, `reference_dii_land_job_blocked`), so the notes were folded by hand with
   `session-land-lib.mjs`'s three functions, as the job would: `chore-land-sessions-2026-09-23.md`,
   `feat-layers-open-bare.md`, `feat-things-are-cards.md`, `land-batch-layers-2026-09-23.md`.
-- CURRENT.md: the aylmo install line now reads `0.4.16-connect.4` (the layers batch, installed and
+- CURRENT.md: the main-desk install line now reads `0.4.16-connect.4` (the layers batch, installed and
   seen on local.thedi.studio at 1440×900 and 390×844). 45 lines.
 - This note is the next leftover, by construction.
 
@@ -10162,7 +10162,7 @@ two doors on a phone (the hardcoded `0.8,0.45,1` auto-frame), and the two orphan
   lines, at the cap, so the 09-22 fold's own title line was dropped: 49 lines.
 - Fixed the two stale `CURRENT.md` lines the `docs-sentences-that-lie` note flagged as
   owed (it could not write them itself — `docs:ai:check` refuses a `CURRENT.md` that
-  differs from `origin/dev` on a feature branch): the aylmo install line named
+  differs from `origin/dev` on a feature branch): the main-desk install line named
   `0.4.7-shelves.2`, confirmed stale by `di status` (read-only) at
   `0.4.16-connect.2`, packed 2026-09-23; and the Follow line said "carries NO assets
   yet", stale since `serverXR/src/follow/assets.js` shipped 2026-09-20 — replaced with
@@ -10262,9 +10262,9 @@ and /spaces cards desk and phone. No page scrolls sideways.
 
 ### Owed
 
-- **On his install and the S24.** Seen here on a dev stack with the phone emulated at DPR 3.
+- **On his install and the a phone.** Seen here on a dev stack with the phone emulated at DPR 3.
   The decision checks each unit on local.thedi.studio after `npm run di:pack` and
-  `di update --from`, and on the S24 in LAN mode. Not done: this session must not touch
+  `di update --from`, and on the a phone in LAN mode. Not done: this session must not touch
   the install on 443/4000.
 - **The phone bar cuts a word at the right edge** (it scrolls sideways by its own CSS).
   At 390 px: a full project's bar is 599 px wide, Projection · Tools · Light · Wiki past
@@ -10337,8 +10337,8 @@ Units 4, 6 and 7 of di-atlas `decisions/2026-09-23-layers-what-inside-what.md`. 
 
 **Owed**
 
-- Not yet on his surfaces: nothing was packed onto his install or opened on the S24 (the decision's
-  verify step for every unit). The published page on the S24 (unit 4) and `/make` were not looked at.
+- Not yet on his surfaces: nothing was packed onto his install or opened on the a phone (the decision's
+  verify step for every unit). The published page on the a phone (unit 4) and `/make` were not looked at.
 - For the owner: a name that is both (Sphere, Plane, Text) still places the NODE on Enter and the
   thing is the row below — kept so type-to-place never changes; "lamp" finds the point light.
   The new word "thing" sits beside `docs/ai/vocabulary.md`'s "object" and Studio's "Objects (4)".
@@ -10523,7 +10523,7 @@ changed.
   the installer finds or downloads a node before bootstrap runs, so `decideMode`
   (`scripts/di/detect.mjs`) always returns node. The GHCR image is not pullable anyway:
   an anonymous token for `dob-0/dii-server` is refused (UNAUTHORIZED, manifest HEAD 403,
-  checked 2026-09-23). aylmo's own `~/.di/state.json` says `mode: node`.
+  checked 2026-09-23). main-desk's own `~/.di/state.json` says `mode: node`.
 - `#di-cli-local`, sync. Before: "di sync compares them and moves work in whichever
   direction is safe — it refuses rather than guess when both sides have changed." After:
   "di sync compares them — what each side has that the other has not, and whether sending
@@ -10611,7 +10611,7 @@ were at 250 and 261-262.
 `docs:ai:check` refuses a CURRENT.md that differs from origin/dev on a feature branch, so
 these two corrections were reverted here. The next land PR should apply them:
 
-- `:32` — "aylmo runs a branch build (`0.4.7-shelves.2`)" → "aylmo runs `0.4.15-place.1`
+- `:32` — "main-desk runs a branch build (`0.4.7-shelves.2`)" → "main-desk runs `0.4.15-place.1`
   (packed 2026-09-22 from #534, the place-and-lights landing)". Evidence:
   `~/.di/state.json` `version: 0.4.15-place.1`, `~/.di/current` → that version,
   `release.json` `packedAt 2026-09-22T14:42Z`; local.thedi.studio answers 200.
@@ -10886,9 +10886,9 @@ it for a chosen one (tests in `zenMode.test.js` and `surfaceBar.embed.test.jsx`)
 One merge conflict, `src/tools/ToolsRoom.test.jsx` (added by both #540 and #541): the two
 files were combined into one, with a SurfaceBar mock that also exports `navigateInApp`.
 
-Still the owner's: walking the bar on local.thedi.studio and the S24; the nine decisions
+Still the owner's: walking the bar on local.thedi.studio and the a phone; the nine decisions
 in the plan (old editor, where the light show lives, the one file, Light/Lamp/Rig, retiring
-the tools' own jump buttons, "Lights on" machine, the S24 on the desk, "Save current view"
+the tools' own jump buttons, "Lights on" machine, the a phone on the desk, "Save current view"
 vs the auto-framed shot, promotion).
 
 ## Landing 21 notes so the dev tier can deploy again
@@ -11036,7 +11036,7 @@ unchanged. The bytes come from Vizrt; this only does the clicking.
 
 ## Seen on real hardware, not inferred
 
-- aylmo, cold: 65.5 s end to end; `libndi.so.6` 27,287,968 bytes; loaded
+- main-desk, cold: 65.5 s end to end; `libndi.so.6` 27,287,968 bytes; loaded
   through serverXR's own `library.js` → `NDI SDK LINUX … 6.3.2.0`, send
   binding present.
 - The real 225 MB macOS `.pkg` unpacked on Linux in 2.3 s → a 29,805,920-byte
@@ -11111,7 +11111,7 @@ whether the multipart stream repeats (77 parts in 6 s, boundaries intact).
 
 ### Still open
 
-aylmo has no NDI runtime, so it can neither send nor receive natively yet; the only NDI
+main-desk has no NDI runtime, so it can neither send nor receive natively yet; the only NDI
 binary on it is the Windows DLL inside TouchDesigner's Wine prefix, which Linux cannot
 load. `avahi` is already running. The runtime is Vizrt's, under its own EULA, and we
 never ship it — on Arch it is the AUR `ndi-sdk`, or `distroav`, which pulls it in and
@@ -11292,7 +11292,7 @@ row in `docs/ai/known-fixes.md`.
 ## 2026-09-20 — `di stage` — the venue box is a command now, not a hand-made setup
 
 Step C of `~/work/di-atlas/decisions/2026-09-20-di-stage-plan.md`: one autostart entry,
-one supervisor, one screen. `RIG.md` said the appliance was "hand-made on asuz, not in
+one supervisor, one screen. `RIG.md` said the appliance was "hand-made on team-laptop, not in
 the product"; it now says what is in the product and what is still hand-made.
 
 - `di stage join SPACE --from URL [--key K|-] [--at ADDR] [--lan] [--name N] [--project ID]
@@ -11325,7 +11325,7 @@ the product"; it now says what is in the product and what is still hand-made.
   the session restore, so the session files come off the profile before each launch; and
   the black-out on a dead server now happens BEFORE the server restart is attempted, not
   after a call that can block for thirty seconds.
-- Seen end to end on aylmo against two throwaway installs under the session scratchpad
+- Seen end to end on main-desk against two throwaway installs under the session scratchpad
   (4420 and 4421; the owner's live di.iiii on 443 was never touched and its pid never
   changed). Join, the kiosk black then `out · wall · ok`, `di stage status` exit 0, `di down`
   warning that the supervisor will undo it, the wall going black when the server stopped and
@@ -11336,7 +11336,7 @@ the product"; it now says what is in the product and what is still hand-made.
 
 **Not in this PR, deliberately:** the plan's step D — displays as data (`output.show`), OS
 display probes, multi-window placement, hotplug reconcile. One screen, a static target: the
-space's single map project or `--project`. A second projector on asuz is still hand-made.
+space's single map project or `--project`. A second projector on team-laptop is still hand-made.
 
 **Open doubt:** the demo seeded the mapping on both sides with a whole-document PUT, which
 produces a `replaceDocument` op — and `serverXR/src/follow/followPlan.js` deliberately never
@@ -11377,7 +11377,7 @@ the "no file yet" placeholder that landed the same day fixed the empty video/ima
   min(r,g,b) > 200**. The same surface on the grid: 255/255 and 7,574 near-white pixels.
 
 Not verified: a real projector in a real dark room. Everything here is a browser at DPR 1 on
-aylmo — the numbers say what the signal carries, not what the wall reflects.
+main-desk — the numbers say what the signal carries, not what the wall reflects.
 
 ## 2026-09-21 — a lamp that knows which lamp it is, and positions go back once on a button
 
@@ -11628,9 +11628,9 @@ anything at all in a browser.
 
 ## 2026-09-20, later — the two-machine rig: a receiver that never says why
 
-Cross-machine NDI was tried for the first time: TouchDesigner on aylmo (2025, under
+Cross-machine NDI was tried for the first time: TouchDesigner on main-desk (2025, under
 Wine), di.iiii 0.4.14-wstream.8 on `win`. Discovery worked across the network once
-`DI_NDI_EXTRA_IPS=192.168.15.53` was set — without it the finder reported aylmo's
+`DI_NDI_EXTRA_IPS=192.168.15.53` was set — without it the finder reported main-desk's
 `10.0.0.122` cable interface, which `win` cannot route to. With it the address was
 reachable (TCP to 5960/5961/5962 succeeded on both the LAN and the tailnet address, and
 node.exe is allowed through the Windows firewall on both profiles) — and
@@ -11648,7 +11648,7 @@ docs/architecture/NDI.md:
   `p_url_address` gives video in 38 ms; a NULL name with the right url, 30 ms. A wrong
   or NULL url falls back to resolving the name through the runtime's own discovery and
   still arrives — at ~4.03 s. So the 5 s threshold, and so a machine name that resolves
-  to an unusable address (MagicDNS pointing `AYLMO` at the tailnet) is not by itself a
+  to an unusable address (MagicDNS pointing `main-desk` at the tailnet) is not by itself a
   reason for no picture.
 - **the strings are copied.** A receiver built from koffi-marshalled JS strings and one
   built from C memory we allocate and hold behave identically (34 ms to first frame,
@@ -11668,7 +11668,7 @@ projection surface can name an NDI® source, the desk suggests the ones any mach
 see and warns about a name none can, and every state says why in the server's own words.
 
 - **A source kind `ndi`, picked by NAME.** `'ndi'` in `MAPPING_SOURCE_KINDS` in both
-  schema mirrors; the ref is the source's name (`AYLMO (td_out_windows)`, or any fragment
+  schema mirrors; the ref is the source's name (`main-desk (td_out_windows)`, or any fragment
   — `td_out` is enough). No address is ever stored: the SENDER chooses which of its own
   interfaces to advertise, so an address written on the desk means nothing on the machine
   that draws. Same model as `stream`, one chain shorter.
@@ -11720,7 +11720,7 @@ see and warns about a name none can, and every state says why in the server's ow
 
 ### Seen, and not seen
 
-Seen on aylmo at 1440x900 (screenshots in `~/Downloads/ndi-step2/`): the inspector with
+Seen on main-desk at 1440x900 (screenshots in `~/Downloads/ndi-step2/`): the inspector with
 the NDI kind chosen, the picker holding `td_out`, the status line and the licence line;
 the Machines section with this machine's screen and camera and the red warning for a
 surface with no name given; and `/out` showing the true state of this laptop — "NDI is not
@@ -11728,7 +11728,7 @@ installed on this machine — install libndi, then restart di" — in warm amber
 measured at zero near-white pixels. That "install libndi" sentence is the server's own
 `how` from step 1, shown verbatim on purpose.
 
-**A live NDI picture is still not verified anywhere in a browser.** aylmo has no NDI
+**A live NDI picture is still not verified anywhere in a browser.** main-desk has no NDI
 runtime and TouchDesigner was deliberately not started. So the `<img>` path, the frame
 rate it can hold, and whether `load` fires per part on a multipart stream are all
 unproven — every state EXCEPT a frame arriving is what was looked at. The cross-machine
@@ -11888,7 +11888,7 @@ OS and keeps one kiosk per assigned display.
   a screen this machine does not have is one dim status row, exit 1, never a crash.
   Cloned displays (same geometry; more monitors than screens; a mirrored display) are
   told and never flipped. Hotplug itself could not be exercised on this one-screen box.
-- **Seen end to end on aylmo** against two throwaway installs under the session
+- **Seen end to end on main-desk** against two throwaway installs under the session
   scratchpad (4520/4521, real config home untouched — `~/.config/systemd/user` and
   `~/.config/autostart` byte-identical, zero `di-stage` units). The probe read the real
   xrandr; the document's `show` travelled as ordinary ops over the follow (closing
@@ -12340,18 +12340,18 @@ Found while putting Emilya's WCC export on all three tiers.
   twin is locked to the old host until rebuilt; `sync-space-to-staging.sh` loops `"$@"` so
   `--force` is read as a space id (pre-existing).
 
-## 2026-09-14 — picture operators in Raw, and one desk across two machines (asuz + aylmo)
+## 2026-09-14 — picture operators in Raw, and one desk across two machines (team-laptop + main-desk)
 
 Carries the note for the stacked #445 (di two-installs fixes) and #446 (map motion glow),
 which landed through the batch without their own.
 
-- **Two real installs, one space.** Installed the latest di.iiii on asuz (Debian 13, no node,
-  no curl) and followed its space from aylmo (certificate on 443). Five faults only two real
+- **Two real installs, one space.** Installed the latest di.iiii on team-laptop (Debian 13, no node,
+  no curl) and followed its space from main-desk (certificate on 443). Five faults only two real
   machines showed — vendored npm on update, CLI self-requests to :80 on a 443 install, invite
   printing localhost, the follower speaking http to its own https server, follows only starting
   at boot, update/restore leaving a padlocked install down. All fixed with guards; rows in
   `docs/ai/known-fixes.md`.
-- **Projector box.** asuz drives an Optoma 1080P over HDMI through `cage` + `chromium` +
+- **Projector box.** team-laptop drives an Optoma 1080P over HDMI through `cage` + `chromium` +
   `seatd` (hand-started kiosk, no boot unit — autostart is the owner's call). The mode mark was
   being projected around the work; `/map/…/out` no longer draws it.
 - **Motion glow** on a camera map surface (#446), then generalised: **picture operators** —
@@ -12363,7 +12363,7 @@ which landed through the batch without their own.
   the follow link. Browser: Runs on per operator; wires crossing machines are WebRTC video,
   remote cards get JPEG previews, numbers ride a data channel. The Desk panel node lists every
   machine and its cameras / mics / speakers / screens and places Camera In / Picture Out for a
-  device. Seen end to end: asuz's camera analysed on aylmo, back on asuz's projector.
+  device. Seen end to end: team-laptop's camera analysed on main-desk, back on team-laptop's projector.
 - **Still undone:** Send / Receive operators for SEPARATE desks (owner wants both modes);
   numbers wired into operator settings; sound operators for the listed mics/speakers; a
   machine only takes part while a page is open on it; two installs restored from one backup
@@ -12373,7 +12373,7 @@ which landed through the batch without their own.
 
 - Design agreed with the owner step by step: `docs/architecture/RIG.md` (mesh, jam/show, any version with any version, local workflow, 20 cases) and the build contract `docs/architecture/rig/PROTOCOL-1.md`. Compatibility starts with protocol 1 (owner: "from this version can all works"); 0.4.x gets no adapter.
 - Built in five parallel lanes, merged here: `serverXR/src/rig/` — frozen core (hello, card, cue, blackout, picture reserved), per-pair features, tolerant readers, room + HMAC key, identity, machine card probes (screens, audio, cameras, serial, MIDI, net, temp, CPU, mem, Pi throttling, part Studio/Stage/Hands), members + UDP discovery on :47600 (LAN only), sinks (built-in cues, blackout → lighting desk + SSE `/api/rig/events`), `RigBlackout` in the map output; `scripts/rig/` conformance + compat grid, `.github/workflows/rig-compat.yml`.
-- Proven on real machines: aylmo + asuz discovered each other both ways across different releases; conformance 17/17 on each; unsigned cue 403; a signed blackout from aylmo blacked asuz's projector (white 253 → 0 → 253).
+- Proven on real machines: main-desk + team-laptop discovered each other both ways across different releases; conformance 17/17 on each; unsigned cue 403; a signed blackout from main-desk blacked team-laptop's projector (white 253 → 0 → 253).
 - Also: `registerLightingRoutes` returns `hasDesk()`; wiki entry "The rig".
 - Next (RIG.md build order): land #447/#450/#451 and rehearse the two-artist jam; then jam rules (holding, presence in Raw, certificate), show mode, parts/appliance, drivers.
 
@@ -13296,7 +13296,7 @@ page in a hole.
 
 ## 2026-09-13 — backup-pull could not see its own archives through a symlinked destination
 
-- On aylmo `~/di-backups` is a symlink into `/mnt/nobara-home`. `find "$DEST"` and `du -sh "$DEST"`
+- On main-desk `~/di-backups` is a symlink into `/mnt/nobara-home`. `find "$DEST"` and `du -sh "$DEST"`
   do not follow a symlink given as the start point, so the pull logged `0 archive(s) held locally, 4.0K`
   while 30 archives (22G) were there.
 - The same `find` feeds the prune list, so pruning to `DII_KEEP` (30) silently never ran: the local
@@ -13358,7 +13358,7 @@ Four things were audited and fixed one at a time. None of the four was what the
 backlog said it was.
 
 **The network space's CV leak was real and it was the owner's own.**
-`diiii.xyz/network/gevorg-grigoryan` still linked a world-readable Google Doc whose
+`diiii.xyz/network/the owner-the owner` still linked a world-readable Google Doc whose
 anonymous text export prints his cell phone and two email addresses — the 09-10 fix
 that replaced external CV links with inline text had never reached prod. Prod also
 held 53 rooms against the manifest's 67. One `space-sync --all --tier prod` closed
@@ -15238,7 +15238,7 @@ asset path under `public/wcc/`.
 - **One padlocked name.** serverXR speaks https when `TLS_CERT`/`TLS_KEY` are readable and falls
   back to http saying so once. `di` takes the address from the certificate's own subject, and
   under `--lan` points that name at the machine's address on tonight's wifi through an optional
-  `~/.di/dns-update` hook (no DNS credentials ever live inside di). On aylmo that is
+  `~/.di/dns-update` hook (no DNS credentials ever live inside di). On main-desk that is
   `https://local.thedi.studio`, port 443, a real Let's Encrypt certificate — and with it a phone
   gets the camera, the microphone, Web MIDI and XR, none of which a browser grants a LAN address
   over plain http. `deployMode` reads `local.<domain>` as this machine, or the first paint says
@@ -15748,7 +15748,7 @@ resolved files, docs gate passes.
 
 ## The festival machine, inventoried; the local model gets its own name
 
-Eleven testers walked every surface of aylmo's `di` install with the internet refused,
+Eleven testers walked every surface of main-desk's `di` install with the internet refused,
 every blocker was reproduced twice, a critic tested the gaps. The inventory lives at
 `docs/testing/FESTIVAL_MACHINE_2026-09-06.md` — the one-line answer: the tools work
 offline, the room does not (loopback-only bind, no phone, no headset; CDN-loading pages
@@ -15783,7 +15783,7 @@ app itself loads nothing from anywhere else; the faults were around it.
   that answered; the notice is shown. `aiChatApi` carries `onNotice`.
 - Keeper node: a bare host tries Ollama's `/api/chat` and then `/v1/chat/completions`.
 - On a `di` install: `LLM_BASE_URL=http://127.0.0.1:8090` and `LLM_MODEL=…` in
-  `~/.di/di.env`. Proven on aylmo: no key, no claude on PATH, a turn answered by
+  `~/.di/di.env`. Proven on main-desk: no key, no claude on PATH, a turn answered by
   qwen3-4b through the install's own API.
 
 ### Three offline faults, fixed
@@ -16578,12 +16578,12 @@ file is the record for the next `land`.
 
 ### The network rooms (#352)
 
-- The owner corrected his own entry — "im Gevorg Aram Grigoryan dob_0 … XR director
-  developer" — so `people.json` now reads `Gevorg Aram Grigoryan` / `XR director,
-  developer`, not the deck's older "Gevorg Grigoryan / head of di.iiii, development".
+- The owner corrected his own entry — "im the owner Aram the owner dob_0 … XR director
+  developer" — so `people.json` now reads `the owner Aram the owner` / `XR director,
+  developer`, not the deck's older "the owner / head of di.iiii, development".
 - `people.json` entries take an optional `resume` (`focus[]`, `timeline[{year, items}]`,
   `cvUrl`), rendered by a new `resumeHTML()` in `lib/room-content.mjs` as focus chips
-  plus a year-by-year `<details>` accordion; five team rooms have one (gevorg, emilya,
+  plus a year-by-year `<details>` accordion; five team rooms have one (the owner, emilya,
   syuzi, yeva, taron), condensed from each person's master CV in the studio Drive.
 - `<details>` rather than any scripted accordion because `network-pages.test.js` fails
   any room page containing `<script>`, and every new font-size had to clear the same
@@ -17331,7 +17331,7 @@ manifest). Local's copy is consistent; staging's is not; the audit refuses it co
 `library` and `funding` invite links minted for Emilya (label `Emilya`, link expires
 2026-09-09; the access it grants is permanent). Verified in a clean browser: refused with no
 link, full page with it, still open on a later visit with `?invite=` gone. The previous pair,
-labelled "Gevorg", had expired on 08-26 having never been opened. Details in auto-memory
+labelled "the owner", had expired on 08-26 having never been opened. Details in auto-memory
 `reference_dii_prod_data_writes`.
 
 ## 2026-09-02 — the entry stops lurching when the walker takes over
@@ -17470,8 +17470,8 @@ flying rules. Measured rather than eyeballed — the computed `::after` opacity 
 - The og card for `main` no longer reads "di.iiii — a space on di.iiii." — the platform's
   own space carries the front-door line (`ogRoutes.js`, test added).
 - `spaces/network/` is in git (it was untracked in the shared checkout). The roster's team
-  names match `/suite` (Gevorg Grigoryan, Syuzi Ginosyan). Eight people have a room:
-  the five-person team + Mery Petrosyan, Greta Grigoryan, Shahane Harutyunyan (everyone
+  names match `/suite` (the owner, Syuzi Ginosyan). Eight people have a room:
+  the five-person team + Mery Petrosyan, Greta the owner, Shahane Harutyunyan (everyone
   with a work already standing on prod). Rooms are generated from `people.json` by
   `spaces/network/build.mjs`; ids are `network-<slug>` (ids are global; `yeva-abgaryan`
   and `mery-petrosyan` are wcc's), addresses are `/network/<slug>`. Live on staging AND
@@ -18204,7 +18204,7 @@ always held the answer; nothing on the page ever did.
   site. Hostname first because the answer has to be right on the FIRST paint —
   a mark that changes its mind once a request lands is a mark nobody trusts.
 - The server's `local` flag still wins when it has spoken. A `di up` install
-  reached over a tailnet name (`aylmo.tail1234.ts.net`) is indistinguishable
+  reached over a tailnet name (`main-desk.tail1234.ts.net`) is indistinguishable
   from a public host by address alone, and that is exactly the case where being
   told "hosted" would be a lie. Read from `/api/config`, never
   `/api/auth/session` — learning where you are must not mint a guest session
@@ -18405,7 +18405,7 @@ fix it — trimming it trips the "differs from origin/dev" rule instead.
 ## 2026-08-21 (push sweep) — three branches on this machine and nowhere else
 
 A sweep of every repo on the desktop for committed-but-unpushed work. Four
-repos went out (`di-bo` 20 commits, `br_id_ge-ops`, `di-jet`, `br_id_ge`, plus
+repos went out (`di-bo` 20 commits, `br_id_ge-ops`, `bot-box`, `br_id_ge`, plus
 `di-atlas`'s public/private and sync maps) — none of them di.iiii's, so the
 detail lives with them. What belongs here is the di.iiii half:
 
@@ -20449,7 +20449,7 @@ before); anatomy manifest points the ten computes at their folders and
 fingerprints them; lint at baseline; no type lives in both homes
 (nodeRuntimes.test.js holds it).
 
-# Mobile paper cuts (real-S24 audit, second pass)
+# Mobile paper cuts (real-a phone audit, second pass)
 
 ## What changed
 
@@ -20482,7 +20482,7 @@ Buffer contract unit-proven (empty never commits; blur restores); FAB
 geometry probed on the phone layout (fabBottom 510 < sheetTop 522) and
 LOOKED at — Delete sits above the sheet, material ports visible in card
 and inspector. Real-device confirmation of scroll/keyboard behaviour rides
-the next staging pass with the S24.
+the next staging pass with the a phone.
 
 # The Timeline learns to run (plan 3.9, minimal cues)
 
@@ -20727,11 +20727,11 @@ next editor open — Time restarts near zero at that moment, once.
 Schema 35/35 + parity 23/23, useDocumentClock 3/3, RawEditor 65/65; full
 suite, lint, build, anatomy, wiki, docs checks green (see PR).
 
-# The mobile touch wave (real-S24 audit findings 1–5)
+# The mobile touch wave (real-a phone audit findings 1–5)
 
 ## Findings, from a real-device audit driven over adb
 
-A hands-on audit on the owner's Galaxy S24 (real input stack, screenshots
+A hands-on audit on the owner's Galaxy a phone (real input stack, screenshots
 read) falsified "touch works in the room" and found the phone's real story.
 
 ## What changed
@@ -20750,7 +20750,7 @@ read) falsified "touch works in the room" and found the phone's real story.
    1 — Back navigated to index -1). Now Back at root stays put and re-arms;
    inside a scope it still pops one level. Tests prove both.
 3. New cards landed under the incoming docked inspector (3/3 creations on
-   the S24 occluded). The placement clamp now reserves the lower 45% of the
+   the a phone occluded). The placement clamp now reserves the lower 45% of the
    canvas on coarse pointers. Test proves the clamp.
 4. Wire endpoints: drop radius doubles for touch releases and every port
    dot carries an invisible ~44px halo on coarse pointers.
@@ -20761,7 +20761,7 @@ read) falsified "touch works in the room" and found the phone's real story.
 ## Verified
 
 Suite 2489/2489, lint below baseline, build/anatomy/wiki/docs green.
-REAL-DEVICE CHECK (2026-08-20, S24 over adb, screenshots read): a single
+REAL-DEVICE CHECK (2026-08-20, a phone over adb, screenshots read): a single
 finger swipe moved the seeded cube from [0, 0.5, 0] to [1.11, 0.5, 2.42]
 and opened its inspector — drag, selection and inspector all live on
 hardware. Emulation is proven meaningless for this bug (it never
@@ -22471,7 +22471,7 @@ where a door's name belongs).
 
 ## 2026-08-18 — the owed source.mic look: the probe was reading the meter's track, not its fill
 
-- `npm run verify:capture` on Linux (aylmo), the one real-browser look CURRENT.md still
+- `npm run verify:capture` on Linux (main-desk), the one real-browser look CURRENT.md still
   owed. First run: webcam OK, mic FAIL (flat) — same signature as the suspended-AudioContext
   class the script hunts. A raw getUserMedia+analyser probe against the same page showed the
   fake device delivering varying signal, so the app was suspect — until an A/B isolated it:
@@ -23377,7 +23377,7 @@ worse than a missing one: an agent reads it and redoes finished work.
 
 - **"8 prod spaces still ownerless"** — they are all owned. Queried prod with
   `PROD_API_TOKEN`: `main`, `open`, `azd`, `algovrithm`, `br-id-ge`,
-  `platform-recordar` → `33d8ad04-…` (Gevorg, GitHub account); `wcc`, `beyond-form`
+  `platform-recordar` → `33d8ad04-…` (the owner, GitHub account); `wcc`, `beyond-form`
   → `f2d566f6-…` (Emilya). Matches what the user chose. The second half of that
   line still stands: releasing ownership does **not** revoke the scope grant it
   created, which is deliberate — losing a space shouldn't lock you out of it.
@@ -23583,7 +23583,7 @@ and the datamosh artefacts survive. The packer therefore no longer drops video b
 `--lean` still does, for a 32 MB artifact, and names the cost. The recipe is in the assets
 README so the next clip added matches.
 
-**macOS verified on real hardware** (`di-mac`, M1, macOS 26.5.1 arm64, no node installed) —
+**macOS verified on real hardware** (`server-mac`, M1, macOS 26.5.1 arm64, no node installed) —
 the arm64 + darwin + vendored-node path end to end, `di` resolving in a real zsh login shell,
 `/main`, `/studio` and a reel all 200, uninstall keeping the data. It found two PATH bugs that
 no Linux container could:
@@ -23716,7 +23716,7 @@ untested behind that for a round. Check `mergeable` before reading green as gree
 
 - `docs/deck/di.ii XR studio_network .pdf` was tracked here, on `main` and `dev`, and
   downloadable from `raw.githubusercontent.com` (verified, HTTP 200). Its pages 85–89
-  are CV pages for **five named people** — Gevorg, Emilya, Syuzanna, Taron, Yeva —
+  are CV pages for **five named people** — the owner, Emilya, Syuzanna, Taron, Yeva —
   each carrying a **date of birth, a personal mobile number, a personal email address
   and a photograph**. Found while reading the deck to identify a di.iiii admin account
   nobody had written down.
@@ -24730,7 +24730,7 @@ stuck, work next" — unstick the queue, then take the deferred strategic items.
 ## 2026-07-09 (night) — Live previews on Spaces-hub cards
 
 **Who:** Claude (single agent; UX + shared viewer). Finished the uncommitted SpaceHub
-preview WIP found in the tree, per Gevorg's ask ("preview of spaces which has live").
+preview WIP found in the tree, per the owner's ask ("preview of spaces which has live").
 
 ### Done this session
 
@@ -24754,7 +24754,7 @@ preview WIP found in the tree, per Gevorg's ask ("preview of spaces which has li
 
 ## 2026-07-09 (eve) — Per-space CAS blob store (owner-approved storage change)
 
-**Who:** Claude (single agent; BAE). Storage-format change approved by Gevorg in-session
+**Who:** Claude (single agent; BAE). Storage-format change approved by the owner in-session
 (manifesto non-negotiable #2/#4 gate).
 
 ### Done this session
@@ -25021,7 +25021,7 @@ preview WIP found in the tree, per Gevorg's ask ("preview of spaces which has li
 
 ## 2026-05-10 — Beta graph-first workspace + world node
 
-**Who:** Gevorg + Claude
+**Who:** the owner + Claude
 
 ### Done
 
@@ -25114,7 +25114,7 @@ preview WIP found in the tree, per Gevorg's ask ("preview of spaces which has li
 
 ## 2026-05-04b — Outliner Panel + Tests
 
-**Who:** Gevorg + Claude
+**Who:** the owner + Claude
 
 ### Done this session
 
@@ -25145,7 +25145,7 @@ preview WIP found in the tree, per Gevorg's ask ("preview of spaces which has li
 
 ## 2026-05-04 — geom.plane Texture + Initial Bundle Optimization
 
-**Who:** Gevorg + Claude
+**Who:** the owner + Claude
 
 ### Done this session
 
@@ -25180,7 +25180,7 @@ preview WIP found in the tree, per Gevorg's ask ("preview of spaces which has li
 
 ## 2026-05-04 — Undo/Redo + AI Company Structure + Ollama Integration
 
-**Who:** Gevorg + Claude
+**Who:** the owner + Claude
 
 ### Changes
 
@@ -25297,7 +25297,7 @@ Created `default-scene-test` project and systematically tested all three Beta ed
 
 ## 2026-05-03 — Beta Empty World Affordance
 
-**Who:** Gevorg + Codex
+**Who:** the owner + Codex
 
 ### Done this session
 
@@ -25315,7 +25315,7 @@ Created `default-scene-test` project and systematically tested all three Beta ed
 
 ## 2026-05-03 — Beta Visitor/Creator First Landing
 
-**Who:** Gevorg + Codex
+**Who:** the owner + Codex
 
 ### Done this session
 
@@ -25333,7 +25333,7 @@ Created `default-scene-test` project and systematically tested all three Beta ed
 
 ## 2026-05-03 — Beta Help Flow + User Manual
 
-**Who:** Gevorg + Codex
+**Who:** the owner + Codex
 
 ### Done this session
 
@@ -25351,7 +25351,7 @@ Created `default-scene-test` project and systematically tested all three Beta ed
 
 ## 2026-05-03 — Beta Workflow Strip Layout Fix
 
-**Who:** Gevorg + Codex
+**Who:** the owner + Codex
 
 ### Done this session
 
@@ -25369,7 +25369,7 @@ Created `default-scene-test` project and systematically tested all three Beta ed
 
 ## 2026-05-03 — Handoff Cleanup · Logical Commits · Beta Delete Key
 
-**Who:** Gevorg + Codex
+**Who:** the owner + Codex
 
 ### Done this session
 
@@ -25416,7 +25416,7 @@ Created `default-scene-test` project and systematically tested all three Beta ed
 
 ## 2026-04-29 — AI Task Contract + MCP Guardrails
 
-**Who:** Gevorg + Copilot
+**Who:** the owner + Copilot
 
 ### Done this session
 
@@ -25441,7 +25441,7 @@ Created `default-scene-test` project and systematically tested all three Beta ed
 
 ## 2026-04-29 — File Splits · Dockerfile · Manifesto + Golden Rules
 
-**Who:** Gevorg + Claude
+**Who:** the owner + Claude
 
 ### Done this session
 
@@ -25456,7 +25456,7 @@ Created `default-scene-test` project and systematically tested all three Beta ed
 
 ## 2026-04-28 — Auth · Storage · Bug Sweep · Architecture Direction
 
-**Who:** Gevorg + Claude
+**Who:** the owner + Claude
 
 ### Done this session
 
@@ -25613,7 +25613,7 @@ This file is the handoff. If it is not updated, the next developer starts cold.
 
 ## 2026-04-24 — Node Cards + di.i Visual Identity + Staging Sync
 
-**Who:** Gevorg + Claude
+**Who:** the owner + Claude
 
 ### Done this session
 

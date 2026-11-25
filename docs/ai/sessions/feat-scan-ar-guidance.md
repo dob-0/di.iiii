@@ -10,5 +10,5 @@
   SfMData (rotation order checked with `aliceVision_exportColmap`: column-major) and scales the reconstruction;
   `fit.mjs` / `place.mjs --scale-from`.
 - NOT done: no run on a phone yet — WebXR, depth, the camera picture's orientation and the camera-access resolution
-  (UNMEASURED; the screen and the sidecar print it) wait for the owner's S24. Decision record:
+  (UNMEASURED; the screen and the sidecar print it) wait for the owner's a phone. Decision record:
   `docs/ai/decisions/2026-10-23-scan-ar-guidance.md`.
