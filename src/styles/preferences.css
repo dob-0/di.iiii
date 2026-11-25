@@ -1919,6 +1919,24 @@
 .monitor-chip[aria-pressed="true"] { color: var(--di-text); box-shadow: inset 0 -2px 0 var(--di-cyan); }
 .monitor-chip.tone-warning .monitor-chip-count { color: var(--di-warning); }
 .monitor-chip-count { color: var(--di-text); font-variant-numeric: tabular-nums; }
+/* Info layer: a panel header's square tag, and the board's All / Private / Personal pick (the .monitor-chip buttons above). */
+.monitor-layer-tag {
+    display: inline-flex;
+    align-items: center;
+    margin-left: var(--di-space-2);
+    padding: 0 var(--di-space-2);
+    color: var(--ui-text-muted);
+    background: var(--di-surface);
+    border-radius: 0;
+    font-family: var(--di-mono);
+    font-size: var(--di-text-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+/* The personal tag carries the same 2px inset underline as a pressed chip (no layout, not a drop shadow). */
+.monitor-layer-tag[data-layer="personal"] { color: var(--di-text); box-shadow: inset 0 -2px 0 var(--di-cyan); }
+.monitor-layer-filter { grid-column: 1 / -1; }
 .monitor-chat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--di-space-2); }
 .monitor-chat {
     display: flex;

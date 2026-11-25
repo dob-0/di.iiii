@@ -191,6 +191,14 @@ jobs:
       - name: Check AI docs
         run: npm run docs:ai:check
 
+      # No new personal or private data in this public repo: the generic rule always, the private list when the
+      # LAYER_DENYLIST secret is set (a fork's run has no secret and says so). Added lines of the PR only.
+      - name: Check info layers
+        if: github.event_name == 'pull_request'
+        env:
+          LAYER_DENYLIST: ${{ secrets.LAYER_DENYLIST }}
+        run: node scripts/check-layers.mjs --base origin/${{ github.base_ref }}
+
       # docs/ai/vocabulary.md as a gate by its own name (tools/lint-words.sh: node, not Vale --
       # see its header). Also runs inside the vitest shards; this step names the rule when it fails.
       - name: Check words (vocabulary)

@@ -10,6 +10,7 @@
 // the agent board, because it lists machines and session titles.
 
 const fs = require('node:fs')
+const { tagPanels } = require('../../shared/infoLayers.cjs')
 const fsp = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
@@ -541,7 +542,8 @@ function createMonitorStore({
       generatedAt: new Date(now()).toISOString(),
       host: os.hostname(),
       configured: fs.existsSync(configPath),
-      panels: Object.fromEntries(entries)
+      // every panel (and each machines row) says its layer, so a report and the shared picture pick by tag, not by name
+      panels: tagPanels(Object.fromEntries(entries))
     }
     cache = { at: now(), value, selfBase }
     return value

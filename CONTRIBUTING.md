@@ -161,6 +161,18 @@ before step 7 (`npm run land`, through a PR — CI cannot push its own fold), an
 tier deploy is **skipped while the run looks green**. That is the failure that cost
 ten days in September 2026; `start-check` and the deploy log are the two places it shows.
 
+## Info layers
+
+Every piece of information has one layer: **personal** (one person's own life), **private**
+(a studio team's work) or **di.iiii** (the tools given to everyone). This repo is public and
+carries only the last. `npm run check:layers` (`scripts/check-layers.mjs`) reads the lines a
+branch adds and fails on a tailnet address (the 100.64/10 range) outside test files, and on any
+pattern from a private list kept outside this repo: the file named by `DI_LAYER_DENYLIST`, or
+the `LAYER_DENYLIST` CI secret. With no list it says so and runs the generic rule only. It runs
+in the pre-push checks and in CI, and prints `file:line` and the rule, never the matched text.
+Use made-up values in tests and generic words in docs. The Monitor tags each panel with its
+layer (`shared/infoLayers.cjs`) and its shared picture leaves out everything personal.
+
 ## The five doors
 
 Every door writes through the same APIs, so the rule is the same everywhere: **run

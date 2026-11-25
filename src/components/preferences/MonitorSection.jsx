@@ -16,6 +16,7 @@ import MonitorTasks, { TaskActions } from './MonitorTasks.jsx'
 import MonitorDetail from './MonitorDetail.jsx'
 import PanelLive from './MonitorLive.jsx'
 import { rowMatches, searchCounts } from './monitorDetail.js'
+import { panelLayer, machineRowLayer } from '../../utils/infoLayers.js'
 
 // One page for everything that is going on: machines, the network, agent
 // sessions (every Claude login on the machine), services, pull requests, and
@@ -28,6 +29,9 @@ const POLL_MS = 5000
 const TABS = [['board', 'Board'], ['map', 'Map'], ['workspace', 'Work'], ['parts', 'Parts'], ['versions', 'Versions'], ['tasks', 'Tasks'], ['shared', 'Shared']]
 const FLASH_MS = 2500
 const FULL_KEY = 'di.monitor.full'
+const LAYER_KEY = 'di.monitor.layer'
+// the board's layer filter: everything, the studio's own work, or the personal side (info layers; the same names as shared/infoLayers.cjs)
+const LAYER_PICKS = [['all', 'All'], ['private', 'Private'], ['personal', 'Personal']]
 const SPARK_SAMPLES = 30
 const TAB_KEYS = { 1: 'board', 2: 'map', 3: 'workspace', 4: 'parts', 5: 'versions', 6: 'tasks', 7: 'shared' }
 const KEYS_HELP = [['1  2  3  4  5  6', 'Board, Map, Work, Parts, Versions, Tasks'], ['/', 'Filter everything'], ['f', 'Full screen on or off'], ['Esc', 'Close the inspector, then leave full screen'], ['?', 'This card']]
@@ -39,6 +43,14 @@ const readFull = () => {
         return window.localStorage.getItem(FULL_KEY) === '1'
     } catch { return false }
 }
+const readLayerPick = () => {
+    try {
+        const got = window.localStorage.getItem(LAYER_KEY)
+        return LAYER_PICKS.some(([id]) => id === got) ? got : 'all'
+    } catch { return 'all' }
+}
+// a panel's layer as a small square tag in its header
+const LayerTag = ({ layer }) => <span className="monitor-layer-tag" data-layer={layer}>{layer}</span>
 const heardLabel = (heardAt, nowMs) => {
     if (!heardAt) return 'waiting'
     const s = Math.max(0, Math.floor((nowMs - heardAt) / 1000))
@@ -191,6 +203,7 @@ export default function MonitorSection({ onStats }) {
     // when the page last heard from the server (a snapshot or a heartbeat), not when the data was built
     const [heardAt, setHeardAt] = useState(null)
     const [full, setFull] = useState(readFull)
+    const [layerPick, setLayerPick] = useState(readLayerPick)
     const [keysOpen, setKeysOpen] = useState(false)
     // response times of each tier, the last SPARK_SAMPLES snapshots, kept in the page only
     const [history, setHistory] = useState({})
@@ -364,6 +377,11 @@ export default function MonitorSection({ onStats }) {
         return () => window.removeEventListener('hashchange', onHash)
     }, [])
 
+    const pickLayer = useCallback((id) => {
+        setLayerPick(id)
+        try { window.localStorage.setItem(LAYER_KEY, id) } catch { /* storage blocked: the choice lasts this visit */ }
+    }, [])
+
     const setFullScreen = useCallback((on) => {
         setFull(on)
         try { window.localStorage.setItem(FULL_KEY, on ? '1' : '0') } catch { /* storage blocked: the choice lasts this visit */ }
@@ -392,10 +410,15 @@ export default function MonitorSection({ onStats }) {
     }, [full, selected, keysOpen, setFullScreen])
 
     const panels = useMemo(() => snap?.panels || {}, [snap])
+    // a row says its own layer; an old report without one is read by the same rule the server uses
+    const rowLayerOf = (row) => row.layer || machineRowLayer(row)
     const machines = useMemo(
-        () => (panels.machines?.rows || []).filter((m) => rowMatches(query, m)),
-        [panels.machines, query]
+        () => (panels.machines?.rows || []).filter((m) => rowMatches(query, m) && (layerPick === 'all' || (m.layer || machineRowLayer(m)) === layerPick)),
+        [panels.machines, query, layerPick]
     )
+    // a panel is shown when its layer is the pick; machines also when it holds a row of that layer (a phone is personal)
+    const inPick = (name) => layerPick === 'all' || (panels[name]?.layer || panelLayer(name)) === layerPick || (name === 'machines' && machines.length > 0)
+    const tag = (name) => <LayerTag layer={panels[name]?.layer || panelLayer(name)} />
     const credits = useMemo(
         () => (panels.credits?.rows || []).filter((c) => rowMatches(query, c)),
         [panels.credits, query]
@@ -482,6 +505,7 @@ export default function MonitorSection({ onStats }) {
                 dots: (p.services?.rows || []).map((sv) => dot(sv.active === 'failed' ? 'danger' : 'success', `${sv.unit}: ${sv.active}`)) }
         ]
     }, [panels, failed])
+    const pickedTiles = countTiles.filter((t) => inPick(t.panel === 'prs' ? 'pullRequests' : t.panel))
 
     // a strip item opens what it is about: a chat, a tier
     const openIssue = (issue) => {
@@ -567,7 +591,7 @@ export default function MonitorSection({ onStats }) {
                     </div>
 
                     <div className="monitor-area-counts">
-                        <CountTiles tiles={countTiles} flashing={flashing} onPick={jumpTo} />
+                        <CountTiles tiles={pickedTiles} flashing={flashing} onPick={jumpTo} />
                     </div>
                 </div>
 
@@ -615,7 +639,12 @@ export default function MonitorSection({ onStats }) {
                         </ModuleSection>
                     ) : null}
                     {tab === 'board' ? (<>
-                    <div data-panel="machines"><ModuleSection title="Machines" subtitle="Tailnet — who is on, who was last seen">
+                    <div className="monitor-chips monitor-layer-filter" role="group" aria-label="Show information layer" data-layer-pick={layerPick}>
+                        {LAYER_PICKS.map(([id, label]) => (
+                            <button key={id} type="button" className="monitor-chip" aria-pressed={layerPick === id} data-layer-filter={id} onClick={() => pickLayer(id)}>{label}</button>
+                        ))}
+                    </div>
+                    {inPick('machines') ? <div data-panel="machines"><ModuleSection actions={tag('machines')} title="Machines" subtitle="Tailnet — who is on, who was last seen">
                         <PanelLive name="machines" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.machines} empty="No machines reported." />
                         <AccountNote account={snap?.account} />
@@ -624,13 +653,13 @@ export default function MonitorSection({ onStats }) {
                                 <Row key={m.id} id={`m:${m.id}`} tone={m.online ? 'success' : 'muted'} flash={flash(`m:${m.id}`)}
                                     selected={selected?.kind === 'machine' && selected.id === m.id} onSelect={() => pick('machine', m)}>
                                     <span className="monitor-name">{m.name}{m.self ? ' · this' : ''}</span>
-                                    <span className="monitor-meta">{m.online ? 'online' : `off · ${timeAgo(m.lastSeen)}`} · {m.os || '—'}</span>
+                                    <span className="monitor-meta">{m.online ? 'online' : `off · ${timeAgo(m.lastSeen)}`} · {m.os || '—'}{rowLayerOf(m) === 'personal' ? ' · personal' : ''}</span>
                                 </Row>
                             ))}
                         </div>
-                    </ModuleSection></div>
+                    </ModuleSection></div> : null}
 
-                    <div data-panel="credits"><ModuleSection title="Credits" subtitle="Claude plans, API keys, Ollama, Colab — what is ready to run our work">
+                    {inPick('credits') ? <div data-panel="credits"><ModuleSection actions={tag('credits')} title="Credits" subtitle="Claude plans, API keys, Ollama, Colab — what is ready to run our work">
                         <PanelLive name="credits" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.credits} empty={panels.credits?.configured ? 'No credits reported.' : ''} />
                         {panels.credits?.ok && !panels.credits.configured ? <div className="monitor-note">This machine does not report credits (no credits feed in its monitor config).</div> : null}
@@ -643,9 +672,9 @@ export default function MonitorSection({ onStats }) {
                                 </Row>
                             ))}
                         </div>
-                    </ModuleSection></div>
+                    </ModuleSection></div> : null}
 
-                    <div data-panel="network"><ModuleSection title="Network" subtitle={machinesSubtitle(panels.network, 'Tiers and addresses we probe')}>
+                    {inPick('network') ? <div data-panel="network"><ModuleSection actions={tag('network')} title="Network" subtitle={machinesSubtitle(panels.network, 'Tiers and addresses we probe')}>
                         <PanelLive name="network" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.network} empty="No probes configured." />
                         <div className="monitor-grid">
@@ -657,9 +686,9 @@ export default function MonitorSection({ onStats }) {
                                 </Row>
                             ))}
                         </div>
-                    </ModuleSection></div>
+                    </ModuleSection></div> : null}
 
-                    <div data-panel="connected"><ModuleSection title="Connected things" subtitle="Lasers, lights, show machine, video, OSC, visiting apps">
+                    {inPick('connected') ? <div data-panel="connected"><ModuleSection actions={tag('connected')} title="Connected things" subtitle="Lasers, lights, show machine, video, OSC, visiting apps">
                         <PanelLive name="connected" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.connected} empty="Nothing reported." />
                         <div className="monitor-grid">
@@ -671,9 +700,9 @@ export default function MonitorSection({ onStats }) {
                                 </Row>
                             ))}
                         </div>
-                    </ModuleSection></div>
+                    </ModuleSection></div> : null}
 
-                    <div data-panel="presence"><ModuleSection title="People now" subtitle={`${panels.presence?.people ?? 0} connected in ${panels.presence?.places ?? 0} space${panels.presence?.places === 1 ? '' : 's'} or project${panels.presence?.places === 1 ? '' : 's'}`}>
+                    {inPick('presence') ? <div data-panel="presence"><ModuleSection actions={tag('presence')} title="People now" subtitle={`${panels.presence?.people ?? 0} connected in ${panels.presence?.places ?? 0} space${panels.presence?.places === 1 ? '' : 's'} or project${panels.presence?.places === 1 ? '' : 's'}`}>
                         <PanelLive name="presence" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.presence} empty="Nobody is connected right now." />
                         <div className="monitor-grid">
@@ -685,9 +714,9 @@ export default function MonitorSection({ onStats }) {
                                 </Row>
                             ))}
                         </div>
-                    </ModuleSection></div>
+                    </ModuleSection></div> : null}
 
-                    <div data-panel="agents"><ModuleSection title="Agents" subtitle={`${panels.agents?.live ?? 0} live of ${panels.agents?.total ?? 0} sessions · ${agentsMachinesText(panels.agents?.machines)}accounts: ${(panels.agents?.accounts || []).join(', ') || 'none found'}`}>
+                    {inPick('agents') ? <div data-panel="agents"><ModuleSection actions={tag('agents')} title="Agents" subtitle={`${panels.agents?.live ?? 0} live of ${panels.agents?.total ?? 0} sessions · ${agentsMachinesText(panels.agents?.machines)}accounts: ${(panels.agents?.accounts || []).join(', ') || 'none found'}`}>
                         <PanelLive name="agents" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.agents} empty="No live agent sessions." />
                         {(panels.agents?.remotes || []).filter((r) => !r.ok).map((r) => (
@@ -710,9 +739,9 @@ export default function MonitorSection({ onStats }) {
                                 </div>
                             </div>
                         ))}
-                    </ModuleSection></div>
+                    </ModuleSection></div> : null}
 
-                    <ModuleSection title="Tasks and shows" subtitle={feedsSubtitle(panels)}>
+                    {inPick('tasks') ? <ModuleSection actions={tag('tasks')} title="Tasks and shows" subtitle={feedsSubtitle(panels)}>
                         {!snap?.configured && !(panels.tasks?.rows?.length || panels.shows?.rows?.length) ? (
                             <div className="monitor-note">No feeds yet. Add feeds with panel &ldquo;tasks&rdquo; or &ldquo;shows&rdquo; to ~/.di/monitor.json — a command, a file or a URL each.</div>
                         ) : null}
@@ -721,9 +750,9 @@ export default function MonitorSection({ onStats }) {
                                 <MonitorFeed key={`${key}:${feedRow.id}`} row={feedRow} kind={key} query={query} ago={(iso) => timeAgo(iso)} />
                             )))}
                         </div>
-                    </ModuleSection>
+                    </ModuleSection> : null}
 
-                    <div data-panel="services"><ModuleSection title="Services" subtitle={machinesSubtitle(panels.services, `${panels.services?.running ?? 0} running · ${failed} failed (failed first)`)}>
+                    {inPick('services') ? <div data-panel="services"><ModuleSection actions={tag('services')} title="Services" subtitle={machinesSubtitle(panels.services, `${panels.services?.running ?? 0} running · ${failed} failed (failed first)`)}>
                         <PanelLive name="services" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.services} empty="No services reported." />
                         <div className="monitor-grid">
@@ -735,9 +764,9 @@ export default function MonitorSection({ onStats }) {
                                 </Row>
                             ))}
                         </div>
-                    </ModuleSection></div>
+                    </ModuleSection></div> : null}
 
-                    <div data-panel="prs"><ModuleSection title="Pull requests" subtitle="Open work on this repo">
+                    {inPick('pullRequests') ? <div data-panel="prs"><ModuleSection actions={tag('pullRequests')} title="Pull requests" subtitle="Open work on this repo">
                         <PanelLive name="pullRequests" ages={ages} nowMs={nowMs} paused={paused} />
                         <PanelNote panel={panels.pullRequests} empty="No open pull requests." />
                         <div className="monitor-grid">
@@ -749,7 +778,7 @@ export default function MonitorSection({ onStats }) {
                                 </Row>
                             ))}
                         </div>
-                    </ModuleSection></div>
+                    </ModuleSection></div> : null}
                     </>) : null}
                 </div>
 

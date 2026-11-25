@@ -102,7 +102,7 @@ class FakeEventSource {
 }
 
 describe('MonitorSection', () => {
-    beforeEach(() => { getMonitor.mockReset() })
+    beforeEach(() => { getMonitor.mockReset(); try { window.localStorage.removeItem('di.monitor.layer') } catch { /* none */ } })
     afterEach(() => { vi.useRealTimers() })
 
     it('shows its data under StrictMode (mount, unmount, mount again)', async () => {
@@ -110,6 +110,42 @@ describe('MonitorSection', () => {
         render(<React.StrictMode><MonitorSection /></React.StrictMode>)
         await waitFor(() => expect(screen.getByText('2/3')).toBeTruthy())
         expect(screen.queryByText(/loading…/)).toBeNull()
+    })
+
+    describe('info layers', () => {
+        const layered = () => {
+            const base = snapshot()
+            return { ...base, panels: { ...base.panels,
+                machines: { ...base.panels.machines, rows: [...base.panels.machines.rows.map((r) => ({ ...r, layer: 'private' })), { id: '100.1.1.9', name: 'handset', os: 'android', ip: '100.1.1.9', online: true, lastSeen: null, tx: 0, rx: 0, layer: 'personal' }] } } }
+        }
+        const panelNames = () => [...document.querySelectorAll('[data-panel]')].map((n) => n.getAttribute('data-panel'))
+        it('each panel header shows its layer and the pick is All at first', async () => {
+            getMonitor.mockResolvedValue(layered())
+            render(<MonitorSection />)
+            await waitFor(() => expect(screen.getByText('Build the monitor')).toBeTruthy())
+            expect(document.querySelector('[data-panel="agents"] .monitor-layer-tag').getAttribute('data-layer')).toBe('private')
+            expect(document.querySelector('[data-panel="credits"] .monitor-layer-tag').getAttribute('data-layer')).toBe('personal')
+            expect(document.querySelector('[data-layer-pick]').getAttribute('data-layer-pick')).toBe('all')
+            expect(screen.getByText('handset')).toBeTruthy()
+        })
+
+        it('Personal hides the private panels and rows and is remembered; Private hides the credits and the phone', async () => {
+            getMonitor.mockResolvedValue(layered())
+            const first = render(<MonitorSection />)
+            await waitFor(() => expect(screen.getByText('Build the monitor')).toBeTruthy())
+            fireEvent.click(document.querySelector('[data-layer-filter="personal"]'))
+            expect(panelNames().sort()).toEqual(['credits', 'machines'])
+            expect(screen.getByText('handset')).toBeTruthy()
+            expect(screen.queryByText('r-di')).toBeNull()
+            expect(window.localStorage.getItem('di.monitor.layer')).toBe('personal')
+            first.unmount()
+            render(<MonitorSection />)
+            await waitFor(() => expect(document.querySelector('[data-layer-pick]').getAttribute('data-layer-pick')).toBe('personal'))
+            fireEvent.click(document.querySelector('[data-layer-filter="private"]'))
+            expect(panelNames()).not.toContain('credits')
+            expect(screen.queryByText('handset')).toBeNull()
+            expect(screen.getByText('r-di')).toBeTruthy()
+        })
     })
 
     it('shows every panel and greys only the broken one', async () => {
