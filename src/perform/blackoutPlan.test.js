@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { flagsToForgetAfterLift, planBlackoutPress } from './blackoutPlan.js'
+import { flagsToForgetAfterLift, isBlackedOut, planBlackoutPress } from './blackoutPlan.js'
 
 const base = { hasDeck: true, deckMaster: 1, lightOwn: true, laserUp: false, laserSetHere: false }
 
@@ -29,6 +29,34 @@ describe('planBlackoutPress', () => {
         expect(none.sends).toEqual([])
         const set = planBlackoutPress({ ...base, lightOwn: false, laserUp: true, laserSetHere: true, blackedOut: true, restore: 1, pending: {} })
         expect(set.sends).toEqual([['LASER', 'off']])
+    })
+})
+
+describe('isBlackedOut: a press darkens while anything reachable is still live (audit risk 1)', () => {
+    const idle = { restore: null, hasDeck: true, deckMaster: 1, lightOwn: true, lightBlackout: false, laserUp: true, laserBlack: false, lightSetHere: false, laserSetHere: false, pendingCount: 0 }
+    it('nothing dark: not blacked out, a press darkens', () => {
+        expect(isBlackedOut(idle)).toBe(false)
+    })
+    it('the light desk was left in blackout but the picture and laser are live: still a DARKEN press, never a lift', () => {
+        expect(isBlackedOut({ ...idle, lightBlackout: true })).toBe(false)
+        const plan = planBlackoutPress({ ...idle, blackedOut: isBlackedOut({ ...idle, lightBlackout: true }), laserSetHere: false })
+        expect(plan.deck).toEqual({ level: 0, keep: 1 })
+        expect(plan.sends).toEqual([['LIGHT', 'on'], ['LASER', 'on']])
+    })
+    it('picture dark with a kept level, but the light is live (half blackout): a press finishes the blackout and keeps the REAL level', () => {
+        const state = { ...idle, restore: 0.8, deckMaster: 0 }
+        expect(isBlackedOut(state)).toBe(false)
+        expect(planBlackoutPress({ ...state, blackedOut: false }).deck).toEqual({ level: 0, keep: 0.8 })
+    })
+    it('everything reachable is dark and a blackout of ours is in progress: it is blacked out, a press lifts', () => {
+        expect(isBlackedOut({ ...idle, restore: 0.8, deckMaster: 0, lightBlackout: true, laserBlack: true })).toBe(true)
+    })
+    it('a desk that is not reachable never counts as live', () => {
+        expect(isBlackedOut({ ...idle, restore: 0.8, deckMaster: 0, lightOwn: false, laserUp: false })).toBe(true)
+    })
+    it('after a reload the blackout kept in the document lifts the laser too', () => {
+        const plan = planBlackoutPress({ ...idle, restore: 0.8, deckMaster: 0, blackedOut: true, laserSetHere: false || (0.8 !== null && true) })
+        expect(plan.sends).toContainEqual(['LASER', 'off'])
     })
 })
 

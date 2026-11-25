@@ -24,7 +24,7 @@ export const BLEND_MODES = ['Mix', 'Add', 'Screen', 'Multiply', 'Difference', 'S
 // Index order is what top.clip reads.
 export const CLIP_MODES = ['Loop', 'Bounce', 'Once']
 export const DEFAULT_COLUMNS = 6
-export const MAX_COLUMNS = 16
+export const MAX_COLUMNS = 32
 export const MAX_LAYERS = 8
 export const MIN_BPM = 20
 export const MAX_BPM = 300
@@ -76,8 +76,8 @@ export const normalizeClip = (clip) => {
 // the master's). `main` is what the panel and MIDI show first: numeric params
 // become sliders, a colour param a colour input. See PROGRESS.md (the feat-deck-effects entry).
 
-// One of every effect fits on a stack (20 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
-export const MAX_EFFECTS = 20
+// One of every effect fits on a stack (21 kinds). It was 8, and the 9th was refused without a word (N3600, N3604).
+export const MAX_EFFECTS = 25
 export const EFFECT_TYPES = {
     'top.level': { main: ['gain', 'brightness', 'gamma'] },
     'top.tint': { main: ['amount', 'bright'] },
@@ -88,7 +88,7 @@ export const EFFECT_TYPES = {
     'top.freeze': { main: ['hold'] },
     'top.silhouette': { main: ['threshold', 'soft', 'invert', 'colour', 'back', 'drift', 'flash'] },
     'top.lineart': { main: ['bands', 'width', 'colour'] },
-    'top.matte': { main: ['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert'] },
+    'top.matte': { main: ['soft', 'drift', 'echo', 'colour', 'back', 'shade', 'fill', 'invert', 'keep', 'refine'] },
     'top.glitch': { main: ['amount', 'speed', 'split'] },
     'top.blocks': { main: ['amount', 'size', 'rate', 'shift', 'hold'] },
     'top.pixelate': { main: ['size', 'levels', 'grey'] },
@@ -98,7 +98,12 @@ export const EFFECT_TYPES = {
     'top.key': { main: ['mode', 'colour', 'tolerance', 'soft'] },
     'top.lookup': { main: ['shadows', 'mids', 'highs', 'amount'] },
     'top.slope': { main: ['strength', 'angle', 'size', 'keep'] },
-    'top.glow': { main: ['threshold', 'radius', 'amount'] }
+    'top.glow': { main: ['threshold', 'radius', 'amount'] },
+    'top.depthscan': { main: ['depth', 'bands', 'scan', 'rim', 'haze', 'relief', 'speed', 'invert', 'cut', 'flash', 'tone', 'hud', 'sensor', 'grain', 'grid'] },
+    'top.cuts': { main: ['rate', 'zoom', 'move', 'mirror', 'flash', 'bars', 'burst', 'lens', 'tiles'] },
+    'top.particles': { main: ['size', 'fly', 'reach', 'speed', 'angle', 'dot', 'floor', 'keep', 'lines', 'streak'] },
+    'top.angles': { main: ['screens', 'hold', 'zoom', 'gap'] },
+    'top.hologram': { main: ['amount', 'rows', 'relief', 'points', 'turn', 'beam', 'speed', 'floor', 'white'] }
 }
 export const EFFECT_TYPE_IDS = Object.keys(EFFECT_TYPES)
 export const effectLabel = (type) => TOP_OPERATORS[type]?.label || type
@@ -126,6 +131,56 @@ export const normalizeEffects = (raw) => {
     return raw.map((item) => normalizeEffect(item, taken)).filter(Boolean).slice(0, MAX_EFFECTS)
 }
 
+// A column's LOOK: what its launch also sets on the master's effects, by effect type:
+//   { 'top.depthscan': { on: true, mix: 1, params: { cut: 1, flash: 6 } } }
+// Only the named effects and the named values change; an effect type the master does not carry is skipped.
+const lookOf = (raw) => {
+    if (!isObject(raw)) return null
+    const out = {}
+    for (const [type, patch] of Object.entries(raw)) {
+        // `layers`: the level and the blend a layer takes with the scene, by layer name ("BODY"):
+        //   { layers: { BODY: { opacity: 1, blend: '4' } } }
+        if (type === 'layers' && isObject(patch)) {
+            const layers = {}
+            for (const [name, value] of Object.entries(patch)) {
+                if (!isObject(value)) continue
+                const item = {}
+                if (Number.isFinite(value.opacity)) item.opacity = clamp(value.opacity, 0, 1, 1)
+                if (value.blend !== undefined) item.blend = choiceOf(value.blend, BLEND_MODES.length)
+                if (Object.keys(item).length) layers[name] = item
+            }
+            if (Object.keys(layers).length) out.layers = layers
+            continue
+        }
+        if (!Object.prototype.hasOwnProperty.call(EFFECT_TYPES, type) || !isObject(patch)) continue
+        const item = {}
+        if (typeof patch.on === 'boolean') item.on = patch.on
+        if (Number.isFinite(patch.mix)) item.mix = clamp(patch.mix, 0, 1, 1)
+        if (isObject(patch.params)) {
+            const params = Object.fromEntries(Object.entries(patch.params).filter(([, value]) => Number.isFinite(value)))
+            if (Object.keys(params).length) item.params = params
+        }
+        if (Object.keys(item).length) out[type] = item
+    }
+    return Object.keys(out).length ? out : null
+}
+
+const applyLook = (effects, look) => (look
+    ? effects.map((effect) => {
+        const patch = look[effect.type]
+        if (!patch) return effect
+        return {
+            ...effect,
+            on: patch.on ?? effect.on,
+            mix: patch.mix ?? effect.mix,
+            params: patch.params ? resolveTopParams(effect.type, { ...effect.params, ...patch.params }) : effect.params
+        }
+    })
+    : effects)
+
+// "3 CAM" -> "CAM": a look names a layer without its number.
+const plainLayerName = (name) => String(name || '').replace(/^\s*\d+\s*[.:)-]?\s+/, '').trim()
+
 const layerIdFor = (index) => `layer-${index + 1}`
 
 export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
@@ -139,12 +194,23 @@ export const createLayer = (index = 0, columns = DEFAULT_COLUMNS) => ({
     bypass: false,
     solo: false,
     side: '',
+    // Laid on after the master's effects (a title over the finished picture).
+    over: false,
     effects: [],
     clips: Array.from({ length: columns }, () => null)
 })
 
 // A stored cue id: a non-empty string, anything else reads as no cue.
 const cueIdOf = (value) => (typeof value === 'string' ? value.trim() : '')
+
+// The grade panel: three numbers on the master level. level = gain, exposure in stops, contrast around mid grey.
+export const GRADE_PARAMS = [
+    { name: 'level', label: 'Level', min: 0, max: 2, step: 0.01, neutral: 1 },
+    { name: 'contrast', label: 'Contrast', min: 0, max: 3, step: 0.01, neutral: 1 },
+    { name: 'exposure', label: 'Exposure', min: -3, max: 3, step: 0.05, neutral: 0 }
+]
+export const GRADE_NEUTRAL = Object.freeze(Object.fromEntries(GRADE_PARAMS.map((p) => [p.name, p.neutral])))
+export const normalizeGrade = (raw) => Object.fromEntries(GRADE_PARAMS.map((p) => [p.name, clamp(isObject(raw) ? raw[p.name] : undefined, p.min, p.max, p.neutral)]))
 
 /** A fresh deck. Layer ids are stable per position, so every new deck reads the same. */
 export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAULT_BPM } = {}) => {
@@ -155,6 +221,8 @@ export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAUL
         // phase anchor of src/timeline/showClock.js. 0 = never tapped.
         epoch: 0,
         master: 1,
+        // The grade of the finished picture (the master level's gain / contrast / exposure), whatever scene plays.
+        grade: { ...GRADE_NEUTRAL },
         // The master's effect stack: after the last layer, before the master level.
         effects: [],
         // The crossfader, 0 = all A, 1 = all B; layers with side '' ignore it.
@@ -162,6 +230,8 @@ export const createDeck = ({ layers = 3, columns = DEFAULT_COLUMNS, bpm = DEFAUL
         columns: cols,
         // The light cue (an id from the project's cues) each column also fires; '' = none.
         columnCues: Array.from({ length: cols }, () => ''),
+        // The look each column also sets when it is launched: master effects by type, null = leaves them alone.
+        columnLooks: Array.from({ length: cols }, () => null),
         layers: Array.from({ length: Math.round(clamp(layers, 1, MAX_LAYERS, 3)) }, (_, index) => createLayer(index, cols))
     }
 }
@@ -192,6 +262,8 @@ export const normalizeDeck = (raw) => {
             bypass: layer.bypass === true,
             solo: layer.solo === true,
             side: sideOf(layer.side),
+            // OVER: the layer is laid on after the master's effects (a title over the finished picture).
+            over: layer.over === true,
             effects: normalizeEffects(layer.effects),
             clips
         }
@@ -200,10 +272,12 @@ export const normalizeDeck = (raw) => {
         bpm: clamp(raw.bpm, MIN_BPM, MAX_BPM, DEFAULT_BPM),
         epoch: sanitizeEpoch(raw.epoch),
         master: clamp(raw.master, 0, 1, 1),
+        grade: normalizeGrade(raw.grade),
         effects: normalizeEffects(raw.effects),
         crossfade: clamp(raw.crossfade, 0, 1, 0.5),
         columns,
         columnCues: Array.from({ length: columns }, (_, column) => cueIdOf(Array.isArray(raw.columnCues) ? raw.columnCues[column] : '')),
+        columnLooks: Array.from({ length: columns }, (_, column) => lookOf(Array.isArray(raw.columnLooks) ? raw.columnLooks[column] : null)),
         layers: layers.length ? layers : createDeck({ columns }).layers
     }
 }
@@ -278,6 +352,7 @@ export const addColumn = (deck) => {
     if (next.columns >= MAX_COLUMNS) return next
     next.columns += 1
     next.columnCues = [...next.columnCues, '']
+    next.columnLooks = [...next.columnLooks, null]
     next.layers = next.layers.map((layer) => ({ ...layer, clips: [...layer.clips, null] }))
     return next
 }
@@ -382,6 +457,31 @@ export const triggerColumn = (deck, column) => {
     next.layers = next.layers.map((layer) => (layer.clips[column]
         ? { ...layer, active: column, trigger: layer.trigger + 1 }
         : { ...layer, active: -1 }))
+    const look = next.columnLooks[column]
+    next.effects = applyLook(next.effects, look)
+    if (look?.layers) {
+        next.layers = next.layers.map((layer) => {
+            const patch = look.layers[plainLayerName(layer.name)]
+            return patch ? { ...layer, ...patch } : layer
+        })
+    }
+    return next
+}
+
+/** One value of one master effect, by effect type (a key held on a controller sets it to 1, its release to 0). */
+export const setMasterParam = (deck, type, key, value) => {
+    const next = normalizeDeck(deck)
+    next.effects = next.effects.map((effect) => (effect.type === type
+        ? { ...effect, params: resolveTopParams(effect.type, { ...effect.params, [key]: value }) }
+        : effect))
+    return next
+}
+
+/** The look a column sets when it is launched (see lookOf), or null for none. A column that is not there changes nothing. */
+export const setColumnLook = (deck, column, look) => {
+    const next = normalizeDeck(deck)
+    if (!Number.isInteger(column) || column < 0 || column >= next.columns) return next
+    next.columnLooks = next.columnLooks.map((item, index) => (index === column ? lookOf(look) : item))
     return next
 }
 
@@ -389,6 +489,8 @@ export const clearLayer = (deck, layerIndex) => withLayer(deck, layerIndex, (lay
 
 export const setOpacity = (deck, layerIndex, opacity) => withLayer(deck, layerIndex, (layer) => ({ ...layer, opacity: clamp(opacity, 0, 1, layer.opacity) }))
 
+/** OVER on / off: laid on after the master's effects (a title on top), or under them like any layer (the title takes the look). */
+export const setOver = (deck, layerIndex, over) => withLayer(deck, layerIndex, (layer) => ({ ...layer, over: over === true }))
 export const setBlend = (deck, layerIndex, blend) => withLayer(deck, layerIndex, (layer) => ({ ...layer, blend: choiceOf(blend, BLEND_MODES.length, layer.blend) }))
 
 export const renameLayer = (deck, layerIndex, name) => withLayer(deck, layerIndex, (layer) => ({ ...layer, name: String(name || '').trim() || layer.name }))
@@ -433,6 +535,15 @@ export const setMaster = (deck, master) => {
     return next
 }
 
+/** One grade number (level / contrast / exposure); `name` null puts all three back to neutral. */
+export const setGrade = (deck, name, value) => {
+    const next = normalizeDeck(deck)
+    if (name === null) { next.grade = { ...GRADE_NEUTRAL }; return next }
+    if (!GRADE_PARAMS.some((p) => p.name === name)) return next
+    next.grade = normalizeGrade({ ...next.grade, [name]: value })
+    return next
+}
+
 /** The deck's own tempo, and (when given) where its beat is. */
 export const setBpm = (deck, bpm, epoch = undefined) => {
     const next = normalizeDeck(deck)
@@ -473,6 +584,28 @@ export const cameraNodeId = (deckId, label, device = '') => {
     return `${deckId}::cam-${h.toString(36)}`
 }
 
+// An effect that is on but cannot change the picture (its params make the operator pass the input
+// through): runStack builds no nodes for it. A missing param reads as 0.
+export const effectIdle = (effect) => {
+    const p = effect?.params || {}
+    const n = (key) => Number(p[key] ?? 0)
+    if (Number(effect?.mix) <= 0) return true
+    switch (effect?.type) {
+        case 'top.hologram':
+            return n('amount') <= 0
+        case 'top.angles':
+            return n('screens') < 1.5 && n('multi') < 0.5
+        case 'top.freeze':
+            return n('hold') < 0.5
+        case 'top.cuts':
+            return ['zoom', 'move', 'mirror', 'flash', 'bars', 'burst', 'lens'].every((key) => n(key) <= 0) &&
+                n('tiles') < 1.5 &&
+                ['hit', 'punch', 'flip', 'neg', 'strobe', 'black', 'multi'].every((key) => n(key) < 0.5)
+        default:
+            return false
+    }
+}
+
 /**
  * A deck node → the picture operators that make its picture.
  *
@@ -510,10 +643,14 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
     // A stack after `input`: each ON effect is the operator plus a Blend (Mix mode:
     // a = what came in, b = the effect, Amount = the effect's mix = dry/wet).
     // Off or empty adds nothing. Returns the id the next stage reads.
-    const runStack = (stack, input, effectIdOf, mixIdOf, unseen = false) => {
+    const runStack = (stack, input, effectIdOf, mixIdOf, unseen = false, second = null) => {
         let current = input
+        // where a Body after this point looks for the person: the stack's own picture, or the wall of
+        // screens once an Angles effect has re-framed it (the mask has to fit what it paints over)
+        let origin = input
         for (const effect of stack) {
             if (!effect.on) continue
+            if (effectIdle(effect)) continue
             const fx = effectIdOf(effect.id)
             const wet = mixIdOf(effect.id)
             const matte = Boolean(TOP_OPERATORS[effect.type]?.matte)
@@ -525,17 +662,29 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
             wires.push({ from: current, to: fx, port: 'a' })
             // Body looks for the person in what the stack started from (the layer's
             // own picture, before its other effects), and paints over `a`.
-            if (matte) wires.push({ from: input, to: fx, port: 'b' })
-            nodes.push({ id: wet, type: 'top.blend', values: { machine, mode: '0', mix: effect.mix } })
-            wires.push({ from: current, to: wet, port: 'a' })
-            wires.push({ from: fx, to: wet, port: 'b' })
-            current = wet
+            if (matte) wires.push({ from: origin, to: fx, port: 'b' })
+            // Angles shows the SECOND camera on every other screen: the first other layer's source (its fader
+            // may be down, the source is there all the same). No second source: the same picture, other framings.
+            const angles = Boolean(TOP_OPERATORS[effect.type]?.second)
+            if (angles) wires.push({ from: second || current, to: fx, port: 'b' })
+            // At full mix the Blend would only copy the effect: the next stage reads the operator itself.
+            if (effect.mix >= 1) {
+                current = fx
+            } else {
+                nodes.push({ id: wet, type: 'top.blend', values: { machine, mode: '0', mix: effect.mix } })
+                wires.push({ from: current, to: wet, port: 'a' })
+                wires.push({ from: fx, to: wet, port: 'b' })
+                current = wet
+            }
+            if (angles) origin = current
         }
         return current
     }
     let below = null
+    // the sources of the layers under the master, bottom first (the master's Angles takes its second camera here)
+    const sources = []
     const anySolo = deck.layers.some((layer) => layer.solo)
-    deck.layers.forEach((layer, index) => {
+    const lay = (layer, index) => {
         // Bypass, solo, the crossfader and opacity 0 silence a layer by its blend's
         // mix, NEVER by dropping its nodes: a dropped source is destroyed and made
         // again (a camera closes and reopens, a video restarts). The source and the
@@ -571,6 +720,7 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
                 }
             })
         }
+        if (!layer.over) sources.push(source)
         const blend = blendNodeId(deckId, index)
         const blendNode = { id: blend, type: 'top.blend', values: { machine, mode: layer.blend, mix: opacity } }
         // An input clip's blend remembers which input it plays, so the source switch can silence it
@@ -580,13 +730,16 @@ export const expandDeck = (deckNode, wiresIntoDeck = []) => {
         if (below) wires.push({ from: below, to: blend, port: 'a' })
         wires.push({ from: runStack(layer.effects, source, (id) => layerEffectNodeId(deckId, index, id), (id) => layerEffectMixNodeId(deckId, index, id), opacity <= 0), to: blend, port: 'b' })
         below = blend
-    })
+    }
+    deck.layers.forEach((layer, index) => { if (!layer.over) lay(layer, index) })
 
-    if (below) below = runStack(deck.effects, below, (id) => masterEffectNodeId(deckId, id), (id) => masterEffectMixNodeId(deckId, id))
+    if (below) below = runStack(deck.effects, below, (id) => masterEffectNodeId(deckId, id), (id) => masterEffectMixNodeId(deckId, id), false, sources.find((id) => id !== sources[0]) || null)
+    // The OVER layers go on last, in their own order: the master's effects never touch them.
+    deck.layers.forEach((layer, index) => { if (layer.over) lay(layer, index) })
     nodes.push({
         id: master,
         type: 'top.level',
-        values: { machine, threshold: 0, gain: 1, brightness: 0, gamma: 1, invert: false, opacity: deck.master }
+        values: { machine, threshold: 0, gain: deck.grade.level, brightness: 0, gamma: 1, exposure: deck.grade.exposure, contrast: deck.grade.contrast, invert: false, opacity: deck.master }
     })
     if (below) wires.push({ from: below, to: master, port: 'a' })
 

@@ -1,3 +1,4 @@
+import { applyNodeValueOps } from './nodeValueOps.js'
 import { useMemo, useReducer } from 'react'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
 
@@ -66,7 +67,8 @@ export function projectStoreReducer(state, action) {
                 loadError: action.error || 'Failed to load project.'
             }
         case 'apply-ops': {
-            const document = applyProjectOps(state.document, action.ops || [])
+            // a batch that only writes node values (a played deck) takes the short way: nodeValueOps.js
+            const document = applyNodeValueOps(state.document, action.ops || []) || applyProjectOps(state.document, action.ops || [])
             return {
                 ...state,
                 version: Number.isFinite(action.version) ? action.version : state.version,

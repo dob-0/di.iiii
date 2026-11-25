@@ -149,6 +149,9 @@ void main() {
             param('gain', 'Gain', 1, 0, 20, 0.1),
             param('brightness', 'Brightness', 0, -1, 1),
             param('gamma', 'Gamma', 1, 0.1, 4),
+            // Exposure in stops (2^x on the light) and contrast around mid grey; 0 and 1 leave the picture as it was.
+            param('exposure', 'Exposure', 0, -3, 3, 0.05),
+            param('contrast', 'Contrast', 1, 0, 3, 0.01),
             toggle('invert', 'Invert'),
             param('opacity', 'Opacity', 1, 0, 1)
         ],
@@ -157,11 +160,14 @@ uniform float p_threshold;
 uniform float p_gain;
 uniform float p_brightness;
 uniform float p_gamma;
+uniform float p_exposure;
+uniform float p_contrast;
 uniform float p_invert;
 uniform float p_opacity;
 void main() {
     vec3 c = texture2D(a, uv).rgb;
-    c = max(c - vec3(p_threshold), 0.0) * p_gain + vec3(p_brightness);
+    c = max(c - vec3(p_threshold), 0.0) * p_gain * exp2(p_exposure);
+    c = (c - vec3(0.5)) * p_contrast + vec3(0.5) + vec3(p_brightness);
     c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / p_gamma));
     if (p_invert > 0.5) c = 1.0 - c;
     gl_FragColor = vec4(c * p_opacity, 1.0);
@@ -377,7 +383,12 @@ void main() {
             colour('back', 'Background', '#e8456b'),
             param('shade', 'Shade', 0, 0, 1),
             param('fill', 'Fill', 1, 0, 1),
-            toggle('invert', 'Invert')
+            toggle('invert', 'Invert'),
+            // 0 = flat background colour; 1 = the picture stays around the person, dimmed (the person stands out of the room)
+            param('keep', 'Keep room', 0, 0, 1),
+            // 0 = the model's own mask (small, soft, a little late); 1 = the mask drawn again along the
+            // edges of the live picture, at the picture's own sharpness (docs/architecture/BODY_TRACKING.md)
+            param('refine', 'Fine edge', 0, 0, 1)
         ],
         fragment: `
 uniform sampler2D self;
@@ -389,6 +400,8 @@ uniform float p_echo;
 uniform float p_shade;
 uniform float p_fill;
 uniform float p_invert;
+uniform float p_keep;
+uniform float p_refine;
 uniform vec3 p_colour;
 uniform vec3 p_back;
 vec3 hueTurn(vec3 c, float turns) {
@@ -404,6 +417,27 @@ float edge(float v) {
     float w = 0.04 + p_soft * 0.42;
     return smoothstep(0.5 - w, 0.5 + w, v);
 }
+// Fine edge: the model answers on a small grid (256 wide inside), so its outline is blocky and a frame or
+// two behind. The live picture (b) is sharp and current. Around this pixel, the mask is averaged only over
+// the neighbours that LOOK like this pixel (same colour = same side of the outline), so the outline moves
+// onto the real edge of the body in the picture. Where the picture has no edge it is a plain smoothing.
+float fine() {
+    vec3 here = texture2D(b, uv).rgb;
+    float sum = person(vec2(0.0)) * 0.5;
+    float wsum = 0.5;
+    float reach = 3.0 + p_refine * 13.0;
+    for (int i = 0; i < 20; i++) {
+        float fi = float(i);
+        float rad = sqrt((fi + 0.5) / 20.0) * reach;
+        float ang = fi * 2.399963;
+        vec2 o = vec2(cos(ang), sin(ang)) * rad;
+        vec3 dc = texture2D(b, uv + o * texel).rgb - here;
+        float w = exp(-dot(dc, dc) / 0.01);
+        sum += person(o) * w;
+        wsum += w;
+    }
+    return sum / wsum;
+}
 float decay() { return p_echo * 0.985; }
 float trailAt(vec2 o) {
     vec2 q = clamp(uv + o * texel, vec2(0.0), vec2(1.0));
@@ -412,8 +446,9 @@ float trailAt(vec2 o) {
 void main() {
     vec3 pic = texture2D(a, uv).rgb;
     if (matte_ready < 0.5) { gl_FragColor = vec4(pic, 0.0); return; }
-    float m = edge(person(vec2(0.0)));
+    float m = edge(p_refine > 0.01 ? fine() : person(vec2(0.0)));
     vec3 back = clamp(hueTurn(p_back, time * p_drift * 0.125), 0.0, 1.0);
+    back = mix(back, pic * 0.42, p_keep);
     vec3 body = mix(p_colour, back * 0.55, p_shade);
     float seen = p_invert > 0.5 ? 1.0 - m : m;
     vec3 inside = mix(pic, body, p_fill);
@@ -433,6 +468,582 @@ void main() {
         col = mix(col, body, line * (1.0 - m));
     }
     gl_FragColor = vec4(col, t);
+}`
+    },
+
+    'top.depthscan': {
+        label: 'Depth scan',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the scanner bar travels, the grain moves).
+        animated: true,
+        params: [
+            param('depth', 'Depth', 0.6, 0, 1),
+            param('bands', 'Bands', 0, 0, 12, 1),
+            param('scan', 'Scanner', 0.6, 0, 1),
+            param('rim', 'X-ray edge', 0.6, 0, 1),
+            param('haze', 'Haze', 0.35, 0, 1),
+            param('relief', 'Relief', 0.3, 0, 1),
+            param('speed', 'Scan speed', 0.5, 0, 4, 0.05),
+            param('grain', 'Grain', 0.15, 0, 1),
+            toggle('invert', 'Film (negative)', 0),
+            param('cut', 'Two-tone', 0, 0, 1),
+            param('flash', 'Flash (Hz)', 0, 0, 15, 0.5),
+            // 0 white-hot (grey), 1 iron (the thermal camera), 2 rainbow, 3 olive (night shot), 4 chrome (polished metal),
+            // 5 night green (a stage seen through night vision), 6 ghost (cold white light on black)
+            param('tone', 'Thermal colour', 0, 0, 6, 1),
+            param('hud', 'Camera frame', 0, 0, 1),
+            // a thermal sensor is small (160 x 120): the heat read on a coarse grid and blown up soft
+            param('sensor', 'Sensor blur', 0, 0, 1),
+            // thin dark lines over the picture, 10 tall panes across and 4 up: a wall of windows
+            param('grid', 'Window grid', 0, 0, 1)
+        ],
+        // A camera has no depth, so this reads one out of the light: black and white, the picture of a depth
+        // scanner or an x-ray plate (the references: a depth pass of two dancers, a clay relief, stepped depth
+        // contours). Brightness is smoothed over a wide disc with an edge-keeping weight, so skin and cloth go
+        // smooth like clay and outlines stay sharp; the slope of that field lights the edges of every volume (the
+        // x-ray rim) and shades it like a relief; Bands reads it in steps; Haze is the milk in the air; the
+        // Scanner bar travels down the picture, trembles what is under it and leaves a glow behind.
+        // One pass, 21 taps. Deterministic: every random-looking value is a hash of the pixel and the time.
+        fragment: `
+uniform float p_depth;
+uniform float p_bands;
+uniform float p_rim;
+uniform float p_relief;
+uniform float p_haze;
+uniform float p_scan;
+uniform float p_speed;
+uniform float p_grain;
+uniform float p_invert;
+uniform float p_cut;
+uniform float p_flash;
+uniform float p_tone;
+uniform float p_hud;
+uniform float p_sensor;
+uniform float p_grid;
+// The palettes of a thermal camera: heat 0..1 -> colour. Iron: black, deep blue, purple, red, orange, yellow, white.
+vec3 ds_ramp(float v, vec3 c0, vec3 c1, vec3 c2, vec3 c3, vec3 c4, vec3 c5) {
+    float s = clamp(v, 0.0, 1.0) * 5.0;
+    vec3 c = mix(c0, c1, clamp(s, 0.0, 1.0));
+    c = mix(c, c2, clamp(s - 1.0, 0.0, 1.0));
+    c = mix(c, c3, clamp(s - 2.0, 0.0, 1.0));
+    c = mix(c, c4, clamp(s - 3.0, 0.0, 1.0));
+    return mix(c, c5, clamp(s - 4.0, 0.0, 1.0));
+}
+vec3 ds_tone(float v, float tone) {
+    if (tone < 0.5) return vec3(v);
+    if (tone < 1.5) return ds_ramp(v, vec3(0.0), vec3(0.10, 0.0, 0.42), vec3(0.58, 0.04, 0.56), vec3(0.93, 0.24, 0.13), vec3(1.0, 0.72, 0.05), vec3(1.0, 1.0, 0.94));
+    if (tone < 2.5) return ds_ramp(v, vec3(0.03, 0.05, 0.50), vec3(0.0, 0.42, 0.98), vec3(0.15, 0.88, 0.30), vec3(0.99, 0.92, 0.08), vec3(1.0, 0.16, 0.28), vec3(1.0, 0.86, 0.86));
+    // chrome: light and dark bands turning over each other like a reflection on polished metal, a cold tint
+    // ghost: a body of cold light. Black, deep blue, pale blue-white, a white core with a breath of green.
+    if (tone > 5.5) return ds_ramp(v, vec3(0.0), vec3(0.03, 0.07, 0.11), vec3(0.20, 0.40, 0.50), vec3(0.58, 0.84, 0.88), vec3(0.86, 1.0, 0.94), vec3(0.96, 1.0, 0.92));
+    // night green: fog lit green, the bright end a vivid lime
+    if (tone > 4.5) return ds_ramp(v, vec3(0.0, 0.015, 0.005), vec3(0.0, 0.09, 0.03), vec3(0.02, 0.26, 0.07), vec3(0.08, 0.52, 0.15), vec3(0.28, 0.84, 0.30), vec3(0.78, 1.0, 0.72));
+    if (tone > 3.5) {
+        float m = 0.5 + 0.5 * sin(v * 9.4 - 1.2);
+        float g = clamp(mix(v, m, 0.62) * 1.15 - 0.05, 0.0, 1.0);
+        return mix(vec3(0.02, 0.03, 0.05), vec3(0.93, 0.96, 1.0), g * g * (3.0 - 2.0 * g));
+    }
+    // olive: the army-green grade of a night shot, light end almost white
+    return mix(vec3(v * 0.58, v * 0.70, v * 0.24), vec3(v), smoothstep(0.75, 1.0, v) * 0.7);
+}
+// The frame a thermal camera draws over its picture: corner marks, a centre cross, the palette as a scale.
+float ds_hud(vec2 p, vec2 px) {
+    vec2 q = abs(p - 0.5);
+    float cross = step(q.x, px.x * 1.5) * step(0.012, q.y) * step(q.y, 0.04) + step(q.y, px.y * 1.5) * step(0.007, q.x) * step(q.x, 0.0225);
+    vec2 m = vec2(0.46, 0.44) - q;
+    float corner = step(0.0, min(m.x, m.y)) * step(min(m.x, m.y * 0.5625), 0.0018) * step(max(m.x, m.y * 0.5625), 0.03);
+    return clamp(cross + corner, 0.0, 1.0);
+}
+float ds_luma(vec2 p) { return dot(texture2D(a, p).rgb, vec3(0.299, 0.587, 0.114)); }
+float ds_hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+float ds_cell(vec2 c, vec2 cell) {
+    vec2 o = cell * 0.25;
+    return 0.5 * (ds_luma(c + o) + ds_luma(c - o));
+}
+vec4 ds_spline(float f) {
+    float f2 = f * f;
+    float f3 = f2 * f;
+    return vec4(1.0 - 3.0 * f + 3.0 * f2 - f3, 3.0 * f3 - 6.0 * f2 + 4.0, -3.0 * f3 + 3.0 * f2 + 3.0 * f + 1.0, f3) / 6.0;
+}
+void main() {
+    // the scanner bar: where it is on its way down, and the tremble of the picture under it
+    float sweep = fract(time * p_speed * 0.25);
+    float dy = uv.y - (1.0 - sweep);
+    dy -= floor(dy + 0.5);
+    float bar = exp(-dy * dy / 0.0012);
+    vec2 px = mod(floor(uv / texel), 256.0);
+    float jit = ds_hash(vec2(mod(floor(uv.y / (texel.y * 2.0)), 512.0), mod(floor(time * 30.0), 211.0))) - 0.5;
+    vec2 p = uv + vec2(jit * 0.012 * bar * p_scan, 0.0);
+
+    // The depth field. Brightness read over a wide disc (20 taps on a golden spiral, turned by a
+    // per-pixel angle so the gaps between taps come out as fine grain, not as ghost outlines).
+    // A tap counts for more the closer its brightness is to this pixel's own, so the inside of a
+    // body goes smooth like clay while its outline stays sharp: texture goes, volume stays.
+    // The same taps, unweighted, give the slope of the field for free.
+    vec2 R = texel * (3.0 + p_depth * 26.0);
+    float turn = ds_hash(px + vec2(mod(floor(time * 24.0), 97.0) * step(0.001, p_grain), 5.0)) * 6.2832;
+    float c = ds_luma(p);
+    float sum = c;
+    float wsum = 1.0;
+    float plain = 0.0;
+    vec2 mom = vec2(0.0);
+    vec2 osum = vec2(0.0);
+    float rr = 0.0;
+    for (int i = 0; i < 20; i++) {
+        float fi = float(i);
+        float rad = sqrt((fi + 0.5) / 20.0);
+        float ang = fi * 2.399963 + turn;
+        vec2 o = vec2(cos(ang), sin(ang)) * rad;
+        float l = ds_luma(p + o * R);
+        float dl = l - c;
+        float wt = exp(-dl * dl / 0.02);
+        sum += l * wt;
+        wsum += wt;
+        plain += l;
+        mom += l * o;
+        osum += o;
+        rr += rad * rad;
+    }
+    float field = plain / 20.0;
+    vec2 g = (mom - field * osum) / rr;
+    float d = mix(c, sum / wsum, 0.6 + 0.4 * p_depth);
+    // near = light, far = dark: the lows fall away, the lit body stands out
+    d = pow(smoothstep(0.10, 0.80, d), 1.25);
+    if (p_sensor > 0.02) {
+        // the small sensor: brightness averaged in cells, the cells joined by a soft curve
+        vec2 cell = texel * (8.0 + p_sensor * 72.0);
+        vec2 at = p / cell - 0.5;
+        vec2 base = floor(at);
+        vec4 wx = ds_spline(fract(at.x));
+        vec4 wy = ds_spline(fract(at.y));
+        float low = 0.0;
+        for (int j = 0; j < 4; j++) {
+            float wj = j == 0 ? wy.x : j == 1 ? wy.y : j == 2 ? wy.z : wy.w;
+            for (int i = 0; i < 4; i++) {
+                float wi = i == 0 ? wx.x : i == 1 ? wx.y : i == 2 ? wx.z : wx.w;
+                low += wi * wj * ds_cell((base + vec2(float(i) - 0.5, float(j) - 0.5)) * cell, cell);
+            }
+        }
+        d = pow(smoothstep(0.04, 0.85, low), 1.1);
+    }
+
+    // how the surface turns. Steep = the edge of a volume.
+    float rim = smoothstep(0.05, 0.45, length(g) * 2.0);
+    float shade = clamp(dot(g, vec2(-0.6, 0.8)) * 1.6, -0.35, 0.35);
+
+    float v = d + p_relief * shade * (0.3 + 0.7 * d);
+    // depth read in steps, like a scanner's contour bands
+    float nb = floor(p_bands + 0.5);
+    if (nb >= 2.0) v = mix(v, floor(v * nb + 0.5) / nb, 0.9);
+    // x-ray: the insides go a little thin, the edges of every volume light up
+    v = v * (1.0 - 0.25 * p_rim) + rim * p_rim * 0.55 * (0.25 + 0.75 * d);
+    // the milk in the air
+    v += p_haze * 0.45 * field * (1.0 - v);
+    // two-tone: the picture cut into pure black and pure white, a silhouette
+    v = mix(v, smoothstep(0.36, 0.44, v), p_cut);
+    // the bar itself: a soft band, a hard line, and the glow it leaves on what it has just read
+    float line = exp(-dy * dy / 0.000012);
+    float trail = exp(-fract(uv.y - (1.0 - sweep)) * 7.0);
+    v += p_scan * (bar * (0.12 + 0.4 * rim + 0.2 * d) + line * 0.45 + trail * 0.08 * (0.4 + d));
+    // film grain
+    v += (ds_hash(px + vec2(mod(floor(time * 24.0), 97.0), 3.0)) - 0.5) * 0.08 * p_grain;
+    v = clamp(v, 0.0, 1.0);
+    // flash: negative and positive change places p_flash times a second
+    float flip = p_flash > 0.05 ? step(0.5, fract(time * p_flash)) : 0.0;
+    v = mix(v, 1.0 - v, abs(p_invert - flip));
+    float tone = floor(p_tone + 0.5);
+    vec3 col = ds_tone(v, tone);
+    if (p_hud > 0.01) {
+        // the scale at the right edge: the palette from cold (bottom) to hot (top), in a thin white frame
+        vec2 b = (uv - vec2(0.962, 0.5)) / vec2(0.006, 0.2);
+        float inBar = step(abs(b.x), 1.0) * step(abs(b.y), 1.0);
+        float frame = step(abs(b.x), 1.0 + texel.x / 0.006 * 1.5) * step(abs(b.y), 1.0 + texel.y / 0.2 * 1.5) - inBar;
+        col = mix(col, ds_tone(b.y * 0.5 + 0.5, tone), inBar * p_hud);
+        col = mix(col, vec3(1.0), clamp(frame + ds_hud(uv, texel), 0.0, 1.0) * p_hud);
+    }
+    if (p_grid > 0.01) {
+        vec2 pane = abs(fract(uv * vec2(10.0, 4.0)) - 0.5);
+        float bar = max(step(0.5 - texel.x * 12.0, pane.x), step(0.5 - texel.y * 4.8, pane.y));
+        col = mix(col, col * 0.22, bar * p_grid);
+    }
+    gl_FragColor = vec4(col, 1.0);
+}`
+    },
+
+    'top.cuts': {
+        label: 'Cuts',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the cuts come in time).
+        animated: true,
+        params: [
+            param('rate', 'Cuts per second', 2, 0.25, 8, 0.25),
+            param('zoom', 'Punch-in', 0.5, 0, 1),
+            param('move', 'Reframe', 0.6, 0, 1),
+            param('mirror', 'Flip', 0.3, 0, 1),
+            param('flash', 'Flash frame', 0.6, 0, 1),
+            param('bars', 'Bars', 0, 0, 1),
+            param('burst', 'Burst', 0, 0, 1),
+            param('lens', 'Fisheye', 0, 0, 1),
+            // MULTISCREEN: the frame as a wall of 2 x 2, 3 x 3 or 4 x 4 screens, each with its own framing and cuts
+            param('tiles', 'Screens', 1, 1, 4, 1),
+            // PRESS values: 1 while a key is held (the deck's fxPress action), 0 otherwise. A scene never sets them.
+            param('hit', 'Press: burst', 0, 0, 1, 1),
+            param('punch', 'Press: punch-in', 0, 0, 1, 1),
+            param('flip', 'Press: flip', 0, 0, 1, 1),
+            param('neg', 'Press: negative', 0, 0, 1, 1),
+            param('strobe', 'Press: strobe', 0, 0, 1, 1),
+            param('black', 'Press: black', 0, 0, 1, 1),
+            param('multi', 'Press: screens', 0, 0, 1, 1)
+        ],
+        // The picture edited like a music video, live. Time is cut into SHOTS (Cuts per second); every shot is one
+        // still framing, chosen once at its cut: a size (wide, medium or close: Punch-in), a place in the frame
+        // (Reframe), sometimes mirrored (Flip). Nothing moves inside a shot but a slow push-in, so it reads as an
+        // edit and not as a wobble. Flash frame: about half the cuts open on one negative frame, the way a cut is
+        // hit in an edit. Bars: black bands above and below, the film frame.
+        // Burst: how many of the shots are a BURST, the way a music video hits a bar: two framings intercut every
+        // tenth of a second, the second one negative, for the length of the shot; then a held shot again.
+        // Deterministic: every choice is a hash of the shot number.
+        fragment: `
+uniform float p_rate;
+uniform float p_zoom;
+uniform float p_move;
+uniform float p_mirror;
+uniform float p_flash;
+uniform float p_bars;
+uniform float p_burst;
+uniform float p_lens;
+uniform float p_hit;
+uniform float p_punch;
+uniform float p_flip;
+uniform float p_neg;
+uniform float p_strobe;
+uniform float p_black;
+uniform float p_tiles;
+uniform float p_multi;
+float ct_hash(float n) { return fract(sin(n * 127.1 + 3.7) * 43758.5453123); }
+void main() {
+    float rate = max(p_rate, 0.05);
+    float t = time * rate;
+    float shot = mod(floor(t), 4096.0);
+    float into = fract(t) / rate;
+    // multiscreen: every screen of the wall is its own little frame with its own shots
+    float wall = max(floor(p_tiles + 0.5), 1.0 + 2.0 * step(0.5, p_multi));
+    vec2 q = uv;
+    float seam = 1.0;
+    if (wall > 1.5) {
+        vec2 tile = floor(uv * wall);
+        q = fract(uv * wall);
+        shot += tile.x * 31.0 + tile.y * 57.0;
+        vec2 e = min(q, 1.0 - q) * vec2(1.7778, 1.0);
+        seam = step(0.012, min(e.x, e.y));
+    }
+    // a burst shot: every other tenth of a second is the B framing, in negative
+    // a held burst key is a burst too, whatever the scene: medium shot and close shot intercut
+    float held = step(0.5, p_hit);
+    float isBurst = max(step(ct_hash(shot + 101.0), p_burst), held);
+    float side = isBurst * mod(floor(time * 10.0), 2.0);
+    shot += side * 977.0;
+    float zoom = max(p_zoom, 0.7 * held);
+    float move = max(p_move, 0.6 * held);
+    float size = mix(floor(ct_hash(shot) * 3.0), 1.0 + side, held);
+    float z = (1.0 + zoom * size * 0.45) * (1.0 + 0.04 * zoom * min(into, 4.0)) * (1.0 + 0.8 * step(0.5, p_punch));
+    vec2 room = vec2(0.5 - 0.5 / z);
+    vec2 c = vec2(0.5) + (vec2(ct_hash(shot + 17.0), ct_hash(shot + 43.0)) * 2.0 - 1.0) * room * move;
+    vec2 p = (q - 0.5) / z + c;
+    if (ct_hash(shot + 71.0) < p_mirror * 0.5) p.x = 1.0 - p.x;
+    if (p_flip > 0.5) p.x = 1.0 - p.x;
+    // fisheye: the middle of the frame pushed at the viewer, the corners falling away into black
+    vec2 fc = (p - 0.5) * vec2(1.7778, 1.0);
+    float fr = dot(fc, fc) * 2.2;
+    p = 0.5 + (p - 0.5) * mix(1.0, 0.5 + 0.75 * fr, p_lens);
+    vec3 col = texture2D(a, clamp(p, 0.0, 1.0)).rgb;
+    col *= 1.0 - p_lens * smoothstep(0.62, 1.05, fr);
+    float hit = step(into, 0.05) * step(0.5, ct_hash(shot + 5.0)) * p_flash * (1.0 - isBurst);
+    // negative: a flash frame, the B side of a burst, the held negative key, the held strobe (10 times a second)
+    float inv = max(hit, side);
+    inv = abs(inv - step(0.5, p_neg));
+    inv = abs(inv - step(0.5, p_strobe) * mod(floor(time * 20.0), 2.0));
+    col = mix(col, 1.0 - col, inv);
+    col *= step(abs(uv.y - 0.5), 0.5 - 0.13 * p_bars);
+    col *= seam * (1.0 - step(0.5, p_black));
+    gl_FragColor = vec4(col, 1.0);
+}`
+    },
+
+    'top.angles': {
+        label: 'Angles',
+        family: 'adjust',
+        // b = the second camera: the deck wires it (vjDeck.js runStack), anywhere else b is what you give it
+        inputs: ['a', 'b'],
+        second: true,
+        // Reads `time` (the screens change angle in time).
+        animated: true,
+        params: [
+            // 1 = off (the picture as it is), 2 = two halves, 3 = three tall screens, 4 = two by two
+            param('screens', 'Screens', 1, 1, 4, 1),
+            param('hold', 'Seconds per angle', 4, 0.5, 16, 0.5),
+            param('zoom', 'Close-ups', 0.6, 0, 1),
+            param('gap', 'Line between', 1, 0, 1),
+            // PRESS value: 1 while a key is held (the deck's fxPress action). A scene never sets it.
+            param('multi', 'Press: screens', 0, 0, 1, 1)
+        ],
+        // The frame as a wall of screens, each one a different ANGLE on the stage: screens side by side show
+        // different cameras (a and b), each at its own shot size (wide, medium, close) and its own place in the
+        // picture. A screen holds its angle for Seconds per angle with a slow push-in, then cuts to the other
+        // camera at another size; the screens change one after another, never together. A tall screen takes the
+        // slice of the camera that fits it, nothing is squeezed. Deterministic: a hash of the shot number.
+        fragment: `
+uniform float p_screens;
+uniform float p_hold;
+uniform float p_zoom;
+uniform float p_gap;
+uniform float p_multi;
+float an_hash(float n) { return fract(sin(n * 91.7 + 1.3) * 43758.5453123); }
+void main() {
+    // a held key is three tall screens, whatever the scene
+    float n = max(floor(p_screens + 0.5), 1.0 + 2.0 * step(0.5, p_multi));
+    if (n < 1.5) { gl_FragColor = vec4(texture2D(a, uv).rgb, 1.0); return; }
+    // the wall: 2 = two halves, 3 = three tall screens, 4 = two by two
+    vec2 cells = n > 3.5 ? vec2(2.0, 2.0) : vec2(n, 1.0);
+    vec2 tile = min(floor(uv * cells), cells - 1.0);
+    vec2 q = uv * cells - tile;
+    float id = tile.x + tile.y * cells.x;
+    // every screen holds one angle; the screens change one after another, never all at once
+    float t = time / max(p_hold, 0.1) + id / (cells.x * cells.y);
+    float shot = mod(floor(t), 4096.0);
+    float into = fract(t) * max(p_hold, 0.1);
+    // which camera: screens side by side never show the same one, and a screen swaps cameras at its change
+    float cam = mod(id + tile.y + shot, 2.0);
+    // the size of the shot: wide, medium, close; never the size this screen had before, never the neighbour's
+    float size = mod(id + shot + floor(an_hash(floor(shot / 3.0) + 7.0) * 3.0), 3.0);
+    float z = (1.0 + p_zoom * size * 0.6) * (1.0 + 0.012 * min(into, 12.0));
+    // the piece of the camera picture that fits this screen without squeezing it
+    vec2 piece = vec2(cells.y / cells.x, 1.0) / z;
+    vec2 room = (1.0 - piece) * 0.5;
+    vec2 c = vec2(0.5) + (vec2(an_hash(shot * 3.0 + id * 17.0), an_hash(shot * 5.0 + id * 29.0)) * 2.0 - 1.0) * room * vec2(0.45, 0.35);
+    // a close shot looks at the head, not at the belt
+    c.y += room.y * 0.4 * step(0.5, size);
+    vec2 p = clamp(c + (q - 0.5) * piece, 0.0, 1.0);
+    vec3 col = mix(texture2D(a, p).rgb, texture2D(b, p).rgb, cam);
+    // a thin dark line between the screens
+    vec2 e = min(q, 1.0 - q) * vec2(1.7778 / cells.x, 1.0 / cells.y);
+    vec2 inner = vec2(step(1.5, cells.x), step(1.5, cells.y));
+    float edge = min(mix(1.0, e.x, inner.x), mix(1.0, e.y, inner.y));
+    col *= step(0.006 * p_gap, edge);
+    gl_FragColor = vec4(col, 1.0);
+}`
+    },
+
+    'top.hologram': {
+        label: 'Hologram',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the beam climbs, the cloud turns).
+        animated: true,
+        params: [
+            // 0 = the picture as it is (the effect costs nothing), 1 = the scan alone
+            param('amount', 'Amount', 0, 0, 1),
+            param('rows', 'Row spacing', 6, 3, 24, 1),
+            param('relief', 'Relief', 3, 0, 6, 0.25),
+            // 0 = unbroken scan lines, 1 = separate points
+            param('points', 'Points', 0.8, 0, 1),
+            param('turn', 'Turn', 0.4, 0, 1),
+            param('beam', 'Beam', 0.6, 0, 1),
+            param('speed', 'Speed', 1, 0, 3, 0.05),
+            param('floor', 'Dark limit', 0.08, 0, 0.9),
+            // 1 = dark points on a white wall
+            param('white', 'On white', 0, 0, 1, 1)
+        ],
+        // The picture as a 3D SCAN: rows of fine points of light, each row lifted by the depth of the picture
+        // under it (bright = near), so a face or a body stands out of the screen like a point cloud. Dark = no
+        // points: a body on black (the Body effect before it) is a hologram of the body alone. Turn: the cloud
+        // is seen a little from one side, then the other. Beam: a line of light climbs the picture and what it
+        // has just passed glows. No memory of the last frame: every point is worked out from the time alone.
+        // For each pixel: the rows below it that their depth could lift this far (8 at most), two reads a row.
+        fragment: `
+uniform float p_amount;
+uniform float p_white;
+uniform float p_rows;
+uniform float p_relief;
+uniform float p_points;
+uniform float p_turn;
+uniform float p_beam;
+uniform float p_speed;
+uniform float p_floor;
+float hg_hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
+float hg_lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+void main() {
+    vec3 live = texture2D(a, uv).rgb;
+    if (p_amount < 0.004) { gl_FragColor = vec4(live, 1.0); return; }
+    vec2 px = uv / texel;
+    float rows = max(p_rows, 2.0);
+    float pitch = rows * 0.55;
+    float r0 = floor(px.y / rows);
+    float sway = sin(time * 0.6 * p_speed) * p_turn * rows * 2.2;
+    // the beam climbs the picture; what it has just passed still glows
+    float by = fract(time * 0.18 * p_speed);
+    vec3 col = vec3(0.0);
+    float cover = 0.0;
+    for (int k = 0; k <= 7; k++) {
+        float fk = float(k);
+        if (fk > p_relief + 1.0) break;
+        float r = r0 - fk;
+        float rowY = (r + 0.5) * rows;
+        if (rowY < 0.0) break;
+        // depth here (the light of the picture), then the same point seen a little from the side
+        vec2 at = vec2(px.x, rowY) * texel;
+        float l0 = hg_lum(texture2D(a, at).rgb);
+        at.x = clamp(at.x - (l0 - 0.5) * sway * texel.x, 0.0, 1.0);
+        vec3 src = texture2D(a, at).rgb;
+        float l = hg_lum(src);
+        float lit = smoothstep(p_floor, p_floor + 0.06, l);
+        if (lit < 0.01) continue;
+        // the row is lifted by the depth: near parts rise over far ones
+        float dy = px.y - (rowY + p_relief * rows * l);
+        if (abs(dy) > 3.0) continue;
+        float line = 1.0 - smoothstep(0.35, 1.25, abs(dy));
+        // the row as separate points: a little uneven, a few missing, a few twinkling
+        float cell = floor(px.x / pitch);
+        vec2 key = vec2(cell, r);
+        float cx = (cell + 0.5 + (hg_hash(key) - 0.5) * 0.7) * pitch;
+        float rad = 0.9 + 1.0 * l;
+        float dot1 = 1.0 - smoothstep(rad - 0.55, rad + 0.55, length(vec2(px.x - cx, dy)));
+        float there = step(0.12, hg_hash(key + 3.7));
+        float tw = hg_hash(key + 9.1);
+        float twinkle = 1.0 - 0.6 * step(0.9, tw) * step(0.5, fract(time * 5.0 * p_speed + tw * 13.0));
+        float m = mix(line * 0.8, dot1 * there * twinkle, p_points) * lit;
+        float ry = rowY * texel.y;
+        float behind = by - ry + step(by, ry);
+        float glowed = 0.5 + p_beam * (1.6 * exp(-abs(ry - by) * 55.0) + 0.5 * exp(-behind * 5.0)) + 0.5 * (1.0 - p_beam);
+        m *= (0.45 + 0.75 * l) * glowed;
+        if (m > cover) { cover = m; col = src / max(max(src.r, max(src.g, src.b)), 0.001); }
+    }
+    vec3 outc = col * min(cover, 1.4);
+    // on a white wall: the same points, dark
+    outc = mix(outc, vec3(1.0) - vec3(min(cover, 1.0)), step(0.5, p_white));
+    gl_FragColor = vec4(mix(live, outc, p_amount), 1.0);
+}`
+    },
+
+    'top.particles': {
+        label: 'Particles',
+        family: 'adjust',
+        inputs: ['a'],
+        // Reads `time` (the dots fly).
+        animated: true,
+        params: [
+            param('size', 'Grain size', 12, 3, 40, 1),
+            param('fly', 'Flying', 0.6, 0, 1),
+            param('reach', 'Reach', 10, 1, 14, 1),
+            param('speed', 'Speed', 0.6, 0.05, 3, 0.05),
+            param('angle', 'Wind', 20, -180, 180, 1),
+            param('dot', 'Dot', 0.42, 0.15, 0.6),
+            param('floor', 'Dark limit', 0.12, 0, 0.9),
+            param('keep', 'Picture under', 0, 0, 1),
+            // lines drawn from grain to grain where both are lit: the body as a wire mesh
+            param('lines', 'Lines', 0, 0, 1),
+            // 1 = round grains on a square grid. More = fine dust: the grid is stretched along the wind, the grains
+            // fly that much farther and draw out into short streaks as they go, like dust caught in a long exposure
+            param('streak', 'Streak', 1, 1, 6, 0.5)
+        ],
+        // The picture as grains of dust. Every grain has a home on a grid laid along the wind and takes the
+        // colour and the size of the picture there (dark = no grain, so a white body on black is a body of
+        // grains). Flying: the share of grains that leave home, slowly at first, then with the wind, getting
+        // smaller, and are born again at home. No memory of the last frame: a grain's place is worked out
+        // from the time alone, so nothing smears and a still picture gives the same dust every time.
+        // For each pixel: the grains that could be here now are the ones whose homes lie up-wind, within Reach
+        // cells, in this row or the one beside it (48 candidates; the picture is read only for the near ones).
+        fragment: `
+uniform float p_size;
+uniform float p_fly;
+uniform float p_reach;
+uniform float p_speed;
+uniform float p_angle;
+uniform float p_dot;
+uniform float p_floor;
+uniform float p_keep;
+uniform float p_lines;
+uniform float p_streak;
+float pt_hash(vec2 p, float k) { return fract(sin(dot(p, vec2(127.1, 311.7)) + k * 17.31) * 43758.5453123); }
+void main() {
+    // the grid of dots lies along the wind: u runs with it, v across it
+    float ang = p_angle * 0.0174533;
+    vec2 wind = vec2(cos(ang), sin(ang));
+    vec2 across = vec2(-wind.y, wind.x);
+    vec2 px = uv / texel;
+    float sx = max(p_streak, 1.0);
+    vec2 g = vec2(dot(px, wind) / (p_size * sx), dot(px, across) / p_size);
+    vec2 cellAt = floor(g);
+    float reach = floor(p_reach + 0.5);
+    float aa = 1.2 / p_size;
+    vec3 col = vec3(0.0);
+    float cover = 0.0;
+    for (int j = -1; j <= 1; j++) {
+        for (int k = -1; k <= 14; k++) {
+            float fk = float(k);
+            if (fk > reach) break;
+            vec2 cell = cellAt + vec2(-fk, float(j));
+            // where this dot lives, and whether it is one of the dots that fly
+            vec2 home = cell + 0.5 + (vec2(pt_hash(cell, 1.0), pt_hash(cell, 2.0)) - 0.5) * 0.6;
+            float flies = step(pt_hash(cell, 3.0), p_fly);
+            float age = flies * fract(time * p_speed * (0.5 + pt_hash(cell, 4.0)) + pt_hash(cell, 5.0));
+            // it leaves slowly and gathers speed, like dust taken by the wind
+            vec2 pos = home + vec2(reach * age * age, (pt_hash(cell, 6.0) - 0.5) * 1.6 * age);
+            // round at home; drawn out along the wind while it flies
+            vec2 off = g - pos;
+            off.x *= sx / (1.0 + 3.0 * age * step(1.5, sx));
+            float d = length(off);
+            if (d > 0.62) continue;
+            vec2 at = (wind * home.x * sx + across * home.y) * p_size * texel;
+            if (at.x < 0.0 || at.x > 1.0 || at.y < 0.0 || at.y > 1.0) continue;
+            vec3 src = texture2D(a, at).rgb;
+            float l = dot(src, vec3(0.299, 0.587, 0.114));
+            float lit = smoothstep(p_floor, p_floor + 0.08, l);
+            float r = p_dot * sqrt(clamp(l, 0.0, 1.0)) * (1.0 - 0.55 * age);
+            float m = (1.0 - smoothstep(r - aa, r + aa, d)) * lit * (1.0 - age * age);
+            if (m > cover) { cover = m; col = src / max(max(src.r, max(src.g, src.b)), 0.001) * max(l, 0.75); }
+        }
+    }
+    // LINES: the nine grains around this pixel, at home, joined to each other where both are lit and near
+    // enough. A grain that flies away leaves its line behind, so the mesh stays while the dust goes.
+    float wire = 0.0;
+    vec3 wireCol = vec3(0.0);
+    if (p_lines > 0.01) {
+        vec2 hp[9];
+        float hl[9];
+        vec3 hc[9];
+        for (int n = 0; n < 9; n++) {
+            vec2 cell = cellAt + vec2(mod(float(n), 3.0) - 1.0, floor(float(n) / 3.0) - 1.0);
+            vec2 home = cell + 0.5 + (vec2(pt_hash(cell, 1.0), pt_hash(cell, 2.0)) - 0.5) * 0.6;
+            vec2 at = clamp((wind * home.x * sx + across * home.y) * p_size * texel, 0.0, 1.0);
+            vec3 src = texture2D(a, at).rgb;
+            float l = dot(src, vec3(0.299, 0.587, 0.114));
+            hp[n] = home;
+            hl[n] = smoothstep(p_floor, p_floor + 0.08, l);
+            hc[n] = src / max(max(src.r, max(src.g, src.b)), 0.001) * max(l, 0.75);
+        }
+        float thick = max(0.045, 0.75 / p_size);
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (j <= i) continue;
+                float both = hl[i] * hl[j];
+                if (both < 0.02) continue;
+                vec2 ab = hp[j] - hp[i];
+                float len = length(ab);
+                if (len > 1.5) continue;
+                float t = clamp(dot(g - hp[i], ab) / (len * len), 0.0, 1.0);
+                float d = length(g - (hp[i] + ab * t));
+                float m = (1.0 - smoothstep(thick - aa * 0.5, thick + aa * 0.5, d)) * both * (1.0 - smoothstep(1.1, 1.5, len));
+                if (m > wire) { wire = m; wireCol = mix(hc[i], hc[j], t); }
+            }
+        }
+        wire *= p_lines;
+    }
+    vec3 under = texture2D(a, uv).rgb * p_keep;
+    vec3 outc = mix(under, wireCol * 0.85, wire);
+    gl_FragColor = vec4(mix(outc, col, cover), 1.0);
 }`
     },
 

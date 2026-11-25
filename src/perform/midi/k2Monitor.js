@@ -10,6 +10,8 @@ export const PUBLISH_GAP_MS = 33
 
 /** The key of a control on the device: "cc:16", "note:36" (channel is ignored on purpose). */
 export const controlKey = (kind, number) => `${kind}:${number}`
+/** The same control on ONE channel: "cc:7@3". The APC40 repeats numbers across channels (five faders are all CC 7). */
+export const channelKey = (kind, number, channel) => `${kind}:${number}@${channel}`
 
 export function createK2Monitor({ now = () => Date.now() } = {}) {
     const listeners = new Set()
@@ -36,11 +38,15 @@ export function createK2Monitor({ now = () => Date.now() } = {}) {
             const control = controlOf(message)
             if (!control) return
             const key = controlKey(control.kind, control.number)
+            const onChannel = channelKey(control.kind, control.number, control.channel)
             draft.values[key] = control.value
             draft.touched[key] = now()
+            draft.values[onChannel] = control.value
+            draft.touched[onChannel] = draft.touched[key]
             draft.last = key
             if (control.kind === 'note') {
                 draft.held[key] = control.press
+                draft.held[onChannel] = control.press
                 publish()
                 return
             }

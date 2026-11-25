@@ -12,6 +12,7 @@ import {
     clipNodeId,
     masterNodeId,
     moveClip,
+    GRADE_PARAMS,
     normalizeDeck,
     removeLayer,
     setBlend,
@@ -19,6 +20,7 @@ import {
     setBypass,
     setClip,
     setCrossfade,
+    setGrade,
     setMaster,
     setOpacity,
     setSide,
@@ -31,6 +33,8 @@ import {
 } from '../../../project/tops/vjDeck.js'
 import { detectAssetMediaKind } from '../../../utils/mediaAssetTypes.js'
 import { resolveClipUrl } from '../../../project/tops/clipVideos.js'
+import { setClipParkBytes } from '../../../project/tops/clipSourceCache.js'
+import { useClipWarmup } from '../../../project/tops/clipWarmup.js'
 import { readNdiSources } from '../../../project/tops/machineDevices.js'
 import { isTypingTarget } from '../../../perform/windowKeys.js'
 import { useShowClockContext } from '../../../perform/useShowClock.js'
@@ -42,6 +46,7 @@ import { useDeckMidi } from '../../../perform/midi/useDeckMidi.js'
 import DeckMidiControl from '../../../perform/midi/DeckMidiControl.jsx'
 import MidiMapOverlay from '../../../perform/midi/MidiMapOverlay.jsx'
 import K2LayoutPanel from '../../../perform/midi/K2LayoutPanel.jsx'
+import { postDeckBye, postDeckLive } from '../../../project/tops/deckLive.js'
 import { buildK2WindowPath } from '../../../perform/midi/k2WindowRouting.js'
 import { resetDeckValue } from '../../../perform/midi/deckBinding.js'
 import ContextMenu from '../ContextMenu.jsx'
@@ -350,7 +355,7 @@ function CameraPreview({ camera, device, className }) {
 }
 const percent = (value) => `${Math.round(value * 100)}`
 
-export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now(), spaceId = '', projectId = null, cues = [], onFireCue = null, onColumnLaunch = null }) {
+export default function VjDeckView({ node, onPatchValues = null, assets = [], inputSources = {}, placement = 'window', onUploadFile = null, now = () => Date.now(), spaceId = '', projectId = null, cues = [], onFireCue = null, onColumnLaunch = null, extraMonitor = null }) {
     const deck = useMemo(() => normalizeDeck(node?.values?.deck), [node?.values?.deck])
     const deckId = node?.id || ''
     const editable = typeof onPatchValues === 'function'
@@ -405,6 +410,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const liveCameras = deck.layers.map((layer) => layer.clips[layer.active]).filter((clip) => clip?.kind === 'camera').map((clip) => clip.camera)
     const clipName = (clip) => (clip.label || (clip.kind === 'input' ? inputLabel(clip.input) : clip.kind === 'camera' ? clip.camera : assetName(clip.asset)))
     const assetName = (id) => (assets || []).find((asset) => asset?.id === id)?.name || id
+    // The deck keeps every clip in memory, like the show wall: a launched clip starts at once in the monitors too.
+    useEffect(() => {
+        setClipParkBytes(384 * 1024 * 1024)
+        return () => setClipParkBytes(0)
+    }, [])
+    const warmDocument = useMemo(() => ({ nodes: [node], assets }), [node, assets])
+    useClipWarmup(warmDocument, { spaceId, projectId, enabled: editable })
 
     // The newest deck this view has seen or written: an upload that finishes after a
     // long wait places its clip into THIS, never into the deck captured when the file
@@ -434,10 +446,25 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     }, [deck.layers.length, deck.columns])
 
     const latestDeck = useRef(deck)
+    const midiSync = useRef(null)
     useEffect(() => { latestDeck.current = deck }, [deck])
     const write = (nextDeck) => {
-        if (editable) { latestDeck.current = nextDeck; onPatchValues({ deck: nextDeck }) }
+        if (editable) {
+            latestDeck.current = nextDeck
+            midiSync.current?.(nextDeck)
+            // the wall on this machine hears it now; the op below is the record (deckLive.js)
+            postDeckLive(projectId, node?.id, nextDeck)
+            onPatchValues({ deck: nextDeck })
+        }
     }
+    // This page going (closed, reloaded, the deck view taken down): tell the walls, so they stop holding what this
+    // page last said and show the stored deck, which is what the page shows when it comes back (deckLive.js).
+    useEffect(() => {
+        if (!editable || !node?.id) return undefined
+        const bye = () => { postDeckBye(projectId, node.id) }
+        window.addEventListener('pagehide', bye)
+        return () => { window.removeEventListener('pagehide', bye); bye() }
+    }, [editable, projectId, node?.id])
 
     // Lights follow. ONE function reports a launched column, and only code that launches
     // calls it: the header button (launchColumn) and the MIDI column action (onColumn of
@@ -603,8 +630,10 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
     const [k2Open, setK2Open] = useState(false)
     const [fxIndex, setFxIndex] = useState(0) // which effect of the selected stack the K2's third pot row turns
     // K2 LAYER button: this layer's effects (leaves Master scope); K2 encoder 6 push: the next effect
-    const onFxLayer = (index) => { setFxPick(index); setFxScope('layer'); setFxIndex(0) }
+    // -1 = the master stack (a controller's master-select key)
+    const onFxLayer = (index) => { if (index < 0) { setFxScope('master'); setFxIndex(0); return } setFxPick(index); setFxScope('layer'); setFxIndex(0) }
     const midi = useDeckMidi({ deckId, deck, write, stored: node?.values?.midiMap, console: node?.values?.midiConsole, onPatch: editable ? onPatchValues : null, onTap, enabled: editable, fxLayer: fxScope === 'master' ? -1 : fxLayer, fxEffect: fxIndex, onFxLayer, onFxEffect: setFxIndex, onColumn: reportColumnLaunch })
+    useEffect(() => { midiSync.current = midi.sync })
     const learnKeyOf = (event) => event.target?.closest?.('[data-midi-target]')?.getAttribute('data-midi-target') || ''
     const onLearnClick = (event) => {
         if (!midi.learning) return
@@ -881,6 +910,27 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                     />
                     <span className="vj-deck-number">{percent(deck.master)}</span>
                 </label>
+                <div className="vj-deck-grade" role="region" aria-label="Grade: level, contrast, exposure of the whole picture">
+                    {GRADE_PARAMS.map((item) => (
+                        <label key={item.name} className="vj-deck-grade-item" title={`${item.label} of the finished picture, whatever scene plays. Double-click the slider to put it back to ${item.neutral}.`}>
+                            <span className="vj-deck-label">{item.label}</span>
+                            <input
+                                type="range"
+                                min={item.min}
+                                max={item.max}
+                                step={item.step}
+                                value={deck.grade[item.name]}
+                                disabled={!editable}
+                                aria-label={item.label}
+                                data-grade={item.name}
+                                onChange={(event) => write(setGrade(latestDeck.current, item.name, event.target.value))}
+                                onDoubleClick={() => write(setGrade(latestDeck.current, item.name, item.neutral))}
+                            />
+                            <span className="vj-deck-number">{item.name === 'exposure' ? `${deck.grade.exposure > 0 ? '+' : ''}${deck.grade.exposure.toFixed(1)}` : percent(deck.grade[item.name])}</span>
+                        </label>
+                    ))}
+                    <button type="button" className="vj-deck-button" disabled={!editable} onClick={() => write(setGrade(latestDeck.current, null))} title="Level 100, contrast 100, exposure 0">Reset grade</button>
+                </div>
                 <div className="vj-deck-actions">
                     <button type="button" className="vj-deck-button" onClick={() => write(addLayer(latestDeck.current))} disabled={!editable}>+ Layer</button>
                     <button type="button" className="vj-deck-button" onClick={() => write(removeLayer(latestDeck.current, latestDeck.current.layers.length - 1))} disabled={!editable || deck.layers.length <= 1} aria-label="Remove the top layer">- Layer</button>
@@ -1132,6 +1182,13 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                             <DeckPicture nodeId={masterNodeId(deckId)} className="vj-deck-monitor-picture" label="Deck output" width={320} height={180} />
                         </div>
                     </figure>
+                    {extraMonitor ? (
+                        // a small extra monitor the host page gives (the Perform desk: the 3D room with its lights)
+                        <figure className="vj-deck-monitor vj-deck-monitor--extra">
+                            <figcaption className="vj-deck-label vj-deck-monitor-caption">{extraMonitor.label}</figcaption>
+                            <div className="vj-deck-monitor-screen">{extraMonitor.content}</div>
+                        </figure>
+                    ) : null}
                 </aside>
                 {seam('s1', deckLayout.shown.s1s2, 'vertical', 'Resize the layer strip and the clip grid', paneId('grid'))}
                 {seam('s2', deckLayout.shown.s1s2, 'vertical', 'Resize the clip grid and the monitors', paneId('monitors'), -1)}
@@ -1175,7 +1232,7 @@ export default function VjDeckView({ node, onPatchValues = null, assets = [], in
                 {seam('s6', deckLayout.shown.s56, 'vertical', 'Resize Clip and Effects', paneId('bottom'))}
             </div>
             <MidiMapOverlay rootRef={rootRef} midi={midi} layoutKey={deck} />
-            {k2Open ? <K2LayoutPanel windowPath={spaceId && projectId ? buildK2WindowPath(spaceId, projectId) : ''} publisher={midi.k2Publisher} map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
+            {k2Open ? <K2LayoutPanel deck={deck} windowPath={spaceId && projectId ? buildK2WindowPath(spaceId, projectId) : ''} publisher={midi.k2Publisher} map={midi.map} monitor={midi.k2Monitor} console={midi.k2Console} consoles={midi.consoles} onPickConsole={editable ? midi.pickConsole : undefined} fxEffect={fxIndex} onClose={() => setK2Open(false)} /> : null}
             <ContextMenu open={Boolean(menu)} x={menu?.x} y={menu?.y} title={menu?.label} items={menuItems} fromKeyboard={Boolean(menu?.fromKeyboard)} onClose={() => setMenu(null)} />
         </div>
         </DeckFoldContext.Provider>
