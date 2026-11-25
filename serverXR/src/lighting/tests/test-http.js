@@ -747,6 +747,38 @@ check('a fader released goes back to what the fixtures render', async () => {
   assert.strictEqual(await wire(41, 1), 60, 'releasing it hands the channel back to the fixture');
 });
 
+check('a Control edit takes back the channel a Fader hold sat on, and only that one', async () => {
+  // 2026-11-25: a Fader-page hold renders over the fixture, so moving the same channel in
+  // the Control window saved the value and nothing changed on the light. Setting a role
+  // through the fixture is the newest hand on its channel: the hold there goes (and the
+  // fine channel paired with it), every other hold stays.
+  const f = await patch('ppttdrgbw', { universe: 59, address: 1 });   // pan panFine tilt tiltFine dimmer r g b w
+  await POST('/api/raw', { channels: [
+    { universe: 59, channel: 1, value: 32 }, { universe: 59, channel: 2, value: 110 },
+    { universe: 59, channel: 7, value: 0 }, { universe: 59, channel: 9, value: 77 },
+  ] });
+  await POST('/api/fixture', { id: f.id, values: { pan: 200, g: 244 } });
+  await settle();
+  const { body } = await GET('/api/state');
+  assert.ok(!('59:1' in body.raw), 'the pan hold is let go');
+  assert.ok(!('59:2' in body.raw), 'and the pan fine hold with it');
+  assert.ok(!('59:7' in body.raw), 'the green hold is let go');
+  assert.strictEqual(body.raw['59:9'], 77, 'white was not edited, so its hold stays');
+  assert.strictEqual(await wire(59, 1), 200, 'pan leaves at the Control value');
+  assert.strictEqual(await wire(59, 7), 244, 'green leaves at the Control value');
+  await POST('/api/raw', { clear: true, all: true, universe: 59 });
+});
+
+check('the Fader page sets a patched channel on its fixture, so Control shows the same value', () => {
+  // The other half of 2026-11-25: green 244 on the Fader page read 0 in Control, because
+  // the Fader page held every channel raw and Control draws the fixture's values.
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  assert.ok(/function setFaderChannel\(universe, ch, value\)/.test(js), 'one way for the Fader page to set a channel');
+  assert.ok(js.includes('queueFixture(id, { values: { [role]: value }, on: true })'), 'a patched channel goes to its fixture');
+  assert.ok(!/addEventListener\('input', \(\) => \{ queueRaw\(/.test(js), 'a fader move no longer holds every channel raw');
+  assert.ok(js.includes('const want = isHeld ? held : (setV != null ? setV : wire);'), 'a patched fader shows the fixture value Control shows');
+});
+
 check('channels outside 1..512 are not stored', async () => {
   const { body } = await POST('/api/raw', {
     channels: [
