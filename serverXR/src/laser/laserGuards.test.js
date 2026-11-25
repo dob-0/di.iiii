@@ -5,19 +5,21 @@ import os from 'node:os'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
-import { generateShape, LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE } from '../../../src/project/nodes/laser.shape/laserShapes.js'
+import { generateShape, LASER_SHAPES, MARK_SHAPES, MARK_MIN_SIZE, DOT_SHAPES } from '../../../src/project/nodes/laser.shape/laserShapes.js'
 
 const require = createRequire(import.meta.url)
 const { flattenLaserPaths } = require('../../../shared/laserFrame.cjs')
 const proto = require('./lasercubeProtocol')
 const g = require('./laserGuards')
-const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, ARM_PHRASE } = require('./laserEngine')
+const { createLaserEngine, applyZone, normaliseZone, stillBeams, dwellSpots, dotsAllowed, ARM_PHRASE } = require('./laserEngine')
 
 const lit = (x, y) => [x, y, 0, 1, 0]
 const dark = (x, y) => [x, y, 0, 0, 0]
 const isLit = (p) => p[2] > 0 || p[3] > 0 || p[4] > 0
 const cheb = (a, b) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]))
 const at = (rate) => g.pathPlan(g.DEFAULT_GUARDS, rate)
+// Not still, or only dots that laser.json "dots": true lets through.
+const okDots = (list) => !list.length || dotsAllowed(list)
 // A seeded pseudo-random frame (mulberry32), lit and blank mixed, full-field jumps included.
 const randomFrame = (seed, n) => {
     let a = seed
@@ -262,7 +264,9 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
                 for (const points of [120, 500]) {
                     for (const size of MARK_SHAPES.includes(shape) ? [0.5, MARK_MIN_SIZE] : [0.5, 0.1, 0.05]) {
                         const frame = g.optimisePath(applyZone(generateShape({ shape, size, height: 0.5, points }), normaliseZone()).points, plan).points
-                        expect(stillBeams(frame), `${shape} size ${size} × ${points} at ${rate}`).toEqual([])
+                        // A dot shape is dots only: a still beam unless laser.json says "dots": true, which lets it through.
+                        if (DOT_SHAPES.includes(shape)) expect(okDots(stillBeams(frame)), `${shape} size ${size} × ${points} at ${rate}`).toBe(true)
+                        else expect(stillBeams(frame), `${shape} size ${size} × ${points} at ${rate}`).toEqual([])
                     }
                     const collapsed = g.optimisePath(applyZone(generateShape({ shape, size: 0, height: 0.5, points }), normaliseZone()).points, plan).points
                     expect(stillBeams(collapsed).length, `${shape} collapsed`).toBeGreaterThan(0)
@@ -397,6 +401,152 @@ describe('the Laser node\'s shapes, as the guards draw them, still pass the stil
                 }
             }
         }
+    })
+    // 2026-11-06 evening: volcano, the lava story in one line with a drop and bombs, held over two of its 16-beat loops
+    // (the bombs' heights change from loop to loop) at every eighth of a beat as sent, at 0.5 and 0.1 like the lava
+    // shapes. Measured worst in one window at 30 kpps: 8.3 % at 0.5 (the drop falling), 29.4 % at 0.1 (the crater
+    // bursting open). At 0.05 it is 40.0 % at 120 points, 48.4 % at 600 and 57.0 % at 900 with a still frame now and then, where
+    // the engine's own 50 % stop blanks the cube, as it does for the other lava shapes there.
+    it('volcano as sent is never still at any eighth of a beat over two loops, and never puts 40 % in one window', () => {
+        expect(LASER_SHAPES[52]).toBe('volcano')
+        const plan = at(30000)
+        for (const size of [0.5, 0.1]) {
+            for (const points of [120, 900]) {
+                for (let beat = 0; beat < 32; beat += 0.125) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape: 'volcano', size, height: 0.5, points, beat }), { budget: null }).points, normaliseZone()).points, plan).points
+                    const label = `volcano ${size} × ${points} beat ${beat}`
+                    expect(stillBeams(frame), label).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, label).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
+    // 2026-11-06 evening: strands (the owner's laser.html), one line wandering along a tangle of drifting sines: held at
+    // every eighth of a beat over 16 as sent, its least and most tangled, slow and fast, at 0.5 and MARK_MIN_SIZE. A strand
+    // is one stretch of line, not a figure across the picture, so a small picture can hold all of it in a few windows:
+    // measured worst at 30 kpps, 12.8 % at 0.5, 24.0 % at 0.15, 42.1 % at 0.1, and at 0.05 72.0 % with still frames, where
+    // the engine's own guards blank the cube, as they are there to.
+    it('strands as sent is never still at any eighth of a beat, and never puts 40 % in one window', () => {
+        expect(LASER_SHAPES[53]).toBe('strands')
+        const plan = at(30000)
+        for (const size of [0.5, MARK_MIN_SIZE]) {
+            for (const [points, copies, speed] of [[120, 2, 0.25], [900, 0, 1], [900, 8, 2]]) {
+                for (let beat = 0; beat < 16; beat += 0.125) {
+                    const frame = g.optimisePath(applyZone(flattenLaserPaths(generateShape({ shape: 'strands', size, height: 0.5, points, copies, beat: beat * speed, speed }), { budget: null }).points, normaliseZone()).points, plan).points
+                    const label = `strands ${size} × ${points} ×${copies} speed ${speed} beat ${beat}`
+                    expect(stillBeams(frame), label).toEqual([])
+                    expect(dwellSpots(frame, { minShare: 0 })[0].share, label).toBeLessThan(0.4)
+                }
+            }
+        }
+    })
+    // 2026-11-07, the owner's solid-light references: contour, draw, blade, coil, down and vortex, six line shapes that
+    // flow, draw themselves, sweep and turn. Held at every eighth of a beat over 32 as sent (draw's round is 8 beats, blade's
+    // turn 16, coil's 24 and 64: the guards see them all moving), with 120, 600 and 900 points and 5 copies, at 0.5, 0.25 and
+    // 0.1. They are named by their place in the list, so a shape added after them does not move this. Measured worst in one
+    // window at 30 kpps, over all six: 18.7 % at 0.5 (vortex: its dot has a quarter of the points), 22.8 % at 0.25 (vortex),
+    // 33.5 % at 0.1 (draw, with its loop at its shortest). No still frame at any of them.
+    it('contour, draw, blade, coil, down and vortex as sent are never still at any eighth of a beat, and never put 40 % in one window', () => {
+        const SOLID = ['contour', 'draw', 'blade', 'coil', 'down', 'vortex']
+        expect(LASER_SHAPES.slice(54, 60)).toEqual(SOLID)
+        const plan = at(30000)
+        const worst = { 0.5: 0, 0.25: 0, 0.1: 0 }
+        for (const shape of SOLID) {
+            for (const size of [0.5, 0.25, 0.1]) {
+                for (const [points, copies] of [[120, 0], [600, 0], [900, 0], [600, 5]]) {
+                    for (let beat = 0; beat < 32; beat += 0.125) {
+                        const raw = generateShape({ shape, size, height: 0.5, points, copies, beat, colour: '#00e5ff', colour2: '#ff0020' })
+                        const frame = g.optimisePath(applyZone(flattenLaserPaths(raw, { budget: null }).points, normaliseZone()).points, plan).points
+                        const label = `${shape} ${size} × ${points} ×${copies} beat ${beat}`
+                        const share = dwellSpots(frame, { minShare: 0 })[0].share
+                        expect(stillBeams(frame), label).toEqual([])
+                        expect(share, label).toBeLessThan(0.4)
+                        worst[size] = Math.max(worst[size], share)
+                    }
+                }
+            }
+        }
+        expect(worst[0.5]).toBeLessThan(0.2)
+        expect(worst[0.25]).toBeLessThan(0.24)
+        expect(worst[0.1]).toBeLessThan(0.345)
+    })
+    // 2026-11-07: phyllotaxis and phyllolines, the owner's TouchDesigner Phyllotaxis ("can we have the sameeee"). Held at
+    // every eighth of a beat over its whole 40-beat sweep, at Copies 1, 2 and 4, at the sizes the desk plays them (1, 0.8,
+    // 0.6), through the whole field (her cubes' zone): never still, never more than the real cube's 2333-point pass at
+    // 35 kpps (the dots: PHYLLO_MOST; the lines: PHYLLO_LINE_MOST). Measured: the most points 1867 (dots, Copies 2, size 1)
+    // and 2033 (lines, Copies 2, 0.7); worst window 4.5 % (dots) and 6.2 % (lines).
+    it('phyllotaxis and phyllolines are never still and always fit the real cube\'s pass, over their whole sweep', () => {
+        expect(LASER_SHAPES.slice(60, 62)).toEqual(['phyllotaxis', 'phyllolines'])
+        const plan = at(35000)
+        const zone = normaliseZone({ xMin: -1, xMax: 1, yMin: -1, yMax: 1 })
+        const most = { phyllotaxis: 0, phyllolines: 0 }
+        for (const shape of ['phyllotaxis', 'phyllolines']) {
+            for (const copies of [1, 2, 4]) {
+                for (const size of [1, 0.8, 0.6]) {
+                    for (let beat = 0; beat < 40; beat += 0.125) {
+                        const raw = generateShape({ shape, size, height: 0, points: 600, copies, beat, colour: '#0090ff' })
+                        const frame = g.optimisePath(applyZone(flattenLaserPaths(raw, { budget: null }).points, zone).points, plan).points
+                        const label = `${shape} ×${copies} ${size} beat ${beat}`
+                        if (shape === 'phyllotaxis') expect(okDots(stillBeams(frame)), label).toBe(true) // point dots: laser.json "dots"
+                        else expect(stillBeams(frame), label).toEqual([])
+                        expect(dwellSpots(frame, { minShare: 0 })[0].share, label).toBeLessThan(0.1)
+                        expect(frame.length, label).toBeLessThanOrEqual(2333)
+                        most[shape] = Math.max(most[shape], frame.length)
+                    }
+                }
+            }
+        }
+        expect(most.phyllotaxis).toBeLessThan(2000)
+        expect(most.phyllolines).toBeLessThan(2150)
+    })
+    // 2026-11-07: crossgrid ("add pattern cross grid"), level lines gliding down and upright ones gliding right. Its picture
+    // repeats every beat (each line moves one place), so it is held at every 1/16 beat over two, at Copies 1, 2 and 4, Points
+    // 120, 600 and 1992 and sizes 1, 0.5, 0.1 and 0.05, through the whole field (her cubes' zone) at 35 kpps: never still,
+    // never over the real cube's 2333-point pass. Then through the desk's own look at full Displace + Wobble, which break the
+    // edge lines where they leave the field, at every Copies over 8 beats (lookPointsAt's t is in ms). Measured: plain at
+    // most 1667 points (Copies 2, 1992 points, size 1), worst window 32.2 % (size 0.05, 1992 points, Copies 1); bent at most
+    // 2097 (Copies 4, 1992 points, size 1). Copies stops at 4: at 5 and 6, fully bent, it drew 2335 and 2549.
+    it('crossgrid as sent is never still and always fits the real cube\'s pass, plain and at full Displace + Wobble', () => {
+        expect(LASER_SHAPES[62]).toBe('crossgrid')
+        const { lookPointsAt } = require('../../../shared/laserLook.cjs')
+        const { normaliseLook } = require('./laserDesk')
+        const plan = at(35000)
+        const zone = normaliseZone({ xMin: -1, xMax: 1, yMin: -1, yMax: 1 })
+        const sent = (raw) => g.optimisePath(applyZone(flattenLaserPaths(raw, { budget: null }).points, zone).points, plan).points
+        const most = { plain: 0, bent: 0 }
+        let worst = 0
+        for (const copies of [1, 2, 4]) {
+            for (const points of [120, 600, 1992]) {
+                for (const size of [1, 0.5, 0.1, 0.05]) {
+                    for (let beat = 0; beat < 2; beat += 0.0625) {
+                        const frame = sent(generateShape({ shape: 'crossgrid', size, height: 0, points, copies, beat, colour: '#ffffff' }))
+                        const label = `crossgrid ${size} × ${points} ×${copies} beat ${beat}`
+                        expect(stillBeams(frame), label).toEqual([])
+                        expect(frame.length, label).toBeLessThanOrEqual(2333)
+                        most.plain = Math.max(most.plain, frame.length)
+                        worst = Math.max(worst, dwellSpots(frame, { minShare: 0 })[0].share)
+                    }
+                }
+            }
+        }
+        const cube = { on: true, flipX: false, flipY: false, size: 1, x: 0, y: 0, order: 0, brightness: 1, corners: [[-1, -1], [1, -1], [1, 1], [-1, 1]] }
+        for (const copies of [1, 2, 3, 4]) {
+            for (const points of [120, 1992]) {
+                for (const size of [1, 0.1]) {
+                    const look = normaliseLook({ shape: 'crossgrid', colour: '#ffffff', size, height: 0, x: 0, points, copies, displace: 1, wobble: 1 })
+                    for (let t = 0; t < 4000; t += 31.25) {
+                        const frame = sent(lookPointsAt(look, { t, clock: { bpm: 120, zero: 0 }, cube, master: 1 }))
+                        const label = `crossgrid bent ${size} × ${points} ×${copies} t ${t}`
+                        expect(stillBeams(frame), label).toEqual([])
+                        expect(frame.length, label).toBeLessThanOrEqual(2333)
+                        most.bent = Math.max(most.bent, frame.length)
+                    }
+                }
+            }
+        }
+        expect(worst).toBeLessThan(0.335)
+        expect(most.plain).toBeLessThan(1750)
+        expect(most.bent).toBeLessThan(2200)
     })
     // 2026-11-01: point, one dot alone in the middle. All the frame is in it, so it is the shape nearest the 50 % stop: held
     // under 40 % at every point count, at 30 and 35 kpps, plain and through a corner pin like the owner's.
@@ -626,7 +776,7 @@ describe('round 2: the review\'s findings (reproduced first with the reviewer\'s
         const parsed = proto.parseFullInfo(infoAnswer(info))
         expect(parsed).toMatchObject({ dacRate: 35000, maxDacRate: 35000, rxBufferSize: 6000, rxBufferFree: 6000 })
         expect(g.frameBudget(parsed.dacRate, parsed.rxBufferSize)).toBe(2333)
-        expect(LASER_SHAPES.length).toBe(52)
+        expect(LASER_SHAPES.length).toBe(63)
         for (const shape of LASER_SHAPES) {
             const rig = armed(ONE, info)
             rig.engine.setFrame('all', generateShape({ shape, size: 0.5, height: 0.5, points: 1992 }))
