@@ -87,4 +87,18 @@ describe('layer guard: a temp git repo', () => {
         expect(r.status).toBe(2)
         expect(r.stderr).toContain('cannot diff against no-such-ref')
     })
+
+    it('review fixes: a quoted non-ASCII file name is read, an added "++ " line is content, a 5-part version is no address', () => {
+        const diff = ['diff --git a/x b/x', '--- a/x', '+++ b/x', '@@ -0,0 +1,2 @@', '+ok', '+++ also content 100.72.1.2',
+            'diff --git "a/\\320\\237.md" "b/\\320\\237.md"', '--- /dev/null', '+++ "b/\u041f.md"', '@@ -0,0 +1 @@', '+ip 100.72.1.2'].join('\n')
+        const lines = addedLines(diff)
+        expect(lines.map((l) => [l.file, l.line])).toEqual([['x', 1], ['x', 2], ['\u041f.md', 1]])
+        expect(scan(lines).map((h) => h.file)).toEqual(['x', '\u041f.md'])
+        expect(scan([{ file: 'a.md', line: 1, text: 'version 100.72.1.3.9' }])).toEqual([])
+    })
+
+    it('a bad private pattern stops with its line number only, never the pattern', () => {
+        expect(() => parseDenylist('fine\nre:(secret')).toThrow('private list line 2 is not a valid pattern')
+        try { parseDenylist('fine\nre:(secret') } catch (e) { expect(String(e.message)).not.toContain('secret') }
+    })
 })

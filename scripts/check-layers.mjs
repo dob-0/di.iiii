@@ -18,30 +18,47 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import { pathToFileURL } from 'node:url'
 
-const TAILNET_V4 = /(?<![\d.])100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}(?![\d])/
+const TAILNET_V4 = /(?<![\d.])100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}(?!\d|\.\d)/
 // test files may carry made-up values (fixtures); everything else may not carry an address
 const TEST_FILE = /(?:\.(?:test|spec)\.[cm]?[jt]sx?$|(?:^|\/)(?:__tests__|__fixtures__|fixtures?)\/)/
 
 export const NO_LIST_LINE = 'layer guard: private list not set, generic rules only'
 
-/** Parse the private list text into matchers. */
+/** Parse the private list text into matchers. A bad `re:` line throws a DenylistError naming only its
+ *  line number: the pattern itself is private and must never reach a (public) CI log. */
+export class DenylistError extends Error {}
 export const parseDenylist = (text) => String(text || '')
     .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#'))
-    .map((l) => {
-        if (l.startsWith('re:')) return new RegExp(l.slice(3), 'i')
-        return new RegExp(`(?<![A-Za-z0-9_])${l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9_])`, 'i')
+    .map((l, i) => [l.trim(), i + 1])
+    .filter(([l]) => l && !l.startsWith('#'))
+    .map(([l, n]) => {
+        if (!l.startsWith('re:')) return new RegExp(`(?<![A-Za-z0-9_])${l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![A-Za-z0-9_])`, 'i')
+        try { return new RegExp(l.slice(3), 'i') } catch { throw new DenylistError(`layer guard: private list line ${n} is not a valid pattern`) }
     })
 
-/** The added lines of a unified diff (-U0) as { file, line, text }. Deleted files and binary hunks give none. */
+/** The added lines of a unified diff (-U0) as { file, line, text }. Deleted files and binary hunks give none.
+ *  File boundaries come from `diff --git` lines, so an added line that itself starts "++ " is never read as a header;
+ *  the caller runs git with core.quotepath=off, and a quoted "b/…" name is unquoted here too. */
 export const addedLines = (diff) => {
     const out = []
     let file = null
+    let inHeader = false
     let next = 0
     for (const raw of String(diff).split('\n')) {
-        if (raw.startsWith('+++ ')) { file = raw.startsWith('+++ b/') ? raw.slice(6) : null; continue }
-        if (raw.startsWith('--- ')) continue
+        if (raw.startsWith('diff --git ')) { file = null; inHeader = true; continue }
+        if (inHeader) {
+            if (raw.startsWith('+++ ')) {
+                const name = raw.slice(4)
+                const unq = name.startsWith('"') && name.endsWith('"') ? name.slice(1, -1).replace(/\\(.)/g, '$1') : name
+                file = unq.startsWith('b/') ? unq.slice(2) : null
+                continue
+            }
+            const hunk0 = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(raw)
+            if (!hunk0) continue
+            inHeader = false
+            next = Number(hunk0[1])
+            continue
+        }
         const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(raw)
         if (hunk) { next = Number(hunk[1]); continue }
         if (file && raw.startsWith('+')) { out.push({ file, line: next, text: raw.slice(1) }); next += 1 }
@@ -71,7 +88,7 @@ export const run = ({ argv = process.argv.slice(2), env = process.env, out = (s)
     const base = flag('--base', 'origin/dev')
     const repo = flag('--repo', process.cwd())
     let diff
-    const diffAgainst = (range) => execFileSync('git', ['-C', repo, 'diff', '--unified=0', '--no-color', '--no-ext-diff', range], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] })
+    const diffAgainst = (range) => execFileSync('git', ['-C', repo, '-c', 'core.quotepath=off', 'diff', '--unified=0', '--no-color', '--no-ext-diff', range], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] })
     try {
         // the branch's own changes (merge base); a shallow CI checkout may lack the merge base, then base..HEAD
         try { diff = diffAgainst(`${base}...HEAD`) } catch { diff = diffAgainst(`${base}..HEAD`) }
@@ -83,7 +100,12 @@ export const run = ({ argv = process.argv.slice(2), env = process.env, out = (s)
     const text = readDenylist(env)
     if (env.DI_LAYER_DENYLIST && text === null) { err('layer guard: DI_LAYER_DENYLIST names a file that cannot be read'); return 2 }
     if (!text) out(NO_LIST_LINE)
-    const hits = scan(addedLines(diff), { denylist: parseDenylist(text) })
+    let denylist
+    try { denylist = parseDenylist(text) } catch (e) {
+        if (e instanceof DenylistError) { err(e.message); return 2 }
+        throw e
+    }
+    const hits = scan(addedLines(diff), { denylist })
     for (const h of hits) err(`${h.file}:${h.line}  ${h.rule}`)
     if (hits.length) {
         err(`layer guard: ${hits.length} added line(s) carry personal or private data. Make the value generic, or keep it out of this repo.`)
