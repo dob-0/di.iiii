@@ -180,3 +180,65 @@ describe('the numbers (80 looks of ~670 kB, Art-Net off)', () => {
     expect((await GET('/api/state?looksRev=' + rev)).text.length).toBeLessThan(200000)
   }, 120000)
 })
+
+// ---- the files: show.json (timer save) and snapshots are what JSON.stringify gives, byte for byte ----
+
+const startDesk = async (withSpace) => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'looks-save-'))
+  const spaceDir = path.join(d, 'space-a')
+  const dk = createDesk({
+    dataDir: path.join(d, 'data'), offline: true, bindPort: 0, outputEnabledDefault: false, log: () => {},
+    ...(withSpace ? { spaces: { dir: () => spaceDir, find: async (id) => ({ label: id }) } } : {}),
+  })
+  const sv = http.createServer((req, res) => dk.handle(req, res))
+  await new Promise((r) => sv.listen(0, '127.0.0.1', r))
+  const b = 'http://127.0.0.1:' + sv.address().port
+  const post = async (route, body) => { const r = await fetch(b + route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }); return { status: r.status, body: await r.json() } }
+  return { dk, post, d, spaceDir, stop: async () => { dk.close(); sv.closeAllConnections?.(); await new Promise((r) => sv.close(r)); fs.rmSync(d, { recursive: true, force: true }) } }
+}
+const waitFor = async (fn, ms = 5000) => { const t = Date.now(); while (Date.now() - t < ms) { if (fn()) return true; await new Promise((r) => setTimeout(r, 25)) } return false }
+const oldText = (dk, space) => { const s = dk.state; if (!space) return JSON.stringify(s); const c = Object.assign({}, s); delete c.output; return JSON.stringify(c) }
+
+describe.each([['this machine\'s own show', false], ['a space\'s show (withoutRig)', true]])('saved files hold the same bytes as JSON.stringify: %s', (_n, space) => {
+  let k, file
+  beforeAll(async () => {
+    k = await startDesk(space)
+    if (space) { expect((await k.post('/api/show/open', { space: 'space-a' })).status).toBe(200); file = path.join(k.spaceDir, 'show.json') } else file = path.join(k.d, 'data', 'show.json')
+  })
+  afterAll(async () => { await k.stop() })
+
+  it('the timer save writes exactly JSON.stringify(state), and a looks change shows in the next save', async () => {
+    await k.post('/api/looks', { looks: makeBigLooks(3, { steps: 4, fixtures: 6 }) })
+    expect(await waitFor(() => fs.existsSync(file) && fs.readFileSync(file, 'utf8') === oldText(k.dk, space))).toBe(true)
+    await k.post('/api/looks/add', { look: { id: 'new-look', name: 'New', kind: 'all', fixtures: [], steps: [{ values: { a: { dimmer: 7 } } }] } })
+    expect(await waitFor(() => fs.readFileSync(file, 'utf8').includes('new-look'))).toBe(true)
+    await waitFor(() => fs.readFileSync(file, 'utf8') === oldText(k.dk, space))
+    expect(fs.readFileSync(file, 'utf8')).toBe(oldText(k.dk, space))
+    expect(JSON.parse(fs.readFileSync(file, 'utf8')).looks.map((l) => l.id)).toContain('new-look')
+  })
+  it('a save while another is in flight lands last: the file ends equal to the state', async () => {
+    for (let i = 0; i < 6; i++) { await k.post('/api/master', { master: 10 + i }); await new Promise((r) => setTimeout(r, 30)) }
+    await k.post('/api/looks/remove', { id: 'new-look' })
+    expect(await waitFor(() => fs.readFileSync(file, 'utf8') === oldText(k.dk, space))).toBe(true)
+    expect(fs.readFileSync(file, 'utf8')).not.toContain('new-look')
+    expect(fs.existsSync(file.replace(/\.json$/, '.prev.json'))).toBe(true)
+    expect(fs.existsSync(file + '.tmp')).toBe(false)
+  })
+  it('a snapshot parses deep-equal to the old clone, with the new looks, and is listed without a re-read', async () => {
+    await k.post('/api/looks/add', { look: { id: 'snap-look', name: 'S', kind: 'all', fixtures: [], steps: [{ values: { a: { dimmer: 3 } } }] } })
+    const r = await k.post('/api/snapshots', { name: 'bytes' })
+    expect(r.status).toBe(200)
+    const snapFile = path.join(path.dirname(file), 'snapshots', r.body.snapshot.id + '.json')
+    const doc = JSON.parse(fs.readFileSync(snapFile, 'utf8'))
+    const expectShow = JSON.parse(JSON.stringify(k.dk.state))
+    for (const key of Object.keys(expectShow)) if (/pin|secret|token|password|key/i.test(key)) delete expectShow[key]
+    expect(doc.show.looks).toEqual(expectShow.looks)
+    expect(doc.show.looks.map((l) => l.id)).toContain('snap-look')
+    expect(Object.keys(doc.show)).toEqual(Object.keys(doc.show).filter((x) => x in expectShow))
+    expect(r.body.snapshot.bytes).toBe(fs.statSync(snapFile).size)
+    expect(doc.counts).toEqual(expect.objectContaining({ fixtures: expectShow.fixtures.length, scenes: expectShow.scenes.length }))
+    // the file is canonical JSON.stringify text of what it holds (no splice artefact), and its looks are the cached text
+    expect(fs.readFileSync(snapFile, 'utf8')).toBe(JSON.stringify(doc))
+    expect(JSON.stringify(doc.show.looks)).toBe(JSON.stringify(k.dk.state.looks))
+  })
+})

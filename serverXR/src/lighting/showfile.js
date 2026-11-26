@@ -61,6 +61,7 @@ function slug(label) {
   return s || 'light';
 }
 
+const LOOKS_MARK = '\u0000looks\u0000';
 function writeAtomic(file, text) {
   const tmp = file + '.tmp';
   fs.writeFileSync(tmp, text);
@@ -117,7 +118,7 @@ function readDoc(doc) {
 // sanitizeScene     the desk's own scene validator (null for a damaged one)
 // sanitizeBanks     the desk's own container validator
 // replaceShow(disk, {keepChase})   the one way a show is replaced (desk.js)
-function attachShowfile({ getState, getShow, sanitizeScene, sanitizeBanks, replaceShow, deskName }) {
+function attachShowfile({ getState, getShow, sanitizeScene, sanitizeBanks, replaceShow, deskName, looksJson }) {
   const snapDir = () => path.join(getShow().dir, 'snapshots');
   const MAX = Math.max(2, Number(process.env.SNAPSHOT_MAX || 50));
   const clone = (o) => JSON.parse(JSON.stringify(o));
@@ -324,7 +325,12 @@ function attachShowfile({ getState, getShow, sanitizeScene, sanitizeBanks, repla
 
   function saveSnapshot(name, { auto = false } = {}) {
     fs.mkdirSync(snapDir(), { recursive: true });
-    const show = showJson();
+    // The looks are most of a big show. Cloned and stringified again they cost two walks of tens of MB on the
+    // desk's thread, so they stay out of the clone and their cached text (looksJson) is spliced into the file.
+    const live = getState();
+    const splice = typeof looksJson === 'function' && Array.isArray(live.looks);
+    const show = withoutMachine(clone(splice ? { ...live, looks: [] } : live));
+    if (splice) show.looks = live.looks;       // for the counts only; the file gets the cached text below
     const id = `snap-${stamp()}-${rand()}`;
     const doc = {
       format: FORMAT, version: VERSION, kind: 'snapshot',
@@ -332,9 +338,20 @@ function attachShowfile({ getState, getShow, sanitizeScene, sanitizeBanks, repla
       auto: !!auto, savedAt: new Date().toISOString(), counts: counts(show),
       desk: { name: deskName || 'di.iiii light desk', host: os.hostname(), show: getShow().label || null }, show,
     };
-    writeAtomic(fileOf(id), JSON.stringify(doc));
+    let text;
+    if (splice) {
+      const token = JSON.stringify(LOOKS_MARK);
+      doc.show = { ...show, looks: LOOKS_MARK };
+      const looksText = looksJson();
+      text = JSON.stringify(doc).replace(token, () => looksText);
+    } else text = JSON.stringify(doc);
+    writeAtomic(fileOf(id), text);
+    // The list entry comes from what was just written, not from reading the whole file back.
+    const st = fs.statSync(fileOf(id));
+    const meta = { id, name: doc.name, auto: doc.auto, savedAt: doc.savedAt, counts: doc.counts, bytes: st.size };
+    listCache.set(fileOf(id), { mtimeMs: st.mtimeMs, meta });
     prune();
-    return readSnapMeta(fileOf(id));
+    return meta;
   }
 
   function readSnapshot(id) {
