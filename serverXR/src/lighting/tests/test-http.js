@@ -946,6 +946,45 @@ check('pan/tilt trim is stored clamped to -255..255 and reaches the wire', async
   assert.strictEqual(await wire(74, 2), 0, 'tilt 128 - 255 stops at 0');
 });
 
+check('a trim keeps two decimals on a head with fine channels and whole steps on one without', async () => {
+  const f = await patch('pptt', { universe: 75, address: 1 });
+  const g = await patch('pt', { universe: 75, address: 11 });
+  await POST('/api/fixture', { id: f.id, values: { pan: 128, panFine: 0, tilt: 100, tiltFine: 0 } });
+  await POST('/api/fixtures/limits', { ids: [f.id, g.id], limits: { panTrim: 0.456, tiltTrim: -1.6 } });
+  const { body } = await GET('/api/state');
+  const lf = body.fixtures.find((x) => x.id === f.id).limits;
+  const lg = body.fixtures.find((x) => x.id === g.id).limits;
+  assert.deepStrictEqual([lf.panTrim, lf.tiltTrim], [0.46, -1.6], 'two decimals where there is a fine byte');
+  assert.deepStrictEqual([lg.panTrim, lg.tiltTrim], [0, -2], 'whole steps where there is none');
+  assert.ok(body.fineNames.pan.includes('pan_fine') && body.fineNames.tilt.includes('tiltFine'), 'the page gets the renderer\'s fine names');
+  await settle();
+  // 128.46 = 32886 = 128 / 118; 98.4 = 25190 = 98 / 102
+  assert.deepStrictEqual([await wire(75, 1), await wire(75, 2), await wire(75, 3), await wire(75, 4)], [128, 118, 98, 102]);
+});
+
+check('a test move swings the lights for a moment, says which, and is never saved', async () => {
+  const f = await patch('pt', { universe: 77, address: 1 });
+  const g = await patch('rgb', { universe: 77, address: 11 });
+  await POST('/api/fixture', { id: f.id, values: { pan: 100, tilt: 100 } });
+  const r = await POST('/api/fixtures/testmove', { ids: [f.id, g.id], axis: 'pan', seconds: 1 });
+  assert.strictEqual(r.status, 200);
+  assert.deepStrictEqual(r.body.moving, [f.id], 'only a light with pan moves; the par is left out, not an error');
+  const { body } = await GET('/api/state');
+  assert.strictEqual(body.status.testMoving[f.id], 'pan', 'the page can paint it');
+  const seen = [];
+  for (let i = 0; i < 6; i++) { seen.push(await wire(77, 1)); await sleep(150); }
+  assert.ok(seen.some((v) => v > 100) && seen.every((v) => v >= 100 && v <= 120), 'pan swings up to 20 steps above home: ' + seen);
+  assert.strictEqual((await POST('/api/fixtures/testmove', { ids: [], axis: 'pan' })).status, 400, 'no light');
+  assert.strictEqual((await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'zoom' })).status, 400, 'no such axis');
+  await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'tilt' });
+  await POST('/api/fixtures/testmove', { off: true });
+  await settle();
+  assert.deepStrictEqual([await wire(77, 1), await wire(77, 2)], [100, 100], 'off: home at once');
+  await sleep(700);   // save() debounces at 400ms
+  const disk = fs.readFileSync(path.join(process.env.DATA_DIR, 'show.json'), 'utf8');
+  assert.ok(!disk.includes('testMove'), 'nothing of it is in the saved show');
+});
+
 check('the Aim page markup exists and is wired to the limits route', () => {
   const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
   const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');

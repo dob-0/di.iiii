@@ -14,6 +14,8 @@ const fs = require('fs');
 const path = require('path');
 const { ArtNet, broadcastPlan, localAddresses } = require('./artnet');
 const { decideIdentify } = require('./identify');
+const { readTestMove } = require('./testmove');
+const { FINE_NAMES, fineRoleIn } = require('./roles');
 const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
   Engine, PROFILES, makeFixture, DEFAULT_LIMITS, roleKinds, ROLE_DEFAULTS,
@@ -245,6 +247,11 @@ function createDesk(opts = {}) {
     // flashing. A saved show that came back with lamps flashing would be a haunting.
     delete s.identify;
     Object.defineProperty(s, 'identify', {
+      value: {}, enumerable: false, writable: true, configurable: true,
+    });
+    // A test move too (testmove.js): fixtureId -> { axis, from, until }, a swing that ends by itself.
+    delete s.testMove;
+    Object.defineProperty(s, 'testMove', {
       value: {}, enumerable: false, writable: true, configurable: true,
     });
     // The video's live colours ride the same way (pixelmap.js): never in show.json, never in a
@@ -1190,8 +1197,21 @@ function createDesk(opts = {}) {
     for (const k of ['invertPan', 'invertTilt', 'swapPT']) {
       if (l[k] != null) out[k] = !!l[k];
     }
+    // Trims keep two decimals (0.01 of a step): a light with a fine pan/tilt channel can use
+    // them; the limits route rounds them to whole steps for a light without one.
     for (const k of ['panTrim', 'tiltTrim']) {
-      if (l[k] != null && Number.isFinite(+l[k])) out[k] = Math.max(-255, Math.min(255, Math.round(+l[k])));
+      if (l[k] != null && Number.isFinite(+l[k])) out[k] = Math.max(-255, Math.min(255, Math.round(+l[k] * 100) / 100));
+    }
+    return out;
+  }
+
+  // A trim as one light can use it: whole steps on an axis with no fine channel to carry the rest.
+  function limitsFor(f, lim) {
+    const channels = (PROFILES[f.profile] || PROFILES.rgb).channels;
+    const out = { ...lim };
+    for (const axis of ['pan', 'tilt']) {
+      const k = axis + 'Trim';
+      if (out[k] != null && !fineRoleIn(channels, axis)) out[k] = Math.round(out[k]);
     }
     return out;
   }
@@ -1368,6 +1388,9 @@ function createDesk(opts = {}) {
         [k, { label: v.label, channels: v.channels, cat: v.cat, custom: !!v.custom, labels: v.labels }])),
       // What each channel role IS, so the interface can ask rather than keep its own copy.
       roleKinds: roleKinds(),
+      // The fine partner names of pan and tilt (roles.js), so the page offers fractional trims
+      // exactly where the renderer has a fine byte to put them in.
+      fineNames: FINE_NAMES,
       // Profiles patched on fixtures whose channels are ALL generic (c1, c2, ...): pure
       // mode-switch banks with no dimmer or emitter, which blackout deliberately cannot
       // touch (scaling a mode switch changes the mode). Empty on the current rig — the
@@ -1407,6 +1430,9 @@ function createDesk(opts = {}) {
         // above it — the page paints the row so the desk visibly agrees with what the
         // operator asked for while they are turned round looking at the rig.
         identifying: Object.entries(state.identify || {}).filter(([, t]) => t > Date.now()).map(([id]) => id),
+        // Which lights are swinging for a test move, and on which axis: { id: 'pan' | 'tilt' }.
+        testMoving: Object.fromEntries(Object.entries(state.testMove || {})
+          .filter(([, e]) => e.until > Date.now()).map(([id, e]) => [id, e.axis])),
         nodes: nodeList(),
         interfaces: localAddresses(),
         broadcast: bcPlan().use,
@@ -1900,7 +1926,7 @@ function createDesk(opts = {}) {
       // coordinates the Fit button would then zoom into oblivion trying to frame.
       if (body.x != null) f.x = Math.max(-WORLD, Math.min(WORLD, +body.x));
       if (body.y != null) f.y = Math.max(-WORLD, Math.min(WORLD, +body.y));
-      if (body.limits) Object.assign(f.limits, sanitizeLimits(body.limits));
+      if (body.limits) Object.assign(f.limits, limitsFor(f, sanitizeLimits(body.limits)));
       if (look) { state.activeScene = null; engine.cancelFade(); pushFrame(); }
       save(); json(res, { ok: true, fixture: f });
     },
@@ -2215,11 +2241,32 @@ function createDesk(opts = {}) {
       json(res, { ok: true, identifying: Object.keys(next), until });
     },
 
+    // TEST MOVE — swing one axis of these lights a little way and back (testmove.js), so the
+    // operator sees which way each head turns before ticking Invert or Swap. Takes
+    // {ids:[...], axis:'pan'|'tilt', seconds} or {off:true}. Live only, like Identify: nothing
+    // is saved and no value changes. `moving` is the lights that have that axis; a light
+    // without one is not an error (a mixed selection still moves its heads), it is just left out.
+    'POST /api/fixtures/testmove': (req, res, body) => {
+      if (body.off) { state.testMove = {}; return json(res, { ok: true, moving: [] }); }
+      const lights = (Array.isArray(body.ids) ? body.ids : [])
+        .map((id) => state.fixtures.find((f) => f.id === id)).filter(Boolean);
+      if (!lights.length) return json(res, { error: 'select a light to move' }, 400);
+      const press = readTestMove(body);
+      if (press.error) return json(res, { error: press.error }, 400);
+      const now = Date.now();
+      const next = {};
+      for (const [id, e] of Object.entries(state.testMove || {})) if (e.until > now) next[id] = e;
+      const moving = lights.filter((f) => (PROFILES[f.profile] || PROFILES.rgb).channels.includes(press.axis));
+      for (const f of moving) next[f.id] = { axis: press.axis, from: now, until: now + press.ms };
+      state.testMove = next;
+      json(res, { ok: true, moving: moving.map((f) => f.id), until: now + press.ms });
+    },
+
     'POST /api/fixtures/limits': (req, res, body) => {
       const lim = sanitizeLimits(body.limits || {});
       for (const id of body.ids || []) {
         const f = state.fixtures.find((x) => x.id === id);
-        if (f) Object.assign(f.limits, lim);
+        if (f) Object.assign(f.limits, limitsFor(f, lim));
       }
       engine.cancelFade(); save(); json(res, { ok: true });
     },
