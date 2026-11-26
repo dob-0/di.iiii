@@ -1,0 +1,8 @@
+## 2026-11-26 — the light desk gets its own right-click menu (first slice: Setup plan, patch grid, scenes)
+
+- Owner (N6860): no browser right-click on the desk. New `ui/contextmenu.js` (+ `.dmenu` css, desk tokens, square corners): one menu at the pointer, arrows / Enter / Esc, closes on outside press, scroll, resize, blur, stays inside the window. A document-level `contextmenu` listener prevents the browser menu everywhere except text inputs, textareas and contenteditable (copy / paste stays there). A place registers `deskMenu.register(selector, fn)`; with no match a small default menu shows (copy selected text, reload page).
+- Setup stage plan: a light = Identify, Select line (same universe), Select all, Clear selection, Trim pan/tilt to 0, Invert pan / tilt, Copy / Paste trims, all through the existing `api/fixtures/identify` and `api/fixtures/limits`. Empty plan = Select all, Clear selection. A right-click on a light outside the selection selects it first.
+- Patch grid: Identify, Select, Unpatch (the existing `unpatchSelection` ask bar).
+- Bank list and Touch tiles: their old right-click handlers moved into the same menu; every item drives the existing scene popover action (bind key, MIDI pad, rename, fade, overwrite, chase, delete). Long-press (finger) still opens the popover directly.
+- Not done: Readdress... (the guarded route exists, but the page's only UI for it is dragging in the grid; no typed form to reuse, none invented); right-click on other pages (Control, Stage, Fader, Show) is the next slice and gets the default menu for now.
+- Proof: `test-http.js` 160 ok, `test.js` 206 ok, eslint 0 errors; headless pictures at 1280x800 and 1920x1080 with fit numbers in the PR.

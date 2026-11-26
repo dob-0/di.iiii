@@ -4144,13 +4144,7 @@ function recallByName(name) {
   recallScene(sc.id);
 }
 
-$('#bankList').addEventListener('contextmenu', (e) => {
-  const r = e.target.closest('.bankrow');
-  if (!r || !r.dataset.id || !S) return;
-  e.preventDefault();
-  const sc = S.scenes.find((s) => s.id === r.dataset.id);
-  if (sc) openBindPop(sc.name, e.clientX, e.clientY, sc.id);
-});
+// right-click on a bank row / touch tile: the desk menu (contextmenu.js), see sceneMenu() below
 
 // Long-press is the finger's right-click. Movement (a scroll) or an early lift (a tap)
 // cancels it; the mouse is excluded because it has a real right button.
@@ -4195,13 +4189,6 @@ $('#touchGrid').addEventListener('click', (e) => {
     e.preventDefault(); e.stopPropagation();
   }
 }, true);
-$('#touchGrid').addEventListener('contextmenu', (e) => {
-  const b = e.target.closest('.tbtn');
-  if (!b || !b.dataset.id || !S) return;
-  e.preventDefault();
-  const sc = S.scenes.find((s) => s.id === b.dataset.id);
-  if (sc) openBindPop(sc.name, e.clientX, e.clientY, sc.id);
-});
 let touchPressTimer = null;
 let touchPressAt = null;
 const cancelTouchPress = () => { clearTimeout(touchPressTimer); touchPressTimer = null; touchPressAt = null; };
@@ -8381,3 +8368,104 @@ $('#cueStop').addEventListener('click', () => cueAct('api/cues/stop', {}));
 $('#cueLoop').addEventListener('click', () => cueAct('api/cues/loop', { loop: !(CUES && CUES.loop) }));
 pullCues();
 setInterval(pullCues, 1000);
+
+/* =============== the desk's right-click menu: what each place offers =============== */
+// contextmenu.js is the component; this is the list for each place. Every item calls an action
+// the desk already has (a route, or the button of the scene popover) — nothing new on the server.
+
+// A scene row / tile: the same actions the scene popover has, one click away. The popover
+// itself still opens for the ones that need a key press or a typed value.
+function sceneMenu(el, e) {
+  const sc = S && S.scenes.find((x) => x.id === el.dataset.id);
+  if (!sc) return null;
+  const via = (btn) => () => { openBindPop(sc.name, e.clientX, e.clientY, sc.id); if (btn) $(btn).click(); };
+  const key = hotkeyOf(sc.name);
+  const mb = midiBindOf(sc.id);
+  const inChase = S.chase.sceneIds.includes(sc.id);
+  const items = [
+    { label: 'Recall', action: () => { activeScene = sc.id; recallScene(sc.id); } },
+    { sep: true },
+    { label: 'Bind key…', action: via('#miBind') },
+  ];
+  if (key) items.push({ label: 'Remove key', hint: hotkeyLabel(key), action: via('#bindRemove') });
+  if (cap('midi')) {
+    items.push({ label: 'Bind MIDI pad…', action: via('#miMidi') });
+    if (mb) items.push({ label: 'Remove MIDI pad', hint: String(mb.num), action: via('#miMidiRemove') });
+  }
+  items.push(
+    { sep: true },
+    { label: 'Rename…', action: via('#miRename') },
+    { label: 'Fade…', action: via('#miFade') },
+    { label: 'Overwrite with current look', action: via('#miRestage') },
+    { label: inChase ? 'Remove from chase' : 'Add to chase', action: via('#miChase') },
+    { sep: true },
+    { label: sceneSel.size > 1 && sceneSel.has(sc.id) ? `Delete ${sceneSel.size} scenes` : 'Delete scene', danger: true, action: via('#miDelete') },
+  );
+  return items;
+}
+window.deskMenu.register('.bankrow[data-id]', sceneMenu);
+window.deskMenu.register('#touchGrid .tbtn[data-id]', sceneMenu);
+
+// Trim copied from one light, pasted onto others (kept on the page, not on the desk).
+let trimClip = null;
+const setLimits = (ids, limits) => {
+  post('api/fixtures/limits', { ids, limits });
+  for (const f of S.fixtures) if (ids.includes(f.id)) Object.assign(f.limits, limits);
+};
+async function identifyIds(ids) {
+  const r = await post('api/fixtures/identify', { ids, seconds: 10 });
+  if (r && r.error) return say(r.error, true);
+  say(`${ids.length === 1 ? (fxById(ids[0]) || {}).name || 'it' : ids.length + ' lights'} flashing for ten seconds — go and look at the rig`);
+}
+function selectAll() { S.fixtures.forEach((f) => sel.add(f.id)); paintSelection(); }
+
+function fixtureMenu(f) {
+  const ids = [...sel];
+  const n = ids.length;
+  const sfx = n > 1 ? ` (${n})` : '';
+  const first = selectedFixtures()[0];
+  const lim = (first && first.limits) || {};
+  return [
+    { label: 'Identify' + sfx, action: () => identifyIds(ids) },
+    { sep: true },
+    { label: 'Select line (universe ' + (f.universe + 1) + ')', action: () => { sel.clear(); S.fixtures.filter((x) => x.universe === f.universe).forEach((x) => sel.add(x.id)); paintSelection(); } },
+    { label: 'Select all', action: selectAll },
+    { label: 'Clear selection', action: () => { sel.clear(); paintSelection(); } },
+    { sep: true },
+    { label: 'Trim pan/tilt to 0' + sfx, action: () => setLimits(ids, { panTrim: 0, tiltTrim: 0 }) },
+    { label: 'Invert pan' + sfx, hint: lim.invertPan ? 'on' : '', action: () => setLimits(ids, { invertPan: !lim.invertPan }) },
+    { label: 'Invert tilt' + sfx, hint: lim.invertTilt ? 'on' : '', action: () => setLimits(ids, { invertTilt: !lim.invertTilt }) },
+    { label: 'Copy trims', action: () => { trimClip = { panTrim: lim.panTrim | 0, tiltTrim: lim.tiltTrim | 0 }; say(`trims copied: pan ${trimClip.panTrim}, tilt ${trimClip.tiltTrim}`); } },
+    { label: 'Paste trims' + sfx, disabled: !trimClip, action: () => { setLimits(ids, { ...trimClip }); say(`trims pasted onto ${n} light${n === 1 ? '' : 's'}`); } },
+  ];
+}
+// the pointer's own light joins the selection if it was not in it (a right-click on a light of a
+// wider selection keeps the selection, so the menu acts on all of them)
+function selectForMenu(id) { if (!sel.has(id)) { sel.clear(); sel.add(id); paintSelection(); } }
+
+// Setup stage plan (the minimap): a light, or empty plan.
+window.deskMenu.register('.fx-node[data-id]', (el) => {
+  const f = S && fxById(el.dataset.id);
+  if (!f) return null;
+  selectForMenu(f.id);
+  return fixtureMenu(f);
+});
+window.deskMenu.register('.stage-inner', () => S && [
+  { label: 'Select all', action: selectAll },
+  { label: 'Clear selection', action: () => { sel.clear(); paintSelection(); } },
+]);
+
+// Patch grid on Setup: a patched cell. Readdress is the drag in the grid (the guarded route has
+// no typed form on the page), so it is not repeated here.
+window.deskMenu.register('.gc[data-id]', (el) => {
+  const f = S && fxById(el.dataset.id);
+  if (!f) return null;
+  selectForMenu(f.id);
+  const n = sel.size;
+  return [
+    { label: 'Identify' + (n > 1 ? ` (${n})` : ''), action: () => identifyIds([...sel]) },
+    { label: 'Select', action: () => { sel.clear(); sel.add(f.id); paintSelection(); } },
+    { sep: true },
+    { label: 'Unpatch' + (n > 1 ? ` (${n})` : '') + '…', danger: true, action: unpatchSelection },
+  ];
+});

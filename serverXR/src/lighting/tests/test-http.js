@@ -956,6 +956,22 @@ check('the Aim page markup exists and is wired to the limits route', () => {
   assert.ok(js.includes('min="-128" max="128"'), 'fader range');
 });
 
+check('the desk right-click menu is loaded and every place hands it its items', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  const cm = fs.readFileSync(path.join(__dirname, '../ui/contextmenu.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../ui/style.css'), 'utf8');
+  assert.ok(/<script src="contextmenu.js">/.test(html) && html.indexOf('contextmenu.js') < html.indexOf('src="app.js"'), 'loaded before app.js');
+  assert.ok(/document\.addEventListener\('contextmenu'/.test(cm) && cm.includes('e.preventDefault()'), 'document-level, prevents the browser menu');
+  assert.ok(cm.includes('isTextTarget') && cm.includes("'input, textarea, [contenteditable"), 'text fields keep the browser menu');
+  for (const key of ['ArrowDown', 'ArrowUp', 'Escape', 'Enter']) assert.ok(cm.includes("'" + key + "'"), 'key ' + key);
+  assert.ok(cm.includes('pointerdown') && cm.includes("'scroll'") && cm.includes("'blur'"), 'closes outside / scroll / blur');
+  assert.ok(/\.dmenu \{[^}]*border-radius: 0/.test(css), 'square corners');
+  for (const sel of ["'.fx-node[data-id]'", "'.stage-inner'", "'.gc[data-id]'", "'.bankrow[data-id]'", "'#touchGrid .tbtn[data-id]'"]) assert.ok(js.includes('deskMenu.register(' + sel), 'registered ' + sel);
+  assert.ok(!js.includes("$('#bankList').addEventListener('contextmenu'") && !js.includes("$('#touchGrid').addEventListener('contextmenu'"), 'old handlers moved into the menu');
+  for (const r of ["post('api/fixtures/identify'", "post('api/fixtures/limits', { ids, limits })", 'unpatchSelection', 'invertPan', 'invertTilt', 'panTrim: 0, tiltTrim: 0']) assert.ok(js.includes(r), r);
+});
+
 check('aim trims set per light reach the wire for that fixture only', async () => {
   const a = await patch('pt', { universe: 76, address: 1 });
   const b = await patch('pt', { universe: 76, address: 11 });

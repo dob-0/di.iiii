@@ -1906,3 +1906,19 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
 .aimcard .aimnum { font-family: var(--mono); font-size: 12px; width: 100%; min-width: 0; box-sizing: border-box; text-align: center; padding: 2px 0; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
 .aimcard .aimnum::-webkit-inner-spin-button, .aimcard .aimnum::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .aimcard .aimzero { width: 100%; padding: 2px 0; font-size: 11px; background: var(--pane2); border: 1px solid var(--line); border-radius: 0; color: var(--text); cursor: pointer; }
+
+/* ---------------- the desk's own right-click menu (contextmenu.js) ---------------- */
+.dmenu {
+  position: fixed; z-index: 90; min-width: 200px; max-width: calc(100vw - 16px); overflow-y: auto;
+  background: var(--pane); border: 1px solid var(--accent); border-radius: 0; box-shadow: 0 10px 30px #000c; padding: 3px 0;
+}
+.dmitem {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%;
+  text-align: left; background: none; border: 0; border-radius: 0; padding: 7px 12px; font-size: 12px; color: var(--text);
+  white-space: nowrap;
+}
+.dmitem:hover:not(:disabled), .dmitem:focus-visible { background: var(--pane2); outline: none; }
+.dmitem:disabled { color: var(--muted); opacity: .55; cursor: default; }
+.dmitem.danger { color: var(--danger); }
+.dmh { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.dmsep { height: 1px; background: var(--line); margin: 3px 0; }
