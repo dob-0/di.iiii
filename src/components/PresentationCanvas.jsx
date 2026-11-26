@@ -5,6 +5,7 @@ import {
     normalizePreviewIssues,
     PREVIEW_HOST_MESSAGE_TYPE
 } from '../utils/presentationPreviewDocument.js'
+import { createCodePageReadBridge } from './codePageReadBridge.js'
 
 export default function PresentationCanvas({
     presentation,
@@ -38,6 +39,15 @@ export default function PresentationCanvas({
 
         window.addEventListener('message', handleMessage)
         return () => window.removeEventListener('message', handleMessage)
+    }, [])
+
+    // page -> host read-only status reads (allowlisted GETs), see codePageReadBridge.js
+    useEffect(() => {
+        const bridge = createCodePageReadBridge({
+            getFrameWindow: () => iframeRef.current?.contentWindow
+        })
+        window.addEventListener('message', bridge)
+        return () => window.removeEventListener('message', bridge)
     }, [])
 
     const previewIssueMessage = previewIssues.length > 0

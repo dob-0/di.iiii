@@ -1379,6 +1379,7 @@ body.space .stage { cursor: grab; }
 .ls-big.danger { color: var(--danger); border-color: var(--danger); background: none; }
 .ls-big.on { background: var(--accent); border-color: var(--accent); color: #041012; }
 .ls-big:disabled { opacity: .35; }
+.ls-bigs { display: flex; gap: 10px; align-items: center; flex: none; flex-wrap: wrap; }   /* ÷2 ×2 BPM TAP FX off stay one group when the row wraps */
 .ls-bpm { display: flex; flex-direction: column; align-items: center; flex: none; min-width: 54px; }
 .ls-bpm b { font-size: 22px; font-family: var(--mono); line-height: 1.1; }
 .ls-bpm span { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
@@ -1827,7 +1828,7 @@ body.dragscene .bankrow { cursor: grabbing; }
 /* A glance box: the lights are squares with their number, no captions: the 34px squares of
    the Setup plan pile on top of each other in a box this size. */
 .touchstage .fx-node { transform: translate(-50%, -50%) scale(calc(1 / var(--zoom, 1))); }
-.touchstage .fx-body { width: calc(16px * var(--ns, 1)); height: calc(16px * var(--ns, 1)); font-size: calc(8px * var(--ns, 1)); font-weight: 500; cursor: grab; }
+.touchstage .fx-body { width: var(--tpx, calc(16px * var(--ns, 1))); height: var(--tpx, calc(16px * var(--ns, 1))); font-size: calc(var(--tpx, 16px) * 0.5); font-weight: 500; cursor: grab; }
 .touchstage .fx-label { display: none; }
 /* A window onto the rig shows the lights, not the video box's words: the tag and grip sit
    inside the zoomed layer, so at the Touch pane's zoom they were drawn huge over the lights. */
@@ -1963,3 +1964,69 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
 .bottom-split:fullscreen > .aimpane { position: absolute; z-index: 5; right: 12px; top: 56px; width: 236px; max-height: calc(100% - 68px); margin: 0; background: var(--bg, #0b0b0c); border: 1px solid var(--line, #2a2a2e); overflow-y: auto; }
 .bottom-split:fullscreen #apPatchToggle { display: none; }
 #mapFullBtn.is-active { background: var(--text, #fff); color: var(--bg, #000); }
+
+/* ================ TOUCH page, compact with a mouse (owner N6942, 2026-11-26) ================
+   "ui is to huge and take the too many space": in his 761x799 window the header (147px), the
+   stage (144), the cue bar (62) and the live strip (301) left ~145px for the looks, and the FX
+   row overflowed: the Depth/Speed/Master faders shrank to 39px tracks under 30px thumbs and the
+   BPM, TAP and FX off went past the right edge. With a mouse or trackpad (pointer: fine) the
+   targets can be 32-36px; a finger (pointer: coarse: phones, tablets) keeps the 44px+ sizes
+   above (WCAG 2.5.5 target size, Apple HIG 44pt). The strip is as tall as the open tab needs
+   (at most 40% of the window, then it scrolls) instead of a fixed 252px that clipped the FX row. */
+@media (pointer: fine) {
+  .touchwrap { gap: 6px; padding: 8px; }
+  .touchbody { gap: 6px; }
+  .touchgrid { grid-template-columns: repeat(auto-fill, minmax(min(128px, 100%), 1fr)); gap: 6px; }
+  .tbtn { min-height: 54px; padding: 6px; gap: 4px; font-size: 14px; }
+  .tbtn.lookbtn.active { padding: 5px; }
+  .tbtn .tstrip { margin: 0 -6px -6px; }
+  .tbtn.lookbtn.active .tstrip { margin: 0 -5px -5px; }
+  .tlooks .touchgrid { margin-top: 6px; }
+  .tcuebar { padding: 5px 6px; gap: 4px 10px; }
+  .tcuewhere b { font-size: 14px; }
+  .tcuebtns .sq { min-height: 34px; }
+  .tcuebtns #tCueGo { font-size: 15px; }
+  .touchtabs { padding: 2px 0; }
+  .touchtabs .btab { min-height: 32px; padding: 4px 10px; }
+
+  .ls-tabs .ls-tab { min-height: 32px; font-size: 13px; border-top-width: 2px; }
+  .ls-fold { width: 36px; }
+  .ls-body { height: auto; max-height: 40vh; overflow-y: auto; padding: 6px 8px; }
+  .ls-panel { height: auto; gap: 6px; }
+  .ls-row { flex-wrap: wrap; gap: 6px 10px; flex: none; }
+  .ls-pads { gap: 4px; flex-wrap: wrap; overflow-x: visible; }
+  .ls-pads .fxpad { min-width: 70px; min-height: 32px; }
+  .ls-big { min-height: 34px; min-width: 64px; padding: 4px 10px; font-size: 14px; }
+  .ls-panel select { min-height: 34px; }
+  .ls-fader { flex: 1 1 200px; min-width: 180px; gap: 8px; }
+  .ls-fader input[type=range] { height: 28px; min-width: 100px; }
+  .ls-fader input[type=range]::-webkit-slider-runnable-track { height: 8px; }
+  .ls-fader input[type=range]::-webkit-slider-thumb { width: 14px; height: 22px; margin-top: -8px; }
+  .ls-fader input[type=range]::-moz-range-track { height: 8px; }
+  .ls-fader input[type=range]::-moz-range-thumb { width: 14px; height: 22px; }
+  .ls-bpm b { font-size: 18px; }
+  .ls-bigs { display: flex; gap: 6px; align-items: center; flex: none; margin-left: auto; }
+  .sp-timing .ls-fader input[type=range] { height: 22px; }
+}
+@media (pointer: fine) and (max-width: 1100px) {
+  .touchstage { height: 18vh; min-height: 140px; }
+}
+/* A short window (his Mac tab is 639x678): the cue bar's place at the top of the scroll was under the
+   pinned strip. The strip scrolls inside a quarter of the height there, the stage box takes 110px. */
+@media (pointer: fine) and (max-height: 720px) {
+  .ls-body { max-height: 24vh; }
+  .touchstage { height: 16vh; min-height: 110px; }
+}
+/* Wide window: the 340px stage box sat alone at the top with an empty band beside it (the bank tabs'
+   cell is empty in a show with no banks) and the looks started under it. The stage, filter and tabs
+   take a left column; the cue bar and the looks fill the right; the strip spans the foot. */
+@media (pointer: fine) and (min-width: 1101px) {
+  .touchwrap { display: grid; grid-template-columns: 340px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .touchwrap:has(.touchhead.stage-folded) { grid-template-columns: auto minmax(0, 1fr); }
+  .touchhead { grid-column: 1; grid-row: 1; grid-template-columns: minmax(0, 1fr); grid-template-rows: none; align-content: start; }
+  .touchhead .touchstage, .touchhead .touchsearch, .touchhead .touchtabs { grid-column: auto; grid-row: auto; }
+  .touchhead .touchstage:not(.folded) { height: 320px; }   /* the column is free under it: a bigger rig to read */
+  .touchhead.stage-folded { grid-template-columns: minmax(0, 1fr); }
+  .touchwrap > .touchbody { grid-column: 2; grid-row: 1; }
+  .touchwrap > .livestrip { grid-column: 1 / -1; grid-row: 2; }
+}
