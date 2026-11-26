@@ -552,6 +552,22 @@
       }
     },
     {
+      "method": "POST",
+      "path": "api/cues/autoplay",
+      "class": "b",
+      "reply": {
+        "cues": "object"
+      },
+      "node": {
+        "status": 200,
+        "body": {
+          "error": "string",
+          "cues": "object"
+        },
+        "text": "{error:'not on this node', cues: empty list}"
+      }
+    },
+    {
       "method": "GET",
       "path": "api/show",
       "class": "b",
