@@ -24,6 +24,16 @@
   .cam-tools select { width: 100%; order: 5; }
   .cam-tools .flex { display: none; }
   #camInfo { flex: 1 1 100%; order: 6; }
+  /* A phone: the picture is the one thing this tab is for, so it starts right under the bar (top third),
+     and the controls sit under it. The bar keeps the desk's doors, the page tabs and Blackout; tempo, snap,
+     save and the like belong to other pages and step aside while this one is open (body.cam-page, camera.js). */
+  .page[data-page="camera"] { min-height: 0; height: calc(100dvh - var(--topbar-h, 46px)); }
+  .cam-stage { order: 1; min-height: 40vh; }
+  .cam-tools { order: 2; border-bottom: 0; border-top: 1px solid var(--line); }
+  body.cam-page .topbar .topright > :not(.topbo) { display: none; }
+  body.cam-page .topbar .topright { padding: 0 8px; min-height: 0; flex: 1 1 100%; }
+  body.cam-page .topbar .topbo { width: 100%; min-height: 36px; }
+  body.cam-page .topbar .pills { display: none; }
 }
 .camview { display: flex; gap: 6px; align-items: center; }
 .cam-tools .sq { padding: 3px 8px; font-size: 11px; }

@@ -112,6 +112,12 @@ function createCamera(opts) {
   let waiters = [];
   let watch = null;
   let camsCache = null, camsAt = 0;
+  let restartP = null;          // the old ffmpeg is being let go before the new one starts
+  let closed = false;           // after close() frame() never starts ffmpeg again
+  let restarts = 0;             // stalled restarts in a row, for the backoff
+  let stallSeenAt = 0;          // when this stall was first seen
+  let lastRestartAt = 0;
+  const BACKOFF_MS = o.backoffMs || [1000, 2000, 5000, 10000];   // then 10 s at most
 
   // /sys is read at most once per sysCacheMs, not on every frame request.
   function cameras() {
@@ -197,9 +203,21 @@ function createCamera(opts) {
     if (watch.unref) watch.unref();
   }
 
+  // Let the stuck ffmpeg go and start a new one, no sooner than the backoff allows.
+  function restartStalled(device, age) {
+    if (closed || restartP) return;
+    if (!stallSeenAt) stallSeenAt = now();
+    if (now() - stallSeenAt < BACKOFF_MS[Math.min(restarts, BACKOFF_MS.length - 1)]) return;
+    stallSeenAt = 0; lastRestartAt = now();
+    restarts++;
+    log('camera stalled ' + age + ' ms, restarting ffmpeg (try ' + restarts + ')');
+    restartP = release().then(() => { restartP = null; if (!closed) { lastError = null; start(device); } });
+  }
+
   // The newest frame, opening the camera first when nobody has it open. Resolves
   // { buf, at } or { error }.
   function frame(viewer) {
+    if (closed) return Promise.resolve({ error: 'the camera is shut', code: 'unavailable' });
     lastWanted = now();
     if (viewer != null && viewerFps > 0) {
       const minGap = 1000 / viewerFps, t = now(), prev = viewers.get(viewer);
@@ -211,6 +229,7 @@ function createCamera(opts) {
     }
     const device = resolveDevice();
     if (!device) return Promise.resolve({ error: 'no camera chosen', code: 'unconfigured' });
+    if (restartP) return Promise.resolve({ error: 'camera restarting', code: 'stalled', ageMs: latest ? now() - latest.at : null });
     if (!proc) {
       if (lastError && now() - lastStartAt < retryMs) return Promise.resolve({ error: lastError, code: 'unavailable' });
       start(device);
@@ -218,12 +237,23 @@ function createCamera(opts) {
     }
     if (latest) {
       const age = now() - latest.at;
-      if (age > staleMs) return Promise.resolve({ error: 'camera stalled', code: 'stalled', ageMs: age, at: latest.at });
+      if (age > staleMs) {
+        // A page keeps asking but the pictures stopped (ffmpeg blocked on a stalled device): let that
+        // process go and start a new one, no sooner than the backoff (1, 2, 5, then 10 s), so the
+        // view returns when the camera does.
+        const lastAt = latest.at;
+        restartStalled(device, age);
+        if (restartP) return Promise.resolve({ error: 'camera stalled', code: 'stalled', ageMs: age, at: lastAt });
+        return Promise.resolve({ error: 'camera stalled', code: 'stalled', ageMs: age, at: latest.at });
+      }
+      stallSeenAt = 0;
+      if (now() - lastRestartAt > 10000) restarts = 0;   // the camera has stayed up: the backoff starts over
       return Promise.resolve(latest);
     }
     return new Promise((resolve) => {
       const t = setTimeout(() => {
         waiters = waiters.filter((w) => w !== done);
+        if (proc && !latest) restartStalled(device, now() - lastStartAt);   // opened but never sent a picture
         resolve({ error: 'no picture yet', code: 'waiting' });
       }, firstFrameMs);
       function done(f) { clearTimeout(t); resolve(f || { error: lastError || 'the camera did not open', code: 'unavailable' }); }
@@ -275,7 +305,7 @@ function createCamera(opts) {
   }
 
   // Resolves once the camera process has ended, so a shutdown can wait before it exits.
-  function close() { const done = release(); settle(null); return done; }
+  function close() { closed = true; const done = release(); settle(null); return done; }
 
   return { frame, status, configure, close, listCameras: () => cameras() };
 }

@@ -1598,29 +1598,21 @@ function createDesk(opts = {}) {
   // The camera page: a v4l2 camera named in <data dir>/camera.json, opened only while a page
   // asks for frames (camera.js). Machine-level, so it is not part of any show.
   const camera = opts.camera || createCamera({ dataDir: DATA, log });
-  const { ownPageRefusal } = require('../localRuntimeGuard');
-  // true (and the 403 sent) when the request is not from this machine's own page.
-  function cameraGuard(req, res) {
-    const refusal = ownPageRefusal(req);
-    if (!refusal) return false;
-    json(res, refusal, 403);
-    return true;
-  }
 
   const routes = {
 
-    // The camera routes carry the laser routes' guard (localRuntimeGuard.js ownPageRefusal): the
-    // Host must be one of this machine's own names and a browser's Origin/Referer the same origin,
-    // so a foreign page cannot read the room picture through DNS rebinding.
-    'GET /api/camera': (req, res) => cameraGuard(req, res) || json(res, camera.status()),
-    'POST /api/camera/config': (req, res, body) => cameraGuard(req, res) || json(res, camera.configure(body)),
+    // The camera routes have the SAME access rule as the desk's own read routes (GET /api/state, /api/cues):
+    // none of their own. Who may reach the desk is decided where it is mounted (serverXR requireLocalRuntime,
+    // loopback or DI_ALLOW_LAN_DEVICES, through the proxy chain), so a phone that reaches the desk through the
+    // gateway reaches the camera too. The laser guard (ownPageRefusal) is not used: a camera is not a laser.
+    'GET /api/camera': (req, res) => json(res, camera.status()),
+    'POST /api/camera/config': (req, res, body) => json(res, camera.configure(body)),
     // One JPEG, the newest. The page asks about twice a second at most while it is open (a viewer
     // asking faster gets 429, camera.js viewerFps); asking is what keeps the camera open, and a
     // camera nobody asks of is let go after ~10 s. A frame older than staleMs is a 503 "stalled"
     // with its age; the headers carry the frame's age and number so a page counts only new frames.
     'GET /api/camera/frame': async (req, res) => {
-      if (cameraGuard(req, res)) return;
-      const f = await camera.frame(req.socket && req.socket.remoteAddress);
+      const f = await camera.frame(req.ip || (req.socket && req.socket.remoteAddress))   // the real client: behind the gateway every socket is 127.0.0.1;
       if (f.error) {
         const status = f.code === 'unconfigured' ? 404 : f.code === 'rate' ? 429 : 503;
         const headers = { 'content-type': 'application/json', 'cache-control': 'no-store' };

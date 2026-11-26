@@ -210,6 +210,7 @@
     const now = page === 'camera';
     if (now === shown) return;
     shown = now;
+    document.body.classList.toggle('cam-page', now);
     if (now) { refreshStatus(); schedule(0); draw(); }
     else { clearTimeout(timer); timer = null; }
   };
