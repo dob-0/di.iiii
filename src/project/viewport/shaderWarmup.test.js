@@ -22,11 +22,17 @@ const fakeRenderer = () => {
         compiled: [],
         autoClear: true,
         localClippingEnabled: false,
+        info: { programs: [] },
         properties: { get: (m) => { if (!props.has(m)) props.set(m, {}); return props.get(m) } },
         render(scene) { r.drawn.push(scene) },
         compile(list) {
             const out = new Set()
-            list.traverse((o) => { const m = o.material; if (!m) return; out.add(m); r.properties.get(m).currentProgram = { isReady: () => r.ready } })
+            list.traverse((o) => {
+                const m = o.material; if (!m) return; out.add(m)
+                const program = { released: false, isReady: () => (program.released ? null : r.ready) }
+                r.properties.get(m).currentProgram = program
+                r.info.programs.push(program)
+            })
             r.compiled.push(out.size)
             return out
         }
@@ -81,5 +87,37 @@ describe('shaders compiled off the clock', () => {
         undo()
         r.render(scene, camera)
         expect(r.drawn.filter((s) => s === scene)).toHaveLength(3)
+    })
+
+    // three 0.185: a program released while waited on (its material disposed — a look
+    // unmounting lamps) answers getProgramParameter with null, and isReady() keeps that
+    // null forever; waiting for `true` held the last frame for good (#745 review).
+    it('stops waiting for a program three has released, instead of holding the frame forever', () => {
+        const { scene } = room()
+        const camera = new PerspectiveCamera()
+        const r = fakeRenderer()
+        installShaderWarmup(r)
+        r.render(scene, camera)
+        expect(r.drawn.filter((s) => s === scene)).toHaveLength(0)
+        for (const program of r.info.programs) program.released = true
+        r.info.programs.length = 0
+        r.render(scene, camera)
+        expect(r.drawn.filter((s) => s === scene)).toHaveLength(1)
+    })
+
+    it('never holds the frame longer than the cap: past it, it draws and the rest compile at first draw', () => {
+        const { scene } = room()
+        const camera = new PerspectiveCamera()
+        const r = fakeRenderer()
+        let t = 0
+        installShaderWarmup(r, { now: () => t, holdMaxMs: 8000 })
+        r.render(scene, camera)
+        t = 7999
+        r.render(scene, camera)
+        expect(r.drawn.filter((s) => s === scene)).toHaveLength(0)
+        t = 8001
+        r.render(scene, camera)
+        expect(r.drawn.filter((s) => s === scene)).toHaveLength(1)
+        expect(r.shaderWarmupStats.timeouts).toBe(1)
     })
 })
