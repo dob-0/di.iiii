@@ -1403,6 +1403,7 @@ function wireStage(stage) {
         return;
       }
       drag = { mode: 'pan', pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, ox: v.x, oy: v.y };
+      touchHandView = true;
       return;
     }
     // One drag at a time: a second finger landing mid-drag used to replace the drag state
@@ -7099,6 +7100,7 @@ $$('.circleBtn').forEach((b) => b.addEventListener('click', () => arrange('circl
 // viewport centre for the buttons. Without this, zooming in walks the rig off-screen.
 function zoomAt(stage, cx, cy, nz) {
   const v = viewOf(stage);
+  if (stage.closest('#touchStage')) touchHandView = true;
   nz = clamp(nz, 0.01, stage.closest('#touchStage') ? 16 : 4);   // same ceiling as fitStage
   const r = stage.getBoundingClientRect();
   const mx = cx - r.left, my = cy - r.top;
@@ -7140,6 +7142,7 @@ window.addEventListener('keydown', (e) => {
 
 function fitStage(stage) {
   const v = viewOf(stage);
+  if (stage.closest('#touchStage')) touchHandView = false;
   const r = stage.getBoundingClientRect();
   if (!S || !S.fixtures.length) { v.zoom = 1; v.x = 0; v.y = 0; placeStages(); return; }
   const pts = [...S.fixtures, ...(S.markers || [])];   // the stage labels are framed too
@@ -7736,8 +7739,9 @@ $$('.stage').forEach(wireStage);
 // ratio the box changed by — the view keeps framing exactly what it framed — and re-place
 // so the label-crowding pass reruns against the new width.
 const stageSizes = new WeakMap();
+let touchHandView = false;   // the Touch view was panned or zoomed by hand: a resize keeps it (only the fit button frames it again)
 function handleStageResize() {
-  let rescaled = false;
+  let rescaled = false, touchRefit = null;
   const setupStage = document.querySelector('.page[data-page="setup"] .stage');
   const was = setupStage && stageSizes.get(setupStage);
   if (setupStage && setupStage.clientWidth && (!was || was.w !== setupStage.clientWidth || was.h !== setupStage.clientHeight)) setupNeedFit = true;
@@ -7746,6 +7750,10 @@ function handleStageResize() {
     const v = viewOf(stage);
     const prev = stageSizes.get(stage);
     stageSizes.set(stage, { w, h });
+    // The Touch glance box is framed to its box: when the box changes size (window tiled or resized, phone
+    // turned, the stage folded open) the old zoom no longer frames the rig (cut off, or a speck in the
+    // middle), so it is framed again, unless a finger or the zoom buttons set the view by hand.
+    if (stage.closest('#touchStage') && w && h && (!prev || prev.w !== w || prev.h !== h) && !touchHandView && S && S.fixtures.length) { touchRefit = stage; continue; }
     // Only a stage that is actually on screen may steer its view — the hidden
     // page's stage reads 0×0, and 0-ratio maths would wipe the pan.
     if (!prev || !prev.w || !prev.h || !w || !h || rescaled) continue;
@@ -7754,6 +7762,7 @@ function handleStageResize() {
     v.y *= h / prev.h;
     rescaled = true;   // one visible stage drives; never apply the ratio twice
   }
+  if (touchRefit) { fitStage(touchRefit); return; }   // fitStage places every stage
   placeStages();
 }
 if (window.ResizeObserver) {

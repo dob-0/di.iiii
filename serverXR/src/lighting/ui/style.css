@@ -1822,7 +1822,7 @@ body.dragscene .bankrow { cursor: grabbing; }
 .stage.viewonly .fx-node { cursor: grab; }
 .touchhead { display: grid; gap: 10px; min-width: 0; }
 .touchhead > .touchsearch[hidden] { display: none; }
-.touchwrap .touchstage { min-height: 0; }
+.touchwrap .touchstage { min-height: 0; }   /* the media rules below set min-height with this same selector: a shorter one lost to this and the box shrank to a 25 px strip */
 .ts-title { font-size: 11px; color: var(--muted); letter-spacing: .02em; margin-right: auto; padding: 0 4px; }
 .touchstage .stage-tools { padding: 4px 6px; }
 /* A glance box: the lights are squares with their number, no captions: the 34px squares of
@@ -1850,7 +1850,8 @@ body.dragscene .bankrow { cursor: grabbing; }
 }
 @media (max-width: 1100px) {
   .touchhead { grid-template-columns: minmax(0, 1fr); }
-  .touchstage { height: 18vh; min-height: 120px; }
+  .touchstage { height: 18vh; }
+  .touchwrap .touchstage:not(.folded) { min-height: 120px; }
   .touchstage.folded { height: auto; min-height: 0; }
 }
 /* =============== keyboard mappings (ported from the studio desk) =============== */
@@ -2009,13 +2010,15 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
   .sp-timing .ls-fader input[type=range] { height: 22px; }
 }
 @media (pointer: fine) and (max-width: 1100px) {
-  .touchstage { height: 18vh; min-height: 140px; }
+  .touchstage { height: 18vh; }
+  .touchwrap .touchstage:not(.folded) { min-height: 140px; }
 }
 /* A short window (his Mac tab is 639x678): the cue bar's place at the top of the scroll was under the
    pinned strip. The strip scrolls inside a quarter of the height there, the stage box takes 110px. */
 @media (pointer: fine) and (max-height: 720px) {
   .ls-body { max-height: 24vh; }
-  .touchstage { height: 16vh; min-height: 110px; }
+  .touchstage { height: 16vh; }
+  .touchwrap .touchstage:not(.folded) { min-height: 110px; }
 }
 /* Wide window: the 340px stage box sat alone at the top with an empty band beside it (the bank tabs'
    cell is empty in a show with no banks) and the looks started under it. The stage, filter and tabs
