@@ -6060,9 +6060,12 @@ const midiPending = new Map();
 let midiFlushing = false;
 let midiFlushTimer = null;
 
-function midiSend(route, body, key) {
+// `last`: a pad press (note target) is a whole call; pressed again it goes to the back of the
+// queue, so the last press wins (press A, B, A -> A ends on air).
+function midiSend(route, body, key, last) {
   if (!midiArmed) return;
   const k = key || route;
+  if (last) midiPending.delete(k);
   const cur = midiPending.get(k);
   if (cur) Object.assign(cur.body, body);
   else midiPending.set(k, { route, body: Object.assign({}, body) });
@@ -6081,10 +6084,15 @@ async function midiFlush() {
       // does — without it a poll landing between messages snaps the value back.
       touchedAt = Date.now();
       try {
-        await fetch(item.route, {
+        const r = await fetch(item.route, {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify(item.body),
         });
+        if (!r.ok) {
+          let why = 'HTTP ' + r.status;
+          try { const j = await r.json(); if (j && j.error) why = j.error; } catch (e) { /* no body */ }
+          say(`a MIDI press was refused by the desk — ${why}`, true);
+        }
       } catch (e) {
         // The pill is the poll's, and the poll would paint over a flag set here within a
         // second and a half. A send that died says so where messages go on every page.
@@ -6181,16 +6189,27 @@ function buildMidiTargets() {
   // with the call a tap on that look's tile on the desk makes (api/looks/fire), through the
   // ARM gate. Looked up at the press, so a changed look list never fires a stale look.
   T.push({ group: 'Looks on the grid  (desk order, 40 a page)' });
-  pad('lookpage:prev', 'Look page  previous', () => midiLookPageStep(-1));
-  pad('lookpage:next', 'Look page  next', () => midiLookPageStep(1));
-  for (const t of window.deskMidiCues.lookPadTargets()) {
-    const k = Number(t.key.slice(8));
-    pad(t.key, t.label, () => {
-      const l = window.deskMidiCues.lookAt(looksOf(), midiLookPage, k);
-      if (!l) { midiFlash(`look pad ${k + 1}: empty (page ${midiLookPage + 1})`); return; }
-      midiSend('api/looks/fire', { id: l.id }, 'lookpad:' + k);
-      midiFlash(`${midiLookPage * window.deskMidiCues.LOOK_PADS + k + 1} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
-    });
+  if (window.deskMidiCues) {
+    pad('lookpage:prev', 'Look page  previous', () => midiLookPageStep(-1));
+    pad('lookpage:next', 'Look page  next', () => midiLookPageStep(1));
+    for (const t of window.deskMidiCues.lookPadTargets()) {
+      const k = Number(t.key.slice(8));
+      pad(t.key, t.label, () => {
+        const mcl = window.deskMidiCues;
+        const fire = mcl.lookPadFire(looksOf(), midiLookPage, k);
+        if (!fire) { midiFlash(`look pad ${k + 1}: empty (page ${midiLookPage + 1})`); return; }
+        // The owner's rule (cuerun.js, 2026-10-09): you press, the scene changes, and auto play
+        // stops. The desk's tile tap and fireLook stay as they are; the pad turns play-in-order
+        // off first, in the same queue, before the fire.
+        if (mcl.cueView(CUES, midiCueSent, Date.now()).autoplay) {
+          midiSend('api/cues/autoplay', { autoplay: false }, 'lookpad:autoplayoff');
+          if (midiArmed) mcl.noteSent(midiCueSent, { autoplay: false }, Date.now());
+        }
+        midiSend(fire.route, fire.body, 'lookpad:' + k, true);
+        const l = mcl.lookAt(looksOf(), midiLookPage, k);
+        midiFlash(`${midiLookPage * mcl.LOOK_PADS + k + 1} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
+      });
+    }
   }
 
   T.push({ group: 'Pads & buttons' });
@@ -6222,6 +6241,7 @@ function buildMidiTargets() {
   T.push({ group: 'Cues' });
   const mc = window.deskMidiCues;
   const cueNow = () => {
+    if (!mc) return [];
     const view = mc.cueView(CUES, midiCueSent, Date.now());
     return [...mc.cueTransport(view), ...mc.cuePadTargets(view)];
   };
@@ -6231,7 +6251,7 @@ function buildMidiTargets() {
       if (!now) { midiFlash(`${t.label}: not in the cue list any more`); return; }
       // Keyed per pad: two pads inside one flush are two cues, sent in press order, never
       // merged into one POST (a shared key would keep only the last index).
-      midiSend(now.route, now.body, 'cue:' + now.key);
+      midiSend(now.route, now.body, 'cue:' + now.key, true);
       if (midiArmed) mc.noteSent(midiCueSent, now.body, Date.now());
       midiFlash(midiArmed ? now.label : now.label + '  (not armed — nothing sent)');
     });
@@ -6256,7 +6276,7 @@ const MIDI_PRESETS = [{
   match: /apc\s*40/i,
   name: 'Akai APC40 mkII',
   // Master fader, PLAY = GO, bank arrows = look pages, the 5 x 8 grid = the desk's looks (midiCues.js).
-  build: () => window.deskMidiCues.apc40Preset(midiTargets.filter((t) => t.key).map((t) => t.key)),
+  build: () => !window.deskMidiCues ? [] : window.deskMidiCues.apc40Preset(midiTargets.filter((t) => t.key).map((t) => t.key)),
 }, {
   match: /xone:?\s*k2/i,
   name: 'Allen & Heath XONE:K2',
@@ -6325,6 +6345,7 @@ function midiApplyPreset() {
 // Look pages. The page change never touches the rig (no midiSend), so it works armed or not.
 function midiLookPageStep(dir) {
   const mc = window.deskMidiCues;
+  if (!mc) return;
   const n = looksOf().length;
   const was = midiLookPage;
   midiLookPage = mc.clampLookPage(midiLookPage + dir, n);
@@ -6334,6 +6355,7 @@ function midiLookPageStep(dir) {
 }
 // All 40 pads are sent again on a page change: forgetting them makes the diff send them all.
 function midiRepaintLookPads() {
+  if (!window.deskMidiCues) return;
   for (let k = 0; k < window.deskMidiCues.LOOK_PADS; k++) {
     const b = midiMap['lookpad:' + k];
     if (b && b.type === 'note') midiLedSent.delete(b.num);
@@ -6342,7 +6364,7 @@ function midiRepaintLookPads() {
 }
 function midiDrawLookPage() {
   const el = $('#miLookPage');
-  if (!el) return;
+  if (!el || !window.deskMidiCues) return;
   const mc = window.deskMidiCues, n = looksOf().length;
   midiLookPage = mc.clampLookPage(midiLookPage, n);
   el.textContent = `look page ${midiLookPage + 1}/${mc.lookPageCount(n)} · ${n} looks`;
@@ -6430,6 +6452,9 @@ function midiHandle(type, ch, num, unit) {
 
   if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
   if (type === 'note') return;
+  // Safe: a fader only records where it is. Applying it would move the mirror the takeover reads
+  // (a master pulled to 0 in Safe, then ARM, then 1/127 = caught at once = the rig goes dark).
+  if (!midiArmed) { midiLastVal[key] = unit; return; }
 
   // soft takeover: ignore until the physical control crosses the desk's value
   if (midiPickup[key]) {
@@ -6486,17 +6511,21 @@ function midiMapByNumber() {
 }
 
 /* ---- drawing ---- */
+// The mirror of what the desk holds. Read from the desk while Safe, and once more at ARM.
+function midiRefreshLive() {
+  if (!S) return;
+  midiLive.master = S.master;
+  midiLive.fxDepth = S.fx.depth; midiLive.fxBpm = S.fx.bpm;
+  midiLive.fxMode = S.fx.mode; midiLive.fxOn = !!S.fx.enabled;
+  midiLive.holdMs = S.chase.holdMs; midiLive.fadeMs = S.chase.fadeMs;
+  midiLive.chase = !!S.chase.enabled;
+}
+
 function buildMidi() {
   // While disarmed the desk is the authority on where everything sits, so takeover has
   // a true reference the moment you arm.
   if (S) midiLive.blackout = !!S.blackout;   // armed too: the pad is one-way, the pill must not drift
-  if (!midiArmed && S) {
-    midiLive.master = S.master;
-    midiLive.fxDepth = S.fx.depth; midiLive.fxBpm = S.fx.bpm;
-    midiLive.fxMode = S.fx.mode; midiLive.fxOn = !!S.fx.enabled;
-    midiLive.holdMs = S.chase.holdMs; midiLive.fadeMs = S.chase.fadeMs;
-    midiLive.chase = !!S.chase.enabled;
-  }
+  if (!midiArmed) midiRefreshLive();
   // While armed this page is the one moving the master, and the slow poll deliberately
   // holds S.master back mid-gesture — so read the mirror, or the pill reports a value the
   // rig left several seconds ago.
@@ -6665,6 +6694,7 @@ function midiBindLights() {
 function midiPaintLights() {
   if (!midiLedOut || !window.deskMidiCues) return;
   try {
+    if (!midiArmed) return;   // only the armed tab owns the pads' lights (inside the try: midiArmed is declared further down)
     const looks = Array.isArray(S && S.looks) ? S.looks : [];   // not looksOf(): a const further down, may not be read yet
     midiLookPage = window.deskMidiCues.clampLookPage(midiLookPage, looks.length);
     const lights = window.deskMidiCues.apc40Lights(midiMap, CUES, { blackout: !!(S && S.blackout) },
@@ -6693,21 +6723,55 @@ $('#miRescan').addEventListener('click', midiListInputs);
 $('#miInputs').addEventListener('change', (e) => midiBindInput(e.target.value));
 $('#miClearMon').addEventListener('click', () => { $('#miMon').innerHTML = '<div class="empty">cleared</div>'; });
 
-$('#miArm').addEventListener('click', () => {
-  midiArmed = !midiArmed;
+// Exactly one armed tab. Arming here sends a claim; any other armed desk tab of this browser
+// goes back to Safe. LEDs belong to the armed tab alone (midiPaintLights), so two tabs never
+// paint over each other.
+let midiClaim = null;
+const midiTabId = Math.random().toString(36).slice(2);
+try {
+  midiClaim = new BroadcastChannel('di-light-midi');
+  midiClaim.onmessage = (e) => {
+    if (e.data && e.data.claim && e.data.claim !== midiTabId && midiArmed) midiSetArmed(false, true);
+  };
+} catch (e) { midiClaim = null; }
+
+// Every LED the map uses, dark: Safe = dark pads.
+function midiLedsOff() {
+  if (!midiLedOut) return;
+  try {
+    for (const k of Object.keys(midiMap)) {
+      const b = midiMap[k];
+      if (b && b.type === 'note' && b.ch === 1 && Number.isInteger(b.num)) midiLedOut.send([0x90, b.num, 0]);
+    }
+  } catch (e) { /* port gone */ }
+  midiLedSent.clear();
+}
+
+function midiSetArmed(on, byClaim) {
+  midiArmed = on;
   const b = $('#miArm');
   b.className = 'miarm ' + (midiArmed ? 'live' : 'safe');
   b.textContent = midiArmed ? 'ARMED — sending to rig' : 'Safe — not sending';
   if (midiArmed) {
-    // Every fader must be caught again, so arming can never jump the rig.
-    for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') midiPickup[k] = true;
+    try { if (midiClaim) midiClaim.postMessage({ claim: midiTabId }); } catch (e) { /* no channel */ }
+    // Every fader must be caught again, so arming can never jump the rig: the mirror is read
+    // from the desk now, and where a fader was in Safe is forgotten.
+    midiRefreshLive();
+    for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') { midiPickup[k] = true; delete midiLastVal[k]; }
     midiDraw();
+    midiLedSent.clear();
+    midiPaintLights();   // full repaint
     say('MIDI armed — the controller is driving the rig');
   } else {
     midiPending.clear();
-    say('MIDI safe — the controller is not sending');
+    // Another tab took over: it owns the lights now, so ours stay as the claimer painted them.
+    if (byClaim) midiLedSent.clear(); else midiLedsOff();
+    if (byClaim) midiDraw();
+    say(byClaim ? 'MIDI safe — another desk tab took over the controller' : 'MIDI safe — the controller is not sending');
   }
-});
+}
+$('#miArm').addEventListener('click', () => midiSetArmed(!midiArmed));
+window.addEventListener('pagehide', () => { if (midiArmed) midiLedsOff(); });
 
 $('#miWizard').addEventListener('click', () => {
   midiWizardOn = !midiWizardOn;

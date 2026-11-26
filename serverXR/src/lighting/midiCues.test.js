@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createRequire } from 'node:module'
 
-const { LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff } =
+const { LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff } =
   createRequire(import.meta.url)('./ui/midiCues.js')
 
 const cues = (n, extra = {}) => ({ list: Array.from({ length: n }, (_, i) => ({ id: 'c' + i, name: 'Look ' + (i + 1) })), ...extra })
@@ -174,6 +174,13 @@ describe('looks on the grid, 40 to a page', () => {
     const sent = new Map()
     expect(lightDiff(p1, sent).filter((l) => l.note < 0x28)).toHaveLength(40)
     expect(lightDiff(p2, sent).filter((l) => l.note < 0x28).length).toBeGreaterThan(0)
+  })
+  it('lookPadFire: the tile call, no layer key, empty slot gives null', () => {
+    expect(lookPadFire(looks, 0, 0)).toEqual({ route: 'api/looks/fire', body: { id: 'l1' } })
+    expect(lookPadFire(looks, 1, 26)).toEqual({ route: 'api/looks/fire', body: { id: 'l67' } })
+    expect(Object.keys(lookPadFire(looks, 1, 0).body)).toEqual(['id'])
+    expect(lookPadFire(looks, 1, 27)).toBe(null)
+    expect(lookPadFire([], 0, 0)).toBe(null)
   })
   it('no look view lights no look pad (the cue pads keep working)', () => {
     expect(apc40Lights(map, cues(3), {}).filter((l) => l.note < 0x28)).toEqual([])

@@ -3,16 +3,18 @@
 // app.js builds its MIDI targets and its APC40 preset from these, midiCues.test.js holds them.
 //
 // Why: a show runs from the cue list (looks + cues), and the MIDI page could only reach the
-// old 16 scene pads. The Reika night (Hayfilm, 2026-11-27) plays 28 cues from an APC40 mkII
-// next to the desk; every pad has to fire one cue, the transport has to be one button each.
+// old 16 scene pads. The Reika night (Hayfilm, 2026-11-27) plays from an APC40 mkII next to the
+// desk: the 5 x 8 grid plays the desk's LOOKS, 40 a page (lookAt below); the cue transport is one
+// button each, and the cue:<i> pads stay learnable targets.
 //
 // The APC40 mkII numbers come from Akai's "APC40 Mk2 Communication Protocol" v1.2
 // (2015-01-19), the inbound tables: the unit starts in Generic Mode (Mode 0); CLIP LAUNCH
 // 1-40 are notes 0x00-0x27 and ignore the MIDI channel; STOP ALL CLIPS 0x51; SCENE LAUNCH
 // 1-5 are 0x52-0x56; PLAY 0x5B; the MASTER fader is CC 0x0E. The protocol does not say
-// where CLIP LAUNCH 1 sits on the panel; the layout below assumes the bottom row is 1-8
-// (so the top-left pad is 0x20), as the common APC40 mkII scripts do. Check it with one
-// press on the MIDI page's monitor; the page's learn row moves any pad that is wrong.
+// where CLIP LAUNCH 1 sits on the panel; the owner's hardware check on the real unit
+// (2026-11-27 00:53) settled it: note 32 (0x20) at velocity 5 lit the top-left pad red, note 0
+// at velocity 9 lit the bottom-left pad orange. So the bottom row is notes 0-7 and the top-left
+// pad is 0x20. The page's learn row still moves any pad that is wrong.
 
 (function (root) {
   const MAX_CUE_PADS = 40;   // the APC40's 5 x 8 grid; the page lists no more than that
@@ -72,6 +74,12 @@
     const list = Array.isArray(looks) ? looks : [];
     if (!Number.isInteger(k) || k < 0 || k >= LOOK_PADS) return null;
     return list[clampLookPage(page, list.length) * LOOK_PADS + k] || null;
+  }
+  // What a look pad press sends: the call a tap on that look's tile makes (api/looks/fire {id}),
+  // no layer, no quantize (the desk falls back to its cue layer). null for an empty slot.
+  function lookPadFire(looks, page, k) {
+    const l = lookAt(looks, page, k);
+    return l ? { route: 'api/looks/fire', body: { id: l.id } } : null;
   }
   // The page's pad targets: 'lookpad:<k>' for k 0-39, and the two page buttons.
   function lookPadTargets() {
@@ -175,7 +183,7 @@
     return send;
   }
 
-  const api = { LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
+  const api = { LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiCues = api;
 })(typeof window !== 'undefined' ? window : this);
