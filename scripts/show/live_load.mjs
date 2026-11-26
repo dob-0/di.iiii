@@ -26,8 +26,15 @@ const apply = flag('--apply'), go = flag('--go'), looksOnly = flag('--looks-only
 const looks = JSON.parse(readFileSync(files[0], 'utf8')).looks;
 const cues = JSON.parse(readFileSync(files[1], 'utf8')).cues;
 
+// A dropped connection or timeout does not throw: it answers status 0, so the callers' own checks
+// (refuse before the snapshot, fail() with the undo line after it) handle it and no stack trace escapes.
 async function call(method, path, body) {
-  const r = await fetch(base + path, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+  let r;
+  try {
+    r = await fetch(base + path, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+  } catch (e) {
+    return { status: 0, body: null, error: String((e && e.cause && e.cause.code) || (e && e.message) || e) };
+  }
   let j = null; try { j = await r.json(); } catch { /* not json */ }
   return { status: r.status, body: j };
 }
@@ -49,8 +56,10 @@ if (!Array.isArray(looks) || !looks.length) refuse('no looks in ' + files[0]);
 if (!cues || !Array.isArray(cues.list) || !cues.list.length) refuse('no cue list in ' + files[1]);
 
 const before = await call('GET', '/api/looks');
-if (before.status !== 200) refuse(`GET /api/looks answered ${before.status}`);
+if (before.status === 0) refuse(`the desk at ${base} is not reachable (${before.error}); nothing was written.`);
+if (before.status !== 200 || !before.body) refuse(`GET /api/looks answered ${before.status}`);
 const live = before.body.looks || before.body;
+if (!Array.isArray(live)) refuse('GET /api/looks did not answer a list of looks');
 const liveById = new Map(live.map((l) => [l.id, l]));
 const toAdd = [], identical = [], clash = [], replaced = [];
 for (const l of looks) {
@@ -76,11 +85,13 @@ const fail = (m) => { console.log('FAILED: ' + m); console.log(undo); process.ex
 let added = 0;
 for (const look of toAdd) {
   const r = await call('POST', '/api/looks/add', { look });
-  if (r.status !== 200 || !r.body || !r.body.ok) fail(`look ${look.id} answered ${r.status} ${JSON.stringify(r.body).slice(0, 160)}`);
+  if (r.status !== 200 || !r.body || !r.body.ok) fail(`look ${look.id} answered ${r.status} ${r.error || JSON.stringify(r.body).slice(0, 160)}`);
   added++;
 }
 const after = await call('GET', '/api/looks');
-const nAfter = (after.body.looks || after.body).length;
+const looksAfter = after.status === 200 && after.body ? (after.body.looks || after.body) : null;
+if (!Array.isArray(looksAfter)) fail(`the read-back GET /api/looks answered ${after.status}${after.error ? ' ' + after.error : ''}`);
+const nAfter = looksAfter.length;
 if (nAfter !== live.length + added - replaced.length) fail(`the desk holds ${nAfter} looks, expected ${live.length + added - replaced.length}`);
 if (looksOnly) {
   console.log(`loaded: ${added - replaced.length} of ${toAdd.length - replaced.length} looks added, ${replaced.length} replaced, the desk holds ${nAfter} looks; the cue list was not touched.`);
@@ -89,7 +100,7 @@ if (looksOnly) {
 
 const loaded = await call('POST', '/api/cues/load', cues);
 const c = loaded.body && loaded.body.cues;
-if (loaded.status !== 200 || !c) fail(`cues/load answered ${loaded.status} ${JSON.stringify(loaded.body).slice(0, 160)}`);
+if (loaded.status !== 200 || !c) fail(`cues/load answered ${loaded.status} ${loaded.error || JSON.stringify(loaded.body).slice(0, 160)}`);
 const missing = Array.isArray(c.missing) ? c.missing.length : Number(c.missing) || 0;
 const n = Array.isArray(c.list) ? c.list.length : c.n;
 if (n !== cues.list.length || missing) fail(`the cue list holds ${n} cues with ${missing} missing, expected ${cues.list.length} and 0`);
@@ -97,8 +108,10 @@ if (n !== cues.list.length || missing) fail(`the cue list holds ${n} cues with $
 let state = '';
 if (go) {
   const g = await call('POST', '/api/cues/go', {});
-  if (g.status !== 200) fail(`GO answered ${g.status} ${JSON.stringify(g.body).slice(0, 160)}`);
-  const s = (await call('GET', '/api/cues')).body.cues;
+  if (g.status !== 200) fail(`GO answered ${g.status} ${g.error || JSON.stringify(g.body).slice(0, 160)}`);
+  const gs = await call('GET', '/api/cues');
+  const s = gs.status === 200 && gs.body && gs.body.cues;
+  if (!s) fail(`GET /api/cues answered ${gs.status}${gs.error ? ' ' + gs.error : ''}`);
   state = `; GO: running ${s.running}, autoplay ${s.autoplay}, cue ${s.index + 1} of ${s.list.length} "${s.name}"`;
 }
 console.log(`loaded: ${added - replaced.length} of ${toAdd.length - replaced.length} looks added, ${replaced.length} replaced, the desk holds ${nAfter} looks; cue list "${c.project}" holds ${n} cues, ${missing} missing${state}.`);

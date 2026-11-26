@@ -78,6 +78,52 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
     }
   })
 
+  // Rules the code is built on, pinned one by one (each was checked by mutating the tool: a changed rule fails one of these).
+  const both = (l, r, extra = {}) => ({ values: { fl1: bar(...l), fr1: bar(...r), fl2: bar(...l), fr2: bar(...r), ...extra }, width: 1 })
+
+  it('the partner is exactly 65536 minus the lead, on both axes (no off-by-one)', () => {
+    const { r, out } = runMirror([{ id: 'e', name: 'E', steps: [step([30001, 26000], [30001, 26000])] }])
+    expect(r.status, r.stdout + r.stderr).toBe(0)
+    const v = out.looks[0].steps[0].values
+    expect(g16(v.fl1, 'pan')).toBe(30001); expect(g16(v.fl1, 'tilt')).toBe(26000)
+    expect(g16(v.fr1, 'pan')).toBe(65536 - 30001); expect(g16(v.fr1, 'tilt')).toBe(65536 - 26000)
+  })
+
+  it('the lead is folded at exactly 0: a bar 2 degrees into its own wall is turned, none ends into a wall', () => {
+    // tilt 33253 is 2 degrees past centre: the left bar points 2 degrees into its own wall (more into it than the right one)
+    const look = { id: 'f', name: 'F', steps: [step([32768, 33253], [32768, 31000])] }
+    const { r, out } = runMirror([look])
+    expect(r.status, r.stdout + r.stderr).toBe(0)
+    const v = out.looks[0].steps[0].values
+    expect(g16(v.fl1, 'tilt')).toBe(65536 - 33253); expect(g16(v.fr1, 'tilt')).toBe(33253) // turned exactly about 65536
+    for (const [l, rr] of [['fl1', 'fr1'], ['fl2', 'fr2']]) {
+      expect(intoRoom('L', g16(v[l], 'pan'), g16(v[l], 'tilt'))).toBeGreaterThanOrEqual(-1e-9)
+      expect(intoRoom('R', g16(v[rr], 'pan'), g16(v[rr], 'tilt'))).toBeGreaterThanOrEqual(-1e-9)
+    }
+  })
+
+  it('a fixed left or right lead is tried: no step move grows more than 5 degrees', () => {
+    // step 1 the left bar is more into the room, step 2 the right bar: a per-step lead would swing a bar by twice its pan
+    // found by search: the per-step lead alone grows a bar's move by more than 5 degrees (exit 1); a fixed L or R lead does not
+    const look = { id: 'sw', name: 'SW', steps: [both([39033, 22147], [39844, 20431]), both([35375, 28498], [38048, 27678])] }
+    const { r, out } = runMirror([look])
+    expect(r.status, r.stdout + r.stderr).toBe(0)
+    const move = (l, id) => Math.abs(g16(l.steps[0].values[id], 'pan') - g16(l.steps[1].values[id], 'pan'))
+    for (const id of ['fl1', 'fr1']) expect(move(out.looks[0], id)).toBeLessThanOrEqual(move(look, id) + 300)
+  })
+
+  it('a bar without a fine channel is rounded, not cut, and clamped to the channel range', () => {
+    const coarse = (p, t) => ({ pan: p, tilt: t, dimmer: 5 })
+    const lead = { pan: 117, pan_fine: 49, tilt: 101, tilt_fine: 0, dimmer: 5 } // pan 30001
+    const look = { id: 'c', name: 'C', steps: [{ values: { fl1: lead, fr1: coarse(117, 101), fl2: bar(0, 26000), fr2: bar(0, 26000) } }] }
+    // exit 1 is expected: a coarse-only bar cannot mirror within 2 of 65536 (its step is 256), and the tool says so
+    const { out } = runMirror([look])
+    const v = out.looks[0].steps[0].values
+    expect(v.fr1.pan).toBe(139) // 65536 - 30001 = 35535 -> 138.8 rounds to 139 (a cut would give 138)
+    expect('pan_fine' in v.fr1).toBe(false)
+    expect(g16(v.fr2, 'pan')).toBe(65535) // 65536 - 0 clamps to the 16-bit maximum
+  })
+
   it('changes nothing but pan/tilt of the bars', () => {
     const { out } = runMirror([{ id: 'a', name: 'A', steps: [step([32768, 40000], [32768, 40000])] }])
     const v = out.looks[0].steps[0].values
@@ -203,9 +249,46 @@ describe('live_load.mjs against a throwaway desk', () => {
     } finally { t.server.close() }
   }, 60000)
 
-  it('an unreachable desk fails before any write (exit 2)', async () => {
+  it('an unreachable desk is refused before any write: exit 2 and a clean line, no stack trace', async () => {
     const d = tmp(); const { lf, cf } = files(d, ['a'])
-    const r = await load('http://127.0.0.1:9', lf, cf)
-    expect(r.rc).not.toBe(0)
+    for (const extra of [[], ['--apply']]) {
+      const r = await load('http://127.0.0.1:9', lf, cf, ...extra)
+      expect(r.rc).toBe(2)
+      expect(r.out).toMatch(/^REFUSED: .*not reachable/m)
+      expect(r.out).not.toMatch(/at .*\.(m?js|ts):\d+|Error:/)
+    }
   })
+
+  // A fake desk: answers the snapshot, then breaks at the chosen path (drops the socket or answers non-JSON).
+  const fakeDesk = async (breakAt, how) => {
+    const server = http.createServer((q, s) => {
+      const u = q.url
+      q.resume()
+      if (u === breakAt && how === 'drop') return q.socket.destroy()
+      const send = (o) => { s.setHeader('content-type', 'application/json'); s.end(JSON.stringify(o)) }
+      if (u === breakAt && how === 'text') { s.end('<html>nope</html>'); return }
+      if (u === '/api/looks' && q.method === 'GET') return send({ looks: [] })
+      if (u === '/api/snapshots') return send({ snapshot: { id: 'S1' } })
+      if (u === '/api/looks/add') return send({ ok: true })
+      if (u === '/api/cues/load') return send({ cues: { project: 'suite-x', list: [{}] } })
+      send({})
+    })
+    await new Promise((res) => server.listen(0, '127.0.0.1', res))
+    return { server, base: `http://127.0.0.1:${server.address().port}` }
+  }
+  for (const [breakAt, how] of [['/api/looks/add', 'drop'], ['/api/looks', 'text'], ['/api/cues/load', 'drop']]) {
+    it(`a ${how === 'drop' ? 'dropped connection' : 'non-JSON answer'} at ${breakAt} after the snapshot still prints the undo line (exit 1)`, async () => {
+      const d = tmp(); const { lf, cf } = files(d, ['a'])
+      const f = await fakeDesk(breakAt, how)
+      try {
+        const r = await load(f.base, lf, cf, '--apply')
+        // GET /api/looks as text fails the first read (before the snapshot): refused with 2, nothing written
+        if (breakAt === '/api/looks') { expect(r.rc).toBe(2); expect(r.out).toMatch(/^REFUSED/m); return }
+        expect(r.rc).toBe(1)
+        expect(r.out).toMatch(/^FAILED: /m)
+        expect(r.out).toMatch(/undo: curl .*"id":"S1"/)
+        expect(r.out).not.toMatch(/at .*\.(m?js|ts):\d+|TypeError/)
+      } finally { f.server.close() }
+    })
+  }
 })
