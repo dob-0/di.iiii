@@ -6205,9 +6205,11 @@ function buildMidiTargets() {
     pad(t.key, t.label, () => {
       const now = cueNow().find((x) => x.key === t.key);
       if (!now) { midiFlash(`${t.label}: not in the cue list any more`); return; }
-      midiSend(now.route, now.body, 'cue:' + now.route);
+      // Keyed per pad: two pads inside one flush are two cues, sent in press order, never
+      // merged into one POST (a shared key would keep only the last index).
+      midiSend(now.route, now.body, 'cue:' + now.key);
       if (midiArmed) mc.noteSent(midiCueSent, now.body, Date.now());
-      midiFlash(now.label);
+      midiFlash(midiArmed ? now.label : now.label + '  (not armed — nothing sent)');
     });
   }
 
@@ -6370,7 +6372,10 @@ function midiHandle(type, ch, num, unit) {
   const key = midiKeyFor(type, ch, num);
   if (!key) return;
   if (key.startsWith('recall:')) return;   // handled by the shared dispatcher, ungated
-  const t = midiTargets.find((x) => x.key === key);
+  let t = midiTargets.find((x) => x.key === key);
+  // Targets are rebuilt on the MIDI page; a cue list loaded while another page was open
+  // has pads the list does not know yet. Rebuild once instead of dropping the press.
+  if (!t) { buildMidiTargets(); t = midiTargets.find((x) => x.key === key); }
   if (!t) return;
 
   if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
