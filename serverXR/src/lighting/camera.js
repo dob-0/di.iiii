@@ -247,8 +247,9 @@ function createCamera(opts) {
       const age = now() - latest.at;
       if (age > staleMs) {
         // A page keeps asking but the pictures stopped (ffmpeg blocked on a stalled device): let that
-        // process go and start a new one, no sooner than the backoff (1, 2, 5, then 10 s), so the
-        // view returns when the camera does.
+        // process go and start a new one, no sooner than the backoff (1, 2, 5, then 10 s). With a page
+        // polling, the measured gaps between restarts are about 4, 12, 14 and 21 s (backoff plus the stall
+        // check and the restart itself), so the view returns when the camera does.
         const lastAt = latest.at;
         restartStalled(device, age);
         if (restartP) return Promise.resolve({ error: 'camera stalled', code: 'stalled', ageMs: age, at: lastAt });

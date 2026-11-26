@@ -229,7 +229,7 @@ check('3 shutdown: close() waits for ffmpeg; one that ignores SIGTERM gets SIGKI
   assert.deepStrictEqual(calls[0].killed, ['SIGTERM', 'SIGKILL']);
   assert.strictEqual(cam.status().active, false);
   // Both shutdown paths wait for it.
-  const root = path.join(__dirname, '..', '..');
+  const root = path.join(__dirname, '..', '..');   // outside-ok: guarded, only read when serverXR is around
   // serverXR's own shutdown is only checked when serverXR is around (a lighting-only copy has no index.js above it).
   const host = path.join(root, 'index.js');
   if (fs.existsSync(host) && fs.existsSync(path.join(root, 'routes'))) assert.ok(/closeCamera\(\)/.test(fs.readFileSync(host, 'utf8')), 'serverXR shutdown closes the camera');
@@ -320,7 +320,7 @@ check('7 camera routes have the desk\'s own read rule: the gateway case, own nam
 
 check('7b a request the desk\'s mount refuses (serverXR requireLocalRuntime) is refused for the camera too, in words that do not name lasers', async () => {
   let guard;
-  try { guard = require('../../localRuntimeGuard'); } catch (e) { return; }   // a lighting-only copy has no serverXR around it
+  try { guard = require('../../localRuntimeGuard'); } catch (e) { return; }   // outside-ok: a lighting-only copy has no serverXR around it
   const keep = { n: process.env.NODE_ENV, l: process.env.DI_LOCAL, a: process.env.DI_ALLOW_LAN_DEVICES };
   process.env.NODE_ENV = 'development'; delete process.env.DI_ALLOW_LAN_DEVICES;
   const d = await deskServer({ fsRoot: tmp(), viewerFps: 1000 }, (req) => req.headers['x-forwarded-for'] || req.socket.remoteAddress);
@@ -351,14 +351,19 @@ check('8 lighting/ reaches nothing outside itself (it runs on its own on the clu
   (function walk(dir) {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, e.name);
-      if (e.isDirectory()) { if (!['tests', 'tools', 'ui', 'node_modules', 'data'].includes(e.name)) walk(full); continue; }
+      if (e.isDirectory()) { if (!['tools', 'ui', 'node_modules', 'data'].includes(e.name)) walk(full); continue; }
       if (!e.name.endsWith('.js') || /\.test\.js$/.test(e.name)) continue;
       const src = fs.readFileSync(full, 'utf8');
-      // a file read that climbs out of the directory is the same reach as a require
-      for (const m of src.matchAll(/(?:readFileSync|readdirSync|existsSync|statSync|createReadStream)\(\s*path\.(?:join|resolve)\(\s*__dirname\s*,\s*((?:'\.\.'\s*,?\s*)+)/g)) {
-        if (m[1].includes('..')) bad.push(path.relative(root, full) + ' reads ' + m[0].slice(0, 70));
+      // any path.join/resolve(__dirname, 'literal', ...) that lands outside lighting/ is the same reach as a require
+      // ('..', '../..', '../x', or a root variable built that way); a line marked "outside-ok" is a guarded read.
+      for (const line of src.split('\n')) {
+        if (/outside-ok/.test(line)) continue;
+        for (const m of line.matchAll(/path\.(?:join|resolve)\(\s*__dirname\s*((?:,\s*'[^']*'\s*)*)\)/g)) {
+          const parts = [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1]);
+          if (path.relative(root, path.resolve(path.dirname(full), ...parts)).startsWith('..')) bad.push(path.relative(root, full) + ' reads ' + m[0].slice(0, 70));
+        }
       }
-      for (const m of src.matchAll(/require\(\s*['"](\.[^'"]*)['"]\s*\)/g)) {
+      for (const m of src.matchAll(/^(?!.*outside-ok).*?require\(\s*['"](\.[^'"]*)['"]\s*\)/gm)) {
         const target = path.resolve(path.dirname(full), m[1]);
         if (path.relative(root, target).startsWith('..')) bad.push(path.relative(root, full) + ' -> ' + m[1]);
       }

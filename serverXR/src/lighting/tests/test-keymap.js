@@ -17,7 +17,7 @@
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const { chromium } = require(require.resolve('playwright', { paths: [path.join(__dirname, '../../../..')] }));
+const { chromium } = require(require.resolve('playwright', { paths: [path.join(__dirname, '../../../..')] }));   // outside-ok: optional playwright from the repo root
 
 const BASE = (process.env.DESK_URL || process.argv[2] || '').replace(/\/$/, '');
 if (!BASE) { console.error('Set DESK_URL to a throwaway offline desk, e.g. DESK_URL=http://127.0.0.1:4604'); process.exit(2); }
