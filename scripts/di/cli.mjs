@@ -76,8 +76,9 @@ import {
     restartSupervisor, runSupervisor, stageStatus, startSupervisor
 } from './stage.mjs'
 import { parseArgs } from './args.mjs'
-import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubUrl, isChannel } from './channels.mjs'
+import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubCommit, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
+import { fileUpdateWarning, guardAutoDowngrade } from './updateGuard.mjs'
 import { versionLabel } from './overlays.mjs'
 import { mcpArgs, moveToken, resolveTarget, askEnter, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
@@ -1057,6 +1058,13 @@ const cmdUpdate = async (args) => {
         // question — someone who names a file has chosen that file.
         if (args.flags.from) {
             release = await releaseFromFile(args.flags.from)
+            const warning = await fileUpdateWarning({
+                fileVersion: release.version,
+                channel,
+                autoOn: autoupdate.statusOf({ home }).active,
+                hubReader: () => hubCommit({ hub: hubUrl(readState(home)), version: from, timeoutMs: 8000 })
+            })
+            if (warning) say(warning)
         } else if (channel === 'dev') {
             // The dev channel is the hub's own commit, not "newest": an install
             // must not run ahead of or behind dev.diiii.xyz.
@@ -1064,6 +1072,12 @@ const cmdUpdate = async (args) => {
             if (picked.current) { say(ui.upToDate(from)); return }
             if (!picked.release) { say(picked.pending); return }
             release = picked.release
+            // The hub can serve an OLDER commit than the one running (a file install ran ahead of it, 2026-11-26).
+            // The timer (`--auto`) never steps back by itself; a hand `di update` warns and goes on.
+            const guard = await guardAutoDowngrade({ installedVersion: from, targetVersion: release.version, allowDowngrade: Boolean(args.flags['allow-downgrade']) })
+            if (!guard.allow && args.flags.auto) { say(guard.note); return }
+            if (!guard.allow) say(style.dim(`note: ${guard.note.replace(/^held: /, 'this steps back: ')}`))
+            if (guard.downgrade) await autoupdate.logLine({ home, outcome: 'downgrade-allowed', detail: guard.note })
         } else {
             release = await latestRelease()
         }
@@ -1846,7 +1860,7 @@ const cmdAutoupdate = async (args) => {
         const { outcome, detail, failed } = await autoupdate.runAutoUpdate({
             home,
             update: ({ channel }) => new Promise((resolve) => {
-                const child = spawn(process.execPath, [fileURLToPath(import.meta.url), 'update', '--channel', channel], { stdio: ['ignore', 'pipe', 'pipe'] })
+                const child = spawn(process.execPath, [fileURLToPath(import.meta.url), 'update', '--channel', channel, '--auto'], { stdio: ['ignore', 'pipe', 'pipe'] })
                 let output = ''
                 child.stdout.on('data', (d) => { output += d })
                 child.stderr.on('data', (d) => { output += d })
