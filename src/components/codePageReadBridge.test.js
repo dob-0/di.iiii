@@ -1,0 +1,129 @@
+import { describe, expect, it, vi } from 'vitest'
+import {
+    createCodePageReadBridge,
+    createReadLimiter,
+    isAllowedReadPath,
+    sanitizeReadBody,
+    stripQuery
+} from './codePageReadBridge.js'
+
+function setup({ fetchImpl, timeoutMs } = {}) {
+    const frame = { postMessage: vi.fn() }
+    const fetchMock = fetchImpl || vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ live: 1 }) }))
+    const handle = createCodePageReadBridge({ getFrameWindow: () => frame, fetchImpl: fetchMock, timeoutMs })
+    const send = (data, source = frame, origin = 'null') => handle({ source, data, origin })
+    return { frame, fetchMock, send }
+}
+const read = (path, id = 'a') => ({ type: 'di-code-page-read', id, path })
+
+describe('codePageReadBridge', () => {
+    it('strips query strings and allows only the two status paths', () => {
+        expect(stripQuery('/light/api/summary?x=1#h')).toBe('/light/api/summary')
+        expect(isAllowedReadPath('/light/api/summary?x=1')).toBe(true)
+        expect(isAllowedReadPath('/light/api/state')).toBe(true)
+        expect(isAllowedReadPath('/light/api/dmx')).toBe(true)
+        expect(isAllowedReadPath('/light/api/dmx/stream')).toBe(false)
+        expect(isAllowedReadPath('/light/api/summary/')).toBe(false)
+        expect(isAllowedReadPath('/light/api/state/../x')).toBe(false)
+        expect(isAllowedReadPath('//evil.test/light/api/state')).toBe(false)
+        expect(isAllowedReadPath(undefined)).toBe(false)
+    })
+
+    it('fetches an allowed path same-origin with GET and posts the parsed body', async () => {
+        const { frame, fetchMock, send } = setup()
+        await send(read('/light/api/dmx?a=1'))
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+        const [url, init] = fetchMock.mock.calls[0]
+        expect(url).toBe('/light/api/dmx?a=1')
+        expect(init.method).toBe('GET')
+        expect(init.credentials).toBe('same-origin')
+        expect(frame.postMessage).toHaveBeenCalledWith(
+            { type: 'di-code-page-read-result', id: 'a', ok: true, status: 200, body: { live: 1 } },
+            '*'
+        )
+    })
+
+    it('rejects other paths with 403 without fetching', async () => {
+        const { frame, fetchMock, send } = setup()
+        await send(read('/light/api/secret'))
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(frame.postMessage.mock.calls[0][0]).toMatchObject({ id: 'a', ok: false, status: 403, error: 'not allowed' })
+    })
+
+    it('only ever issues GET', async () => {
+        const { fetchMock, send } = setup()
+        await send({ ...read('/light/api/state'), method: 'POST' })
+        expect(fetchMock.mock.calls[0][1].method).toBe('GET')
+    })
+
+    it('ignores messages from another source and other message types', async () => {
+        const { frame, fetchMock, send } = setup()
+        await send(read('/light/api/state'), { postMessage: vi.fn() })
+        await send({ type: 'other', path: '/light/api/state' })
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(frame.postMessage).not.toHaveBeenCalled()
+    })
+
+    it('drops reads past 10 per second with 429', async () => {
+        const { frame, fetchMock, send } = setup()
+        for (let i = 0; i < 6; i++) await send(read('/light/api/state', `r${i}`))
+        for (let i = 6; i < 12; i++) await send(read('/light/api/state', `r${i}`))
+        expect(fetchMock).toHaveBeenCalledTimes(10)
+        const last = frame.postMessage.mock.calls.map((c) => c[0]).filter((m) => m.status === 429)
+        expect(last.map((m) => m.id)).toEqual(['r10', 'r11'])
+    })
+
+    it('limiter frees slots after the window', () => {
+        let t = 0
+        const allow = createReadLimiter({ now: () => t })
+        expect(Array.from({ length: 11 }, () => allow())).toEqual([...Array(10).fill(true), false])
+        t = 1001
+        expect(allow()).toBe(true)
+    })
+
+    it('answers ok:false when the fetch times out', async () => {
+        const hang = vi.fn((url, { signal }) => new Promise((_, reject) => {
+            signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' })))
+        }))
+        const { frame, send } = setup({ fetchImpl: hang, timeoutMs: 20 })
+        await send(read('/light/api/state'))
+        expect(frame.postMessage.mock.calls[0][0]).toMatchObject({ ok: false, body: null, error: 'timeout' })
+    })
+
+    it('gives body null for a non-JSON response', async () => {
+        const { frame, send } = setup({
+            fetchImpl: vi.fn(async () => ({ ok: false, status: 502, json: async () => { throw new Error('x') } }))
+        })
+        await send(read('/light/api/state'))
+        expect(frame.postMessage.mock.calls[0][0]).toMatchObject({ ok: false, status: 502, body: null })
+    })
+
+    it('ignores a message whose origin is not the sandboxed page (frame navigated away)', async () => {
+        const { frame, fetchMock, send } = setup()
+        await send(read('/light/api/dmx'), frame, 'https://evil.example')
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(frame.postMessage).not.toHaveBeenCalled()
+    })
+
+    it('state and summary leave the host without targets, LAN addresses, serial ports or scenes', () => {
+        const state = sanitizeReadBody('/light/api/state', {
+            master: 255, blackout: false, scenes: [{ id: 's' }],
+            output: { targets: ['2.0.0.7'], serialPort: '/dev/ttyUSB0' },
+            fixtures: [{ id: 'a', name: 'P1', universe: 2, address: 1, profile: 'X', values: { r1: 1 }, limits: { panTrim: 1 } }]
+        })
+        expect(state).toEqual({ master: 255, blackout: false, fixtures: [{ id: 'a', name: 'P1', universe: 2, address: 1, profile: 'X', values: { r1: 1 } }] })
+        const summary = sanitizeReadBody('/light/api/summary?x=1', {
+            looks: 27, input: { port: 'x' },
+            output: { enabled: true, connected: true, packetsSent: 5, lastError: '/dev/ttyUSB0 gone', targets: ['2.0.0.7'], bus: { status: 'ok', networks: ['2.0.0.0/8'], routes: [{ name: 'Output', driver: 'artnet', status: 'ok', reason: 'to 2.0.0.7', target: '2.0.0.7' }] } }
+        })
+        expect(JSON.stringify(summary)).not.toMatch(/2\.0\.0|ttyUSB|networks|targets|input/)
+        expect(summary.looks).toBe(27)
+        expect(summary.output).toMatchObject({ enabled: true, connected: true, packetsSent: 5, lastError: 'error' })
+    })
+
+    it('a 200 that is not JSON is not ok', async () => {
+        const { frame, send } = setup({ fetchImpl: vi.fn(async () => ({ ok: true, status: 200, json: async () => { throw new Error('html') } })) })
+        await send(read('/light/api/summary'))
+        expect(frame.postMessage.mock.calls[0][0]).toMatchObject({ ok: false, status: 200, body: null })
+    })
+})
