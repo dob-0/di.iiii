@@ -6934,6 +6934,33 @@ function zoomAt(stage, cx, cy, nz) {
 const stageFor = (el) => el.closest('.stagepane').querySelector('.stage');
 // Frame every fixture with some margin. This is also the rescue: whatever the pan and
 // zoom have done, one press brings the whole rig back on screen.
+// Setup map full screen: the whole .bottom-split (map + Aim panel) goes full screen so the Aim
+// panel stays usable; the same Fullscreen API route stagepage.js uses.
+const mapFullEl = () => document.querySelector('.page[data-page="setup"] .bottom-split');
+function mapFullOn() { return !!document.fullscreenElement && document.fullscreenElement === mapFullEl(); }
+function toggleMapFull() {
+  if (document.fullscreenElement) { document.exitFullscreen(); return; }
+  const el = mapFullEl();
+  if (!el || !el.requestFullscreen) { say('This browser cannot go full screen', true); return; }
+  el.requestFullscreen().then(() => say('Map full screen — Esc leaves'))
+    .catch((err) => say(`Full screen refused — ${err.message}`, true));
+}
+document.addEventListener('fullscreenchange', () => {
+  const b = $('#mapFullBtn'); if (!b) return;
+  const on = mapFullOn();
+  b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', String(on));
+  b.title = on ? 'Leave full screen (Esc)' : 'Map full screen (Shift+F) — Esc leaves';
+  if (window.deskMenu && window.deskMenu.close) window.deskMenu.close();
+  setupNeedFit = true;                                   // zoom-to-fit on enter and on exit
+  requestAnimationFrame(() => requestAnimationFrame(() => placeStages()));
+});
+$('#mapFullBtn') && $('#mapFullBtn').addEventListener('click', toggleMapFull);
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'F' || !e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (page !== 'setup' || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target.tagName || '')) || e.target.isContentEditable) return;
+  e.preventDefault(); toggleMapFull();
+});
+
 function fitStage(stage) {
   const v = viewOf(stage);
   const r = stage.getBoundingClientRect();
@@ -6941,13 +6968,14 @@ function fitStage(stage) {
   const pts = [...S.fixtures, ...(S.markers || [])];   // the stage labels are framed too
   const xs = pts.map((f) => f.x), ys = pts.map((f) => f.y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const padR = mapFullOn() && $('#aimPane') ? 250 : 0;   // full screen: the Aim panel floats at the right edge, keep the plan clear of it
   const { sc, ox, oy } = stageMap(r.width, r.height);
   const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;
   // The Touch pane has no zoom slider and is a small glance at the rig: a compact rig (her
   // lights 0.1 apart) needs more than 4x there, or every light lands on one spot.
   const maxZoom = stage.closest('#touchStage') ? 16 : 4;
-  v.zoom = clamp(Math.min((r.width - 70) / bw, (r.height - 96) / bh, maxZoom), 0.01, maxZoom);   // 35 px of air each side: the short labels stay inside
-  v.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * v.zoom;
+  v.zoom = clamp(Math.min((r.width - 70 - padR) / bw, (r.height - 96) / bh, maxZoom), 0.01, maxZoom);   // 35 px of air each side: the short labels stay inside
+  v.x = (r.width - padR) / 2 - (ox + (x0 + x1) / 2 * sc) * v.zoom;
   v.y = r.height / 2 - 8 - (oy + (y0 + y1) / 2 * sc) * v.zoom;   // 8 px up: the name under the last row stays inside
   slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });
   placeStages();

@@ -66,7 +66,7 @@
       rows.push(b);
     }
     el.addEventListener('contextmenu', (e) => e.preventDefault());
-    document.body.appendChild(el);
+    (document.fullscreenElement || document.body).appendChild(el);   // inside the full-screen element or it would be hidden behind it
     // stay inside the window: measured after it is in the page, then moved
     const r = el.getBoundingClientRect();
     const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;

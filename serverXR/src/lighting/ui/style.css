@@ -1955,3 +1955,11 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
 .aimpane button:disabled { opacity: .4; cursor: default; }
 .ap-hint { font-size: 10.5px; color: var(--muted); margin: 0; line-height: 1.35; }
 .page[data-page="setup"] .stage:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+
+/* ---------------- Setup map full screen (Shift+F): map fills the screen, Aim floats at the right ---------------- */
+.bottom-split:fullscreen { display: block; position: relative; padding: 0; background: var(--bg, #0b0b0c); }
+.bottom-split:fullscreen > .stagepane { position: absolute; inset: 0; margin: 0; }
+.bottom-split:fullscreen > .splitter, .bottom-split:fullscreen > .pane:not(.stagepane):not(.aimpane) { display: none; }
+.bottom-split:fullscreen > .aimpane { position: absolute; z-index: 5; right: 12px; top: 56px; width: 236px; max-height: calc(100% - 68px); margin: 0; background: var(--bg, #0b0b0c); border: 1px solid var(--line, #2a2a2e); overflow-y: auto; }
+.bottom-split:fullscreen #apPatchToggle { display: none; }
+#mapFullBtn.is-active { background: var(--text, #fff); color: var(--bg, #000); }
