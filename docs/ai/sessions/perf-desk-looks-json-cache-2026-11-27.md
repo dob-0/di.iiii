@@ -11,3 +11,5 @@
 **Tests:** `serverXR/src/lighting/looksCache.test.js`. Run: `cd serverXR && ../node_modules/.bin/vitest run src/lighting`.
 
 **Not tested:** the live desk and a real browser.
+
+**Second step (same PR):** show saves and snapshots splice the cached looks text; the timer save writes through the async fs (one in flight, `showWriteGen` guards stale writes; `close()` writes synchronously). Loop hold during a save 301 ms to 1.8 ms; a snapshot 1405 ms to ~60 ms (bench: `tests/bench-state.js`).
