@@ -78,7 +78,8 @@ import {
 import { parseArgs } from './args.mjs'
 import { CHANNELS, DEFAULT_CHANNEL, devRelease, hubCommit, hubUrl, isChannel } from './channels.mjs'
 import * as autoupdate from './autoupdate.mjs'
-import { fileUpdateWarning, guardAutoDowngrade } from './updateGuard.mjs'
+import { cachedOrder, decideDevUpdate, fileUpdateWarning, runningCommitOf } from './updateGuard.mjs'
+import { takeUpdateLock } from './updateLock.mjs'
 import { versionLabel } from './overlays.mjs'
 import { mcpArgs, moveToken, resolveTarget, askEnter, runLogin, runLogout, runWhoami } from './login.mjs'
 import { CMD, fail, say, style, ui, warn } from './ui.mjs'
@@ -1018,9 +1019,22 @@ const cmdUninstall = async (args) => {
     say(ui.uninstalled(p.data))
 }
 
+// One update at a time per install: the timer and a hand `di update` (or --from) both read the
+// running version first and flip `current` last, so two at once could put the older build back.
 const cmdUpdate = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
+    const lock = await takeUpdateLock({ home })
+    if (!lock.ok) {
+        const text = `another install is running (pid ${lock.holder?.pid ?? '?'} since ${lock.holder?.at ?? '?'})`
+        if (args.flags.auto) say(`held: ${text} — trying again next tick`)
+        else { fail(`${text} — try again in a minute`); process.exitCode = 1 }
+        return
+    }
+    try { await cmdUpdateLocked(args, home) } finally { await lock.release() }
+}
+
+const cmdUpdateLocked = async (args, home) => {
     const verbose = Boolean(args.flags.verbose)
     const from = installedVersion(home)
     // --channel for this run; otherwise the one `di channel` remembered.
@@ -1052,6 +1066,7 @@ const cmdUpdate = async (args) => {
     }
 
     let release
+    let decision = null
     try {
         // --from is the venue case: a machine with no network, an artifact on a
         // USB stick. It skips the feed entirely, and with it the "is this newer"
@@ -1074,10 +1089,16 @@ const cmdUpdate = async (args) => {
             release = picked.release
             // The hub can serve an OLDER commit than the one running (a file install ran ahead of it, 2026-11-26).
             // The timer (`--auto`) never steps back by itself; a hand `di update` warns and goes on.
-            const guard = await guardAutoDowngrade({ installedVersion: from, targetVersion: release.version, allowDowngrade: Boolean(args.flags['allow-downgrade']) })
-            if (!guard.allow && args.flags.auto) { say(guard.note); return }
-            if (!guard.allow) say(style.dim(`note: ${guard.note.replace(/^held: /, 'this steps back: ')}`))
-            if (guard.downgrade) await autoupdate.logLine({ home, outcome: 'downgrade-allowed', detail: guard.note })
+            decision = await decideDevUpdate({
+                installedVersion: from,
+                runningCommit: runningCommitOf(home),
+                targetVersion: release.version,
+                auto: Boolean(args.flags.auto),
+                allowDowngrade: Boolean(args.flags['allow-downgrade']),
+                order: cachedOrder({ read: () => readState(home).orderCache, write: (orderCache) => writeState(home, { orderCache }) })
+            })
+            if (decision.action === 'hold') { say(decision.note); return }
+            if (decision.note) say(style.dim(`note: ${decision.note}`))
         } else {
             release = await latestRelease()
         }
@@ -1090,8 +1111,8 @@ const cmdUpdate = async (args) => {
     // A machine can be AHEAD of the release feed — a build installed from a
     // file, an rc, a test install. "Not the same version" is not "newer", and
     // walking someone backwards is not an update.
-    // Dev builds are matched to the hub by commit, not ordered by version: the
-    // hub moving back is a move the channel must follow.
+    // Dev builds are matched to the hub by commit, not ordered by version; their
+    // order comes from the commits (decideDevUpdate above), and the timer never steps back.
     if (!args.flags.from && channel !== 'dev' && !isNewerVersion(release.version, from) && !args.flags.force) {
         say(ui.aheadOfRelease(from, release.version))
         return
@@ -1131,6 +1152,14 @@ const cmdUpdate = async (args) => {
         return
     }
 
+    // Another install must not have moved `current` while this one downloaded (the lock makes it rare; this makes it loud).
+    const movedUnderUs = () => installedVersion(home) !== from
+    if (movedUnderUs()) {
+        await fsp.rm(staged.partialDir, { recursive: true, force: true }).catch(() => {})
+        fail(`another install changed ${from} to ${installedVersion(home)} while this update was staging — nothing has been changed`)
+        process.exitCode = 1
+        return
+    }
     const runner = runnerFor(home)
     const wasRunning = await ownAlive(home, resolvePort(home))
     if (!wasRunning && await heldByStranger(home, resolvePort(home))) say(ui.portTaken(resolvePort(home), await freePortNear(resolvePort(home))))
@@ -1158,7 +1187,16 @@ const cmdUpdate = async (args) => {
         }
     }
 
+    if (movedUnderUs()) {
+        await fsp.rm(staged.partialDir, { recursive: true, force: true }).catch(() => {})
+        fail(`another install changed ${from} to ${installedVersion(home)} while this update was stopping the server — nothing has been changed`)
+        process.exitCode = 1
+        if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true, lan: wasLan } })
+        return
+    }
     await activate({ home, ...staged, version: release.version, mode: readState(home).mode })
+    // A step back is written down only once it has happened (a failed install logs nothing).
+    if (decision?.stepsBack) await autoupdate.logLine({ home, outcome: 'downgrade-allowed', detail: `${decision.note} (${args.flags.auto ? 'timer' : 'hand'})` })
     await pruneVersions({ home, keep: [release.version, from].filter(Boolean) })
 
     await writeState(home, { lastUpdate: { at: new Date().toISOString(), from, to: release.version, channel: args.flags.from ? 'file' : channel } })

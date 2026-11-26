@@ -7,7 +7,7 @@
  * which is newer: the order is the commit order on the branch, asked of GitHub's
  * compare endpoint (one GET, only when the two commits differ).
  *
- *   guardAutoDowngrade   the auto-updater never installs an older (or unrelated) commit
+ *   decideDevUpdate      the auto-updater never installs an older (or unrelated) commit
  *                        than the one running, unless `--allow-downgrade` is given
  *                        (that is logged). `di update --rollback` is another door and
  *                        is not touched by this file.
@@ -17,7 +17,11 @@
  *
  * Pure: the network and the clock come in as arguments, so the tests need neither.
  */
+import fs from 'node:fs'
+import path from 'node:path'
+
 import { REPO, hubCommit } from './channels.mjs'
+import { paths } from './paths.mjs'
 
 export const DEV_VERSION = /-dev\.([0-9a-f]{8})$/
 
@@ -44,26 +48,65 @@ export const commitOrder = async ({ installed, target, fetchImpl = fetch, timeou
     }
 }
 
+/** The running build's own commit, from `current/release.json` (null when it cannot be read). */
+export const runningCommitOf = (home) => {
+    try {
+        const release = JSON.parse(fs.readFileSync(path.join(paths(home).current, 'release.json'), 'utf8'))
+        const commit = String(release?.gitCommit || '').trim().toLowerCase()
+        return /^[0-9a-f]{8,40}$/.test(commit) ? commit : null
+    } catch {
+        return null
+    }
+}
+
 /**
- * Decide for the auto-updater. `target` is the release it is about to install.
- * Returns { allow, why }. Holding is the safe answer: a held tick is retried in 5 minutes,
- * a wrong step back on a live rig is not.
+ * `commitOrder` with an answer kept per (installed, target) pair: a held tick would otherwise ask
+ * GitHub every 5 minutes (60 unauthenticated calls per hour per IP, shared). A pair of commits has
+ * one order for ever, so only a real answer is kept; 'unknown' is asked again.
  */
-export const guardAutoDowngrade = async ({ installedVersion, targetVersion, allowDowngrade = false, order = commitOrder }) => {
-    const installed = devCommitOf(installedVersion)
+export const cachedOrder = ({ read, write, inner = commitOrder, max = 20 }) => async ({ installed, target }) => {
+    if (installed === target) return 'same'
+    const key = `${installed}...${target}`
+    const cache = (await read()) || {}
+    if (cache[key]) return cache[key]
+    const where = await inner({ installed, target })
+    if (where !== 'unknown') {
+        const next = {}
+        for (const k of Object.keys(cache).slice(-(max - 1))) next[k] = cache[k]
+        next[key] = where
+        await write(next)
+    }
+    return where
+}
+
+const heldNote = (reason) => `held: ${reason} — not stepping back. Step back on purpose with: di update --channel dev --allow-downgrade (logged), or di update --rollback`
+
+/**
+ * The whole dev-channel decision, pure: what `di update` does with the hub's build.
+ *   { action: 'install' | 'hold', note, stepsBack }
+ * `auto` is the timer: it holds whenever it cannot prove the target is the same or newer
+ * (older, diverged, unordered, running commit unreadable). A hand `di update` goes on and says
+ * it steps back. `stepsBack` = the install will move to a commit that is not newer (log it).
+ * Holding is the safe answer: a held tick is retried in 5 minutes, a wrong step back on a live rig is not.
+ */
+export const decideDevUpdate = async ({ installedVersion, runningCommit, targetVersion, auto = false, allowDowngrade = false, order = commitOrder }) => {
+    const fromFile = /^[0-9a-f]{8,40}$/.test(String(runningCommit || '')) ? String(runningCommit).slice(0, 8) : null
+    const installed = fromFile || (auto ? null : devCommitOf(installedVersion))
     const target = devCommitOf(targetVersion)
-    if (!installed || !target) return { allow: true, why: 'not a pair of dev builds' } // stable releases are ordered by isNewerVersion
+    const stepNote = (where) => `${installedVersion} -> ${targetVersion} (commit order: ${where})`
+    if (!installed || !target) {
+        if (allowDowngrade) return { action: 'install', stepsBack: true, note: `downgrade allowed by flag: ${stepNote('not known')}` }
+        if (!auto) return { action: 'install', stepsBack: false, note: null }
+        return { action: 'hold', stepsBack: false, note: heldNote(!installed ? 'the running build does not say which commit it is' : "the hub's build does not name a commit") }
+    }
     const where = await order({ installed, target })
-    if (where === 'same' || where === 'ahead') return { allow: true, why: where }
-    if (allowDowngrade) return { allow: true, why: where, downgrade: true, note: `downgrade allowed by flag: ${installedVersion} -> ${targetVersion} (commit order: ${where})` }
+    if (where === 'same' || where === 'ahead') return { action: 'install', stepsBack: false, note: null }
+    if (allowDowngrade) return { action: 'install', stepsBack: true, note: `downgrade allowed by flag: ${stepNote(where)}` }
     const reason = where === 'unknown'
         ? 'could not tell which commit is newer'
         : `the hub serves ${target}, ${where === 'behind' ? 'older than' : 'not a descendant of'} the running ${installed}`
-    return {
-        allow: false,
-        why: where,
-        note: `held: ${reason} — not stepping back. Step back on purpose with: di update --channel dev --allow-downgrade (logged), or di update --rollback`
-    }
+    if (auto) return { action: 'hold', stepsBack: false, note: heldNote(reason) }
+    return { action: 'install', stepsBack: true, note: `this steps back: ${reason}; stepping back anyway (hand update)` }
 }
 
 /**
@@ -79,5 +122,5 @@ export const fileUpdateWarning = async ({ fileVersion, autoOn, channel, hubReade
     }
     if (channel !== 'dev' && !mine) return null // a release file on stable: the hub commit is not what the updater follows
     if (mine && hub.startsWith(mine)) return null
-    return `!! automatic updates are ON and the hub serves ${hub.slice(0, 8)}, not ${mine || fileVersion}: the next tick (within 5 minutes) will move this install to the hub's build, undoing this file. Run first: di autoupdate off (turn it on again when the hub serves this commit)`
+    return `!! automatic updates are ON and the hub serves ${hub.slice(0, 8)}, not ${mine || fileVersion}: the next tick (within 5 minutes) may replace this install with the hub's build (it holds only when the hub's commit is older than this file's). Run first: di autoupdate off (turn it on again when the hub serves this commit)`
 }
