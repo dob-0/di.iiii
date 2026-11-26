@@ -79,6 +79,7 @@
         pick.innerHTML = '';
         if (!st.device) pick.add(new Option('Choose a camera…', ''));
         (st.cameras || []).forEach((c) => pick.add(new Option((c.name || 'camera') + ' · ' + c.device, c.device)));
+        if (st.device && !(st.cameras || []).some((c) => c.device === st.device)) pick.add(new Option(st.device + ' · not listed', st.device));
         if (st.device) pick.value = st.device;
         pick.disabled = !(st.cameras || []).length;
       }

@@ -291,7 +291,7 @@ async function deskServer(opts, setIp) {
   return { camera, desk, get, port, stop };
 }
 
-// What the phones really send: https via the aylmo gateway, Host local.thedi.studio, an https Referer, X-Forwarded-*.
+// What the phones really send: https via the gateway machine, a public host name, an https Referer, X-Forwarded-*.
 const GATEWAY = { host: 'local.thedi.studio', referer: 'https://local.thedi.studio/light/', 'x-forwarded-for': '203.0.113.7', 'x-forwarded-proto': 'https', 'x-forwarded-host': 'local.thedi.studio' };
 
 check('7 camera routes have the desk\'s own read rule: the gateway case, own name and a foreign Host all answer like GET /api/state', async () => {
@@ -358,14 +358,17 @@ check('8 lighting/ reaches nothing outside itself (it runs on its own on the clu
       // ('..', '../..', '../x', or a root variable built that way); a line marked "outside-ok" is a guarded read.
       for (const line of src.split('\n')) {
         if (/outside-ok/.test(line)) continue;
-        for (const m of line.matchAll(/path\.(?:join|resolve)\(\s*__dirname\s*((?:,\s*'[^']*'\s*)*)\)/g)) {
+        for (const m of line.matchAll(/path\.(?:join|resolve)\(\s*__dirname\s*((?:,\s*'[^']*'\s*)*)(?:,[^)]*)?\)/g)) {
           const parts = [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1]);
           if (path.relative(root, path.resolve(path.dirname(full), ...parts)).startsWith('..')) bad.push(path.relative(root, full) + ' reads ' + m[0].slice(0, 70));
         }
       }
-      for (const m of src.matchAll(/^(?!.*outside-ok).*?require\(\s*['"](\.[^'"]*)['"]\s*\)/gm)) {
-        const target = path.resolve(path.dirname(full), m[1]);
-        if (path.relative(root, target).startsWith('..')) bad.push(path.relative(root, full) + ' -> ' + m[1]);
+      for (const line of src.split('\n')) {
+        if (/outside-ok/.test(line)) continue;
+        for (const m of line.matchAll(/require\(\s*['"](\.[^'"]*)['"]\s*\)/g)) {
+          const target = path.resolve(path.dirname(full), m[1]);
+          if (path.relative(root, target).startsWith('..')) bad.push(path.relative(root, full) + ' -> ' + m[1]);
+        }
       }
     }
   })(root);
