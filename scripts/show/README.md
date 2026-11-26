@@ -73,6 +73,40 @@ reading (the SRE launch checklist style). A reading that is missing is NO-GO wit
 | S12 laser safety | `safety` in `laser/api/state`: `ok`/`noGo`/`reason`, `zone`, `stopPathMs`, `stopsPerHour`, `worstHeadroom`, `guards` | NO-GO "owed: S12" |
 | S14 MIDI heard, posture | `midi.statePath` + `midi.field` (default `midi.heardAt`, epoch ms on the show machine's clock); the posture unit's values | NO-GO "owed: S14" |
 
+## Desk tools: mirrored moving-bar pairs, tilt flip, loading looks onto a live desk
+
+Built 2026-11-26 on a show night; the tools had lived in a report folder and are now part of di. Why, the owner's words:
+N7020 "the right side truss ones need to swaped they looks no stage they look to the wall" and N7024 "look and fix the
+scenes i want that light work sync , now its bad becouse in scenes left line and right line is do the same movment and one
+the every time looks to the wall". Measured that night (camera frames 21:31:45 and 21:38:46, RDM GET 21:29): both bar
+trusses hang the same way (MovingBar43, 16-bit pan 540 deg, tilt 270 deg), DMX tilt above 32768 turns a bar toward the
+LEFT wall, so the true mirror of a bar's (pan, tilt) is `(65536 - pan, 65536 - tilt)` and equal values on both sides send
+one side into its own wall.
+
+| tool | does |
+|---|---|
+| `python3 scripts/show/mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R]` | every left/right pair mirrors and faces the room in every step of every look |
+| `python3 scripts/show/flip_truss_tilt.py <presets.json> <in.json> <out.json> [--sides L,R] [--left L] [--right R]` | tilt of the chosen sides mirrored about straight down (the N7020 fix) |
+| `node scripts/show/live_load.mjs <looks.json> <cues.json> [--base URL] [--replace-prefix P] [--apply] [--go] [--looks-only]` | adds a file's looks after the desk's own looks; dry run by default |
+
+**The rule (mirror_sync).** A pair is `L<n>` and `R<n>` in the presets `.units` (`--left/--right` change the two prefixes;
+only numbers present on both sides are pairs; each unit's `id` is its fixture id). A look whose pair-steps all mirror (within 2
+of 65536 on both axes) with no bar more than 5 deg into its own wall stays as it is. In any other look the lead bar keeps
+its move, folded at exactly 0 (where it points into its own wall its tilt mirrors about the centre), its partner gets the
+mirror. The lead is chosen per look by the least growth of step moves (per-step, left, or right). Only `pan`, `pan_fine`,
+`tilt`, `tilt_fine` of the pair bars change, proved by walking every value; the tool re-audits its output and exits 1 when
+a pair is not mirrored, a bar points into a wall, or a bar's largest step move grew more than `--max-grow` (default 5 deg).
+`--copy-suffix S` writes copies (`id+S`, `name + S`) and leaves the originals.
+
+**Loader.** Reads the desk (`--base`, default `http://diiii.localhost/light`), checks names and cue targets, writes nothing
+without `--apply`. `--apply` first saves a desk snapshot and prints the one-line undo (`curl ... /api/snapshots/restore`);
+a look id already on the desk with other content is refused (exit 2) unless it starts with `--replace-prefix`;
+`--looks-only` leaves the cue list; `--go` sends one plain GO (an index would turn autoplay off). Exit 0 ok, 1 a desk call
+failed, 2 refused before any write. Against a live desk, take `di show checkpoint` first and say the change.
+
+**Tests:** `npx vitest run scripts/show/desk-tools.test.mjs` (synthetic fixtures; the loader runs on a throwaway offline desk).
+**Undo:** the loader's printed snapshot line; the mirror tools write a new file and never edit their input.
+
 ## Not validated, stated
 
 - The 60 s soak, the 10 s interval, 85/90 C, 600 s kernel window: our numbers, no source (RESEARCH-show-safety 3 found
