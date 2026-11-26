@@ -6947,7 +6947,7 @@ $('#showNoteBtn').addEventListener('click', async () => {
 /* =============== wiring =============== */
 
 function showPage(name) {
-  page = ['setup', 'control', 'stage', 'touch', 'fader', 'aim', 'midi'].includes(name) ? name : 'setup';
+  page = ['setup', 'control', 'stage', 'touch', 'fader', 'aim', 'camera', 'midi'].includes(name) ? name : 'setup';
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';
@@ -6956,6 +6956,7 @@ function showPage(name) {
   // there on the phone. Skipped mid-edit: a pending save is newer than the server.
   if (page === 'midi' && !midiSaveTimer) loadMidiMap();
   if (window.stagePageShown) window.stagePageShown(page);   // stagepage.js
+  if (window.cameraPageShown) window.cameraPageShown(page);   // camera.js
   if (S) renderAll(false);
 }
 $$('.page-tab').forEach((t) => t.addEventListener('click', () => {

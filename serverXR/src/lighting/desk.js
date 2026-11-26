@@ -48,6 +48,7 @@ const { createCueRunner, sanitizeCues } = require('./cuerun');
 const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
 const holds = require('./holds');
+const { createCamera } = require('./camera');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -1594,7 +1595,22 @@ function createDesk(opts = {}) {
     });
   }
 
+  // The camera page: a v4l2 camera named in <data dir>/camera.json, opened only while a page
+  // asks for frames (camera.js). Machine-level, so it is not part of any show.
+  const camera = opts.camera || createCamera({ dataDir: DATA, log });
+
   const routes = {
+
+    'GET /api/camera': (req, res) => json(res, camera.status()),
+    'POST /api/camera/config': (req, res, body) => json(res, camera.configure(body)),
+    // One JPEG, the newest. The page asks about once a second while it is open; asking
+    // is what keeps the camera open, and a camera nobody asks of is let go after ~10 s.
+    'GET /api/camera/frame': async (req, res) => {
+      const f = await camera.frame();
+      if (f.error) return json(res, { error: f.error, code: f.code }, f.code === 'unconfigured' ? 404 : 503);
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': f.buf.length, 'x-frame-age': String(Date.now() - f.at) });
+      return res.end(f.buf);
+    },
 
     'GET /api/state': (req, res) => json(res, publicStateJson(new URL(req.url, 'http://localhost').searchParams.get('looksRev')), 200, req),
 
@@ -2893,7 +2909,7 @@ function createDesk(opts = {}) {
   const SPACE_ID = /^[a-z0-9-]{3,48}$/;
   // The routes a page opened for one space may use while another show is loaded: the
   // ones that say which show is loaded, and the ones that change it.
-  const SHOW_ROUTES = new Set(['GET /api/show', 'POST /api/show/open', 'POST /api/show/copy-machine']);
+  const SHOW_ROUTES = new Set(['GET /api/camera', 'POST /api/camera/config', 'GET /api/camera/frame', 'GET /api/show', 'POST /api/show/open', 'POST /api/show/copy-machine']);
 
   const who = () => (show.space ? `${show.label || show.space}'s show` : "this machine's own show");
 
@@ -3066,6 +3082,7 @@ function createDesk(opts = {}) {
   }
 
   function close() {
+    camera.close();
     dmxStream.close();
     clearInterval(timer);
     clearInterval(pollTimer);

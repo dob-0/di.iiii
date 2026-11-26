@@ -991,7 +991,7 @@ check('the Aim page markup exists and is wired to the limits route', () => {
   assert.ok(/<button class="page-tab" data-page="aim"/.test(html), 'tab');
   assert.ok(/<main class="page" data-page="aim">/.test(html) && /id="aimBank"/.test(html), 'page');
   assert.ok(js.includes("post('api/fixtures/limits', { ids: [f.id], limits: { [key]: val } })"), 'posts one light, one key');
-  assert.ok(js.includes("'fader', 'aim', 'midi'"), 'page is routable');
+  assert.ok(js.includes("'fader', 'aim', 'camera', 'midi'"), 'page is routable');
   assert.ok(js.includes('min="-128" max="128"'), 'fader range');
 });
 
