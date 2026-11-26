@@ -72,7 +72,9 @@ const aimPanelTrim = (f, k) => +(lim(f)[k]) || 0;
   // The desk's own answer: what it stored for these lights, straight from api/state. (pullState keeps
   // the old fixtures for 700 ms after any press, so it cannot be the read-back for a fast nudge.)
   async function readBack(ids) {
-    const next = await (await fetch('api/state')).json();
+    // Only the fixtures are read here; the looks are left out when the page already holds them.
+    const held = h.S && h.S();
+    const next = await (await fetch(held && held.looksRev != null ? 'api/state?looksRev=' + encodeURIComponent(held.looksRev) : 'api/state')).json();
     for (const f of (next && next.fixtures) || []) {
       const mine = ids.includes(f.id) && h.fxById(f.id);
       if (mine && f.limits) mine.limits = f.limits;

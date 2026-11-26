@@ -1256,10 +1256,42 @@ function createDesk(opts = {}) {
     sceneJsonCache = { version: stateVersion, text };
     return text;
   }
-  function publicStateJson() {
-    const body = JSON.stringify(Object.assign(publicState(false), { scenes: SCENES_PLACEHOLDER }));
-    return body.replace(SCENES_TOKEN, scenesJson());
+  // The looks are the rest of that bulk (80 looks x 64 steps = 42 MB on the live desk) and cannot
+  // be keyed on stateVersion: a fader move calls save() too. So the cache is keyed on the looks
+  // themselves: the same array, the same length, every element the very same object, and looksEdits
+  // unchanged. Every route that changes a look puts a NEW object in the list (putLook, replace-all,
+  // remove, show load all do), so none of them needs to say anything; a change that edits a look
+  // object in place MUST call looksEdited(). There is no such place today (audited 2026-11-27).
+  let looksEdits = 0;
+  // Starts from the clock, so a page holding a rev from before a restart can never match a new one.
+  let looksRev = Date.now();
+  let looksCache = { arr: null, items: [], edits: -1, text: '[]' };
+  function looksEdited() { looksEdits++; }
+  function looksJson() {
+    const arr = state.looks;
+    const c = looksCache;
+    let same = c.arr === arr && c.edits === looksEdits && c.items.length === arr.length;
+    if (same) for (let i = 0; i < arr.length; i++) if (c.items[i] !== arr[i]) { same = false; break; }
+    if (!same) {
+      looksCache = { arr, items: arr.slice(), edits: looksEdits, text: JSON.stringify(arr) };
+      looksRev++;
+    }
+    return looksCache.text;
   }
+  // GET /api/state. `have` is the looksRev a page already holds: when it is still current the reply
+  // leaves looks out (and does not stringify them); looksRev is always in the reply.
+  function publicStateJson(have) {
+    const text = looksJson();
+    const skip = have != null && have !== '' && Number(have) === looksRev;
+    const parts = Object.assign(publicState(false), { scenes: SCENES_PLACEHOLDER, looks: LOOKS_PLACEHOLDER, looksRev });
+    if (skip) delete parts.looks;
+    let body = JSON.stringify(parts);
+    body = body.replace(SCENES_TOKEN, () => scenesJson());
+    if (!skip) body = body.replace(LOOKS_TOKEN, () => text);
+    return body;
+  }
+  const LOOKS_PLACEHOLDER = '\u0000looks\u0000';
+  const LOOKS_TOKEN = JSON.stringify(LOOKS_PLACEHOLDER);
 
   // One answer per route (outputStatus.js): ok | unreachable | off, with the reason in words, for the
   // main output and every extra device. The page shows it; nothing sends into a dead route in silence.
@@ -1476,7 +1508,7 @@ function createDesk(opts = {}) {
 
   const routes = {
 
-    'GET /api/state': (req, res) => json(res, publicStateJson(), 200, req),
+    'GET /api/state': (req, res) => json(res, publicStateJson(new URL(req.url, 'http://localhost').searchParams.get('looksRev')), 200, req),
 
     // Which show this desk is running, where its file is, and whether the one offer a
     // new space's empty show gets applies. Answered whichever show a page asked for.
@@ -2984,6 +3016,8 @@ function createDesk(opts = {}) {
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
   return {
     handle, close, engine, writeShow, summary, input,
+    // For a caller that edits a look object in place: the cached looks JSON is rebuilt on the next poll.
+    looksEdited,
     // The cue runner itself, for a caller in this process that drives the list on a
     // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
     // /api/cues routes call, so there is still ONE clock.
