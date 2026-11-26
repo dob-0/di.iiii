@@ -11,6 +11,7 @@ const WORLD = 1000;
 
 const zlib = require('zlib');
 const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
 const { ArtNet, broadcastPlan, localAddresses } = require('./artnet');
 const { decideIdentify } = require('./identify');
@@ -678,6 +679,7 @@ function createDesk(opts = {}) {
   // Ctrl+C then threw the whole drag away. Exit flushes whatever is pending.
   let saveTimer = null;
   let dirty = false;
+  let showWriteGen = 0;   // bumped by every synchronous save or show change; an async save in flight checks it
   // Whether the show is safely on disk, for the page (status.save). A save runs from a
   // timer: before this, a locked or read-only show file (OneDrive, an antivirus, a full
   // disk) threw out of that timer — inside serverXR nothing catches it, so one failed
@@ -718,6 +720,52 @@ function createDesk(opts = {}) {
 
   // The rig as last written into the machine's own show file, so a space's show being
   // saved rewrites that file only when the rig actually changed.
+  // The looks are the rest of that bulk (80 looks x 64 steps = 42 MB on the live desk) and cannot
+  // be keyed on stateVersion: a fader move calls save() too. So the cache is keyed on the looks
+  // themselves: the same array, the same length, every element the very same object, and looksEdits
+  // unchanged. Every route that changes a look puts a NEW object in the list (putLook, replace-all,
+  // remove, show load all do), so none of them needs to say anything; a change that edits a look
+  // object in place MUST call looksEdited(). There is no such place today (audited 2026-11-27).
+  let looksEdits = 0;
+  // Starts from the clock, so a page holding a rev from before a restart can never match a new one.
+  let looksRev = Date.now();
+  let looksCache = { arr: null, items: [], edits: -1, text: '[]' };
+  function looksEdited() { looksEdits++; }
+  function looksJson() {
+    const arr = state.looks;
+    const c = looksCache;
+    let same = c.arr === arr && c.edits === looksEdits && c.items.length === arr.length;
+    if (same) for (let i = 0; i < arr.length; i++) if (c.items[i] !== arr[i]) { same = false; break; }
+    if (!same) {
+      looksCache = { arr, items: arr.slice(), edits: looksEdits, text: JSON.stringify(arr) };
+      looksRev++;
+    }
+    return looksCache.text;
+  }
+  const LOOKS_PLACEHOLDER = '\u0000looks\u0000';
+  const LOOKS_TOKEN = JSON.stringify(LOOKS_PLACEHOLDER);
+
+  // JSON.stringify(s), byte for byte, with the looks text spliced in from the cache (looksJson) instead of
+  // walked again: at 43 MB of looks a save stringified them all, on the DMX loop's thread, 0.4 s after every fire.
+  function stateText(s) {
+    const p = stateParts(s);
+    return p.whole != null ? p.whole : p.head + looksJson() + p.tail;
+  }
+  // The same text in three pieces, so the async write can send the looks as bytes encoded once per change
+  // (looksBuffer) instead of flattening and encoding a 40+ MB string on the loop's thread on every save.
+  function stateParts(s) {
+    if (!Array.isArray(s.looks)) return { whole: JSON.stringify(s) };
+    looksJson();
+    const text = JSON.stringify(Object.assign({}, s, { looks: LOOKS_PLACEHOLDER }));
+    const at = text.indexOf(LOOKS_TOKEN);
+    return { head: text.slice(0, at), tail: text.slice(at + LOOKS_TOKEN.length) };
+  }
+  function looksBuffer() {
+    looksJson();
+    if (!looksCache.buf) looksCache.buf = Buffer.from(looksCache.text);
+    return looksCache.buf;
+  }
+
   let machineOutputText = JSON.stringify(state.output);
 
   // While a space's show is loaded, the rig is still the machine's: a change under OUTPUT
@@ -762,7 +810,8 @@ function createDesk(opts = {}) {
 
   // The loaded show's own file. Throws when it cannot be written; both flags below are
   // then left as they were, so the retry does exactly what this attempt meant to.
-  function writeShowFile() {
+  // Everything before the bytes go out: the show that appeared under us is kept aside, and the text is made.
+  function prepareShowWrite() {
     const file = showFile();
     fs.mkdirSync(show.dir, { recursive: true });
     // A show that appeared after we booted with nothing belongs to somebody else — a
@@ -789,7 +838,15 @@ function createDesk(opts = {}) {
     // Compact, not pretty-printed: at 500+ scenes the indented form cost ~29ms to
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     // A space's show is written without the rig (normaliseOutput says why).
-    const text = show.space ? JSON.stringify(withoutRig(state)) : JSON.stringify(state);
+    const parts = stateParts(show.space ? withoutRig(state) : state);
+    const text = () => (parts.whole != null ? parts.whole : parts.head + looksJson() + parts.tail);
+    return { file, text, parts };
+  }
+
+  function writeShowFile() {
+    const { file, text: makeText } = prepareShowWrite();
+    const text = makeText();
+    showWriteGen++;
     // The previous copy is COPIED aside, never renamed. Renaming the live file away
     // first left a window — microseconds, but real — in which show.json did not exist at
     // all, and a second desk booting into that window found no show, started empty, and
@@ -805,11 +862,66 @@ function createDesk(opts = {}) {
     dirty = false;
   }
 
+  // The same write for the timer, off the DMX loop's thread: the text is made at once (the looks come from the
+  // cache), the 40-55 MB go out through the async fs. One save in flight at a time (saveTick waits); tmp + rename and
+  // show.prev.json work exactly as in writeShowFile. A show change, adoption or synchronous save that happens while it
+  // is in flight bumps showWriteGen, and this write then drops its tmp file instead of landing an older show.
+  async function writeShowFileAsync() {
+    const { file, text, parts } = prepareShowWrite();
+    const looksBuf = parts.whole != null ? null : looksBuffer();
+    const gen = showWriteGen;
+    const inPlace = saveStatus.failures >= 3;
+    const tmp = file + '.tmp';
+    dirty = false;
+    try {
+      const fh = await fsp.open(tmp, 'w');
+      try {
+        if (looksBuf) { await fh.writeFile(parts.head); await fh.writeFile(looksBuf); await fh.writeFile(parts.tail); }
+        else await fh.writeFile(parts.whole);
+      } finally { await fh.close(); }
+      if (gen !== showWriteGen) { fsp.unlink(tmp).catch(() => {}); return; }
+      try { await fsp.copyFile(file, file.replace(/\.json$/, '.prev.json')); } catch (e) { /* first save ever */ }
+      if (gen !== showWriteGen) { fsp.unlink(tmp).catch(() => {}); return; }
+      try { await fsp.rename(tmp, file); }
+      catch (e) {
+        if (!inPlace || !LOCKED.has(e.code)) throw e;
+        await fsp.writeFile(file, text());
+        fsp.unlink(tmp).catch(() => {});
+      }
+      bootedWithNothing = false;
+    } catch (e) { dirty = true; throw e; }
+  }
+
+  // The timer: like saveSoon but the show file goes out asynchronously and a save already in flight makes this one wait.
+  let writing = false;
+  function saveTick() {
+    if (writing) { clearTimeout(saveTimer); saveTimer = setTimeout(saveTick, 25); return; }
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    const machineOwed = !!show.space && JSON.stringify(state.output) !== machineOutputText;
+    if (!dirty && !machineOwed) return saveSoon();   // nothing to write: the sync path only settles the status
+    const fail = (e) => {
+      try { throw e; } catch (err) { failSave(err); }
+    };
+    let p = Promise.resolve();
+    try {
+      if (dirty) { writing = true; p = writeShowFileAsync(); }
+    } catch (e) { writing = false; return fail(e); }
+    p.then(() => {
+      if (show.space) writeMachineOutput(); else machineOutputText = JSON.stringify(state.output);
+      if (!saveStatus.ok) log('  the show saved again after ' + saveStatus.failures + ' failed attempt(s)');
+      Object.assign(saveStatus, { ok: true, pending: dirty, lastOkAt: Date.now(), lastError: null, failures: 0 });
+    }).catch(fail).finally(() => { writing = false; });
+  }
+
   // The timer's way in: never throws. A failure is kept, retried with a growing wait
   // (0.5 s doubling, at most 15 s) and reported; the desk and the DMX loop run on.
   function saveSoon() {
     try { writeShow(); }
-    catch (e) {
+    catch (e) { failSave(e); }
+  }
+  function failSave(e) {
+    {
       saveStatus.ok = false;
       saveStatus.pending = true;
       saveStatus.failures++;
@@ -822,7 +934,7 @@ function createDesk(opts = {}) {
         log('  COULD NOT SAVE ' + showFile() + ' (' + (e.code || '') + ' ' + e.message + ') — still running, retrying in ' + wait + 'ms');
       }
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(saveSoon, wait);
+      saveTimer = setTimeout(saveTick, wait);
     }
   }
   // The layer an outside caller's cue drives, unless it names another.
@@ -841,7 +953,7 @@ function createDesk(opts = {}) {
     dirty = true;
     saveStatus.pending = true;
     stateVersion++;
-    if (!saveTimer) saveTimer = setTimeout(saveSoon, 400);
+    if (!saveTimer) saveTimer = setTimeout(saveTick, 400);
   }
 
   // ---- the pushed frame (dmxstream.js): every rendered frame to every room listening ----
@@ -1256,9 +1368,17 @@ function createDesk(opts = {}) {
     sceneJsonCache = { version: stateVersion, text };
     return text;
   }
-  function publicStateJson() {
-    const body = JSON.stringify(Object.assign(publicState(false), { scenes: SCENES_PLACEHOLDER }));
-    return body.replace(SCENES_TOKEN, scenesJson());
+  // GET /api/state. `have` is the looksRev a page already holds: when it is still current the reply
+  // leaves looks out (and does not stringify them); looksRev is always in the reply.
+  function publicStateJson(have) {
+    const text = looksJson();
+    const skip = have != null && have !== '' && Number(have) === looksRev;
+    const parts = Object.assign(publicState(false), { scenes: SCENES_PLACEHOLDER, looks: LOOKS_PLACEHOLDER, looksRev });
+    if (skip) delete parts.looks;
+    let body = JSON.stringify(parts);
+    body = body.replace(SCENES_TOKEN, () => scenesJson());
+    if (!skip) body = body.replace(LOOKS_TOKEN, () => text);
+    return body;
   }
 
   // One answer per route (outputStatus.js): ok | unreachable | off, with the reason in words, for the
@@ -1476,7 +1596,7 @@ function createDesk(opts = {}) {
 
   const routes = {
 
-    'GET /api/state': (req, res) => json(res, publicStateJson(), 200, req),
+    'GET /api/state': (req, res) => json(res, publicStateJson(new URL(req.url, 'http://localhost').searchParams.get('looksRev')), 200, req),
 
     // Which show this desk is running, where its file is, and whether the one offer a
     // new space's empty show gets applies. Answered whichever show a page asked for.
@@ -1528,7 +1648,7 @@ function createDesk(opts = {}) {
       let disk;
       try { disk = readShow(DATA); } catch (e) { return json(res, { error: 'This machine has no show of its own to copy.' }, 404); }
       // Whatever the empty space show had pending is dropped: the copy is its first save.
-      clearTimeout(saveTimer); saveTimer = null; dirty = false;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
       writeWhole(showFile(), JSON.stringify(withoutRig(disk)));
       switchShow({ ...show });   // and loaded back from the file just written
       log('  copied this machine\'s show to ' + showFile() + ' (' + MACHINE_SHOW + ' is unchanged)');
@@ -1892,7 +2012,7 @@ function createDesk(opts = {}) {
     // opened for one space must never snapshot or import into another show.
     ...attachShowfile({
       getState: () => state, getShow: () => show, sanitizeScene, sanitizeBanks, replaceShow,
-      deskName: 'di.iiii light desk',
+      deskName: 'di.iiii light desk', looksJson: () => (Array.isArray(state.looks) ? looksJson() : null),
     }).routes(json),
 
     'POST /api/master': (req, res, body) => {
@@ -2874,7 +2994,7 @@ function createDesk(opts = {}) {
     const text = show.space ? JSON.stringify(withoutRig(disk)) : JSON.stringify({ ...disk, output: rigNow });
     const chase = { ...engine.chase };
     const origin = engine.chaseOrigin;
-    clearTimeout(saveTimer); saveTimer = null; dirty = false;
+    clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
     try {
       fs.mkdirSync(show.dir, { recursive: true });
       writeWhole(showFile(), text);
@@ -2954,6 +3074,7 @@ function createDesk(opts = {}) {
     // process that has gone, and every extra device is let go of like the main two.
     cancelPending();
     cueRunner.close();
+    if (writing) dirty = true;   // an async save in flight may not finish before the process ends: write it again, synchronously
     try { writeShow(); } catch (e) { log('could not save the show on close: ' + e.message); }
     artnet.close();
     input.close();
@@ -2984,6 +3105,8 @@ function createDesk(opts = {}) {
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
   return {
     handle, close, engine, writeShow, summary, input,
+    // For a caller that edits a look object in place: the cached looks JSON is rebuilt on the next poll.
+    looksEdited,
     // The cue runner itself, for a caller in this process that drives the list on a
     // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
     // /api/cues routes call, so there is still ONE clock.
@@ -2998,7 +3121,7 @@ function createDesk(opts = {}) {
     // when this desk is running something else.
     adoptShowFile: (id) => {
       if (show.space !== id) return false;
-      clearTimeout(saveTimer); saveTimer = null; dirty = false;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
       switchShow({ ...show });
       return true;
     },
