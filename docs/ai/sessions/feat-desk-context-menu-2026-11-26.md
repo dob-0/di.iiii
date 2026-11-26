@@ -5,4 +5,5 @@
 - Patch grid: Identify, Select, Unpatch (the existing `unpatchSelection` ask bar).
 - Bank list and Touch tiles: their old right-click handlers moved into the same menu; every item drives the existing scene popover action (bind key, MIDI pad, rename, fade, overwrite, chase, delete). Long-press (finger) still opens the popover directly.
 - Not done: Readdress... (the guarded route exists, but the page's only UI for it is dragging in the grid; no typed form to reuse, none invented); right-click on other pages (Control, Stage, Fader, Show) is the next slice and gets the default menu for now.
-- Proof: `test-http.js` 160 ok, `test.js` 206 ok, eslint 0 errors; headless pictures at 1280x800 and 1920x1080 with fit numbers in the PR.
+- Proof: `test-http.js` 161 ok, `test.js` 206 ok, eslint 0 errors; headless pictures at 1280x800 and 1920x1080 with fit numbers in the PR.
+- Safety: a right-click on a light outside a hand-made selection of 2+ (the all-selected default included) selects only that light; Trim to 0, Invert and Paste on 2+ lights ask first with the count; the menu header names the target.

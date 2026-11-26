@@ -1922,3 +1922,4 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
 .dmitem.danger { color: var(--danger); }
 .dmh { font-family: var(--mono); font-size: 10px; color: var(--muted); }
 .dmsep { height: 1px; background: var(--line); margin: 3px 0; }
+.dmhead { padding: 7px 12px 6px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--line); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

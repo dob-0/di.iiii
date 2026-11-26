@@ -38,13 +38,14 @@
 
   function open(items, x, y) {
     close();
-    const list = items.filter((it, i, a) => !(it.sep && (i === 0 || i === a.length - 1 || a[i - 1].sep)));
+    const list = items.filter((it, i, a) => !(it.sep && (i === 0 || i === a.length - 1 || a[i - 1].sep || a[i - 1].head)));
     const el = document.createElement('div');
     el.className = 'dmenu';
     el.setAttribute('role', 'menu');
     el.style.left = '0px'; el.style.top = '0px'; el.style.visibility = 'hidden';
     const rows = [];
     for (const it of list) {
+      if (it.head) { const d = document.createElement('div'); d.className = 'dmhead'; d.textContent = it.label; d.title = it.label; el.appendChild(d); continue; }
       if (it.sep) { const s = document.createElement('div'); s.className = 'dmsep'; s.setAttribute('role', 'separator'); el.appendChild(s); continue; }
       const b = document.createElement('button');
       b.type = 'button';

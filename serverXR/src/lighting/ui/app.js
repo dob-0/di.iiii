@@ -8426,22 +8426,34 @@ function fixtureMenu(f) {
   const first = selectedFixtures()[0];
   const lim = (first && first.limits) || {};
   return [
+    { head: true, label: menuTarget() },
     { label: 'Identify' + sfx, action: () => identifyIds(ids) },
     { sep: true },
     { label: 'Select line (universe ' + (f.universe + 1) + ')', action: () => { sel.clear(); S.fixtures.filter((x) => x.universe === f.universe).forEach((x) => sel.add(x.id)); paintSelection(); } },
     { label: 'Select all', action: selectAll },
     { label: 'Clear selection', action: () => { sel.clear(); paintSelection(); } },
     { sep: true },
-    { label: 'Trim pan/tilt to 0' + sfx, action: () => setLimits(ids, { panTrim: 0, tiltTrim: 0 }) },
-    { label: 'Invert pan' + sfx, hint: lim.invertPan ? 'on' : '', action: () => setLimits(ids, { invertPan: !lim.invertPan }) },
-    { label: 'Invert tilt' + sfx, hint: lim.invertTilt ? 'on' : '', action: () => setLimits(ids, { invertTilt: !lim.invertTilt }) },
+    { label: 'Trim pan/tilt to 0' + sfx, action: guarded('Set pan/tilt trim to 0', 'Trim to 0', () => setLimits(ids, { panTrim: 0, tiltTrim: 0 })) },
+    { label: 'Invert pan' + sfx, hint: lim.invertPan ? 'on' : '', action: guarded('Toggle invert pan', 'Invert', () => setLimits(ids, { invertPan: !lim.invertPan })) },
+    { label: 'Invert tilt' + sfx, hint: lim.invertTilt ? 'on' : '', action: guarded('Toggle invert tilt', 'Invert', () => setLimits(ids, { invertTilt: !lim.invertTilt })) },
     { label: 'Copy trims', action: () => { trimClip = { panTrim: lim.panTrim | 0, tiltTrim: lim.tiltTrim | 0 }; say(`trims copied: pan ${trimClip.panTrim}, tilt ${trimClip.tiltTrim}`); } },
-    { label: 'Paste trims' + sfx, disabled: !trimClip, action: () => { setLimits(ids, { ...trimClip }); say(`trims pasted onto ${n} light${n === 1 ? '' : 's'}`); } },
+    { label: 'Paste trims' + sfx, disabled: !trimClip, action: guarded('Paste trims', 'Paste', () => { setLimits(ids, { ...trimClip }); say(`trims pasted onto ${n} light${n === 1 ? '' : 's'}`); }) },
   ];
 }
 // the pointer's own light joins the selection if it was not in it (a right-click on a light of a
 // wider selection keeps the selection, so the menu acts on all of them)
-function selectForMenu(id) { if (!sel.has(id)) { sel.clear(); sel.add(id); paintSelection(); } }
+// Only a hand-made selection of 2+ (not the whole rig, which is the desk's default) is kept.
+function selectForMenu(id) {
+  const kept = sel.has(id) && sel.size >= 2 && sel.size < S.fixtures.length;
+  if (!kept) { sel.clear(); sel.add(id); paintSelection(); }
+}
+const menuTarget = () => sel.size === 1 ? ((fxById([...sel][0]) || {}).name || '1 light') : `${sel.size} lights`;
+// More than one light: ask first, naming the count (the desk's ask bar, never a blocking box).
+const guarded = (what, ok, fn) => () => {
+  const n = sel.size;
+  if (n < 2) return fn();
+  window.deskAsk.ask(`${what} on ${n} lights?`, ok).then((y) => { if (y) fn(); });
+};
 
 // Setup stage plan (the minimap): a light, or empty plan.
 window.deskMenu.register('.fx-node[data-id]', (el) => {
@@ -8463,6 +8475,7 @@ window.deskMenu.register('.gc[data-id]', (el) => {
   selectForMenu(f.id);
   const n = sel.size;
   return [
+    { head: true, label: menuTarget() },
     { label: 'Identify' + (n > 1 ? ` (${n})` : ''), action: () => identifyIds([...sel]) },
     { label: 'Select', action: () => { sel.clear(); sel.add(f.id); paintSelection(); } },
     { sep: true },

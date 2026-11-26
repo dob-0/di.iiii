@@ -972,6 +972,15 @@ check('the desk right-click menu is loaded and every place hands it its items', 
   for (const r of ["post('api/fixtures/identify'", "post('api/fixtures/limits', { ids, limits })", 'unpatchSelection', 'invertPan', 'invertTilt', 'panTrim: 0, tiltTrim: 0']) assert.ok(js.includes(r), r);
 });
 
+check('right-click on the all-selected default targets one light, and bulk trim actions ask first', () => {
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  assert.ok(js.includes('sel.size >= 2 && sel.size < S.fixtures.length'), 'only a hand-made 2+ selection is kept');
+  assert.ok(js.includes('window.deskAsk.ask(`${what} on ${n} lights?`'), 'bulk asks with the count');
+  for (const w of ["guarded('Set pan/tilt trim to 0'", "guarded('Toggle invert pan'", "guarded('Toggle invert tilt'", "guarded('Paste trims'"]) assert.ok(js.includes(w), w);
+  assert.ok(js.includes('{ head: true, label: menuTarget() }'), 'header names the target');
+  assert.ok(/label: 'Unpatch'[^\n]*action: unpatchSelection/.test(js), 'unpatch keeps its own ask bar');
+});
+
 check('aim trims set per light reach the wire for that fixture only', async () => {
   const a = await patch('pt', { universe: 76, address: 1 });
   const b = await patch('pt', { universe: 76, address: 11 });
