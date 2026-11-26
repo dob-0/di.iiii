@@ -1151,6 +1151,18 @@ function buildGroups() {
 
 /* =============== stage (shared by SETUP and CONTROL) =============== */
 
+// A short name for the plan: "Left truss 7 (out 6 @259)" -> "LT7", "P9" stays "P9". The map has
+// little room per light; the full name is the box's tooltip and sits in Selections.
+function shortLabel(name) {
+  const base = String(name || '').replace(/\(.*?\)/g, '').trim();
+  const words = base.split(/\s+/).filter(Boolean);
+  if (words.length < 2 && base.length <= 5) return base;
+  const initials = words.filter((w) => !/^\d+$/.test(w)).map((w) => w[0].toUpperCase()).join('');
+  const num = (base.match(/(\d+)\s*$/) || [])[1] || '';
+  const out = (initials + num).slice(0, 6);
+  return out || base.slice(0, 5);
+}
+
 function buildStages() {
   for (const inner of $$('.stage-inner')) {
     inner.innerHTML = '';
@@ -1158,7 +1170,8 @@ function buildStages() {
       const node = document.createElement('div');
       node.className = 'fx-node';
       node.dataset.id = f.id;
-      node.innerHTML = `<div class="fx-body">${f.index}</div><div class="fx-label">${esc(f.name)}</div>`;
+      node.innerHTML = `<div class="fx-body">${f.index}</div><div class="fx-label">${esc(shortLabel(f.name))}</div>`;
+      node.title = f.name;                    // the full name stays one hover away
       inner.appendChild(node);
     }
     for (const st of S.strips || []) inner.appendChild(stripNode(st, 'px-strip'));
@@ -1227,8 +1240,34 @@ function stageMap(W, H) {
   return { sc, ox: (W - sc) / 2, oy: (H - sc) / 2 };
 }
 
+let setupNeedFit = true;     // the Setup map frames the whole plan when it opens and when its box changes size
+// Nearest-neighbour spacing of the lights in plan units (the smaller of the x / y gap, the way two
+// squares touch). Cached by positions: placeStages runs on every pointermove of a drag.
+let gapSig = '', gapWorld = 0.1;
+function lightGap() {
+  const fx = S.fixtures;
+  const sig = fx.length + ':' + fx.map((f) => f.x + ',' + f.y).join(';');
+  if (sig === gapSig) return gapWorld;
+  let best = Infinity;
+  for (let i = 0; i < fx.length; i++) {
+    let near = Infinity;
+    for (let j = 0; j < fx.length; j++) {
+      if (i === j) continue;
+      const d = Math.max(Math.abs(fx[i].x - fx[j].x), Math.abs(fx[i].y - fx[j].y));
+      if (d > 1e-4 && d < near) near = d;     // lights stacked on one spot cannot set the size
+    }
+    if (near < best) best = near;
+  }
+  gapSig = sig; gapWorld = Number.isFinite(best) ? best : 0.1;
+  return gapWorld;
+}
+
 function placeStages() {
   if (!S) return;   // the resize observer can fire before the first state arrives
+  if (setupNeedFit) {
+    const st = document.querySelector('.page[data-page="setup"] .stage');
+    if (S.fixtures.length && st && st.clientWidth > 40 && st.clientHeight > 40) { setupNeedFit = false; fitStage(st); return; }
+  }
   const panes = $$('.stage-inner');
   // READ PHASE. clientWidth/clientHeight were being read after the style writes below had
   // already dirtied layout, which forces a synchronous whole-document reflow — once per
@@ -1240,6 +1279,18 @@ function placeStages() {
     inner.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.zoom})`;
     inner.style.setProperty('--zoom', v.zoom);   // the Touch stage keeps its lights one size whatever the zoom
     inner.style.setProperty('--ns', nodeSize[viewName(inner)]);   // light size, this view only
+    // Box size from the plan's real spacing: the wanted size (34 px x this view's size), cut to 85 %
+    // of the gap to the nearest neighbour so two boxes never overlap, never below 14 px on screen.
+    // The pane is scaled by the zoom, so the variable is in pane pixels (screen size / zoom).
+    if (S.fixtures.length > 1) {
+      const g = stageMap(sizes[paneIdx].W, sizes[paneIdx].H);
+      const gapPx = lightGap() * g.sc * v.zoom;
+      const want = 34 * nodeSize[viewName(inner)];
+      const px = Math.max(14, Math.min(want, gapPx * 0.85));
+      inner.style.setProperty('--fxw', (px / v.zoom) + 'px');
+      inner.style.setProperty('--fxh', (px * 0.88 / v.zoom) + 'px');
+      inner.style.setProperty('--fxf', Math.max(8, px * 0.36) / v.zoom + 'px');
+    }
     // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
     // tile forever. One line on every multiple of GRID in world units — the very grid the
     // drag snap and the arrange tools use — so a snapped light sits ON a drawn line. A
@@ -1626,6 +1677,7 @@ function paintSelection() {
   $$('#patchGrid .gc.used').forEach((c) => c.classList.toggle('sel', sel.has(c.dataset.id)));
   paintSelList();
   syncLimitPanel();
+  if (window.deskAimPanel) window.deskAimPanel.refresh();
   // Skipped only while a marquee is being dragged — see deferAttr. The editor is rebuilt
   // once on release, so the selection it describes is always the finished one.
   if (!deferAttr) buildAttr();
@@ -4214,13 +4266,7 @@ function recallByName(name) {
   recallScene(sc.id);
 }
 
-$('#bankList').addEventListener('contextmenu', (e) => {
-  const r = e.target.closest('.bankrow');
-  if (!r || !r.dataset.id || !S) return;
-  e.preventDefault();
-  const sc = S.scenes.find((s) => s.id === r.dataset.id);
-  if (sc) openBindPop(sc.name, e.clientX, e.clientY, sc.id);
-});
+// right-click on a bank row / touch tile: the desk menu (contextmenu.js), see sceneMenu() below
 
 // Long-press is the finger's right-click. Movement (a scroll) or an early lift (a tap)
 // cancels it; the mouse is excluded because it has a real right button.
@@ -4265,13 +4311,6 @@ $('#touchGrid').addEventListener('click', (e) => {
     e.preventDefault(); e.stopPropagation();
   }
 }, true);
-$('#touchGrid').addEventListener('contextmenu', (e) => {
-  const b = e.target.closest('.tbtn');
-  if (!b || !b.dataset.id || !S) return;
-  e.preventDefault();
-  const sc = S.scenes.find((s) => s.id === b.dataset.id);
-  if (sc) openBindPop(sc.name, e.clientX, e.clientY, sc.id);
-});
 let touchPressTimer = null;
 let touchPressAt = null;
 const cancelTouchPress = () => { clearTimeout(touchPressTimer); touchPressTimer = null; touchPressAt = null; };
@@ -6731,6 +6770,7 @@ function showPage(name) {
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';
+  if (page === 'setup') setupNeedFit = true;
   // Opening MIDI re-reads the show's map, so a layout mapped on the laptop is already
   // there on the phone. Skipped mid-edit: a pending save is newer than the server.
   if (page === 'midi' && !midiSaveTimer) loadMidiMap();
@@ -6906,9 +6946,9 @@ function fitStage(stage) {
   // The Touch pane has no zoom slider and is a small glance at the rig: a compact rig (her
   // lights 0.1 apart) needs more than 4x there, or every light lands on one spot.
   const maxZoom = stage.closest('#touchStage') ? 16 : 4;
-  v.zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, maxZoom), 0.01, maxZoom);
+  v.zoom = clamp(Math.min((r.width - 70) / bw, (r.height - 96) / bh, maxZoom), 0.01, maxZoom);   // 35 px of air each side: the short labels stay inside
   v.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * v.zoom;
-  v.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * v.zoom;
+  v.y = r.height / 2 - 8 - (oy + (y0 + y1) / 2 * sc) * v.zoom;   // 8 px up: the name under the last row stays inside
   slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });
   placeStages();
 }
@@ -7487,6 +7527,9 @@ $$('.stage').forEach(wireStage);
 const stageSizes = new WeakMap();
 function handleStageResize() {
   let rescaled = false;
+  const setupStage = document.querySelector('.page[data-page="setup"] .stage');
+  const was = setupStage && stageSizes.get(setupStage);
+  if (setupStage && setupStage.clientWidth && (!was || was.w !== setupStage.clientWidth || was.h !== setupStage.clientHeight)) setupNeedFit = true;
   for (const stage of $$('.stage')) {
     const w = stage.clientWidth, h = stage.clientHeight;
     const v = viewOf(stage);
@@ -8451,3 +8494,121 @@ $('#cueStop').addEventListener('click', () => cueAct('api/cues/stop', {}));
 $('#cueLoop').addEventListener('click', () => cueAct('api/cues/loop', { loop: !(CUES && CUES.loop) }));
 pullCues();
 setInterval(pullCues, 1000);
+
+/* =============== the desk's right-click menu: what each place offers =============== */
+// contextmenu.js is the component; this is the list for each place. Every item calls an action
+// the desk already has (a route, or the button of the scene popover) — nothing new on the server.
+
+// A scene row / tile: the same actions the scene popover has, one click away. The popover
+// itself still opens for the ones that need a key press or a typed value.
+function sceneMenu(el, e) {
+  const sc = S && S.scenes.find((x) => x.id === el.dataset.id);
+  if (!sc) return null;
+  const via = (btn) => () => { openBindPop(sc.name, e.clientX, e.clientY, sc.id); if (btn) $(btn).click(); };
+  const key = hotkeyOf(sc.name);
+  const mb = midiBindOf(sc.id);
+  const inChase = S.chase.sceneIds.includes(sc.id);
+  const items = [
+    { label: 'Recall', action: () => { activeScene = sc.id; recallScene(sc.id); } },
+    { sep: true },
+    { label: 'Bind key…', action: via('#miBind') },
+  ];
+  if (key) items.push({ label: 'Remove key', hint: hotkeyLabel(key), action: via('#bindRemove') });
+  if (cap('midi')) {
+    items.push({ label: 'Bind MIDI pad…', action: via('#miMidi') });
+    if (mb) items.push({ label: 'Remove MIDI pad', hint: String(mb.num), action: via('#miMidiRemove') });
+  }
+  items.push(
+    { sep: true },
+    { label: 'Rename…', action: via('#miRename') },
+    { label: 'Fade…', action: via('#miFade') },
+    { label: 'Overwrite with current look', action: via('#miRestage') },
+    { label: inChase ? 'Remove from chase' : 'Add to chase', action: via('#miChase') },
+    { sep: true },
+    { label: sceneSel.size > 1 && sceneSel.has(sc.id) ? `Delete ${sceneSel.size} scenes` : 'Delete scene', danger: true, action: via('#miDelete') },
+  );
+  return items;
+}
+window.deskMenu.register('.bankrow[data-id]', sceneMenu);
+window.deskMenu.register('#touchGrid .tbtn[data-id]', sceneMenu);
+
+// Trim copied from one light, pasted onto others (kept on the page, not on the desk).
+let trimClip = null;
+const setLimits = (ids, limits) => {
+  post('api/fixtures/limits', { ids, limits });
+  for (const f of S.fixtures) if (ids.includes(f.id)) Object.assign(f.limits, limits);
+};
+async function identifyIds(ids) {
+  const r = await post('api/fixtures/identify', { ids, seconds: 10 });
+  if (r && r.error) return say(r.error, true);
+  say(`${ids.length === 1 ? (fxById(ids[0]) || {}).name || 'it' : ids.length + ' lights'} flashing for ten seconds — go and look at the rig`);
+}
+function selectAll() { S.fixtures.forEach((f) => sel.add(f.id)); paintSelection(); }
+
+function fixtureMenu(f) {
+  const ids = [...sel];
+  const n = ids.length;
+  const sfx = n > 1 ? ` (${n})` : '';
+  const first = selectedFixtures()[0];
+  const lim = (first && first.limits) || {};
+  return [
+    { head: true, label: menuTarget() },
+    { label: 'Aim this light', action: () => window.deskAimPanel.focus(f.id) },
+    { label: 'Identify' + sfx, action: () => identifyIds(ids) },
+    { sep: true },
+    { label: 'Select line (universe ' + (f.universe + 1) + ')', action: () => { sel.clear(); S.fixtures.filter((x) => x.universe === f.universe).forEach((x) => sel.add(x.id)); paintSelection(); } },
+    { label: 'Select all', action: selectAll },
+    { label: 'Clear selection', action: () => { sel.clear(); paintSelection(); } },
+    { sep: true },
+    { label: 'Trim pan/tilt to 0' + sfx, action: guarded('Set pan/tilt trim to 0', 'Trim to 0', () => setLimits(ids, { panTrim: 0, tiltTrim: 0 })) },
+    { label: 'Invert pan' + sfx, hint: lim.invertPan ? 'on' : '', action: guarded('Toggle invert pan', 'Invert', () => setLimits(ids, { invertPan: !lim.invertPan })) },
+    { label: 'Invert tilt' + sfx, hint: lim.invertTilt ? 'on' : '', action: guarded('Toggle invert tilt', 'Invert', () => setLimits(ids, { invertTilt: !lim.invertTilt })) },
+    { label: 'Copy trims', action: () => { trimClip = { panTrim: lim.panTrim | 0, tiltTrim: lim.tiltTrim | 0 }; say(`trims copied: pan ${trimClip.panTrim}, tilt ${trimClip.tiltTrim}`); } },
+    { label: 'Paste trims' + sfx, disabled: !trimClip, action: guarded('Paste trims', 'Paste', () => { setLimits(ids, { ...trimClip }); say(`trims pasted onto ${n} light${n === 1 ? '' : 's'}`); }) },
+  ];
+}
+// the pointer's own light joins the selection if it was not in it (a right-click on a light of a
+// wider selection keeps the selection, so the menu acts on all of them)
+// Only a hand-made selection of 2+ (not the whole rig, which is the desk's default) is kept.
+function selectForMenu(id) {
+  const kept = sel.has(id) && sel.size >= 2 && sel.size < S.fixtures.length;
+  if (!kept) { sel.clear(); sel.add(id); paintSelection(); }
+}
+const menuTarget = () => sel.size === 1 ? ((fxById([...sel][0]) || {}).name || '1 light') : `${sel.size} lights`;
+// More than one light: ask first, naming the count (the desk's ask bar, never a blocking box).
+const guarded = (what, ok, fn) => () => {
+  const n = sel.size;
+  if (n < 2) return fn();
+  window.deskAsk.ask(`${what} on ${n} lights?`, ok).then((y) => { if (y) fn(); });
+};
+
+// Setup stage plan (the minimap): a light, or empty plan.
+window.deskMenu.register('.fx-node[data-id]', (el) => {
+  const f = S && fxById(el.dataset.id);
+  if (!f) return null;
+  selectForMenu(f.id);
+  return fixtureMenu(f);
+});
+window.deskMenu.register('.stage-inner', () => S && [
+  { label: 'Select all', action: selectAll },
+  { label: 'Clear selection', action: () => { sel.clear(); paintSelection(); } },
+]);
+
+// Patch grid on Setup: a patched cell. Readdress is the drag in the grid (the guarded route has
+// no typed form on the page), so it is not repeated here.
+window.deskMenu.register('.gc[data-id]', (el) => {
+  const f = S && fxById(el.dataset.id);
+  if (!f) return null;
+  selectForMenu(f.id);
+  const n = sel.size;
+  return [
+    { head: true, label: menuTarget() },
+    { label: 'Identify' + (n > 1 ? ` (${n})` : ''), action: () => identifyIds([...sel]) },
+    { label: 'Select', action: () => { sel.clear(); sel.add(f.id); paintSelection(); } },
+    { sep: true },
+    { label: 'Unpatch' + (n > 1 ? ` (${n})` : '') + '…', danger: true, action: unpatchSelection },
+  ];
+});
+
+// Setup's Aim panel (aimpanel.js) works on the desk's own state and routes.
+window.deskAimPanel.init({ S: () => S, sel: () => sel, fxById, post, say, paintSelection, pullState });

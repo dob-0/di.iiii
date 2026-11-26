@@ -995,6 +995,59 @@ check('the Aim page markup exists and is wired to the limits route', () => {
   assert.ok(js.includes('min="-128" max="128"'), 'fader range');
 });
 
+check('the desk right-click menu is loaded and every place hands it its items', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  const cm = fs.readFileSync(path.join(__dirname, '../ui/contextmenu.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../ui/style.css'), 'utf8');
+  assert.ok(/<script src="contextmenu.js">/.test(html) && html.indexOf('contextmenu.js') < html.indexOf('src="app.js"'), 'loaded before app.js');
+  assert.ok(/document\.addEventListener\('contextmenu'/.test(cm) && cm.includes('e.preventDefault()'), 'document-level, prevents the browser menu');
+  assert.ok(cm.includes('isTextTarget') && cm.includes("'input, textarea, [contenteditable"), 'text fields keep the browser menu');
+  for (const key of ['ArrowDown', 'ArrowUp', 'Escape', 'Enter']) assert.ok(cm.includes("'" + key + "'"), 'key ' + key);
+  assert.ok(cm.includes('pointerdown') && cm.includes("'scroll'") && cm.includes("'blur'"), 'closes outside / scroll / blur');
+  assert.ok(/\.dmenu \{[^}]*border-radius: 0/.test(css), 'square corners');
+  for (const sel of ["'.fx-node[data-id]'", "'.stage-inner'", "'.gc[data-id]'", "'.bankrow[data-id]'", "'#touchGrid .tbtn[data-id]'"]) assert.ok(js.includes('deskMenu.register(' + sel), 'registered ' + sel);
+  assert.ok(!js.includes("$('#bankList').addEventListener('contextmenu'") && !js.includes("$('#touchGrid').addEventListener('contextmenu'"), 'old handlers moved into the menu');
+  for (const r of ["post('api/fixtures/identify'", "post('api/fixtures/limits', { ids, limits })", 'unpatchSelection', 'invertPan', 'invertTilt', 'panTrim: 0, tiltTrim: 0']) assert.ok(js.includes(r), r);
+});
+
+check('right-click on the all-selected default targets one light, and bulk trim actions ask first', () => {
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  assert.ok(js.includes('sel.size >= 2 && sel.size < S.fixtures.length'), 'only a hand-made 2+ selection is kept');
+  assert.ok(js.includes('window.deskAsk.ask(`${what} on ${n} lights?`'), 'bulk asks with the count');
+  for (const w of ["guarded('Set pan/tilt trim to 0'", "guarded('Toggle invert pan'", "guarded('Toggle invert tilt'", "guarded('Paste trims'"]) assert.ok(js.includes(w), w);
+  assert.ok(js.includes('{ head: true, label: menuTarget() }'), 'header names the target');
+  assert.ok(/label: 'Unpatch'[^\n]*action: unpatchSelection/.test(js), 'unpatch keeps its own ask bar');
+});
+
+check('the Setup Aim panel sits beside the map and writes only through api/fixtures/limits', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../ui/aimpanel.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../ui/style.css'), 'utf8');
+  assert.ok(/id="aimPane"/.test(html) && /id="apPanVal"/.test(html) && /data-axis="tilt" data-dir="-1"/.test(html) && /data-step="5"/.test(html) && /id="apZero"/.test(html), 'panel markup');
+  assert.ok(html.indexOf('id="aimPane"') > html.indexOf('class="stage-inner"') && html.indexOf('id="aimPane"') < html.indexOf('data-split="setup-sel"'), 'right beside the map');
+  assert.ok(html.indexOf('aimpanel.js') < html.indexOf('src="app.js"'), 'script order');
+  assert.ok(js.includes("h.post('api/fixtures/limits', { ids: j.ids, limits: j.limits })") && js.includes("fetch('api/state')"), 'writes via limits, reads back from state');
+  assert.ok(!/api\/(fixture'|fixtures\/(?!limits|identify))/.test(js), 'no other route');
+  assert.ok(js.includes('+(lim(f)[k]) || 0') && !js.includes('] | 0') && js.includes('* 100) / 100') && js.includes("'trimStep'") && /data-step="0.01"/.test(html), 'fractional trims are read whole and rounded to 2 decimals; step in trimStep');
+  for (const k2 of ["'ArrowLeft'", "'ArrowUp'", "'Tab'"]) assert.ok(js.includes(k2), k2);
+  assert.ok(js.includes('S.fixtures.length') && js.includes('the default: nothing picked'), 'whole-rig default is never a target');
+  assert.ok(js.includes("localStorage.setItem('aimPatchHidden'"), 'collapse remembered');
+  assert.ok(app.includes("label: 'Aim this light'") && app.includes('deskAimPanel.init('), 'hooked in app.js');
+  assert.ok(/\.patch-min > \.top-split \{ display: none/.test(css), 'collapse css');
+});
+
+check('minimap: boxes sized from the plan spacing, short labels, fit on open', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../ui/style.css'), 'utf8');
+  assert.ok(app.includes('function lightGap()') && app.includes("'--fxw'"), 'box size comes from the neighbour gap');
+  assert.ok(app.includes('Math.max(14, Math.min(want, gapPx * 0.85))'), 'never over the gap, never under 14 px');
+  assert.ok(css.includes('width: var(--fxw,'), 'the box reads --fxw');
+  assert.ok(app.includes('shortLabel(f.name)') && app.includes('node.title = f.name'), 'short label, full name as tooltip');
+  assert.ok(app.includes('setupNeedFit = true'), 'Setup refits when it opens and on resize');
+});
+
 check('aim trims set per light reach the wire for that fixture only', async () => {
   const a = await patch('pt', { universe: 76, address: 1 });
   const b = await patch('pt', { universe: 76, address: 11 });

@@ -313,9 +313,9 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 
 .fx-node { position: absolute; transform: translate(-50%, -50%); }
 .fx-body {
-  position: relative; width: calc(34px * var(--ns, 1)); height: calc(30px * var(--ns, 1)); border-radius: 0;   /* --ns: the light size of this view */
+  position: relative; width: var(--fxw, calc(34px * var(--ns, 1))); height: var(--fxh, calc(30px * var(--ns, 1))); border-radius: 0;   /* --ns: the light size of this view */
   border: 1px solid #00000055; display: flex; align-items: center; justify-content: center;
-  font-size: calc(11px * var(--ns, 1)); color: var(--text); font-weight: 600; cursor: grab;
+  font-size: var(--fxf, calc(11px * var(--ns, 1))); color: var(--text); font-weight: 600; cursor: grab; overflow: hidden;
   background: #1d1d20; transition: background .1s linear;   /* matches paintStage's unlit body */
 }
 .fx-node.sel .fx-body { outline: 2px solid #fff; outline-offset: 1px; }
@@ -1914,3 +1914,44 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
 .aimcard .aimnum { font-family: var(--mono); font-size: 12px; width: 100%; min-width: 0; box-sizing: border-box; text-align: center; padding: 2px 0; background: var(--field); border: 1px solid var(--line); border-radius: 0; }
 .aimcard .aimnum::-webkit-inner-spin-button, .aimcard .aimnum::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .aimcard .aimzero { width: 100%; padding: 2px 0; font-size: 11px; background: var(--pane2); border: 1px solid var(--line); border-radius: 0; color: var(--text); cursor: pointer; }
+
+/* ---------------- the desk's own right-click menu (contextmenu.js) ---------------- */
+.dmenu {
+  position: fixed; z-index: 90; min-width: 200px; max-width: calc(100vw - 16px); overflow-y: auto;
+  background: var(--pane); border: 1px solid var(--accent); border-radius: 0; box-shadow: 0 10px 30px #000c; padding: 3px 0;
+}
+.dmitem {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%;
+  text-align: left; background: none; border: 0; border-radius: 0; padding: 7px 12px; font-size: 12px; color: var(--text);
+  white-space: nowrap;
+}
+.dmitem:hover:not(:disabled), .dmitem:focus-visible { background: var(--pane2); outline: none; }
+.dmitem:disabled { color: var(--muted); opacity: .55; cursor: default; }
+.dmitem.danger { color: var(--danger); }
+.dmh { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.dmsep { height: 1px; background: var(--line); margin: 3px 0; }
+.dmhead { padding: 7px 12px 6px; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--line); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------------- Setup: Aim panel beside the map (aimpanel.js) ---------------- */
+.bottom-split { grid-template-columns: minmax(0, 1fr) var(--ap-w, 236px) 6px var(--sp-1) 6px var(--sp-2); }
+@media (max-width: 1100px) { .bottom-split { grid-template-columns: 1fr; } }
+.page[data-page="setup"].patch-min > .top-split { display: none; }
+.aimpane { min-width: 0; overflow: hidden; display: flex; flex-direction: column; margin-left: 4px; }
+.aimpane .pane-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.ap-body { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; min-height: 0; overflow-y: auto; }
+.ap-who { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-sub { font-size: 11px; color: var(--muted); min-height: 14px; }
+.ap-step { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.ap-step span { flex: 1; }
+.ap-step button { width: 38px; padding: 6px 0; }
+.ap-step button.is-active { border-color: var(--accent); color: var(--accent); }
+.ap-axis { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 2px 8px; align-items: center; }
+.ap-lab { font-size: 11px; color: var(--muted); }
+.ap-val { font-family: var(--mono); font-size: 26px; font-weight: 600; grid-row: 2; line-height: 1.1; }
+.ap-btns { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 4px; }
+.ap-btns button { width: 46px; height: 46px; font-size: 22px; padding: 0; }
+.ap-row { display: flex; gap: 6px; }
+.ap-row button { flex: 1; padding: 8px 4px; white-space: nowrap; }
+.aimpane button:disabled { opacity: .4; cursor: default; }
+.ap-hint { font-size: 10.5px; color: var(--muted); margin: 0; line-height: 1.35; }
+.page[data-page="setup"] .stage:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
