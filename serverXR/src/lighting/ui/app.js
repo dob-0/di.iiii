@@ -2479,6 +2479,7 @@ function syncLimitPanel() {
     $('#panMin').value = l.panMin; $('#panMax').value = l.panMax;
     $('#tiltMin').value = l.tiltMin; $('#tiltMax').value = l.tiltMax;
     $('#invPan').checked = !!l.invertPan; $('#invTilt').checked = !!l.invertTilt; $('#swapPT').checked = !!l.swapPT;
+    $('#panTrim').value = l.panTrim | 0; $('#tiltTrim').value = l.tiltTrim | 0;
   }
   drawMoveBoxes();
 }
@@ -2543,7 +2544,84 @@ function wireLimits() {
   }));
   [['invPan', 'invertPan'], ['invTilt', 'invertTilt'], ['swapPT', 'swapPT']].forEach(([el, key]) =>
     $('#' + el).addEventListener('change', () => sendLimits({ [key]: $('#' + el).checked })));
+  // Home trim: whole DMX steps, -255..255 (the server clamps the same way).
+  ['panTrim', 'tiltTrim'].forEach((k) => $('#' + k).addEventListener('change', () => {
+    const v = Math.max(-255, Math.min(255, Math.round(+$('#' + k).value || 0)));
+    $('#' + k).value = v; sendLimits({ [k]: v });
+  }));
 }
+
+/* =============== aim page =============== */
+
+// Pan/tilt home trim per moving light (limits.panTrim / tiltTrim, whole DMX steps). The fader
+// range is -128..128; the route and the engine accept -255..255, so a larger trim set on the
+// Setup page still shows in the number box (the fader pins at its end).
+let aimSig = '';
+const aimTimers = new Map();   // `${id}:${key}` -> { last, t, pending }
+const aimLights = () => S.fixtures
+  .filter((f) => profileOf(f).channels.some((c) => c === 'pan' || c === 'tilt'))
+  .sort((a, b) => a.universe - b.universe || a.address - b.address);
+// Live at ~20/s: the first move goes at once, then at most one per 50 ms, and the last value always goes.
+function aimSend(f, key, v) {
+  const k = `${f.id}:${key}`;
+  const st = aimTimers.get(k) || { last: 0, t: 0, pending: null };
+  aimTimers.set(k, st);
+  f.limits = f.limits || {};
+  f.limits[key] = v;
+  const fire = (val) => { st.last = Date.now(); st.pending = null; post('api/fixtures/limits', { ids: [f.id], limits: { [key]: val } }); };
+  const wait = 50 - (Date.now() - st.last);
+  if (wait <= 0 && !st.t) { fire(v); return; }
+  st.pending = v;
+  if (!st.t) st.t = setTimeout(() => { st.t = 0; if (st.pending !== null) fire(st.pending); }, Math.max(wait, 0));
+}
+function renderAim() {
+  const wrap = $('#aimBank');
+  const lights = aimLights();
+  const sig = lights.map((f) => `${f.id}|${f.name}|${f.universe}|${f.address}`).join(';');
+  if (sig !== aimSig) {
+    aimSig = sig;
+    const byUni = new Map();
+    for (const f of lights) { if (!byUni.has(f.universe)) byUni.set(f.universe, []); byUni.get(f.universe).push(f); }
+    const fad = (key, label) => `<div><label>${label}</label><div class="vwrap"><input type="range" data-k="${key}" min="-128" max="128" step="1" value="0" aria-label="${label} trim"></div><input class="aimnum" data-k="${key}" type="number" min="-255" max="255" step="1" value="0" aria-label="${label} trim value"></div>`;
+    wrap.innerHTML = lights.length
+      ? [...byUni].map(([u, fs]) => `<section class="aimuni"><h3>Universe ${u + 1} · ${fs.length} light${fs.length === 1 ? '' : 's'}</h3><div class="aimrow">${fs.map((f) => `<div class="aimcard" data-id="${esc(f.id)}"><div class="aimname" title="${esc(f.name)}">${esc(f.name)}</div><div class="aimaddr">${String(f.address).padStart(3, '0')}</div><div class="aimpair">${fad('tiltTrim', 'Tilt')}${fad('panTrim', 'Pan')}</div><button class="aimzero" title="Reset this light's pan and tilt trim to 0">0</button></div>`).join('')}</div></section>`).join('')
+      : '<p class="muted">No moving lights are patched — a light shows here when its profile has a pan or tilt channel.</p>';
+    $$('.aimcard', wrap).forEach((card) => {
+      const set = (key, v, from) => {
+        v = clamp(Math.round(+v || 0), -255, 255);
+        if (from !== 'range') $(`input[type=range][data-k="${key}"]`, card).value = v;
+        if (from !== 'num') $(`.aimnum[data-k="${key}"]`, card).value = v;
+        const f = fxById(card.dataset.id);
+        if (f) aimSend(f, key, v);
+        paintAimCard(card);
+      };
+      $$('input[type=range]', card).forEach((r) => r.addEventListener('input', () => set(r.dataset.k, r.value, 'range')));
+      $$('.aimnum', card).forEach((n) => n.addEventListener('change', () => set(n.dataset.k, n.value, 'num')));
+      $('.aimzero', card).addEventListener('click', () => { set('panTrim', 0); set('tiltTrim', 0); });
+    });
+  }
+  // Follow the desk, except a control being used right now.
+  const live = document.activeElement;
+  for (const card of $$('.aimcard', wrap)) {
+    const f = fxById(card.dataset.id);
+    if (!f) continue;
+    for (const key of ['panTrim', 'tiltTrim']) {
+      const st = aimTimers.get(`${f.id}:${key}`);
+      if (st && (st.t || Date.now() - st.last < 600)) continue;
+      const v = (f.limits && f.limits[key]) | 0;
+      const r = $(`input[type=range][data-k="${key}"]`, card), n = $(`.aimnum[data-k="${key}"]`, card);
+      if (live !== r && +r.value !== clamp(v, -128, 128)) r.value = v;
+      if (live !== n && +n.value !== v) n.value = v;
+    }
+    paintAimCard(card);
+  }
+}
+function paintAimCard(card) {
+  card.classList.toggle('moved', $$('.aimnum', card).some((n) => +n.value !== 0));
+}
+$('#aimResetAll').addEventListener('click', () => {
+  $$('#aimBank .aimzero').forEach((b) => b.click());
+});
 
 /* =============== scenes =============== */
 
@@ -5656,6 +5734,7 @@ function renderAll(busy) {
   $('#wireLine').textContent = `· ${wl}`;
   document.title = `Light · ${wl}`;
   paintShow(S.show);
+  if (page === 'aim') renderAim();
   // Go steps the desk's SCENES, so with none it would press and do nothing: hide it then.
   // (MOXIR UI audit, 2026-10-01)
   $('#goBtn').hidden = !S.scenes.length;
@@ -6578,7 +6657,7 @@ $('#showNoteBtn').addEventListener('click', async () => {
 /* =============== wiring =============== */
 
 function showPage(name) {
-  page = ['setup', 'control', 'stage', 'touch', 'fader', 'midi'].includes(name) ? name : 'setup';
+  page = ['setup', 'control', 'stage', 'touch', 'fader', 'aim', 'midi'].includes(name) ? name : 'setup';
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';

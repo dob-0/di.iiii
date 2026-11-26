@@ -186,6 +186,10 @@ const DEFAULT_LIMITS = {
   dimMin: 0, dimMax: 255,
   panMin: 0, panMax: 255, tiltMin: 0, tiltMax: 255,
   invertPan: false, invertTilt: false, swapPT: false,
+  // Home trim, in DMX steps of the fixture's own pan/tilt channel (-255..255): one head that sits
+  // off from its identical neighbours is brought in line without touching any scene. Added after
+  // invert and the min/max mapping, then clamped to the limits, never wrapped.
+  panTrim: 0, tiltTrim: 0,
 };
 
 let nextId = 1;
@@ -464,6 +468,11 @@ class Engine {
           const inv = role === 'pan' ? lim.invertPan : lim.invertTilt;
           if (inv) raw = 255 - raw;
           v = role === 'pan' ? mapRange(raw, lim.panMin, lim.panMax) : mapRange(raw, lim.tiltMin, lim.tiltMax);
+          const trim = (role === 'pan' ? lim.panTrim : lim.tiltTrim) | 0;
+          if (trim) {
+            const lo = role === 'pan' ? lim.panMin : lim.tiltMin, hi = role === 'pan' ? lim.panMax : lim.tiltMax;
+            v = Math.max(Math.min(lo, hi), Math.min(Math.max(lo, hi), v + trim));
+          }
         } else if (kind === 'emitter') {
           // Master and FX ride the dimmer channel when the fixture has one, so neither may
           // be applied to the colour channels as well — that would scale the lamp twice.
