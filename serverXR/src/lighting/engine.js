@@ -494,7 +494,10 @@ class Engine {
               // the channel would have passed through.
               const fineBase = (headPT && headPT[fineRole] != null) ? headPT[fineRole] : (val(fineRole) ?? ROLE_DEFAULTS[fineRole] ?? 0);
               const base = clamp8(v) * 256 + clamp8(+fineBase || 0);
-              const p = Math.max(Math.min(loN, hiN) * 256, Math.min(Math.max(loN, hiN) * 256 + 255, base + Math.round(extra * 256)));
+              // The ends are the OLD end bytes (end coarse + the fine pass-through), so past a range end the
+              // fraction can never step back while the trim grows (255/0 stays 255/0, not 255/253 then 255/0).
+              const fb = clamp8(+fineBase || 0);
+              const p = Math.max(Math.min(loN, hiN) * 256 + fb, Math.min(Math.max(loN, hiN) * 256 + fb, base + Math.round(extra * 256)));
               v = p >> 8;
               (fineWrites || (fineWrites = [])).push([fineCh, p & 255]);
             } else {

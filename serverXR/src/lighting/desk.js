@@ -15,7 +15,7 @@ const fsp = fs.promises;
 const path = require('path');
 const { ArtNet, broadcastPlan, localAddresses } = require('./artnet');
 const { decideIdentify } = require('./identify');
-const { readTestMove, pressTestMove, testMoveLive } = require('./testmove');
+const { readTestMove, pressTestMove, stopTestMove, testMoveLive } = require('./testmove');
 const { FINE_NAMES, fineRoleIn } = require('./roles');
 const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
@@ -2395,13 +2395,16 @@ function createDesk(opts = {}) {
     // is saved and no value changes. `moving` is the lights that have that axis; a light
     // without one is not an error (a mixed selection still moves its heads), it is just left out.
     'POST /api/fixtures/testmove': (req, res, body) => {
-      // {off:true} stops every light; {off:true, ids:[...]} only those, and the others swing on.
+      // {off:true} stops every light; {off:true, ids:[...]} only those, and the others swing on. A stop
+      // lets the swing in progress finish (at most 2 s) so the head never jumps; it is home after that.
       if (body.off) {
-        if (Array.isArray(body.ids) && body.ids.length) {
-          const keep = {};
-          for (const [id, e] of Object.entries(state.testMove || {})) if (!body.ids.includes(id)) keep[id] = e;
-          state.testMove = keep;
-        } else state.testMove = {};
+        const now = Date.now();
+        const ask = Array.isArray(body.ids) && body.ids.length ? body.ids : null;
+        const next = {};
+        for (const [id, e] of Object.entries(state.testMove || {})) {
+          if (!ask || ask.includes(id)) { const st = stopTestMove(e, now); if (st) next[id] = st; } else next[id] = e;
+        }
+        state.testMove = next;
         return json(res, { ok: true, moving: [] });
       }
       const lights = (Array.isArray(body.ids) ? body.ids : [])

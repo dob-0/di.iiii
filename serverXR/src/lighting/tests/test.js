@@ -363,10 +363,30 @@ check('whole trims give exactly the old bytes on a 16-bit head, fine value and a
 check('a 16-bit trim past the end stops at the very end, never wraps', () => {
   const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 250, panFine: 9, tilt: 2, tiltFine: 9 } });
   f.limits.panTrim = 10.5; f.limits.tiltTrim = -10.5;
-  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [255, 137, 0, 0],
-    'the whole 10 clamps like the old engine; the half step rides the fine byte, capped at the end (255 / 255)');
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [255, 9, 0, 9],
+    'the whole 10 clamps like the old engine; the half step cannot pass the old end byte (end coarse + the fine pass-through)');
   f.limits.panMax = 200; f.limits.tiltMin = 20;
-  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [200, 137, 20, 0], 'the limits are whole coarse steps');
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [200, 9, 20, 9], 'the limits are whole coarse steps');
+});
+
+// Review of #1374, should 1: nudging a trim past a range end must never step the head back.
+check('a 16-bit trim past the range end never steps back as it grows (both ends, both axes)', () => {
+  for (const [at, sign] of [[255, 1], [0, -1]]) {
+    for (const fine of [0, 77, 255]) {
+      const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: at, panFine: fine, tilt: at, tiltFine: fine } });
+      let last = null;
+      for (let t = -10; t <= 10; t += 0.01) {
+        const tr = Math.round(t * 100) / 100;
+        f.limits.panTrim = tr; f.limits.tiltTrim = tr;
+        const b = new Engine(baseState([f])).render().get(0);
+        const v = b[2] * 256 + b[3];
+        if (last != null && tr * sign > 0) assert.ok((v - last) * sign >= 0, `tilt at ${at}/${fine}: trim ${tr} stepped back ${last} -> ${v}`);
+        if (tr * sign > 0) last = v; else last = null;
+      }
+      f.limits.tiltTrim = 1.5 * sign;
+      assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0)].slice(2, 4), [at, fine], 'past the end it holds the old end byte');
+    }
+  }
 });
 
 // Review of #1373 (2026-11-26): with NO fraction and NO swing the bytes are the old engine's, on any
@@ -2645,6 +2665,22 @@ check('video: the mix breathes with its LFO; settings merge field by field', () 
   assert.deepStrictEqual([v1.anim.on, v1.anim.bx, v1.anim.beats, v1.anim.dir, v1.anim.ease, v1.contrast, v1.speed], [true, 0.7, 16, 'forward', 'smooth', 300, 0.1],
     'a partial patch keeps the rest; values are clamped');
   assert.deepStrictEqual(pm.sanitizeVideo(null, {}).lfo, pm.DEFAULT_LFO);
+});
+
+check('a test move Off lets the swing in progress finish, so the head never snaps', () => {
+  const { stopTestMove, testMoveSteps, testMoveLive } = require('../testmove');
+  const e = { axis: 'pan', from: 10000, until: 18000 };
+  const s = stopTestMove(e, 11000);
+  assert.deepStrictEqual(s, { axis: 'pan', from: 10000, until: 12000 }, 'ends at the next whole swing');
+  assert.strictEqual(testMoveSteps(s, 11000, 'pan'), testMoveSteps(e, 11000, 'pan'), 'no jump at the stop');
+  assert.ok(testMoveLive(s, 11999) && !testMoveLive(s, 12000));
+  let worst = 0, prevV = testMoveSteps(s, 11000, 'pan');
+  for (let t = 11001; t <= 12100; t++) { const v = testMoveSteps(s, t, 'pan'); worst = Math.max(worst, Math.abs(v - prevV)); prevV = v; }
+  assert.ok(worst < 0.1, 'no 1 ms jump after the stop: ' + worst);
+  const both = stopTestMove({ axis: 'tilt', from: 11500, until: 15500, prev: { axis: 'pan', from: 10000, until: 12000 } }, 11600);
+  assert.ok(both.prev && both.prev.until === 12000 && both.until === 13500, 'both axes finish their own swing');
+  assert.strictEqual(stopTestMove(null, 1), null);
+  assert.strictEqual(stopTestMove({ axis: 'pan', from: 0, until: 100 }, 500), null, 'an ended one leaves nothing');
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');

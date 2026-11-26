@@ -978,8 +978,9 @@ check('a test move swings the lights for a moment, says which, and is never save
   assert.strictEqual((await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'zoom' })).status, 400, 'no such axis');
   await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'tilt' });
   await POST('/api/fixtures/testmove', { off: true });
+  await sleep(2300);   // off lets the swing in progress finish (at most one 2 s swing), then home
   await settle();
-  assert.deepStrictEqual([await wire(77, 1), await wire(77, 2)], [100, 100], 'off: home at once');
+  assert.deepStrictEqual([await wire(77, 1), await wire(77, 2)], [100, 100], 'off: home after the swing in progress');
   await sleep(700);   // save() debounces at 400ms
   const disk = fs.readFileSync(path.join(process.env.DATA_DIR, 'show.json'), 'utf8');
   assert.ok(!disk.includes('testMove'), 'nothing of it is in the saved show');
@@ -1004,12 +1005,14 @@ check('a test move re-press and the off call: only the asked lights stop, the he
   await sleep(100);
   assert.ok((await wire(78, 1)) !== 100 || (await wire(78, 2)) !== 100, 'both axes live, pan not snapped');
   await POST('/api/fixtures/testmove', { off: true, ids: [f.id] });
+  await sleep(2300);   // the swing in progress finishes (never a snap), then the light is home
   await settle();
-  assert.deepStrictEqual([await wire(78, 1), await wire(78, 2)], [100, 100], 'the asked light is home at once');
+  assert.deepStrictEqual([await wire(78, 1), await wire(78, 2)], [100, 100], 'the asked light is home after its swing');
   st = (await GET('/api/state')).body.status.testMoving;
   assert.ok(!st[f.id] && st[g.id] === 'pan', 'the other light still swings');
   await POST('/api/fixtures/testmove', { off: true });
-  assert.deepStrictEqual((await GET('/api/state')).body.status.testMoving, {}, 'off with no ids stops every light');
+  await sleep(2300);
+  assert.deepStrictEqual((await GET('/api/state')).body.status.testMoving, {}, 'off with no ids stops every light, after their swing');
 });
 
 check('the Aim page markup exists and is wired to the limits route', () => {

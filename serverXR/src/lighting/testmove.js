@@ -73,6 +73,21 @@ function pressTestMove(old, press, now) {
 }
 
 /**
+ * The entry after an Off at `now`: each running axis finishes the swing it is in (it ends at rest),
+ * like a re-press of the other axis does, so the head never snaps. Null when nothing is left.
+ */
+function stopTestMove(old, now) {
+  if (!old) return null;
+  const P = TEST_MOVE.periodMs;
+  const cut = (e) => (e && AXES.includes(e.axis) && e.until > now
+    ? { axis: e.axis, from: e.from, until: Math.min(e.until, e.from + Math.ceil((now - e.from) / P) * P) } : null);
+  const entry = cut(old);
+  const prev = cut(old.prev);
+  if (entry && prev) entry.prev = prev;
+  return entry || (prev ? prev : null);
+}
+
+/**
  * A press, as the route receives it: { ids, axis, seconds } -> { axis, ms } or { error }.
  * The length is rounded up to whole swings so the head always ends where it started.
  */
@@ -83,4 +98,4 @@ function readTestMove(body) {
   return { axis, ms: Math.ceil((s * 1000) / TEST_MOVE.periodMs) * TEST_MOVE.periodMs };
 }
 
-module.exports = { TEST_MOVE, testMoveAt, testMoveSteps, testMoveLive, pressTestMove, readTestMove };
+module.exports = { TEST_MOVE, testMoveAt, testMoveSteps, testMoveLive, pressTestMove, stopTestMove, readTestMove };
