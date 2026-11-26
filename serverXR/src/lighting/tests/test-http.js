@@ -999,6 +999,16 @@ check('the Setup Aim panel sits beside the map and writes only through api/fixtu
   assert.ok(/\.patch-min > \.top-split \{ display: none/.test(css), 'collapse css');
 });
 
+check('minimap: boxes sized from the plan spacing, short labels, fit on open', () => {
+  const app = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../ui/style.css'), 'utf8');
+  assert.ok(app.includes('function lightGap()') && app.includes("'--fxw'"), 'box size comes from the neighbour gap');
+  assert.ok(app.includes('Math.max(14, Math.min(want, gapPx * 0.85))'), 'never over the gap, never under 14 px');
+  assert.ok(css.includes('width: var(--fxw,'), 'the box reads --fxw');
+  assert.ok(app.includes('shortLabel(f.name)') && app.includes('node.title = f.name'), 'short label, full name as tooltip');
+  assert.ok(app.includes('setupNeedFit = true'), 'Setup refits when it opens and on resize');
+});
+
 check('aim trims set per light reach the wire for that fixture only', async () => {
   const a = await patch('pt', { universe: 76, address: 1 });
   const b = await patch('pt', { universe: 76, address: 11 });

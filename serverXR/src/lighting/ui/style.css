@@ -313,9 +313,9 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 
 .fx-node { position: absolute; transform: translate(-50%, -50%); }
 .fx-body {
-  position: relative; width: calc(34px * var(--ns, 1)); height: calc(30px * var(--ns, 1)); border-radius: 0;   /* --ns: the light size of this view */
+  position: relative; width: var(--fxw, calc(34px * var(--ns, 1))); height: var(--fxh, calc(30px * var(--ns, 1))); border-radius: 0;   /* --ns: the light size of this view */
   border: 1px solid #00000055; display: flex; align-items: center; justify-content: center;
-  font-size: calc(11px * var(--ns, 1)); color: var(--text); font-weight: 600; cursor: grab;
+  font-size: var(--fxf, calc(11px * var(--ns, 1))); color: var(--text); font-weight: 600; cursor: grab; overflow: hidden;
   background: #1d1d20; transition: background .1s linear;   /* matches paintStage's unlit body */
 }
 .fx-node.sel .fx-body { outline: 2px solid #fff; outline-offset: 1px; }

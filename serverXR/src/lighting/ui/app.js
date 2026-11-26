@@ -1151,6 +1151,18 @@ function buildGroups() {
 
 /* =============== stage (shared by SETUP and CONTROL) =============== */
 
+// A short name for the plan: "Left truss 7 (out 6 @259)" -> "LT7", "P9" stays "P9". The map has
+// little room per light; the full name is the box's tooltip and sits in Selections.
+function shortLabel(name) {
+  const base = String(name || '').replace(/\(.*?\)/g, '').trim();
+  const words = base.split(/\s+/).filter(Boolean);
+  if (words.length < 2 && base.length <= 5) return base;
+  const initials = words.filter((w) => !/^\d+$/.test(w)).map((w) => w[0].toUpperCase()).join('');
+  const num = (base.match(/(\d+)\s*$/) || [])[1] || '';
+  const out = (initials + num).slice(0, 6);
+  return out || base.slice(0, 5);
+}
+
 function buildStages() {
   for (const inner of $$('.stage-inner')) {
     inner.innerHTML = '';
@@ -1158,7 +1170,8 @@ function buildStages() {
       const node = document.createElement('div');
       node.className = 'fx-node';
       node.dataset.id = f.id;
-      node.innerHTML = `<div class="fx-body">${f.index}</div><div class="fx-label">${esc(f.name)}</div>`;
+      node.innerHTML = `<div class="fx-body">${f.index}</div><div class="fx-label">${esc(shortLabel(f.name))}</div>`;
+      node.title = f.name;                    // the full name stays one hover away
       inner.appendChild(node);
     }
     for (const st of S.strips || []) inner.appendChild(stripNode(st, 'px-strip'));
@@ -1227,8 +1240,34 @@ function stageMap(W, H) {
   return { sc, ox: (W - sc) / 2, oy: (H - sc) / 2 };
 }
 
+let setupNeedFit = true;     // the Setup map frames the whole plan when it opens and when its box changes size
+// Nearest-neighbour spacing of the lights in plan units (the smaller of the x / y gap, the way two
+// squares touch). Cached by positions: placeStages runs on every pointermove of a drag.
+let gapSig = '', gapWorld = 0.1;
+function lightGap() {
+  const fx = S.fixtures;
+  const sig = fx.length + ':' + fx.map((f) => f.x + ',' + f.y).join(';');
+  if (sig === gapSig) return gapWorld;
+  let best = Infinity;
+  for (let i = 0; i < fx.length; i++) {
+    let near = Infinity;
+    for (let j = 0; j < fx.length; j++) {
+      if (i === j) continue;
+      const d = Math.max(Math.abs(fx[i].x - fx[j].x), Math.abs(fx[i].y - fx[j].y));
+      if (d > 1e-4 && d < near) near = d;     // lights stacked on one spot cannot set the size
+    }
+    if (near < best) best = near;
+  }
+  gapSig = sig; gapWorld = Number.isFinite(best) ? best : 0.1;
+  return gapWorld;
+}
+
 function placeStages() {
   if (!S) return;   // the resize observer can fire before the first state arrives
+  if (setupNeedFit) {
+    const st = document.querySelector('.page[data-page="setup"] .stage');
+    if (S.fixtures.length && st && st.clientWidth > 40 && st.clientHeight > 40) { setupNeedFit = false; fitStage(st); return; }
+  }
   const panes = $$('.stage-inner');
   // READ PHASE. clientWidth/clientHeight were being read after the style writes below had
   // already dirtied layout, which forces a synchronous whole-document reflow — once per
@@ -1240,6 +1279,18 @@ function placeStages() {
     inner.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.zoom})`;
     inner.style.setProperty('--zoom', v.zoom);   // the Touch stage keeps its lights one size whatever the zoom
     inner.style.setProperty('--ns', nodeSize[viewName(inner)]);   // light size, this view only
+    // Box size from the plan's real spacing: the wanted size (34 px x this view's size), cut to 85 %
+    // of the gap to the nearest neighbour so two boxes never overlap, never below 14 px on screen.
+    // The pane is scaled by the zoom, so the variable is in pane pixels (screen size / zoom).
+    if (S.fixtures.length > 1) {
+      const g = stageMap(sizes[paneIdx].W, sizes[paneIdx].H);
+      const gapPx = lightGap() * g.sc * v.zoom;
+      const want = 34 * nodeSize[viewName(inner)];
+      const px = Math.max(14, Math.min(want, gapPx * 0.85));
+      inner.style.setProperty('--fxw', (px / v.zoom) + 'px');
+      inner.style.setProperty('--fxh', (px * 0.88 / v.zoom) + 'px');
+      inner.style.setProperty('--fxf', Math.max(8, px * 0.36) / v.zoom + 'px');
+    }
     // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
     // tile forever. One line on every multiple of GRID in world units — the very grid the
     // drag snap and the arrange tools use — so a snapped light sits ON a drawn line. A
@@ -6649,6 +6700,7 @@ function showPage(name) {
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';
+  if (page === 'setup') setupNeedFit = true;
   // Opening MIDI re-reads the show's map, so a layout mapped on the laptop is already
   // there on the phone. Skipped mid-edit: a pending save is newer than the server.
   if (page === 'midi' && !midiSaveTimer) loadMidiMap();
@@ -6824,9 +6876,9 @@ function fitStage(stage) {
   // The Touch pane has no zoom slider and is a small glance at the rig: a compact rig (her
   // lights 0.1 apart) needs more than 4x there, or every light lands on one spot.
   const maxZoom = stage.closest('#touchStage') ? 16 : 4;
-  v.zoom = clamp(Math.min(r.width * 0.8 / bw, r.height * 0.8 / bh, maxZoom), 0.01, maxZoom);
+  v.zoom = clamp(Math.min((r.width - 70) / bw, (r.height - 96) / bh, maxZoom), 0.01, maxZoom);   // 35 px of air each side: the short labels stay inside
   v.x = r.width / 2 - (ox + (x0 + x1) / 2 * sc) * v.zoom;
-  v.y = r.height / 2 - (oy + (y0 + y1) / 2 * sc) * v.zoom;
+  v.y = r.height / 2 - 8 - (oy + (y0 + y1) / 2 * sc) * v.zoom;   // 8 px up: the name under the last row stays inside
   slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });
   placeStages();
 }
@@ -7405,6 +7457,9 @@ $$('.stage').forEach(wireStage);
 const stageSizes = new WeakMap();
 function handleStageResize() {
   let rescaled = false;
+  const setupStage = document.querySelector('.page[data-page="setup"] .stage');
+  const was = setupStage && stageSizes.get(setupStage);
+  if (setupStage && setupStage.clientWidth && (!was || was.w !== setupStage.clientWidth || was.h !== setupStage.clientHeight)) setupNeedFit = true;
   for (const stage of $$('.stage')) {
     const w = stage.clientWidth, h = stage.clientHeight;
     const v = viewOf(stage);
