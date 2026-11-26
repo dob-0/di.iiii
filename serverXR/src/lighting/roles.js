@@ -58,6 +58,18 @@ function roleKinds() {
   return out;
 }
 
+// The 16-bit partner of a coarse pan or tilt channel: the low byte under it. The standard
+// role is panFine / tiltFine; a hand-made profile may spell it pan_fine / tilt_fine (the
+// Reika MovingBar43, 2026-11-26), and both name the same channel. The renderer joins the
+// pair into one 16-bit position (so a trim of half a step has somewhere to go) and the
+// interface reads this same list, published on /api/state as `fineNames`.
+const FINE_NAMES = { pan: ['panFine', 'pan_fine'], tilt: ['tiltFine', 'tilt_fine'] };
+function fineRoleIn(channels, coarse) {
+  for (const name of FINE_NAMES[coarse] || []) if (channels.includes(name)) return name;
+  return null;
+}
+
 module.exports = {
   ROLE_DEFAULTS, LIGHT_ROLES, LEVEL_ROLES, POSITION_ROLES, FINE_ROLES, roleKind, roleKinds,
+  FINE_NAMES, fineRoleIn,
 };

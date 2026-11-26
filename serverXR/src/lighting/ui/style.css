@@ -345,7 +345,7 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 /* ---------------- limits ---------------- */
 .limitcols { display: grid; grid-template-columns: 150px 1fr; height: 100%; min-height: 0; }
 .limitcol { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
-.limitcol.wide { border-right: 0; }
+.limitcol.wide { border-right: 0; overflow-y: auto; }   /* a short pane scrolls inside; the last row is never cut off */
 .vslider { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 0; }
 .vval { font-size: 11px; color: var(--muted); }
 .vtrack { position: relative; width: 2px; background: var(--line); flex: 1; min-height: 120px; }
@@ -369,7 +369,12 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
 .movelabels input { width: 100%; }
 .invert { display: flex; gap: 12px; align-items: center; padding: 0 12px 12px; font-size: 12px; color: var(--muted); }
 .invert label { display: flex; gap: 4px; align-items: center; letter-spacing: 0; }
-.trim input[type=number] { width: 64px; }   /* "-255" whole, with the spinner */
+.trim input[type=number] { width: 76px; }   /* "-12.34" whole, with the spinner */
+/* Trim step chips and the test-move buttons: small switches in the same row rhythm as Invert. */
+.trimstep, .testmove { display: flex; gap: 6px; align-items: center; }
+.invert.trimtools { flex-wrap: wrap; row-gap: 6px; }   /* Step and Move share one row; a narrow pane wraps them */
+.trimstep .sq, .testmove .sq, .aimhead .sq { padding: 3px 8px; font-size: 11px; }
+.testmove .sq.on { animation: findpulse 0.5s steps(1) infinite; }   /* swinging now: blinks like Find */
 
 /* ---------------- control page ---------------- */
 /* The rail default was 240px — too narrow for the FX/LFO/Audio stacks on a wide screen —
@@ -1892,10 +1897,13 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
 .page[data-page="aim"] { overflow-x: hidden; }
 .aimbank { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 12px; }
 .aimuni { margin-bottom: 14px; }
-.aimuni h3 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.aimhead { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; }
+.aimuni h3 { margin: 0; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
 .aimrow { display: flex; flex-wrap: wrap; gap: 8px; }
 .aimcard { width: 112px; min-width: 0; box-sizing: border-box; background: var(--pane); border: 1px solid var(--line); border-radius: 0; padding: 6px 4px; display: grid; justify-items: center; gap: 4px; }
 .aimcard.moved { border-color: var(--accent); }
+.aimcard.swinging { outline: 2px solid var(--accent); outline-offset: -2px; animation: swingblink 0.5s steps(1) infinite; }   /* a test move is running on it: the outline blinks like Find, so it never reads as a trimmed card's still border (.moved) */
+@keyframes swingblink { 50% { outline-color: transparent; } }
 .aimname { font-size: 11px; line-height: 13px; min-height: 26px; max-width: 100%; text-align: center; overflow-wrap: anywhere; }
 .aimaddr { font-family: var(--mono); font-size: 10px; color: var(--muted); }
 .aimpair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; justify-items: center; }
