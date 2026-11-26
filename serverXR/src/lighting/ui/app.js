@@ -6091,6 +6091,9 @@ async function midiFlush() {
 /* ---- what a control can be pointed at ---- */
 // Rebuilt whenever the rig changes. Continuous targets expose read() so soft takeover
 // knows where the desk currently is; both read() and apply() speak 0..1.
+// The switches this page flipped in the last moments (midiCues.js cueView): a poll that left
+// before the press landed must not undo a second press.
+const midiCueSent = {};
 function buildMidiTargets() {
   const T = [];
   const cc = (key, label, read, apply) => T.push({ key, label, kind: 'cc', read, apply });
@@ -6191,6 +6194,26 @@ function buildMidiTargets() {
 
   for (let i = 0; i < 16; i++) pad('scene:' + i, 'Scene pad ' + (i + 1), () => midiRecallPad(i));
 
+  // The cue list (midiCues.js): transport first, then one pad per cue. The body is read at
+  // the press, from the desk's last cue state, so a switch never flips from a stale label.
+  T.push({ group: 'Cues' });
+  const mc = window.deskMidiCues;
+  const cueNow = () => {
+    const view = mc.cueView(CUES, midiCueSent, Date.now());
+    return [...mc.cueTransport(view), ...mc.cuePadTargets(view)];
+  };
+  for (const t of cueNow()) {
+    pad(t.key, t.label, () => {
+      const now = cueNow().find((x) => x.key === t.key);
+      if (!now) { midiFlash(`${t.label}: not in the cue list any more`); return; }
+      // Keyed per pad: two pads inside one flush are two cues, sent in press order, never
+      // merged into one POST (a shared key would keep only the last index).
+      midiSend(now.route, now.body, 'cue:' + now.key);
+      if (midiArmed) mc.noteSent(midiCueSent, now.body, Date.now());
+      midiFlash(midiArmed ? now.label : now.label + '  (not armed — nothing sent)');
+    });
+  }
+
   midiTargets = T;
 }
 
@@ -6207,6 +6230,11 @@ function buildMidiTargets() {
 // with aseqdump: channel 1, knobs on CC 4-15 in three rows of four, faders on CC 16-19
 // (all four confirmed swept end to end), encoders from CC 20, switches on notes 12-42.
 const MIDI_PRESETS = [{
+  match: /apc\s*40/i,
+  name: 'Akai APC40 mkII',
+  // Master fader, PLAY = GO, the 5 x 8 grid = the cue list (midiCues.js holds the layout).
+  build: () => window.deskMidiCues.apc40Preset(midiTargets.filter((t) => t.key).map((t) => t.key)),
+}, {
   match: /xone:?\s*k2/i,
   name: 'Allen & Heath XONE:K2',
   // ch is 1-based here, the way the device reports it and the mapping table shows it.
@@ -6345,7 +6373,10 @@ function midiHandle(type, ch, num, unit) {
   const key = midiKeyFor(type, ch, num);
   if (!key) return;
   if (key.startsWith('recall:')) return;   // handled by the shared dispatcher, ungated
-  const t = midiTargets.find((x) => x.key === key);
+  let t = midiTargets.find((x) => x.key === key);
+  // Targets are rebuilt on the MIDI page; a cue list loaded while another page was open
+  // has pads the list does not know yet. Rebuild once instead of dropping the press.
+  if (!t) { buildMidiTargets(); t = midiTargets.find((x) => x.key === key); }
   if (!t) return;
 
   if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
@@ -6376,7 +6407,7 @@ function midiAssign(key, type, ch, num) {
     if (b && b.type === type && b.ch === ch && b.num === num) delete midiMap[k];
   }
   midiMap[key] = { type, ch, num };
-  midiPickup[key] = true;
+  midiPickup[key] = type !== 'note';   // a pad has no position to catch; only faders and knobs wait for takeover
   delete midiLastVal[key];
   saveMidiMap();
 }
@@ -6426,7 +6457,8 @@ function buildMidi() {
   const mv = midiArmed ? midiLive.master : (S ? S.master : null);
   const black = midiArmed ? midiLive.blackout : (S && S.blackout);
   midiPill('#miMasterStat', `master <b>${mv == null ? '—' : mv}</b>${black ? ' · BLACK' : ''}`, black ? 'bad' : '');
-  const sig = (S ? S.fixtures.map((f) => f.id + f.name + f.profile).join('|') + '#' + S.scenes.length : '');
+  const sig = (S ? S.fixtures.map((f) => f.id + f.name + f.profile).join('|') + '#' + S.scenes.length : '')
+    + '#' + (CUES && Array.isArray(CUES.list) ? CUES.list.map((c) => c.id + c.name).join('|') + (CUES.autoplay ? 'A' : '') + (CUES.loop ? 'L' : '') : '');
   if (sig !== midiSig) { midiSig = sig; buildMidiTargets(); midiDraw(); midiDrawBank(); }
 }
 
