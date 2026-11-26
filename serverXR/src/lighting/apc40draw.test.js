@@ -59,6 +59,11 @@ describe('drawn APC40: buttons', () => {
     expect(view({ state: { blackout: true } }).buttons.find((x) => x.key === 'blackout').hex).toBe('#ff0000')
     expect(view().buttons.find((x) => x.key === 'blackout').hex).toBe('#590000')
   })
+  it('the blackout button reads "Blackout on/off" on the drawing and in the legend text', () => {
+    const b = view().buttons.find((x) => x.key === 'blackout')
+    expect(b.short).toBe('BLACKOUT\non/off')
+    expect(b.does).toMatch(/^Blackout on\/off/)
+  })
   it('a rebound button is drawn where the map put it; an unbound key is not drawn', () => {
     const m2 = { ...map, cuego: { type: 'note', ch: 1, num: 0x5d }, blackout: undefined }
     delete m2.blackout

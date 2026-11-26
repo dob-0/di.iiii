@@ -6219,11 +6219,14 @@ function buildMidiTargets() {
 
   T.push({ group: 'Pads & buttons' });
 
-  pad('blackout', 'Blackout  (on)', () => {
-    // One-way like the B key: the mirror may be stale, and a toggle of it can un-blackout the rig.
-    const intent = window.deskPanicKeys.midiBlackoutIntent();
-    midiLive.blackout = intent.blackout;
+  pad('blackout', 'Blackout  on / off  (a press flips it)', () => {
+    // A toggle (owner N7276): one press sets blackout on, the next sets it off. midiLive.blackout is
+    // this page's last send, else the desk's poll; the send goes through midiSend, so Safe sends nothing.
+    if (!midiArmed) return;
+    const intent = window.deskPanicKeys.midiBlackoutToggle(midiLive.blackout);
+    midiLive.blackout = intent.blackout; midiBlackoutSentAt = Date.now();
     midiSend('api/master', intent);
+    midiPaintLights();   // the LED follows the press at once
   });
   pad('chaseon', 'Chase run / stop', () => {
     midiLive.chase = !midiLive.chase;
@@ -6529,7 +6532,9 @@ function midiRefreshLive() {
 function buildMidi() {
   // While disarmed the desk is the authority on where everything sits, so takeover has
   // a true reference the moment you arm.
-  if (S) midiLive.blackout = !!S.blackout;   // armed too: the pad is one-way, the pill must not drift
+  // The pad toggles, so a poll that left before the press landed must not undo the mirror: what this
+  // page sent in the last 2.5 s wins (same rule as the cue switches, midiCues.js SENT_WINS_MS).
+  if (S && Date.now() - midiBlackoutSentAt > 2500) midiLive.blackout = !!S.blackout;
   if (!midiArmed) midiRefreshLive();
   // While armed this page is the one moving the master, and the slow poll deliberately
   // holds S.master back mid-gesture — so read the mirror, or the pill reports a value the
@@ -6550,6 +6555,7 @@ function buildMidi() {
 // colours the pad lights are sent (apc40Lights), so it cannot disagree with the real unit, and
 // a click on it goes through the same target.apply() + ARM gate as the real pad.
 let midiApc = null;
+let midiBlackoutSentAt = 0;   // when the blackout pad last sent (see buildMidi)
 function midiApcPress(key) {
   let t = midiTargets.find((x) => x.key === key);
   if (!t) { buildMidiTargets(); t = midiTargets.find((x) => x.key === key); }
@@ -6561,7 +6567,7 @@ function midiApcUpdate() {
   if (!midiApc) midiApc = window.deskApc40Draw.create($('#miApc'), { press: midiApcPress, armed: () => midiArmed });
   const mv = midiArmed ? midiLive.master : (S ? S.master : null);
   midiApc.update({
-    map: midiMap, cues: CUES, state: { blackout: !!(S && S.blackout) },
+    map: midiMap, cues: CUES, state: { blackout: midiArmed ? !!midiLive.blackout : !!(S && S.blackout) },
     looks: Array.isArray(S && S.looks) ? S.looks : [], page: midiLookPage, activeId: activeLookId(),
     master: mv == null ? undefined : mv / 255,
   });
@@ -6730,7 +6736,7 @@ function midiLeds() {
       armed: () => midiArmed,   // only the armed tab owns the pads' lights (a getter: midiArmed is declared further down)
       map: () => midiMap,
       cues: () => CUES,
-      state: () => ({ blackout: !!(S && S.blackout) }),
+      state: () => ({ blackout: midiArmed ? !!midiLive.blackout : !!(S && S.blackout) }),
       looks: () => (Array.isArray(S && S.looks) ? S.looks : []),   // not looksOf(): a const further down
       page: () => midiLookPage,
       setPage: (p) => { midiLookPage = p; },

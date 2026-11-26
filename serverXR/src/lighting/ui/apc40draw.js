@@ -45,7 +45,7 @@
     cueback: { short: 'BACK', does: 'Cue back' },
     cueauto: { short: 'AUTO', does: 'Play in order, on / off' },
     cueloop: { short: 'LOOP', does: 'Loop, on / off' },
-    blackout: { short: 'BLACK OUT', does: 'Blackout', danger: true },
+    blackout: { short: 'BLACKOUT\non/off', does: 'Blackout on/off (a press flips it)', danger: true },
     'lookpage:next': { short: 'PG\n▶', does: 'Look page, next' },
     'lookpage:prev': { short: 'PG\n◀', does: 'Look page, previous' },
   };
@@ -343,9 +343,9 @@
         for (const b of v.buttons) {
           const e = A.btn[b.note]; if (!e) continue;
           const lb = e.querySelector(':scope > .lb');
+          if (b.danger) e.classList.add('red');   // its border narrows the label: fit after it
           if (lb) fitLabel(lb, b.short, [9, 8, 7, 6.5, 6]);
           if (b.hex && b.vel > 1 && !e.classList.contains('ar')) { e.style.background = b.hex; e.classList.add('lit'); }
-          if (b.danger) e.classList.add('red');
           keyOfEl.set(e, b.key);
           e.title = `${b.hw}: ${b.does}`;
         }
@@ -355,7 +355,7 @@
         sp.textContent = `Looks page ${v.page + 1} of ${v.pages}  ·  ${v.total} looks, 40 a page  ·  RIGHT / LEFT turn the page`;
         air.textContent = 'On air: ' + (v.onAir || 'none');
         const rows = [];
-        for (const b of v.buttons) rows.push(`<tr class="${b.danger ? 'danger' : ''}"><td class="hw">${b.hex && b.vel > 1 ? `<span class="sw" style="background:${b.hex}"></span>` : ''}${esc(b.hw)}</td><td class="do">${esc(b.does)}${b.danger ? '  (one way)' : ''}</td></tr>`);
+        for (const b of v.buttons) rows.push(`<tr class="${b.danger ? 'danger' : ''}"><td class="hw">${b.hex && b.vel > 1 ? `<span class="sw" style="background:${b.hex}"></span>` : ''}${esc(b.hw)}</td><td class="do">${esc(b.does)}</td></tr>`);
         if (v.master.mapped) rows.push(`<tr><td class="hw">MASTER fader (CC ${v.master.cc})</td><td class="do">${esc(v.master.does)}</td></tr>`);
         tbody.innerHTML = rows.join('') || '<tr><td colspan="2">no button is mapped</td></tr>';
         note.textContent = v.mapped ? '' : 'Nothing is bound yet: this is the preset layout. Press "Map my controller" to bind it.';
