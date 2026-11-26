@@ -2033,3 +2033,7 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
   .touchwrap > .touchbody { grid-column: 2; grid-row: 1; }
   .touchwrap > .livestrip { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* The drawn APC40 (apc40draw.js): a pane of its own above the two columns, never squeezed by the flex column. */
+.miapcpane { flex: none; }
+.miapcpane .midibody { overflow: visible; }

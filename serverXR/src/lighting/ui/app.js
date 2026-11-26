@@ -6543,6 +6543,28 @@ function buildMidi() {
   const sig = (S ? S.fixtures.map((f) => f.id + f.name + f.profile).join('|') + '#' + S.scenes.length : '')
     + '#' + (S && Array.isArray(S.looks) ? S.looks.map((l) => l.id).join(',') : '') + '#' + (CUES && Array.isArray(CUES.list) ? CUES.list.map((c) => c.id + c.name).join('|') + (CUES.autoplay ? 'A' : '') + (CUES.loop ? 'L' : '') : '');
   if (sig !== midiSig) { midiSig = sig; buildMidiTargets(); midiDraw(); midiDrawBank(); }
+  midiApcUpdate();
+}
+
+// The drawn APC40 (apc40draw.js): the pane's picture of the controller. It shows the same
+// colours the pad lights are sent (apc40Lights), so it cannot disagree with the real unit, and
+// a click on it goes through the same target.apply() + ARM gate as the real pad.
+let midiApc = null;
+function midiApcPress(key) {
+  let t = midiTargets.find((x) => x.key === key);
+  if (!t) { buildMidiTargets(); t = midiTargets.find((x) => x.key === key); }
+  if (!t || t.kind !== 'note') return;
+  t.apply(); midiHit(key);
+}
+function midiApcUpdate() {
+  if (page !== 'midi' || !window.deskApc40Draw || !$('#miApc')) return;
+  if (!midiApc) midiApc = window.deskApc40Draw.create($('#miApc'), { press: midiApcPress, armed: () => midiArmed });
+  const mv = midiArmed ? midiLive.master : (S ? S.master : null);
+  midiApc.update({
+    map: midiMap, cues: CUES, state: { blackout: !!(S && S.blackout) },
+    looks: Array.isArray(S && S.looks) ? S.looks : [], page: midiLookPage, activeId: activeLookId(),
+    master: mv == null ? undefined : mv / 255,
+  });
 }
 
 function midiDraw() {
@@ -6598,6 +6620,7 @@ function midiValText(t) {
 
 function midiHit(key) {
   if (page !== 'midi') return;
+  if (midiApc) midiApc.hit(key);
   const tr = $(`tr[data-key="${CSS.escape(key)}"]`);
   if (!tr) return;
   tr.classList.add('hit');
@@ -6640,7 +6663,7 @@ function midiMonitor(cls, text) {
 }
 const mpad = (n, w) => String(n).padStart(w, ' ');
 const midiBar = (u) => '  ' + '█'.repeat(Math.round(clamp(u, 0, 1) * 20)).padEnd(20, '·');
-const midiFlash = (m) => { $('#miWizNote').textContent = m; };
+const midiFlash = (m) => { $('#miWizNote').textContent = m; if (midiApc) midiApc.say(m); };
 const midiSceneMsg = (m) => { $('#miSceneMsg').textContent = m; };
 function midiPill(sel, html, cls) {
   const e = $(sel);
@@ -6718,7 +6741,7 @@ function midiLeds() {
   return midiPainter;
 }
 function midiLookLed(id) { const p = midiLeds(); if (p) p.pressLook(id); }
-function midiPaintLights() { const p = midiLeds(); if (p) p.paint(); }
+function midiPaintLights() { const p = midiLeds(); if (p) p.paint(); midiApcUpdate(); }
 
 function midiEnable() {
   if (!navigator.requestMIDIAccess) {
