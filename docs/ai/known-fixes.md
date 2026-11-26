@@ -3,6 +3,14 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Light desk heads moved in 8-bit steps on profiles that name the fine channels pan_fine / tilt_fine (2026-11-26, Reika)
+
+Symptom: on the Reika rig (MovingBar43: pan, pan_fine, tilt, tilt_fine; BAR1240PIX57: tilt, tilt_fine) a look that moves heads drifted in jerky steps, about 2 degrees per step on a 540-degree pan, while the Limits trim already used 16 bits.
+Cause: `headsPose` in `serverXR/src/lighting/headMotion.js` looked for the fine channel by the single names `panFine` / `tiltFine`; a profile spelling it `pan_fine` / `tilt_fine` counted as 8-bit, so only the coarse byte was written and the fine byte stayed at its rest value.
+Fix: `headsPose` finds the fine partner with `fineRoleIn` from `serverXR/src/lighting/roles.js` (the resolver the engine's trim and `desk.js` already use) and writes the fine byte under the profile's own name. Profiles with no fine channel, and `panFine` / `tiltFine` profiles, give the same bytes as before.
+Regression test: `serverXR/src/lighting/tests/test-head-fine.js` (7 cases: both bytes written and coarse*256+fine equals the 16-bit target; both namings equal; tilt-only bar; panFine and 8-bit profiles byte-identical to a copy of the old function; whole-desk render with a sweep look; a non-moving fixture unchanged). 4 of the 7 fail on the old code.
+Not done: not run on the real rig. The room's client port `src/rigbuild/headMotion.js` was not touched. The Reika profiles live in the desk's data (read from the live desk's profile list), not in repo profile files.
+
 ## Monitor 3D map card flickered under a resting pointer; a drag that started on a card did not turn the camera (2026-11-24, N6446.1)
 
 Symptom: resting the pointer on a 3D map card (Monitor map, Spaces world 3D) made it open and close about 20 times a second; a drag started on a card moved the camera −5 px instead of turning it. Measured headless (scratch flicker test, 12 one-second rests with a 1 px jiggle): 12541 DOM changes.
