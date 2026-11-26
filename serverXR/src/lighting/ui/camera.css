@@ -33,7 +33,11 @@
   body.cam-page .topbar .topright > :not(.topbo) { display: none; }
   body.cam-page .topbar .topright { padding: 0 8px; min-height: 0; flex: 1 1 100%; }
   body.cam-page .topbar .topbo { width: 100%; min-height: 36px; }
-  body.cam-page .topbar .pills { display: none; }
+  /* The pills (output off, save failed, faders held, console in) are what a phone at the desk most needs:
+     they stay, on their own line under Blackout, which keeps a gap of its own above the picture. */
+  body.cam-page .topbar .pills { flex: 1 1 100%; order: 9; flex-wrap: wrap; padding: 2px 8px 4px; min-height: 0; }
+  body.cam-page .topbar .pills > button { flex: 0 0 auto; max-width: 100%; }
+  body.cam-page .topbar .topright { padding-bottom: 6px; }
 }
 .camview { display: flex; gap: 6px; align-items: center; }
 .cam-tools .sq { padding: 3px 8px; font-size: 11px; }

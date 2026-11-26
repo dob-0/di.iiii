@@ -112,6 +112,7 @@ function createCamera(opts) {
   let waiters = [];
   let watch = null;
   let camsCache = null, camsAt = 0;
+  const releasing = new Set();  // every ffmpeg being let go: close() waits for all of them, not only the latest
   let restartP = null;          // the old ffmpeg is being let go before the new one starts
   let closed = false;           // after close() frame() never starts ffmpeg again
   let restarts = 0;             // stalled restarts in a row, for the backoff
@@ -155,7 +156,7 @@ function createCamera(opts) {
     proc = null;
     if (!p) return Promise.resolve();
     log('camera released');
-    return new Promise((resolve) => {
+    const pr = new Promise((resolve) => {
       let done = false, kill = null, grace = null;
       const end = () => { if (done) return; done = true; clearTimeout(kill); clearTimeout(grace); resolve(); };
       p.once('close', end); p.once('exit', end);
@@ -165,6 +166,9 @@ function createCamera(opts) {
         grace = setTimeout(end, 1000);
       }, killMs);
     });
+    releasing.add(pr);
+    pr.then(() => releasing.delete(pr));
+    return pr;
   }
 
   function settle(frame) {
@@ -211,7 +215,11 @@ function createCamera(opts) {
     stallSeenAt = 0; lastRestartAt = now();
     restarts++;
     log('camera stalled ' + age + ' ms, restarting ffmpeg (try ' + restarts + ')');
-    restartP = release().then(() => { restartP = null; if (!closed) { lastError = null; start(device); } });
+    restartP = release().then(() => {
+      restartP = null;
+      // Only the camera chosen NOW is opened: a configure() during the restart has already moved on.
+      if (!closed && !proc && resolveDevice() === device) { lastError = null; start(device); }
+    });
   }
 
   // The newest frame, opening the camera first when nobody has it open. Resolves
@@ -305,7 +313,7 @@ function createCamera(opts) {
   }
 
   // Resolves once the camera process has ended, so a shutdown can wait before it exits.
-  function close() { closed = true; const done = release(); settle(null); return done; }
+  function close() { closed = true; const done = release(); settle(null); return Promise.all([done, ...releasing]).then(() => {}); }
 
   return { frame, status, configure, close, listCameras: () => cameras() };
 }

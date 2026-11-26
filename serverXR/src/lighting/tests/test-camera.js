@@ -230,7 +230,9 @@ check('3 shutdown: close() waits for ffmpeg; one that ignores SIGTERM gets SIGKI
   assert.strictEqual(cam.status().active, false);
   // Both shutdown paths wait for it.
   const root = path.join(__dirname, '..', '..');
-  assert.ok(/closeCamera\(\)/.test(fs.readFileSync(path.join(root, 'index.js'), 'utf8')), 'serverXR shutdown closes the camera');
+  // serverXR's own shutdown is only checked when serverXR is around (a lighting-only copy has no index.js above it).
+  const host = path.join(root, 'index.js');
+  if (fs.existsSync(host) && fs.existsSync(path.join(root, 'routes'))) assert.ok(/closeCamera\(\)/.test(fs.readFileSync(host, 'utf8')), 'serverXR shutdown closes the camera');
   assert.ok(/closeCamera\(\)/.test(fs.readFileSync(path.join(__dirname, '..', 'standalone.js'), 'utf8')), 'standalone shutdown closes the camera');
 });
 
@@ -352,6 +354,10 @@ check('8 lighting/ reaches nothing outside itself (it runs on its own on the clu
       if (e.isDirectory()) { if (!['tests', 'tools', 'ui', 'node_modules', 'data'].includes(e.name)) walk(full); continue; }
       if (!e.name.endsWith('.js') || /\.test\.js$/.test(e.name)) continue;
       const src = fs.readFileSync(full, 'utf8');
+      // a file read that climbs out of the directory is the same reach as a require
+      for (const m of src.matchAll(/(?:readFileSync|readdirSync|existsSync|statSync|createReadStream)\(\s*path\.(?:join|resolve)\(\s*__dirname\s*,\s*((?:'\.\.'\s*,?\s*)+)/g)) {
+        if (m[1].includes('..')) bad.push(path.relative(root, full) + ' reads ' + m[0].slice(0, 70));
+      }
       for (const m of src.matchAll(/require\(\s*['"](\.[^'"]*)['"]\s*\)/g)) {
         const target = path.resolve(path.dirname(full), m[1]);
         if (path.relative(root, target).startsWith('..')) bad.push(path.relative(root, full) + ' -> ' + m[1]);
@@ -418,6 +424,45 @@ check('11b ffmpeg that dies is started again by the next request after retryMs',
   p = cam.frame(); await sleep(10); assert.strictEqual(f.calls.length, 2);
   f.calls[1].p.stdout.write(Buffer.concat([jpeg(3), jpeg(4)])); assert.ok((await p).buf);
   await cam.close();
+});
+
+check('12 configure() during a stall restart: the restart opens the camera chosen now, not the old one', async () => {
+  const f = fakeSpawn();
+  const plain = f.spawn;   // the old ffmpeg takes 80 ms to end after SIGTERM, so the restart is still waiting when the page picks
+  f.spawn = (...a) => { const p = plain(...a); p.kill = (sig) => { p.killed.push(sig); setTimeout(() => p.emit('close', 0), 80); }; return p; };
+  const cam = createCamera({ dataDir: tmp(), spawn: (...a) => f.spawn(...a), fsRoot: tmp(), viewerFps: 1000, staleMs: 40, idleMs: 60000, backoffMs: [30], killMs: 500 });
+  cam.configure({ device: '/dev/video4' });
+  let p = cam.frame(); f.calls[0].p.stdout.write(Buffer.concat([jpeg(1), jpeg(2)])); await p;
+  const end = Date.now() + 400; let n = f.calls.length;
+  while (Date.now() < end && f.calls.length === n && !f.calls[0].p.killed.length) { await cam.frame(); await sleep(10); }
+  assert.ok(f.calls[0].p.killed.includes('SIGTERM'), 'the restart began');
+  cam.configure({ device: '/dev/video6' });          // the page picks another camera while the old ffmpeg is going
+  await sleep(150);
+  assert.ok(f.calls.every((c) => !(c.args.includes('/dev/video4') && c !== f.calls[0])), 'no second ffmpeg on the old device');
+  const st = cam.status();
+  assert.strictEqual(st.device, '/dev/video6');
+  assert.ok(!st.active || f.calls[f.calls.length - 1].args.includes('/dev/video6'), 'what runs is what status says');
+  cam.configure({ device: null, name: null });        // chosen camera removed: nothing may open
+  await sleep(100);
+  assert.strictEqual(cam.status().active, false);
+  await cam.close();
+});
+
+check('13 close() during a restart waits for the ffmpeg that ignores SIGTERM (SIGKILL after killMs)', async () => {
+  const calls = [];
+  const spawn = () => { const p = new EventEmitter(); p.stdout = new PassThrough(); p.stderr = new PassThrough(); p.killed = [];
+    p.kill = (sig) => { p.killed.push(sig); if (sig === 'SIGKILL') setImmediate(() => p.emit('close', 0)); }; calls.push(p); return p; };
+  const cam = createCamera({ dataDir: tmp(), spawn, fsRoot: tmp(), viewerFps: 1000, staleMs: 40, idleMs: 60000, backoffMs: [20], killMs: 200 });
+  cam.configure({ device: '/dev/video4' });
+  let p = cam.frame(); calls[0].stdout.write(Buffer.concat([jpeg(1), jpeg(2)])); await p;
+  const end = Date.now() + 500;
+  while (Date.now() < end && !calls[0].killed.length) { await cam.frame(); await sleep(10); }
+  assert.deepStrictEqual(calls[0].killed, ['SIGTERM'], 'the restart is waiting for the hung ffmpeg');
+  const t0 = Date.now();
+  await cam.close();
+  assert.deepStrictEqual(calls[0].killed, ['SIGTERM', 'SIGKILL'], 'close() saw it through to the kill');
+  assert.ok(Date.now() - t0 >= 100, 'close() waited (' + (Date.now() - t0) + ' ms), not 0');
+  assert.strictEqual(calls.length, 1, 'and no new ffmpeg after');
 });
 
 (async () => {
