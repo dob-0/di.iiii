@@ -10,6 +10,7 @@ import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { confineToAreas } from './walkableAreas.js'
+import { buildCollider, clampToBox, collectSolids, disposeCollider, groundBelow, stepFly, stepWalk } from './walkerCollision.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -473,8 +474,16 @@ export const detectTouchDevice = () => {
     return (navigator.maxTouchPoints || 0) > 0 && !window.matchMedia('(any-pointer: fine)').matches
 }
 
-function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true }) {
-    const { camera, gl } = useThree()
+function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, walkableAreas, collide = true, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef, altitudeKeys = DEFAULT_ALTITUDE_KEYS, wheelDolly = true }) {
+    const { camera, gl, scene } = useThree()
+    // Game-style collision (walkerCollision.js): the building's solid meshes as one BVH, built when
+    // the model has arrived (they load late, so the scene is polled like SurfaceOverrides does) and
+    // rebuilt when the set changes. No building in the room = no collider = the walker as it was.
+    const colliderRef = useRef(null)
+    const solidsSigRef = useRef({ built: null, seen: null })
+    const frameCountRef = useRef(0)
+    const bodyRef = useRef({ feetY: 0, vy: 0, grounded: true, wasFly: false, lastX: NaN, lastZ: NaN })
+    useEffect(() => () => { disposeCollider(colliderRef.current); colliderRef.current = null }, [])
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
     // write camera.position/lookAt then, or it yanks the camera back to the
@@ -823,11 +832,41 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
 
         // XrLocomotion owns movement + camera during a session.
         if (isPresenting) return
+        if (collide) {
+            // every ~60 frames: has the building changed? the first one found is built at once, a
+            // changed one once it has stopped changing (a model's meshes arrive together)
+            if (frameCountRef.current++ % 60 === 1) {
+                const { sig, meshes } = collectSolids(scene)
+                const st = solidsSigRef.current
+                if (sig && sig !== st.built && (sig === st.seen || st.built === null)) {
+                    disposeCollider(colliderRef.current)
+                    colliderRef.current = buildCollider(meshes)
+                    st.built = sig
+                    if (import.meta.env.DEV && typeof window !== 'undefined') window.__diiCollider = { collider: colliderRef.current, body: bodyRef.current, meshes: meshes.map((m) => m.name || m.parent?.name || m.type) }
+                    bodyRef.current.lastX = NaN
+                }
+                st.seen = sig
+            }
+        }
         const keys = keysRef.current
         const joy = joystickRef?.current || { x: 0, y: 0 }
         const fly = flyRef.current
         if (player.pitch === undefined) player.pitch = 0
         if (player.altY === undefined) player.altY = EYE_HEIGHT
+        const collider = collide ? colliderRef.current : null
+        const body = bodyRef.current
+        if (collider) {
+            // placed from outside (spawn, teleport, mode switch): find the floor under the eye
+            const placed = !Number.isFinite(body.lastX) || Math.abs(player.x - body.lastX) > 1e-3 || Math.abs(player.z - body.lastZ) > 1e-3 || body.wasFly !== fly
+            if (placed) {
+                const g = groundBelow(collider.bvh, player.x, player.z, player.altY)
+                body.feetY = Math.max(g ?? 0, player.altY - EYE_HEIGHT)
+                body.vy = 0
+            }
+            body.wasFly = fly
+        }
+        const preX = player.x
+        const preZ = player.z
 
         // Only arrow keys (and mouse/touch drag, and the mobile joystick's x
         // axis) turn the camera -- A/D strafe sideways instead, matching the
@@ -900,10 +939,29 @@ function Walker({ playerRef, onNearestZone, onPortalReached, entities, bounds, w
             player.x = dollied.x
             player.z = dollied.z
         }
+        const preAlt = player.altY
         if (fly && vert !== 0) {
             player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, FLY_MIN_ALTITUDE, 60)
         }
-        if (!fly) {
+        if (collider) {
+            // game-style collision: the move above is only the INTENDED position; the capsule
+            // is pushed out of whatever it overlaps, which is what makes it slide along a wall
+            const pre = { x: preX, z: preZ }
+            if (fly) {
+                const p = clampToBox(collider, stepFly(collider, { x: preX, y: preAlt, z: preZ }, player.x, player.altY, player.z), pre)
+                player.x = p.x
+                player.z = p.z
+                player.altY = Math.max(FLY_MIN_ALTITUDE, p.y)
+            } else {
+                const p = clampToBox(collider, stepWalk(collider, body, { x: preX, z: preZ }, player.x, player.z, delta, EYE_HEIGHT), pre)
+                player.x = p.x
+                player.z = p.z
+                // the eye follows the feet (smoothed, so a step up is not a pop)
+                player.altY = THREE.MathUtils.lerp(player.altY, body.feetY + EYE_HEIGHT, Math.min(1, delta * (body.grounded ? 12 : 30)))
+            }
+            body.lastX = player.x
+            body.lastZ = player.z
+        } else if (!fly) {
             player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))
         }
 
@@ -1971,6 +2029,7 @@ export default function LiveProjectScene({
                         entities={entities}
                         bounds={bounds}
                         walkableAreas={worldState.walkableAreas}
+                        collide={worldState.collide !== false}
                         joystickRef={joystickRef}
                         joyVisRef={joyVisRef}
                         joyThumbRef={joyThumbRef}
