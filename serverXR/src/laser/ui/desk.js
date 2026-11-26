@@ -3,6 +3,9 @@
 //
 // The light desk's hardest lesson, kept here from the start: a poll must never overwrite a value under the person's
 // hand. Every field remembers when it was last touched, and the poll leaves it alone for HOLD_MS after.
+// The Show tab: at a root alias (/light/, /laser/) ../show/ would land on a space named "show"; the Show desk is at
+// /serverXR/show/ on every install (serverXR/src/index.js). Owner N6923, 2026-11-26.
+document.querySelectorAll('a[data-show-tab]').forEach((a) => { if (/^\/(light|laser)(\/|$)/.test(location.pathname)) a.setAttribute('href', '/serverXR/show/'); });
 'use strict'
 ;(() => {
     const HOLD_MS = 1500
