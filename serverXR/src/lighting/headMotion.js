@@ -1,4 +1,5 @@
 'use strict';
+const { fineRoleIn } = require('./roles');
 // HEAD MOTION - a look that MOVES the moving heads. One pure function, played the same way by the desk (here) and by
 // the 3D room (src/rigbuild/headMotion.js, a CLIENT PORT: serverXR is CommonJS and src/ cannot import it; the test
 // src/rigbuild/headMotion.test.js pins the two to within 0.01 degree at fixed `now` values, as lookMotion.test.js
@@ -173,17 +174,20 @@ function headsPose(hd, channels, val) {
   const { off, unit, level } = hd;
   const sign = headSigns(unit.hung);
   const out = {};
-  const axis = (role, fineRole, offset, range) => {
+  // The fine partner under a coarse channel, by the desk's one resolver (roles.js fineRoleIn: panFine or pan_fine, tiltFine or
+  // tilt_fine), the same one the renderer's trim uses, so heads write 16 bits for every naming a profile may use.
+  const axis = (role, offset, range) => {
     if (!channels.includes(role)) return;
-    const hasFine = channels.includes(fineRole);
+    const fineRole = fineRoleIn(channels, role);
+    const hasFine = fineRole != null;
     const c = val(role);
     const f = hasFine ? val(fineRole) : null;
     const [coarse, fine] = moveAxis([c == null ? 128 : c, f == null ? 0 : f], offset, range, hasFine);
     out[role] = coarse;
     if (hasFine) out[fineRole] = fine;
   };
-  axis('pan', 'panFine', sign.pan * off.pan * level, unit.panRange);
-  axis('tilt', 'tiltFine', sign.tilt * off.tilt * level, unit.tiltRange);
+  axis('pan', sign.pan * off.pan * level, unit.panRange);
+  axis('tilt', sign.tilt * off.tilt * level, unit.tiltRange);
   return Object.keys(out).length ? out : null;
 }
 
