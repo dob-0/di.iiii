@@ -20,6 +20,8 @@ describe('codePageReadBridge', () => {
         expect(stripQuery('/light/api/summary?x=1#h')).toBe('/light/api/summary')
         expect(isAllowedReadPath('/light/api/summary?x=1')).toBe(true)
         expect(isAllowedReadPath('/light/api/state')).toBe(true)
+        expect(isAllowedReadPath('/light/api/dmx')).toBe(true)
+        expect(isAllowedReadPath('/light/api/dmx/stream')).toBe(false)
         expect(isAllowedReadPath('/light/api/summary/')).toBe(false)
         expect(isAllowedReadPath('/light/api/state/../x')).toBe(false)
         expect(isAllowedReadPath('//evil.test/light/api/state')).toBe(false)
@@ -61,18 +63,19 @@ describe('codePageReadBridge', () => {
         expect(frame.postMessage).not.toHaveBeenCalled()
     })
 
-    it('drops reads past 4 per second with 429', async () => {
+    it('drops reads past 10 per second with 429', async () => {
         const { frame, fetchMock, send } = setup()
         for (let i = 0; i < 6; i++) await send(read('/light/api/state', `r${i}`))
-        expect(fetchMock).toHaveBeenCalledTimes(4)
+        for (let i = 6; i < 12; i++) await send(read('/light/api/state', `r${i}`))
+        expect(fetchMock).toHaveBeenCalledTimes(10)
         const last = frame.postMessage.mock.calls.map((c) => c[0]).filter((m) => m.status === 429)
-        expect(last.map((m) => m.id)).toEqual(['r4', 'r5'])
+        expect(last.map((m) => m.id)).toEqual(['r10', 'r11'])
     })
 
     it('limiter frees slots after the window', () => {
         let t = 0
         const allow = createReadLimiter({ now: () => t })
-        expect([1, 2, 3, 4, 5].map(() => allow())).toEqual([true, true, true, true, false])
+        expect(Array.from({ length: 11 }, () => allow())).toEqual([...Array(10).fill(true), false])
         t = 1001
         expect(allow()).toBe(true)
     })

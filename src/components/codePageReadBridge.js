@@ -10,8 +10,8 @@
 
 export const CODE_PAGE_READ_TYPE = 'di-code-page-read'
 export const CODE_PAGE_READ_RESULT_TYPE = 'di-code-page-read-result'
-export const CODE_PAGE_READ_ALLOWLIST = Object.freeze(['/light/api/summary', '/light/api/state'])
-export const CODE_PAGE_READ_MAX_PER_SECOND = 4
+export const CODE_PAGE_READ_ALLOWLIST = Object.freeze(['/light/api/summary', '/light/api/state', '/light/api/dmx'])
+export const CODE_PAGE_READ_MAX_PER_SECOND = 10
 export const CODE_PAGE_READ_TIMEOUT_MS = 5000
 
 export function stripQuery(path) {

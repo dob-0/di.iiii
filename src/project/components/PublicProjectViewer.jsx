@@ -50,6 +50,7 @@ import { renderPlan } from '../../shared/renderPlan.js'
 import useRenderMode from '../viewport/useRenderMode.js'
 import { useGraphMakesRoom } from './graphRoom.js'
 import { pageAllow } from '../../utils/pageFramePermissions.js'
+import { createCodePageReadBridge } from '../../components/codePageReadBridge.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
 // mounts a canvas. Everything that touches three (both scene renderers, the XR
@@ -437,6 +438,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         if (consumeArriveWalking() && walkGateOpen) setNavMode('walk')
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [state.status, projectId])
+
+    // page -> host read-only status reads (allowlisted GETs), see components/codePageReadBridge.js
+    useEffect(() => {
+        if (!showCodeView) return undefined
+        const bridge = createCodePageReadBridge({
+            getFrameWindow: () => iframeRef.current?.contentWindow
+        })
+        window.addEventListener('message', bridge)
+        return () => window.removeEventListener('message', bridge)
+    }, [showCodeView])
 
     useEffect(() => {
         if (!showCodeView) return undefined
