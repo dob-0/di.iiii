@@ -331,7 +331,15 @@ check('phone: Tap, the output badge and checkboxes are 44px targets on a coarse 
 // at 1440x900 (a hidden scene filter shifted the 3-row grid), clipping TAP / FX off / BPM; and
 // the cue bar did not stay pinned when the body, not the pane, was the scroller.
 check('Touch: the live strip is never squeezed and the cue bar pins in both layouts', () => {
-  if (/\.touchwrap \{[^}]*display: grid/.test(css)) throw new Error('.touchwrap is a fixed-row grid again (a hidden child shifts the rows)');
+  // A grid is allowed only when every child sits in a named cell (a hidden child then shifts nothing) and the strip's row is auto
+  // (owner N6942, 2026-11-26: the wide mouse layout puts the stage beside the looks).
+  const grid = css.match(/\.touchwrap \{[^}]*display: grid[^}]*\}/);
+  if (grid) {
+    if (!/grid-template-rows: minmax\(0, 1fr\) auto/.test(grid[0])) throw new Error('.touchwrap grid: the strip row is not auto (it can be squeezed)');
+    for (const kid of ['.touchhead', '.touchwrap > .touchbody', '.touchwrap > .livestrip']) {
+      if (!new RegExp(kid.replace(/[.>]/g, (c) => (c === '.' ? '\\.' : '>')) + ' \\{[^}]*grid-row: \\d').test(css)) throw new Error(kid + ' has no fixed grid row (a hidden child would shift the rows)');
+    }
+  }
   if (!/\.livestrip \{\s*flex: none/.test(css)) throw new Error('.livestrip can shrink');
   if (!/\.tcuebar \{\s*position: sticky/.test(css)) throw new Error('the cue bar is not sticky');
   if (!/@media \(max-width: 1100px\) \{ \.tcuebar \{ top: var\(--topbar-h/.test(css)) throw new Error('on the body-scroll layout the cue bar does not pin under the top bar');
