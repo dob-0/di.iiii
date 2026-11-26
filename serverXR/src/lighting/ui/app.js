@@ -1293,6 +1293,9 @@ function placeStages() {
       inner.style.setProperty('--fxw', (px / v.zoom) + 'px');
       inner.style.setProperty('--fxh', (px * 0.88 / v.zoom) + 'px');
       inner.style.setProperty('--fxf', Math.max(8, px * 0.36) / v.zoom + 'px');
+      // The Touch glance box: its squares are screen pixels (16 x size), cut to 90 % of the gap to the
+      // nearest light so a packed truss reads as a row of lights, not one pile (owner N6944).
+      if (viewName(inner) === 'touch') inner.style.setProperty('--tpx', Math.max(6, Math.min(16 * nodeSize.touch, gapPx * 0.9)) + 'px');
     }
     // The backdrop grid lives on the outer, untransformed pane (see style.css) so it can
     // tile forever. One line on every multiple of GRID in world units — the very grid the
@@ -6976,10 +6979,16 @@ function fitStage(stage) {
   const bw = Math.max(0.08, x1 - x0) * sc, bh = Math.max(0.08, y1 - y0) * sc;
   // The Touch pane has no zoom slider and is a small glance at the rig: a compact rig (her
   // lights 0.1 apart) needs more than 4x there, or every light lands on one spot.
-  const maxZoom = stage.closest('#touchStage') ? 16 : 4;
-  v.zoom = clamp(Math.min((r.width - 70 - padR) / bw, (r.height - 96) / bh, maxZoom), 0.01, maxZoom);   // 35 px of air each side: the short labels stay inside
+  const touch = !!stage.closest('#touchStage');
+  const maxZoom = touch ? 16 : 4;
+  // Air around the rig: 35 px each side and 96 px in height frame the Setup plan's labels. The Touch
+  // box has no labels and is only ~100-200 px tall: 96 px of air left 11 px for the whole rig, so
+  // every light sat on one spot (owner N6944, 2026-11-26, "the minimap it bagged"). There the air is
+  // 16 px around the 16 px squares.
+  const airX = touch ? 32 : 70, airY = touch ? 32 : 96;
+  v.zoom = clamp(Math.min((r.width - airX - padR) / bw, (r.height - airY) / bh, maxZoom), 0.01, maxZoom);   // 35 px of air each side: the short labels stay inside
   v.x = (r.width - padR) / 2 - (ox + (x0 + x1) / 2 * sc) * v.zoom;
-  v.y = r.height / 2 - 8 - (oy + (y0 + y1) / 2 * sc) * v.zoom;   // 8 px up: the name under the last row stays inside
+  v.y = r.height / 2 - (touch ? 0 : 8) - (oy + (y0 + y1) / 2 * sc) * v.zoom;   // 8 px up: the name under the last row stays inside
   slidersOf(stage).forEach((o) => { o.value = Math.round(v.zoom * 100); });
   placeStages();
 }
