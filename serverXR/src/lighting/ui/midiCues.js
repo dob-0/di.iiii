@@ -183,7 +183,46 @@
     return send;
   }
 
-  const api = { LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
+  // The pad lights, one painter per page. The pressed look goes red at once (optimistic), the
+  // old one back to ember in the same paint; the desk's answer corrects it (answer(id, false)
+  // drops it) and the poll confirms it (the polled active look equals it) or, if the poll still
+  // shows the old look, the guess holds for OPT_LOOK_MS so a poll that raced the fire cannot
+  // flip the pad back. Only the armed page lights (Safe: nothing is painted, as before).
+  // deps: out() port|null, armed(), map(), cues(), state(), looks(), page(), setPage(p),
+  // polledId(), now().
+  const OPT_LOOK_MS = 4000;
+  function createLedPainter(deps) {
+    const sent = deps.sent || new Map();
+    let opt = null;   // { id, at }
+    function lookId() {
+      const polled = deps.polledId() || '';
+      if (opt) {
+        if (polled === opt.id || deps.now() - opt.at > OPT_LOOK_MS) opt = null;
+        else return opt.id;
+      }
+      return polled;
+    }
+    function paint() {
+      const out = deps.out();
+      if (!out || !deps.armed()) return;
+      try {
+        const looks = deps.looks();
+        deps.setPage(clampLookPage(deps.page(), looks.length));
+        const lights = apc40Lights(deps.map(), deps.cues(), deps.state(), { looks, page: deps.page(), activeId: lookId() });
+        for (const l of lightDiff(lights, sent)) out.send([0x90, l.note, l.vel]);
+      } catch (e) { sent.clear(); }   // port gone: repaint everything when it is back
+    }
+    return {
+      paint,
+      pressLook(id) { if (!deps.armed()) return; opt = { id, at: deps.now() }; paint(); },
+      answer(id, ok) { if (!ok && opt && opt.id === id) { opt = null; paint(); } },
+      forget(note) { sent.delete(note); },
+      reset() { sent.clear(); opt = null; },
+      sent,
+    };
+  }
+
+  const api = { createLedPainter, OPT_LOOK_MS, LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiCues = api;
 })(typeof window !== 'undefined' ? window : this);

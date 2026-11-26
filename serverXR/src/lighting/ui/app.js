@@ -3474,8 +3474,9 @@ $('#touchLooks').addEventListener('click', async (e) => {
   const b = e.target.closest('.lookbtn');
   if (!b || !b.dataset.look) return;
   const look = looksOf().find((l) => l.id === b.dataset.look);
+  midiLookLed(b.dataset.look);   // pad lights follow the click at once
   const r = await post('api/looks/fire', { id: b.dataset.look });
-  if (!r || r.error) { say(`look did not fire — ${(r && r.error) || 'no answer'}`, true); return; }
+  if (!r || r.error) { if (midiPainter) midiPainter.answer(b.dataset.look, false); say(`look did not fire — ${(r && r.error) || 'no answer'}`, true); return; }
   // Mark it now from the answer, not from the next poll: the tile has to be seen to take.
   if (r.layer && S) {
     const ls = layersOf();
@@ -6089,12 +6090,14 @@ async function midiFlush() {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify(item.body),
         });
+        if (item.route === 'api/looks/fire' && item.body && item.body.id && midiPainter) midiPainter.answer(item.body.id, r.ok);
         if (!r.ok) {
           let why = 'HTTP ' + r.status;
           try { const j = await r.json(); if (j && j.error) why = j.error; } catch (e) { /* no body */ }
           say(`a MIDI press was refused by the desk — ${why}`, true);
         }
       } catch (e) {
+        if (item.route === 'api/looks/fire' && item.body && midiPainter) midiPainter.answer(item.body.id, false);
         // The pill is the poll's, and the poll would paint over a flag set here within a
         // second and a half. A send that died says so where messages go on every page.
         say('a MIDI move did not reach the desk', true);
@@ -6207,6 +6210,7 @@ function buildMidiTargets() {
           if (midiArmed) mcl.noteSent(midiCueSent, { autoplay: false }, Date.now());
         }
         midiSend(fire.route, fire.body, 'lookpad:' + k, true);
+        midiLookLed(fire.body.id);   // the pad goes red now, not at the next poll
         const l = mcl.lookAt(looksOf(), midiLookPage, k);
         midiFlash(`${midiLookPage * mcl.LOOK_PADS + k + 1} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
       });
@@ -6692,17 +6696,29 @@ function midiBindLights() {
     || [...midiAccess.outputs.values()].find((o) => /apc\s*40/i.test(o.name || '')) || null;
   midiPaintLights();
 }
-function midiPaintLights() {
-  if (!midiLedOut || !window.deskMidiCues) return;
-  try {
-    if (!midiArmed) return;   // only the armed tab owns the pads' lights (inside the try: midiArmed is declared further down)
-    const looks = Array.isArray(S && S.looks) ? S.looks : [];   // not looksOf(): a const further down, may not be read yet
-    midiLookPage = window.deskMidiCues.clampLookPage(midiLookPage, looks.length);
-    const lights = window.deskMidiCues.apc40Lights(midiMap, CUES, { blackout: !!(S && S.blackout) },
-      { looks, page: midiLookPage, activeId: activeLookId() });
-    for (const l of window.deskMidiCues.lightDiff(lights, midiLedSent)) midiLedOut.send([0x90, l.note, l.vel]);
-  } catch (e) { midiLedSent.clear(); }   // port gone: repaint everything when it is back
+// One painter (midiCues.js createLedPainter): lights go out at the press (optimistic), the
+// answer of api/looks/fire corrects them, the next poll confirms them.
+let midiPainter = null;
+function midiLeds() {
+  if (!midiPainter && window.deskMidiCues) {
+    midiPainter = window.deskMidiCues.createLedPainter({
+      sent: midiLedSent,
+      out: () => midiLedOut,
+      armed: () => midiArmed,   // only the armed tab owns the pads' lights (a getter: midiArmed is declared further down)
+      map: () => midiMap,
+      cues: () => CUES,
+      state: () => ({ blackout: !!(S && S.blackout) }),
+      looks: () => (Array.isArray(S && S.looks) ? S.looks : []),   // not looksOf(): a const further down
+      page: () => midiLookPage,
+      setPage: (p) => { midiLookPage = p; },
+      polledId: () => activeLookId(),
+      now: () => Date.now(),
+    });
+  }
+  return midiPainter;
 }
+function midiLookLed(id) { const p = midiLeds(); if (p) p.pressLook(id); }
+function midiPaintLights() { const p = midiLeds(); if (p) p.paint(); }
 
 function midiEnable() {
   if (!navigator.requestMIDIAccess) {
