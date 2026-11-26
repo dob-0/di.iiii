@@ -150,6 +150,18 @@ h3 { font-size: 12px; font-weight: 600; margin: 14px 0 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { padding: 4px 8px; min-height: 28px; font-size: 12px; background: var(--cell); }
 .chip.is-on { border-color: var(--accent); color: var(--accent); }
+/* Send to: which lasers a tile's picture goes to; a tile's lasers as small numbers on its picture. */
+/* A layer the laser's pass has no room for (layersDrawn): struck through. */
+.chip.is-off { text-decoration: line-through; opacity: 0.5; }
+.layercubes { margin-top: 8px; }
+.layercubes .muted { font-size: 12px; margin-top: 4px; }
+.layercubes .muted:empty { display: none; }
+.sendto { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 0 10px 8px; }
+.sendto .label { font-size: 12px; color: var(--muted, #888); margin-right: 4px; }
+.tile { position: relative; }
+.tile .onlasers { position: absolute; top: 4px; right: 4px; padding: 0 5px; border-radius: 3px; font-size: 11px; line-height: 16px;
+  background: var(--accent); color: #000; pointer-events: none; }
+.tile .onlasers:empty { display: none; }
 .swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; }
 .swatch { height: 28px; padding: 0; border: 1px solid var(--line); }
 .swatch.is-on { outline: 2px solid #fff; outline-offset: 1px; }
@@ -176,8 +188,17 @@ button.small { min-height: 24px; padding: 2px 8px; }
 .field { display: grid; grid-template-columns: 84px minmax(0, 1fr) 46px; align-items: center; gap: 8px; padding: 3px 0; }
 .field label { color: var(--muted); font-size: 12px; }
 .field input[type=range] { width: 100%; }
+.field input[type=color] { width: 100%; height: 24px; padding: 0; border: 1px solid var(--line); background: none; }
 .field output { font: 500 11px var(--mono); text-align: right; cursor: text; }
 .field input.num { width: 46px; background: var(--field); border: 1px solid var(--accent); font: 500 11px var(--mono); padding: 2px 3px; text-align: right; }
+/* LFO (2026-11-07): the ~ beside an editor slider, its Wave/Every/Depth under it, and the mark of where it has the slider now. */
+.editor .field { grid-template-columns: 84px minmax(0, 1fr) 46px 28px; position: relative; }
+.lfo-btn { padding: 0; min-width: 0; font: 600 15px var(--mono); line-height: 1; }
+.lfo-btn.is-on { color: var(--accent); border-color: var(--accent); }
+.lfo-mark { position: absolute; top: 6px; bottom: 6px; width: 2px; background: var(--accent); border-radius: 1px; pointer-events: none; }
+.lfo { margin: 0 0 6px 12px; padding: 4px 0 2px 10px; border-left: 2px solid var(--accent); }
+.lfo .field { grid-template-columns: 60px minmax(0, 1fr) 46px 28px; }
+.lfo-waves { padding: 2px 0 4px; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
 .empty { padding: 12px 10px; margin: 0; }
 .editor.is-empty .editbody { display: none; }
@@ -261,6 +282,9 @@ button.save.is-unsaved { background: var(--accent); border-color: var(--accent);
   .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
   .editor { overflow: visible; }
   .field { grid-template-columns: 76px minmax(0, 1fr) 46px; padding: 6px 0; }
+  .editor .field { grid-template-columns: 76px minmax(0, 1fr) 46px 40px; }
+  .lfo .field { grid-template-columns: 52px minmax(0, 1fr) 46px 40px; }
+  .lfo-mark { top: 12px; bottom: 12px; }
   .chip, .swatch, button { min-height: 40px; }
   .swatches { grid-template-columns: repeat(6, 1fr); }
   .swatch, .swatches input[type=color], .addcolour { height: 40px; }
