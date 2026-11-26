@@ -547,7 +547,9 @@ require('./laser/sceneLink').linkLightToLaser({ lighting, lasers, log: logger })
 // The show desk (serverXR/src/showDesk, 2026-10-31) at /show/ — the lighting desk and the laser desk on one page. Only files: the
 // page sends the two desks' own routes from this same origin, so their guards apply as on their own pages. Mounted under the
 // base path only (a bare /show could shadow a space of that name). routes/showDeskRoutes.js.
-registerShowDeskRoutes(app, { mountPaths: [`${config.mountPath || ''}/show`.replace(/\/+/g, '/')] })
+// Also at /serverXR/show (never a bare /show): the Light and Laser desks opened at their root aliases (/light/, /laser/)
+// send their Show tab there, whatever this install's base path is (owner N6923, 2026-11-26: the tab 404'd as space "show").
+registerShowDeskRoutes(app, { mountPaths: [...new Set([`${config.mountPath || ''}/show`.replace(/\/+/g, '/'), '/serverXR/show'])] })
 
 // The show status (serverXR/src/stage/showStatus.js, 2026-11-01, plan S11) at /show-status: one JSON of the running show
 // (light scene, laser armed or stopped and why, controller heard, link, heat, the stage watch's latest.json), read by the

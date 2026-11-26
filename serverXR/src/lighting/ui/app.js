@@ -1,6 +1,9 @@
 'use strict';
 
 const $ = (s, r = document) => r.querySelector(s);
+// The Show tab: at a root alias (/light/, /laser/) ../show/ would land on a space named "show"; the Show desk is at
+// /serverXR/show/ on every install (serverXR/src/index.js). Owner N6923, 2026-11-26.
+document.querySelectorAll('a[data-show-tab]').forEach((a) => { if (/^\/(light|laser)(\/|$)/.test(location.pathname)) a.setAttribute('href', '/serverXR/show/'); });
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // Names are typed by a person and land in innerHTML. Without this, a fixture called
