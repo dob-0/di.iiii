@@ -51,7 +51,7 @@ async function readStatus(path, { fetchImpl, timeoutMs }) {
         } catch {
             body = null
         }
-        return { ok: Boolean(response.ok), status: response.status, body }
+        return { ok: Boolean(response.ok) && body !== null, status: response.status, body }
     } catch (error) {
         return {
             ok: false,
@@ -62,6 +62,37 @@ async function readStatus(path, { fetchImpl, timeoutMs }) {
     } finally {
         clearTimeout(timer)
     }
+}
+
+// Only what a status page needs leaves the host: no output targets, LAN addresses,
+// serial ports, scenes or any other part of the desk's state (review of #1380).
+export function sanitizeReadBody(path, body) {
+    if (!body || typeof body !== 'object') return body
+    const route = stripQuery(path)
+    if (route === '/light/api/state') {
+        return {
+            master: body.master,
+            blackout: body.blackout,
+            fixtures: (Array.isArray(body.fixtures) ? body.fixtures : []).map((f) => ({
+                id: f?.id, name: f?.name, universe: f?.universe, address: f?.address, profile: f?.profile,
+                // channel names in profile order, with their levels; nothing else of the fixture
+                values: f?.values && typeof f.values === 'object' ? { ...f.values } : {}
+            }))
+        }
+    }
+    if (route === '/light/api/summary') {
+        const { output, input, ...rest } = body
+        const o = output && typeof output === 'object' ? output : {}
+        return {
+            ...rest,
+            output: {
+                driver: o.driver, enabled: o.enabled, connected: o.connected,
+                packetsSent: o.packetsSent, lastError: o.lastError ? 'error' : null,
+                bus: { status: o.bus?.status, routes: (o.bus?.routes || []).map((r) => ({ name: r?.name, driver: r?.driver, status: r?.status })) }
+            }
+        }
+    }
+    return body
 }
 
 // Returns a handler for window 'message' events. `getFrameWindow` gives the
@@ -75,6 +106,10 @@ export function createCodePageReadBridge({
     return async function handleMessage(event) {
         const frame = getFrameWindow?.()
         if (!frame || event?.source !== frame) return
+        // the sandboxed page is origin "null"; with deviceAccess (allow-same-origin) it is ours.
+        // A page that navigated the frame elsewhere keeps the same window but not the origin.
+        const ownOrigin = typeof window !== 'undefined' ? window.location.origin : null
+        if (event.origin !== 'null' && event.origin !== ownOrigin) return
         const data = event.data
         if (data?.type !== CODE_PAGE_READ_TYPE) return
         const id = typeof data.id === 'string' ? data.id : ''
@@ -88,7 +123,8 @@ export function createCodePageReadBridge({
         }
         if (!limiter()) return reply({ ok: false, status: 429, error: 'rate limited' })
         if (!isAllowedReadPath(data.path)) return reply({ ok: false, status: 403, error: 'not allowed' })
-        reply(await readStatus(stripQuery(data.path) + queryOf(data.path), { fetchImpl, timeoutMs }))
+        const result = await readStatus(stripQuery(data.path) + queryOf(data.path), { fetchImpl, timeoutMs })
+        reply({ ...result, body: sanitizeReadBody(data.path, result.body) })
     }
 }
 

@@ -3,6 +3,7 @@ import {
     createCodePageReadBridge,
     createReadLimiter,
     isAllowedReadPath,
+    sanitizeReadBody,
     stripQuery
 } from './codePageReadBridge.js'
 
@@ -10,7 +11,7 @@ function setup({ fetchImpl, timeoutMs } = {}) {
     const frame = { postMessage: vi.fn() }
     const fetchMock = fetchImpl || vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ live: 1 }) }))
     const handle = createCodePageReadBridge({ getFrameWindow: () => frame, fetchImpl: fetchMock, timeoutMs })
-    const send = (data, source = frame) => handle({ source, data })
+    const send = (data, source = frame, origin = 'null') => handle({ source, data, origin })
     return { frame, fetchMock, send }
 }
 const read = (path, id = 'a') => ({ type: 'di-code-page-read', id, path })
@@ -30,10 +31,10 @@ describe('codePageReadBridge', () => {
 
     it('fetches an allowed path same-origin with GET and posts the parsed body', async () => {
         const { frame, fetchMock, send } = setup()
-        await send(read('/light/api/summary?a=1'))
+        await send(read('/light/api/dmx?a=1'))
         expect(fetchMock).toHaveBeenCalledTimes(1)
         const [url, init] = fetchMock.mock.calls[0]
-        expect(url).toBe('/light/api/summary?a=1')
+        expect(url).toBe('/light/api/dmx?a=1')
         expect(init.method).toBe('GET')
         expect(init.credentials).toBe('same-origin')
         expect(frame.postMessage).toHaveBeenCalledWith(
@@ -95,5 +96,34 @@ describe('codePageReadBridge', () => {
         })
         await send(read('/light/api/state'))
         expect(frame.postMessage.mock.calls[0][0]).toMatchObject({ ok: false, status: 502, body: null })
+    })
+
+    it('ignores a message whose origin is not the sandboxed page (frame navigated away)', async () => {
+        const { frame, fetchMock, send } = setup()
+        await send(read('/light/api/dmx'), frame, 'https://evil.example')
+        expect(fetchMock).not.toHaveBeenCalled()
+        expect(frame.postMessage).not.toHaveBeenCalled()
+    })
+
+    it('state and summary leave the host without targets, LAN addresses, serial ports or scenes', () => {
+        const state = sanitizeReadBody('/light/api/state', {
+            master: 255, blackout: false, scenes: [{ id: 's' }],
+            output: { targets: ['2.0.0.7'], serialPort: '/dev/ttyUSB0' },
+            fixtures: [{ id: 'a', name: 'P1', universe: 2, address: 1, profile: 'X', values: { r1: 1 }, limits: { panTrim: 1 } }]
+        })
+        expect(state).toEqual({ master: 255, blackout: false, fixtures: [{ id: 'a', name: 'P1', universe: 2, address: 1, profile: 'X', values: { r1: 1 } }] })
+        const summary = sanitizeReadBody('/light/api/summary?x=1', {
+            looks: 27, input: { port: 'x' },
+            output: { enabled: true, connected: true, packetsSent: 5, lastError: '/dev/ttyUSB0 gone', targets: ['2.0.0.7'], bus: { status: 'ok', networks: ['2.0.0.0/8'], routes: [{ name: 'Output', driver: 'artnet', status: 'ok', reason: 'to 2.0.0.7', target: '2.0.0.7' }] } }
+        })
+        expect(JSON.stringify(summary)).not.toMatch(/2\.0\.0|ttyUSB|networks|targets|input/)
+        expect(summary.looks).toBe(27)
+        expect(summary.output).toMatchObject({ enabled: true, connected: true, packetsSent: 5, lastError: 'error' })
+    })
+
+    it('a 200 that is not JSON is not ok', async () => {
+        const { frame, send } = setup({ fetchImpl: vi.fn(async () => ({ ok: true, status: 200, json: async () => { throw new Error('html') } })) })
+        await send(read('/light/api/summary'))
+        expect(frame.postMessage.mock.calls[0][0]).toMatchObject({ ok: false, status: 200, body: null })
     })
 })
