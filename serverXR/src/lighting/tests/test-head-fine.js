@@ -119,5 +119,18 @@ check('whole desk: the fixture no look names keeps its bytes whether or not a lo
   } finally { removeProfile('test pan_fine bar'); }
 });
 
+check('pan_fine clamps at both ends: 0 and 65535 exactly', () => {
+  const ch = ['pan', 'pan_fine'];
+  const lo = headsPose(hd(unit('a'), -600, 0), ch, rest({ pan: 128, pan_fine: 0 }));
+  const hi = headsPose(hd(unit('a'), 600, 0), ch, rest({ pan: 128, pan_fine: 0 }));
+  assert.strictEqual(lo.pan * 256 + lo.pan_fine, 0);
+  assert.strictEqual(hi.pan * 256 + hi.pan_fine, 65535);
+});
+
+check('fixed literal bytes (independent of moveAxis): rest 128/0, +10 deg on 540 -> 132/190', () => {
+  const out = headsPose(hd(unit('a'), 10, 0), ['pan', 'pan_fine'], rest({ pan: 128, pan_fine: 0 }));
+  assert.deepStrictEqual([out.pan, out.pan_fine], [132, 190]);
+});
+
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');
 process.exit(failures ? 1 : 0);
