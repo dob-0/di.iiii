@@ -3382,6 +3382,10 @@ function buildTouch() {
 // poller at the foot of the file: showPage() runs before that line and a let is not
 // readable until its declaration has run.
 let CUES = null;
+// The APC40 pad lights' port and what each pad was last sent (midiBindLights). Up here for the
+// same reason as CUES: paintCues() paints them and can run before the MIDI section is read.
+let midiLedOut = null;
+const midiLedSent = new Map();
 
 // LOOKS: tap one and it goes on the cue layer — the same layer the cue list fires on, so a
 // tapped look and a GO are never two things playing at once. The tile that is on is the
@@ -4045,6 +4049,7 @@ function saveMidiMap() {
   clearTimeout(midiSaveTimer);
   midiSaveTimer = setTimeout(() => {
     midiSaveTimer = null;
+    midiPaintLights();
     post('api/midi', { midi: { maps: midiToWire() } }).then((r) => {
       if (r && r.error) { midiSayState('NOT saved — ' + r.error, true); say('MIDI map did not save — ' + r.error, true); }
       else midiSayState('saved with the show');
@@ -4105,6 +4110,8 @@ function initMidi() {
 function onMidiMessage(e) {
   const [a, b, c] = e.data;
   midiPageMessage(e);
+  // Released: the APC40 darkens a pad it lit under the finger. Forget it and paint it back.
+  if ((a & 0xf0) === 0x80 || ((a & 0xf0) === 0x90 && c === 0)) { midiLedSent.delete(b); midiPaintLights(); }
   if ((a & 0xf0) !== 0x90 || c === 0) return;            // note-on only, below here
   const ch = (a & 0x0f) + 1;
   if (popMode === 'midicap' && bindSceneId != null) {
@@ -6596,6 +6603,27 @@ function midiBindInput(id) {
   for (const i of midiAccess.inputs.values()) i.onmidimessage = null;
   midiInput = midiAccess.inputs.get(id) || null;
   if (midiInput) midiInput.onmidimessage = onMidiMessage;
+  midiBindLights();
+}
+
+// ---- pad lights (midiCues.js apc40Lights) ----
+// The output port with the input's name, only for a controller whose lights we know (the
+// APC40 mkII). Lights never move the rig, so they follow the desk whether the page is armed or
+// not: the pads show the show even in Safe.
+function midiBindLights() {
+  midiLedOut = null;
+  midiLedSent.clear();
+  if (!midiAccess || !midiInput || !/apc\s*40/i.test(midiInput.name || '')) return;
+  midiLedOut = [...midiAccess.outputs.values()].find((o) => o.name === midiInput.name)
+    || [...midiAccess.outputs.values()].find((o) => /apc\s*40/i.test(o.name || '')) || null;
+  midiPaintLights();
+}
+function midiPaintLights() {
+  if (!midiLedOut || !window.deskMidiCues) return;
+  const lights = window.deskMidiCues.apc40Lights(midiMap, CUES, { blackout: !!(S && S.blackout) });
+  try {
+    for (const l of window.deskMidiCues.lightDiff(lights, midiLedSent)) midiLedOut.send([0x90, l.note, l.vel]);
+  } catch (e) { midiLedSent.clear(); }   // port gone: repaint everything when it is back
 }
 
 function midiEnable() {
@@ -8534,6 +8562,7 @@ function paintControlScenes() {
   $('#ctlNoScenes').hidden = !none;
 }
 function paintCues() {
+  midiPaintLights();
   paintControlScenes();
   paintTouchCues();
   const strip = $('#cueStrip');

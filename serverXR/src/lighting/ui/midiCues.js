@@ -86,7 +86,59 @@
     return out;
   }
 
-  const api = { MAX_CUE_PADS, SENT_WINS_MS, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset };
+  // Pad lights. Akai protocol v1.2, "Outbound Message Type 1: LEDs": a note-on to the pad's
+  // note, MIDI channel = LED type (0 = primary colour, solid), velocity = colour from the RGB
+  // table. Warm palette for a dark room: the running cue red, the next one orange, every other
+  // cue in the list a dim ember, a pad with no cue dark.
+  const APC40_COLOUR = { off: 0, running: 5, next: 9, cue: 10, dim: 6, white: 3 };
+  //  5 #FF0000 · 9 #FF5400 · 10 #591D00 · 6 #590000 · 3 #FFFFFF (Akai RGB table)
+
+  // What the cue runner fires on the next GO, as cuerun.js does it (nextCueIndex): after the
+  // last cue only a looping list starts again.
+  function nextIndex(index, n, loop) {
+    if (!n) return -1;
+    if (!Number.isInteger(index) || index < 0) return 0;
+    if (index + 1 < n) return index + 1;
+    return loop ? 0 : -1;
+  }
+
+  // midi map rows (the page's {key: {type, ch, num}}) + cue state -> [{note, vel}], one per
+  // mapped pad on channel 1. Only pads this preset lights: cue pads, GO, back, play in order,
+  // loop, blackout. PLAY is a plain LED (0 off, 1 on); the others are RGB.
+  function apc40Lights(map, cues, state) {
+    const c = cues || {};
+    const n = Array.isArray(c.list) ? Math.min(c.list.length, MAX_CUE_PADS) : 0;
+    const running = c.running === true && Number.isInteger(c.index) ? c.index : -1;
+    const next = nextIndex(c.index, n, c.loop === true);
+    const out = [];
+    const put = (key, vel) => {
+      const b = map && map[key];
+      if (b && b.type === 'note' && b.ch === 1 && Number.isInteger(b.num)) out.push({ note: b.num, vel });
+    };
+    for (let i = 0; i < MAX_CUE_PADS; i++) {
+      const vel = i >= n ? APC40_COLOUR.off
+        : i === running ? APC40_COLOUR.running
+          : i === next ? APC40_COLOUR.next
+            : APC40_COLOUR.cue;
+      put('cue:' + i, vel);
+    }
+    put('cuego', running >= 0 ? 1 : 0);
+    put('cueback', n ? APC40_COLOUR.cue : APC40_COLOUR.off);
+    put('cueauto', c.autoplay ? APC40_COLOUR.next : APC40_COLOUR.cue);
+    put('cueloop', c.loop ? APC40_COLOUR.next : APC40_COLOUR.cue);
+    put('blackout', state && state.blackout ? APC40_COLOUR.running : APC40_COLOUR.dim);
+    return out;
+  }
+
+  // Only what changed goes on the wire; a pad the hardware lit by itself (it lights while held
+  // in Generic Mode, dark on release) is forgotten on release so the next paint restores it.
+  function lightDiff(lights, sent) {
+    const send = [];
+    for (const l of lights) if (sent.get(l.note) !== l.vel) { send.push(l); sent.set(l.note, l.vel); }
+    return send;
+  }
+
+  const api = { MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiCues = api;
 })(typeof window !== 'undefined' ? window : this);
