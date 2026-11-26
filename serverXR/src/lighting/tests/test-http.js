@@ -991,6 +991,7 @@ check('the Setup Aim panel sits beside the map and writes only through api/fixtu
   assert.ok(html.indexOf('aimpanel.js') < html.indexOf('src="app.js"'), 'script order');
   assert.ok(js.includes("h.post('api/fixtures/limits', { ids: j.ids, limits: j.limits })") && js.includes("fetch('api/state')"), 'writes via limits, reads back from state');
   assert.ok(!/api\/(fixture'|fixtures\/(?!limits|identify))/.test(js), 'no other route');
+  assert.ok(js.includes('+(lim(f)[k]) || 0') && !js.includes('] | 0') && js.includes('* 100) / 100') && js.includes("'trimStep'") && /data-step="0.01"/.test(html), 'fractional trims are read whole and rounded to 2 decimals; step in trimStep');
   for (const k2 of ["'ArrowLeft'", "'ArrowUp'", "'Tab'"]) assert.ok(js.includes(k2), k2);
   assert.ok(js.includes('S.fixtures.length') && js.includes('the default: nothing picked'), 'whole-rig default is never a target');
   assert.ok(js.includes("localStorage.setItem('aimPatchHidden'"), 'collapse remembered');

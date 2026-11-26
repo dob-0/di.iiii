@@ -8,12 +8,17 @@
 //
 // Target = the lights the user picked by hand. The desk's default "everything selected" is never a
 // target: one stray press must not move every light of a rig someone is aiming (the panel says so).
-//   Map focused: arrows nudge pan (left/right) and tilt (down/up) by 1, Shift = 5;
+//   Map focused: arrows nudge pan (left/right) and tilt (down/up) by 1, Shift = 5 (trims may be fractional: steps 0.01 / 0.1 / 1 / 5, kept in localStorage 'trimStep');
 //   Tab / Shift+Tab step to the next / previous light of the same line (universe, in address order).
 // Light it: the existing identify route (white flash, ten seconds). It is a button, not automatic.
 (function (root) {
   const MIN = -255, MAX = 255;
-  let h = null, step = 1, busy = Promise.resolve();
+  let h = null, step = aimPanelStoredStep(), busy = Promise.resolve();
+  function aimPanelStoredStep() {
+    let v = 1;
+    try { v = +localStorage.getItem('trimStep') || 1; } catch (e) { /* default */ }
+    return [0.01, 0.1, 1, 5].includes(v) ? v : 1;
+  }
   const $ = (s) => document.querySelector(s);
 
   const targets = () => {
@@ -24,7 +29,9 @@
     return ids.map((id) => h.fxById(id)).filter(Boolean);
   };
   const lim = (f) => f.limits || {};
-  const same = (list, k) => list.every((f) => (lim(f)[k] | 0) === (lim(list[0])[k] | 0));
+  // a trim may be fractional (0.25): read it as a number, never with `| 0`
+const aimPanelTrim = (f, k) => +(lim(f)[k]) || 0;
+  const same = (list, k) => list.every((f) => aimPanelTrim(f, k) === aimPanelTrim(list[0], k));
 
   function refresh() {
     if (!h || !$('#apWho')) return;
@@ -41,7 +48,7 @@
     $('#apWho').textContent = t.length === 1 ? f.name : t.length + ' lights';
     $('#apWho').title = $('#apWho').textContent;
     $('#apSub').textContent = t.length === 1 ? `Universe ${f.universe + 1} · ${String(f.address).padStart(3, '0')} · #${f.index}` : 'Same nudge on each light';
-    const show = (el, k) => { $(el).textContent = same(t, k) ? String(lim(f)[k] | 0) : 'mixed'; };
+    const show = (el, k) => { $(el).textContent = same(t, k) ? String(aimPanelTrim(f, k)) : 'mixed'; };
     show('#apPanVal', 'panTrim'); show('#apTiltVal', 'tiltTrim');
   }
 
@@ -79,7 +86,7 @@
     return write((t) => {
       const groups = new Map();
       for (const f of t) {
-        const v = clamp((lim(f)[key] | 0) + dir * by);
+        const v = clamp(Math.round((aimPanelTrim(f, key) + dir * by) * 100) / 100);
         if (!groups.has(v)) groups.set(v, []);
         groups.get(v).push(f.id);
       }
@@ -138,6 +145,7 @@
       const st = e.target.closest('[data-step]');
       if (st) {
         step = +st.dataset.step;
+        try { localStorage.setItem('trimStep', String(step)); } catch (e) { /* session only */ }
         pane.querySelectorAll('[data-step]').forEach((b) => b.classList.toggle('is-active', b === st));
         return;
       }
@@ -168,6 +176,7 @@
       else hit = false;
       if (hit) { e.preventDefault(); e.stopPropagation(); }
     }, true);
+    pane.querySelectorAll('[data-step]').forEach((b) => b.classList.toggle('is-active', +b.dataset.step === step));
     refresh();
   }
 

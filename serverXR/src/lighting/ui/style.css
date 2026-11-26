@@ -1935,7 +1935,7 @@ body.keylearn .bankrow, body.keylearn .tbtn { outline: 1px dashed color-mix(in s
 .ap-sub { font-size: 11px; color: var(--muted); min-height: 14px; }
 .ap-step { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
 .ap-step span { flex: 1; }
-.ap-step button { width: 40px; }
+.ap-step button { width: 38px; padding: 6px 0; }
 .ap-step button.is-active { border-color: var(--accent); color: var(--accent); }
 .ap-axis { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 2px 8px; align-items: center; }
 .ap-lab { font-size: 11px; color: var(--muted); }
