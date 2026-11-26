@@ -314,7 +314,7 @@ describe('`di update` swaps the version under the unit', () => {
 
     it('cmdUpdate still stops through the runner before the flip and starts after it', () => {
         const source = fs.readFileSync(path.join(HERE, 'cli.mjs'), 'utf8')
-        const body = source.slice(source.indexOf('const cmdUpdate = async'), source.indexOf('\n}\n', source.indexOf('const cmdUpdate = async')))
+        const body = source.slice(source.indexOf('const cmdUpdateLocked = async'), source.indexOf('\n}\n', source.indexOf('const cmdUpdateLocked = async')))
         const stopAt = body.indexOf('await runner.stop({ home })')
         const flipAt = body.indexOf('await activate(')
         const startAt = body.lastIndexOf('await cmdUp(')

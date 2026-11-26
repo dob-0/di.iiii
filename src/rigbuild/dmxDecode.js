@@ -236,8 +236,10 @@ export const decodeDmx = (channels, values, type = null) => {
 
     // Position.
     const [panRange, tiltRange] = Array.isArray(type?.pan_tilt_deg?.value) ? type.pan_tilt_deg.value : [540, 270]
-    if (has('pan')) out.pan = Math.round(degFromHome(sixteen(at.pan, has('panFine') ? at.panFine : null), panRange) * 100) / 100
-    if (has('tilt')) out.tilt = Math.round(degFromHome(sixteen(at.tilt, has('tiltFine') ? at.tiltFine : null), tiltRange) * 100) / 100
+    // Fine bytes under either naming (panFine / pan_fine), same list as the desk's roles.js FINE_NAMES.
+    const fineOf = (names) => { const n = names.find(has); return n ? at[n] : null }
+    if (has('pan')) out.pan = Math.round(degFromHome(sixteen(at.pan, fineOf(['panFine', 'pan_fine'])), panRange) * 100) / 100
+    if (has('tilt')) out.tilt = Math.round(degFromHome(sixteen(at.tilt, fineOf(['tiltFine', 'tilt_fine'])), tiltRange) * 100) / 100
     // A scanning laser's X/Y position (UP-LA40WF ch 6/7, cap.aim: 0-125 by hand, 64 = centre) read back as degrees on the
     // unit's own scan axes — the exact inverse of encodeDmx below — so the room moves the laser's picture where the desk
     // moves the unit (owner 2026-10-17: "add movement in 3d that i can sync that"). A byte above the by-hand range is the

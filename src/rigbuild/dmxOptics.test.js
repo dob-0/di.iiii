@@ -36,3 +36,15 @@ describe('what the desk puts in a B380F\'s path', () => {
         expect(decodeDmx(channels, values({ frost: 255 }), {}).optics.frost).toBe(1)
     })
 })
+
+describe('the room reads pan/tilt fine bytes under both names', () => {
+    const ch = (a, b) => [{ role: 'pan' }, { role: a }, { role: 'tilt' }, { role: b }]
+    it('pan_fine / tilt_fine decode the same as panFine / tiltFine', () => {
+        const v = [100, 77, 90, 201]
+        const x = decodeDmx(ch('panFine', 'tiltFine'), v, {})
+        const y = decodeDmx(ch('pan_fine', 'tilt_fine'), v, {})
+        expect([y.pan, y.tilt]).toEqual([x.pan, x.tilt])
+        const z = decodeDmx([{ role: 'pan' }, { role: 'tilt' }], [100, 90], {})
+        expect(y.pan).not.toBe(z.pan)
+    })
+})

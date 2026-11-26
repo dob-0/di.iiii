@@ -138,13 +138,19 @@ export const readPackageTemp = ({
     return null
 }
 
+/** One extra line in the autoupdate log (an allowed downgrade is written here, never silent). */
+export const logLine = async ({ home, outcome, detail, now = () => new Date() }) => {
+    await fsp.mkdir(paths(home).logs, { recursive: true })
+    await fsp.appendFile(logFile(home), line(now(), outcome, detail))
+}
+
 const line = (now, outcome, detail) => `${now.toISOString()} ${outcome}${detail ? ` ${detail}` : ''}\n`
 
 /**
  * One run of the job. Always appends exactly one line to the log and records
  * the same in state.json — a failure is a line that says why, never silence.
  *
- *   skipped-heat · up-to-date · pending · updated · failed
+ *   skipped-heat · up-to-date · pending · held (would step back) · updated · failed
  */
 export const runAutoUpdate = async ({
     home,
@@ -196,6 +202,9 @@ export const runAutoUpdate = async ({
                 }
             } else if (/already the newest|up to date|nothing to update to/i.test(text)) {
                 outcome = 'up-to-date'
+                detail = `channel=${channel} ${text}`
+            } else if (/^held: /i.test(text)) {
+                outcome = 'held'
                 detail = `channel=${channel} ${text}`
             } else if (/no dev build|try again/i.test(text)) {
                 outcome = 'pending'
