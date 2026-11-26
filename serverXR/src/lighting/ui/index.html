@@ -52,6 +52,7 @@
     <button class="page-tab" data-page="stage" title="The whole stage on one page — lights, objects, video">Stage</button>
     <button class="page-tab" data-page="touch">Touch</button>
     <button class="page-tab" data-page="fader">Fader</button>
+    <button class="page-tab" data-page="aim" title="Correct every moving light's aim with trim faders so a line of lights points the same way">Aim</button>
     <!-- MIDI was a separate midi.html with its own stylesheet and its own map in one
          browser's localStorage. It is a page of this suite now: same shell, same styles,
          and the mappings live with the show over api/midi, so the laptop and the phone
@@ -1000,6 +1001,18 @@
     </div>
   </div>
   <div class="faderbank" id="faderBank"></div>
+</main>
+
+<!-- ===================== AIM ===================== -->
+<!-- One column per moving light, grouped by universe, in patch order. Each fader is a
+     pan/tilt home trim (DMX steps) sent through api/fixtures/limits. -->
+<main class="page" data-page="aim">
+  <div class="fader-tools">
+    <span class="muted small">Trim each light's aim so a line of lights points the same way. DMX steps, 0 = untouched; added after invert and min/max.</span>
+    <span class="flex"></span>
+    <button class="sq" id="aimResetAll" title="Set every trim on this page back to 0">All to 0</button>
+  </div>
+  <div class="aimbank" id="aimBank"></div>
 </main>
 
 <!-- ===================== MIDI ===================== -->

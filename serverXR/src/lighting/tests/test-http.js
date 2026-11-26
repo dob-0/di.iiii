@@ -946,6 +946,32 @@ check('pan/tilt trim is stored clamped to -255..255 and reaches the wire', async
   assert.strictEqual(await wire(74, 2), 0, 'tilt 128 - 255 stops at 0');
 });
 
+check('the Aim page markup exists and is wired to the limits route', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  assert.ok(/<button class="page-tab" data-page="aim"/.test(html), 'tab');
+  assert.ok(/<main class="page" data-page="aim">/.test(html) && /id="aimBank"/.test(html), 'page');
+  assert.ok(js.includes("post('api/fixtures/limits', { ids: [f.id], limits: { [key]: val } })"), 'posts one light, one key');
+  assert.ok(js.includes("'fader', 'aim', 'midi'"), 'page is routable');
+  assert.ok(js.includes('min="-128" max="128"'), 'fader range');
+});
+
+check('aim trims set per light reach the wire for that fixture only', async () => {
+  const a = await patch('pt', { universe: 76, address: 1 });
+  const b = await patch('pt', { universe: 76, address: 11 });
+  for (const f of [a, b]) await POST('/api/fixture', { id: f.id, values: { pan: 100, tilt: 100 } });
+  await POST('/api/fixtures/limits', { ids: [a.id], limits: { panTrim: -20 } });
+  await POST('/api/fixtures/limits', { ids: [a.id], limits: { tiltTrim: 30 } });
+  await settle();
+  assert.strictEqual(await wire(76, 1), 80, 'a pan 100 - 20');
+  assert.strictEqual(await wire(76, 2), 130, 'a tilt 100 + 30');
+  assert.strictEqual(await wire(76, 11), 100, 'b pan untouched');
+  assert.strictEqual(await wire(76, 12), 100, 'b tilt untouched');
+  await POST('/api/fixtures/limits', { ids: [a.id], limits: { panTrim: 0, tiltTrim: 0 } });
+  await settle();
+  assert.strictEqual(await wire(76, 1), 100, 'zero button restores');
+});
+
 check('pan and tilt ignore blackout', async () => {
   const f = await patch('pt', { universe: 17, address: 1 });
   await POST('/api/fixture', { id: f.id, values: { pan: 200, tilt: 60 } });
