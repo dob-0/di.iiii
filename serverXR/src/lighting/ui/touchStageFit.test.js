@@ -1,7 +1,7 @@
 // The Touch minimap (the small stage map): it is framed to its box once, so a box that changes size (window tiled or
 // resized, phone turned, stage folded open) left the rig cut off or a speck. Found on the live desk 2026-11-26 (owner N7040):
 // 1536x864 -> 844x390 -> 1536x864 left 33 lights as one 8 px square. jsdom has no layout, so the rules are guarded here;
-// the pictures and measured numbers are in docs/ai/sessions/fix-touch-minimap-2026-11-26.md.
+// the pictures and measured numbers are in the session note of PR #1384 (fix-touch-minimap-2026-11-26).
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
