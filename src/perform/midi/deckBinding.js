@@ -18,6 +18,7 @@ import {
     clearLayer,
     normalizeDeck,
     setBlend,
+    setOver,
     setBpm,
     effectNumericParams,
     setBypass,
@@ -34,8 +35,10 @@ import {
     tapTempo,
     trigger,
     triggerColumn,
+    setMasterParam,
     updateClip
 } from '../../project/tops/vjDeck.js'
+import { TOP_OPERATORS } from '../../project/tops/topOperators.js'
 
 /** Absolute 0..127 → 0..1. */
 export const unit = (value) => Math.min(1, Math.max(0, Number(value) / 127))
@@ -57,6 +60,12 @@ export const ACTIONS = {
     blend: { args: ['layer'], button: false, relativeOk: false },
     clipSpeed: { args: ['layer'], button: false, relativeOk: true },
     bypass: { args: ['layer'], button: true },
+    // A key puts one layer on one blend mode (args { layer, blend, off }): press = that blend, press again = back to `off`
+    // (the text layer: solid, the picture inside the letters, letters that invert the picture, letters cut out of it).
+    layerBlend: { args: ['layer'], button: true },
+    // A key takes a layer out from OVER the master's effects and puts it under them (the text takes the scene's look:
+    // fog, thermal colour, hologram, cuts), and back.
+    layerOver: { args: ['layer'], button: true },
     solo: { args: ['layer'], button: true },
     side: { args: ['layer'], button: true },
     clip: { args: ['layer', 'column'], button: true },
@@ -73,11 +82,55 @@ export const ACTIONS = {
     fxToggle: { args: [], button: true },
     // The next layer (with clips) whose effects the pots address; the view owns that choice (ctx.onFxLayer).
     fxLayerNext: { args: [], button: true },
+    // Layer n (args.layer, 0-based; -1 = the master) is the stack the pots address (ctx.onFxLayer): a track-select key.
+    fxLayer: { args: [], button: true },
     // The next effect of the selected stack that the pots turn (ctx.onFxEffect).
     fxNext: { args: [], button: true },
     // FREEZE while held: hold 1 on every Freeze effect of the master and the selected layer, 0 on release.
-    hold: { args: [], button: false }
+    hold: { args: [], button: false },
+    // The next / previous SCENE: the column after (before) the one playing, launched on every layer, round and round.
+    columnNext: { args: [], button: true },
+    columnPrev: { args: [], button: true },
+    // The next / previous BANK of 8 columns under the pads; the console owns that choice (ctx.onBank).
+    bankNext: { args: [], button: true },
+    bankPrev: { args: [], button: true },
+    // A PRESS: while the key is held one value of a master effect is 1, on release 0 (args { type, param }).
+    // The Cuts effect has the values made for it: burst, punch-in, flip, negative, strobe, black.
+    fxPress: { args: [], button: false },
+    // A TOGGLE KEY: press sets one value of a master effect (args { type, param, value, label? }), press again puts the operator's default back.
+    fxSet: { args: [], button: true }
 }
+
+/** The fxSet args that are usable: a type, a param and a finite value. */
+const fxSetArgs = (args) => typeof args.type === 'string' && typeof args.param === 'string' && Number.isFinite(args.value)
+const sameValue = (a, b) => Math.abs(Number(a) - Number(b)) < 1e-6
+
+/** The column the deck is on: the one most layers play (the lower layer wins a tie), -1 when nothing plays. */
+export const currentColumn = (deck) => {
+    const counts = new Map()
+    let best = -1
+    for (const layer of normalizeDeck(deck).layers) {
+        if (layer.active < 0) continue
+        counts.set(layer.active, (counts.get(layer.active) || 0) + 1)
+        if (best < 0 || counts.get(layer.active) > counts.get(best)) best = layer.active
+    }
+    return best
+}
+
+/** The next column with a clip, one step `dir` from the playing one, wrapping; null when the deck has no clip at all. */
+export const stepColumn = (deck, dir) => {
+    const base = normalizeDeck(deck)
+    const playing = currentColumn(base)
+    const from = playing < 0 ? (dir > 0 ? -1 : 0) : playing
+    for (let i = 1; i <= base.columns; i++) {
+        const to = ((from + dir * i) % base.columns + base.columns) % base.columns
+        if (base.layers.some((layer) => layer.clips[to])) return to
+    }
+    return null
+}
+
+/** The actions a stateful key (ctx.stateful) sets from its own state instead of toggling. */
+const STATEFUL_ACTIONS = new Set(['bypass', 'solo', 'side', 'fxSet'])
 
 // --- the effects half of the K2: which stack, which effect, freeze ----------------
 
@@ -197,7 +250,10 @@ const run = (deck, control, entry, ctx) => {
     const args = entry.args || {}
     const spec = ACTIONS[entry.action]
     if (!spec) return deck
-    if (spec.button && !control.press) return deck
+    // A STATEFUL key (ctx.stateful): the controller itself toggles it and says its new state, on = note-on,
+    // off = note-off (the APC40's record-arm, solo and A|B keys). Its release is a message too, not a key-up.
+    const stateful = STATEFUL_ACTIONS.has(entry.action) && ctx.stateful?.(control) === true
+    if (spec.button && !control.press && !stateful) return deck
     const base = normalizeDeck(deck)
     const layer = layerAt(base, args.layer)
     if (spec.args.includes('layer') && !layer) return deck
@@ -222,14 +278,25 @@ const run = (deck, control, entry, ctx) => {
             const clip = layer.clips[layer.active]
             return nextOr(continuous(clip.speed, control, entry, { step: DEFAULT_STEP.clipSpeed, from: (x) => x * 4, to: (x) => x / 4 }, ctx), (v) => updateClip(base, args.layer, layer.active, { speed: v }))
         }
-        case 'bypass': return setBypass(base, layer.id, !layer.bypass)
-        case 'solo': return setSolo(base, layer.id, !layer.solo)
-        case 'side': return setSide(base, layer.id, SIDE_CYCLE[layer.side] ?? '')
+        case 'bypass': return setBypass(base, layer.id, stateful ? control.press : !layer.bypass)
+        case 'layerOver': return setOver(base, args.layer, !layer.over)
+        case 'layerBlend': {
+            const to = Number(args.blend)
+            if (!Number.isInteger(to) || to < 0 || to >= BLEND_MODES.length) return deck
+            const off = Number.isInteger(Number(args.off)) ? Number(args.off) : 2
+            return setBlend(base, args.layer, String(Number(layer.blend) === to ? off : to))
+        }
+        case 'solo': return setSolo(base, layer.id, stateful ? control.press : !layer.solo)
+        case 'side':
+            // a stateful A|B key says which side: velocity 1 = A, 2 = B, note-off = none
+            if (stateful) return setSide(base, layer.id, !control.press ? '' : control.value === 2 ? 'b' : 'a')
+            return setSide(base, layer.id, SIDE_CYCLE[layer.side] ?? '')
         case 'clip':
             if (!isInt(args.column) || !layer.clips[args.column]) return deck
             return trigger(base, args.layer, args.column)
         case 'column':
-            return isInt(args.column) && args.column < base.columns ? triggerColumn(base, args.column) : deck
+            // an empty column is not a scene: pressing it must not black the wall
+            return isInt(args.column) && args.column < base.columns && base.layers.some((item) => item.clips[args.column]) ? triggerColumn(base, args.column) : deck
         case 'clearLayer': return layer.active < 0 ? deck : clearLayer(base, args.layer)
         case 'crossfade':
             return nextOr(continuous(base.crossfade, control, entry, { step: DEFAULT_STEP.crossfade, from: (x) => x, to: (x) => x }, ctx), (v) => setCrossfade(base, v))
@@ -243,7 +310,9 @@ const run = (deck, control, entry, ctx) => {
             const master = where < 0
             // no layer given = the selected stack, and then the selected effect of it (K2 encoder 6 push)
             const slot = args.effect ?? (args.layer === undefined ? ctx.fx?.effect : 0) ?? 0
-            const effect = (master ? base.effects : base.layers[where]?.effects)?.[slot]
+            const stackList = (master ? base.effects : base.layers[where]?.effects) || []
+            // the selected effect (no effect in the binding) on a shorter stack: the last one, as the panel shows it
+            const effect = stackList[args.effect === undefined ? Math.min(slot, Math.max(0, stackList.length - 1)) : slot]
             if (!effect) return deck
             const stack = master ? 'master' : where
             if (args.param === 'mix') {
@@ -260,6 +329,11 @@ const run = (deck, control, entry, ctx) => {
             const effect = stackFor(base, where)[args.slot]
             return effect ? setEffectOn(base, where < 0 ? MASTER_STACK : where, effect.id, !effect.on) : deck
         }
+        case 'fxLayer': {
+            const to = args.layer === -1 ? -1 : isInt(args.layer) && base.layers[args.layer] ? args.layer : null
+            if (to !== null) ctx.onFxLayer?.(to)
+            return deck
+        }
         case 'fxLayerNext': {
             const to = nextFxLayer(base, ctx.fx?.layer)
             if (to !== null) ctx.onFxLayer?.(to)
@@ -271,6 +345,29 @@ const run = (deck, control, entry, ctx) => {
             return deck
         }
         case 'hold': return setFreezeHold(deck, ctx.holdLayer ?? ctx.fx?.layer, control.press ? 1 : 0)
+        case 'columnNext':
+        case 'columnPrev': {
+            const to = stepColumn(base, entry.action === 'columnNext' ? 1 : -1)
+            if (to === null) return deck
+            ctx.onColumnStep?.(to)
+            return triggerColumn(base, to)
+        }
+        case 'bankNext': ctx.onBank?.(1); return deck
+        case 'fxPress':
+            return typeof args.type === 'string' && typeof args.param === 'string'
+                ? setMasterParam(base, args.type, args.param, control.press ? 1 : 0)
+                : deck
+        case 'bankPrev': ctx.onBank?.(-1); return deck
+        case 'fxSet': {
+            if (!fxSetArgs(args)) return deck
+            const held = base.effects.find((effect) => effect.type === args.type)
+            if (!held) return deck
+            if (!sameValue(held.params?.[args.param], args.value)) return setMasterParam(base, args.type, args.param, args.value)
+            // back to args.off when the binding names it (Freeze: its own start value is "held"), else the effect's start value
+            if (Number.isFinite(args.off)) return setMasterParam(base, args.type, args.param, args.off)
+            const start = TOP_OPERATORS[args.type]?.params.find((p) => p.name === args.param)
+            return start && Number.isFinite(start.value) ? setMasterParam(base, args.type, args.param, start.value) : deck
+        }
         case 'tap': {
             // The view owns the clock (the show clock, or the deck's own taps).
             if (typeof ctx.onTap === 'function') { ctx.onTap(); return deck }
@@ -446,8 +543,20 @@ export const ledColour = (deck, entry, ctx = {}) => {
             return has.every((item) => item.active === args.column) ? 'green' : 'amber'
         }
         case 'bypass': return layer?.bypass ? 'red' : null
+        case 'layerBlend': return layer ? (Number(layer.blend) === Number(args.blend) ? 'green' : 'amber') : null
+        case 'layerOver': return layer ? (layer.over ? 'amber' : 'green') : null
         case 'solo': return layer?.solo ? 'green' : null
         case 'side': return layer?.side === 'a' ? 'amber' : layer?.side === 'b' ? 'green' : null
+        case 'fxLayer': return Number.isInteger(ctx.fx?.layer) && ctx.fx.layer === args.layer ? 'green' : null
+        case 'fxPress': {
+            const held = base.effects.find((effect) => effect.type === args.type)
+            return held ? (Number(held.params?.[args.param]) > 0 ? 'green' : 'amber') : null
+        }
+        case 'fxSet': {
+            const held = base.effects.find((effect) => effect.type === args.type)
+            if (!held) return null
+            return sameValue(held.params?.[args.param], args.value) ? 'green' : 'amber'
+        }
         case 'fxToggle': {
             if (!Number.isInteger(ctx.fx?.layer) || !Number.isInteger(args.slot)) return null
             const effect = stackFor(base, ctx.fx.layer)[args.slot]
@@ -521,6 +630,8 @@ export const describeAction = (entry, ctx = {}) => {
         case 'blend': return layer ? `L${layer} blend` : 'Blend'
         case 'clipSpeed': return layer ? `L${layer} speed` : 'Clip speed'
         case 'bypass': return layer ? `Bypass L${layer}` : 'Bypass'
+        case 'layerOver': return typeof args.label === 'string' && args.label ? args.label : `L${layer || ''} over / under the effects`
+        case 'layerBlend': return typeof args.label === 'string' && args.label ? args.label : `L${layer || ''} blend ${BLEND_MODES[Number(args.blend)] || ''}`.trim()
         case 'solo': return layer ? `Solo L${layer}` : 'Solo'
         case 'side': return layer ? `L${layer} side A/B` : 'Side A/B'
         case 'clip': return layer && column ? `L${layer} clip ${column}` : 'Clip'
@@ -531,9 +642,16 @@ export const describeAction = (entry, ctx = {}) => {
         case 'bpm': return 'BPM'
         case 'tap': return 'Tap tempo'
         case 'fxToggle': return Number.isInteger(args.slot) ? `FX ${args.slot + 1} on/off` : 'Effect on/off'
+        case 'fxLayer': return args.layer === -1 ? 'FX: master' : layer ? `FX: layer ${layer}` : 'FX layer'
         case 'fxLayerNext': return 'Next FX layer'
         case 'fxNext': return 'Next effect'
         case 'hold': return 'Freeze (hold)'
+        case 'columnNext': return 'Next scene'
+        case 'columnPrev': return 'Previous scene'
+        case 'bankNext': return 'Next bank'
+        case 'bankPrev': return 'Previous bank'
+        case 'fxPress': return `Hold: ${String(args.param || '').toUpperCase()}`
+        case 'fxSet': return typeof args.label === 'string' && args.label ? args.label : `Set ${args.param} ${args.value}`
         case 'fx': {
             if (args.layer === undefined && args.effect === undefined && Number.isInteger(ctx.fxEffect)) {
                 const name = `FX ${ctx.fxEffect + 1}`

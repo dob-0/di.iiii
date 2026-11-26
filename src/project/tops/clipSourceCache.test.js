@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import { acquireClipSource, clipSourceCacheSize } from './clipSourceCache.js'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { acquireClipSource, clipSourceCacheSize, clipSourceParkedBytes, setClipParkBytes } from './clipSourceCache.js'
 import { createClipVideo } from './clipVideos.js'
 
 const response = (size, { ok = true } = {}) => ({
@@ -84,5 +84,86 @@ describe('a clip video with a memory source', () => {
         expect(video.src).toBe('/assets/b.mp4')
         slow.resolve('blob:late'); await slow.promise
         expect(video.src).toBe('/assets/b.mp4')
+    })
+})
+
+describe('parked clips', () => {
+    afterEach(() => { setClipParkBytes(0) })
+
+    it('reuses a parked file without fetching it again', async () => {
+        setClipParkBytes(10_000)
+        const fetchImpl = vi.fn(async () => response(1000))
+        const u = urls()
+        const a = acquireClipSource('/assets/p1.mp4', { fetchImpl, ...u })
+        expect(await a.promise).toBe('blob:clip-1')
+        a.release()
+        expect(u.revokeObjectURL).not.toHaveBeenCalled()
+        expect(clipSourceCacheSize()).toBe(1)
+        expect(clipSourceParkedBytes()).toBe(1000)
+        const b = acquireClipSource('/assets/p1.mp4', { fetchImpl, ...u })
+        expect(await b.promise).toBe('blob:clip-1')
+        expect(fetchImpl).toHaveBeenCalledTimes(1)
+        expect(clipSourceParkedBytes()).toBe(0)
+        b.release()
+        expect(clipSourceParkedBytes()).toBe(1000)
+    })
+
+    it('evicts the oldest parked file when over budget, and only that one', async () => {
+        setClipParkBytes(2500)
+        const u = urls()
+        const fetchImpl = async () => response(1000)
+        const handles = ['a', 'b', 'c'].map((name) => acquireClipSource('/assets/e-' + name + '.mp4', { fetchImpl, ...u }))
+        await Promise.all(handles.map((h) => h.promise))
+        handles.forEach((h) => h.release())
+        expect(u.revokeObjectURL).toHaveBeenCalledTimes(1)
+        expect(u.revokeObjectURL).toHaveBeenCalledWith('blob:clip-1')
+        expect(clipSourceCacheSize()).toBe(2)
+        expect(clipSourceParkedBytes()).toBe(2000)
+    })
+
+    it('evicts a file bigger than the whole budget at once', async () => {
+        setClipParkBytes(500)
+        const u = urls()
+        const a = acquireClipSource('/assets/big-park.mp4', { fetchImpl: async () => response(1000), ...u })
+        await a.promise
+        a.release()
+        expect(u.revokeObjectURL).toHaveBeenCalledTimes(1)
+        expect(clipSourceCacheSize()).toBe(0)
+    })
+
+    it('keeps today\'s behaviour with the budget at 0', async () => {
+        const u = urls()
+        const a = acquireClipSource('/assets/zero.mp4', { fetchImpl: async () => response(1000), ...u })
+        await a.promise
+        a.release()
+        await Promise.resolve()
+        expect(u.revokeObjectURL).toHaveBeenCalledTimes(1)
+        expect(clipSourceCacheSize()).toBe(0)
+        expect(clipSourceParkedBytes()).toBe(0)
+    })
+
+    it('evicts down to a lowered budget at once', async () => {
+        setClipParkBytes(10_000)
+        const u = urls()
+        const fetchImpl = async () => response(1000)
+        const handles = ['a', 'b', 'c'].map((name) => acquireClipSource('/assets/l-' + name + '.mp4', { fetchImpl, ...u }))
+        await Promise.all(handles.map((h) => h.promise))
+        handles.forEach((h) => h.release())
+        expect(clipSourceCacheSize()).toBe(3)
+        setClipParkBytes(1500)
+        expect(clipSourceCacheSize()).toBe(1)
+        expect(u.revokeObjectURL).toHaveBeenCalledTimes(2)
+        expect(clipSourceParkedBytes()).toBe(1000)
+    })
+
+    it('parks a download released before it finished, once it finishes', async () => {
+        setClipParkBytes(10_000)
+        const u = urls()
+        const a = acquireClipSource('/assets/early.mp4', { fetchImpl: async () => response(1000), ...u })
+        a.release()
+        expect(await a.promise).toBe('blob:clip-1')
+        expect(u.revokeObjectURL).not.toHaveBeenCalled()
+        expect(clipSourceCacheSize()).toBe(1)
+        expect(clipSourceParkedBytes()).toBe(1000)
     })
 })

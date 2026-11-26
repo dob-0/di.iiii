@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EFFECT_TYPE_IDS, addEffect, createDeck, effectMainParams, expandDeck, layerEffectMixNodeId, layerEffectNodeId, masterEffectNodeId, normalizeEffects, setClip, trigger } from './vjDeck.js'
+import { EFFECT_TYPE_IDS, addEffect, createDeck, effectMainParams, expandDeck, layerEffectNodeId, masterEffectNodeId, normalizeEffects, setClip, trigger } from './vjDeck.js'
 import { TOP_OPERATORS, resolveTopParams } from './topOperators.js'
 import { checkShader } from './topEngine.js'
 
@@ -40,9 +40,10 @@ describe('Platina look effects', () => {
         const deck = addEffect(playing(), 0, type)
         const id = deck.layers[0].effects[0].id
         const out = expand(deck)
-        expect(out.nodes.length).toBe(plain.nodes.length + 2)
+        // default mix 1: just the operator, no Blend node
+        expect(out.nodes.length).toBe(plain.nodes.length + 1)
         expect(out.nodes.find((n) => n.id === layerEffectNodeId('D', 0, id)).type).toBe(type)
-        expect(out.wires).toContainEqual({ from: layerEffectMixNodeId('D', 0, id), to: 'D::L0::blend', port: 'b' })
+        expect(out.wires).toContainEqual({ from: layerEffectNodeId('D', 0, id), to: 'D::L0::blend', port: 'b' })
         const off = { ...deck, layers: [{ ...deck.layers[0], effects: deck.layers[0].effects.map((e) => ({ ...e, on: false })) }] }
         expect(expand(off).nodes).toEqual(plain.nodes)
         expect(expand(off).wires).toEqual(plain.wires)

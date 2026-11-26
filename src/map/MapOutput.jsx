@@ -3,6 +3,9 @@ import MapStage from './MapStage.jsx'
 import { useMapDocument, useMapChannelListener } from './useMapDocument.js'
 import { mapOutputReason } from './mapOutputReason.js'
 import { toTopNetwork, useTopNetwork } from '../project/tops/useTopNetwork.js'
+import { overlayDeckLive, useDeckLive } from '../project/tops/deckLive.js'
+import { setClipParkBytes } from '../project/tops/clipSourceCache.js'
+import { useClipWarmup } from '../project/tops/clipWarmup.js'
 import { useMachinePresence } from '../project/tops/useMachinePresence.js'
 import RigBlackout from '../rig/RigBlackout.jsx'
 import useScreenWakeLock from '../hooks/useScreenWakeLock.js'
@@ -23,9 +26,17 @@ import './mapSurface.css'
 // own size, so what was aligned is what projects.
 const IDLE_CURSOR_MS = 2000
 const NO_NETWORK = { nodes: [], wires: [] }
+/** ?clean=1 in the address: the wall shows the picture only. */
+export const isCleanRequest = (search = typeof window === 'undefined' ? '' : window.location.search) => {
+    try { return new URLSearchParams(search).get('clean') === '1' } catch { return false }
+}
 
 export default function MapOutput({ projectId, spaceId }) {
-    const { store, mapping, document: doc } = useMapDocument(projectId, { role: 'out' })
+    const { store, mapping, document: storedDoc } = useMapDocument(projectId, { role: 'out' })
+    // A deck being played in another window of this machine: draw its newest state at once (deckLive.js),
+    // not the one the server hands back a moment later.
+    const deckLive = useDeckLive(projectId)
+    const doc = useMemo(() => overlayDeckLive(storedDoc, deckLive), [storedDoc, deckLive])
     // The project's picture operators, for a surface whose source is Pictures.
     const network = useMemo(() => toTopNetwork(doc), [doc])
     // This page is its machine on the desk: a kiosk with a camera and a
@@ -36,6 +47,17 @@ export default function MapOutput({ projectId, spaceId }) {
     // /tools): it draws the surfaces and follows them, but is no machine on
     // the desk, so it joins no machine link and shows no controls.
     const [isPreview] = useState(() => isPreviewRequest())
+    // ?clean=1 — the show wall: nothing but the picture, ever. No buttons and no cursor even while the mouse
+    // moves over it (a second display the mouse wanders onto in the middle of a set).
+    const [isClean] = useState(() => isCleanRequest())
+    // The show wall keeps every deck clip in memory: the files are fetched once at load and kept,
+    // so a launched clip starts at once instead of after its download.
+    useEffect(() => {
+        if (!isClean) return undefined
+        setClipParkBytes(384 * 1024 * 1024)
+        return () => setClipParkBytes(0)
+    }, [isClean])
+    useClipWarmup(doc, { spaceId, projectId, enabled: isClean })
     const { machine } = useMachinePresence(isPreview ? null : spaceId, { ndi: 'poll' })
     useEffect(() => {
         if (isPreview && doc) signalPreviewReady(spaceId)
@@ -112,11 +134,11 @@ export default function MapOutput({ projectId, spaceId }) {
     }, [viewport, mapping])
 
     return (
-        <div className={`map-output${idle ? ' is-idle' : ''}`}>
+        <div className={`map-output${idle || isClean ? ' is-idle' : ''}${isClean ? ' is-clean' : ''}`}>
             {stage.width > 0 ? (
                 <MapStage mapping={fallbackMapping} spaceId={spaceId} width={stage.width} height={stage.height} network={network} assets={doc?.assets || null} projectId={projectId} live placeholders={false} />
             ) : null}
-            {isPreview ? null : <MapOutputControls spaceId={spaceId} projectId={projectId} />}
+            {isPreview || isClean ? null : <MapOutputControls spaceId={spaceId} projectId={projectId} />}
             <RigBlackout />
         </div>
     )
