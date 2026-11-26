@@ -10,3 +10,4 @@ Measured headless on the live desk at 761x799, 1536x864, 768x864, 1280x800, 639x
 
 Cause of the minimap: fitStage kept 96 px of vertical air (for the Setup plan's labels); the Touch box is ~107 px tall, so 11 px were left for the rig.
 Compact sizes only with a mouse (pointer: fine); a finger keeps the 44 px targets.
+- Wiring guard: a .touchwrap grid now passes only if every child has a fixed grid row and the strip row is auto; checked that it still fails when the strip loses its row. Lighting vitest 83 passed.
