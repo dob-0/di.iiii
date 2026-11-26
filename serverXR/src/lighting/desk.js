@@ -1552,8 +1552,8 @@ function createDesk(opts = {}) {
         // operator asked for while they are turned round looking at the rig.
         identifying: Object.entries(state.identify || {}).filter(([, t]) => t > Date.now()).map(([id]) => id),
         // Which lights are swinging for a test move, and on which axis: { id: 'pan' | 'tilt' }.
-        testMoving: Object.fromEntries(Object.entries(state.testMove || {})
-          .filter(([, e]) => testMoveLive(e, Date.now())).map(([id, e]) => [id, e.until > Date.now() ? e.axis : e.prev.axis])),
+        testMoving: ((now) => Object.fromEntries(Object.entries(state.testMove || {})
+          .filter(([, e]) => testMoveLive(e, now)).map(([id, e]) => [id, e.until > now ? e.axis : e.prev.axis])))(Date.now()),
         nodes: nodeList(),
         interfaces: localAddresses(),
         broadcast: bcPlan().use,

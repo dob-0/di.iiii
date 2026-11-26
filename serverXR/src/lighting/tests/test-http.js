@@ -1004,7 +1004,12 @@ check('a test move re-press and the off call: only the asked lights stop, the he
   assert.strictEqual(st[f.id], 'tilt', 'the new axis is the one shown');
   await sleep(100);
   assert.ok((await wire(78, 1)) !== 100 || (await wire(78, 2)) !== 100, 'both axes live, pan not snapped');
+  const beforeOff = [await wire(78, 1), await wire(78, 2)];
   await POST('/api/fixtures/testmove', { off: true, ids: [f.id] });
+  await settle();
+  const afterOff = [await wire(78, 1), await wire(78, 2)];
+  assert.ok(Math.abs(afterOff[0] - beforeOff[0]) <= 6 && Math.abs(afterOff[1] - beforeOff[1]) <= 6,
+    `off does not snap the head to rest: ${beforeOff} -> ${afterOff}`);
   await sleep(2300);   // the swing in progress finishes (never a snap), then the light is home
   await settle();
   assert.deepStrictEqual([await wire(78, 1), await wire(78, 2)], [100, 100], 'the asked light is home after its swing');

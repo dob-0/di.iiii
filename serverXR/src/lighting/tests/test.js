@@ -371,20 +371,23 @@ check('a 16-bit trim past the end stops at the very end, never wraps', () => {
 
 // Review of #1374, should 1: nudging a trim past a range end must never step the head back.
 check('a 16-bit trim past the range end never steps back as it grows (both ends, both axes)', () => {
-  for (const [at, sign] of [[255, 1], [0, -1]]) {
+  // the trim grows outward from 0 in the direction of the end it nears: the byte pair never steps back
+  for (const [at, sign] of [[255, 1], [0, -1], [250, 1], [5, -1]]) {
     for (const fine of [0, 77, 255]) {
       const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: at, panFine: fine, tilt: at, tiltFine: fine } });
       let last = null;
-      for (let t = -10; t <= 10; t += 0.01) {
-        const tr = Math.round(t * 100) / 100;
+      for (let d = 0; d <= 1000; d++) {
+        const tr = sign * d / 100;
         f.limits.panTrim = tr; f.limits.tiltTrim = tr;
         const b = new Engine(baseState([f])).render().get(0);
         const v = b[2] * 256 + b[3];
-        if (last != null && tr * sign > 0) assert.ok((v - last) * sign >= 0, `tilt at ${at}/${fine}: trim ${tr} stepped back ${last} -> ${v}`);
-        if (tr * sign > 0) last = v; else last = null;
+        if (last != null) assert.ok((v - last) * sign >= 0, `tilt at ${at}/${fine}: trim ${tr} stepped back ${last} -> ${v}`);
+        last = v;
       }
-      f.limits.tiltTrim = 1.5 * sign;
-      assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0)].slice(2, 4), [at, fine], 'past the end it holds the old end byte');
+      if (at === 0 || at === 255) {
+        f.limits.tiltTrim = 1.5 * sign;
+        assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0)].slice(2, 4), [at, fine], 'past the end it holds the old end byte');
+      }
     }
   }
 });
