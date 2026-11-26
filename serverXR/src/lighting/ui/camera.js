@@ -1,3 +1,4 @@
+/* global post -- app.js's POST helper, a classic-script global */
 'use strict';
 // The Camera page: the desk's room camera, live (desk.js: api/camera, api/camera/frame).
 //
