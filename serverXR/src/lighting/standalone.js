@@ -47,6 +47,11 @@ server.listen(HTTP_PORT, HTTP_HOST, () => {
 process.on('uncaughtException', (e) => { console.log('ERROR (desk kept running): ' + (e && e.stack || e)); });
 process.on('unhandledRejection', (e) => { console.log('ERROR (desk kept running): ' + (e && e.stack || e)); });
 
-function shutdown() { desk.close(); process.exit(0); }
+// The camera's ffmpeg is waited for (SIGTERM, SIGKILL after 2 s) so it never outlives the desk and holds /dev/videoN.
+function shutdown() {
+  const hard = setTimeout(() => process.exit(0), 4000);
+  if (hard.unref) hard.unref();
+  desk.closeCamera().catch(() => {}).then(() => { desk.close(); process.exit(0); });
+}
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

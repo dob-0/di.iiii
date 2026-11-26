@@ -8,17 +8,22 @@
 // equirectangular picture (drag, wheel / pinch to zoom); "Flat" shows the whole frame.
 (function (root) {
   const $ = (s) => document.querySelector(s);
-  const GAP_MS = 700, RETRY_MS = 3000, FOV_MIN = 30, FOV_MAX = 110, FOV_DEFAULT = 90;
+  const GAP_MS = 500, RETRY_MS = 3000, STALL_MS = 1000, FOV_MIN = 30, FOV_MAX = 110, FOV_DEFAULT = 90;
 
   let mode = '360';
   let yaw = 0, pitch = 0, fov = FOV_DEFAULT;     // degrees
   let bitmap = null;                              // newest frame, decoded
-  let frameAt = 0, frameTimes = [];
+  let frameAt = 0, frameTimes = [], lastSeq = 0, stallTimer = 0;
   let timer = null, inflight = false, shown = false, dirty = false, raf = 0;
-  let gl = null, glState = null, glFailed = false;
+  let gl = null, glState = null, glFailed = false, ctxLost = false;
   let camsSig = '';
 
   const stage = () => $('#camStage');
+  // The picture on screen is older than the camera's last word: say how old, over the picture.
+  function stalled(ageMs) {
+    const s = Math.max(1, Math.round(ageMs / 1000));
+    say('camera stalled \u2014 last picture ' + s + ' s ago', true);
+  }
   const say = (t, bad) => { const m = $('#camMsg'); if (!m) return; m.textContent = t || ''; m.classList.toggle('bad', !!bad); };
 
   // ---------- frames ----------
@@ -31,16 +36,23 @@
     try {
       const r = await fetch('api/camera/frame?t=' + Date.now(), { cache: 'no-store' });
       if (r.ok && /image\/jpeg/.test(r.headers.get('content-type') || '')) {
-        const bmp = await createImageBitmap(await r.blob());
-        if (bitmap && bitmap.close) bitmap.close();
-        bitmap = bmp; frameAt = Date.now(); glState && (glState.fresh = true);
-        frameTimes.push(frameAt); frameTimes = frameTimes.filter((t) => frameAt - t < 5000);
-        say('');
-        draw();
+        // The desk numbers its frames: asking twice for the same one is not a new picture,
+        // so it is neither decoded nor counted in fps.
+        const seq = Number(r.headers.get('x-frame-seq')) || 0;
+        if (!seq || seq !== lastSeq) {
+          const bmp = await createImageBitmap(await r.blob());
+          if (bitmap && bitmap.close) bitmap.close();
+          bitmap = bmp; frameAt = Date.now(); lastSeq = seq; glState && (glState.fresh = true);
+          frameTimes.push(frameAt); frameTimes = frameTimes.filter((t) => frameAt - t < 5000);
+          draw();
+        }
+        if (!ctxLost) say('');          // the lost-graphics message stays until the context is back
       } else {
         let j = {}; try { j = await r.json(); } catch (e) { /* not json */ }
         wait = RETRY_MS;
-        if (j.code === 'unconfigured') { say('Choose a camera above.'); refreshStatus(); }
+        if (j.code === 'stalled') { wait = STALL_MS; frameTimes = []; stalled(j.ageMs || 0); }
+        else if (j.code === 'rate') wait = Math.max(GAP_MS, j.retryMs || GAP_MS);
+        else if (j.code === 'unconfigured') { say('Choose a camera above.'); refreshStatus(); }
         else say(j.error ? (j.error[0].toUpperCase() + j.error.slice(1) + '.') : 'No picture.', true);
       }
     } catch (e) { wait = RETRY_MS; say('The desk did not answer.', true); }
@@ -87,6 +99,13 @@
     const c = $('#camGl');
     gl = c.getContext('webgl2', { antialias: false, alpha: false });
     if (!gl) { glFailed = true; return false; }
+    if (!c._ctxBound) {
+      c._ctxBound = true;
+      // The browser may take the GPU context away (a phone locking, memory pressure). Say so, stop
+      // drawing, and when it is given back build the program and texture again and redraw.
+      c.addEventListener('webglcontextlost', (e) => { e.preventDefault(); ctxLost = true; glState = null; gl = null; say('The 360 view lost the graphics card for a moment. Waiting for it to come back\u2026', true); });
+      c.addEventListener('webglcontextrestored', () => { ctxLost = false; glFailed = false; glState && (glState.fresh = true); say(''); draw(); });
+    }
     const vs = '#version 300 es\nout vec2 uv; void main(){ vec2 p = vec2((gl_VertexID<<1)&2, gl_VertexID&2); uv = p*2.0-1.0; gl_Position = vec4(uv,0.0,1.0); }';
     const fs = '#version 300 es\nprecision highp float; in vec2 uv; out vec4 o; uniform sampler2D tex; uniform float yaw, pitch, tanH, aspect;\n'
       + 'void main(){ vec3 d = normalize(vec3(uv.x*aspect*tanH, uv.y*tanH, -1.0));\n'
@@ -126,6 +145,7 @@
       g.drawImage(bitmap, (c.width - w) / 2, (c.height - h) / 2, w, h);
       return;
     }
+    if (ctxLost) return;          // lost, not yet restored: draw nothing, the message says why
     if (!initGl()) { say('This browser cannot draw the 360 view (WebGL 2). Use Flat.', true); return; }
     const c = $('#camGl'); sizeCanvas(c);
     gl.viewport(0, 0, c.width, c.height);
@@ -174,7 +194,7 @@
     $('#camPick').addEventListener('change', async (e) => {
       if (!e.target.value) return;
       const r = await post('api/camera/config', { device: e.target.value });
-      if (r && r.error) say(r.error, true); else { bitmap = null; frameTimes = []; camsSig = ''; say('Opening the camera…'); schedule(0); }
+      if (r && r.error) say(r.error, true); else { bitmap = null; lastSeq = 0; frameTimes = []; camsSig = ''; say('Opening the camera…'); schedule(0); }
     });
     new ResizeObserver(() => draw()).observe(stage());
     document.addEventListener('visibilitychange', () => { if (document.hidden) { clearTimeout(timer); timer = null; } else schedule(0); });

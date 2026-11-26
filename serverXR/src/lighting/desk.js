@@ -1598,17 +1598,37 @@ function createDesk(opts = {}) {
   // The camera page: a v4l2 camera named in <data dir>/camera.json, opened only while a page
   // asks for frames (camera.js). Machine-level, so it is not part of any show.
   const camera = opts.camera || createCamera({ dataDir: DATA, log });
+  const { ownPageRefusal } = require('../localRuntimeGuard');
+  // true (and the 403 sent) when the request is not from this machine's own page.
+  function cameraGuard(req, res) {
+    const refusal = ownPageRefusal(req);
+    if (!refusal) return false;
+    json(res, refusal, 403);
+    return true;
+  }
 
   const routes = {
 
-    'GET /api/camera': (req, res) => json(res, camera.status()),
-    'POST /api/camera/config': (req, res, body) => json(res, camera.configure(body)),
-    // One JPEG, the newest. The page asks about once a second while it is open; asking
-    // is what keeps the camera open, and a camera nobody asks of is let go after ~10 s.
+    // The camera routes carry the laser routes' guard (localRuntimeGuard.js ownPageRefusal): the
+    // Host must be one of this machine's own names and a browser's Origin/Referer the same origin,
+    // so a foreign page cannot read the room picture through DNS rebinding.
+    'GET /api/camera': (req, res) => cameraGuard(req, res) || json(res, camera.status()),
+    'POST /api/camera/config': (req, res, body) => cameraGuard(req, res) || json(res, camera.configure(body)),
+    // One JPEG, the newest. The page asks about twice a second at most while it is open (a viewer
+    // asking faster gets 429, camera.js viewerFps); asking is what keeps the camera open, and a
+    // camera nobody asks of is let go after ~10 s. A frame older than staleMs is a 503 "stalled"
+    // with its age; the headers carry the frame's age and number so a page counts only new frames.
     'GET /api/camera/frame': async (req, res) => {
-      const f = await camera.frame();
-      if (f.error) return json(res, { error: f.error, code: f.code }, f.code === 'unconfigured' ? 404 : 503);
-      res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': f.buf.length, 'x-frame-age': String(Date.now() - f.at) });
+      if (cameraGuard(req, res)) return;
+      const f = await camera.frame(req.socket && req.socket.remoteAddress);
+      if (f.error) {
+        const status = f.code === 'unconfigured' ? 404 : f.code === 'rate' ? 429 : 503;
+        const headers = { 'content-type': 'application/json', 'cache-control': 'no-store' };
+        if (f.code === 'rate') headers['retry-after'] = String(Math.max(1, Math.ceil((f.retryMs || 500) / 1000)));
+        res.writeHead(status, headers);
+        return res.end(JSON.stringify({ error: f.error, code: f.code, ageMs: f.ageMs, retryMs: f.retryMs }));
+      }
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': f.buf.length, 'x-frame-age': String(Date.now() - f.at), 'x-frame-seq': String(f.seq) });
       return res.end(f.buf);
     },
 
@@ -3082,7 +3102,7 @@ function createDesk(opts = {}) {
   }
 
   function close() {
-    camera.close();
+    camera.close();   // the caller that must wait for the camera to be let go uses closeCamera()
     dmxStream.close();
     clearInterval(timer);
     clearInterval(pollTimer);
@@ -3124,6 +3144,8 @@ function createDesk(opts = {}) {
     handle, close, engine, writeShow, summary, input,
     // For a caller that edits a look object in place: the cached looks JSON is rebuilt on the next poll.
     looksEdited,
+    // Let the camera go and wait until its ffmpeg has ended (shutdown waits on this).
+    closeCamera: () => camera.close(),
     // The cue runner itself, for a caller in this process that drives the list on a
     // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
     // /api/cues routes call, so there is still ONE clock.

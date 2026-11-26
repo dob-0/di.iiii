@@ -8,6 +8,17 @@
 // re-encode, so the cost of a viewer is a pipe read, not a transcode, whatever the size.
 // A camera another program holds is not taken from it: the open fails, the page says so,
 // and the next try is no sooner than `retryMs`.
+//
+// A camera that stops sending (ffmpeg blocked on a stalled device) is NOT shown as live: a frame
+// older than `staleMs` (default 2 s, camera.json "staleMs") is answered as code "stalled" with
+// its age, and status() says stalled.
+//
+// WIFI COST, per phone (viewers are capped at `viewerFps` frame requests a second, default 2,
+// camera.json "viewerFps", and each answer is one whole JPEG because `-c:v copy` is kept: a
+// re-encode would load the CPU that drives the lights). Mbit/s = size x 8 x fps / 1e6:
+//   148 KB frame x 2/s = 2.4 Mbit/s;  1 MB x 2/s = 16.8 Mbit/s;  2 MB x 2/s = 33.6 Mbit/s
+// (before the cap the page asked every 700 ms, 1.4/s, but nothing stopped a faster client).
+// Two phones double it; a 2.4 GHz wifi link that carries 20-30 Mbit/s fits one phone at 2 MB.
 
 const fs = require('fs');
 const path = require('path');
@@ -37,22 +48,35 @@ function listCameras(fsRoot) {
 }
 
 // Split a byte stream of back-to-back JPEGs: a frame ends where the next one starts.
+// Only the NEW bytes are scanned (indexOf from where the last scan stopped, minus the two bytes
+// a start marker may be cut across), each chunk is copied once into one growing buffer, and
+// only the frame in progress is kept: no re-concat and no re-scan per 64 KB pipe chunk.
 function createFrameSplitter(onFrame) {
-  let buf = Buffer.alloc(0);
+  let cur = Buffer.allocUnsafe(256 * 1024);
+  let len = 0;
+  let started = false;
+  let scanFrom = 0;
   return function push(chunk) {
-    buf = buf.length ? Buffer.concat([buf, chunk]) : chunk;
-    if (buf.length > BUF_MAX) { buf = Buffer.alloc(0); return; }
+    if (!chunk.length) return;
+    if (len + chunk.length > cur.length) {
+      if (len + chunk.length > BUF_MAX) { len = 0; started = false; scanFrom = 0; return; }   // a runaway pipe is dropped
+      const bigger = Buffer.allocUnsafe(Math.min(BUF_MAX, Math.max(cur.length * 2, len + chunk.length)));
+      cur.copy(bigger, 0, 0, len);
+      cur = bigger;
+    }
+    chunk.copy(cur, len);
+    len += chunk.length;
     for (;;) {
-      if (buf.length < 3 || buf.compare(SOI, 0, 3, 0, 3) !== 0) {
-        const at = buf.indexOf(SOI);
+      const at = cur.subarray(0, len).indexOf(SOI, scanFrom);
+      if (!started) {
         // No start yet: keep the last two bytes, a start marker may be cut across chunks.
-        if (at < 0) { buf = buf.subarray(Math.max(0, buf.length - 2)); return; }
-        buf = buf.subarray(at);
+        if (at < 0) { if (len > 2) { cur.copy(cur, 0, len - 2, len); len = 2; } scanFrom = 0; return; }
+        cur.copy(cur, 0, at, len); len -= at; started = true; scanFrom = 3;
+        continue;
       }
-      const next = buf.indexOf(SOI, 3);
-      if (next < 0) return;
-      onFrame(buf.subarray(0, next));
-      buf = buf.subarray(next);
+      if (at < 0) { scanFrom = Math.max(3, len - 2); return; }
+      onFrame(Buffer.from(cur.subarray(0, at)));
+      cur.copy(cur, 0, at, len); len -= at; scanFrom = 3;
     }
   };
 }
@@ -67,9 +91,17 @@ function createCamera(opts) {
   const firstFrameMs = o.firstFrameMs != null ? o.firstFrameMs : 4000;
   const log = o.log || (() => {});
   const fsRoot = o.fsRoot || '/';
+  const killMs = o.killMs != null ? o.killMs : 2000;           // SIGTERM, then SIGKILL after this
+  const sysCacheMs = o.sysCacheMs != null ? o.sysCacheMs : 2000;
 
   let cfg = {};
   try { if (file) cfg = JSON.parse(fs.readFileSync(file, 'utf8')) || {}; } catch (e) { cfg = {}; }
+  // Settings read from camera.json (or opts): a frame older than staleMs is "stalled";
+  // one viewer may ask for at most viewerFps frames a second.
+  const num = (v, d) => (Number(v) > 0 ? Number(v) : d);
+  const staleMs = num(o.staleMs != null ? o.staleMs : cfg.staleMs, 2000);
+  const viewerFps = num(o.viewerFps != null ? o.viewerFps : cfg.viewerFps, 2);
+  const viewers = new Map();    // viewer key -> time of its last accepted request
 
   let proc = null;
   let latest = null;            // { buf, at }
@@ -79,10 +111,18 @@ function createCamera(opts) {
   let lastStartAt = 0;
   let waiters = [];
   let watch = null;
+  let camsCache = null, camsAt = 0;
+
+  // /sys is read at most once per sysCacheMs, not on every frame request.
+  function cameras() {
+    const t = now();
+    if (!camsCache || t - camsAt >= sysCacheMs || t < camsAt) { camsCache = listCameras(fsRoot); camsAt = t; }
+    return camsCache;
+  }
 
   function resolveDevice() {
-    const cams = listCameras(fsRoot);
     if (cfg.device) return cfg.device;
+    const cams = cameras();
     if (cfg.name) {
       const want = String(cfg.name).toLowerCase();
       const hit = cams.find((c) => c.name && c.name.toLowerCase().includes(want));
@@ -99,15 +139,26 @@ function createCamera(opts) {
     return a;
   }
 
+  function stopWatch() { if (watch) { clearInterval(watch); watch = null; } }
+
+  // Let the camera go: SIGTERM, then SIGKILL after killMs. Resolves when the process has ended
+  // (or, last resort, 1 s after the SIGKILL), so a caller can wait for /dev/videoN to be free.
   function release() {
-    if (watch) { clearInterval(watch); watch = null; }
+    stopWatch();
     const p = proc;
     proc = null;
-    if (!p) return;
-    try { p.kill('SIGTERM'); } catch (e) { /* gone */ }
-    const t = setTimeout(() => { try { p.kill('SIGKILL'); } catch (e) { /* gone */ } }, 2000);
-    if (t.unref) t.unref();
+    if (!p) return Promise.resolve();
     log('camera released');
+    return new Promise((resolve) => {
+      let done = false, kill = null, grace = null;
+      const end = () => { if (done) return; done = true; clearTimeout(kill); clearTimeout(grace); resolve(); };
+      p.once('close', end); p.once('exit', end);
+      try { p.kill('SIGTERM'); } catch (e) { end(); return; }
+      kill = setTimeout(() => {
+        try { p.kill('SIGKILL'); } catch (e) { /* gone */ }
+        grace = setTimeout(end, 1000);
+      }, killMs);
+    });
   }
 
   function settle(frame) {
@@ -116,6 +167,7 @@ function createCamera(opts) {
   }
 
   function start(device) {
+    stopWatch();                // never two timers: a start that failed earlier left none, this keeps it so
     lastStartAt = now();
     lastError = null;
     latest = null;
@@ -126,17 +178,17 @@ function createCamera(opts) {
     proc = p;
     log('camera opened ' + device);
     const split = createFrameSplitter((f) => {
-      latest = { buf: Buffer.from(f), at: now() };
       frames++;
+      latest = { buf: f, at: now(), seq: frames };
       settle(latest);
     });
     p.stdout.on('data', split);
     p.stderr.on('data', (c) => { stderr = (stderr + c).slice(-400); });
-    p.on('error', (e) => { if (proc === p) { lastError = 'cannot start ffmpeg: ' + e.message; proc = null; settle(null); } });
+    p.on('error', (e) => { if (proc === p) { lastError = 'cannot start ffmpeg: ' + e.message; proc = null; stopWatch(); settle(null); } });
     p.on('close', () => {
       if (proc !== p) return;
       proc = null;
-      if (watch) { clearInterval(watch); watch = null; }
+      stopWatch();
       const busy = /busy/i.test(stderr);
       lastError = busy ? 'the camera is in use by another program' : (stderr.trim().split('\n').pop() || 'the camera stopped');
       settle(null);
@@ -147,8 +199,16 @@ function createCamera(opts) {
 
   // The newest frame, opening the camera first when nobody has it open. Resolves
   // { buf, at } or { error }.
-  function frame() {
+  function frame(viewer) {
     lastWanted = now();
+    if (viewer != null && viewerFps > 0) {
+      const minGap = 1000 / viewerFps, t = now(), prev = viewers.get(viewer);
+      if (prev != null && t >= prev && t - prev < minGap - 1) {
+        return Promise.resolve({ error: 'too many requests from this device', code: 'rate', retryMs: Math.ceil(minGap - (t - prev)) });
+      }
+      if (viewers.size > 200) for (const [k, v] of viewers) if (t - v > 10000) viewers.delete(k);
+      viewers.set(viewer, t);
+    }
     const device = resolveDevice();
     if (!device) return Promise.resolve({ error: 'no camera chosen', code: 'unconfigured' });
     if (!proc) {
@@ -156,7 +216,11 @@ function createCamera(opts) {
       start(device);
       if (!proc) return Promise.resolve({ error: lastError || 'the camera did not open', code: 'unavailable' });
     }
-    if (latest) return Promise.resolve(latest);
+    if (latest) {
+      const age = now() - latest.at;
+      if (age > staleMs) return Promise.resolve({ error: 'camera stalled', code: 'stalled', ageMs: age, at: latest.at });
+      return Promise.resolve(latest);
+    }
     return new Promise((resolve) => {
       const t = setTimeout(() => {
         waiters = waiters.filter((w) => w !== done);
@@ -173,10 +237,13 @@ function createCamera(opts) {
       configured: !!device,
       device,
       config: { device: cfg.device || null, name: cfg.name || null, size: cfg.size || null, fps: cfg.fps || null },
-      cameras: listCameras(fsRoot),
+      cameras: cameras(),
       active: !!proc,
       frames,
       frameAgeMs: latest ? now() - latest.at : null,
+      stalled: !!(proc && latest && now() - latest.at > staleMs),
+      staleMs,
+      viewerFps,
       error: lastError,
       idleMs,
     };
@@ -202,13 +269,15 @@ function createCamera(opts) {
     }
     const changed = JSON.stringify(next) !== JSON.stringify(cfg);
     cfg = next;
+    camsCache = null;
     if (changed) { release(); latest = null; lastError = null; }
     return status();
   }
 
-  function close() { release(); settle(null); }
+  // Resolves once the camera process has ended, so a shutdown can wait before it exits.
+  function close() { const done = release(); settle(null); return done; }
 
-  return { frame, status, configure, close, listCameras: () => listCameras(fsRoot) };
+  return { frame, status, configure, close, listCameras: () => cameras() };
 }
 
 module.exports = { createCamera, listCameras, createFrameSplitter };
