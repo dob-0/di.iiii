@@ -1589,6 +1589,28 @@ void main() {
 }`
     },
 
+    // Steady: the hand shake taken out of a camera picture. The engine measures how far each new frame
+    // jumped (steadyMotion.js) and hands the correction in as steady_offset; this only reads the picture
+    // there, zoomed in by `zoom` so the moving edge stays out of sight. Translation only.
+    'top.steady': {
+        label: 'Steady',
+        family: 'adjust',
+        inputs: ['a'],
+        steady: true,
+        params: [
+            param('smooth', 'Smoothing', 0.5, 0, 1),
+            param('zoom', 'Zoom', 1.1, 1, 1.4, 0.01),
+            param('reach', 'Max shift', 0.06, 0, 0.15, 0.005)
+        ],
+        fragment: `
+uniform float p_zoom;
+uniform vec2 steady_offset;
+void main() {
+    vec2 pos = (uv - 0.5) / max(p_zoom, 1.0) + 0.5 + steady_offset;
+    gl_FragColor = vec4(texture2D(a, clamp(pos, vec2(0.0), vec2(1.0))).rgb, 1.0);
+}`
+    },
+
     'top.shape': {
         label: 'Shape',
         family: 'in',
