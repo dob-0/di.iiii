@@ -985,6 +985,33 @@ check('a test move swings the lights for a moment, says which, and is never save
   assert.ok(!disk.includes('testMove'), 'nothing of it is in the saved show');
 });
 
+check('a test move re-press and the off call: only the asked lights stop, the head never snaps', async () => {
+  const f = await patch('pt', { universe: 78, address: 1 });
+  const g = await patch('pt', { universe: 78, address: 11 });
+  await POST('/api/fixture', { id: f.id, values: { pan: 100, tilt: 100 } });
+  await POST('/api/fixture', { id: g.id, values: { pan: 100, tilt: 100 } });
+  await POST('/api/fixtures/testmove', { ids: [f.id, g.id], axis: 'pan', seconds: 4 });
+  await sleep(1100);
+  const mid = await wire(78, 1);
+  const r1 = await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'pan', seconds: 4 });
+  await settle();
+  const after = await wire(78, 1);
+  assert.ok(Math.abs(after - mid) <= 6, `a re-press does not snap the head back to rest: ${mid} -> ${after}`);
+  assert.ok(r1.body.until > Date.now() + 3000, 'and it runs on');
+  await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'tilt', seconds: 4 });
+  let st = (await GET('/api/state')).body.status.testMoving;
+  assert.strictEqual(st[f.id], 'tilt', 'the new axis is the one shown');
+  await sleep(100);
+  assert.ok((await wire(78, 1)) !== 100 || (await wire(78, 2)) !== 100, 'both axes live, pan not snapped');
+  await POST('/api/fixtures/testmove', { off: true, ids: [f.id] });
+  await settle();
+  assert.deepStrictEqual([await wire(78, 1), await wire(78, 2)], [100, 100], 'the asked light is home at once');
+  st = (await GET('/api/state')).body.status.testMoving;
+  assert.ok(!st[f.id] && st[g.id] === 'pan', 'the other light still swings');
+  await POST('/api/fixtures/testmove', { off: true });
+  assert.deepStrictEqual((await GET('/api/state')).body.status.testMoving, {}, 'off with no ids stops every light');
+});
+
 check('the Aim page markup exists and is wired to the limits route', () => {
   const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
   const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
