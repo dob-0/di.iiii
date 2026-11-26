@@ -1735,6 +1735,7 @@ function paintSelList() {
         });
       }
     }
+    paintTestMove();
     const finding = new Set((S.status && S.status.identifying) || []);
     for (const row of $$('.selrow', list)) {
       const f = fxById(row.dataset.id);
@@ -2531,10 +2532,69 @@ function syncLimitPanel() {
     $('#panMin').value = l.panMin; $('#panMax').value = l.panMax;
     $('#tiltMin').value = l.tiltMin; $('#tiltMax').value = l.tiltMax;
     $('#invPan').checked = !!l.invertPan; $('#invTilt').checked = !!l.invertTilt; $('#swapPT').checked = !!l.swapPT;
-    $('#panTrim').value = l.panTrim | 0; $('#tiltTrim').value = l.tiltTrim | 0;
+    $('#panTrim').value = +l.panTrim || 0; $('#tiltTrim').value = +l.tiltTrim || 0;
   }
+  paintTrimStep();
   drawMoveBoxes();
 }
+
+// TRIM STEP — how far one arrow press moves a trim: 1, 0.1 or 0.01 of a DMX step, one choice for
+// the Setup panel and the Aim page, kept on this device. A fraction only reaches a light whose
+// pan/tilt has a fine channel (S.fineNames, published from roles.js, the list the renderer uses);
+// a light without one stays in whole steps, and the server rounds its trim the same way.
+const TRIM_STEPS = ['1', '0.1', '0.01'];
+let trimStep = TRIM_STEPS.includes(localStorage.getItem('trimStep')) ? localStorage.getItem('trimStep') : '0.1';
+const hasFine = (f, axis) => {
+  const names = (S && S.fineNames && S.fineNames[axis]) || [];
+  return !!f && profileOf(f).channels.some((c) => names.includes(c));
+};
+const trimStepFor = (f, axis) => (hasFine(f, axis) ? +trimStep : 1);
+const roundTrim = (v, step) => {
+  const n = clamp(+v || 0, -255, 255);
+  return step >= 1 ? Math.round(n) : Math.round(n * 100) / 100;
+};
+function paintTrimStep() {
+  for (const b of $$('.trimstep button')) b.classList.toggle('on', b.dataset.step === trimStep);
+  const f = selectedFixtures()[0];
+  $('#panTrim').step = trimStepFor(f, 'pan');
+  $('#tiltTrim').step = trimStepFor(f, 'tilt');
+  for (const card of $$('#aimBank .aimcard')) {
+    const cf = fxById(card.dataset.id);
+    for (const [key, axis] of [['panTrim', 'pan'], ['tiltTrim', 'tilt']]) {
+      const s = trimStepFor(cf, axis);
+      for (const el of $$(`[data-k="${key}"]`, card)) el.step = s;
+    }
+  }
+}
+for (const b of $$('.trimstep button')) {
+  b.addEventListener('click', () => {
+    trimStep = b.dataset.step;
+    localStorage.setItem('trimStep', trimStep);
+    paintTrimStep();
+  });
+}
+
+// TEST MOVE — one press swings these lights a little toward a higher pan or tilt and back
+// (desk testmove.js), on the desk side, so it turns each head exactly the way the fader would.
+// A head that turns the other way from its neighbours wants Invert; one that moves on the
+// other axis wants Swap. Live only: nothing is saved, and the swing ends by itself.
+const TEST_MOVE_S = 4;
+async function testMove(ids, axis) {
+  if (!ids.length) return say('select a light to move', true);
+  const r = await post('api/fixtures/testmove', { ids, axis, seconds: TEST_MOVE_S });
+  if (!r || r.error) return say((r && r.error) || 'the desk did not answer', true);
+  if (!r.moving.length) return say(`none of these lights has ${axis}`, true);
+  S.status.testMoving = { ...(S.status.testMoving || {}), ...Object.fromEntries(r.moving.map((id) => [id, axis])) };
+  paintTestMove();
+  const n = r.moving.length;
+  say(`${n} light${n === 1 ? '' : 's'} swinging ${axis} and back for ${TEST_MOVE_S} s. Turns the other way from the rest: Invert. Moves on the other axis: Swap.`);
+}
+function paintTestMove() {
+  const moving = (S && S.status && S.status.testMoving) || {};
+  for (const b of $$('.testmove button')) b.classList.toggle('on', [...sel].some((id) => moving[id] === b.dataset.axis));
+  for (const card of $$('#aimBank .aimcard')) card.classList.toggle('swinging', !!moving[card.dataset.id]);
+}
+for (const b of $$('.testmove button')) b.addEventListener('click', () => testMove([...sel], b.dataset.axis));
 
 function drawDimSlider() {
   const pct = (v) => (v / 255) * 100;
@@ -2596,18 +2656,20 @@ function wireLimits() {
   }));
   [['invPan', 'invertPan'], ['invTilt', 'invertTilt'], ['swapPT', 'swapPT']].forEach(([el, key]) =>
     $('#' + el).addEventListener('change', () => sendLimits({ [key]: $('#' + el).checked })));
-  // Home trim: whole DMX steps, -255..255 (the server clamps the same way).
+  // Home trim: -255..255 (the server clamps the same way), to 0.01 on an axis with a fine
+  // channel and whole steps on one without (trimStepFor).
   ['panTrim', 'tiltTrim'].forEach((k) => $('#' + k).addEventListener('change', () => {
-    const v = Math.max(-255, Math.min(255, Math.round(+$('#' + k).value || 0)));
+    const v = roundTrim($('#' + k).value, trimStepFor(selectedFixtures()[0], k === 'panTrim' ? 'pan' : 'tilt'));
     $('#' + k).value = v; sendLimits({ [k]: v });
   }));
 }
 
 /* =============== aim page =============== */
 
-// Pan/tilt home trim per moving light (limits.panTrim / tiltTrim, whole DMX steps). The fader
-// range is -128..128; the route and the engine accept -255..255, so a larger trim set on the
-// Setup page still shows in the number box (the fader pins at its end).
+// Pan/tilt home trim per moving light (limits.panTrim / tiltTrim, DMX steps: to 0.01 where the
+// axis has a fine channel, whole steps where not — the Step chips). The fader range is
+// -128..128; the route and the engine accept -255..255, so a larger trim set on the Setup page
+// still shows in the number box (the fader pins at its end).
 let aimSig = '';
 const aimTimers = new Map();   // `${id}:${key}` -> { last, t, pending }
 const aimLights = () => S.fixtures
@@ -2634,13 +2696,19 @@ function renderAim() {
     aimSig = sig;
     const byUni = new Map();
     for (const f of lights) { if (!byUni.has(f.universe)) byUni.set(f.universe, []); byUni.get(f.universe).push(f); }
+    // The step attribute is set per light by paintTrimStep: the chosen step where the axis has a fine channel, 1 where not.
     const fad = (key, label) => `<div><label>${label}</label><div class="vwrap"><input type="range" data-k="${key}" min="-128" max="128" step="1" value="0" aria-label="${label} trim"></div><input class="aimnum" data-k="${key}" type="number" min="-255" max="255" step="1" value="0" aria-label="${label} trim value"></div>`;
+    const moveBtn = (axis) => `<button type="button" class="sq aimmove" data-axis="${axis}" title="Swing every light in this row a little toward a higher ${axis} and back, for ${TEST_MOVE_S} seconds, to see which way each one turns">Move ${axis}</button>`;
     wrap.innerHTML = lights.length
-      ? [...byUni].map(([u, fs]) => `<section class="aimuni"><h3>Universe ${u + 1} · ${fs.length} light${fs.length === 1 ? '' : 's'}</h3><div class="aimrow">${fs.map((f) => `<div class="aimcard" data-id="${esc(f.id)}"><div class="aimname" title="${esc(f.name)}">${esc(f.name)}</div><div class="aimaddr">${String(f.address).padStart(3, '0')}</div><div class="aimpair">${fad('tiltTrim', 'Tilt')}${fad('panTrim', 'Pan')}</div><button class="aimzero" title="Reset this light's pan and tilt trim to 0">0</button></div>`).join('')}</div></section>`).join('')
+      ? [...byUni].map(([u, fs]) => `<section class="aimuni"><div class="aimhead"><h3>Universe ${u + 1} · ${fs.length} light${fs.length === 1 ? '' : 's'}</h3>${fs.some((f) => profileOf(f).channels.includes('pan')) ? moveBtn('pan') : ''}${fs.some((f) => profileOf(f).channels.includes('tilt')) ? moveBtn('tilt') : ''}</div><div class="aimrow">${fs.map((f) => `<div class="aimcard" data-id="${esc(f.id)}"><div class="aimname" title="${esc(f.name)}">${esc(f.name)}</div><div class="aimaddr">${String(f.address).padStart(3, '0')}</div><div class="aimpair">${fad('tiltTrim', 'Tilt')}${fad('panTrim', 'Pan')}</div><button class="aimzero" title="Reset this light's pan and tilt trim to 0">0</button></div>`).join('')}</div></section>`).join('')
       : '<p class="muted">No moving lights are patched — a light shows here when its profile has a pan or tilt channel.</p>';
+    $$('.aimuni', wrap).forEach((section) => {
+      $$('.aimmove', section).forEach((b) => b.addEventListener('click', () =>
+        testMove($$('.aimcard', section).map((c) => c.dataset.id), b.dataset.axis)));
+    });
     $$('.aimcard', wrap).forEach((card) => {
       const set = (key, v, from) => {
-        v = clamp(Math.round(+v || 0), -255, 255);
+        v = roundTrim(v, trimStepFor(fxById(card.dataset.id), key === 'panTrim' ? 'pan' : 'tilt'));
         if (from !== 'range') $(`input[type=range][data-k="${key}"]`, card).value = v;
         if (from !== 'num') $(`.aimnum[data-k="${key}"]`, card).value = v;
         const f = fxById(card.dataset.id);
@@ -2651,7 +2719,9 @@ function renderAim() {
       $$('.aimnum', card).forEach((n) => n.addEventListener('change', () => set(n.dataset.k, n.value, 'num')));
       $('.aimzero', card).addEventListener('click', () => { set('panTrim', 0); set('tiltTrim', 0); });
     });
+    paintTrimStep();
   }
+  paintTestMove();
   // Follow the desk, except a control being used right now.
   const live = document.activeElement;
   for (const card of $$('.aimcard', wrap)) {
@@ -2660,7 +2730,7 @@ function renderAim() {
     for (const key of ['panTrim', 'tiltTrim']) {
       const st = aimTimers.get(`${f.id}:${key}`);
       if (st && (st.t || Date.now() - st.last < 600)) continue;
-      const v = (f.limits && f.limits[key]) | 0;
+      const v = +(f.limits && f.limits[key]) || 0;
       const r = $(`input[type=range][data-k="${key}"]`, card), n = $(`.aimnum[data-k="${key}"]`, card);
       if (live !== r && +r.value !== clamp(v, -128, 128)) r.value = v;
       if (live !== n && +n.value !== v) n.value = v;

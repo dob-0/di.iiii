@@ -62,6 +62,7 @@
         "caps",
         "show",
         "roleKinds",
+        "fineNames",
         "fxModes",
         "fxSpatial",
         "now",
@@ -86,6 +87,7 @@
       ],
       "status": [
         "identifying",
+        "testMoving",
         "extra",
         "listen",
         "lanAllowed",
@@ -341,6 +343,24 @@
           "ids": [
             "$fixtureId"
           ],
+          "seconds": 1
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/fixtures/testmove",
+      "class": "a",
+      "reply": {
+        "ok": "boolean",
+        "moving": "array"
+      },
+      "probe": {
+        "body": {
+          "ids": [
+            "$fixtureId"
+          ],
+          "axis": "pan",
           "seconds": 1
         }
       }

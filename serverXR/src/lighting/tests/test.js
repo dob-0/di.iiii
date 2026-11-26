@@ -336,6 +336,86 @@ check('an old show without trim keys renders exactly as before', () => {
   assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 2)], [77, 211]);
 });
 
+// Fine trim (owner 2026-11-26, N6857: "more steps ... i want tune best best"): on a head with
+// 16-bit pan/tilt the trim may be a fraction, and the part under a whole step is the fine byte.
+check('a fraction of a trim goes to the fine byte on a 16-bit head, whichever way the fine channel is named', () => {
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 128, panFine: 0, tilt: 100, tiltFine: 0 } });
+  f.limits.panTrim = 0.5; f.limits.tiltTrim = -0.25;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [128, 128, 99, 192],
+    'pan 128 + 0.5 = 128 / 128; tilt 100 - 0.25 = 99 / 192');
+  addProfile('test bar fine', ['pan', 'pan_fine', 'tilt', 'tilt_fine', 'dimmer'], { replace: true });
+  const g = makeFixture({ profile: 'test bar fine', address: 1, values: { pan: 128, tilt: 100, dimmer: 255 } });
+  g.limits.panTrim = 0.5; g.limits.tiltTrim = -1.01;
+  assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 4)], [128, 128, 98, 253],
+    'pan_fine / tilt_fine (a hand-made profile, the Reika bars) are the same partner; 98.99 = 98 / 253');
+  removeProfile('test bar fine');
+});
+
+check('whole trims give exactly the old bytes on a 16-bit head, fine value and all', () => {
+  for (const [pan, panFine, tilt, tiltFine, pt, tt] of [[128, 0, 100, 0, 0, 0], [77, 0, 211, 0, 4, -2], [0, 0, 255, 0, 3, -52], [128, 77, 100, 200, -1, 1]]) {
+    const f = makeFixture({ profile: 'pptt', address: 1, values: { pan, panFine, tilt, tiltFine } });
+    f.limits.panTrim = pt; f.limits.tiltTrim = tt;
+    assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [pan + pt, panFine, tilt + tt, tiltFine],
+      `pan ${pan}/${panFine} trim ${pt}, tilt ${tilt}/${tiltFine} trim ${tt}: the coarse moves by the trim, the fine passes as before`);
+  }
+});
+
+check('a 16-bit trim past the end stops at the very end, never wraps', () => {
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 250, panFine: 9, tilt: 2, tiltFine: 9 } });
+  f.limits.panTrim = 10.5; f.limits.tiltTrim = -10.5;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [255, 255, 0, 0]);
+  f.limits.panMax = 200; f.limits.tiltMin = 20;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [200, 255, 20, 0], 'the limits are whole coarse steps');
+});
+
+check('invert mirrors the fine byte with its coarse; fine 0 is exactly the 8-bit mirror', () => {
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 100, panFine: 64, tilt: 0, tiltFine: 0 } });
+  f.limits.invertPan = true;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [154, 192], '255 - 100.25 = 154.75');
+  f.values.panFine = 0;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [155, 0], '255 - 100, as before');
+});
+
+check('swap takes the fine byte along with its coarse', () => {
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 10, panFine: 7, tilt: 100, tiltFine: 200 } });
+  f.limits.swapPT = true;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [100, 200, 10, 7]);
+});
+
+check('a fraction stored on a head without a fine channel is rounded to whole steps', () => {
+  const f = makeFixture({ profile: 'pt', address: 1, values: { pan: 128, tilt: 100 } });
+  f.limits.panTrim = 0.6; f.limits.tiltTrim = -0.4;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [129, 100]);
+});
+
+// Test move (N6857: "some button where can click and there are some movement for test"): a swing
+// on the desk side, so it turns each head the way its fader would, through Swap and Invert.
+check('a test move swings the asked axis on the desk side and ends where it began', () => {
+  const { testMoveAt, readTestMove } = require('../testmove');
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 128, panFine: 0, tilt: 100, tiltFine: 0 } });
+  const g = makeFixture({ profile: 'pt', address: 11, values: { pan: 128, tilt: 100 } });
+  const h = makeFixture({ profile: 'pt', address: 21, values: { pan: 50, tilt: 60 } });
+  const state = { ...baseState([f, g, h]), testMove: { [f.id]: { axis: 'pan', from: 0, until: 4000 }, [g.id]: { axis: 'tilt', from: 0, until: 4000 } } };
+  const e = new Engine(state);
+  const at = (now) => [...e.render(state, now).get(0)];
+  let b = at(500);
+  assert.deepStrictEqual(b.slice(0, 4), [138, 0, 100, 0], 'a quarter swing: pan out by 10, tilt still');
+  assert.deepStrictEqual(b.slice(10, 12), [128, 110], 'the other light swings its own axis');
+  assert.deepStrictEqual(b.slice(20, 22), [50, 60], 'a light not asked does not move');
+  assert.deepStrictEqual(at(1000).slice(0, 2), [148, 0], 'the top of the swing, 20 steps');
+  assert.deepStrictEqual(at(2000).slice(0, 2), [128, 0], 'a whole swing ends where it began');
+  assert.deepStrictEqual(at(4000).slice(0, 4), [128, 0, 100, 0], 'over: home exactly');
+  f.limits.invertPan = true;
+  assert.strictEqual(at(1000)[0], 107, 'inverted: the same press turns it the other way (127 - 20)');
+  f.limits.invertPan = false; f.limits.swapPT = true;
+  b = at(1000);
+  assert.deepStrictEqual([b[0], b[2]], [100, 148], 'swapped: Move pan moves the channel the desk pan feeds, the tilt motor');
+  assert.strictEqual(testMoveAt({ axis: 'pan', from: 0, until: 100 }, 100), null, 'ends at until');
+  assert.deepStrictEqual(readTestMove({ axis: 'pan', seconds: 1 }), { axis: 'pan', ms: 2000 }, 'rounded up to whole swings');
+  assert.deepStrictEqual(readTestMove({ axis: 'tilt' }), { axis: 'tilt', ms: 4000 }, 'a press is 4 s');
+  assert.ok(readTestMove({ axis: 'zoom' }).error, 'only pan or tilt');
+});
+
 check('pan/tilt ignore master and blackout', () => {
   const f = makeFixture({ profile: 'ptrgb', address: 1, values: { pan: 200, tilt: 100, r: 255, g: 255, b: 255 } });
   const s = baseState([f]);

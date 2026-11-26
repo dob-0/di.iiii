@@ -407,10 +407,22 @@
             <label><input type="checkbox" id="invTilt"> Tilt</label>
             <label><input type="checkbox" id="swapPT"> Swap</label>
           </div>
-          <div class="invert trim" title="Home trim in DMX steps (-255..255), added after invert and limits, kept inside them">
+          <div class="invert trim" title="Home trim in DMX steps (-255..255), added after invert and limits, kept inside them. A light with a fine pan/tilt channel takes fractions, down to 0.01 of a step.">
             <span>Trim</span>
             <label>Pan <input type="number" id="panTrim" min="-255" max="255" step="1" value="0" aria-label="Pan trim"></label>
             <label>Tilt <input type="number" id="tiltTrim" min="-255" max="255" step="1" value="0" aria-label="Tilt trim"></label>
+          </div>
+          <div class="invert trimtools">
+            <div class="trimstep" role="group" aria-label="Trim step" title="How far one arrow press moves a trim. 0.1 and 0.01 reach a light with a fine pan/tilt channel; a light without one moves in whole steps.">
+              <span>Step</span>
+              <button type="button" class="sq toggle" data-step="1">1</button>
+              <button type="button" class="sq toggle" data-step="0.1">0.1</button>
+              <button type="button" class="sq toggle" data-step="0.01">0.01</button>
+            </div>
+            <div class="testmove" role="group" aria-label="Test move" title="Swings the selected lights a little toward a higher pan or tilt and back, for 4 seconds. Turns the other way from the rest: tick Invert. Moves on the other axis: tick Swap. Nothing is saved.">
+              <button type="button" class="sq toggle" data-axis="pan">Move pan</button>
+              <button type="button" class="sq toggle" data-axis="tilt">Move tilt</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1022,8 +1034,14 @@
      pan/tilt home trim (DMX steps) sent through api/fixtures/limits. -->
 <main class="page" data-page="aim">
   <div class="fader-tools">
-    <span class="muted small">Trim each light's aim so a line of lights points the same way. DMX steps, 0 = untouched; added after invert and min/max.</span>
+    <span class="muted small">Trim each light's aim so a line of lights points the same way. DMX steps, 0 = untouched; added after invert and min/max. Move pan / Move tilt swing a row so you can see which way each light turns.</span>
     <span class="flex"></span>
+    <span class="trimstep" role="group" aria-label="Trim step" title="How far one arrow press moves a trim. 0.1 and 0.01 reach a light with a fine pan/tilt channel; a light without one moves in whole steps.">
+      <span class="muted small">Step</span>
+      <button type="button" class="sq toggle" data-step="1">1</button>
+      <button type="button" class="sq toggle" data-step="0.1">0.1</button>
+      <button type="button" class="sq toggle" data-step="0.01">0.01</button>
+    </span>
     <button class="sq" id="aimResetAll" title="Set every trim on this page back to 0">All to 0</button>
   </div>
   <div class="aimbank" id="aimBank"></div>
