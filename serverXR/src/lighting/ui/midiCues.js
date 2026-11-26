@@ -58,6 +58,29 @@
     return view;
   }
 
+  // The looks on the grid (owner 2026-11-27: the pads play the desk's LOOKS in desk order, the
+  // order of `looks` in the desk's state, 40 to a page). Slot k of page p is looks[40 * p + k];
+  // a slot past the last look is empty and does nothing. Slots are numbered like apc40PadNote:
+  // 0 = top-left, rows left to right.
+  const LOOK_PADS = 40;
+  function lookPageCount(n) { return Math.max(1, Math.ceil((Number.isInteger(n) ? n : 0) / LOOK_PADS)); }
+  function clampLookPage(page, n) {
+    const p = Number.isInteger(page) ? page : 0;
+    return Math.min(Math.max(p, 0), lookPageCount(n) - 1);
+  }
+  function lookAt(looks, page, k) {
+    const list = Array.isArray(looks) ? looks : [];
+    if (!Number.isInteger(k) || k < 0 || k >= LOOK_PADS) return null;
+    return list[clampLookPage(page, list.length) * LOOK_PADS + k] || null;
+  }
+  // The page's pad targets: 'lookpad:<k>' for k 0-39, and the two page buttons.
+  function lookPadTargets() {
+    const out = [];
+    for (let k = 0; k < LOOK_PADS; k++) out.push({ key: 'lookpad:' + k, label: `Look pad ${k + 1}  (top-left first, this page)` });
+    return out;
+  }
+  const LOOK_PAGE_KEYS = { prev: 'lookpage:prev', next: 'lookpage:next' };
+
   // Cue n (0-based) reads like a page: top row left to right first. Rows are 8 wide, 5 deep;
   // the bottom row carries notes 0-7.
   function apc40PadNote(i) {
@@ -82,7 +105,13 @@
     note(0x53, 'cueauto');
     note(0x54, 'cueloop');
     note(0x56, 'blackout');
-    for (let i = 0; i < MAX_CUE_PADS; i++) note(apc40PadNote(i), 'cue:' + i);
+    // Page buttons. Akai's inbound table (Communication Protocol v1.2, pp. 32-33, note numbers):
+    //   "RIGHT  0x60 (C_7)"   "LEFT  0x61 (C#7)"   ("UP 0x5E (A#6)", "DOWN 0x5F (B_6)" are the other two
+    //   arrows of the same cluster, not mapped: one control drives one target.)
+    // RIGHT = next page, LEFT = previous page. The 'cue:<i>' pads stay learnable targets, off the grid.
+    note(0x60, LOOK_PAGE_KEYS.next);
+    note(0x61, LOOK_PAGE_KEYS.prev);
+    for (let k = 0; k < LOOK_PADS; k++) note(apc40PadNote(k), 'lookpad:' + k);
     return out;
   }
 
@@ -105,7 +134,7 @@
   // midi map rows (the page's {key: {type, ch, num}}) + cue state -> [{note, vel}], one per
   // mapped pad on channel 1. Only pads this preset lights: cue pads, GO, back, play in order,
   // loop, blackout. PLAY is a plain LED (0 off, 1 on); the others are RGB.
-  function apc40Lights(map, cues, state) {
+  function apc40Lights(map, cues, state, looksView) {
     const c = cues || {};
     const n = Array.isArray(c.list) ? Math.min(c.list.length, MAX_CUE_PADS) : 0;
     const running = c.running === true && Number.isInteger(c.index) ? c.index : -1;
@@ -121,6 +150,14 @@
           : i === next ? APC40_COLOUR.next
             : APC40_COLOUR.cue;
       put('cue:' + i, vel);
+    }
+    // The look pads: the look on air red, the others on this page ember, an empty slot dark.
+    // looksView = { looks, page, activeId }.
+    if (looksView) {
+      for (let k = 0; k < LOOK_PADS; k++) {
+        const l = lookAt(looksView.looks, looksView.page, k);
+        put('lookpad:' + k, !l ? APC40_COLOUR.off : (looksView.activeId && l.id === looksView.activeId) ? APC40_COLOUR.running : APC40_COLOUR.cue);
+      }
     }
     put('cuego', running >= 0 ? 1 : 0);
     put('cueback', n ? APC40_COLOUR.cue : APC40_COLOUR.off);
@@ -138,7 +175,7 @@
     return send;
   }
 
-  const api = { MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
+  const api = { LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiCues = api;
 })(typeof window !== 'undefined' ? window : this);

@@ -3386,6 +3386,7 @@ let CUES = null;
 // same reason as CUES: paintCues() paints them and can run before the MIDI section is read.
 let midiLedOut = null;
 const midiLedSent = new Map();
+let midiLookPage = 0;   // which 40 looks the APC40 grid holds (per surface, never saved, never sent to the desk)
 
 // LOOKS: tap one and it goes on the cue layer — the same layer the cue list fires on, so a
 // tapped look and a GO are never two things playing at once. The tile that is on is the
@@ -6176,6 +6177,22 @@ function buildMidiTargets() {
     }
   }
 
+  // The looks on the grid (midiCues.js lookAt): slot k of this page fires looks[40 * page + k],
+  // with the call a tap on that look's tile on the desk makes (api/looks/fire), through the
+  // ARM gate. Looked up at the press, so a changed look list never fires a stale look.
+  T.push({ group: 'Looks on the grid  (desk order, 40 a page)' });
+  pad('lookpage:prev', 'Look page  previous', () => midiLookPageStep(-1));
+  pad('lookpage:next', 'Look page  next', () => midiLookPageStep(1));
+  for (const t of window.deskMidiCues.lookPadTargets()) {
+    const k = Number(t.key.slice(8));
+    pad(t.key, t.label, () => {
+      const l = window.deskMidiCues.lookAt(looksOf(), midiLookPage, k);
+      if (!l) { midiFlash(`look pad ${k + 1}: empty (page ${midiLookPage + 1})`); return; }
+      midiSend('api/looks/fire', { id: l.id }, 'lookpad:' + k);
+      midiFlash(`${midiLookPage * window.deskMidiCues.LOOK_PADS + k + 1} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
+    });
+  }
+
   T.push({ group: 'Pads & buttons' });
 
   pad('blackout', 'Blackout  (on)', () => {
@@ -6238,7 +6255,7 @@ function buildMidiTargets() {
 const MIDI_PRESETS = [{
   match: /apc\s*40/i,
   name: 'Akai APC40 mkII',
-  // Master fader, PLAY = GO, the 5 x 8 grid = the cue list (midiCues.js holds the layout).
+  // Master fader, PLAY = GO, bank arrows = look pages, the 5 x 8 grid = the desk's looks (midiCues.js).
   build: () => window.deskMidiCues.apc40Preset(midiTargets.filter((t) => t.key).map((t) => t.key)),
 }, {
   match: /xone:?\s*k2/i,
@@ -6303,6 +6320,32 @@ function midiApplyPreset() {
   }
   midiDraw(); midiDrawSceneGrid();
   midiFlash(`${preset.name}: ${n} controls mapped`);
+}
+
+// Look pages. The page change never touches the rig (no midiSend), so it works armed or not.
+function midiLookPageStep(dir) {
+  const mc = window.deskMidiCues;
+  const n = looksOf().length;
+  const was = midiLookPage;
+  midiLookPage = mc.clampLookPage(midiLookPage + dir, n);
+  if (midiLookPage !== was) midiRepaintLookPads();
+  midiDrawLookPage();
+  midiFlash(`look page ${midiLookPage + 1}/${mc.lookPageCount(n)}` + (midiLookPage === was ? '  (end of the list)' : ''));
+}
+// All 40 pads are sent again on a page change: forgetting them makes the diff send them all.
+function midiRepaintLookPads() {
+  for (let k = 0; k < window.deskMidiCues.LOOK_PADS; k++) {
+    const b = midiMap['lookpad:' + k];
+    if (b && b.type === 'note') midiLedSent.delete(b.num);
+  }
+  midiPaintLights();
+}
+function midiDrawLookPage() {
+  const el = $('#miLookPage');
+  if (!el) return;
+  const mc = window.deskMidiCues, n = looksOf().length;
+  midiLookPage = mc.clampLookPage(midiLookPage, n);
+  el.textContent = `look page ${midiLookPage + 1}/${mc.lookPageCount(n)} · ${n} looks`;
 }
 
 function midiStepFx(dir) {
@@ -6464,7 +6507,7 @@ function buildMidi() {
   const black = midiArmed ? midiLive.blackout : (S && S.blackout);
   midiPill('#miMasterStat', `master <b>${mv == null ? '—' : mv}</b>${black ? ' · BLACK' : ''}`, black ? 'bad' : '');
   const sig = (S ? S.fixtures.map((f) => f.id + f.name + f.profile).join('|') + '#' + S.scenes.length : '')
-    + '#' + (CUES && Array.isArray(CUES.list) ? CUES.list.map((c) => c.id + c.name).join('|') + (CUES.autoplay ? 'A' : '') + (CUES.loop ? 'L' : '') : '');
+    + '#' + (S && Array.isArray(S.looks) ? S.looks.map((l) => l.id).join(',') : '') + '#' + (CUES && Array.isArray(CUES.list) ? CUES.list.map((c) => c.id + c.name).join('|') + (CUES.autoplay ? 'A' : '') + (CUES.loop ? 'L' : '') : '');
   if (sig !== midiSig) { midiSig = sig; buildMidiTargets(); midiDraw(); midiDrawBank(); }
 }
 
@@ -6534,6 +6577,7 @@ function midiDrawBank() {
   if (!S) return;
   const max = Math.max(1, Math.ceil(S.scenes.length / 16));
   $('#miBankLabel').textContent = `pad bank ${midiBank + 1}/${max} · ${S.scenes.length} scenes`;
+  midiDrawLookPage();
   midiDrawSceneGrid();
 }
 
@@ -6620,8 +6664,11 @@ function midiBindLights() {
 }
 function midiPaintLights() {
   if (!midiLedOut || !window.deskMidiCues) return;
-  const lights = window.deskMidiCues.apc40Lights(midiMap, CUES, { blackout: !!(S && S.blackout) });
   try {
+    const looks = Array.isArray(S && S.looks) ? S.looks : [];   // not looksOf(): a const further down, may not be read yet
+    midiLookPage = window.deskMidiCues.clampLookPage(midiLookPage, looks.length);
+    const lights = window.deskMidiCues.apc40Lights(midiMap, CUES, { blackout: !!(S && S.blackout) },
+      { looks, page: midiLookPage, activeId: activeLookId() });
     for (const l of window.deskMidiCues.lightDiff(lights, midiLedSent)) midiLedOut.send([0x90, l.note, l.vel]);
   } catch (e) { midiLedSent.clear(); }   // port gone: repaint everything when it is back
 }
