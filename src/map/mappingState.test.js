@@ -3,9 +3,11 @@ import {
     applyProjectOps,
     defaultMappingSurface,
     invertProjectOps,
+    normalizeMappingCue,
     normalizeMappingState,
     normalizeMappingSurface,
-    normalizeProjectDocument
+    normalizeProjectDocument,
+    regularWarpGrid
 } from '../shared/projectSchema.js'
 
 const withSurfaces = (ids) => applyProjectOps(
@@ -409,5 +411,298 @@ describe('the show\'s clock — mappingState.showEpoch', () => {
         expect(normalizeProjectDocument(JSON.parse(JSON.stringify(written))).mappingState.showSource).toBe('clock')
         expect('showSource' in normalizeMappingState({ showSource: 'desk' })).toBe(false)
         expect('showSource' in normalizeMappingState({})).toBe(false)
+    })
+})
+
+describe('the visuals bank', () => {
+    const visualDoc = (extra = {}) => normalizeProjectDocument({ mappingState: extra })
+    const create = (doc, visual, index) => applyProjectOps(doc, [{ type: 'createMappingVisual', payload: { visual, index } }])
+    const roundTrip = (doc, ops) => applyProjectOps(applyProjectOps(doc, ops), invertProjectOps(doc, ops)).mappingState
+    const v = (id, source) => ({ id, name: id, source: source || { kind: 'image', ref: '/a.png' } })
+
+    it('defaults to an empty bank with nothing playing', () => {
+        const state = normalizeMappingState({})
+        expect(state.visuals).toEqual([])
+        expect(state.playing).toBe('')
+    })
+
+    it('drops visuals without an id and later duplicates, and names the nameless', () => {
+        const state = normalizeMappingState({ visuals: [{ name: 'no id' }, { id: '  a  ' }, { id: 'a', name: 'dupe' }, { id: 'b', name: '   ' }] })
+        expect(state.visuals.map((visual) => visual.id)).toEqual(['a', 'b'])
+        expect(state.visuals.map((visual) => visual.name)).toEqual(['Visual 1', 'Visual 2'])
+    })
+
+    it('bounds id and name to 80 characters and the bank to 200', () => {
+        const long = 'x'.repeat(120)
+        const one = normalizeMappingState({ visuals: [{ id: long, name: long }] }).visuals[0]
+        expect(one.id).toHaveLength(80)
+        expect(one.name).toHaveLength(80)
+        const many = normalizeMappingState({ visuals: Array.from({ length: 250 }, (_, i) => ({ id: 'v' + i })) })
+        expect(many.visuals).toHaveLength(200)
+    })
+
+    it('gives a visual the test card by default and refuses the wall and visual kinds', () => {
+        const state = normalizeMappingState({ visuals: [{ id: 'a' }, { id: 'b', source: { kind: 'wall' } }, { id: 'c', source: { kind: 'visual', ref: 'a' } }, { id: 'd', source: { kind: 'html', ref: '/x.html' } }] })
+        const card = { kind: 'test', ref: 'card' }
+        expect(state.visuals.map((visual) => visual.source)).toEqual([card, card, card, { kind: 'html', ref: '/x.html' }])
+    })
+
+    it('clears playing when it names no visual', () => {
+        expect(normalizeMappingState({ visuals: [{ id: 'a' }], playing: 'a' }).playing).toBe('a')
+        expect(normalizeMappingState({ visuals: [{ id: 'a' }], playing: 'gone' }).playing).toBe('')
+        expect(normalizeMappingState({ playing: 'a' }).playing).toBe('')
+    })
+
+    it('accepts the wall, visual and html source kinds with their refs', () => {
+        const surfaces = normalizeMappingState({ surfaces: [
+            { id: 'w', source: { kind: 'wall', ref: 'junk' } },
+            { id: 'v', source: { kind: 'visual', ref: '  vis  ' } },
+            { id: 'l', source: { kind: 'visual', ref: 'y'.repeat(120) } },
+            { id: 'h', source: { kind: 'html', ref: ' /uploads/a.html ' } },
+            { id: 'u', source: { kind: 'nope', ref: 'q' } }
+        ] }).surfaces
+        expect(surfaces[0].source).toEqual({ kind: 'wall', ref: '' })
+        expect(surfaces[1].source).toEqual({ kind: 'visual', ref: 'vis' })
+        expect(surfaces[2].source.ref).toHaveLength(80)
+        expect(surfaces[3].source).toEqual({ kind: 'html', ref: '/uploads/a.html' })
+        expect(surfaces[4].source.kind).toBe('test')
+    })
+
+    it('keeps the new kinds in a cue and clears a wall ref there too', () => {
+        const cue = normalizeMappingState({ cues: [{ id: 'c', surfaces: { a: { source: { kind: 'wall', ref: 'junk' } } } }] }).cues[0]
+        expect(cue.surfaces.a.source).toEqual({ kind: 'wall', ref: '' })
+    })
+
+    describe('input', () => {
+        const input = (value) => normalizeMappingSurface({ id: 'a', input: value }).input
+        it('is omitted unless it is four finite numbers', () => {
+            for (const bad of [undefined, null, 'x', [], [0, 0, 1], [0, 0, 1, 1, 1], [0, 0, 1, NaN], [0, 0, '1', 1], [0, 0, Infinity, 1]]) {
+                expect('input' in normalizeMappingSurface({ id: 'a', input: bad })).toBe(false)
+            }
+        })
+        it('keeps a good rectangle and clamps the rest to the wall', () => {
+            expect(input([0.25, 0.5, 0.5, 0.25])).toEqual([0.25, 0.5, 0.5, 0.25])
+            expect(input([-1, 2, 5, -3])).toEqual([0, 1, 1, 0.001])
+            expect(input([0.75, 0.5, 1, 1])).toEqual([0.75, 0.5, 0.25, 0.5])
+            expect(input([1, 1, 1, 1])).toEqual([1, 1, 0.001, 0.001])
+            expect(input([0.1234567891, 0, 0.1, 0.1])[0]).toBe(0.123457)
+        })
+        it('is set and removed by setMappingSurface, and undo restores absent and present', () => {
+            const base = withSurfaces(['a'])
+            const set = [{ type: 'setMappingSurface', payload: { surfaceId: 'a', patch: { input: [0, 0, 0.5, 0.5] } } }]
+            const doc = applyProjectOps(base, set)
+            expect(doc.mappingState.surfaces[0].input).toEqual([0, 0, 0.5, 0.5])
+            expect(applyProjectOps(doc, invertProjectOps(base, set)).mappingState).toEqual(base.mappingState)
+            const clear = [{ type: 'setMappingSurface', payload: { surfaceId: 'a', patch: { input: null } } }]
+            const cleared = applyProjectOps(doc, clear)
+            expect('input' in cleared.mappingState.surfaces[0]).toBe(false)
+            expect(applyProjectOps(cleared, invertProjectOps(doc, clear)).mappingState).toEqual(doc.mappingState)
+        })
+    })
+
+    describe('ops and their inverses', () => {
+        it('createMappingVisual appends, inserts at an index, and ignores a taken id', () => {
+            let doc = create(visualDoc(), v('a'))
+            doc = create(doc, v('b'))
+            doc = create(doc, v('c'), 1)
+            expect(doc.mappingState.visuals.map((visual) => visual.id)).toEqual(['a', 'c', 'b'])
+            expect(create(doc, { ...v('a'), name: 'clobber' }).mappingState.visuals[0].name).toBe('a')
+            expect(create(doc, { name: 'idless' }).mappingState).toEqual(doc.mappingState)
+        })
+        it('createMappingVisual inverts to a delete, and to nothing for a taken id', () => {
+            const base = create(visualDoc(), v('a'))
+            const ops = [{ type: 'createMappingVisual', payload: { visual: v('b') } }]
+            expect(invertProjectOps(base, ops)).toEqual([{ type: 'deleteMappingVisual', payload: { visualId: 'b' } }])
+            expect(roundTrip(base, ops)).toEqual(base.mappingState)
+            expect(invertProjectOps(base, [{ type: 'createMappingVisual', payload: { visual: v('a') } }])).toEqual([])
+        })
+        it('setMappingVisual merges name and source, ignores a missing id, and inverts', () => {
+            const base = create(visualDoc(), v('a'))
+            const ops = [{ type: 'setMappingVisual', payload: { visualId: 'a', patch: { name: 'New', source: { kind: 'video', ref: '/m.mp4' } } } }]
+            const after = applyProjectOps(base, ops)
+            expect(after.mappingState.visuals[0]).toEqual({ id: 'a', name: 'New', source: { kind: 'video', ref: '/m.mp4' } })
+            expect(roundTrip(base, ops)).toEqual(base.mappingState)
+            const miss = [{ type: 'setMappingVisual', payload: { visualId: 'zzz', patch: { name: 'x' } } }]
+            expect(applyProjectOps(base, miss).mappingState).toEqual(base.mappingState)
+            expect(invertProjectOps(base, miss)).toEqual([])
+            const bad = applyProjectOps(base, [{ type: 'setMappingVisual', payload: { visualId: 'a', patch: { source: { kind: 'wall' } } } }])
+            expect(bad.mappingState.visuals[0].source).toEqual({ kind: 'test', ref: 'card' })
+        })
+        it('reorderMappingVisuals keeps unnamed ids at the back and inverts', () => {
+            const base = ['a', 'b', 'c'].reduce((doc, id) => create(doc, v(id)), visualDoc())
+            const ops = [{ type: 'reorderMappingVisuals', payload: { visualIds: ['c', 'a'] } }]
+            expect(applyProjectOps(base, ops).mappingState.visuals.map((visual) => visual.id)).toEqual(['b', 'c', 'a'])
+            expect(roundTrip(base, ops)).toEqual(base.mappingState)
+        })
+        it('deleteMappingVisual removes it, stops it playing and repoints surfaces and cues', () => {
+            let doc = ['a', 'b', 'c'].reduce((d, id) => create(d, v(id)), visualDoc())
+            doc = applyProjectOps(doc, [
+                { type: 'setMappingState', payload: { patch: { playing: 'b' } } },
+                { type: 'createMappingSurface', payload: { surface: { id: 's1', source: { kind: 'visual', ref: 'b' } } } },
+                { type: 'createMappingSurface', payload: { surface: { id: 's2', source: { kind: 'visual', ref: 'c' } } } },
+                { type: 'createMappingCue', payload: { cue: { id: 'q', surfaces: { s1: { source: { kind: 'visual', ref: 'b' } }, s2: { source: { kind: 'visual', ref: 'c' } }, s3: { opacity: 0.5 } } } } }
+            ])
+            expect(doc.mappingState.playing).toBe('b')
+            const ops = [{ type: 'deleteMappingVisual', payload: { visualId: 'b' } }]
+            const after = applyProjectOps(doc, ops)
+            const m = after.mappingState
+            expect(m.visuals.map((visual) => visual.id)).toEqual(['a', 'c'])
+            expect(m.playing).toBe('')
+            expect(m.surfaces[0].source).toEqual({ kind: 'wall', ref: '' })
+            expect(m.surfaces[1].source).toEqual({ kind: 'visual', ref: 'c' })
+            expect(m.cues[0].surfaces.s1.source).toEqual({ kind: 'wall', ref: '' })
+            expect(m.cues[0].surfaces.s2.source).toEqual({ kind: 'visual', ref: 'c' })
+            expect(m.cues[0].surfaces.s3).toEqual({ opacity: 0.5 })
+            expect(applyProjectOps(after, invertProjectOps(doc, ops)).mappingState).toEqual(doc.mappingState)
+            expect(applyProjectOps(doc, [{ type: 'deleteMappingVisual', payload: { visualId: 'nope' } }]).mappingState).toEqual(doc.mappingState)
+        })
+        it('deleteMappingVisual restores the last visual at the back', () => {
+            const doc = ['a', 'b'].reduce((d, id) => create(d, v(id)), visualDoc())
+            const ops = [{ type: 'deleteMappingVisual', payload: { visualId: 'b' } }]
+            expect(roundTrip(doc, ops)).toEqual(doc.mappingState)
+        })
+    })
+
+    it('setMappingState cannot replace the bank but can set playing', () => {
+        const base = create(visualDoc(), v('a'))
+        const ops = [{ type: 'setMappingState', payload: { patch: { visuals: [v('evil')], playing: 'a' } } }]
+        const after = applyProjectOps(base, ops)
+        expect(after.mappingState.visuals.map((visual) => visual.id)).toEqual(['a'])
+        expect(after.mappingState.playing).toBe('a')
+        const stop = [{ type: 'setMappingState', payload: { patch: { playing: '' } } }]
+        expect(applyProjectOps(after, invertProjectOps(after, stop)).mappingState.playing).toBe('a')
+        expect(applyProjectOps(applyProjectOps(base, ops), invertProjectOps(base, ops)).mappingState.playing).toBe('')
+    })
+})
+
+describe('advanced output fields', () => {
+    const norm = (surface = {}) => normalizeMappingSurface({ id: 'a', ...surface })
+    const setOp = (patch) => [{ type: 'setMappingSurface', payload: { surfaceId: 'a', patch } }]
+    const roundTrip = (patch) => {
+        const doc = withSurfaces(['a'])
+        const after = applyProjectOps(doc, setOp(patch))
+        const back = applyProjectOps(after, invertProjectOps(doc, setOp(patch)))
+        return { doc, after, back }
+    }
+
+    it('has every default', () => {
+        const surface = norm()
+        expect(surface.flip).toBe('none')
+        expect(surface.isKey).toBe(false)
+        expect(surface.blackBg).toBe(true)
+        expect([surface.red, surface.green, surface.blue]).toEqual([0, 0, 0])
+        expect(surface.softEdge).toEqual({ enabled: false, left: 0, right: 0, top: 0, bottom: 0, power: 2, gamma: 1, luminance: 0.5 })
+        expect(surface.inputRotation).toBe(0)
+        expect('warp' in surface).toBe(false)
+        expect(defaultMappingSurface.softEdge).toEqual(surface.softEdge)
+        expect(defaultMappingSurface.blackBg).toBe(true)
+    })
+
+    it('clamps and repairs each field', () => {
+        expect(norm({ flip: 'hv' }).flip).toBe('hv')
+        expect(norm({ flip: 'sideways' }).flip).toBe('none')
+        expect(norm({ isKey: 'yes' }).isKey).toBe(false)
+        expect(norm({ blackBg: false }).blackBg).toBe(false)
+        expect(norm({ blackBg: 'no' }).blackBg).toBe(true)
+        const colour = norm({ red: 5, green: -5, blue: 0.123456 })
+        expect([colour.red, colour.green, colour.blue]).toEqual([1, -1, 0.1235])
+        const soft = norm({ softEdge: { enabled: true, left: 9, right: -1, top: 0.25, bottom: 'x', power: 99, gamma: 0, luminance: 3 } }).softEdge
+        expect(soft).toEqual({ enabled: true, left: 0.5, right: 0, top: 0.25, bottom: 0, power: 10, gamma: 0.1, luminance: 1 })
+        expect(norm({ softEdge: { power: 0 } }).softEdge.power).toBe(0.1)
+        expect(norm({ softEdge: { gamma: 50 } }).softEdge.gamma).toBe(4)
+        expect(norm({ softEdge: { left: 0.1 } }).softEdge.power).toBe(2)
+        expect(norm({ softEdge: 'nope' }).softEdge).toEqual(defaultMappingSurface.softEdge)
+        expect(norm({ inputRotation: 190 }).inputRotation).toBe(-170)
+        expect(norm({ inputRotation: -180 }).inputRotation).toBe(180)
+        expect(norm({ inputRotation: 180 }).inputRotation).toBe(180)
+        expect(norm({ inputRotation: 720 }).inputRotation).toBe(0)
+        expect(norm({ inputRotation: 12.34567 }).inputRotation).toBe(12.3457)
+        expect(norm({ inputRotation: Infinity }).inputRotation).toBe(0)
+    })
+
+    it('regularWarpGrid(2, 1) is 5 columns by 3 rows, row-major, top row first', () => {
+        const grid = regularWarpGrid(2, 1)
+        expect(grid).toHaveLength(15)
+        expect(grid.slice(0, 5)).toEqual([[0, 0], [0.25, 0], [0.5, 0], [0.75, 0], [1, 0]])
+        expect(grid.slice(5, 10).map((point) => point[1])).toEqual([0.5, 0.5, 0.5, 0.5, 0.5])
+        expect(grid[14]).toEqual([1, 1])
+        expect(regularWarpGrid(0, 0)).toEqual([[0, 0], [1, 0], [0, 1], [1, 1]])
+    })
+
+    it('is omitted when absent and keeps mode and divisions in range', () => {
+        expect('warp' in norm({ warp: 'x' })).toBe(false)
+        expect('warp' in norm({ warp: null })).toBe(false)
+        const warp = norm({ warp: { mode: 'weird', divisionsX: 9, divisionsY: -3 } }).warp
+        expect(warp.mode).toBe('linear')
+        expect(warp.divisionsX).toBe(4)
+        expect(warp.divisionsY).toBe(0)
+        expect(warp.points).toEqual(regularWarpGrid(4, 0))
+        expect(norm({ warp: {} }).warp).toEqual({ mode: 'linear', divisionsX: 0, divisionsY: 0, points: regularWarpGrid(0, 0) })
+        expect(norm({ warp: { mode: 'perspective' } }).warp.mode).toBe('perspective')
+    })
+
+    it('regenerates the whole grid when the length or an entry is wrong', () => {
+        const short = norm({ warp: { divisionsX: 1, divisionsY: 1, points: [[0, 0], [0.3, 0.3]] } }).warp
+        expect(short.points).toEqual(regularWarpGrid(1, 1))
+        const points = regularWarpGrid(1, 1)
+        points[4] = [0.4, 'x']
+        expect(norm({ warp: { divisionsX: 1, divisionsY: 1, points } }).warp.points).toEqual(regularWarpGrid(1, 1))
+        points[4] = [0.4, NaN]
+        expect(norm({ warp: { divisionsX: 1, divisionsY: 1, points } }).warp.points).toEqual(regularWarpGrid(1, 1))
+    })
+
+    it('forces the four corners, clamps and rounds the rest', () => {
+        const points = regularWarpGrid(1, 1)
+        points[0] = [0.2, 0.2]
+        points[2] = [0.9, 0.9]
+        points[6] = [-3, 0.5]
+        points[8] = [5, 5]
+        points[4] = [0.1234567891, 3]
+        const out = norm({ warp: { divisionsX: 1, divisionsY: 1, points } }).warp.points
+        expect([out[0], out[2], out[6], out[8]]).toEqual([[0, 0], [1, 0], [0, 1], [1, 1]])
+        expect(out[4]).toEqual([0.123457, 2])
+        expect(out[1]).toEqual([0.5, 0])
+        const edge = points.slice()
+        edge[3] = [-3, 7]
+        expect(norm({ warp: { divisionsX: 1, divisionsY: 1, points: edge } }).warp.points[3]).toEqual([-1, 2])
+    })
+
+    it('sets warp, softEdge and flip through setMappingSurface and inverts them', () => {
+        const warp = { mode: 'bezier', divisionsX: 1, divisionsY: 0, points: [[0, 0], [0.5, 0.2], [1, 0], [0, 1], [0.5, 0.8], [1, 1]] }
+        const w = roundTrip({ warp })
+        expect(w.after.mappingState.surfaces[0].warp).toEqual(warp)
+        expect('warp' in w.back.mappingState.surfaces[0]).toBe(false)
+        expect(w.back.mappingState).toEqual(w.doc.mappingState)
+
+        const removed = applyProjectOps(w.after, setOp({ warp: null }))
+        expect('warp' in removed.mappingState.surfaces[0]).toBe(false)
+        const restored = applyProjectOps(removed, invertProjectOps(w.after, setOp({ warp: null })))
+        expect(restored.mappingState.surfaces[0].warp).toEqual(warp)
+
+        const edited = applyProjectOps(w.after, setOp({ warp: { mode: 'perspective' } }))
+        expect(edited.mappingState.surfaces[0].warp.mode).toBe('perspective')
+        const editedBack = applyProjectOps(edited, invertProjectOps(w.after, setOp({ warp: { mode: 'perspective' } })))
+        expect(editedBack.mappingState).toEqual(w.after.mappingState)
+
+        const s = roundTrip({ softEdge: { enabled: true, left: 0.2, power: 3 } })
+        expect(s.after.mappingState.surfaces[0].softEdge).toEqual({ enabled: true, left: 0.2, right: 0, top: 0, bottom: 0, power: 3, gamma: 1, luminance: 0.5 })
+        expect(s.back.mappingState).toEqual(s.doc.mappingState)
+
+        const f = roundTrip({ flip: 'h' })
+        expect(f.after.mappingState.surfaces[0].flip).toBe('h')
+        expect(f.back.mappingState).toEqual(f.doc.mappingState)
+    })
+
+    it('never lets these fields into a cue', () => {
+        const cue = normalizeMappingCue({
+            id: 'c',
+            surfaces: {
+                a: {
+                    enabled: false, opacity: 0.5, flip: 'h', isKey: true, blackBg: false, red: 1, green: 1, blue: 1, inputRotation: 90,
+                    softEdge: { enabled: true }, warp: { mode: 'bezier' }
+                }
+            }
+        })
+        expect(cue.surfaces.a).toEqual({ enabled: false, opacity: 0.5 })
     })
 })
