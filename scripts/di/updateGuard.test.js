@@ -8,7 +8,7 @@ import os from 'node:os'
 import path from 'node:path'
 
 import { cachedOrder, commitOrder, decideDevUpdate, devCommitOf, fileUpdateWarning, runningCommitOf } from './updateGuard.mjs'
-import { lockFile, takeUpdateLock } from './updateLock.mjs'
+import { lockFile, startOf, takeUpdateLock } from './updateLock.mjs'
 import { COMMANDS } from './cli.mjs'
 import { logFile, runAutoUpdate } from './autoupdate.mjs'
 import { rollback } from './install.mjs'
@@ -100,12 +100,27 @@ describe('(a) the auto-updater never steps back', () => {
         let calls = 0
         const inner = async () => { calls += 1; return calls === 1 ? 'unknown' : 'behind' }
         const ask = cachedOrder({ read: () => store, write: async (next) => { store = next }, inner })
-        expect(await ask({ installed: 'a', target: 'b' })).toBe('unknown')
-        expect(store).toEqual({})
+        let clock = 1000
+        const timed = cachedOrder({ read: () => store, write: async (next) => { store = next }, inner, now: () => clock })
+        expect(await timed({ installed: 'a', target: 'b' })).toBe('unknown')
+        expect(await timed({ installed: 'a', target: 'b' })).toBe('unknown') // a 404 is not asked again within the hour
+        expect(calls).toBe(1)
+        clock += 61 * 60 * 1000
+        expect(await timed({ installed: 'a', target: 'b' })).toBe('behind')
         expect(await ask({ installed: 'a', target: 'b' })).toBe('behind')
         expect(await ask({ installed: 'a', target: 'b' })).toBe('behind')
         expect(await ask({ installed: 'c', target: 'c' })).toBe('same')
         expect(calls).toBe(2)
+    })
+    it('the installed version is re-read before the server stops and before the flip', () => {
+        const source = fs.readFileSync(new URL('./cli.mjs', import.meta.url), 'utf8')
+        const checks = [...source.matchAll(/if \(movedUnderUs\(\)\)/g)].map((m) => m.index)
+        const stop = source.indexOf('try { await runner.stop({ home }) } catch', checks[0])
+        const flip = source.indexOf('await activate({ home, ...staged')
+        expect(checks.length).toBe(2)
+        expect(checks[0]).toBeLessThan(stop)
+        expect(checks[1]).toBeGreaterThan(stop)
+        expect(checks[1]).toBeLessThan(flip)
     })
     it('the cache stays small', async () => {
         let store = {}
@@ -227,7 +242,7 @@ describe('`di update` end to end, network faked: the wiring does what the guard 
     it('timer while another install holds the lock: held, nothing fetched', async () => {
         fakeNetwork({ hubCommit: HUB_NEW, status: 'ahead' })
         const home = await installed()
-        await fsp.writeFile(lockFile(home), JSON.stringify({ pid: process.pid, at: new Date().toISOString() }))
+        await fsp.writeFile(lockFile(home), JSON.stringify({ pid: process.pid, start: startOf(process.pid), at: new Date().toISOString() }))
         const text = await run(home, { auto: true })
         expect(text).toContain('held: another install is running')
         expect(fetched).toEqual([])
@@ -252,8 +267,46 @@ describe('the update lock', () => {
     })
     it('a lock older than 3 hours is stale even when its pid is alive', async () => {
         const home = await makeHome()
-        await fsp.writeFile(lockFile(home), JSON.stringify({ pid: process.pid, at: new Date(Date.now() - 4 * 3600e3).toISOString() }))
+        await fsp.writeFile(lockFile(home), JSON.stringify({ pid: process.pid, start: startOf(process.pid), at: new Date(Date.now() - 4 * 3600e3).toISOString() }))
         expect((await takeUpdateLock({ home })).ok).toBe(true)
+    })
+    it('a lock whose pid is alive but is another process now (pid reuse) is stale at once', async () => {
+        const home = await makeHome()
+        await fsp.writeFile(lockFile(home), JSON.stringify({ pid: 1, start: 'not-pid-1', at: new Date(Date.now() - 3600e3).toISOString() }))
+        expect((await takeUpdateLock({ home })).ok).toBe(true)
+        await fsp.writeFile(lockFile(home), JSON.stringify({ pid: 1, at: new Date(Date.now() - 3600e3).toISOString() }))
+        expect((await takeUpdateLock({ home })).ok).toBe(true) // no start recorded: not one of ours
+    })
+    it('an unreadable lock younger than a minute is held, an old one is stale', async () => {
+        const home = await makeHome()
+        await fsp.writeFile(lockFile(home), '')
+        const r = await takeUpdateLock({ home })
+        expect(r.ok).toBe(false)
+        expect(r.file).toBe(lockFile(home))
+        const old = new Date(Date.now() - 120e3)
+        await fsp.utimes(lockFile(home), old, old)
+        expect((await takeUpdateLock({ home })).ok).toBe(true)
+    })
+    it('release leaves another holder\'s lock alone', async () => {
+        const home = await makeHome()
+        const mine = await takeUpdateLock({ home, pid: process.pid })
+        await fsp.writeFile(lockFile(home), JSON.stringify({ pid: 424242, start: '1', at: new Date().toISOString() }))
+        await mine.release()
+        expect(fs.existsSync(lockFile(home))).toBe(true)
+    })
+    it('8 processes at once: exactly one holder, with and without a dead lock before', async () => {
+        const home = await makeHome()
+        const child = path.join(home, 'child.mjs')
+        const mod = new URL('./updateLock.mjs', import.meta.url).href
+        await fsp.writeFile(child, `import { takeUpdateLock } from '${mod}'\nconst r = await takeUpdateLock({ home: process.argv[2] })\nprocess.stdout.write(r.ok ? 'OK' : 'NO')\nif (r.ok) await new Promise((res) => setTimeout(res, 400))\n`)
+        const { execFile } = await import('node:child_process')
+        const runAll = () => Promise.all(Array.from({ length: 8 }, () => new Promise((resolve) => execFile(process.execPath, [child, home], (e, out) => resolve(out)))))
+        for (const dead of [false, true]) {
+            await fsp.rm(lockFile(home), { force: true })
+            if (dead) await fsp.writeFile(lockFile(home), JSON.stringify({ pid: 2 ** 22 + 99, start: '1', at: new Date().toISOString() }))
+            const outs = await runAll()
+            expect(outs.filter((o) => o === 'OK').length).toBe(1)
+        }
     })
     it('a failed update still frees the lock (cmdUpdate holds it in try/finally)', () => {
         const source = fs.readFileSync(new URL('./cli.mjs', import.meta.url), 'utf8')
@@ -295,6 +348,10 @@ describe('(b) di update --from <file> warns when automatic updates would undo it
     })
     it('a release file on the stable channel says nothing about the hub', async () => {
         expect(await fileUpdateWarning({ fileVersion: '0.4.4', autoOn: true, channel: 'stable', hubReader: hub('bdf2b70d11') })).toBeNull()
+    })
+    it('the warning says the timer replaces this install only when the hub is newer', async () => {
+        const text = await fileUpdateWarning({ fileVersion: NEW, autoOn: true, channel: 'dev', hubReader: hub('bdf2b70d1111') })
+        expect(text).toContain('only when the hub\'s commit is newer')
     })
     it('is wired into `di update --from`, before staging', () => {
         const source = fs.readFileSync(new URL('./cli.mjs', import.meta.url), 'utf8')

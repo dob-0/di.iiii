@@ -62,20 +62,21 @@ export const runningCommitOf = (home) => {
 /**
  * `commitOrder` with an answer kept per (installed, target) pair: a held tick would otherwise ask
  * GitHub every 5 minutes (60 unauthenticated calls per hour per IP, shared). A pair of commits has
- * one order for ever, so only a real answer is kept; 'unknown' is asked again.
+ * one order for ever, so a real answer is kept for good. 'unknown' (an unpushed local commit gets a
+ * compare 404 every time) is kept for an hour, then asked again.
  */
-export const cachedOrder = ({ read, write, inner = commitOrder, max = 20 }) => async ({ installed, target }) => {
+export const cachedOrder = ({ read, write, inner = commitOrder, max = 20, now = () => Date.now(), unknownMs = 60 * 60 * 1000 }) => async ({ installed, target }) => {
     if (installed === target) return 'same'
     const key = `${installed}...${target}`
     const cache = (await read()) || {}
-    if (cache[key]) return cache[key]
+    const hit = cache[key]
+    if (hit && !String(hit).startsWith('unknown@')) return hit
+    if (hit && now() - Number(String(hit).slice(8)) < unknownMs) return 'unknown'
     const where = await inner({ installed, target })
-    if (where !== 'unknown') {
-        const next = {}
-        for (const k of Object.keys(cache).slice(-(max - 1))) next[k] = cache[k]
-        next[key] = where
-        await write(next)
-    }
+    const next = {}
+    for (const k of Object.keys(cache).filter((k) => k !== key).slice(-(max - 1))) next[k] = cache[k]
+    next[key] = where === 'unknown' ? `unknown@${now()}` : where
+    await write(next)
     return where
 }
 
@@ -122,5 +123,5 @@ export const fileUpdateWarning = async ({ fileVersion, autoOn, channel, hubReade
     }
     if (channel !== 'dev' && !mine) return null // a release file on stable: the hub commit is not what the updater follows
     if (mine && hub.startsWith(mine)) return null
-    return `!! automatic updates are ON and the hub serves ${hub.slice(0, 8)}, not ${mine || fileVersion}: the next tick (within 5 minutes) may replace this install with the hub's build (it holds only when the hub's commit is older than this file's). Run first: di autoupdate off (turn it on again when the hub serves this commit)`
+    return `!! automatic updates are ON and the hub serves ${hub.slice(0, 8)}, not ${mine || fileVersion}: the next tick (within 5 minutes) may replace this install with the hub's build (it replaces this install only when the hub's commit is newer than this file's). Run first: di autoupdate off (turn it on again when the hub serves this commit)`
 }

@@ -1026,9 +1026,9 @@ const cmdUpdate = async (args) => {
     if (!requireInstalled(home)) return
     const lock = await takeUpdateLock({ home })
     if (!lock.ok) {
-        const text = `another install is running (pid ${lock.holder?.pid ?? '?'} since ${lock.holder?.at ?? '?'})`
+        const text = `another install is running (pid ${lock.holder?.pid ?? '?'} since ${lock.holder?.at ?? '?'}; lock file ${lock.file})`
         if (args.flags.auto) say(`held: ${text} — trying again next tick`)
-        else { fail(`${text} — try again in a minute`); process.exitCode = 1 }
+        else { fail(`${text} — try again in a minute; if no install is running, remove that file`); process.exitCode = 1 }
         return
     }
     try { await cmdUpdateLocked(args, home) } finally { await lock.release() }
