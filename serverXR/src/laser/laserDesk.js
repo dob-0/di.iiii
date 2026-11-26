@@ -25,7 +25,7 @@ const path = require('path')
 const { LASER_SHAPES, shapeListOf, parseLaserColour } = require('../../../shared/laserShapes.cjs')
 const { flattenLaserPaths, FRAME_MAX_POINTS } = require('../../../shared/laserFrame.cjs')
 // A look drawn at a moment lives in shared/ (2026-10-29): the page's tiles play the looks with the same code.
-const { CUBE_DEFAULTS, normaliseCorners, beatsAt, lookPointsAt } = require('../../../shared/laserLook.cjs')
+const { CUBE_DEFAULTS, normaliseCorners, beatsAt, lookPointsAt, LFO_WAVES, LFO_FIELDS, LFO_DEFAULT, LFO_BEATS_MIN, LFO_BEATS_MAX } = require('../../../shared/laserLook.cjs')
 
 const TICK_MS = 50 // as the show player: well inside the engine's signal-loss stop (FRAME_TIMEOUT_MS 200)
 const OUT = 'desk' // the desk's Laser Out name in the engine (one sender per cube)
@@ -82,6 +82,18 @@ const LOOK_DEFAULTS = Object.freeze({
     wobble: 0, // 0…1: a ripple runs along every line, once round every wobbleBeats
     wobbleBeats: 1,
     strobe: 0, // flashes per beat, 0 (off) to 2: the picture is on for the first half of each
+    // From the owner's laser.html (2026-11-06 evening), shared/laserLook.cjs SPLIT_REACH:
+    speed: 1, // 0.25…4: how fast the shape moves by itself against the desk's beat
+    split: 0, // 0…1: the picture again in colour2, a little apart, as a laser's misaligned colours (red + green = yellow)
+    colour2: '#14ff28', // the split beam's colour
+    splitFar: 0, // 0…1: how far the split beam is from the first, near (0) to far (1) (shared/laserLook.cjs SPLIT_FAR)
+    flicker: 0, // 0…1: each beam's brightness dips at random every frame, by up to half
+    // Layers (2026-11-07, the owner: "we are adding + and opening same pattern copy and alll the paraamamtres"): more
+    // patterns, each with every setting of its own, drawn in the same signal (shared/laserLook.cjs LAYERS_PASS_MOST).
+    layers: [],
+    // LFO (2026-11-07, the owner: "add lfo paramatre for laser desk"): per slider, { on, wave, beats, depth }, the slider
+    // moving by itself on the desk's beat (shared/laserLook.cjs LFO_FIELDS).
+    lfo: {},
     cubes: 'all' // 'all' or the cube ids this look draws on; the others are held dark
 })
 
@@ -89,9 +101,9 @@ const shapeOf = (v) => {
     const names = shapeListOf(v).filter((s) => LASER_SHAPES.includes(s))
     return names.length ? names.join(',') : LOOK_DEFAULTS.shape
 }
-const colourOf = (v) => {
+const colourOf = (v, fallback = LOOK_DEFAULTS.colour) => {
     const text = String(v ?? '').trim()
-    if (!/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(text)) return LOOK_DEFAULTS.colour
+    if (!/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(text)) return fallback
     const rgb = parseLaserColour(text)
     return '#' + rgb.map((c) => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
 }
@@ -126,6 +138,31 @@ const nextName = (name, taken) => {
 }
 
 /** Any object as a look: unknown fields dropped, every known one clamped. `base` fills what `raw` leaves out. */
+// A look's layers: each a look of its own, every setting in range, without a name, an id, cubes or layers of its own.
+const MAX_LAYERS = 3
+const LAYER_SKIP = ['id', 'name', 'cubes', 'layers']
+const layersOf = (list) => (Array.isArray(list) ? list : []).filter((l) => l && typeof l === 'object').slice(0, MAX_LAYERS).map((l) => {
+    const look = normaliseLook({ ...l, layers: [] })
+    for (const k of LAYER_SKIP) delete look[k]
+    return look
+})
+// A look's LFOs: one per slider that may have one, every setting in range. One switched off keeps its settings, so
+// switching it back on brings back the wave it had.
+const lfoOf = (raw) => {
+    const out = {}
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out
+    for (const key of Object.keys(LFO_FIELDS)) {
+        const one = raw[key]
+        if (!one || typeof one !== 'object') continue
+        out[key] = {
+            on: one.on === undefined ? true : bool(one.on),
+            wave: LFO_WAVES.includes(one.wave) ? one.wave : LFO_DEFAULT.wave,
+            beats: clamp(num(one.beats, LFO_DEFAULT.beats), LFO_BEATS_MIN, LFO_BEATS_MAX),
+            depth: clamp(num(one.depth, LFO_DEFAULT.depth), 0, 1)
+        }
+    }
+    return out
+}
 const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
     const r = raw && typeof raw === 'object' ? raw : {}
     const pick = (k) => (r[k] !== undefined ? r[k] : base[k])
@@ -156,6 +193,13 @@ const normaliseLook = (raw = {}, base = LOOK_DEFAULTS) => {
         wobble: clamp(num(pick('wobble'), 0), 0, 1),
         wobbleBeats: clamp(num(pick('wobbleBeats'), 1), 0.25, 64),
         strobe: clamp(num(pick('strobe'), 0), 0, 2),
+        speed: clamp(num(pick('speed'), 1), 0.25, 4),
+        split: clamp(num(pick('split'), 0), 0, 1),
+        colour2: colourOf(pick('colour2'), LOOK_DEFAULTS.colour2),
+        splitFar: clamp(num(pick('splitFar'), 0), 0, 1),
+        flicker: clamp(num(pick('flicker'), 0), 0, 1),
+        layers: layersOf(pick('layers')),
+        lfo: lfoOf(pick('lfo')),
         cubes: Array.isArray(cubes) ? [...new Set(cubes.map(idOf).filter(Boolean))].slice(0, 64) : 'all'
     }
 }
@@ -253,7 +297,29 @@ const SEED_LOOKS = [
     { id: 'bubble', name: 'Bubble', shape: 'bubble', colour: '#ff4000', size: 0.5, points: 500 },
     { id: 'crack', name: 'Crack', shape: 'crack', colour: '#ffa000', size: 0.5, points: 500 },
     { id: 'drip', name: 'Drip', shape: 'drip', colour: '#ff2010', size: 0.5, points: 600 },
-    { id: 'lava-show', name: 'Lava', shape: 'magma,lava,bubble,drip,crack,eruption', cycle: 16, colour: '#ff4000', size: 0.5, points: 600 }
+    { id: 'lava-show', name: 'Lava', shape: 'magma,lava,bubble,drip,crack,eruption', cycle: 16, colour: '#ff4000', size: 0.5, points: 600 },
+    // The same evening, "okay doing lava laser animation": the lava story in one line over four bars (a drop falls into
+    // the pool, the pool swells into a volcano, it erupts, it melts back).
+    { id: 'volcano', name: 'Volcano', shape: 'volcano', colour: '#ff4000', size: 0.5, points: 600 },
+    // Then the owner's laser.html: "organic, tangled, wandering strands", in its own colours, red split with green (its
+    // brief: "red + green beams slightly misaligned (they turn yellow where they overlap)"), and its flicker.
+    { id: 'strands', name: 'Strands', shape: 'strands', colour: '#ff190a', colour2: '#14ff28', split: 0.25, flicker: 0.4, size: 0.5, points: 600 },
+    // 2026-11-07, from the owner's references of solid-light pieces ("more line based stuff"): thin organic lines that
+    // flow, draw themselves, sweep and coil; and "Solid", the four in turn, 16 beats each.
+    { id: 'contour', name: 'Contour', shape: 'contour', colour: '#4060ff', size: 0.5, points: 600 },
+    { id: 'draw', name: 'Draw', shape: 'draw', colour: '#ffffff', size: 0.5, points: 600 },
+    { id: 'blade', name: 'Blade', shape: 'blade', colour: '#ffffff', copies: 3, size: 0.5, points: 600 },
+    { id: 'coil', name: 'Coil', shape: 'coil', colour: '#ffffff', size: 0.5, points: 600 },
+    { id: 'solid', name: 'Solid', shape: 'contour,draw,blade,coil', cycle: 16, colour: '#ffffff', size: 0.5, points: 600 },
+    // "flat 3 lines go down loop".
+    { id: 'down', name: 'Down', shape: 'down', colour: '#ffffff', size: 0.5, points: 600 },
+    // "spiral animation and inside of it … red dot scaning one point", then "spirall need to be red, dot white".
+    { id: 'vortex', name: 'Vortex', shape: 'vortex', colour: '#ff0020', colour2: '#ffffff', size: 0.5, points: 600 },
+    // 2026-11-07, the owner's TouchDesigner Phyllotaxis ("can we have the sameeee"): its dots, and its lines.
+    { id: 'phyllotaxis', name: 'Phyllotaxis', shape: 'phyllotaxis', colour: '#0090ff', size: 0.8, points: 600 },
+    { id: 'phyllolines', name: 'Phyllotaxis lines', shape: 'phyllolines', colour: '#0090ff', size: 0.6, points: 600 },
+    // "add pattern cross grid": down, crossed.
+    { id: 'crossgrid', name: 'Cross grid', shape: 'crossgrid', colour: '#ffffff', size: 0.5, points: 600 }
 ].map((look) => normaliseLook(look))
 // The seed looks a bank saved before `seeded` was kept (2026-10-29 evening) had been offered: the first fourteen.
 const FIRST_SEEDS = ['ring', 'star', 'fan', 'wave', 'triangle', 'square', 'spiral', 'scan', 'galaxy', 'sunflower', 'noisy', 'grid', 'td-cycle', 'pairs']
@@ -291,6 +357,11 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const clock = { bpm: 120, zero: now(), taps: [] }
     let live = null // the look on the cubes (a copy: editing it never touches the bank until Store)
     let liveId = null // the bank's look it came from
+    // Per laser (2026-11-07, the owner: "send differnet signals to each laser"): a look sent to some lasers only (go's
+    // `to`) plays on them over the look on all, as a lighting desk's selected fixtures take a palette; sending to all
+    // clears them. cubeId → { look: a copy, as `live`; id: the bank's look it came from, or null once that is deleted }.
+    const liveBy = new Map()
+    const copyOf = (look) => ({ ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' })
     let blackout = false
     let timer = null
     const sent = new Map() // cubeId → { key, end, held, points, at }
@@ -356,7 +427,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
 
     let lastEngine = null
     const tick = () => {
-        if (!live && !mapTest.size) return
+        if (!live && !liveBy.size && !mapTest.size) return
         const engine = getEngine()
         // A config reload (Use these) builds a new engine with no frames: everything is sent again, not kept alive.
         if (engine !== lastEngine) { for (const s of sent.values()) s.key = null; lastEngine = engine }
@@ -373,16 +444,19 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         const cubes = orderedCubes(engine.state().cubes).filter((c) => cubeCfg(c.id).on)
         const t = now()
         cubes.forEach((cube, index) => {
-            // No look live: only a cube being mapped is the desk's; the others stay with whoever has them.
-            if (!live && !mapTest.has(cube.id)) return
+            // A laser's own look first, else the look on all. No look for it: a cube the desk drew on goes dark (its look
+            // moved off it: the last picture must not stay frozen there); the others stay with whoever has them.
+            const own = liveBy.get(cube.id)?.look ?? null
+            const look = own || live
+            if (!look && !mapTest.has(cube.id) && !sent.has(cube.id)) return
             const was = sent.get(cube.id) || { key: null, end: null, held: null, points: 0, at: 0 }
             const cfg = cubeCfg(cube.id)
-            const drawn = live && (live.cubes === 'all' || live.cubes.includes(cube.id))
+            const drawn = Boolean(own) || Boolean(live && (live.cubes === 'all' || live.cubes.includes(cube.id)))
             // Mapping: the alignment picture over the cube's whole field (its size and offset left out), through its map.
             const raw = blackout ? [BLANK]
                 : mapTest.has(cube.id) ? lookPointsAt(testLook, { t, clock, index: 0, cube: { ...cfg, size: 1, x: 0, y: 0 }, master: show.master })
                     : !drawn ? [BLANK]
-                        : lookPointsAt(live, { t, clock, index, cube: cfg, master: show.master, audio: audioAt(t) })
+                        : lookPointsAt(look, { t, clock, index, cube: cfg, master: show.master, audio: audioAt(t) })
             let points = [BLANK]
             let end = was.end
             if (raw.some(isLit)) {
@@ -406,9 +480,10 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     // Every cube the desk drew on goes dark, and the desk stops sending: its hold on them runs out (CLAIM_TTL_MS),
     // so a Nodes Laser Out or the show player can take them.
     const release = () => {
-        const was = live !== null || mapTest.size > 0
+        const was = live !== null || liveBy.size > 0 || mapTest.size > 0
         live = null
         liveId = null
+        liveBy.clear()
         mapTest.clear()
         if (timer) { stopEvery(timer); timer = null }
         // Only cubes the desk drew on are touched: a desk that never drew must not build an engine to say so.
@@ -421,15 +496,71 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return { ok: true }
     }
 
-    const go = (id) => {
+    const knownCubes = () => getEngine().state().cubes.map((c) => c.id)
+    const resend = (c) => { const s = sent.get(c); if (s) s.key = null }
+    // The look on these lasers only; the other lasers keep what they play.
+    const playOn = (look, cubes) => { for (const c of cubes) { liveBy.set(c, { look: copyOf(look), id: look.id }); resend(c) } }
+    // The look on every laser.
+    const playOnAll = (look) => {
+        live = copyOf(look)
+        liveId = look.id
+        liveBy.clear()
+        for (const s of sent.values()) s.key = null
+    }
+
+    /**
+     * A look onto the cubes: onto the lasers in `to` (Send to), else onto the lasers its Cubes pick, else onto every one.
+     * 2026-11-07, the owner, showing the editor's Cubes: "choose each liser and then going anorher pattern choosing laser":
+     * a look's Cubes are where it plays. The lasers it does not pick keep their own look (before, they went dark).
+     */
+    const go = (id, to) => {
         const look = show.looks.find((l) => l.id === idOf(id))
         if (!look) return { ok: false, status: 404, error: `no look "${id}"` }
-        live = { ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' }
-        liveId = look.id
-        for (const s of sent.values()) s.key = null
+        const known = new Set(knownCubes())
+        if (Array.isArray(to) && to.length) {
+            const targets = [...new Set(to.map(idOf))].filter((c) => known.has(c))
+            if (!targets.length) return { ok: false, status: 400, error: 'to: none of those lasers is on this desk' }
+            playOn(look, targets)
+        } else {
+            const picked = Array.isArray(look.cubes) ? look.cubes.filter((c) => known.has(c)) : []
+            // Cubes naming no laser on this desk (an old setup): the look goes on all, drawn only where it picks, as before.
+            if (picked.length) playOn(look, picked)
+            else playOnAll(look)
+        }
         tick()
         startTicking()
-        return { ok: true, live: liveId }
+        return { ok: true, live: liveId, liveBy: liveByOut() }
+    }
+    // Each laser's own look, for the page: cubeId → { id, name }.
+    const liveByOut = () => Object.fromEntries([...liveBy].map(([c, m]) => [c, { id: m.id, name: m.look.name }]))
+    const cubeList = (cubes, all) => (cubes === 'all' ? all : cubes)
+    // A look of the bank changed (an edit, an undo): every laser playing it follows. `before` is the look as it was: when
+    // its Cubes changed while it plays, it moves onto the lasers it now picks and leaves the ones it dropped (they go back
+    // to the look on all, else dark). Picking All puts it on every laser.
+    const followLook = (look, before = null) => {
+        const onAll = Boolean(live && liveId === look.id)
+        const onSome = [...liveBy.values()].some((m) => m.id === look.id)
+        if ((onAll || onSome) && before && JSON.stringify(before.cubes) !== JSON.stringify(look.cubes)) {
+            if (look.cubes === 'all') { playOnAll(look); return true }
+            const all = knownCubes()
+            const was = new Set(cubeList(before.cubes, all))
+            const now = new Set(look.cubes)
+            for (const [c, m] of [...liveBy]) if (m.id === look.id && !now.has(c)) { liveBy.delete(c); resend(c) }
+            const added = look.cubes.filter((c) => !was.has(c) && all.includes(c))
+            if (onAll) {
+                // The look on all draws only where its Cubes pick: a laser just picked drops its own look to show it.
+                live = copyOf(look)
+                for (const c of added) if (liveBy.delete(c)) resend(c)
+                for (const c of all) resend(c)
+            }
+            if (onSome) playOn(look, added)
+            for (const [c, m] of liveBy) if (m.id === look.id) liveBy.set(c, { look: copyOf(look), id: look.id })
+            return true
+        }
+        let moved = false
+        if (onAll) { live = copyOf(look); moved = true }
+        for (const [c, m] of liveBy) if (m.id === look.id) { liveBy.set(c, { look: copyOf(look), id: look.id }); moved = true }
+        return moved
     }
 
     // ---- the bank as the page edits it (2026-10-29, the owner, after a Preview-and-Send try: "like in resolume … keep
@@ -441,14 +572,13 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     const editLook = (id, fields = {}) => {
         const i = show.looks.findIndex((l) => l.id === idOf(id))
         if (i < 0) return { ok: false, status: 404, error: `no look "${id}"` }
+        // `step: true` (the editor's Reset) is a step of its own, never joined to the slider's edits just before it.
+        if (fields.step === true) lastStep = null
         remember('edit', show.looks[i].id)
-        show.looks[i] = normaliseLook({ ...fields, id: show.looks[i].id }, show.looks[i])
+        const before = show.looks[i]
+        show.looks[i] = normaliseLook({ ...fields, id: before.id }, before)
         dirty = true
-        if (live && liveId === show.looks[i].id) {
-            const look = show.looks[i]
-            live = { ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' }
-            tick()
-        }
+        if (followLook(show.looks[i], before)) tick()
         return { ok: true, look: show.looks[i] }
     }
 
@@ -487,16 +617,15 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
     }
     // The bank as it was; the look on the laser shows its picture there (or the cubes play on when it is gone).
     const restore = (snap) => {
+        const was = new Map(show.looks.map((l) => [l.id, l]))
         show.looks = clone(snap.looks)
         const has = (id) => id !== null && show.looks.some((l) => l.id === id)
         if (!has(liveId)) liveId = has(snap.liveId) ? snap.liveId : null
         dirty = JSON.stringify(show.looks) !== JSON.stringify(savedLooks)
         lastStep = null
-        const look = show.looks.find((l) => l.id === liveId)
-        if (live && look) {
-            live = { ...look, cubes: Array.isArray(look.cubes) ? [...look.cubes] : 'all' }
-            tick()
-        }
+        let moved = false
+        for (const look of show.looks) if (followLook(look, was.get(look.id) ?? null)) moved = true
+        if (moved) tick()
     }
     const undo = () => {
         if (!past.length) return { ok: true, undone: false }
@@ -567,6 +696,10 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         show.looks = [...kept, ...made]
         const moved = created.find((c) => c.from === liveId)
         if (moved) liveId = moved.id
+        for (const m of liveBy.values()) {
+            const to = created.find((c) => c.from === m.id)
+            if (to) m.id = to.id
+        }
         commit()
         return saveNow() ? { ok: true, created } : { ok: false, status: 500, error: 'desk.json could not be written (see the server log)', created }
     }
@@ -625,6 +758,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         remember('delete')
         show.looks.splice(i, 1)
         if (liveId === idOf(id)) liveId = null
+        for (const m of liveBy.values()) if (m.id === idOf(id)) m.id = null
         dirty = true
         return { ok: true }
     }
@@ -731,7 +865,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             mapTest.add(key)
             startTicking()
         } else if (mapTest.delete(key)) {
-            const drawn = live && (live.cubes === 'all' || live.cubes.includes(key))
+            const drawn = liveBy.has(key) || (live && (live.cubes === 'all' || live.cubes.includes(key)))
             if (!drawn && sent.has(key)) {
                 if (!sent.get(key).held) getEngine().setFrame(key, [BLANK], OUT)
                 sent.delete(key)
@@ -767,6 +901,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
         return {
             live,
             liveId,
+            liveBy: liveByOut(),
             blackout,
             master: show.master,
             palette: show.palette,
@@ -775,6 +910,8 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             looks: show.looks,
             shapes: LASER_SHAPES,
             defaults: LOOK_DEFAULTS,
+            // The seed looks, for the editor's Reset (a look back to how its scene started).
+            seeds: SEED_LOOKS,
             loadMessage,
             unsaved: dirty,
             changed: changedIds(),
@@ -785,7 +922,7 @@ const createLaserDesk = ({ dataDir, getEngine, now = Date.now, setInterval: ever
             hearing: now() - audio.at <= AUDIO_STALE_MS,
             cubes: orderedCubes(engine.cubes).map((c) => {
                 const s = sent.get(c.id)
-                return { id: c.id, ...cubeCfg(c.id), driving: Boolean((live || mapTest.has(c.id)) && s && !s.held), held: s?.held ?? null, points: s?.points ?? 0 }
+                return { id: c.id, ...cubeCfg(c.id), driving: Boolean((live || liveBy.has(c.id) || mapTest.has(c.id)) && s && !s.held), held: s?.held ?? null, points: s?.points ?? 0 }
             })
         }
     }
