@@ -1626,6 +1626,7 @@ function paintSelection() {
   $$('#patchGrid .gc.used').forEach((c) => c.classList.toggle('sel', sel.has(c.dataset.id)));
   paintSelList();
   syncLimitPanel();
+  if (window.deskAimPanel) window.deskAimPanel.refresh();
   // Skipped only while a marquee is being dragged — see deferAttr. The editor is rebuilt
   // once on release, so the selection it describes is always the finished one.
   if (!deferAttr) buildAttr();
@@ -8427,6 +8428,7 @@ function fixtureMenu(f) {
   const lim = (first && first.limits) || {};
   return [
     { head: true, label: menuTarget() },
+    { label: 'Aim this light', action: () => window.deskAimPanel.focus(f.id) },
     { label: 'Identify' + sfx, action: () => identifyIds(ids) },
     { sep: true },
     { label: 'Select line (universe ' + (f.universe + 1) + ')', action: () => { sel.clear(); S.fixtures.filter((x) => x.universe === f.universe).forEach((x) => sel.add(x.id)); paintSelection(); } },
@@ -8482,3 +8484,6 @@ window.deskMenu.register('.gc[data-id]', (el) => {
     { label: 'Unpatch' + (n > 1 ? ` (${n})` : '') + '…', danger: true, action: unpatchSelection },
   ];
 });
+
+// Setup's Aim panel (aimpanel.js) works on the desk's own state and routes.
+window.deskAimPanel.init({ S: () => S, sel: () => sel, fxById, post, say, paintSelection, pullState });

@@ -981,6 +981,23 @@ check('right-click on the all-selected default targets one light, and bulk trim 
   assert.ok(/label: 'Unpatch'[^\n]*action: unpatchSelection/.test(js), 'unpatch keeps its own ask bar');
 });
 
+check('the Setup Aim panel sits beside the map and writes only through api/fixtures/limits', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../ui/aimpanel.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, '../ui/style.css'), 'utf8');
+  assert.ok(/id="aimPane"/.test(html) && /id="apPanVal"/.test(html) && /data-axis="tilt" data-dir="-1"/.test(html) && /data-step="5"/.test(html) && /id="apZero"/.test(html), 'panel markup');
+  assert.ok(html.indexOf('id="aimPane"') > html.indexOf('class="stage-inner"') && html.indexOf('id="aimPane"') < html.indexOf('data-split="setup-sel"'), 'right beside the map');
+  assert.ok(html.indexOf('aimpanel.js') < html.indexOf('src="app.js"'), 'script order');
+  assert.ok(js.includes("h.post('api/fixtures/limits', { ids: j.ids, limits: j.limits })") && js.includes("fetch('api/state')"), 'writes via limits, reads back from state');
+  assert.ok(!/api\/(fixture'|fixtures\/(?!limits|identify))/.test(js), 'no other route');
+  for (const k2 of ["'ArrowLeft'", "'ArrowUp'", "'Tab'"]) assert.ok(js.includes(k2), k2);
+  assert.ok(js.includes('S.fixtures.length') && js.includes('the default: nothing picked'), 'whole-rig default is never a target');
+  assert.ok(js.includes("localStorage.setItem('aimPatchHidden'"), 'collapse remembered');
+  assert.ok(app.includes("label: 'Aim this light'") && app.includes('deskAimPanel.init('), 'hooked in app.js');
+  assert.ok(/\.patch-min > \.top-split \{ display: none/.test(css), 'collapse css');
+});
+
 check('aim trims set per light reach the wire for that fixture only', async () => {
   const a = await patch('pt', { universe: 76, address: 1 });
   const b = await patch('pt', { universe: 76, address: 11 });
