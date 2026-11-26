@@ -2479,6 +2479,7 @@ function syncLimitPanel() {
     $('#panMin').value = l.panMin; $('#panMax').value = l.panMax;
     $('#tiltMin').value = l.tiltMin; $('#tiltMax').value = l.tiltMax;
     $('#invPan').checked = !!l.invertPan; $('#invTilt').checked = !!l.invertTilt; $('#swapPT').checked = !!l.swapPT;
+    $('#panTrim').value = l.panTrim | 0; $('#tiltTrim').value = l.tiltTrim | 0;
   }
   drawMoveBoxes();
 }
@@ -2543,6 +2544,11 @@ function wireLimits() {
   }));
   [['invPan', 'invertPan'], ['invTilt', 'invertTilt'], ['swapPT', 'swapPT']].forEach(([el, key]) =>
     $('#' + el).addEventListener('change', () => sendLimits({ [key]: $('#' + el).checked })));
+  // Home trim: whole DMX steps, -255..255 (the server clamps the same way).
+  ['panTrim', 'tiltTrim'].forEach((k) => $('#' + k).addEventListener('change', () => {
+    const v = Math.max(-255, Math.min(255, Math.round(+$('#' + k).value || 0)));
+    $('#' + k).value = v; sendLimits({ [k]: v });
+  }));
 }
 
 /* =============== scenes =============== */

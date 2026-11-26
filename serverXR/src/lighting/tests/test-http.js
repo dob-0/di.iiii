@@ -931,6 +931,21 @@ check('dimmer limits squeeze the output and apply across a selection', async () 
   assert.strictEqual(await wire(16, 10), 128, 'both of them');
 });
 
+check('pan/tilt trim is stored clamped to -255..255 and reaches the wire', async () => {
+  const f = await patch('pt', { universe: 74, address: 1 });
+  await POST('/api/fixture', { id: f.id, values: { pan: 128, tilt: 128 } });
+  await POST('/api/fixtures/limits', { ids: [f.id], limits: { panTrim: 64.4, tiltTrim: -999 } });
+  const { body } = await GET('/api/state');
+  const got = body.fixtures.find((x) => x.id === f.id).limits;
+  assert.strictEqual(got.panTrim, 64, 'whole steps');
+  assert.strictEqual(got.tiltTrim, -255, 'clamped');
+  await POST('/api/fixtures/limits', { ids: [f.id], limits: { panTrim: 'x' } });
+  assert.strictEqual((await GET('/api/state')).body.fixtures.find((x) => x.id === f.id).limits.panTrim, 64, 'junk is ignored');
+  await settle();
+  assert.strictEqual(await wire(74, 1), 192, 'pan 128 + 64');
+  assert.strictEqual(await wire(74, 2), 0, 'tilt 128 - 255 stops at 0');
+});
+
 check('pan and tilt ignore blackout', async () => {
   const f = await patch('pt', { universe: 17, address: 1 });
   await POST('/api/fixture', { id: f.id, values: { pan: 200, tilt: 60 } });

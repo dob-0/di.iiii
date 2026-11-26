@@ -1190,6 +1190,9 @@ function createDesk(opts = {}) {
     for (const k of ['invertPan', 'invertTilt', 'swapPT']) {
       if (l[k] != null) out[k] = !!l[k];
     }
+    for (const k of ['panTrim', 'tiltTrim']) {
+      if (l[k] != null && Number.isFinite(+l[k])) out[k] = Math.max(-255, Math.min(255, Math.round(+l[k])));
+    }
     return out;
   }
 

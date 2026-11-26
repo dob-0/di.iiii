@@ -296,6 +296,46 @@ check('pan/tilt limits, invert and swap', () => {
   assert.strictEqual(e.render().get(0)[1], 255);
 });
 
+check('pan/tilt trim shifts the head by whole DMX steps', () => {
+  const f = makeFixture({ profile: 'pt', address: 1, values: { pan: 128, tilt: 100 } });
+  const e = new Engine(baseState([f]));
+  f.limits.panTrim = 64; f.limits.tiltTrim = -40;
+  assert.deepStrictEqual([...e.render().get(0).slice(0, 2)], [192, 60], 'pan +64, tilt -40');
+});
+
+check('pan/tilt trim clamps at the limits, never wraps', () => {
+  const f = makeFixture({ profile: 'pt', address: 1, values: { pan: 250, tilt: 10 } });
+  const e = new Engine(baseState([f]));
+  f.limits.panTrim = 64; f.limits.tiltTrim = -64;
+  assert.deepStrictEqual([...e.render().get(0).slice(0, 2)], [255, 0], 'past the end stays at the end');
+  f.limits.panMax = 200; f.limits.tiltMin = 20;
+  assert.deepStrictEqual([...e.render().get(0).slice(0, 2)], [200, 20], 'the limits stay the outer bounds');
+});
+
+check('pan/tilt trim applies after invert', () => {
+  const f = makeFixture({ profile: 'pt', address: 1, values: { pan: 100, tilt: 0 } });
+  const e = new Engine(baseState([f]));
+  f.limits.invertPan = true; f.limits.panTrim = 64;
+  assert.strictEqual(e.render().get(0)[0], 219, '255-100 = 155, then +64');
+});
+
+check('pan/tilt trim belongs to the output channel when swapped', () => {
+  const f = makeFixture({ profile: 'pt', address: 1, values: { pan: 10, tilt: 100 } });
+  const e = new Engine(baseState([f]));
+  f.limits.swapPT = true; f.limits.panTrim = 64;
+  assert.deepStrictEqual([...e.render().get(0).slice(0, 2)], [164, 10], 'pan channel = tilt value 100 + pan trim; tilt channel untrimmed');
+});
+
+check('an old show without trim keys renders exactly as before', () => {
+  const old = { panMin: 0, panMax: 255, tiltMin: 0, tiltMax: 255, invertPan: false, invertTilt: false, swapPT: false };
+  const f = makeFixture({ profile: 'pt', address: 1, values: { pan: 77, tilt: 211 }, limits: old });
+  const g = makeFixture({ profile: 'pt', address: 1, values: { pan: 77, tilt: 211 } });
+  delete g.limits.panTrim; delete g.limits.tiltTrim;     // a fixture object that never met the new keys
+  assert.strictEqual(f.limits.panTrim, 0, 'a loaded fixture gets trim 0');
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [77, 211]);
+  assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 2)], [77, 211]);
+});
+
 check('pan/tilt ignore master and blackout', () => {
   const f = makeFixture({ profile: 'ptrgb', address: 1, values: { pan: 200, tilt: 100, r: 255, g: 255, b: 255 } });
   const s = baseState([f]);

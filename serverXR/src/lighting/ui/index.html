@@ -392,6 +392,11 @@
             <label><input type="checkbox" id="invTilt"> Tilt</label>
             <label><input type="checkbox" id="swapPT"> Swap</label>
           </div>
+          <div class="invert trim" title="Home trim in DMX steps (-255..255), added after invert and limits, kept inside them">
+            <span>Trim</span>
+            <label>Pan <input type="number" id="panTrim" min="-255" max="255" step="1" value="0" aria-label="Pan trim"></label>
+            <label>Tilt <input type="number" id="tiltTrim" min="-255" max="255" step="1" value="0" aria-label="Tilt trim"></label>
+          </div>
         </div>
       </div>
     </div>
