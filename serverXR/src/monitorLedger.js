@@ -30,7 +30,7 @@ const defaults = () => ({
 })
 
 const run = (file, args, opts = {}) => new Promise((resolve) => {
-  execFile(file, args, { timeout: TOOL_TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024, env: { ...process.env, ...(opts.env || {}) }, shell: false }, (error, stdout, stderr) => {
+  execFile(file, args, { timeout: TOOL_TIMEOUT_MS, maxBuffer: 8 * 1024 * 1024, windowsHide: true, env: { ...process.env, ...(opts.env || {}) }, shell: false }, (error, stdout, stderr) => {
     resolve({ ok: !error, code: error?.code ?? 0, stdout: String(stdout || ''), stderr: String(stderr || '') })
   })
 })

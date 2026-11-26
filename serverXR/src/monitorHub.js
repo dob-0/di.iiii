@@ -274,7 +274,7 @@ function createProvenStore({ file = null, now = () => Date.now() } = {}) {
 
 function runGit(args, { cwd, timeout = 3000 } = {}) {
   return new Promise((resolve, reject) => {
-    execFile('git', args, { cwd, timeout, maxBuffer: 1024 * 1024 }, (error, stdout) => (error ? reject(error) : resolve(String(stdout))))
+    execFile('git', args, { cwd, timeout, maxBuffer: 1024 * 1024, windowsHide: true }, (error, stdout) => (error ? reject(error) : resolve(String(stdout))))
   })
 }
 
