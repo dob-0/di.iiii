@@ -119,7 +119,7 @@ describe('drawn APC40: the full patch, strobe and the knob pages (round 2)', () 
 describe('round 2: safe look, contrast, callouts', () => {
   const draw = require('./ui/apc40draw.js')
   const fs = require('node:fs')
-  const src = fs.readFileSync(new URL('./ui/apc40draw.js', import.meta.url), 'utf8')
+  const src = fs.readFileSync(require.resolve('./ui/apc40draw.js'), 'utf8')
   const lum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((x) => (x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4)); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2] }
   it('Safe dims the pads and kills every glow (pinned in the CSS)', () => {
     expect(src).toContain('.apc40.safe .apcp .pad')
