@@ -105,7 +105,7 @@ mirror. The lead is chosen per look by the least growth of step moves (per-step,
 `tilt`, `tilt_fine` of the pair bars change (plus the cell channels unless `--keep-cells`), proved by walking every value; the
 tool re-audits its output (cells counted uniform / reversed / same / other). The walk proof allows pan/tilt of the bars and
 the cell channels of the PARTNER bar only (never the lead's), and only when cells are mirrored. **Designed two-sided looks.** A look with `twoSided: true` (call and answer: the two sides do different things on purpose) is
-written to the output exactly as it came in, never mirrored, never counted as changed; one line names it
+written to the output exactly as it came in, never mirrored, never counted as changed (the wall check still applies: a bar into its own wall exits 1 and names the look; with `--copy-suffix` it is not copied, and the line says "not copied"); one line names it
 (`kept as designed (twoSided): <ids>`). The builder or the merge that makes a call-and-answer look sets the flag. The desk keeps
 the field only from an install that carries this change (`sanitizeLook` in `serverXR/src/lighting/looks.js` writes it only when it is exactly `true`; older desks drop it).
 Exit 1 when: wrong argument count (usage), no pair in the presets, "no looks selected", another value changed,

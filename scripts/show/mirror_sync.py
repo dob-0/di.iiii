@@ -38,7 +38,7 @@ dimmer, timing and the desk trims stay. The tool proves that by walking every va
 output (0 not mirrored, 0 into a wall; the cell counts uniform / reversed / same / other are printed), and refuses (exit 1)
 when a bar's largest step move grew by more than --max-grow degrees (default 5).
 Designed two-sided looks: a look with `twoSided: true` (call and answer: the two sides do different things on purpose) goes to
-the output exactly as it came in, never mirrored and never counted as changed; one line names it ("kept as designed (twoSided):
+the output exactly as it came in, never mirrored and never counted as changed (the wall check still applies: a bar into its own wall exits 1 and the look is named; with --copy-suffix it is not copied, and the line says "not copied"); one line names it ("kept as designed (twoSided):
 <ids>"). The builder or the merge that makes a call-and-answer look sets the flag on the look; the desk keeps the field only from
 an install that carries this change (older desks drop unknown look fields, so a look read back from one has lost the flag).
 Exit codes: 0 ok; 1 wrong argument count (usage), no pair in the presets, "no looks selected", or a failed proof (another value
@@ -146,6 +146,7 @@ if not looks:
     sys.exit('no looks selected')
 before = json.loads(json.dumps(looks))
 DESIGNED = [l['id'] for l in looks if l.get('twoSided') is True]
+WALLED = []
 
 
 def g16(v, ch):
@@ -316,7 +317,10 @@ for i, look in enumerate(looks):
         look['name'] = f"{look.get('name', '')} {suffix.strip('-')}"
     a1, j1 = audit(look), jumps(look)
     if look.get('twoSided') is True:
-        total.update({'looks': 1})  # kept as designed: not audited, not counted as changed or as a failed proof
+        # kept as designed: its mirror is not touched or checked, but the wall check still counts
+        total.update({'looks': 1, 'before into a wall': a0['wall'], 'after into a wall': a1['wall']})
+        if a1['wall']:
+            WALLED.append(look.get('name', look['id']))
         continue
     rows.append((look.get('name', look['id']), a0, a1, ch, worst(j0), worst(j1), lead, gmax))
     total.update({'looks': 1, 'changed looks': bool(ch), 'pair-steps changed': ch['changed'], 'turned': ch['turned'],
@@ -361,7 +365,7 @@ for name, a0, a1, ch, w0, w1, lead, gmax in rows:
               f"lead {lead}: changed {ch['changed']} (turned {ch['turned']}); after not mirrored {a1['same'] + a1['other']}, into a wall {a1['wall']}; "
               f"largest step move pan/tilt deg {w0} -> {w1}, one bar's move grew at most {gmax:.0f}")
 out = dict(src) if isinstance(src, dict) else {}
-out['looks'] = looks
+out['looks'] = [l for l in looks if not (suffix and l.get('twoSided') is True)]  # a copy of a kept look would be an identical duplicate
 json.dump(out, open(out_f, 'w'), indent=1)
 print(f"{total['looks']} looks, {total['changed looks']} changed: {total['pair-steps changed']} of {total['pairs']} pair-steps "
       f"changed ({total['turned']} turned to face the room); before: same {total['before same']}, other {total['before other']}, "
@@ -372,5 +376,7 @@ if CELLS:
           f"other {total['cells other']}, not as the rule says {total['cells bad']}")
 print(RULE)
 if DESIGNED:
-    print('kept as designed (twoSided): ' + ', '.join(DESIGNED))
+    print('kept as designed (twoSided): ' + ', '.join(DESIGNED) + (' (not copied)' if suffix else ''))
+for w in WALLED:
+    print(f'twoSided look {w}: a bar points into its own wall (the wall check still applies)')
 sys.exit(1 if other or total['cells bad'] or total['after not mirrored'] or total['after into a wall'] or total['moves grew'] else 0)

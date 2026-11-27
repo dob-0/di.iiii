@@ -325,6 +325,23 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
     expect(runMirror([wrong({ twoSided: 'true' })], [], CAM).out.looks[0].aim_fix_sync).toBeTruthy()
   })
 
+  it('twoSided still gets the wall check: a designed look aimed into a wall exits 1 and is named', () => {
+    const walled = { id: 'duel', name: 'Duel', twoSided: true, steps: [step([32768, 20000], [32768, 20000])] }
+    const a = runMirror([walled], [], CAM)
+    expect(a.r.status, a.r.stdout + a.r.stderr).toBe(1)
+    expect(a.r.stdout).toMatch(/twoSided look Duel: a bar points into its own wall/)
+    expect(a.out.looks[0]).toEqual(walled)
+  })
+
+  it('twoSided with --copy-suffix is not copied, and the line says so', () => {
+    const designed = { id: 'duel', name: 'Duel', twoSided: true, steps: [step([30001, 40000], [30001, 40000])] }
+    const other = { id: 'x', name: 'X', steps: [step([30001, 40000], [30001, 40000])] }
+    const a = runMirror([designed, other], ['--copy-suffix', '-m'], CAM)
+    expect(a.r.status, a.r.stdout + a.r.stderr).toBe(0)
+    expect(a.out.looks.map((l) => l.id)).toEqual(['x-m'])
+    expect(a.r.stdout).toMatch(/^kept as designed \(twoSided\): duel \(not copied\)$/m)
+  })
+
   it('a per-axis key wins over MIRROR_MODE', () => {
     // MIRROR_MODE negate everywhere, but tilt is 'same' by its own key: the tilt is copied, not negated
     const a = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'negate', MIRROR_MODE_TILT: 'same', FACE_SIGN: 1, CELL_MIRROR_LR: true })
