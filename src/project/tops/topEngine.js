@@ -257,10 +257,17 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     const programs = new Map()
     const programFor = (type) => {
         if (!programs.has(type)) {
-            const source = type === '__present' ? PRESENT : `${PREAMBLE}${TOP_OPERATORS[type].fragment}`
-            programs.set(type, link(gl, source))
+            // a shader that fails is remembered: frame() would otherwise compile the same broken source on every frame
+            try {
+                const source = type === '__present' ? PRESENT : `${PREAMBLE}${TOP_OPERATORS[type].fragment}`
+                programs.set(type, link(gl, source))
+            } catch (error) {
+                programs.set(type, { failed: String(error?.message || error) })
+            }
         }
-        return programs.get(type)
+        const compiled = programs.get(type)
+        if (compiled.failed !== undefined) throw new Error(compiled.failed)
+        return compiled
     }
     const present = programFor('__present')
 

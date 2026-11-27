@@ -1,6 +1,8 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { jobOf, lineOf } from './k2Jobs.js'
 import { faceOfConsole } from './k2Face.js'
+import { APC40_CONSOLE_ID } from './apc40.js'
+import Apc40Layout from './Apc40Layout.jsx'
 import { K2_WINDOW_NAME } from './k2Channel.js'
 import { TOUCH_MS, controlKey } from './k2Monitor.js'
 import { K2_CONSOLES, XONE_K2_CONTROLS } from './xoneK2.js'
@@ -46,9 +48,10 @@ export const windowFeatures = (screenLike = typeof window !== 'undefined' ? wind
 }
 export const BLOCKED_NOTE = 'The browser blocked the controller window. Allow pop-ups for this page, then press Device again.'
 
-export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, console: current = K2_CONSOLES[0], consoles = K2_CONSOLES, onPickConsole, windowPath = '', publisher = null, openWindow = (...args) => window.open(...args) }) {
+export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, deck = null, console: current = K2_CONSOLES[0], consoles = K2_CONSOLES, onPickConsole, windowPath = '', publisher = null, openWindow = (...args) => window.open(...args) }) {
     const [blocked, setBlocked] = useState(false)
     const face = faceOfConsole(current)
+    const isApc = current.id === APC40_CONSOLE_ID
     const openDevice = () => {
         publisher?.ensure()
         try { if (deviceWindow && !deviceWindow.closed) { deviceWindow.focus?.(); setBlocked(false); return } } catch { deviceWindow = null }
@@ -114,7 +117,7 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, con
     }
 
     return (
-        <section className="k2-panel" aria-label="Xone:K2 layout">
+        <section className={`k2-panel${isApc ? ' k2-panel--apc' : ''}`} aria-label={isApc ? 'APC40 mkII layout' : 'Xone:K2 layout'}>
             <header className="k2-panel-head">
                 <span className="k2-panel-title">{current.name}</span>
                 <span className="k2-switch" role="group" aria-label="K2 console">
@@ -125,6 +128,8 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, con
                 {face && windowPath ? <button type="button" className="k2-device" title="Open the controller as a picture in its own window" onClick={openDevice}>Device</button> : null}
                 <button type="button" className="k2-close" onClick={onClose} aria-label="Close the K2 layout">Close</button>
             </header>
+            {isApc ? <Apc40Layout map={map} deck={deck} snap={snap} faded={faded} fxEffect={fxEffect} selected={selected} onSelect={setSelected} /> : null}
+            {isApc ? null : (
             <div className="k2-body">
                 {ROWS.map((row) => (
                     <div key={row.id} className="k2-row" role="group" aria-label={row.title}>
@@ -134,8 +139,9 @@ export default function K2LayoutPanel({ map, monitor, onClose, fxEffect = 0, con
                     </div>
                 ))}
             </div>
+            )}
             {blocked ? <p className="k2-detail" role="alert">{BLOCKED_NOTE}</p> : null}
-            <p className="k2-detail" role="status" aria-live="polite">{detail}</p>
+            {isApc ? null : <p className="k2-detail" role="status" aria-live="polite">{detail}</p>}
         </section>
     )
 }

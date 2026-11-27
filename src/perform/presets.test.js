@@ -3,6 +3,7 @@ import {
     BUILT_IN_PRESETS,
     GRID,
     WINDOW_KINDS,
+    WINDOW_ORDER,
     choosePreset,
     framesFromRects,
     isComingKind,
@@ -93,6 +94,20 @@ describe('the built-in presets', () => {
         for (const kind of Object.keys(WINDOW_KINDS).filter(isComingKind)) {
             expect(WINDOW_KINDS[kind].coming.length).toBeGreaterThan(10)
         }
+    })
+})
+
+describe('the Room 3D kind', () => {
+    it('is a native phase-1 kind, listed once in the + window order', () => {
+        expect(WINDOW_KINDS.room).toMatchObject({ label: 'Room 3D', family: 'pictures', phase: 1 })
+        expect(isComingKind('room')).toBe(false)
+        expect(WINDOW_ORDER.filter((kind) => kind === 'room')).toHaveLength(1)
+    })
+
+    it('no built-in opens it as a window (the VJ deck shows the room as its own third monitor); Show is unchanged', () => {
+        const withRoom = BUILT_IN_PRESETS.filter((preset) => preset.windows.some((item) => item.kind === 'room')).map((preset) => preset.id)
+        expect(withRoom).toEqual([])
+        expect(BUILT_IN_PRESETS.find((preset) => preset.id === 'show').windows.map((item) => item.kind)).toEqual(['deck', 'lightlooks', 'laser', 'cues', 'master', 'clock'])
     })
 })
 

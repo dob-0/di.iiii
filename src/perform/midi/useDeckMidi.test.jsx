@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, renderHook, screen } from '@testing-library/react'
 import VjDeckView from '../../raw/components/vjDeck/VjDeckView.jsx'
-import { createDeck, setClip, trigger } from '../../project/tops/vjDeck.js'
+import { MASTER_STACK, addEffect, createDeck, setClip, setMasterParam, trigger } from '../../project/tops/vjDeck.js'
 import { WRITE_GAP_MS, useDeckMidi } from './useDeckMidi.js'
 
 // A fake Web MIDI access at the navigator boundary: one K2 in, one K2 out.
@@ -334,5 +334,135 @@ describe('a K2 set to another MIDI channel (the owner\'s sends on 2, N3636)', ()
         send(fake, [0xb1, FADER_2, 0])
         act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
         expect(writes.at(-1).layers[1].opacity).toBe(0)
+    })
+})
+
+describe('APC40 mkII LEDs from the hook', () => {
+    const apcAccess = () => {
+        const sent = []
+        const input = { id: 'in-apc', name: 'APC40 mkII', manufacturer: 'Akai', onmidimessage: null }
+        const output = { id: 'out-apc', name: 'APC40 mkII', manufacturer: 'Akai', state: 'connected', send: (data) => sent.push([...data]) }
+        return { sent, input, output, access: { inputs: new Map([[input.id, input]]), outputs: new Map([[output.id, output]]), onstatechange: null } }
+    }
+
+    it('with only an APC40 plugged in and no console stored, the pads light like Resolume (playing 52, loaded 33, empty 1)', async () => {
+        const fake = apcAccess()
+        install(fake)
+        renderHook(() => useDeckMidi({ deck: playedDeck(), write: () => {}, onPatch: () => {}, enabled: true, deckId: 'deck-apc' }))
+        await flushAsync()
+        await flushAsync()
+        expect(fake.sent).toContainEqual([0x90, 0, 52])  // layer 1 column 1 playing
+        expect(fake.sent).toContainEqual([0x90, 1, 33])  // layer 1 column 2 loaded
+        expect(fake.sent).toContainEqual([0x90, 16, 1])  // layer 3 has no clips: dim
+        expect(fake.sent.every((bytes) => (bytes[0] & 0xf0) === 0x90)).toBe(true)
+    })
+
+    it('a fader takes its value at once, as in Resolume: no soft takeover on the APC40', async () => {
+        const fake = apcAccess()
+        install(fake)
+        const writes = []
+        renderHook(() => useDeckMidi({ deck: playedDeck(), write: (deck) => writes.push(deck), onPatch: () => {}, enabled: true, deckId: 'deck-apc-3', console: 'apc40' }))
+        await flushAsync()
+        // layer 2 is at opacity 1; the fader sits near the bottom and has not "crossed" anything
+        act(() => fake.input.onmidimessage({ data: [0xb1, 7, 10] }))
+        act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
+        expect(writes.at(-1).layers[1].opacity).toBeCloseTo(10 / 127)
+    })
+
+    it('a pad press that plays a clip lights it at once', async () => {
+        const fake = apcAccess()
+        install(fake)
+        const view = renderHook((props) => useDeckMidi({ write: () => {}, onPatch: () => {}, enabled: true, deckId: 'deck-apc-2', console: 'apc40', ...props }), {
+            initialProps: { deck: playedDeck() }
+        })
+        await flushAsync()
+        fake.sent.length = 0
+        view.rerender({ deck: trigger(playedDeck(), 0, 2) })
+        expect(fake.sent).toContainEqual([0x90, 2, 52])
+        expect(fake.sent).toContainEqual([0x90, 0, 33])
+    })
+})
+
+describe('HOLD keys (fxPress) never stay stuck', () => {
+    const PAD = [0x9e, 100, 127]
+    const PAD_UP = [0x8e, 100, 0]
+    const PAD_2 = [0x9e, 101, 127]
+    const PAD_2_UP = [0x8e, 101, 0]
+    const bind = (note) => ({ match: { kind: 'note', number: note, channel: 0 }, action: 'fxPress', args: { type: 'top.cuts', param: 'black' } })
+    const stored = { bindings: [bind(100), bind(101)] }
+    const withCuts = (black = 0) => {
+        const deck = addEffect(playedDeck(), MASTER_STACK, 'top.cuts')
+        return black ? setMasterParam(deck, 'top.cuts', 'black', black) : deck
+    }
+    const blackOf = (deck) => deck.effects.find((effect) => effect.type === 'top.cuts').params.black
+
+    it('the value goes back to 0 when the controller is unplugged while held', async () => {
+        const { fake, writes } = await mount({ deck: withCuts(), stored })
+        send(fake, PAD)
+        expect(blackOf(writes.at(-1))).toBe(1)
+        fake.access.inputs.clear()
+        await act(async () => { fake.access.onstatechange?.() })
+        expect(blackOf(writes.at(-1))).toBe(0)
+    })
+
+    it('the value goes back to 0 when the hook is disabled while held', async () => {
+        const { fake, writes, rerender } = await mount({ deck: withCuts(), stored })
+        send(fake, PAD)
+        expect(blackOf(writes.at(-1))).toBe(1)
+        rerender({ deck: withCuts(), stored, enabled: false })
+        expect(blackOf(writes.at(-1))).toBe(0)
+    })
+
+    it('two pads on one value keep it at 1 until the second one lifts', async () => {
+        const { fake, writes } = await mount({ deck: withCuts(), stored })
+        send(fake, PAD)
+        send(fake, PAD_2)
+        const count = writes.length
+        send(fake, PAD_UP)
+        expect(writes).toHaveLength(count) // one still held: nothing written
+        expect(blackOf(writes.at(-1))).toBe(1)
+        send(fake, PAD_2_UP)
+        expect(blackOf(writes.at(-1))).toBe(0)
+    })
+
+    it('a deck that arrives with black 1 and nothing held is written back to 0 at activation', async () => {
+        const { writes } = await mount({ deck: withCuts(1), stored })
+        expect(writes.length).toBeGreaterThan(0)
+        expect(blackOf(writes.at(-1))).toBe(0)
+    })
+})
+
+describe('sync: a write made by the view, not by MIDI', () => {
+    it('a message after sync(other) computes from other, before the prop has caught up', async () => {
+        const { fake, writes, result } = await mount()
+        const other = trigger(playedDeck(), 1, 2) // the light desk launched layer 2 column 3
+        act(() => result.current.sync(other))
+        send(fake, [0x9e, 37, 127]) // layer 1 column 2, no render in between
+        expect(writes).toHaveLength(1)
+        expect(writes.at(-1).layers[0].active).toBe(1)
+        expect(writes.at(-1).layers[1].active).toBe(2) // other's change is still there
+    })
+
+    it('sync of the deck the hook already holds does nothing', async () => {
+        const { fake, writes, result } = await mount()
+        send(fake, [0x9e, 37, 127])
+        expect(writes).toHaveLength(1)
+        expect(() => act(() => result.current.sync(writes[0]))).not.toThrow() // what the view hands back from flush
+        act(() => result.current.sync(null))
+        act(() => { vi.advanceTimersByTime(WRITE_GAP_MS * 2) })
+        expect(writes).toHaveLength(1)
+        send(fake, [0x9e, 33, 127]) // still computed from writes[0]
+        expect([writes.at(-1).layers[0].active, writes.at(-1).layers[1].active]).toEqual([1, 1])
+    })
+
+    it('the echo of an earlier MIDI write arriving after sync does not roll the deck back', async () => {
+        const { fake, writes, result, rerender } = await mount()
+        send(fake, [0x9e, 37, 127]) // our write 1: layer 1 column 2
+        const other = trigger(writes[0], 1, 2) // the view then writes layer 2 column 3 on top of it
+        act(() => result.current.sync(other))
+        rerender({ deck: writes[0] }) // the echo of write 1 arrives first
+        send(fake, [0x9e, 38, 127]) // layer 1 column 3: must be computed from other, not write 1
+        expect(writes.at(-1).layers[0].active).toBe(2)
+        expect(writes.at(-1).layers[1].active).toBe(2)
     })
 })

@@ -45,11 +45,11 @@ describe('what a screen shows, by the surface it points at', () => {
 })
 
 describe('how often a screen re-uploads', () => {
-    it('a video is driven by the frames the browser presents; the network is capped at 15, NDI at 30; stills upload once', () => {
+    it('a video is driven by the frames the browser presents; the network is capped at 30, NDI at 30; stills upload once', () => {
         expect(LIVE_SCREEN_RATES.video).toBe('frame')
         expect(LIVE_SCREEN_RATES.camera).toBe('frame')
         expect(LIVE_SCREEN_RATES.stream).toBe('frame')
-        expect(LIVE_SCREEN_RATES.network).toBe(15)
+        expect(LIVE_SCREEN_RATES.network).toBe(30)
         expect(LIVE_SCREEN_RATES.ndi).toBe(30)
         expect(LIVE_SCREEN_RATES.image).toBe(0)
         expect(LIVE_SCREEN_RATES.test).toBe(0)
@@ -58,7 +58,7 @@ describe('how often a screen re-uploads', () => {
     it('the element wins over the kind: a <video> is always frame-driven, a camera drawn through the motion glow is a canvas on the clock', () => {
         expect(liveScreenRate('camera', 'video')).toBe('frame')
         expect(liveScreenRate('camera', 'canvas')).toBe(30)
-        expect(liveScreenRate('network', 'canvas')).toBe(15)
+        expect(liveScreenRate('network', 'canvas')).toBe(30)
         expect(liveScreenRate('ndi', 'img')).toBe(30)
         expect(liveScreenRate('image', 'img')).toBe(0)
     })
