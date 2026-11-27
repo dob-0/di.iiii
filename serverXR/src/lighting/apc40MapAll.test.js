@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect } from 'vitest'
 import { createRequire } from 'node:module'
 
@@ -73,7 +74,7 @@ describe('APC40 mkII: every control has a preset row', () => {
 })
 
 describe('APC40 map-all: ARM, release and the strobe cap', () => {
-  const app = fs.readFileSync(new URL('./ui/app.js', import.meta.url), 'utf8')
+  const app = fs.readFileSync(req.resolve('./ui/app.js'), 'utf8')
   it('every new button goes through the ARM gate (a press while Safe does nothing)', () => {
     const start = app.indexOf('// ---- map-all (owner 2026-11-27')
     const end = app.indexOf("T.push({ group: 'Safety' })")
@@ -137,7 +138,7 @@ describe('APC40 map-all: ARM, release and the strobe cap', () => {
 })
 
 describe('APC40 map-all round 2 (#1404 review)', () => {
-  const app = fs.readFileSync(new URL('./ui/app.js', import.meta.url), 'utf8')
+  const app = fs.readFileSync(req.resolve('./ui/app.js'), 'utf8')
   it('F1: the fader base follows a desk-side change (scene recall) instead of writing the old level back', () => {
     // fader 0.6 written as 0.6; the scene recall put the group at 1.0 -> the base is 1.0, not 0.6
     expect(P.groupBase(0.6, 0.6, 1, 1)).toBeCloseTo(1, 6)
