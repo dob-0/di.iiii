@@ -978,11 +978,46 @@ check('a test move swings the lights for a moment, says which, and is never save
   assert.strictEqual((await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'zoom' })).status, 400, 'no such axis');
   await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'tilt' });
   await POST('/api/fixtures/testmove', { off: true });
+  await sleep(2300);   // off lets the swing in progress finish (at most one 2 s swing), then home
   await settle();
-  assert.deepStrictEqual([await wire(77, 1), await wire(77, 2)], [100, 100], 'off: home at once');
+  assert.deepStrictEqual([await wire(77, 1), await wire(77, 2)], [100, 100], 'off: home after the swing in progress');
   await sleep(700);   // save() debounces at 400ms
   const disk = fs.readFileSync(path.join(process.env.DATA_DIR, 'show.json'), 'utf8');
   assert.ok(!disk.includes('testMove'), 'nothing of it is in the saved show');
+});
+
+check('a test move re-press and the off call: only the asked lights stop, the head never snaps', async () => {
+  const f = await patch('pt', { universe: 78, address: 1 });
+  const g = await patch('pt', { universe: 78, address: 11 });
+  await POST('/api/fixture', { id: f.id, values: { pan: 100, tilt: 100 } });
+  await POST('/api/fixture', { id: g.id, values: { pan: 100, tilt: 100 } });
+  await POST('/api/fixtures/testmove', { ids: [f.id, g.id], axis: 'pan', seconds: 4 });
+  await sleep(1100);
+  const mid = await wire(78, 1);
+  const r1 = await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'pan', seconds: 4 });
+  await settle();
+  const after = await wire(78, 1);
+  assert.ok(Math.abs(after - mid) <= 6, `a re-press does not snap the head back to rest: ${mid} -> ${after}`);
+  assert.ok(r1.body.until > Date.now() + 3000, 'and it runs on');
+  await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'tilt', seconds: 4 });
+  let st = (await GET('/api/state')).body.status.testMoving;
+  assert.strictEqual(st[f.id], 'tilt', 'the new axis is the one shown');
+  await sleep(100);
+  assert.ok((await wire(78, 1)) !== 100 || (await wire(78, 2)) !== 100, 'both axes live, pan not snapped');
+  const beforeOff = [await wire(78, 1), await wire(78, 2)];
+  await POST('/api/fixtures/testmove', { off: true, ids: [f.id] });
+  await settle();
+  const afterOff = [await wire(78, 1), await wire(78, 2)];
+  assert.ok(Math.abs(afterOff[0] - beforeOff[0]) <= 6 && Math.abs(afterOff[1] - beforeOff[1]) <= 6,
+    `off does not snap the head to rest: ${beforeOff} -> ${afterOff}`);
+  await sleep(2300);   // the swing in progress finishes (never a snap), then the light is home
+  await settle();
+  assert.deepStrictEqual([await wire(78, 1), await wire(78, 2)], [100, 100], 'the asked light is home after its swing');
+  st = (await GET('/api/state')).body.status.testMoving;
+  assert.ok(!st[f.id] && st[g.id] === 'pan', 'the other light still swings');
+  await POST('/api/fixtures/testmove', { off: true });
+  await sleep(2300);
+  assert.deepStrictEqual((await GET('/api/state')).body.status.testMoving, {}, 'off with no ids stops every light, after their swing');
 });
 
 check('the Aim page markup exists and is wired to the limits route', () => {
