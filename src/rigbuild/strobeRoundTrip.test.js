@@ -1,12 +1,9 @@
 // @vitest-environment node
-import { describe, expect, it, beforeAll } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createRequire } from 'node:module'
 import { MAX_STROBE_HZ } from './strobeCap.js'
 import { decodeDmx, encodeDmx } from './dmxDecode.js'
 import { ASSUMED_PROFILES } from './assumedProfiles.js'
-import { setStrobeLimit } from './strobeCap.js'
-// N7618 (2026-11-27): no cap by default; this file pins the OLD 3 Hz cap, i.e. the desk setting output.strobeLimit ON.
-beforeAll(() => setStrobeLimit(true))
 
 // Cap review A1 (2026-09-30): the DMX value written for a capped rate must PLAY at <= the cap,
 // and the desk's own strobe effect must never flash faster than the same cap.

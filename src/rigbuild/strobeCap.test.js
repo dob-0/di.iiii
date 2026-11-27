@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeAll } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 // Photosensitivity cap: at most 3 flashes a second in any look (strobeCap.js).
 vi.mock('./looks.js', async (orig) => {
@@ -13,9 +13,6 @@ import { deskLooksWithValues } from './deskLookValues.js'
 import { decodeDmx, encodeDmx } from './dmxDecode.js'
 import { flashLamps, strobeEnvelope } from './rigFlash.js'
 import { dmxEntities } from './dmxPose.js'
-import { setStrobeLimit } from './strobeCap.js'
-// N7618 (2026-11-27): no cap by default; this file pins the OLD 3 Hz cap, i.e. the desk setting output.strobeLimit ON.
-beforeAll(() => setStrobeLimit(true))
 
 const strobe = { id: 'S1', type: 'spotLight', components: { transform: { position: [0, 6, 0], rotation: [0, 0, 0] }, light: { color: '#ffffff', intensity: 5, angle: 0.5 }, beam: { visible: true }, fixture: { type: 'ext-strobe', mode: '4ch-assumed', index: 9 } } }
 const type = TYPES.types.find((t) => t.code === 'EXT-STROBE')
@@ -95,29 +92,5 @@ describe('a laser is never lit by a look (runtime gate, review A2-1)', () => {
         const cell = run({ aims: {}, colours: {}, levels: { 'truss-top/up-la40wf': 0.6 } })
         expect(Object.values(cell).every((v) => v === 0)).toBe(true)
         expect(Object.keys(cell).length).toBe(laserMode.channels.length)
-    })
-})
-
-describe('N7618 (2026-11-27): the limit is OFF by default, no clamp', () => {
-    it('capStrobeHz passes any rate, and a look keeps its own strobeHz', () => {
-        setStrobeLimit(false)
-        try {
-            expect(capStrobeHz(10)).toBe(10)
-            expect(capStrobeHz(20)).toBe(20)
-            expect(capStrobeHz(-4)).toBe(0)
-            expect(capStrobeHz('x')).toBe(0)
-            expect(lookStrobeHz({ strobeHz: 10 })).toBe(10)
-            expect(lookStrobeHz({})).toBe(3)
-        } finally { setStrobeLimit(true) }
-    })
-    it('the room flash runs at the asked rate: 10 Hz flashes at t = 0.1 s, with no shared 3 Hz grid', () => {
-        setStrobeLimit(false)
-        try {
-            expect(strobeEnvelope(0.1, 10)).toBeCloseTo(1, 6)
-            expect(strobeEnvelope(0.05, 10)).toBeLessThan(0.15)
-            let rises = 0, prev = 0
-            for (let t = 0; t < 1; t += 0.001) { const v = strobeEnvelope(t, 10); if (v > 0.9 && prev <= 0.9) rises++; prev = v }
-            expect(rises).toBeGreaterThanOrEqual(9)
-        } finally { setStrobeLimit(true) }
     })
 })

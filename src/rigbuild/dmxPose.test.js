@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { TYPE_LIBRARY } from './types/index.js'
 import { typeById } from './fixtureTypes.js'
 import { pieceEntity } from './plotEdits.js'
@@ -218,9 +218,6 @@ describe('zoom keeps the flux, not the candela (render audit C)', () => {
 })
 
 import { fixturePanOf, roomPanOf } from './dmxPose.js'
-import { setStrobeLimit } from './strobeCap.js'
-// N7618 (2026-11-27): no cap by default; this file pins the OLD 3 Hz cap, i.e. the desk setting output.strobeLimit ON.
-beforeAll(() => setStrobeLimit(true))
 describe('a lamp hung turned or with its pan reversed (MOXIR 2026-10-17)', () => {
     it('offsets and reverses the pan, and the two conversions undo each other', () => {
         expect(fixturePanOf(-90, null)).toBe(-90)

@@ -23,7 +23,7 @@
 //   - EVERY VIEWER, ONE BEAT: the beat is a function of the SERVER's time (`serverNowOf`) and of the moment the
 //     scene was fired (`epoch`, also server time); a viewer's own clock never enters.
 
-import { MAX_STROBE_HZ, strobeLimited } from './strobeCap.js'
+import { MAX_STROBE_HZ } from './strobeCap.js'
 
 export const FX_MODES = ['none', 'strobe', 'chase', 'pulse', 'sine', 'sparkle', 'comet', 'bars', 'glitch', 'radar',
     'pump', 'breathe', 'pingpong', 'blocks', 'fade']
@@ -84,7 +84,7 @@ export const motionLevel = (fx, fixture, i, n, now) => {
     const lane16 = () => Math.min(15, Math.floor(phaseOf(fx, fixture, i, n) * 16))
     switch (fx.mode) {
         case 'strobe': {
-            const slice = Math.max((strobeLimited() ? Math.ceil(1000 / MAX_STROBE_HZ / FRAME_MS) : 2) * FRAME_MS, Math.floor(beatMs / 8 / FRAME_MS) * FRAME_MS)
+            const slice = Math.max(Math.ceil(1000 / MAX_STROBE_HZ / FRAME_MS) * FRAME_MS, Math.floor(beatMs / 8 / FRAME_MS) * FRAME_MS)
             const on = (tq % slice) < Math.max(FRAME_MS, Math.floor(slice / 3 / FRAME_MS) * FRAME_MS)
             return applyDepth(on ? 255 : 0, depth)
         }

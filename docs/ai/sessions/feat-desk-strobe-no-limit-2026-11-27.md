@@ -4,7 +4,7 @@ The owner answered "i dont want any limits so yes" (ledger N7618) to "may your s
 
 - **Off (default):** api/raw takes any value on a `strobe` channel (the page's knob runs DMX 4-103 = 1-20 Hz); no 3-rises-a-second refusal; the software strobe (`fx.js`, also a look's `motion` strobe) floors at two frames (one on, one off = 20 flashes a second at the 40 Hz loop) instead of 334 ms; the APC40 "Strobe rate" knob runs 1-20 Hz.
 - **On:** exactly the old caps: raw strobe channel <= DMX 14, 3 rising edges a second spaced >= 334 ms, strobe slice >= 350 ms, knob 1-3 Hz.
-- **3D preview (round 2):** `src/rigbuild/strobeCap.js` follows the same switch (`setStrobeLimit`, fed from the desk state in `rigMirror/useLightingMirror.js`): off = no clamp, no shared 3 Hz grid in `rigFlash.js`, 2-frame floor in `lookMotion.js`. Tests that pin the cap set the switch on.
+- **Not touched:** `src/rigbuild/strobeCap.js` and the 3D preview still clamp at 3 Hz; that part is its own PR (feat/preview-strobe-no-limit-2026-11-27), waiting for the owner's yes.
 - **Switch on the page:** the Output panel has a "Strobe limit (3 Hz)" checkbox next to "Broadcast on every network".
 - **Tests:** `serverXR/src/lighting/tests/test-strobe-cap.js` (switch off = no cap; switch on = old cap holds), `midiPatch.test.js`.
 - **Measured** (standalone desk, loopback, ARTNET_OFFLINE=1): see `~/work/agent-reports-2026-11-27/strobe-free/measure.log`.

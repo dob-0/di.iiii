@@ -1,12 +1,9 @@
 // look motion: the room's port of the desk's FX maths (serverXR/src/lighting/fx.js) must agree with it, every mode,
 // at fixed `now` values, within 1/255; two viewers with different local clocks and the same server offset see the same frame.
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { createRequire } from 'node:module'
 import { motionLevel, motionPlan, motionFrame, serverNowOf, deskMotionOf, FX_MODES, FX_SPATIAL } from './lookMotion.js'
 import { normalizeRigLooks, MOTION_MODES, MOTION_SPATIAL } from '../shared/projectSchema.js'
-import { setStrobeLimit } from './strobeCap.js'
-// N7618 (2026-11-27): no cap by default; this file pins the OLD 3 Hz cap, i.e. the desk setting output.strobeLimit ON.
-beforeAll(() => setStrobeLimit(true))
 
 const require = createRequire(import.meta.url)
 const fx = require('../../serverXR/src/lighting/fx.js')

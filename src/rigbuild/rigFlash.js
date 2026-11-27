@@ -2,7 +2,7 @@
 // docs/architecture/RIG_BUILD.md §15.6.
 
 import { spotAimDirection } from '../project/viewport/spotLightAim.js'
-import { MAX_STROBE_HZ, capStrobeHz, strobeLimited } from './strobeCap.js'
+import { MAX_STROBE_HZ, capStrobeHz } from './strobeCap.js'
 
 // Per kind: the face (w × h, metres — the Atomic 3000's lens field is about 0.40 × 0.16
 // m, a 4-lite blinder's about 0.45 × 0.45), the glare sprite's size, the colour, and the
@@ -27,12 +27,6 @@ export const FLASH_TAU_S = 0.022
  */
 export const strobeEnvelope = (t, hz = STROBE_HZ) => {
     const rate = Number(hz) > 0 ? capStrobeHz(hz) : STROBE_HZ
-    // No limit (N7618, the default): every lamp flashes at its own rate, no shared grid.
-    if (!strobeLimited()) {
-        const period = 1 / rate
-        const since = (((Number(t) || 0) % period) + period) % period
-        return Math.exp(-since / FLASH_TAU_S)
-    }
     // ONE GRID FOR THE WHOLE ROOM (cap review A1-3, 2026-09-30): the rule is about the flashes a
     // person sees, not per lamp. Every strobe fires only on a tick of a shared MAX_STROBE_HZ grid,
     // every n-th tick for a rate of MAX/n (the rate is rounded DOWN to the nearest MAX/n: 3, 1.5,
