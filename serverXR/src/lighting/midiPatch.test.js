@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createRequire } from 'node:module'
 
 const req = createRequire(import.meta.url)
@@ -242,7 +242,9 @@ describe('activator lights', () => {
   })
 })
 
-describe('strobe on the controller (N7314), capped at 3 Hz', () => {
+describe('strobe on the controller (N7314), the old 3 Hz cap = the desk setting output.strobeLimit ON', () => {
+  beforeAll(() => P.setStrobeLimit(true))
+  afterAll(() => P.setStrobeLimit(false))
   it('the knob never passes DMX 14 on the 1-20 Hz band, from 0 to its maximum, in 1/1000 steps', () => {
     expect(P.STROBE_DMX_CAP).toBe(14)
     for (let i = 0; i <= 1000; i++) {
@@ -282,6 +284,26 @@ describe('strobe on the controller (N7314), capped at 3 Hz', () => {
     expect(h.fxIds).toEqual(['m1'])
     const all = P.strobeHit([bar, mov], prof, 'all', 0.5)
     expect(all.holds.some((c) => c.universe === 2)).toBe(false)
+  })
+})
+
+describe('strobe on the controller, N7618 (2026-11-27): the limit is OFF by default, no cap', () => {
+  beforeAll(() => P.setStrobeLimit(false))
+  it('the knob runs the whole 1-20 Hz band: DMX 4 at 0, 103 at max, 20 Hz at the top', () => {
+    expect(P.strobeDmxFromUnit(0)).toBe(4)
+    expect(P.strobeDmxFromUnit(1)).toBe(103)
+    expect(P.strobeHzFromDmx(P.strobeDmxFromUnit(1))).toBeCloseTo(20, 5)
+    let prev = 0
+    for (let i = 0; i <= 1000; i++) { const d = P.strobeDmxFromUnit(i / 1000); expect(d).toBeGreaterThanOrEqual(prev); prev = d }
+  })
+  it('the gate passes the band as asked and still keeps a value past the band open', () => {
+    for (const v of [4, 14, 15, 50, 103]) expect(P.capStrobeDmx(v)).toBe(v)
+    for (const v of [104, 255, -1, NaN, 'x', null, undefined]) expect(P.capStrobeDmx(v)).toBe(0)
+  })
+  it('hit "all" at the knob max holds the strobe channel at 103', () => {
+    const bar = { id: 'b1', universe: 1, address: 10, profile: 'bar' }
+    const h = P.strobeHit([bar], () => ({ channels: ['dimmer', 'r', 'g', 'b', 'w', 'zoom', 'zoom2', 'strobe'] }), 'all', 1)
+    expect(h.holds.find((c) => c.channel === 17)).toEqual({ universe: 1, channel: 17, value: 103 })
   })
 })
 

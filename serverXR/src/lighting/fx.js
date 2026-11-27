@@ -270,7 +270,10 @@ function fxLevel(fx, fixture, i, n, now, bounds) {
       // one frame on, one frame off is the fastest strobe the 40 Hz loop can carry.
       // And never faster than 3 flashes a second, whatever the bpm (the room's rule,
       // src/rigbuild/strobeCap.js MAX_STROBE_HZ): a slice is one flash, so >= 1000/3 ms.
-      const slice = Math.max(Math.ceil(1000 / MAX_STROBE_HZ / FRAME_MS) * FRAME_MS, Math.floor(beatMs / 8 / FRAME_MS) * FRAME_MS);
+      // Owner N7618 (2026-11-27): NO cap by default. The floor is two frames (one on, one off = 20 flashes a second at the 40 Hz
+      // loop); the old 3 Hz cap is the desk setting output.strobeLimit (fx.strobeLimit here), off by default.
+      const floorMs = fx.strobeLimit ? Math.ceil(1000 / MAX_STROBE_HZ / FRAME_MS) * FRAME_MS : 2 * FRAME_MS;
+      const slice = Math.max(floorMs, Math.floor(beatMs / 8 / FRAME_MS) * FRAME_MS);
       const on = (tq % slice) < Math.max(FRAME_MS, Math.floor(slice / 3 / FRAME_MS) * FRAME_MS);
       return fxApplyDepth(on ? 255 : 0, depth);
     }

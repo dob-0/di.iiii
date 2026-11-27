@@ -4962,6 +4962,7 @@ function buildOutput() {
     // The way back from "broadcast keeps off the laser network": only meaningful for Art-Net broadcast.
     $('#broadcastAllRow').hidden = !(S.output.driver === 'artnet' && S.output.mode === 'broadcast');
     $('#broadcastAll').checked = !!S.output.broadcastAll;
+    $('#strobeLimit').checked = !!S.output.strobeLimit;
     $('#refreshHz').value = S.output.refreshHz || 40;
   }
   if (typing) return;
@@ -6203,11 +6204,12 @@ function midiHoldUp(key) {
   // a strobe hit's software part (fixtures with no strobe channel) goes back to the rig's own effect
   if (h.fxIds && h.fxIds.length) midiSend('api/fx', { mode: 'rig', ids: h.fxIds }, 'hold:fx:' + key, true);
 }
-// Strobe hits (N7314): hold-to-flash plus the strobe. The bar's strobe channel is held at the rate knob, capped at 3 Hz in
-// midiPatch.js (capStrobeDmx); fixtures with no strobe channel get the software strobe (fx.js, also <= 3 Hz); a shutter is never written.
+// Strobe hits (N7314): hold-to-flash plus the strobe. The bar's strobe channel is held at the rate knob, 1-20 Hz (3 Hz with the desk's Strobe limit on, N7618) in
+// midiPatch.js (capStrobeDmx); fixtures with no strobe channel get the software strobe (fx.js); a shutter is never written.
 function midiStrobeDown(key, kind, list, maxMs) {
   const mp = window.deskMidiPatch;
   if (!midiArmed || !mp || midiHeld.has(key)) return;
+  mp.setStrobeLimit(!!(S && S.output && S.output.strobeLimit));   // N7618: the 3 Hz cap only when the desk setting is on
   const hit = mp.strobeHit(list || (S && S.fixtures) || [], (f) => S.profiles[f.profile], kind, midiLive.strobeU);
   if (!hit.holds.length && !hit.fxIds.length) return;
   const h = { channels: hit.holds, fxIds: hit.fxIds, strobe: true, timer: setTimeout(() => midiHoldUp(key), maxMs || mp.MAX_HOLD_MS) };
@@ -6224,6 +6226,7 @@ function midiStrobeDown(key, kind, list, maxMs) {
 // The rate knob turned while a strobe is held: the held strobe channel follows (through the cap only when the desk setting output.strobeLimit is on).
 function midiStrobeRate() {
   const mp = window.deskMidiPatch;
+  mp.setStrobeLimit(!!(S && S.output && S.output.strobeLimit));
   const dmx = mp.strobeDmxFromUnit(midiLive.strobeU);
   for (const [key, h] of midiHeld) {
     if (!h.strobe || !h.channels) continue;
@@ -6445,7 +6448,7 @@ function buildMidiTargets() {
     hit('hit:white', 'Hit: white flash, every fixture', () => fixtures);
     for (const g of groups.filter((x) => x.key !== 'back')) hit(`hit:${g.key}`, `Hit: ${g.label} flash`, () => fixtures.filter((f) => g.ids.includes(f.id)));
     // Strobe (N7314). Rate = track knob 1, 1-3 Hz; the page caps it (midiPatch.capStrobeDmx). Hits release on pad up, disarm, close.
-    cc('strobe:rate', 'Strobe rate  1-3 Hz  (hits below; capped at 3 Hz)', () => midiLive.strobeU, (u) => { midiLive.strobeU = u; midiStrobeRate(); });
+    cc('strobe:rate', 'Strobe rate  1-20 Hz  (hits below; no cap, 3 Hz only with Strobe limit on)', () => midiLive.strobeU, (u) => { midiLive.strobeU = u; midiStrobeRate(); });
     T.push({ key: 'hit:strobe-all', label: 'Hit: strobe, back bars + soft strobe on the rest (hold)', kind: 'note',
       apply: () => midiStrobeDown('hit:strobe-all', 'all'), up: () => midiHoldUp('hit:strobe-all') });
     T.push({ key: 'hit:strobe-movers', label: 'Hit: strobe, movers, software only (hold)', kind: 'note',
@@ -7085,7 +7088,7 @@ function midiApcUpdate() {
   midiApc.update({
     map: midiMap, cues: CUES, state: { blackout: midiBlackoutNow() },
     looks: padLooksOf(), order: curPadOrder(), bright: midiPadBright, page: midiLookPage, activeId: lookOnAirId(),
-    master: mv == null ? undefined : mv / 255, values: midiApcValues(),
+    master: mv == null ? undefined : mv / 255, values: midiApcValues(), strobeLimit: !!(S && S.output && S.output.strobeLimit),
   });
 }
 
@@ -7355,7 +7358,7 @@ function midiApcSoon() {
     // Only when something it draws has changed: the 1 s cue paint and every state poll land here.
     const c = CUES || {};
     const sig = [lookOnAirId(), midiLookPage, midiArmed, midiBlackoutNow(),
-      midiArmed ? midiLive.master : (S && S.master), c.index, c.running, c.autoplay, c.loop, c.n, S && S.looksRev, Object.keys(midiMap).length, JSON.stringify(midiApcValues())].join('|');
+      midiArmed ? midiLive.master : (S && S.master), c.index, c.running, c.autoplay, c.loop, c.n, S && S.looksRev, !!(S && S.output && S.output.strobeLimit), Object.keys(midiMap).length, JSON.stringify(midiApcValues())].join('|');
     if (sig === midiApcSig) return;
     midiApcSig = sig; midiApcAt = Date.now(); midiApcUpdate();
   }, Math.max(0, midiApcAt + 250 - Date.now()));
@@ -8140,6 +8143,9 @@ $('#addNode').addEventListener('click', addNodeByIp);
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter') addNodeByIp(); }));
 $('#broadcastAll').addEventListener('change', (e) => {
   post('api/output', { broadcastAll: e.target.checked }).then(pullState);
+});
+$('#strobeLimit').addEventListener('change', (e) => {
+  post('api/output', { strobeLimit: e.target.checked }).then(pullState);
 });
 $('#saveOutput').addEventListener('click', () => {
   const entries = $('#targets').value.split(',').map((s) => s.trim()).filter(Boolean);

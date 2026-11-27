@@ -1,5 +1,6 @@
 'use strict';
-// The room's flash rule AT THE DESK (PR #1397 round 4): no more than 3 flashes a second whoever asks, a software strobe
+// The room's flash rule AT THE DESK (PR #1397 round 4), since 2026-11-27 (owner N7618) a desk SETTING, OFF by default: with
+// output.strobeLimit off there is no cap; with it on, no more than 3 flashes a second whoever asks, a software strobe
 // that flashes the DMX, and one that cannot outlive its page. Spawns its own desk (ephemeral ports, throwaway data dir,
 // ARTNET_OFFLINE) and reads the wire back through GET /api/dmx. Run with: node serverXR/src/lighting/tests/test-strobe-cap.js
 //  R3-I1  api/raw: a strobe-role channel is capped (DMX 14 = 2.92 Hz), a light channel takes 3 rising edges a second, any owner
@@ -24,7 +25,8 @@ const GET = (r) => api('GET', r);
 const POST = (r, b) => api('POST', r, b || {});
 const wire = async (u, ch) => ((await GET('/api/dmx')).body.dmx[u] || [])[ch - 1];
 const tests = [];
-const check = (name, fn) => tests.push({ name, fn });
+// `limit`: the desk setting output.strobeLimit for this check (N7618: OFF by default = no cap; ON = the old 3 a second).
+const check = (name, fn, limit) => tests.push({ name, fn, limit: !!limit });
 // Rising edges (crossing up through 128) of one channel, sampled every 20 ms for `ms`; the most inside any 1000 ms window.
 async function edges(u, ch, ms) {
   const t0 = Date.now(); const rises = []; let prev = null;
@@ -51,7 +53,7 @@ check('R3-I1: a raw write to a strobe channel is capped at DMX 14, and a value p
   await sleep(120);
   assert.strictEqual(await wire(f.universe, ch), 14, 'the wire carries the capped value');
   await POST('/api/raw', { clear: true, all: true });
-});
+}, true);
 
 check('R3-I1: a fixture takes 3 rising edges a second through api/raw, from any client', async () => {
   const f = await add('drgb', 10);
@@ -70,7 +72,7 @@ check('R3-I1: a fixture takes 3 rising edges a second through api/raw, from any 
   const again = await POST('/api/raw', { channel: ch, universe: f.universe, value: 255 });
   assert.ok(!(again.body.refused && again.body.refused.rate), 'a second later it takes one again');
   await POST('/api/raw', { clear: true, all: true });
-});
+}, true);
 
 check('R3-I3: the software strobe puts flashes on the DMX of a dark mover, at most 3 a second', async () => {
   const f = await add('ptdrgbws', 40);
@@ -85,7 +87,7 @@ check('R3-I3: the software strobe puts flashes on the DMX of a dark mover, at mo
   await POST('/api/fx', { mode: 'rig', ids: [f.id] });
   await sleep(150);
   assert.strictEqual(await wire(f.universe, dim), 0, 'back to the dark look after release');
-});
+}, true);
 
 check('R3-I2: the software strobe expires by itself and is gone from the saved fixtures', async () => {
   const f = await add('ptdrgbws', 60);
@@ -136,6 +138,35 @@ check('R4-L5: the 3 raw flashes a second are spaced, not a burst', async () => {
   assert.ok(ok.length >= 2 && ok.length <= 4, 'accepted ' + ok.length);
   for (let i = 1; i < ok.length; i++) assert.ok(ok[i] - ok[i - 1] >= 320, 'gap ' + (ok[i] - ok[i - 1]) + ' ms');
   await POST('/api/raw', { clear: true, all: true });
+}, true);
+
+check('N7618 (default, switch off): a raw strobe channel and the rise rate are NOT capped', async () => {
+  const f = await add('drgbs', 160);
+  const ch = f.address + 4;
+  for (const v of [103, 50, 14, 200, 255]) {
+    await POST('/api/raw', { channel: ch, universe: f.universe, value: v, owner: 'someone-else' });
+    assert.strictEqual((await GET('/api/state')).body.raw[f.universe + ':' + ch], v, 'asked ' + v + ' held as asked');
+  }
+  await POST('/api/raw', { clear: true, all: true });
+  const g = await add('drgb', 180);
+  let refused = 0;
+  for (let i = 0; i < 12; i++) {
+    const up = await POST('/api/raw', { channel: g.address, universe: g.universe, value: 255 });
+    if (up.body.refused && up.body.refused.rate) refused++;
+    await POST('/api/raw', { channel: g.address, universe: g.universe, value: -1 });
+  }
+  assert.strictEqual(refused, 0, 'no rising edge refused with the switch off');
+  await POST('/api/raw', { clear: true, all: true });
+});
+
+check('N7618 (default, switch off): the software strobe goes past 3 flashes a second on the wire', async () => {
+  const f = await add('ptdrgbws', 200);
+  await dark(f);
+  await POST('/api/fx', { bpm: 300 });
+  await POST('/api/fx', { mode: 'strobe', flash: true, ids: [f.id] });
+  const e = await edges(f.universe, f.address + 2, 2200);
+  assert.ok(e.max > 3, 'more than 3 rising edges in one second, saw ' + e.max);
+  await POST('/api/fx', { mode: 'rig', ids: [f.id] });
 });
 
 (async function main() {
@@ -154,6 +185,7 @@ check('R4-L5: the 3 raw flashes a second are spaced, not a burst', async () => {
     });
     base = 'http://127.0.0.1:' + port;
     for (const t of tests) {
+      await POST('/api/output', { strobeLimit: t.limit });
       try { await t.fn(); console.log('  ok   ' + t.name); } catch (e) { failures++; console.log('  FAIL ' + t.name + '\n       ' + e.message); }
     }
   } catch (e) { failures++; console.log(e.message); }

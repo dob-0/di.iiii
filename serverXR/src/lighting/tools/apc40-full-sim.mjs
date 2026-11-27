@@ -142,9 +142,9 @@ check('tempo knob 65 = down 63 clicks', s.fx.bpm === Math.max(20, bsc0 + 2 - 63)
 // ---- 4. zoom and colour effect ----
 const zoomers = (x) => x.fixtures.filter((f) => f.values.zoom != null)
 const nz = zoomers(s).length
-await cc(6, 7, 0, 150); await cc(6, 7, 100, 800)
+await cc(6, 7, 0, 150); await cc(6, 7, 100, 2000)
 s = await st()
-check(`fader 6 = zoom on the ${nz} fixtures that have one (100/127 = 201)`, nz > 0 && zoomers(s).every((f) => Math.abs(f.values.zoom - 201) <= 1 && (f.values.zoom2 == null || Math.abs(f.values.zoom2 - 201) <= 1)), zoomers(s).map((f) => f.values.zoom).slice(0, 4))
+check(`fader 6 = zoom on the ${nz} fixtures that have one (100/127 = 201)`, nz > 0 && zoomers(s).every((f) => Math.abs(f.values.zoom - 201) <= 1 && (f.values.zoom2 == null || Math.abs(f.values.zoom2 - 201) <= 1)), zoomers(s).map((f) => f.id + ":" + f.values.zoom + "/" + f.values.zoom2))
 check('fixtures without a zoom channel are untouched', s.fixtures.filter((f) => f.values.zoom == null).every((f) => f.values.zoom === undefined), 'ok')
 await cc(8, 7, 0, 150); await cc(8, 7, 127, 150); await cc(8, 7, 64, 700)
 s = await st()
@@ -246,7 +246,7 @@ await cc(1, 48, 127, 250)                     // knob to the maximum
 await on(1, 0x57, 700)
 r2 = await st()
 const sv = rawOf(r2).filter(([k]) => barStrobe(r2).includes(k)).map(([, v]) => v)
-check('strobe hit (PAN 0x57) at the knob maximum: all 15 bar strobe channels at DMX 14 (2.92 Hz), not above', sv.length === 15 && sv.every((v) => v === 14), sv)
+check('strobe hit (PAN 0x57) at the knob maximum: all 15 bar strobe channels at the top of the band (output.strobeLimit off, #1403: DMX 103, above the old 14 cap)', sv.length === 15 && sv.every((v) => v === 103), sv)
 check('the movers\' shutter is never written by the strobe hit', rawOf(r2).every(([k]) => !moverShutter(r2).includes(k)), rawOf(r2).filter(([k]) => moverShutter(r2).includes(k)))
 const movFx = r2.fixtures.filter((f) => moverShutter(r2).length && s2has(f)).length
 function s2has(f) { return f.fx && f.fx.mode === 'strobe' }
@@ -284,7 +284,7 @@ await cc(3, 0x10, 0, 500)
 r2 = await st()
 check('bank change: the first message on bank 3 is a position, not a turn (animation size unchanged)', r2.video.anim.bscale === anim0, [anim0, r2.video.anim.bscale])
 await api('api/lfos', { lfos: [{ id: 't1', wave: 'sine', beats: 1, depth: 255, enabled: false }] })
-await sleep(1300)
+await sleep(2500)
 await cc(4, 0x10, 13, 200); await cc(4, 0x10, 127, 500)
 r2 = await st()
 check('bank 4 knob 1 = LFO 1 wave: top -> random, list keeps its id', r2.lfos && r2.lfos[0] && r2.lfos[0].wave === 'random' && r2.lfos[0].id === 't1', r2.lfos && r2.lfos[0])
@@ -366,11 +366,11 @@ check('record arm 2 held: raw hold on the right truss universe only', rawU(m1, 4
 await off(2, 0x30, 500)
 m1 = await st()
 check('record arm 2 note-off: every hold released', rawOf(m1).length === 0, rawOf(m1).length)
-await cc(1, 48, 127, 250)
+await cc(1, 48, 0, 150); await cc(1, 48, 64, 150); await cc(1, 48, 127, 250)   // pick the knob up from where it was left, then to the maximum
 await on(8, 0x30, 500)                                    // record arm 8: strobe back bars, rate knob at maximum
 m1 = await st()
 const bs = rawOf(m1).filter(([k]) => barStrobe(m1).includes(k)).map(([, v]) => v)
-check('record arm 8 (strobe back bars) at the knob maximum: strobe channels at DMX 14 at most (<= 3 Hz)', bs.length === 15 && bs.every((v) => v >= 4 && v <= 14), bs)
+check('record arm 8 (strobe back bars) at the knob maximum: strobe channels in the band 4..103 and above the old DMX 14 cap (output.strobeLimit off, #1403)', bs.length === 15 && bs.every((v) => v === 103), bs)
 await off(8, 0x30, 600)
 m1 = await st()
 check('record arm 8 note-off: strobe released, nothing held, no per-fixture fx', rawOf(m1).length === 0 && m1.fixtures.every((f) => !f.fx), [rawOf(m1).length, m1.fixtures.filter((f) => f.fx).length])

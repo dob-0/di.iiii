@@ -89,7 +89,9 @@ describe('APC40 map-all: ARM, release and the strobe cap', () => {
     for (let n = 1; n <= 8; n++) expect(app).toContain("up: () => midiHoldUp(key)")
     expect(app).toContain('maxMs || mp.MAX_HOLD_MS')
   })
-  it('strobe cap: whatever the knob or the arm buttons ask, the bar strobe channel never exceeds DMX 14 (<= 3 Hz)', () => {
+  it('strobe cap (output.strobeLimit ON): whatever the knob or the arm buttons ask, the bar strobe channel never exceeds DMX 14 (<= 3 Hz)', () => {
+    P.setStrobeLimit(true)
+    try {
     for (let u = 0; u <= 1.0001; u += 0.01) {
       const v = P.strobeDmxFromUnit(u)
       expect(v).toBeLessThanOrEqual(14)
@@ -107,6 +109,13 @@ describe('APC40 map-all: ARM, release and the strobe cap', () => {
       expect(hit.holds.some((c) => c.universe === 1)).toBe(false)   // a mover is soft strobe only, its shutter untouched
       expect(hit.fxIds).toEqual(['m'])
     }
+    } finally { P.setStrobeLimit(false) }
+  })
+  it('strobe limit OFF (default, #1403): the knob runs the whole band 4..103', () => {
+    P.setStrobeLimit(false)
+    expect(P.strobeDmxFromUnit(1)).toBeGreaterThan(14)
+    expect(P.strobeDmxFromUnit(1)).toBeLessThanOrEqual(103)
+    expect(P.capStrobeDmx(103)).toBe(103); expect(P.capStrobeDmx(104)).toBe(0)
   })
   it('crossfader and solo maths', () => {
     expect(P.xfadeFactor('A', 0)).toBe(1); expect(P.xfadeFactor('A', 0.5)).toBe(1); expect(P.xfadeFactor('A', 1)).toBe(0)
