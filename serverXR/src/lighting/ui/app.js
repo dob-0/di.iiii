@@ -6181,6 +6181,7 @@ function midiHoldUp(key) {
   const h = midiHeld.get(key);
   if (!h) return;
   clearTimeout(h.timer);
+  clearInterval(h.beat);
   midiHeld.delete(key);
   if (h.channels && h.channels.length) midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, channels: window.deskMidiPatch.releaseOf(h.channels) }, 'hold:' + key, true);
   // a strobe hit's software part (fixtures with no strobe channel) goes back to the rig's own effect
@@ -6193,9 +6194,16 @@ function midiStrobeDown(key, kind) {
   if (!midiArmed || !mp || midiHeld.has(key)) return;
   const hit = mp.strobeHit((S && S.fixtures) || [], (f) => S.profiles[f.profile], kind, midiLive.strobeU);
   if (!hit.holds.length && !hit.fxIds.length) return;
-  midiHeld.set(key, { channels: hit.holds, fxIds: hit.fxIds, timer: setTimeout(() => midiHoldUp(key), mp.MAX_HOLD_MS) });
+  const h = { channels: hit.holds, fxIds: hit.fxIds, timer: setTimeout(() => midiHoldUp(key), mp.MAX_HOLD_MS) };
+  midiHeld.set(key, h);
   if (hit.holds.length) midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: hit.holds }, 'hold:' + key, true);
-  if (hit.fxIds.length) midiSend('api/fx', { mode: 'strobe', ids: hit.fxIds }, 'hold:fx:' + key, true);
+  // The software strobe is a LEASE on the desk (api/fx flash:true, 3 s): it flashes the lamps even from a dark look, and the
+  // desk lets go by itself if this page stops renewing it (reload, closed tab, pulled cable: R3-I2).
+  if (hit.fxIds.length) {
+    const lease = () => midiSend('api/fx', { mode: 'strobe', flash: true, ids: hit.fxIds }, 'hold:fx:' + key, true);
+    lease();
+    h.beat = setInterval(lease, 1000);
+  }
 }
 // The rate knob turned while a strobe is held: the held strobe channel follows (still through the cap).
 function midiStrobeRate() {
@@ -6210,6 +6218,7 @@ function midiStrobeRate() {
 }
 // Every hit lets go: disarm, a new controller, page close. Goes out even as the gate closes.
 function midiReleaseAll() {
+  midiSend('api/fx', { clearFlash: true }, 'hold:clearflash', true);   // every software-strobe lease, the first thing out
   if (midiHeld.size && window.deskMidiPatch) midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, clear: true }, 'hold:clearall', true);
   for (const key of [...midiHeld.keys()]) {
     const t = midiTargets.find((x) => x.key === key);
@@ -6676,10 +6685,9 @@ function midiRelease(ch, num) {
   const key = midiKeyFor('note', ch, num);
   const t = key && midiTargets.find((x) => x.key === key);
   if (t && t.up) t.up();
-  // ACTIVATOR is a toggle on the unit (Akai p.11): its second press may arrive as a late note-off. Flip then, behind ARM.
-  else if (t && midiArmed && /^grp:\w+:on$/.test(key) && window.deskMidiPatch.activatorOffFlips(midiLastOn[key], Date.now())) { midiLastOn[key] = undefined; t.apply(); midiHit(key); }
+  // ACTIVATOR: a press flips it, on the note-on, whatever the press length (owner N7276; R3-I4: the old "flip again on a
+  // note-off of 600 ms or more" turned every long press back). The note-off of a momentary button never flips.
 }
-const midiLastOn = {};
 
 function midiHandle(type, ch, num, unit, raw) {
   // A scene armed on the grid takes the next PAD, whatever it was bound to before.
@@ -6703,7 +6711,7 @@ function midiHandle(type, ch, num, unit, raw) {
   if (!t) { buildMidiTargets(); t = midiTargets.find((x) => x.key === key); }
   if (!t) return;
 
-  if (t.kind === 'note') { if (type !== 'note') return; midiLastOn[key] = Date.now(); t.apply(); midiHit(key); return; }
+  if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
   if (type === 'note') return;
   // A relative encoder (TEMPO, CUE LEVEL): clicks, not a position, so no takeover; Safe sends nothing.
   if (t.rel) {
@@ -7201,7 +7209,7 @@ function midiPrefSet(patch) {
 function midiSetArmed(on, byClaim) {
   if (!on && midiArmed) midiReleaseAll();   // a held flash lets go before the gate closes
   midiArmed = on;
-  if (on) midiSend('api/raw', { owner: 'apc40', clear: true }, 'hold:clear', true);   // a hit whose release never came (crash, sleep, reload) lets go on ARM
+  if (on) { midiSend('api/raw', { owner: 'apc40', clear: true }, 'hold:clear', true); midiSend('api/fx', { clearFlash: true }, 'hold:clearflash', true); }   // a hit whose release never came (crash, sleep, reload) lets go on ARM
   const b = $('#miArm');
   b.className = 'miarm ' + (midiArmed ? 'live' : 'safe');
   b.textContent = midiArmed ? 'ARMED — sending to rig' : 'Safe — not sending';

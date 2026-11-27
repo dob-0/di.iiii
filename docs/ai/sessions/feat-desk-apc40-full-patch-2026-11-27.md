@@ -9,7 +9,7 @@ Owner N7277: "use the full midi potential ... patch it full ... that it can be s
 - Zoom fader 6 (only fixtures with a zoom channel: the 15 back bars in Reika), colour FX amount (fader 8), beats (knob 7), spread (knob 8), mode (CUE LEVEL relative knob), on/off (metronome). Modes and amounts only: colours stay with colorfx.js, which skips green.
 - Hits (press+release): white (every fixture), Left, Right (api/raw holds, owner apc40: dimmer, shutter, emitters; never strobe), swap (colour FX swap while held, then restored). Let go on release, on disarm, on page close, after 15 s.
 - Safety: blackout release (always off), panic (blackout, chase off, FX off, cues stop).
-- Strobe on the movers stays UNBOUND: a venue safety decision for the owner.
+- Strobe: SENDS (0x58) = hit:strobe-movers, PAN (0x57) = hit:strobe-all, both capped at 3 flashes a second at the desk (api/raw: strobe channel <= DMX 14, 3 rising edges a second per fixture). The software strobe is a 3 s lease (api/fx flash:true) the page renews; ARM and page close clear it.
 - Pure parts in `ui/midiPatch.js`; wiring in `app.js`; preset in `midiCues.js`.
 
 ## Found by the scratch run

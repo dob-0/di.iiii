@@ -229,7 +229,8 @@ function makeFixture(f = {}) {
     // existed reads back byte for byte.
     ...(typeof f.rigKey === 'string' && f.rigKey && f.rigKey.length <= 300 ? { rigKey: f.rigKey } : {}),
     // A fixture's own effect, beating the rig-wide one for it alone (see render).
-    ...(f.fx && FX_MODES.includes(f.fx.mode) ? { fx: { mode: f.fx.mode } } : {}),
+    // A flash lease (api/fx flash:true) is live only: a saved or reloaded show never comes back strobing.
+    ...(f.fx && !f.fx.flash && FX_MODES.includes(f.fx.mode) ? { fx: { mode: f.fx.mode } } : {}),
   };
 }
 
@@ -345,7 +346,11 @@ class Engine {
     // Tempo, depth and Follow stay rig-wide. With no fixture carrying its own mode this is
     // exactly one group of every fixture — the rig-wide effect as it always was.
     const globalOn = fxActive(state.fx);
-    const ownFx = (f) => (f.fx && FX_MODES.includes(f.fx.mode) ? f.fx.mode : null);
+    // A FLASH effect (api/fx {flash:true}: the controller's software strobe hit) is a lease: `until` is its server-side expiry,
+    // renewed by the page's heartbeat. Past it the fixture is simply back on the rig (PR #1397 round 4, R3-I2): a closed tab,
+    // a reload or a pulled cable cannot leave a lamp strobing.
+    const flashOn = (f) => !!(f.fx && f.fx.flash && f.fx.mode === 'strobe' && Number(f.fx.until) > Date.now());
+    const ownFx = (f) => (f.fx && FX_MODES.includes(f.fx.mode) && (!f.fx.flash || flashOn(f)) ? f.fx.mode : null);
     const anyOwn = state.fixtures.some(ownFx);
     const effMode = (f) => ownFx(f) || (globalOn ? state.fx.mode : 'none');
     const fxGroups = new Map();
@@ -425,7 +430,11 @@ class Engine {
       // What this fixture is being told, in order of who has the last word: the layer
       // stack, then an LFO, then the fixture's own stored value. The stack sits on top
       // because a layer IS the thing an operator raised a fader on.
+      const flashing = flashOn(f);
       const baseVal = (role) => {
+        // A flash is a hit of light, not a multiplier of what is there: a dark look has nothing to flash, so the hit
+        // drives the lamp's dimmer and light channels to full for the on-phase of the strobe below (R3-I3).
+        if (flashing && (role === 'dimmer' || roleKind(role) === 'emitter')) return 255;
         if (sv && sv[role] != null) return sv[role];
         if (lv && lv[role] != null) return lv[role];
         return f.values[role];
@@ -450,7 +459,7 @@ class Engine {
       const lm = motion && !noScale ? motion.get(f.id) : null;
       if (lm) lvl *= lm.level / 255;
       if (fxGroup && !noFx && !(lm && lm.strobe && fxGroup.fx.mode === 'strobe')) {
-        lvl *= fxLevel(fxGroup.fx, f, fxGroup.order.get(f.id) ?? 0, fxGroup.n, now, fxGroup.bounds) / 255;
+        lvl *= fxLevel(flashing ? { ...fxGroup.fx, depth: 255 } : fxGroup.fx, f, fxGroup.order.get(f.id) ?? 0, fxGroup.n, now, fxGroup.bounds) / 255;
       }
       if (audioOn && !noScale) lvl *= this.audioMult(state, f, profile, now) / 255;
       // Objects mask the look like an effect does, with the same exemptions, plus a light
@@ -668,6 +677,9 @@ class Engine {
   cancelFade() { this.fade = null; }
 
   tick() {
+    // An expired flash lease lets go for good (R3-I2): the saved show never keeps a strobe nobody is holding.
+    const nowMs = Date.now();
+    for (const f of this.state.fixtures) if (f.fx && f.fx.flash && !(Number(f.fx.until) > nowMs)) delete f.fx;
     this.tickChase();
     this.cues.tick();   // a running follow sequence steps on here (cues.js)
     const target = this.render();
@@ -776,7 +788,7 @@ class Engine {
       name: name || `Scene ${this.state.scenes.length + 1}`,
       fadeMs: 1000,
       fixtures: this.state.fixtures.map((f) => ({ id: f.id, on: f.on, values: { ...f.values },
-        ...(f.fx ? { fx: { mode: f.fx.mode } } : {}) })),
+        ...(f.fx && !f.fx.flash ? { fx: { mode: f.fx.mode } } : {}) })),
       raw: { ...this.state.raw },
       // Deep enough copies that editing the live fx/LFOs later can never reach back into
       // a scene that was captured before the edit.

@@ -133,10 +133,7 @@
     return out.filter((c) => c.channel >= 1 && c.channel <= 512);
   }
   const releaseOf = (channels) => channels.map((c) => ({ universe: c.universe, channel: c.channel, value: -1 }));
-  // ACTIVATOR is a toggle in Generic Mode (Akai protocol p.11): the unit may send note-on, then note-off on the NEXT
-  // press. A note-off close behind its note-on is a momentary release (ignore); a late one is a second press (flip).
-  const TOGGLE_OFF_MIN_MS = 600;
-  const activatorOffFlips = (lastOnAt, now) => Number.isFinite(lastOnAt) && now - lastOnAt >= TOGGLE_OFF_MIN_MS;
+  // ACTIVATOR: a press flips it on the note-on, however long it is held; the note-off never flips (R3-I4, owner N7276).
   const MAX_HOLD_MS = 15000;   // a flash the page forgot to release lets go by itself
 
   // ---- zoom ----
@@ -253,7 +250,7 @@
 
   const api = { relDelta, BPM_MIN, BPM_MAX, clampBpm, bpmStep, createTapper, TAP_RESET_MS, TAP_KEEP, NUDGE_MS, nudgeEpoch,
     rateFromUnit, unitFromRate, CFX_MODES, CFX_BEATS, cfxModeStep, cfxBeatsFromUnit, unitFromCfxBeats, cfxToggle,
-    GROUPS, rigGroups, groupDimRead, groupIsOn, HOLD_OWNER, flashChannels, releaseOf, MAX_HOLD_MS, TOGGLE_OFF_MIN_MS, activatorOffFlips, zoomRoles,
+    GROUPS, rigGroups, groupDimRead, groupIsOn, HOLD_OWNER, flashChannels, releaseOf, MAX_HOLD_MS, zoomRoles,
     STROBE_MAX_HZ, STROBE_DMX_CAP, capStrobeDmx, strobeDmxFromHz, strobeHzFromDmx, strobeHzFromUnit, strobeDmxFromUnit, strobeHit,
     KNOB_PAGES, KNOBS, knobByKey, knobValue, knobUnit, knobSend, knobRings, headScaleFromUnit };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
