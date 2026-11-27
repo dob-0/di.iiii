@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, afterEach } from 'vitest'
+import { describe, expect, it, vi, afterEach, beforeAll } from 'vitest'
 import http from 'node:http'
 
 // The room's pose of a look is mocked to a fixed level per lamp: these tests are about the checker, not the rig rules.
@@ -10,6 +10,9 @@ vi.mock('../../src/rigbuild/looks.js', async (orig) => {
 
 import { parseCueRange, statsOf, lampsOf, lookOfCue, expectationOf, measureOf, compareLamps, cueLine, nodeUniverseOf, nodeKindOf, main, MOVE_THRESHOLD, followNext, followMinutes, layerPlays } from './cue-wire-check.mjs'
 import { TYPE_LIBRARY } from '../../src/rigbuild/types/index.js'
+import { setStrobeLimit } from '../../src/rigbuild/strobeCap.js'
+// N7618 (2026-11-27): no cap by default; this file pins the OLD 3 Hz cap, i.e. the desk setting output.strobeLimit ON.
+beforeAll(() => setStrobeLimit(true))
 
 const lamp = (id, type, universe, address, extra = {}) => ({ id, type: 'spotLight', components: { transform: { position: [id === 'w2' ? 3 : 0, 6, 0] }, fixture: { type, universe, address }, ...extra } })
 const ENTITIES = [
