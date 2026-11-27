@@ -1,0 +1,8 @@
+## 2026-11-27 — The drawn APC40 on the MIDI tab fits the pane width at every window width
+
+- Owner's tile (710x780 css px, dpr 1.667): the Labelled view panned a 1.1x drawing in a scroll box, so track columns 1 and 8 were cut off and the page was about 3300 px tall. Measured in a headless harness before: drawing 1218 px wide in a 668 px box.
+- Now (serverXR/src/lighting/ui/apc40draw.js): no pan box ever. Under 1000 px the unit is drawn whole at the pane width (the Real layout view, 470 px tall at 710 px wide); the Labelled button is disabled there with a title saying why. Pad numbers stay at 11 px or more or are hidden (data-cut), never drawn cut; captions and button glyphs that would be under about 7 px on screen are hidden below scale 0.85, the legend under the drawing names every control.
+- Also fixed: report() threw ReferenceError (a local const shadowed the callouts() function), so the fit check could not run at all.
+- Test: serverXR/src/lighting/apc40fit.browser.test.js, headless Chromium, 7 widths (360..2560) x 3 saved view choices. Needs playwright; without it the test is skipped with a loud warning (DI_APC_FIT_PLAYWRIGHT / DI_APC_FIT_CHROMIUM point it at one).
+- Not done: the Labelled view at 1000-1400 px still prints captions at 7-8 px on screen (scaled with the unit); readable on a big screen only.
+- Legend follows the live MIDI map: apc40View.slots lists track fader 1-8, track knob 1-8 and activator 1-8, each naming the control the map binds to that cc / note on that channel, empty when unbound; hw of every legend row comes from the binding (hwOf). The drawing's redraw signature in app.js now includes each binding's type/ch/num, so a remap with the same key count redraws.

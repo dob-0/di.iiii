@@ -120,6 +120,19 @@
   const ALL_KEYS = Object.keys(BUTTONS).concat(['master'], CONTROLS.map((c) => c.key), pm().KNOBS.map((k) => k.key));
   for (let k = 0; k < mc.LOOK_PADS; k++) ALL_KEYS.push('lookpad:' + k);
 
+  // The printed name of the control a binding (type, ch, num) lands on (Akai protocol v1.2): one rule for the legend rows and the tests.
+  function hwOf(b) {
+    if (!b) return '';
+    if (b.type === 'cc') {
+      if (b.num === 7 && b.ch >= 1 && b.ch <= 8) return 'TRACK FADER ' + b.ch;
+      if (b.num >= 48 && b.num <= 55 && b.ch === 1) return 'TRACK KNOB ' + (b.num - 47);
+      if (b.num === 13) return 'TEMPO knob';
+      if (b.num === 47) return 'CUE LEVEL knob';
+      return 'CC ' + b.num + ' ch ' + b.ch;
+    }
+    if (b.num === 0x32 && b.ch >= 1 && b.ch <= 8) return 'ACTIVATOR ' + b.ch;
+    return 'NOTE ' + b.num + ' ch ' + b.ch;
+  }
   function presetRows() { return mc.apc40Preset(ALL_KEYS); }
 
   // The strobe labels follow the desk setting output.strobeLimit (model.strobeLimit): off (default, N7618) = the lamp's whole band,
@@ -188,12 +201,20 @@
     }
     // Faders, knobs, activators, and the 8 device knobs of each TRACK SELECT bank: what each does and its range.
     const ccName = (b) => (b.type === 'cc' ? 'CC ' + b.num + ' ch ' + b.ch : 'note ' + b.num + ' ch ' + b.ch);
-    const controls = CONTROLS.filter((c) => eff[c.key]).map((c) => ({ ...c, ...(c.key === 'strobe:rate' ? { range: m.strobeLimit ? STROBE_RANGE.on : STROBE_RANGE.off } : {}), where: ccName(eff[c.key]) }));
+    const controls = CONTROLS.filter((c) => eff[c.key]).map((c) => ({ ...c, hw: hwOf(eff[c.key]) || c.hw, ...(c.key === 'strobe:rate' ? { range: m.strobeLimit ? STROBE_RANGE.on : STROBE_RANGE.off } : {}), where: ccName(eff[c.key]) }));
     const knobs = pm().KNOBS.filter((k) => eff[k.key]).map((k) => ({ key: k.key, page: k.page, pageName: k.pageName, bank: eff[k.key].ch,
       hw: 'BANK ' + eff[k.key].ch + ' KNOB ' + (eff[k.key].num - 0x0f), does: k.label, range: k.unitLabel, where: ccName(eff[k.key]) }));
+    // The legend follows the LIVE map, not the key's preset place: a slot of the unit (track fader 1-8, track knob 1-8, activator 1-8)
+    // names the control the map binds to that cc / note on that channel, and is empty when nothing is bound there.
+    const bindKey = (type, ch, num) => { const c = CONTROLS.find((x) => eff[x.key] && eff[x.key].type === type && eff[x.key].ch === ch && eff[x.key].num === num); return c || null; };
+    const slots = [];
+    const slot = (hw, type, ch, num) => { const c = bindKey(type, ch, num); slots.push({ hw, type, ch, num, key: c ? c.key : null, does: c ? c.does : '', range: c ? c.range : '' }); };
+    for (let n = 1; n <= 8; n++) slot('TRACK FADER ' + n, 'cc', n, 7);
+    for (let n = 1; n <= 8; n++) slot('TRACK KNOB ' + n, 'cc', 1, 47 + n);
+    for (let n = 1; n <= 8; n++) slot('ACTIVATOR ' + n, 'note', n, 0x32);
     const mb = eff.master;
     const view = {
-      pads, buttons, controls, knobs, bindings: eff, columns, ordered: Array.isArray(m.order) && m.order.length > 0,
+      pads, buttons, controls, knobs, slots, bindings: eff, columns, ordered: Array.isArray(m.order) && m.order.length > 0,
       page, pages: mc.lookPageCount(looks.length), total: new Set(looks.filter(Boolean).map((l) => l.id)).size,
       master: { mapped: !!(mb && mb.type === 'cc'), cc: mb ? mb.num : null, does: 'Master fader = desk master' },
       onAir: (looks.find((l) => l && l.id === m.activeId) || {}).name || '',
@@ -266,7 +287,7 @@
   // The on-air pad: white label on this gradient is at least 4.5:1 at both ends (review L1; test pins it).
   const LIVE_GRADIENT = ['#dd2c22', '#cc0000'];
 
-  const api = { apc40View, apc40Callouts, ccTarget, takeover, ledHex, LED_HEX, BUTTONS, HW, CONTROLS, LIVE_GRADIENT };
+  const api = { hwOf, apc40View, apc40Callouts, ccTarget, takeover, ledHex, LED_HEX, BUTTONS, HW, CONTROLS, LIVE_GRADIENT };
 
   // ---------------------------------------------------------------- the drawing (browser only)
   if (typeof document !== 'undefined') {
@@ -335,7 +356,7 @@
     // the PADS list. Owner 2026-11-27: "fix and update ui that i can see what is what".
     const PAD_RENDERED = [14, 13, 12, 11.5, 11];
     const READ_MIN = 11;
-    const NARROW_W = 1000, READ_SCALE = 1.1;   // pane narrower than this: OVERVIEW (the whole unit fitted to the width, like the di music page; pads show their number)
+    const NARROW_W = 1000, CAPTION_MIN_SCALE = .85;   // pane narrower than this: OVERVIEW (the whole unit fitted to the width, like the di music page; pads show their number)
 
     const css = document.createElement('style');
     css.textContent = CSS.join('\n') + [
@@ -345,7 +366,8 @@
       '.apc40 .apcjump{display:none;gap:8px;align-items:center;font:12px/1.3 var(--mono);color:var(--muted)}',
       '.apc40.pan .apcjump{display:flex}.apc40 .apcjump button{font:600 12px/1 var(--mono);padding:8px 12px;min-height:32px}',
       '.apc40.overview .apcside .tog{display:none}',
-      '.apcview{display:inline-flex;gap:0}.apcview button{font:600 12px/1 var(--mono);padding:7px 12px;min-height:30px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}.apcview button+button{border-left:0}.apcview button[aria-pressed=true]{background:var(--accent,#2b6cff);color:#fff}',
+      '.apc40.tiny .apcp .pl,.apc40.tiny .apcp :not(.pad)>.lb{display:none}.apc40.tiny .apcp :is(.bar,.sq4,.xab,.m,.akai small){color:transparent}.apc40 .apcp .lb[data-cut]{visibility:hidden}',
+      '.apcview button:disabled{opacity:.45;cursor:not-allowed}.apcview{display:inline-flex;gap:0}.apcview button{font:600 12px/1 var(--mono);padding:7px 12px;min-height:30px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}.apcview button+button{border-left:0}.apcview button[aria-pressed=true]{background:var(--accent,#2b6cff);color:#fff}',
       '.apc40 .apcp{flex:none;width:' + NATIVE_W + 'px}',
       '.apcp .pad{border:1px solid rgba(255,255,255,.08);color:#151515;cursor:pointer;padding:0}',
       '.apcp .pad.live{background:linear-gradient(180deg,' + LIVE_GRADIENT[0] + ',' + LIVE_GRADIENT[1] + ');box-shadow:0 0 1.3cqw #ff0000;color:#fff;font-weight:700}',
@@ -625,7 +647,7 @@
       // The choice is kept per browser; until he picks: Labelled when the pane is wide, Real layout when it is narrow.
       let picked = null;
       try { const v = window.localStorage && window.localStorage.getItem('deskApcView'); if (v === 'labelled' || v === 'real') picked = v; } catch (e) { /* storage blocked: default by width */ }
-      const viewNow = () => picked || (wrap.clientWidth < NARROW_W ? 'real' : 'labelled');
+      const viewNow = () => (wrap.clientWidth < NARROW_W ? 'real' : (picked || 'labelled'));   // a pane under NARROW_W never pans (owner 2026-11-27): the whole unit at the width
       let overview = false;   // narrow pane: the whole unit at the width, no leader labels, pads carry their number (the PADS list below names them)
       const callouts = () => labelsOn && !overview;
       const margins = () => (callouts() ? MARGIN : NO_MARGIN);
@@ -799,7 +821,9 @@
         const rows = [];
         padlist.innerHTML = v.pads.filter((p) => p.name).map((p) => `<li class="${p.state === 'live' ? 'live' : ''}"><span class="no">${p.no}</span>${esc(p.name)}</li>`).join('') || '<li>no looks on this page</li>';
         for (const b of v.buttons) rows.push(`<tr class="${b.danger ? 'danger' : ''}"><td class="hw">${b.hex && b.vel > 1 ? `<span class="sw" style="background:${b.hex}"></span>` : ''}${esc(b.hw)}</td><td class="do">${esc(b.does)}</td></tr>`);
-        for (const c of v.controls.concat(v.knobs)) rows.push(`<tr><td class="hw">${esc(c.hw)}</td><td class="do">${esc(c.does)}  [${esc(c.range)}]</td></tr>`);
+        const slotted = new Set(v.slots.map((x) => x.key).filter(Boolean));
+        for (const x of v.slots) rows.push(`<tr class="${x.key ? '' : 'empty'}"><td class="hw">${esc(x.hw)}</td><td class="do">${x.key ? esc(x.does) + '  [' + esc(x.range) + ']' : ''}</td></tr>`);
+        for (const c of v.controls.filter((x) => !slotted.has(x.key)).concat(v.knobs)) rows.push(`<tr><td class="hw">${esc(c.hw)}</td><td class="do">${esc(c.does)}  [${esc(c.range)}]</td></tr>`);
         if (v.master.mapped) rows.push(`<tr><td class="hw">MASTER fader (CC ${v.master.cc})</td><td class="do">${esc(v.master.does)}</td></tr>`);
         tbody.innerHTML = rows.join('') || '<tr><td colspan="2">no button is mapped</td></tr>';
         note.textContent = v.mapped ? '' : 'Nothing is bound yet: this is the preset layout. Press "Map my controller" to bind it.';
@@ -818,17 +842,18 @@
 
       // The panel is scaled to the room the pane has, by width (the legend sits below it and the page scrolls).
       // REAL LAYOUT: the whole unit at the width like the di music page (devices.js fitApc), pads show their NUMBER (>= 11 px), no leader labels.
-      // LABELLED in a pane narrower than the unit at READ_SCALE: drawn at READ_SCALE (every name and leader label >= 11 px) in a pan box.
+      // Never a pan box (owner 2026-11-27): the unit is always the pane width. LABELLED (leader lines) needs a pane >= NARROW_W; narrower, the REAL view is drawn.
       let scale = 1;
       function fitScale() {
         const total = wrap.clientWidth; if (!total) return;
         const real = viewNow() === 'real';
         if (real !== overview) { overview = real; wrap.classList.toggle('overview', real); wrap.classList.toggle('nolabels', !callouts()); layoutCallouts(); }
-        for (const b of viewBtns) b.setAttribute('aria-pressed', String((b.dataset.v === 'real') === real));
+        for (const b of viewBtns) { b.setAttribute('aria-pressed', String((b.dataset.v === 'real') === real)); if (b.dataset.v === 'labelled') { b.disabled = total < NARROW_W; b.title = b.disabled ? 'Needs a wider window: the leader labels do not fit this width. The legend below names every control.' : ''; } }
         const m = margins(), SW = NATIVE_W + m.l + m.r, SH = NATIVE_H + m.t + m.b;
-        const pan = !real && total < NARROW_W && total < SW * READ_SCALE;
+        const pan = false;   // never a sideways scroll: the unit is always fitted to the pane width
         wrap.classList.toggle('pan', pan);
-        scale = pan ? READ_SCALE : Math.max(.3, Math.min(total / SW, 2));
+        scale = Math.min(total / SW, 2);
+        wrap.classList.toggle('tiny', scale < CAPTION_MIN_SCALE);   // control captions would be under ~7 px on screen: hidden, the legend below names every control
         stage.style.setProperty('--clpx', Math.max(10.5, Math.round(12 / scale * 100) / 100) + 'px');   // leader labels: 12 px on screen
         ap.style.left = m.l + 'px'; ap.style.top = m.t + 'px';
         stage.style.width = SW + 'px'; stage.style.height = SH + 'px';
@@ -867,14 +892,15 @@
 
       // The measured fit check: any label cut, any control outside the panel, the smallest label as drawn on screen.
       function report() {
-        const labels = [...ap.querySelectorAll('.lb')];
-        const cut = labels.filter((l) => l.dataset.cut || (l.textContent && (l.scrollWidth > l.clientWidth || l.scrollHeight > l.clientHeight)));
+        const labels = [...ap.querySelectorAll('.lb')].filter((l) => !l.dataset.cut && l.getClientRects().length);   // a number that cannot reach 11 px is hidden (data-cut), not drawn cut
+        const hiddenLb = ap.querySelectorAll('.lb[data-cut]').length;
+        const cut = labels.filter((l) => (l.textContent && (l.scrollWidth > l.clientWidth || l.scrollHeight > l.clientHeight)));
         const shown = labels.filter((l) => l.textContent);
         const px = shown.map((l) => parseFloat(l.dataset.px || l.style.fontSize) * scale);
         const pr = ap.getBoundingClientRect();
         const sr = side.getBoundingClientRect();
         const bad = [];
-        for (const e of [...ap.children]) { const r = e.getBoundingClientRect(); if (r.right > pr.right + 1 || r.bottom > pr.bottom + 1 || r.left < pr.left - 1 || r.top < pr.top - 1) bad.push((e.className || e.tagName) + ''); }
+        for (const e of [...ap.children]) { if (!e.getClientRects().length) continue; const r = e.getBoundingClientRect(); if (r.right > pr.right + 1 || r.bottom > pr.bottom + 1 || r.left < pr.left - 1 || r.top < pr.top - 1) bad.push((e.className || e.tagName) + ''); }
         const sideCut = [...side.querySelectorAll('td,p,h3')].filter((n) => n.scrollWidth > n.clientWidth + 1).length;
         const cls = [...stage.querySelectorAll('.cl')].filter((e) => e.style.display !== 'none' && callouts());
         const rects = cls.map((e) => e.getBoundingClientRect()), stg = stage.getBoundingClientRect();
@@ -886,8 +912,8 @@
           if (r.left < stg.left - 1 || r.top < stg.top - 1 || r.right > stg.right + 1 || r.bottom > stg.bottom + 1) clOut++;
           for (let b = a + 1; b < rects.length; b++) { const q = rects[b]; if (r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top) clOverlap++; }
         }
-        const callouts = { count: cls.length, cut: clCut, overlap: clOverlap, onUnit: clOnUnit, outsideStage: clOut, minPx: cls.length ? Math.round(Math.min(...cls.map((e) => parseFloat(getComputedStyle(e).fontSize))) * scale * 10) / 10 : 0 };
-        return { callouts, labels: shown.length, cut: cut.length, cutTexts: cut.map((l) => l.textContent), outside: bad.length, outsideWho: bad.slice(0, 5), minPx: px.length ? Math.round(Math.min(...px) * 10) / 10 : 0, scale: Math.round(scale * 1000) / 1000, panel: [Math.round(pr.width), Math.round(pr.height)], side: [Math.round(sr.width), Math.round(sr.height)], sideCut, unknownLed: lastView ? lastView.pads.filter((p) => p.hex === UNKNOWN_HEX).length : 0 };
+        const co = { count: cls.length, cut: clCut, overlap: clOverlap, onUnit: clOnUnit, outsideStage: clOut, minPx: cls.length ? Math.round(Math.min(...cls.map((e) => parseFloat(getComputedStyle(e).fontSize))) * scale * 10) / 10 : 0 };
+        return { callouts: co, labels: shown.length, hiddenLabels: hiddenLb, cut: cut.length, cutTexts: cut.map((l) => l.textContent), outside: bad.length, outsideWho: bad.slice(0, 5), minPx: px.length ? Math.round(Math.min(...px) * 10) / 10 : 0, scale: Math.round(scale * 1000) / 1000, panel: [Math.round(pr.width), Math.round(pr.height)], side: [Math.round(sr.width), Math.round(sr.height)], sideCut, unknownLed: lastView ? lastView.pads.filter((p) => p.hex === UNKNOWN_HEX).length : 0 };
       }
       function say(text) { last.textContent = text; }
       return { update, hit, live, fit: fitScale, report, say, el: ap };
