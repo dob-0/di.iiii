@@ -458,7 +458,7 @@
       const xg = G.box.xfader, xcy = PY(Y(xg[1], xg[0]) + xg[3] / 2), xw = xg[2], xh = 3.2;   // track centre line (panel %), cap height (panel % of height)
       const xa = Cx(el('div', 'xab', ap, 'A'), 'xA'), xb = Cx(el('div', 'xab', ap, 'B'), 'xB');
       xa.style.left = (xg[0] - 1.2) + '%'; xb.style.left = (xg[0] + xw + 1.2) + '%'; xa.style.top = xb.style.top = xcy + '%';
-      [xg[0] - .09, xg[0] + xw].forEach((x, n) => { const t = el('div', 'xt', ap); t.style.left = x + '%'; t.style.width = '.09%'; t.style.top = (xcy - xh * .7) + '%'; t.style.height = (xh * 1.4) + '%'; G.box['xt.' + n] = [x, 0, .09, 0]; });
+      [xg[0], xg[0] + xw].forEach((x, n) => { const t = el('div', 'xt', ap); t.style.left = x + '%'; t.style.width = 'max(1px, .09%)'; if (!n) t.style.transform = 'translateX(-100%)'; t.style.top = (xcy - xh * .7) + '%'; t.style.height = (xh * 1.4) + '%'; });   // left stop ends at the track start, right stop starts at its end
       const xf = Bx(el('div', 'xf', ap), 'xfader'); xf.style.top = (xcy - xh / 2) + '%'; xf.style.height = xh + '%'; el('b', '', xf); R.xfader = xf;
       const ak = Cx(el('div', 'akai', ap), 'akai', true); ak.textContent = 'AKAI'; el('small', '', ak, 'Professional');
 
