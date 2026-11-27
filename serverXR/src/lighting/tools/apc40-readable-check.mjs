@@ -16,9 +16,10 @@ import { checkSimTarget, checkDeskAnswers } from './simGuard.mjs'
 const require = createRequire((process.env.PW_FROM || process.cwd()) + '/')
 const { chromium } = require('playwright')
 const FLOOR = 11
+const SELFTEST = process.env.APC_OVERLAP_SELFTEST === '1'   // test-only: forces a known overlap to prove the assertion fails
 const base = process.argv[2]
 const out = process.argv[3]
-const sizes = (process.argv.length > 4 ? process.argv.slice(4) : ['1534x830', '1536x864', '606x780']).map((s) => s.split('x').map(Number))
+const sizes = (process.argv.length > 4 ? process.argv.slice(4) : ['1534x830', '1536x864', '606x780', '662x830']).map((s) => s.split('x').map(Number))
 {
   let u
   try { u = new URL(base) } catch { console.error('not a URL: ' + base); process.exit(2) }
@@ -56,7 +57,7 @@ for (const [w, h, view] of sizes.flatMap(([w, h]) => [[w, h, 'labelled'], [w, h,
   for (let pg = 0; pg < pages; pg++) {
     if (pg > 0) { await page.evaluate(() => midiLookPageStep(1)); await page.waitForTimeout(500) }
     await page.evaluate(() => { window.scrollTo(0, 0); for (let e = document.querySelector('.apcwrap'); e; e = e.parentElement) { e.scrollTop = 0; if (e.classList.contains('apcwrap')) e.scrollLeft = 0 } })   // every measure starts from the unscrolled first view
-    const m = await page.evaluate((pageNo) => {
+    const m = await page.evaluate(({ pageNo, SELFTEST }) => {
       const stage = document.querySelector('.apcstage'), k = stage.getBoundingClientRect().width / stage.offsetWidth
       const px = (e) => parseFloat(getComputedStyle(e).fontSize) * k
       const pads = [...document.querySelectorAll('.apcp .pad')].filter((p) => p.firstChild && p.firstChild.textContent)
@@ -88,9 +89,18 @@ for (const [w, h, view] of sizes.flatMap(([w, h]) => [[w, h, 'labelled'], [w, h,
         whole: !!aw && ar.left >= 0 && ar.right <= window.innerWidth + 1 && document.querySelector('.apcstage').getBoundingClientRect().right <= ar.right + 1 && getComputedStyle(aw).overflowX !== 'auto' }   // the whole unit, no sideways pan
       const sw = [...document.querySelectorAll('.apcview button')]
       const switchOk = sw.length === 2 && sw.every(inView) && sw.filter((b) => b.getAttribute('aria-pressed') === 'true').length === 1
-      return { switchOk, drawing, scale: Math.round(k * 1000) / 1000, pads: pads.length, padMin: Math.min(...padPx), clN: cl.length, clMin: cl.length ? Math.min(...clPx) : null, cut, clCut, short, noTitle, list, firstView, underBar, dup, topLabels: tops.length }
-    }, pg + 1)
-    const ok = m.padMin >= FLOOR - 0.05 && (m.clMin == null || m.clMin >= FLOOR - 0.05) && m.cut === 0 && m.clCut === 0 && m.noTitle === 0 && m.list === m.pads && m.firstView.scrollTop === 0 && m.firstView.heading && m.firstView.orderButtons >= 2 && m.firstView.orderButtonsInView === m.firstView.orderButtons && m.underBar.length === 0 && m.dup.length === 0 && m.drawing.visible && m.drawing.first && (view === 'real' ? m.drawing.whole && m.drawing.overview && m.clN === 0 : m.drawing.overview === false && m.clN > 0 && m.drawing.pan === (w < 1000)) && m.switchOk
+      // overlaps (as drawn, in screen px): the APC/AKAI logos, the crossfader (track, cap, end stops) and A/B must not intersect ANY other drawn element, and no two labels (.pl) may intersect; controls against controls are not checked (they tile the panel by design)
+      const ap0 = document.querySelector('.apcp'), kids = [...ap0.children].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' })
+      const cls = (e) => e.className && e.className.baseVal === undefined ? String(e.className) : ''
+      const isX = (e) => /\b(logo|akai|xf|xab|xt)\b/.test(cls(e)), isLab = (e) => /\bpl\b/.test(cls(e))
+      const nm = (e) => cls(e).trim().replace(/\s+/g, '.') + (e.textContent ? '"' + e.textContent.trim().slice(0, 8) + '"' : '')
+      const hit = (a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(), w = Math.min(x.right, y.right) - Math.max(x.left, y.left), h = Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top), thin = Math.min(x.width, x.height, y.width, y.height) < 2; return thin ? w > 0 && h > 0 : w > 1 && h > 1 }   // a thin end stop counts at any positive overlap
+      if (SELFTEST) { const f = document.querySelector('.apcp .xf'), a = document.querySelector('.apcp .akai'); f.style.left = a.style.left; f.style.top = a.style.top }   // test-only: put the crossfader on AKAI; the check must FAIL
+      const overlaps = []
+      for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) { const a = kids[i], b = kids[j]; if ((isX(a) || isX(b) || (isLab(a) && isLab(b))) && hit(a, b)) overlaps.push(nm(a) + ' x ' + nm(b)) }
+      return { overlaps, overlapChecked: kids.length, switchOk, drawing, scale: Math.round(k * 1000) / 1000, pads: pads.length, padMin: Math.min(...padPx), clN: cl.length, clMin: cl.length ? Math.min(...clPx) : null, cut, clCut, short, noTitle, list, firstView, underBar, dup, topLabels: tops.length }
+    }, { pageNo: pg + 1, SELFTEST })
+    const ok = m.padMin >= FLOOR - 0.05 && (m.clMin == null || m.clMin >= FLOOR - 0.05) && m.cut === 0 && m.clCut === 0 && m.noTitle === 0 && m.list === m.pads && m.firstView.scrollTop === 0 && m.firstView.heading && m.firstView.orderButtons >= 2 && m.firstView.orderButtonsInView === m.firstView.orderButtons && m.underBar.length === 0 && m.dup.length === 0 && m.overlaps.length === 0 && m.drawing.visible && m.drawing.first && (view === 'real' ? m.drawing.whole && m.drawing.overview && m.clN === 0 : m.drawing.overview === false && m.clN > 0 && m.drawing.pan === (w < 1000)) && m.switchOk
     if (!ok) fail++
     rows.push({ size: w + 'x' + h + ' ' + view, page: pg + 1, ...m, ok })
     console.log((ok ? 'PASS ' : 'FAIL ') + w + 'x' + h + ' ' + view + ' page ' + (pg + 1) + '  ' + JSON.stringify(m))
