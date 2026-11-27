@@ -56,7 +56,7 @@ function page(o = {}) {
     const applyOnAir = () => { L.onAirApplied++; return true; };
     const MIDI_PREF_KEY = 'lightdeskMidiPrefs';
     ${grabLine(/const MIDI_ONAIR_MS = \d+;/)}
-    ${['midiPrefs', 'midiPrefSet', 'midiRefreshLive', 'midiLiveArrived', 'midiSend', 'midiFlush', 'midiSetArmed', 'midiOnAirTick', 'midiOnAirStart', 'midiOnAirStop', 'midiListInputs', 'midiBindInput', 'midiRestoreTry', 'midiLookPress', 'midiBlackoutPress'].map(grab).join('\n')}
+    ${['midiPrefs', 'midiPrefSet', 'midiRefreshLive', 'midiLiveArrived', 'midiSend', 'midiBlind', 'midiFlush', 'midiSetArmed', 'midiOnAirTick', 'midiOnAirStart', 'midiOnAirStop', 'midiListInputs', 'midiBindInput', 'midiRestoreTry', 'midiLookPress', 'midiBlackoutPress'].map(grab).join('\n')}
     ${grabLine(/if \(midiPrefs\(\)\.enabled\) midiEnable\(\);/).replace('midiEnable()', 'A.enable()')}
     return {
       get armed() { return midiArmed; }, get wait() { return midiLiveWait; }, live: midiLive, pickup: midiPickup, pending: midiPending,

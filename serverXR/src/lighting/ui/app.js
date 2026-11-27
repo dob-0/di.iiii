@@ -4125,7 +4125,7 @@ function initMidi() {
   navigator.requestMIDIAccess({ sysex: false }).then((access) => {
     midiReady = true;
     midiAccess = access;
-    access.onstatechange = () => { midiListInputs(); };
+    access.onstatechange = () => { midiReleaseAll(); midiListInputs(); };   // a pulled cable or a new controller: every hit and SHIFT let go (R2-2)
     midiListInputs();
     midiPill('#miMidiStat', 'MIDI <b>ready</b>', 'good');
   }).catch((e) => {
@@ -6108,10 +6108,19 @@ const midiPending = new Map();
 let midiFlushing = false;
 let midiFlushTimer = null;
 
+function midiBlind() {
+  const MIDI_BLIND_MS = 1700;   // the busy window (700 ms) + one poll (750 ms) + margin
+  midiLive.blindUntil = Date.now() + MIDI_BLIND_MS;
+  clearTimeout(midiLive.blindTimer);
+  midiLive.blindTimer = setTimeout(() => { midiLive.blindTimer = null; const f = midiLive.relevel; midiLive.relevel = null; if (f && midiArmed) f(); }, MIDI_BLIND_MS + 50);
+}
 // `last`: a pad press (note target) is a whole call; pressed again it goes to the back of the
 // queue, so the last press wins (press A, B, A -> A ends on air).
 function midiSend(route, body, key, last) {
   if (!midiArmed || midiLiveWait) return;
+  // These change the desk's dimmers behind the page's mirror (R2-1, #1404 review): until a poll has brought the new values, the
+  // fader bases are unknown, so a SOLO / A-B / crossfader press waits for them instead of writing an old level back.
+  if (/^api\/(fixtures\/all|looks\/fire|scenes\/recall|cues\/)/.test(route)) midiBlind();
   const k = key || route;
   if (last) midiPending.delete(k);
   const cur = midiPending.get(k);
@@ -6141,10 +6150,8 @@ async function midiFlush() {
         const bodyText = JSON.stringify(item.body);
         const r = await fetch(item.route, {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          // keepalive lets a release leave when the page closes, but Chrome rejects it unpredictably ("Failed to fetch"): an 11 KB
-          // api/raw hold and small api/chase posts both failed with it in the simulation (3 runs), so the hold never left. Only the
-          // two tiny page-close backstop posts of midiReleaseAll ({clear}, {clearFlash}) keep it; everything else goes without.
-          keepalive: !!(item.body && (item.body.clear === true || item.body.clearFlash === true)),
+          // No keepalive here: Chrome rejected keepalive posts in the simulation (an 11 KB api/raw hold, small api/chase posts) so the
+          // hold never left. The page-close clears are NOT queued: midiPageClose sends them as direct keepalive fetches.
           body: bodyText,
         });
         if (item.route === 'api/looks/fire' && item.body && item.body.id) midiLookAnswer(item.body.id, r.ok);
@@ -6236,6 +6243,17 @@ function midiReleaseAll() {
     const t = midiTargets.find((x) => x.key === key);
     if (t && t.up) t.up(); else midiHoldUp(key);
   }
+}
+
+// Page close: the queue is awaited one fetch at a time and never runs once the page is gone, so the two clears leave as direct
+// keepalive fetches (~60 bytes each, far under the 64 KB keepalive budget): every software-strobe lease and every raw hold of ours.
+function midiPageClose() {
+  midiLive.shift = false;
+  const post = (route, body) => { try { fetch(route, { method: 'POST', headers: { 'content-type': 'application/json' }, keepalive: true, body: JSON.stringify(body) }).catch(() => {}); } catch (e) { /* the page is going */ } };
+  post('api/fx', { clearFlash: true });
+  if (window.deskMidiPatch) post('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, clear: true });
+  for (const h of midiHeld.values()) { clearTimeout(h.timer); clearInterval(h.beat); }
+  midiHeld.clear(); midiPending.clear();
 }
 
 function buildMidiTargets() {
@@ -6460,6 +6478,10 @@ function buildMidiTargets() {
     // A group's level = its fader x the crossfader (by side) x solo; the fader's own value is remembered per group.
     function applyLevels(keys, fresh) {
       const solo = soloIds();
+      // Blind: a desk-side change the page does not mirror is in flight (midiBlind). The press is remembered and applied from the
+      // desk's own values once the poll has brought them; only a fader (fresh) sets its own base and goes out now.
+      const blind = Date.now() < (midiLive.blindUntil || 0);
+      if (blind && !(fresh && fresh.length)) { midiLive.relevel = () => applyLevels(allKeys()); return; }
       for (const key of keys) {
         const g = gById[key]; if (!g) continue;
         // The base is what the fader last set; when the desk moved the group since (scene recall, its own fader) the live
@@ -7471,7 +7493,7 @@ function midiRestoreTry() {
   if (prefs.preset && !Object.keys(midiMap).length && midiInput && midiPresetFor(midiInput.name) && midiPresetFor(midiInput.name).name === prefs.preset) midiApplyPreset();
 }
 if (midiPrefs().enabled) midiEnable();
-window.addEventListener('pagehide', () => { if (midiArmed) { midiReleaseAll(); midiLedsOff(); } });
+window.addEventListener('pagehide', () => { if (midiArmed) { midiPageClose(); midiLedsOff(); } });
 
 $('#miWizard').addEventListener('click', () => {
   midiWizardOn = !midiWizardOn;

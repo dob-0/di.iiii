@@ -162,8 +162,41 @@ describe('APC40 map-all round 2 (#1404 review)', () => {
     expect(app).toContain('midiLive.epochMine = { v: r.epoch')
     expect(app).toContain('midiLive.epochMine.v')
   })
-  it('keepalive only on the page-close backstop posts', () => {
-    expect(app).toContain('keepalive: !!(item.body && (item.body.clear === true || item.body.clearFlash === true))')
+  it('keepalive: the queue never uses it; the page close sends its two small clears directly, as keepalive fetches', () => {
+    expect(app).not.toMatch(/keepalive: !!\(item\.body/)
     expect(app).not.toContain('keepalive: bodyText.length')
+    const flush = app.slice(app.indexOf('async function midiFlush()'), app.indexOf('async function midiFlush()') + 2500)
+    expect(flush).not.toMatch(/keepalive:\s*(true|[^/\n]*body)/)
+    expect(app).toContain("window.addEventListener('pagehide', () => { if (midiArmed) { midiPageClose(); midiLedsOff(); } });")
+    expect(app).toMatch(/function midiPageClose\(\)[\s\S]{0,700}keepalive: true/)
+  })
+  it('R2-3: midiPageClose fires both clears at once (no queue), each body well under 4000 bytes, and drops the timers', () => {
+    const m = app.match(/function midiPageClose\(\) \{[\s\S]*?\n\}\n/)[0]
+    const fetched = []
+    const midiHeld = new Map([['hit:white', { timer: setTimeout(() => {}, 1e6), beat: setInterval(() => {}, 1e6) }]])
+    const midiPending = new Map([['x', {}]])
+    const midiLive = { shift: true }
+    const f = new Function('midiHeld', 'midiPending', 'midiLive', 'window', 'fetch', m + '; midiPageClose();')
+    f(midiHeld, midiPending, midiLive, { deskMidiPatch: P }, (route, o) => { fetched.push({ route, o }); return Promise.resolve() })
+    expect(fetched.map((x) => x.route)).toEqual(['api/fx', 'api/raw'])
+    for (const x of fetched) { expect(x.o.keepalive).toBe(true); expect(x.o.body.length).toBeLessThan(4000) }
+    expect(JSON.parse(fetched[0].o.body)).toEqual({ clearFlash: true })
+    expect(JSON.parse(fetched[1].o.body)).toEqual({ owner: P.HOLD_OWNER, clear: true })
+    expect(midiHeld.size).toBe(0); expect(midiPending.size).toBe(0); expect(midiLive.shift).toBe(false)
+  })
+  it('R2-2: a port change (pulled cable, new controller) lets go of every hit and of SHIFT', () => {
+    expect(app).toMatch(/access\.onstatechange = \(\) => \{ midiReleaseAll\(\); midiListInputs\(\); \}/)
+  })
+  it('R2-1: after a desk-side change the page does not mirror (all-dimmer, look fire, scene recall) a level press waits for the poll', () => {
+    expect(app).toContain('api\\/(fixtures\\/all|looks\\/fire|scenes\\/recall|cues\\/)')
+    expect(app).toContain('if (blind && !(fresh && fresh.length)) { midiLive.relevel = () => applyLevels(allKeys()); return; }')
+    // the deferral window covers the busy window (700 ms) + one poll interval (750 ms)
+    expect(+app.match(/const MIDI_BLIND_MS = (\d+)/)[1]).toBeGreaterThanOrEqual(700 + 750)
+    // run the guard: a send of those routes opens the window, a dimmer post does not
+    const m = app.match(/function midiBlind\(\) \{[\s\S]*?\n\}\n/)[0]
+    const midiLive = {}
+    const g = new Function('midiLive', 'midiArmed', m + '; return midiBlind;')(midiLive, true)
+    g(); expect(midiLive.blindUntil).toBeGreaterThan(Date.now() + 1000)
+    clearTimeout(midiLive.blindTimer)
   })
 })
