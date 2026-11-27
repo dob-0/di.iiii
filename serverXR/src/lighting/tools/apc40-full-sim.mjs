@@ -21,7 +21,7 @@ const browser = await chromium.launch({ headless: true })
 const ctx = await browser.newContext({ viewport: { width: 1534, height: 830 } })
 const page = await ctx.newPage()
 const posts = []
-ctx.on('response', async (r) => { if (/api\/raw/.test(r.url()) && r.request().method()==='POST') { try { const j = JSON.parse(await r.text()); console.log('raw resp', r.status(), Object.keys(j.raw||{}).length, JSON.stringify(j.refused||j.error||'').slice(0,100)) } catch (e) { console.log('raw resp err', r.status()) } } })
+ctx.on('response', async (r) => { if (/api\/raw/.test(r.url()) && r.request().method()==='POST') { try { const j = JSON.parse(await r.text()); console.log('raw resp', r.status(), Object.keys(j.raw||{}).length, JSON.stringify(j.refused||j.error||'').slice(0,100)) } catch (e) { console.log('raw resp err', r.status(), String(e.message).slice(0,80)) } } })
 ctx.on('request', (r) => { if (r.method() === 'POST' && /\/api\//.test(r.url())) posts.push(r.url().split('/api/')[1]) })
 page.on('pageerror', (e) => console.log('PAGE ERROR ' + e.message))
 await ctx.addInitScript(() => {
@@ -66,7 +66,10 @@ const s1 = await st()
 check('Safe: every new control pressed, nothing posted, nothing moved', posts.length === p0 && JSON.stringify(s1.fixtures.map((f) => f.on)) === JSON.stringify(s0.fixtures.map((f) => f.on)) && s1.fx.bpm === s0.fx.bpm && !Object.keys(s1.raw).length, { posts: posts.length - p0 })
 
 await page.click('#miArm')
-await sleep(500)
+// wait on the page's own readback, not a fixed time: until the first desk state has arrived the page drops every post and
+// catches every fader again (midiLiveWait), so a fader moved inside that window is lost (the flaky 'fader 1' of run 1)
+await page.waitForFunction(() => typeof midiLiveWait !== 'undefined' && midiLiveWait === false, null, { timeout: 8000 })
+await sleep(300)
 
 // ---- 1. group dimmers ----
 const d0 = [dimOf(s0, 5), dimOf(s0, 4), mean([...byU(s0, 2), ...byU(s0, 3)].map((f) => f.values.dimmer))]
@@ -356,11 +359,9 @@ check('solo 1: left truss keeps its level, the right truss sits at 15 %', Math.a
 await on(1, 0x34, 150); await off(1, 0x34, 100); await sleep(2500)
 m1 = await st()
 check('clip stop 1: column 1 released to 100 % and the solo is gone', Math.abs(dimOf(m1, 5) - 255) <= 2 && dimOf(m1, 4) >= lv[1] * 0.9, { left: dimOf(m1, 5), right: dimOf(m1, 4) })
-const pa = posts.length
-await on(2, 0x30, 900)                                    // record arm 2: right truss white flash, held
-console.log('arm2 posts', posts.slice(pa), JSON.stringify(await page.evaluate(() => ({ armed: window.midiArmed, held: [...midiHeld.keys()], bound: midiMap['arm:2'] }))))
+await on(2, 0x30, 400)                                    // record arm 2: right truss white flash, held (auto-release at 1.5 s)
 m1 = await st()
-const rawU = (s, u) => rawOf(s).filter(([k]) => k.startsWith(u + ':')).length
+var rawU = (s, u) => rawOf(s).filter(([k]) => k.startsWith(u + ':')).length
 check('record arm 2 held: raw hold on the right truss universe only', rawU(m1, 4) > 0 && rawU(m1, 5) === 0, { u4: rawU(m1, 4), u5: rawU(m1, 5), keys: rawOf(m1).slice(0, 4), owners: m1.rawOwners })
 await off(2, 0x30, 500)
 m1 = await st()

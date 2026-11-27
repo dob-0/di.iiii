@@ -109,7 +109,7 @@
   for (let n = 1; n <= 8; n++) {
     MAPALL.push({ key: 'col:release:' + n, hw: 'CLIP STOP ' + n, does: 'Release ' + COL[n - 1] + (n === 1 ? ' (with Shift: every column)' : ''), range: 'press' });
     MAPALL.push({ key: 'solo:' + n, hw: 'SOLO ' + n, does: n <= 4 ? 'Solo ' + COL[n - 1] + ' (others to 15 %)' : 'Colour FX ' + CFXM[n - 5], range: 'switch' });
-    MAPALL.push({ key: 'arm:' + n, hw: 'RECORD ARM ' + n, does: n <= 5 ? 'Hold: white flash, ' + COL[n - 1] : 'Hold: strobe ' + COL[n - 6] + ' (3 Hz cap)', range: 'hold' });
+    MAPALL.push({ key: 'arm:' + n, hw: 'RECORD ARM ' + n, does: n <= 5 ? 'Hold: white flash, ' + COL[n - 1] : 'Hold: strobe ' + COL[n - 6] + ' (rate: track knob 1)', range: 'hold' });
     MAPALL.push({ key: 'ab:' + n, hw: 'A/B ' + n, does: AB[n - 1], range: 'press' });
     if (n >= 4) MAPALL.push({ key: 'act:' + n, hw: 'ACTIVATOR ' + n, does: ACT[n], range: 'switch' });
   }

@@ -126,3 +126,44 @@ describe('APC40 map-all: ARM, release and the strobe cap', () => {
     }
   })
 })
+
+describe('APC40 map-all round 2 (#1404 review)', () => {
+  const app = fs.readFileSync(new URL('./ui/app.js', import.meta.url), 'utf8')
+  it('F1: the fader base follows a desk-side change (scene recall) instead of writing the old level back', () => {
+    // fader 0.6 written as 0.6; the scene recall put the group at 1.0 -> the base is 1.0, not 0.6
+    expect(P.groupBase(0.6, 0.6, 1, 1)).toBeCloseTo(1, 6)
+    // nothing changed behind the page (rounding only): the fader's value stands
+    expect(P.groupBase(0.6, 0.6, 0.6 + 1 / 255, 1)).toBe(0.6)
+    // never written yet: read live; with a solo factor of 0.15 the live level is divided back out
+    expect(P.groupBase(null, null, 0.15, 0.15)).toBeCloseTo(1, 6)
+    // the desk dimmed the group to 20 % while SOLO sits at 100 %
+    expect(P.groupBase(0.9, 0.9, 0.2, 1)).toBeCloseTo(0.2, 6)
+    expect(app).toContain('mp.groupBase(midiLive.base[key], midiLive.wrote[key], live, fac0)')
+    expect(app).toContain('midiLive.wrote[key] = sum / g.ids.length / 255')
+    // the fader and the release set the base themselves (fresh), so they are not re-read
+    expect(app).toContain('applyLevels([g.key], [g.key])')
+  })
+  it('F4: the rate knob follows the held strobe channel in the whole band when output.strobeLimit is off, to the cap when on', () => {
+    expect(P.isStrobeRate(14, false)).toBe(true); expect(P.isStrobeRate(60, false)).toBe(true); expect(P.isStrobeRate(103, false)).toBe(true)
+    expect(P.isStrobeRate(104, false)).toBe(false); expect(P.isStrobeRate(255, false)).toBe(false); expect(P.isStrobeRate(0, false)).toBe(false)
+    expect(P.isStrobeRate(14, true)).toBe(true); expect(P.isStrobeRate(15, true)).toBe(false); expect(P.isStrobeRate(60, true)).toBe(false)
+    expect(app).not.toMatch(/c\.value <= 14/)
+    expect(app).toContain('S.output.strobeLimit')
+    expect(draw.CONTROLS.find((c) => c.key === 'arm:8').does).not.toMatch(/3 Hz|cap/)
+  })
+  it('F2: letting go of everything (disarm, new controller, page close) also lets go of SHIFT', () => {
+    expect(app).toMatch(/function midiReleaseAll\(\) \{\n  midiLive\.shift = false;/)
+  })
+  it('F3: the colour-FX stop of SHIFT + CLIP STOP leaves first and urgent', () => {
+    expect(app).toContain("sendCfx({ mode: 'none' }, 'cfx:mode', true)")
+    expect(app).toContain('for (let i = 8; i >= 1; i--) releaseCol(i)')
+  })
+  it('F5: a nudge after a tap starts from the tap epoch, whatever a poll in flight brought back', () => {
+    expect(app).toContain('midiLive.epochMine = { v: r.epoch')
+    expect(app).toContain('midiLive.epochMine.v')
+  })
+  it('keepalive only on the page-close backstop posts', () => {
+    expect(app).toContain('keepalive: !!(item.body && (item.body.clear === true || item.body.clearFlash === true))')
+    expect(app).not.toContain('keepalive: bodyText.length')
+  })
+})

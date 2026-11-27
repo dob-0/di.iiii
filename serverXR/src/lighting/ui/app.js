@@ -6101,7 +6101,7 @@ const midiSeenNote = new Set();
 // disarmed it is refreshed from the desk; while armed this page is the one moving them.
 const midiLive = { strobeU: 0.5, master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null,
   fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255,
-  xf: 0.5, base: {}, side: { left: 'A', right: 'A', back: 'A' }, solo: new Set(), shift: false, freeze: null };
+  xf: 0.5, base: {}, wrote: {}, side: { left: 'A', right: 'A', back: 'A' }, solo: new Set(), shift: false, freeze: null };
 
 /* ---- the send queue ---- */
 const midiPending = new Map();
@@ -6141,10 +6141,10 @@ async function midiFlush() {
         const bodyText = JSON.stringify(item.body);
         const r = await fetch(item.route, {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          // keepalive lets a release leave when the page closes, but a keepalive body is capped near 64 KB
-          // by the browser (a white hit over a big rig is ~60 KB): big bodies go without it, and the
-          // page-close backstop is the tiny {clear} post in midiReleaseAll.
-          keepalive: bodyText.length < 12000,
+          // keepalive lets a release leave when the page closes, but Chrome rejects it unpredictably ("Failed to fetch"): an 11 KB
+          // api/raw hold and small api/chase posts both failed with it in the simulation (3 runs), so the hold never left. Only the
+          // two tiny page-close backstop posts of midiReleaseAll ({clear}, {clearFlash}) keep it; everything else goes without.
+          keepalive: !!(item.body && (item.body.clear === true || item.body.clearFlash === true)),
           body: bodyText,
         });
         if (item.route === 'api/looks/fire' && item.body && item.body.id) midiLookAnswer(item.body.id, r.ok);
@@ -6160,6 +6160,7 @@ async function midiFlush() {
         if (item.route === 'api/looks/fire' && item.body) midiLookAnswer(item.body.id, false);
         // The pill is the poll's, and the poll would paint over a flag set here within a
         // second and a half. A send that died says so where messages go on every page.
+        console.warn('midi send failed', item.route, e && e.message);   // kept: the cause of a lost hold is otherwise invisible
         say('a MIDI move did not reach the desk', true);
       }
       // 25/s ceiling for moving values; a pad press neither waits for it nor makes the next press wait.
@@ -6213,20 +6214,22 @@ function midiStrobeDown(key, kind, list, maxMs) {
     h.beat = setInterval(lease, 1000);
   }
 }
-// The rate knob turned while a strobe is held: the held strobe channel follows (still through the cap).
+// The rate knob turned while a strobe is held: the held strobe channel follows (through the cap only when the desk setting output.strobeLimit is on).
 function midiStrobeRate() {
   const mp = window.deskMidiPatch;
   const dmx = mp.strobeDmxFromUnit(midiLive.strobeU);
   for (const [key, h] of midiHeld) {
     if (!h.strobe || !h.channels) continue;
-    const upd = h.channels.filter((c) => c.value !== 255 && c.value >= 4 && c.value <= 14).map((c) => ({ ...c, value: dmx }));
+    const lim = !!(S && S.output && S.output.strobeLimit);   // off (default) = the lamp's whole band 4..103, on = the 3 Hz cap
+    const upd = h.channels.filter((c) => mp.isStrobeRate(c.value, lim)).map((c) => ({ ...c, value: dmx }));
     if (!upd.length) continue;
-    h.channels = h.channels.map((c) => (c.value !== 255 && c.value >= 4 && c.value <= 14 ? { ...c, value: dmx } : c));
+    h.channels = h.channels.map((c) => (mp.isStrobeRate(c.value, lim) ? { ...c, value: dmx } : c));
     midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: upd }, 'hold:strobe-rate:' + key, true);
   }
 }
 // Every hit lets go: disarm, a new controller, page close. Goes out even as the gate closes.
 function midiReleaseAll() {
+  midiLive.shift = false;   // SHIFT is not a hold: a pulled cable or a new controller must not leave it down (F2, #1404 review)
   midiSend('api/fx', { clearFlash: true }, 'hold:clearflash', true);   // every software-strobe lease, the first thing out
   if (midiHeld.size && window.deskMidiPatch) midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, clear: true }, 'hold:clearall', true);
   for (const key of [...midiHeld.keys()]) {
@@ -6325,7 +6328,7 @@ function buildMidiTargets() {
     for (const g of groups) {
       const ids = g.ids;
       cc(`grp:${g.key}:dim`, `${g.label} dimmer  (${ids.length})`, () => mp.groupDimRead((S && S.fixtures) || [], g),   // the desk's values at catch time, never the copy taken at build
-        (u) => { midiLive.base[g.key] = u; applyLevels([g.key]); });
+        (u) => { midiLive.base[g.key] = u; applyLevels([g.key], [g.key]); });
       pad(`grp:${g.key}:on`, `${g.label} on / off  (a press flips it)`, () => {
         if (!midiArmed) return;
         // flips what the desk shows now, not a copy; the LED follows at once
@@ -6366,12 +6369,16 @@ function buildMidiTargets() {
       if (!midiArmed) return;
       const r = tapper.tap(Date.now());
       if (r.bpm != null) midiLive.fxBpm = r.bpm;
+      midiLive.epochMine = { v: r.epoch, at: Date.now() };   // a poll in flight must not hand the old epoch back to a nudge (F5)
+      if (S && S.fx) S.fx.epoch = r.epoch;
       sendFx(r, 'fx:tap');
       midiFlash(r.bpm != null ? `tap tempo ${r.bpm} BPM` : 'tap tempo: the beat is here, tap again for the speed');
     });
     const nudge = (dir) => () => {
       if (!midiArmed) return;
-      const e = mp.nudgeEpoch(S && S.fx ? S.fx.epoch : 0, dir, Date.now());
+      const mine = midiLive.epochMine && Date.now() - midiLive.epochMine.at < 3000 ? midiLive.epochMine.v : null;   // our last write wins over a poll that left before it
+      const e = mp.nudgeEpoch(mine != null ? mine : S && S.fx ? S.fx.epoch : 0, dir, Date.now());
+      midiLive.epochMine = { v: e, at: Date.now() };
       if (S && S.fx) S.fx.epoch = e;   // a second press before the poll moves on from here
       sendFx({ epoch: e }, 'fx:nudge');
       midiFlash(`beat nudge ${dir > 0 ? '+' : '-'}${mp.NUDGE_MS} ms`);
@@ -6392,7 +6399,7 @@ function buildMidiTargets() {
         (u) => { const v = Math.round(u * 255); for (const f of zoomers) midiSend('api/fixture', { id: f.id, values: Object.fromEntries(mp.zoomRoles(S.profiles[f.profile]).map((r) => [r, v])) }, 'api/fixture:zoom:' + f.id); });
     }
     const cfx = () => (S && S.colorFx) || {};
-    const sendCfx = (body, key) => { if (S) S.colorFx = Object.assign({}, cfx(), body); midiSend('api/colorfx', body, key); };
+    const sendCfx = (body, key, last) => { if (S) S.colorFx = Object.assign({}, cfx(), body); midiSend('api/colorfx', body, key, last); };
     cc('cfxamount', 'Colour FX amount', () => (cfx().amount != null ? cfx().amount : 255) / 255, (u) => sendCfx({ amount: Math.round(u * 255) }, 'cfx:amount'));
     cc('cfxbeats', 'Colour FX beats  (1 2 4 8 16 32)', () => mp.unitFromCfxBeats(cfx().beats), (u) => sendCfx({ beats: mp.cfxBeatsFromUnit(u) }, 'cfx:beats'));
     cc('cfxspread', 'Colour FX spread', () => (cfx().spread != null ? cfx().spread : 0.5), (u) => sendCfx({ spread: Math.round(u * 1000) / 1000 }, 'cfx:spread'));
@@ -6451,16 +6458,23 @@ function buildMidiTargets() {
     const colFx = (n) => (n <= 3 ? fixtures.filter((f) => ((gById[colKeys[n - 1]] || {}).ids || []).includes(f.id)) : n === 4 ? moverFx() : n === 5 ? fixtures : []);
     const soloIds = () => { const out = new Set(); for (const n of midiLive.solo) for (const f of colFx(n)) out.add(f.id); return out; };
     // A group's level = its fader x the crossfader (by side) x solo; the fader's own value is remembered per group.
-    function applyLevels(keys) {
+    function applyLevels(keys, fresh) {
       const solo = soloIds();
       for (const key of keys) {
         const g = gById[key]; if (!g) continue;
-        if (midiLive.base[key] == null) midiLive.base[key] = mp.groupDimRead((S && S.fixtures) || [], g);
+        // The base is what the fader last set; when the desk moved the group since (scene recall, its own fader) the live
+        // level is the base, so a SOLO / A-B / crossfader press never writes an old level back (F1, #1404 review).
+        const live = mp.groupDimRead((S && S.fixtures) || [], g);
+        const fac0 = g.ids.length ? mp.xfadeFactor(midiLive.side[key], midiLive.xf) * mp.soloFactor(solo, g.ids[0]) : 1;
+        midiLive.base[key] = fresh && fresh.includes(key) ? midiLive.base[key] : mp.groupBase(midiLive.base[key], midiLive.wrote[key], live, fac0);
+        let sum = 0;
         for (const id of g.ids) {
           const v = Math.round(255 * midiLive.base[key] * mp.xfadeFactor(midiLive.side[key], midiLive.xf) * mp.soloFactor(solo, id));
+          sum += v;
           const f = fxById(id); if (f && f.values) f.values.dimmer = v;
           midiSend('api/fixture', { id, values: { dimmer: v } }, 'api/fixture:' + id);
         }
+        if (g.ids.length) midiLive.wrote[key] = sum / g.ids.length / 255;
       }
     }
     const allKeys = () => colKeys.filter((k) => gById[k]);
@@ -6492,20 +6506,20 @@ function buildMidiTargets() {
         if (n === 5) midiLive.solo.clear();
         if (midiLive.solo.size !== hadSolo) applyLevels(allKeys());   // the others come back from 15 %
         for (const f of colFx(n)) { f.on = true; midiSend('api/fixture', { id: f.id, on: true }, 'api/fixture:on:' + f.id, true); }
-        if (n <= 3) { midiLive.base[colKeys[n - 1]] = 1; applyLevels([colKeys[n - 1]]); }
-        else if (n === 5) { for (const k of allKeys()) midiLive.base[k] = 1; applyLevels(allKeys()); }
+        if (n <= 3) { midiLive.base[colKeys[n - 1]] = 1; applyLevels([colKeys[n - 1]], [colKeys[n - 1]]); }
+        else if (n === 5) { for (const k of allKeys()) midiLive.base[k] = 1; applyLevels(allKeys(), allKeys()); }
         else for (const f of colFx(4)) midiSend('api/fixture', { id: f.id, values: { dimmer: 255 } }, 'api/fixture:' + f.id);
       } else if (n === 6) {
         for (const f of zoomersAll()) midiSend('api/fixture', { id: f.id, values: Object.fromEntries(mp.zoomRoles(S.profiles[f.profile]).map((r) => [r, 0])) }, 'api/fixture:zoom:' + f.id);
       } else if (n === 7) {
         const l = layerById(TOUCH_LOOK_LAYER); if (l) { l.level = 1; l.rate = 1; delete l.headScale; }
         midiSend('api/layer', { id: TOUCH_LOOK_LAYER, level: 1, rate: 1, headScale: 1 }, 'api/layer:release');
-      } else sendCfx({ mode: 'none' }, 'cfx:mode');
+      } else sendCfx({ mode: 'none' }, 'cfx:mode', true);   // urgent: the colour effect stops now, not behind the dimmer posts (F3)
     }
     for (let n = 1; n <= 8; n++) {
       pad('col:release:' + n, `Clip stop ${n}  release column ${n}  (shift: every column)`, () => {
         if (!midiArmed) return;
-        if (midiLive.shift) { for (let i = 1; i <= 8; i++) releaseCol(i); midiFlash('every column released'); } else { releaseCol(n); midiFlash(`column ${n} released`); }
+        if (midiLive.shift) { for (let i = 8; i >= 1; i--) releaseCol(i); midiFlash('every column released')   /* 8 first: the colour FX stop leaves first */; } else { releaseCol(n); midiFlash(`column ${n} released`); }
         midiPaintLights();
       });
     }
@@ -6526,7 +6540,7 @@ function buildMidiTargets() {
       const key = armKeys(n);
       const down = () => (n <= 5 ? midiHoldDown(key, colFx(n), mp.ARM_FLASH_MS)   // 6 left, 7 right (software strobe), 8 back bars (strobe channel, capped)
         : midiStrobeDown(key, 'all', colFx(n - 5), mp.ARM_FLASH_MS));
-      T.push({ key, label: n <= 5 ? `Record arm ${n}  hold: white flash, ${colName[n - 1]}` : `Record arm ${n}  hold: strobe ${colName[n - 6]}  (<= 3 Hz)`, kind: 'note', apply: down, up: () => midiHoldUp(key) });
+      T.push({ key, label: n <= 5 ? `Record arm ${n}  hold: white flash, ${colName[n - 1]}` : `Record arm ${n}  hold: strobe ${colName[n - 6]}  (rate: track knob 1)`, kind: 'note', apply: down, up: () => midiHoldUp(key) });
     }
     // Activator 4-8 (1-3 are the group switches above).
     const layerOn = () => { const l = layerById(TOUCH_LOOK_LAYER); return !l || l.on !== false; };
