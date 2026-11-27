@@ -200,16 +200,19 @@ describe('the fast poll and the urgent sends', () => {
   it('the poll does not look at document.hidden: the APC40 is used while the tab is hidden', () => {
     expect(grab('midiOnAirTick')).not.toMatch(/hidden|visibility/)
   })
-  it('a look pad press leaves at once (no 40 ms wait), in order: autoplay off, then the fire', async () => {
+  it('a look pad press leaves at once (no 40 ms wait) as ONE fire call carrying autoplayOff (#1395)', async () => {
     vi.useFakeTimers()
     try {
       const { api, log } = page({ S: desk() })
       api.midiSetArmed(true)
-      api.midiSend('api/cues/autoplay', { autoplay: false }, 'lookpad:autoplayoff')
-      api.midiSend('api/looks/fire', { id: 'l1' }, 'lookpad:3', true)
+      api.midiSend('api/looks/fire', { id: 'l1', autoplayOff: true }, 'lookpad:3', true)
       await vi.advanceTimersByTimeAsync(5)   // 5 ms: far under the 40 ms merge timer
-      expect(log.fetches.filter((f) => f.route !== 'api/onair').map((f) => f.route)).toEqual(['api/cues/autoplay', 'api/looks/fire'])
+      expect(log.fetches.filter((f) => f.route !== 'api/onair')).toEqual([{ route: 'api/looks/fire', body: { id: 'l1', autoplayOff: true } }])
     } finally { vi.useRealTimers() }
+  })
+  it('the pad handler builds that one call: fire body + autoplayOff, sent as the urgent key', () => {
+    expect(SRC).toMatch(/fire\.body = Object\.assign\(\{\}, fire\.body, \{ autoplayOff: true \}\);/)
+    expect(SRC).toMatch(/midiSend\(fire\.route, fire\.body, 'lookpad:' \+ k, true\);/)
   })
   it('a fader value is not urgent: it waits for the 40 ms merge timer', async () => {
     vi.useFakeTimers()

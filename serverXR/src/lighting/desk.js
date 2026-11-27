@@ -1872,6 +1872,10 @@ function createDesk(opts = {}) {
     'POST /api/looks/fire': (req, res, body) => {
       const look = state.looks.find((l) => l.id === body.id);
       if (!look) return json(res, { error: 'no such look' }, 404);
+      // `autoplayOff: true`: the press also turns play-in-order off (the owner's rule, cuerun.js 2026-10-09), in this one
+      // call: a pad used to send api/cues/autoplay first, a second request that waited its turn behind the pad queue.
+      // Only when it is on, so a press that leaves it off saves nothing extra.
+      if (body.autoplayOff === true && (cueRunner.brief() || {}).autoplay) cueRunner.setAutoplay(false);
       const wait = quantiseWait(body.quantize);
       if (wait > 0) {
         const at = Date.now() + wait;
