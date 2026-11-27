@@ -48,10 +48,43 @@
     blackout: { short: 'BLACKOUT\non/off', does: 'Blackout on/off (a press flips it)', danger: true },
     'lookpage:next': { short: 'PG\n▶', does: 'Look page, next' },
     'lookpage:prev': { short: 'PG\n◀', does: 'Look page, previous' },
+    // The full patch (N7277) and strobe (N7314): one note each on channel 1.
+    tap: { short: 'TAP', does: 'Tap tempo (beat and speed)' },
+    'nudge:-': { short: 'NDG\n-', does: 'Nudge the beat earlier' },
+    'nudge:+': { short: 'NDG\n+', does: 'Nudge the beat later' },
+    cfxon: { short: 'COL\nFX', does: 'Colour effect on / off' },
+    'hit:white': { short: 'HIT\nWHT', does: 'Hold: white flash, all lights' },
+    'hit:left': { short: 'HIT\nLEFT', does: 'Hold: flash the left truss' },
+    'hit:right': { short: 'HIT\nRIGHT', does: 'Hold: flash the right truss' },
+    'hit:swap': { short: 'HIT\nSWAP', does: 'Hold: swap the colour effect' },
+    'hit:strobe-all': { short: 'STRB\nALL', does: 'Hold: strobe the back bars (rate: track knob 1, 3 Hz cap) and software strobe on the rest' },
+    'hit:strobe-movers': { short: 'STRB\nMOV', does: 'Hold: software strobe on the movers (the shutter is never touched)' },
+    blackoutoff: { short: 'BO\nOFF', does: 'Blackout off (session record)' },
+    panic: { short: 'PANIC', does: 'Panic (bank lock)' },
   };
+  // The faders, knobs and activators: control -> parameter -> range (the same table as the session note).
+  const CONTROLS = [
+    { key: 'grp:left:dim', hw: 'TRACK FADER 1', does: 'Left truss dimmer', range: '0-100 %' },
+    { key: 'grp:right:dim', hw: 'TRACK FADER 2', does: 'Right truss dimmer', range: '0-100 %' },
+    { key: 'grp:back:dim', hw: 'TRACK FADER 3', does: 'Back bars dimmer', range: '0-100 %' },
+    { key: 'zoom', hw: 'TRACK FADER 6', does: 'Zoom, all bars', range: '0-255' },
+    { key: 'layerlevel', hw: 'TRACK FADER 7', does: 'Layer level', range: '0-100 %' },
+    { key: 'cfxamount', hw: 'TRACK FADER 8', does: 'Colour effect amount', range: '0-255' },
+    { key: 'grp:left:on', hw: 'ACTIVATOR 1', does: 'Left truss on / off', range: 'switch' },
+    { key: 'grp:right:on', hw: 'ACTIVATOR 2', does: 'Right truss on / off', range: 'switch' },
+    { key: 'grp:back:on', hw: 'ACTIVATOR 3', does: 'Back bars on / off', range: 'switch' },
+    { key: 'strobe:rate', hw: 'TRACK KNOB 1', does: 'Strobe rate (hold-to-flash hits)', range: '1-3 Hz (DMX 4-14, capped)' },
+    { key: 'headscale', hw: 'TRACK KNOB 2', does: 'Movement size (layer pan/tilt swing)', range: '0-100 %, 100 = as written' },
+    { key: 'layerrate', hw: 'TRACK KNOB 6', does: 'Layer rate', range: '1/8 x - 8 x' },
+    { key: 'cfxbeats', hw: 'TRACK KNOB 7', does: 'Colour effect beats', range: '1-32' },
+    { key: 'cfxspread', hw: 'TRACK KNOB 8', does: 'Colour effect spread', range: '0-1' },
+    { key: 'tempo:rel', hw: 'TEMPO knob', does: 'Tempo, 1 BPM a click', range: '20-300 BPM' },
+    { key: 'cfxmode:rel', hw: 'CUE LEVEL knob', does: 'Colour effect mode, one step a click', range: 'none hue chase swap' },
+  ];
   // Printed names (protocol v1.2 inbound table) for the notes the drawing labels.
-  const HW = { 0x5b: 'PLAY', 0x51: 'STOP ALL CLIPS', 0x52: 'SCENE LAUNCH 1', 0x53: 'SCENE LAUNCH 2', 0x54: 'SCENE LAUNCH 3', 0x55: 'SCENE LAUNCH 4', 0x56: 'SCENE LAUNCH 5', 0x60: 'RIGHT', 0x61: 'LEFT' };
-  const ALL_KEYS = Object.keys(BUTTONS).concat(['master']);
+  const HW = { 0x63: 'TAP TEMPO', 0x64: 'NUDGE -', 0x65: 'NUDGE +', 0x5a: 'METRONOME', 0x3e: 'DEVICE BUTTON 5 (Dev. On/Off)', 0x3f: 'DEVICE BUTTON 6 (Dev. Lock)', 0x40: 'DEVICE BUTTON 7 (Clip/Dev. View)', 0x41: 'DEVICE BUTTON 8 (Detail View)', 0x57: 'PAN', 0x58: 'SENDS', 0x66: 'SESSION REC', 0x67: 'BANK LOCK', 0x5b: 'PLAY', 0x51: 'STOP ALL CLIPS', 0x52: 'SCENE LAUNCH 1', 0x53: 'SCENE LAUNCH 2', 0x54: 'SCENE LAUNCH 3', 0x55: 'SCENE LAUNCH 4', 0x56: 'SCENE LAUNCH 5', 0x60: 'RIGHT', 0x61: 'LEFT' };
+  const pm = () => (typeof module === 'object' && module && module.exports) ? require('./midiPatch.js') : root.deskMidiPatch;
+  const ALL_KEYS = Object.keys(BUTTONS).concat(['master'], CONTROLS.map((c) => c.key), pm().KNOBS.map((k) => k.key));
   for (let k = 0; k < mc.LOOK_PADS; k++) ALL_KEYS.push('lookpad:' + k);
 
   function presetRows() { return mc.apc40Preset(ALL_KEYS); }
@@ -113,9 +146,14 @@
       const vel = velOf.has(note) ? velOf.get(note) : null;
       buttons.push({ key, note, hw: HW[note] || ('NOTE ' + note), short: b.short, does: b.does, danger: !!b.danger, vel, hex: vel == null ? null : ledHex(vel) });
     }
+    // Faders, knobs, activators, and the 8 device knobs of each TRACK SELECT bank: what each does and its range.
+    const ccName = (b) => (b.type === 'cc' ? 'CC ' + b.num + ' ch ' + b.ch : 'note ' + b.num + ' ch ' + b.ch);
+    const controls = CONTROLS.filter((c) => eff[c.key]).map((c) => ({ ...c, where: ccName(eff[c.key]) }));
+    const knobs = pm().KNOBS.filter((k) => eff[k.key]).map((k) => ({ key: k.key, page: k.page, pageName: k.pageName, bank: eff[k.key].ch,
+      hw: 'BANK ' + eff[k.key].ch + ' KNOB ' + (eff[k.key].num - 0x0f), does: k.label, range: k.unitLabel, where: ccName(eff[k.key]) }));
     const mb = eff.master;
     return {
-      pads, buttons, columns, ordered: Array.isArray(m.order) && m.order.length > 0,
+      pads, buttons, controls, knobs, columns, ordered: Array.isArray(m.order) && m.order.length > 0,
       page, pages: mc.lookPageCount(looks.length), total: new Set(looks.filter(Boolean).map((l) => l.id)).size,
       master: { mapped: !!(mb && mb.type === 'cc'), cc: mb ? mb.num : null, does: 'Master fader = desk master' },
       onAir: (looks.find((l) => l && l.id === m.activeId) || {}).name || '',
@@ -123,7 +161,7 @@
     };
   }
 
-  const api = { apc40View, ledHex, LED_HEX, BUTTONS, HW };
+  const api = { apc40View, ledHex, LED_HEX, BUTTONS, HW, CONTROLS };
 
   // ---------------------------------------------------------------- the drawing (browser only)
   if (typeof document !== 'undefined') {
@@ -379,6 +417,7 @@
         air.textContent = 'On air: ' + (v.onAir || 'none');
         const rows = [];
         for (const b of v.buttons) rows.push(`<tr class="${b.danger ? 'danger' : ''}"><td class="hw">${b.hex && b.vel > 1 ? `<span class="sw" style="background:${b.hex}"></span>` : ''}${esc(b.hw)}</td><td class="do">${esc(b.does)}</td></tr>`);
+        for (const c of v.controls.concat(v.knobs)) rows.push(`<tr><td class="hw">${esc(c.hw)}</td><td class="do">${esc(c.does)}  [${esc(c.range)}]</td></tr>`);
         if (v.master.mapped) rows.push(`<tr><td class="hw">MASTER fader (CC ${v.master.cc})</td><td class="do">${esc(v.master.does)}</td></tr>`);
         tbody.innerHTML = rows.join('') || '<tr><td colspan="2">no button is mapped</td></tr>';
         note.textContent = v.mapped ? '' : 'Nothing is bound yet: this is the preset layout. Press "Map my controller" to bind it.';
