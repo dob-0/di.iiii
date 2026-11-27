@@ -39,7 +39,8 @@ output (0 not mirrored, 0 into a wall; the cell counts uniform / reversed / same
 when a bar's largest step move grew by more than --max-grow degrees (default 5).
 Designed two-sided looks: a look with `twoSided: true` (call and answer: the two sides do different things on purpose) goes to
 the output exactly as it came in, never mirrored and never counted as changed (the wall check still applies: a bar into its own wall exits 1 and the look is named; with --copy-suffix it is not copied, and the line says "not copied"); one line names it ("kept as designed (twoSided):
-<ids>"). The builder or the merge that makes a call-and-answer look sets the flag on the look; the desk keeps the field only from
+<ids>"). Today nothing sets the flag: no builder or merge step writes it, so set it by hand in the suite file on each call-and-answer look
+before a run, until a build step sets it. The run proves it: a twoSided look that is not as it came in (or is copied) exits 1, named. The desk keeps the field only from
 an install that carries this change (older desks drop unknown look fields, so a look read back from one has lost the flag).
 Exit codes: 0 ok; 1 wrong argument count (usage), no pair in the presets, "no looks selected", or a failed proof (another value
 changed, a pair not mirrored, a cell not as the rule says, a bar into a wall, a step move grew more than --max-grow); 2 the rule
@@ -118,7 +119,7 @@ def provenance():
         if not isinstance(m, dict):
             why = 'no measured entry'
         elif isinstance(m.get('value'), bool) != isinstance(v, bool):
-            why = f"measured value {m.get('value')!r} is a boolean"
+            why = ('measured value %r is not a boolean' if isinstance(v, bool) else 'measured value %r is a boolean') % (m.get('value'),)
         elif m.get('value') != v:
             why = f"measured value {m.get('value')!r} differs from the constant {v!r}"
         elif str(m.get('confidence', 'none')).strip().lower() in ('', 'none'):
@@ -147,6 +148,7 @@ if not looks:
 before = json.loads(json.dumps(looks))
 DESIGNED = [l['id'] for l in looks if l.get('twoSided') is True]
 WALLED = []
+BROKEN = []
 
 
 def g16(v, ch):
@@ -312,6 +314,9 @@ for i, look in enumerate(looks):
     if ch:
         look['aim_fix_sync'] = ('left/right pairs mirrored and facing the room in every step (owner N7024, 2026-11-26): '
                                 f"{ch['changed']} pair-steps changed, {ch['turned']} turned to face the room, lead {lead}")
+    own_id, own_name = look['id'], look.get('name', look['id'])
+    if look.get('twoSided') is True and look != before[i]:
+        BROKEN.append(own_id)  # the run's own proof: a designed look must leave the tool as it came in
     if suffix:
         look['id'] = look['id'] + suffix
         look['name'] = f"{look.get('name', '')} {suffix.strip('-')}"
@@ -320,7 +325,7 @@ for i, look in enumerate(looks):
         # kept as designed: its mirror is not touched or checked, but the wall check still counts
         total.update({'looks': 1, 'before into a wall': a0['wall'], 'after into a wall': a1['wall']})
         if a1['wall']:
-            WALLED.append(look.get('name', look['id']))
+            WALLED.append(own_name)
         continue
     rows.append((look.get('name', look['id']), a0, a1, ch, worst(j0), worst(j1), lead, gmax))
     total.update({'looks': 1, 'changed looks': bool(ch), 'pair-steps changed': ch['changed'], 'turned': ch['turned'],
@@ -366,6 +371,8 @@ for name, a0, a1, ch, w0, w1, lead, gmax in rows:
               f"largest step move pan/tilt deg {w0} -> {w1}, one bar's move grew at most {gmax:.0f}")
 out = dict(src) if isinstance(src, dict) else {}
 out['looks'] = [l for l in looks if not (suffix and l.get('twoSided') is True)]  # a copy of a kept look would be an identical duplicate
+if suffix:
+    BROKEN += [l['id'] for l in out['looks'] if l.get('twoSided') is True]
 json.dump(out, open(out_f, 'w'), indent=1)
 print(f"{total['looks']} looks, {total['changed looks']} changed: {total['pair-steps changed']} of {total['pairs']} pair-steps "
       f"changed ({total['turned']} turned to face the room); before: same {total['before same']}, other {total['before other']}, "
@@ -377,6 +384,8 @@ if CELLS:
 print(RULE)
 if DESIGNED:
     print('kept as designed (twoSided): ' + ', '.join(DESIGNED) + (' (not copied)' if suffix else ''))
+for b in BROKEN:
+    print(f'twoSided look {b}: not as it came in (or copied with --copy-suffix): the tool broke its own rule')
 for w in WALLED:
     print(f'twoSided look {w}: a bar points into its own wall (the wall check still applies)')
-sys.exit(1 if other or total['cells bad'] or total['after not mirrored'] or total['after into a wall'] or total['moves grew'] else 0)
+sys.exit(1 if BROKEN or other or total['cells bad'] or total['after not mirrored'] or total['after into a wall'] or total['moves grew'] else 0)

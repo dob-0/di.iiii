@@ -106,8 +106,8 @@ mirror. The lead is chosen per look by the least growth of step moves (per-step,
 tool re-audits its output (cells counted uniform / reversed / same / other). The walk proof allows pan/tilt of the bars and
 the cell channels of the PARTNER bar only (never the lead's), and only when cells are mirrored. **Designed two-sided looks.** A look with `twoSided: true` (call and answer: the two sides do different things on purpose) is
 written to the output exactly as it came in, never mirrored, never counted as changed (the wall check still applies: a bar into its own wall exits 1 and names the look; with `--copy-suffix` it is not copied, and the line says "not copied"); one line names it
-(`kept as designed (twoSided): <ids>`). The builder or the merge that makes a call-and-answer look sets the flag. The desk keeps
-the field only from an install that carries this change (`sanitizeLook` in `serverXR/src/lighting/looks.js` writes it only when it is exactly `true`; older desks drop it).
+(`kept as designed (twoSided): <ids>`). Today nothing sets the flag: no builder or merge step writes it, so set it by hand in the suite file on each call-and-answer look before a run, until a build step sets it. The run proves it: a twoSided look that is not as it came in (or is copied) exits 1, named. The desk keeps
+the field only from an install that carries this change (`sanitizeLook` in `serverXR/src/lighting/looks.js` writes it only when it is exactly `true`; older desks drop it). Re-recording an existing look id with the desk's capture rebuilds the look and drops `twoSided` (it drops `motion` and `heads` the same way; the UI never sends an id), so set the flag again in the suite file.
 Exit 1 when: wrong argument count (usage), no pair in the presets, "no looks selected", another value changed,
 a pair is not mirrored, a cell is not as the rule says, a bar points into a wall, or a bar's largest step move grew more than
 `--max-grow` (default 5 deg). Exit 2 (one line, nothing written) when the rule is incomplete or unmeasured, or a constant or measured value is a boolean or not valid.

@@ -342,6 +342,36 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
     expect(a.r.stdout).toMatch(/^kept as designed \(twoSided\): duel \(not copied\)$/m)
   })
 
+  it('a boolean constant with a number measured value says the measured value is not a boolean', () => {
+    const look = { id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }
+    const good = meas(CAM)
+    const { r } = runMirror([look], [], CAM, { ...good, CELL_MIRROR_LR: { ...good.CELL_MIRROR_LR, value: 1 } })
+    expect(r.status).toBe(2)
+    expect(r.stderr).toMatch(/CELL_MIRROR_LR.*measured value 1 is not a boolean/)
+  })
+
+  it('the wall line of a twoSided look names its own id and name, also with --copy-suffix', () => {
+    const walled = { id: 'duel', name: 'Duel', twoSided: true, steps: [step([32768, 20000], [32768, 20000])] }
+    const a = runMirror([walled], ['--copy-suffix', '-m'], CAM)
+    expect(a.r.status).toBe(1)
+    expect(a.r.stdout).toMatch(/twoSided look Duel: a bar points/)
+    expect(a.r.stdout).not.toMatch(/Duel m/)
+  })
+
+  it('the run proves its own twoSided rule: a patched copy that mirrors a designed look exits 1 and names it', () => {
+    const src = fs.readFileSync(path.join(here, 'mirror_sync.py'), 'utf8')
+    const gate = ' and look.get(\'twoSided\') is not True'
+    expect(src).toContain(gate)
+    const dir = tmp()
+    fs.writeFileSync(path.join(dir, 'mirror_sync.py'), src.replace(gate, ''))
+    const designed = { id: 'duel', name: 'Duel', twoSided: true, steps: [step([30001, 40000], [30001, 40000])] }
+    const { r } = runMirror([designed], [], CAM, undefined, [dir])
+    expect(r.status, r.stdout + r.stderr).toBe(1)
+    expect(r.stdout).toMatch(/twoSided look duel: not as it came in/)
+    const s2 = runMirror([designed], ['--copy-suffix', '-m'], CAM, undefined, [dir])
+    expect(s2.r.status).toBe(1)
+  })
+
   it('a per-axis key wins over MIRROR_MODE', () => {
     // MIRROR_MODE negate everywhere, but tilt is 'same' by its own key: the tilt is copied, not negated
     const a = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'negate', MIRROR_MODE_TILT: 'same', FACE_SIGN: 1, CELL_MIRROR_LR: true })
