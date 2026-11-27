@@ -14,12 +14,15 @@ presets_lib_measured.py `_m()` and `cell_mirror()`; not imported):
   CELL_MIRROR_LR (falls back to CELL_MIRROR, default True): True = the partner shows the lead's cells in reversed index
   order, False = the same index. Cell channels are the keys <c><i> (c in r, g, b, w; i = 1..N, N from the keys present).
   No FACE_SIGN, or no mirror mode for an axis: exit 2 (never a guessed sign: two wrong loads happened on 2026-11-26).
+  Each key the rule uses (FACE_SIGN, the pan key, the tilt key, and unless --keep-cells the cell key) also needs
+  measured.<KEY> in the presets: the same value (a boolean measured value for a number constant is refused) and a confidence other than none; else exit 2 naming the key.
 Measured rule of the Reika rig (camera record, 2026-11-26 22:4x, dob-3f's controlled hold, all 18 bars at pan 128; tilt 156
 put both sides inward, tilt 100 put both on their own walls; the lead dob-39 viewed the frame): the right bars hang turned
 180 degrees, DMX tilt above centre lands INWARD on both sides. Presets values: MIRROR_MODE_PAN negate, MIRROR_MODE_TILT
 same, FACE_SIGN +1, CELL_MIRROR_LR True (pan R = 65536 - pan L, tilt R = tilt L, R cells = L cells reversed).
 The OLD rule (measured wrong for that hall, kept as presets values for other rigs): both trusses hang the same way,
-MIRROR_MODE negate, FACE_SIGN -1, so the mirror is (65536 - pan, 65536 - tilt); with --keep-cells it is the old tool.
+MIRROR_MODE negate, FACE_SIGN -1, so the mirror is (65536 - pan, 65536 - tilt); the old tool's moves come back with --keep-cells
+and, for presets with no camera record, --rule-unmeasured-ok (the provenance check below).
 
 Rule, for every look and every pair n = 1..9 (the 5th left bar gives no light, but it stays in every scene: owner N7030):
   a look whose pair-steps all mirror (within 2 on both axes, cells too) with no bar more than 5 deg into its own wall
@@ -34,6 +37,13 @@ Only pan, pan_fine, tilt, tilt_fine of the moving bars change, plus the partner'
 dimmer, timing and the desk trims stay. The tool proves that by walking every value, re-audits every pair-step of the
 output (0 not mirrored, 0 into a wall; the cell counts uniform / reversed / same / other are printed), and refuses (exit 1)
 when a bar's largest step move grew by more than --max-grow degrees (default 5).
+Designed two-sided looks: a look with `twoSided: true` (call and answer: the two sides do different things on purpose) goes to
+the output exactly as it came in, never mirrored and never counted as changed; one line names it ("kept as designed (twoSided):
+<ids>"). The builder or the merge that makes a call-and-answer look sets the flag on the look; the desk keeps the field only from
+an install that carries this change (older desks drop unknown look fields, so a look read back from one has lost the flag).
+Exit codes: 0 ok; 1 wrong argument count (usage), no pair in the presets, "no looks selected", or a failed proof (another value
+changed, a pair not mirrored, a cell not as the rule says, a bar into a wall, a step move grew more than --max-grow); 2 the rule
+is incomplete or unmeasured, or a constant or measured value is not valid.
 Undo: the output is a new file (--copy-suffix writes copies next to the originals); the input is never changed.
 
 Usage: mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG]
@@ -107,6 +117,8 @@ def provenance():
         m = MEAS.get(k) if isinstance(MEAS, dict) else None
         if not isinstance(m, dict):
             why = 'no measured entry'
+        elif isinstance(m.get('value'), bool) != isinstance(v, bool):
+            why = f"measured value {m.get('value')!r} is a boolean"
         elif m.get('value') != v:
             why = f"measured value {m.get('value')!r} differs from the constant {v!r}"
         elif str(m.get('confidence', 'none')).strip().lower() in ('', 'none'):
@@ -133,6 +145,7 @@ looks = [l for l in all_looks if (not only or l['id'].startswith(only)) and (not
 if not looks:
     sys.exit('no looks selected')
 before = json.loads(json.dumps(looks))
+DESIGNED = [l['id'] for l in looks if l.get('twoSided') is True]
 
 
 def g16(v, ch):
@@ -284,7 +297,7 @@ PARTS = {}  # look index -> {(step index, partner fixture id)}: the only bars wh
 for i, look in enumerate(looks):
     a0, j0 = audit(look), jumps(look)
     best = None
-    for lead in (('step', 'L', 'R') if needs(look) else ()):
+    for lead in (('step', 'L', 'R') if needs(look) and look.get('twoSided') is not True else ()):
         trial = json.loads(json.dumps(look))
         parts = set()
         ch = sync(trial, lead, parts)
@@ -302,6 +315,9 @@ for i, look in enumerate(looks):
         look['id'] = look['id'] + suffix
         look['name'] = f"{look.get('name', '')} {suffix.strip('-')}"
     a1, j1 = audit(look), jumps(look)
+    if look.get('twoSided') is True:
+        total.update({'looks': 1})  # kept as designed: not audited, not counted as changed or as a failed proof
+        continue
     rows.append((look.get('name', look['id']), a0, a1, ch, worst(j0), worst(j1), lead, gmax))
     total.update({'looks': 1, 'changed looks': bool(ch), 'pair-steps changed': ch['changed'], 'turned': ch['turned'],
                   'pairs': a1['pairs'], 'after not mirrored': a1['same'] + a1['other'], 'after into a wall': a1['wall'],
@@ -355,4 +371,6 @@ if CELLS:
     print(f"cells after (pair-steps): uniform {total['cells uniform']}, reversed {total['cells reversed']}, same {total['cells same']}, "
           f"other {total['cells other']}, not as the rule says {total['cells bad']}")
 print(RULE)
+if DESIGNED:
+    print('kept as designed (twoSided): ' + ', '.join(DESIGNED))
 sys.exit(1 if other or total['cells bad'] or total['after not mirrored'] or total['after into a wall'] or total['moves grew'] else 0)

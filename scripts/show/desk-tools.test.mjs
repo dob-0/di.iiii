@@ -222,12 +222,16 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
   })
 
   it('--keep-cells: a look whose right cells are not the left reversed has them changed without it, and byte-equal with it', () => {
-    const look = camLook([32768, 40000], [32768, 40000], { l: L7, r: allR(L7) })
+    const look = camLook([32768, 40000], [30000, 41000], { l: L7, r: allR(L7) })
     const without = runMirror([look], [], CAM)
-    expect(cellsOf(without.out.looks[0].steps[0].values.fr1)).not.toEqual(cellsOf(look.steps[0].values.fr1))
+    const cellsBoth = (o) => JSON.stringify(['fl1', 'fr1'].map((id) => cellsOf(o.looks[0].steps[0].values[id])))
+    expect(cellsBoth(without.out)).not.toEqual(cellsBoth({ looks: [look] }))
     const kept = runMirror([look], ['--keep-cells'], CAM)
     expect(kept.r.status, kept.r.stdout + kept.r.stderr).toBe(0)
     for (const id of ['fl1', 'fr1', 'fl2', 'fr2']) expect(cellsOf(kept.out.looks[0].steps[0].values[id])).toEqual(cellsOf(look.steps[0].values[id]))
+    // sync ran (pan/tilt were mirrored), only the cells are kept
+    const pt = (o) => JSON.stringify(['fl1', 'fr1'].map((id) => [g16(o.looks[0].steps[0].values[id], 'pan'), g16(o.looks[0].steps[0].values[id], 'tilt')]))
+    expect(pt(kept.out)).not.toEqual(pt({ looks: [look] }))
     expect(ruleLine(kept.r.stdout)).toMatch(/cells kept \(--keep-cells\)/)
   })
 
@@ -275,8 +279,16 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
 
   it('FACE_SIGN as a float 1.0 / -1.0 works; any other number exits 2 with one line', () => {
     const look = { id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }
-    for (const f of [1.0, -1.0]) {
-      const { r } = runMirror([look], [], { ...CAM, FACE_SIGN: f })
+    // JSON.stringify writes 1.0 as 1, so the presets text is written by hand with a literal 1.0 / -1.0
+    for (const f of ['1.0', '-1.0']) {
+      const d = tmp()
+      const pf = path.join(d, 'p.json'), inf = path.join(d, 'i.json'), outf = path.join(d, 'o.json')
+      const consts = JSON.stringify({ ...CAM, FACE_SIGN: 0 }).replace('"FACE_SIGN":0', `"FACE_SIGN":${f}`)
+      const meast = JSON.stringify(meas({ ...CAM, FACE_SIGN: 0 })).replace('"value":0', `"value":${f}`)
+      fs.writeFileSync(pf, `{"constants":${consts},"measured":${meast},"units":${JSON.stringify(PRESETS.units)}}`)
+      expect(fs.readFileSync(pf, 'utf8')).toContain(`"FACE_SIGN":${f}`)
+      fs.writeFileSync(inf, JSON.stringify({ looks: [look] }))
+      const r = py('mirror_sync.py', [pf, inf, outf])
       expect(r.status, r.stdout + r.stderr).not.toBe(2)
       expect(r.stderr).not.toMatch(/Traceback/)
     }
@@ -285,6 +297,32 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
       expect(r.status).toBe(2)
       expect(r.stderr.trim().split('\n')).toHaveLength(1)
     }
+  })
+
+  it('a boolean measured value is refused with exit 2 and one line (True == 1 in Python)', () => {
+    const look = { id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }
+    const good = meas(CAM)
+    const { r, out } = runMirror([look], [], CAM, { ...good, FACE_SIGN: { ...good.FACE_SIGN, value: true } })
+    expect(r.status, r.stdout).toBe(2)
+    expect(r.stderr.trim().split('\n')).toHaveLength(1)
+    expect(r.stderr).toMatch(/FACE_SIGN.*boolean/)
+    expect(out).toBeNull()
+  })
+
+  it('twoSided: true goes out unchanged and is named; the same look without the flag is fixed', () => {
+    const wrong = (extra) => ({ id: 'duel', name: 'Duel', ...extra, steps: [step([30001, 40000], [30001, 40000])] })
+    const other = { id: 'x', name: 'X', steps: [step([30001, 40000], [30001, 40000])] }
+    const a = runMirror([wrong({ twoSided: true }), other], [], CAM)
+    expect(a.r.status, a.r.stdout + a.r.stderr).toBe(0)
+    expect(a.out.looks[0]).toEqual(wrong({ twoSided: true }))
+    expect(a.out.looks[1].aim_fix_sync).toMatch(/pair-steps changed/)
+    expect(a.r.stdout).toMatch(/^kept as designed \(twoSided\): duel$/m)
+    expect(a.r.stdout).toMatch(/2 looks, 1 changed/)
+    const b = runMirror([wrong({})], [], CAM)
+    expect(b.out.looks[0].aim_fix_sync).toMatch(/pair-steps changed/)
+    expect(b.r.stdout).not.toMatch(/kept as designed/)
+    // only the exact boolean counts
+    expect(runMirror([wrong({ twoSided: 'true' })], [], CAM).out.looks[0].aim_fix_sync).toBeTruthy()
   })
 
   it('a per-axis key wins over MIRROR_MODE', () => {

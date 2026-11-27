@@ -836,6 +836,13 @@ check('a look with one step is a scene, and holds still', () => {
   assert.deepStrictEqual(at(99999), { r: 10, g: 20 }, 'one step never moves, whatever the clock says');
 });
 
+check('a look keeps twoSided only when it is exactly true', () => {
+  const one = (extra) => sanitizeLooks([{ id: 'a', steps: [{ values: { '*': { r: 1 } } }], ...extra }])[0];
+  assert.strictEqual(one({ twoSided: true }).twoSided, true);
+  for (const v of ['true', 1, false, null]) assert.ok(!('twoSided' in one({ twoSided: v })), `twoSided ${JSON.stringify(v)} writes no field`);
+  assert.ok(!('twoSided' in one({})), 'a missing field writes no field');
+});
+
 // ---- looks: spatial fan ------------------------------------------------------
 // A look's phase spread can read the stage arrangement instead of selection order —
 // the same promise fx.js's spatial fan makes for the old effects engine, brought into

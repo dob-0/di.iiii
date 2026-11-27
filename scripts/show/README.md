@@ -96,7 +96,7 @@ partner's value is `65536 - lead` on that axis (m = +1 left, -1 right), anything
 shows the lead's cells `<c><i>` in reversed order (false: same index). No `FACE_SIGN` or no mode for an axis: exit 2, never a guess.
 Presets values: the camera rule is `MIRROR_MODE_PAN negate, MIRROR_MODE_TILT same, FACE_SIGN 1, CELL_MIRROR_LR true`
 (pan R = 65536 - pan L, tilt R = tilt L, R cells = L cells reversed). The OLD rule is `MIRROR_MODE negate, FACE_SIGN -1`;
-with `--keep-cells` it is the old tool exactly. The output names the rule it used.
+with `--keep-cells` (and, for presets with no camera record, `--rule-unmeasured-ok`) the old tool's moves come back. The output names the rule it used.
 A pair is `L<n>` and `R<n>` in the presets `.units` (`--left/--right` change the two prefixes;
 only numbers present on both sides are pairs; each unit's `id` is its fixture id). A look whose pair-steps all mirror (within 2
 on both axes, cells too) with no bar more than 5 deg into its own wall stays as it is. In any other look the lead bar keeps
@@ -104,11 +104,15 @@ its move, folded at exactly 0 (where it points into its own wall its tilt mirror
 mirror. The lead is chosen per look by the least growth of step moves (per-step, left, or right). Only `pan`, `pan_fine`,
 `tilt`, `tilt_fine` of the pair bars change (plus the cell channels unless `--keep-cells`), proved by walking every value; the
 tool re-audits its output (cells counted uniform / reversed / same / other). The walk proof allows pan/tilt of the bars and
-the cell channels of the PARTNER bar only (never the lead's), and only when cells are mirrored. Exit 1 when: another value changed,
+the cell channels of the PARTNER bar only (never the lead's), and only when cells are mirrored. **Designed two-sided looks.** A look with `twoSided: true` (call and answer: the two sides do different things on purpose) is
+written to the output exactly as it came in, never mirrored, never counted as changed; one line names it
+(`kept as designed (twoSided): <ids>`). The builder or the merge that makes a call-and-answer look sets the flag. The desk keeps
+the field only from an install that carries this change (`sanitizeLook` in `serverXR/src/lighting/looks.js` writes it only when it is exactly `true`; older desks drop it).
+Exit 1 when: wrong argument count (usage), no pair in the presets, "no looks selected", another value changed,
 a pair is not mirrored, a cell is not as the rule says, a bar points into a wall, or a bar's largest step move grew more than
-`--max-grow` (default 5 deg). Exit 2 (one line, nothing written) when the rule is incomplete or unmeasured.
+`--max-grow` (default 5 deg). Exit 2 (one line, nothing written) when the rule is incomplete or unmeasured, or a constant or measured value is a boolean or not valid.
 **Provenance.** Each key the rule uses (`FACE_SIGN`, the pan key, the tilt key, and, unless `--keep-cells`, the cell key) needs
-`measured.<KEY>` in the presets with the same value as `constants.<KEY>` and a confidence other than `none`; otherwise exit 2
+`measured.<KEY>` in the presets with the same value as `constants.<KEY>` (a boolean measured value for a number constant is refused) and a confidence other than `none`; otherwise exit 2
 naming the key. The rule line prints each key's confidence and the first 60 characters of its method. `--rule-unmeasured-ok`
 skips the check (other rigs, fixtures); the line then says "rule NOT measured". `FACE_SIGN` may be 1, -1, 1.0 or -1.0.
 Undo: the input is never changed; the output is a new file.
