@@ -108,9 +108,11 @@
   }
   const members = (fixtures, g) => (fixtures || []).filter((f) => g.ids.includes(f.id));
   // The group dimmer as a fader reads it: the mean of its members' dimmers, 0..1.
+  // The group fader is the lamps' `sub` (a multiplier over whatever plays, absent = full), not their stored dimmer:
+  // a running look writes the dimmer itself, so a fader on values.dimmer moved nothing (owner N7670).
   function groupDimRead(fixtures, g) {
-    const m = members(fixtures, g).filter((f) => f.values && Number.isFinite(+f.values.dimmer));
-    return m.length ? m.reduce((s, f) => s + (+f.values.dimmer), 0) / m.length / 255 : 1;
+    const m = members(fixtures, g);
+    return m.length ? m.reduce((s, f) => s + (Number.isFinite(+f.sub) && f.sub != null ? +f.sub : 255), 0) / m.length / 255 : 1;
   }
   // On = every member on (a group with one lamp switched off is not "on").
   const groupIsOn = (fixtures, g) => { const m = members(fixtures, g); return m.length > 0 && m.every((f) => f.on !== false); };

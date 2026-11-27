@@ -6496,8 +6496,10 @@ function buildMidiTargets() {
         for (const id of g.ids) {
           const v = Math.round(255 * midiLive.base[key] * mp.xfadeFactor(midiLive.side[key], midiLive.xf) * mp.soloFactor(solo, id));
           sum += v;
-          const f = fxById(id); if (f && f.values) f.values.dimmer = v;
-          midiSend('api/fixture', { id, values: { dimmer: v } }, 'api/fixture:' + id);
+          // The group's share goes to the lamp's sub, a multiplier AFTER the look: a running look writes the dimmer itself,
+          // so a fader on values.dimmer did nothing (owner N7670).
+          const f = fxById(id); if (f) { if (v >= 255) delete f.sub; else f.sub = v; }
+          midiSend('api/fixture', { id, sub: v }, 'api/fixture:sub:' + id);
         }
         if (g.ids.length) midiLive.wrote[key] = sum / g.ids.length / 255;
       }

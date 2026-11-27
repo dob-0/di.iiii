@@ -2226,6 +2226,15 @@ function createDesk(opts = {}) {
         || body.universe != null || body.profile != null || body.limits != null;
       if (body.values) Object.assign(f.values, sanitizeValues(body.values));
       if (body.on != null) f.on = !!body.on;
+      // The group fader (N7670): a multiplier over whatever plays; 255 or null = full and the field goes away.
+      if (body.sub !== undefined) {
+        // Only a real number (or null = full) is a fader share: Number('') and Number(false) are 0, which would
+        // silently black out a lamp from a bad client, so anything else is refused (review of #1407).
+        if (body.sub !== null && typeof body.sub !== 'number') return json(res, { error: 'sub must be a number 0..255 or null' }, 400);
+        const n = body.sub;
+        if (n === null || !Number.isFinite(n) || n >= 255) delete f.sub; else f.sub = Math.max(0, Math.round(n));
+        if (!look) pushFrame();
+      }
       if (body.name != null) f.name = String(body.name).slice(0, 40);
       if (body.address != null) f.address = Math.max(1, Math.min(512, body.address | 0));
       if (body.universe != null) f.universe = Math.max(0, Math.min(32767, body.universe | 0));
