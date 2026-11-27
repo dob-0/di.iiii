@@ -6383,7 +6383,10 @@ function midiDrawLookPage() {
   if (!el || !window.deskMidiCues) return;
   const mc = window.deskMidiCues, n = padLooksOf().length;
   midiLookPage = mc.clampLookPage(midiLookPage, n);
-  el.textContent = `look page ${midiLookPage + 1}/${mc.lookPageCount(n)} · ${n} looks`;
+  // Looks, not slots: an order has empty slots and repeats, and a look made after it may have no pad.
+  const total = looksOf().length, onPads = new Set(padLooksOf().filter(Boolean).map((l) => l.id)).size;
+  const off = curPadOrder() && total > onPads ? ` (${total - onPads} not on the pads)` : '';
+  el.textContent = `look page ${midiLookPage + 1}/${mc.lookPageCount(n)} · ${total} looks${off}`;
 }
 
 function midiStepFx(dir) {
@@ -6579,6 +6582,8 @@ async function midiLoadPadBright() {
 }
 // The pad order is a desk setting, not a MIDI message: it never touches the rig, so it needs no ARM.
 async function midiSetPadOrder(body, said) {
+  // Armed, every pad under the player's fingers changes at once: ask first.
+  if (midiArmed && !window.confirm('The controller is ARMED. This moves every look to another pad now. Continue?')) return;
   const r = await post('api/midi/padorder', body);
   const note = $('#miOrderNote');
   if (!r || r.error) { if (note) note.textContent = 'not changed: ' + ((r && r.error) || 'no answer'); return; }

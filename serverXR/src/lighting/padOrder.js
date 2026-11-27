@@ -74,17 +74,40 @@ function brightnessOrder(looks, scores) {
 }
 
 // A saved or posted order: ids of looks that exist (the same id twice is fine), null = empty
-// slot, anything else dropped; trailing empties cut. Nothing left -> null.
+// slot; an id no look has becomes an EMPTY slot (so a deleted look never moves the other pads),
+// other junk is dropped; trailing empties cut. Nothing left -> null.
 function sanitizePadOrder(order, looks) {
   if (!Array.isArray(order)) return null;
   const known = new Set((Array.isArray(looks) ? looks : []).map((l) => l.id));
   const out = [];
   for (const v of order.slice(0, MAX_PAD_SLOTS)) {
     if (v === null) out.push(null);
-    else if (typeof v === 'string' && known.has(v)) out.push(v);
+    else if (typeof v === 'string') out.push(known.has(v) ? v : null);
   }
   while (out.length && out[out.length - 1] === null) out.pop();
   return out.length ? out : null;
+}
+
+// A look made while an order is set goes into the first empty slot of the column its brightness
+// band names (rank among all looks, 8 bands), or after the last slot if that column has none.
+// Nothing else moves. Returns the new order.
+function placeLook(order, looks, look, scores) {
+  const list = Array.isArray(looks) ? looks : [];
+  if (!Array.isArray(order) || !order.length || !look) return order || null;
+  if (order.includes(look.id)) return order;
+  const me = list.findIndex((l) => l.id === look.id);
+  const sc = scores || list.map(lookBrightness);
+  const mine = me >= 0 ? sc[me] : lookBrightness(look);
+  const rank = sc.filter((s, j) => s < mine || (s === mine && j < me)).length;
+  const col = Math.min(COLUMNS - 1, Math.floor(rank * COLUMNS / Math.max(1, list.length)));
+  const out = order.slice();
+  let at = out.findIndex((v, i) => v === null && i % COLUMNS === col);
+  if (at < 0) {
+    at = Math.ceil(out.length / COLUMNS) * COLUMNS + col;
+    while (out.length < at) out.push(null);
+  }
+  out[at] = look.id;
+  return out;
 }
 
 // What GET returns: each pad (flat slot number) with its look and brightness x 100.
@@ -103,4 +126,4 @@ function describePadOrder(looks, padOrder) {
   });
 }
 
-module.exports = { COLUMNS, ROWS_PER_PAGE, PAD_SLOTS, cellLights, lookBrightness, brightnessOrder, sanitizePadOrder, describePadOrder };
+module.exports = { COLUMNS, ROWS_PER_PAGE, PAD_SLOTS, cellLights, lookBrightness, brightnessOrder, sanitizePadOrder, placeLook, describePadOrder };

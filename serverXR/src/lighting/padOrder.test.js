@@ -6,7 +6,7 @@ import path from 'node:path'
 import http from 'node:http'
 
 const require = createRequire(import.meta.url)
-const { lookBrightness, cellLights, brightnessOrder, sanitizePadOrder, describePadOrder, PAD_SLOTS } = require('./padOrder.js')
+const { lookBrightness, cellLights, brightnessOrder, sanitizePadOrder, placeLook, describePadOrder, PAD_SLOTS } = require('./padOrder.js')
 const { createDesk } = require('./desk.js')
 const mc = require('./ui/midiCues.js')
 const { apc40View } = require('./ui/apc40draw.js')
@@ -82,8 +82,8 @@ describe('band layout', () => {
 
 describe('sanitize', () => {
   const L = looks(3)
-  it('unknown ids and junk dropped, a repeat kept, trailing empties cut, nothing left is null', () => {
-    expect(sanitizePadOrder(['l1', 'nope', 7, 'l1', null, 'l2', null], L)).toEqual(['l1', 'l1', null, 'l2'])
+  it('an unknown id is an empty slot (others keep their pad), junk dropped, a repeat kept, trailing empties cut, nothing left is null', () => {
+    expect(sanitizePadOrder(['l1', 'nope', 7, 'l1', null, 'l2', null], L)).toEqual(['l1', null, 'l1', null, 'l2'])
     expect(sanitizePadOrder(['nope'], L)).toBeNull()
     expect(sanitizePadOrder([], L)).toBeNull()
     expect(sanitizePadOrder('x', L)).toBeNull()
@@ -187,7 +187,7 @@ describe('route api/midi/padorder, saved with the show', () => {
   })
   it('a hand order is sanitized, a bad body is refused, clear goes back to desk order', async () => {
     const r = await call('POST', '/api/midi/padorder', { order: ['l3', 'ghost', 'l3', 'l1'] })
-    expect(r.body.padOrder).toEqual(['l3', 'l3', 'l1'])
+    expect(r.body.padOrder).toEqual(['l3', null, 'l3', 'l1'])
     expect((await call('POST', '/api/midi/padorder', { nope: 1 })).status).toBe(400)
     expect((await call('POST', '/api/midi/padorder', { clear: true })).body.padOrder).toBeNull()
     expect((await call('GET', '/api/state')).body.padOrder).toBeNull()
@@ -201,6 +201,45 @@ describe('route api/midi/padorder, saved with the show', () => {
     await stop(); await boot()
     expect((await call('GET', '/api/midi/padorder')).body.padOrder).toEqual(['l3', 'l1', 'l2'])
     await call('POST', '/api/looks', { looks: looks(16).filter((l) => l.id !== 'l1') })
-    expect((await call('GET', '/api/midi/padorder')).body.padOrder).toEqual(['l3', 'l2'])
+    expect((await call('GET', '/api/midi/padorder')).body.padOrder).toEqual(['l3', null, 'l2'])
+  })
+
+  it('delete one look, reload: every other look keeps its pad', async () => {
+    const L = looks(24)
+    await call('POST', '/api/looks', { looks: L })
+    await call('POST', '/api/midi/padorder', { mode: 'brightness' })
+    const before = (await call('GET', '/api/midi/padorder')).body.padOrder
+    const gone = before[3]
+    await call('POST', '/api/looks/remove', { id: gone })
+    const file = path.join(dir, 'show.json')
+    const t = Date.now()
+    while (Date.now() - t < 5000 && fs.readFileSync(file, 'utf8').includes('"' + gone + '"')) await new Promise((r) => setTimeout(r, 25))
+    await stop(); await boot()
+    const after = (await call('GET', '/api/midi/padorder')).body.padOrder
+    before.forEach((id, i) => { if (id !== gone) expect(after[i]).toBe(id) })
+    expect(after[3]).toBeNull()
+  })
+  it('a new look takes the first empty slot of its brightness column, else goes after the last slot; nothing else moves', async () => {
+    const L = looks(16)
+    await call('POST', '/api/looks', { looks: L })
+    await call('POST', '/api/midi/padorder', { mode: 'brightness' })
+    const before = (await call('GET', '/api/midi/padorder')).body.padOrder
+    await call('POST', '/api/looks/add', { look: mk('newbright', 250) })
+    const after = (await call('GET', '/api/midi/padorder')).body.padOrder
+    expect(after.indexOf('newbright') % 8).toBe(7)
+    before.forEach((id, i) => expect(after[i]).toBe(id))
+    expect(after).toHaveLength(Math.ceil(before.length / 8) * 8 + 8)   // column full: a new row
+  })
+})
+
+describe('placeLook', () => {
+  it('uses an empty slot in its column first', () => {
+    const L = [mk('a', 1), mk('b', 100), mk('c', 250)]
+    const o = placeLook(['a', null, null, null, null, null, null, null, 'b'], L.concat(mk('d', 0)), mk('d', 0))
+    expect(o[16]).toBe('d')   // the darkest: column 0 has no empty slot, so a new row
+    expect(o.slice(0, 9)).toEqual(['a', null, null, null, null, null, null, null, 'b'])
+    const o2 = placeLook(['a', null, null, null, null, null, null, null, 'b'], L.concat(mk('e', 250)), mk('e', 250))
+    expect(o2[6]).toBe('e')   // rank 3 of 4 looks -> band 7, column index 6
+    expect(placeLook(null, L, L[0])).toBeNull()
   })
 })

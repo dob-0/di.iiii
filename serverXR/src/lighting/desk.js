@@ -44,7 +44,7 @@ const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
-const { sanitizePadOrder, brightnessOrder, lookBrightness, describePadOrder } = require('./padOrder');
+const { sanitizePadOrder, placeLook, brightnessOrder, lookBrightness, describePadOrder } = require('./padOrder');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
 const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
@@ -950,7 +950,8 @@ function createDesk(opts = {}) {
   // jump to the end of the list the operator is reading.
   function putLook(look) {
     const at = state.looks.findIndex((l) => l.id === look.id);
-    if (at >= 0) state.looks[at] = look; else state.looks.push(look);
+    if (at >= 0) state.looks[at] = look;
+    else { state.looks.push(look); if (state.padOrder) state.padOrder = placeLook(state.padOrder, state.looks, look); }
   }
 
   let stateVersion = 0;
@@ -1728,8 +1729,13 @@ function createDesk(opts = {}) {
     'POST /api/looks': (req, res, body) => {
       const looks = sanitizeLooks(body.looks);
       if (!looks) return json(res, { error: 'looks must be a list, each with an id and at least one step' }, 400);
+      const had = new Set(state.looks.map((l) => l.id));
       state.looks = looks;
-      state.padOrder = sanitizePadOrder(state.padOrder, looks);   // ids that vanished leave the pads
+      state.padOrder = sanitizePadOrder(state.padOrder, looks);   // ids that vanished leave an empty slot, nothing moves
+      if (state.padOrder && looks.some((l) => !had.has(l.id))) {
+        const sc = looks.map(lookBrightness);   // once: the looks are heavy
+        looks.forEach((l, i) => { if (!had.has(l.id)) state.padOrder = placeLook(state.padOrder, looks, l, sc); });
+      }
       // No pushFrame: replacing the library is a data change. A layer pointing at a look
       // that just vanished simply stops contributing on the next tick, which is the
       // honest behaviour — nothing snaps and nothing is quietly held.
@@ -1844,6 +1850,7 @@ function createDesk(opts = {}) {
       if (state.looks.length === before) return json(res, { error: 'no such look' }, 404);
       // A layer left pointing at nothing is emptied rather than deleted: the operator
       // put that layer there, and its fader keeps its place in the stack.
+      state.padOrder = sanitizePadOrder(state.padOrder, state.looks);   // its pad goes empty, the others stay
       let emptied = 0;
       for (const layer of state.layers) if (layer.lookId === body.id) { layer.lookId = null; emptied++; }
       save(); pushFrame(); json(res, { ok: true, emptied });

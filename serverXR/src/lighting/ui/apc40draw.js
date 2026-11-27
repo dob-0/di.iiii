@@ -116,7 +116,7 @@
     const mb = eff.master;
     return {
       pads, buttons, columns, ordered: Array.isArray(m.order) && m.order.length > 0,
-      page, pages: mc.lookPageCount(looks.length), total: looks.length,
+      page, pages: mc.lookPageCount(looks.length), total: new Set(looks.filter(Boolean).map((l) => l.id)).size,
       master: { mapped: !!(mb && mb.type === 'cc'), cc: mb ? mb.num : null, does: 'Master fader = desk master' },
       onAir: (looks.find((l) => l && l.id === m.activeId) || {}).name || '',
       mapped: bound > 0,
@@ -375,7 +375,7 @@
         // master fader (the desk's master, 0..1)
         const mf = A.fad[8]; if (mf && typeof model.master === 'number') mf.style.setProperty('--v', Math.max(0, Math.min(1, model.master)));
         // legend
-        sp.textContent = `Looks page ${v.page + 1} of ${v.pages}  ·  ${v.total} ${v.ordered ? 'pads' : 'looks'}, 40 a page  ·  RIGHT / LEFT turn the page` + (v.ordered ? '  ·  columns dark to bright' : '');
+        sp.textContent = `Looks page ${v.page + 1} of ${v.pages}  ·  ${v.total} looks, 40 a page  ·  RIGHT / LEFT turn the page` + (v.ordered ? '  ·  columns dark to bright' : '');
         air.textContent = 'On air: ' + (v.onAir || 'none');
         const rows = [];
         for (const b of v.buttons) rows.push(`<tr class="${b.danger ? 'danger' : ''}"><td class="hw">${b.hex && b.vel > 1 ? `<span class="sw" style="background:${b.hex}"></span>` : ''}${esc(b.hw)}</td><td class="do">${esc(b.does)}</td></tr>`);
