@@ -1028,7 +1028,7 @@ check('the Setup Aim panel sits beside the map and writes only through api/fixtu
   assert.ok(/id="aimPane"/.test(html) && /id="apPanVal"/.test(html) && /data-axis="tilt" data-dir="-1"/.test(html) && /data-step="5"/.test(html) && /id="apZero"/.test(html), 'panel markup');
   assert.ok(html.indexOf('id="aimPane"') > html.indexOf('class="stage-inner"') && html.indexOf('id="aimPane"') < html.indexOf('data-split="setup-sel"'), 'right beside the map');
   assert.ok(html.indexOf('aimpanel.js') < html.indexOf('src="app.js"'), 'script order');
-  assert.ok(js.includes("h.post('api/fixtures/limits', { ids: j.ids, limits: j.limits })") && js.includes("fetch('api/state')"), 'writes via limits, reads back from state');
+  assert.ok(js.includes("h.post('api/fixtures/limits', { ids: j.ids, limits: j.limits })") && js.includes("'api/state'"), 'writes via limits, reads back from state');
   assert.ok(!/api\/(fixture'|fixtures\/(?!limits|identify))/.test(js), 'no other route');
   assert.ok(js.includes('+(lim(f)[k]) || 0') && !js.includes('] | 0') && js.includes('* 100) / 100') && js.includes("'trimStep'") && /data-step="0.01"/.test(html), 'fractional trims are read whole and rounded to 2 decimals; step in trimStep');
   for (const k2 of ["'ArrowLeft'", "'ArrowUp'", "'Tab'"]) assert.ok(js.includes(k2), k2);

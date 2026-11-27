@@ -318,8 +318,11 @@ function renderNote(text) {
 async function pullState() {
   try {
     const askedAt = Date.now();
-    const reply = await fetch('api/state');
+    // Say which looks we hold: while they are unchanged the desk leaves them out (42 MB on a big show).
+    const reply = await fetch(S && Array.isArray(S.looks) && S.looksRev != null ? 'api/state?looksRev=' + encodeURIComponent(S.looksRev) : 'api/state');
     const next = await reply.json();
+    // looks left out and the rev still ours: keep the list we have (an older desk sends no looksRev and always sends looks).
+    if (next && !('looks' in next) && S && Array.isArray(S.looks) && next.looksRev === S.looksRev) next.looks = S.looks;
     // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
     const wasOffline = pollFails >= 2;
     // Opened for one space while the desk runs another show: say which, and keep what is
