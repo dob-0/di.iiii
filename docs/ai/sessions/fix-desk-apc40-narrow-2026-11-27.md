@@ -7,3 +7,8 @@ Owner: "fix and update ui that i can see what is what"; N7606: "we have midi ui 
 - Measured (scratch desk, the live desk's 120 looks, GET only): pad min / leader min px: 606x780 labelled 11.0 / 12.0, real 11.0 / none drawn; 1534x830 labelled 11.0 / 12.0, real 14.0; 1536x864 labelled 11.0 / 12.0, real 14.0.
 - Not checked: the owner's real window.
 - Rollback: revert the PR.
+
+## Review nits (r3b)
+
+- The "Labels with leader lines" checkbox is hidden in Real layout, where it does nothing.
+- Narrow Labelled view: the empty band above the leader labels in view is trimmed (the unit is pulled up under them as the pan box scrolls); band 55 px -> about 25 px at 606x780. Check re-run, all 6 combinations PASS (log in apc-look/narrow/r3b/).

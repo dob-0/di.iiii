@@ -311,6 +311,7 @@
       '.apc40.pan .apcwrap{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain}',
       '.apc40 .apcjump{display:none;gap:8px;align-items:center;font:12px/1.3 var(--mono);color:var(--muted)}',
       '.apc40.pan .apcjump{display:flex}.apc40 .apcjump button{font:600 12px/1 var(--mono);padding:8px 12px;min-height:32px}',
+      '.apc40.overview .apcside .tog{display:none}',
       '.apcview{display:inline-flex;gap:0}.apcview button{font:600 12px/1 var(--mono);padding:7px 12px;min-height:30px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}.apcview button+button{border-left:0}.apcview button[aria-pressed=true]{background:var(--accent,#2b6cff);color:#fff}',
       '.apc40 .apcp{flex:none;width:' + NATIVE_W + 'px}',
       '.apcp .pad{border:1px solid rgba(255,255,255,.08);color:#151515;cursor:pointer;padding:0}',
@@ -797,10 +798,25 @@
         stage.style.transform = 'scale(' + scale + ')';
         body.style.width = pan ? '100%' : Math.floor(SW * scale) + 'px';
         body.style.height = Math.ceil(SH * scale) + (pan ? 18 : 0) + 'px';
+        stage.style.marginTop = '';
         if (!pan) body.scrollLeft = 0;
         if (lastView) lastView.pads.forEach((p, i) => fitPad(A.pads[i].firstChild, p.name, p.no));   // names are sized in px on screen: refit at every scale
         layoutCallouts();
+        if (pan) trimTop(); else stage.style.marginTop = '';
       }
+      // The pan box has no use for an empty band above the leader labels that are in view: pull the unit up under them. The box keeps the
+      // height of the globally smallest trim, so nothing is cut at the bottom and the page does not jump while panning.
+      function trimTop() {
+        const m = margins(), SH = NATIVE_H + m.t + m.b, sr = stage.getBoundingClientRect(), br = body.getBoundingClientRect();
+        const cls = [...stage.querySelectorAll('.cl')].filter((e) => e.style.display !== 'none').map((e) => e.getBoundingClientRect());
+        const top = (r) => (r.top - sr.top) / scale;
+        const all = cls.length ? Math.max(0, Math.min(...cls.map(top)) - 4) : 0;
+        const seen = cls.filter((r) => r.right > br.left && r.left < br.right);
+        const now = seen.length ? Math.max(0, Math.min(...seen.map(top)) - 4) : all;
+        stage.style.marginTop = (-Math.max(now, 0) * scale) + 'px'; body.style.height = Math.ceil((SH - all) * scale) + 18 + 'px';
+      }
+      let trimRaf = 0;
+      body.addEventListener('scroll', () => { if (!wrap.classList.contains('pan') || trimRaf) return; trimRaf = requestAnimationFrame(() => { trimRaf = 0; trimTop(); }); });
       // The two-button switch sits in the pane heading, next to the title.
       const viewBtns = [];
       { const head = host.closest('.miapcpane') && host.closest('.miapcpane').querySelector('.pane-head h2');
