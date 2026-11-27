@@ -15,7 +15,7 @@ const fsp = fs.promises;
 const path = require('path');
 const { ArtNet, broadcastPlan, localAddresses } = require('./artnet');
 const { decideIdentify } = require('./identify');
-const { readTestMove } = require('./testmove');
+const { readTestMove, pressTestMove, stopTestMove, testMoveLive } = require('./testmove');
 const { FINE_NAMES, fineRoleIn } = require('./roles');
 const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
@@ -251,7 +251,7 @@ function createDesk(opts = {}) {
     Object.defineProperty(s, 'identify', {
       value: {}, enumerable: false, writable: true, configurable: true,
     });
-    // A test move too (testmove.js): fixtureId -> { axis, from, until }, a swing that ends by itself.
+    // A test move too (testmove.js): fixtureId -> { axis, from, until, prev? }, a swing that ends by itself.
     delete s.testMove;
     Object.defineProperty(s, 'testMove', {
       value: {}, enumerable: false, writable: true, configurable: true,
@@ -1600,8 +1600,8 @@ function createDesk(opts = {}) {
         // operator asked for while they are turned round looking at the rig.
         identifying: Object.entries(state.identify || {}).filter(([, t]) => t > Date.now()).map(([id]) => id),
         // Which lights are swinging for a test move, and on which axis: { id: 'pan' | 'tilt' }.
-        testMoving: Object.fromEntries(Object.entries(state.testMove || {})
-          .filter(([, e]) => e.until > Date.now()).map(([id, e]) => [id, e.axis])),
+        testMoving: ((now) => Object.fromEntries(Object.entries(state.testMove || {})
+          .filter(([, e]) => testMoveLive(e, now)).map(([id, e]) => [id, e.until > now ? e.axis : e.prev.axis])))(Date.now()),
         nodes: nodeList(),
         interfaces: localAddresses(),
         broadcast: bcPlan().use,
@@ -1906,6 +1906,10 @@ function createDesk(opts = {}) {
     'POST /api/looks/fire': (req, res, body) => {
       const look = state.looks.find((l) => l.id === body.id);
       if (!look) return json(res, { error: 'no such look' }, 404);
+      // `autoplayOff: true`: the press also turns play-in-order off (the owner's rule, cuerun.js 2026-10-09), in this one
+      // call: a pad used to send api/cues/autoplay first, a second request that waited its turn behind the pad queue.
+      // Only when it is on, so a press that leaves it off saves nothing extra.
+      if (body.autoplayOff === true && (cueRunner.brief() || {}).autoplay) cueRunner.setAutoplay(false);
       const wait = quantiseWait(body.quantize);
       if (wait > 0) {
         const at = Date.now() + wait;
@@ -2443,7 +2447,18 @@ function createDesk(opts = {}) {
     // is saved and no value changes. `moving` is the lights that have that axis; a light
     // without one is not an error (a mixed selection still moves its heads), it is just left out.
     'POST /api/fixtures/testmove': (req, res, body) => {
-      if (body.off) { state.testMove = {}; return json(res, { ok: true, moving: [] }); }
+      // {off:true} stops every light; {off:true, ids:[...]} only those, and the others swing on. A stop
+      // lets the swing in progress finish (at most 2 s) so the head never jumps; it is home after that.
+      if (body.off) {
+        const now = Date.now();
+        const ask = Array.isArray(body.ids) && body.ids.length ? body.ids : null;
+        const next = {};
+        for (const [id, e] of Object.entries(state.testMove || {})) {
+          if (!ask || ask.includes(id)) { const st = stopTestMove(e, now); if (st) next[id] = st; } else next[id] = e;
+        }
+        state.testMove = next;
+        return json(res, { ok: true, moving: [] });
+      }
       const lights = (Array.isArray(body.ids) ? body.ids : [])
         .map((id) => state.fixtures.find((f) => f.id === id)).filter(Boolean);
       if (!lights.length) return json(res, { error: 'select a light to move' }, 400);
@@ -2451,11 +2466,12 @@ function createDesk(opts = {}) {
       if (press.error) return json(res, { error: press.error }, 400);
       const now = Date.now();
       const next = {};
-      for (const [id, e] of Object.entries(state.testMove || {})) if (e.until > now) next[id] = e;
+      for (const [id, e] of Object.entries(state.testMove || {})) if (testMoveLive(e, now)) next[id] = e;
       const moving = lights.filter((f) => (PROFILES[f.profile] || PROFILES.rgb).channels.includes(press.axis));
-      for (const f of moving) next[f.id] = { axis: press.axis, from: now, until: now + press.ms };
+      // A re-press keeps the swing going from where it is; the other axis finishes its swing (testmove.js).
+      for (const f of moving) next[f.id] = pressTestMove(next[f.id], press, now);
       state.testMove = next;
-      json(res, { ok: true, moving: moving.map((f) => f.id), until: now + press.ms });
+      json(res, { ok: true, moving: moving.map((f) => f.id), until: Math.max(now + press.ms, ...moving.map((f) => next[f.id].until)) });
     },
 
     'POST /api/fixtures/limits': (req, res, body) => {
