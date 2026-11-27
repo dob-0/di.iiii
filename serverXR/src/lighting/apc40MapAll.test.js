@@ -152,7 +152,7 @@ describe('APC40 map-all round 2 (#1404 review)', () => {
     expect(draw.CONTROLS.find((c) => c.key === 'arm:8').does).not.toMatch(/3 Hz|cap/)
   })
   it('F2: letting go of everything (disarm, new controller, page close) also lets go of SHIFT', () => {
-    expect(app).toMatch(/function midiReleaseAll\(\) \{\n  midiLive\.shift = false;/)
+    expect(app).toContain('function midiReleaseAll() {\n  midiLive.shift = false;')
   })
   it('F3: the colour-FX stop of SHIFT + CLIP STOP leaves first and urgent', () => {
     expect(app).toContain("sendCfx({ mode: 'none' }, 'cfx:mode', true)")
