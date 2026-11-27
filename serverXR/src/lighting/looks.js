@@ -374,7 +374,25 @@ function layerValues(state, fixtures, now, clockBpm, epoch = 0) {
   return out;
 }
 
+// The look that is ON AIR: the top layer of the mix (layerValues' own order — highest priority,
+// a tie goes to the later layer) that is on, above level 0 and holds a look that exists. null when
+// none. Every source lands here: the cue layer, play in order, a tap, MIDI, another tab.
+function onAirOf(state) {
+  const layers = Array.isArray(state && state.layers) ? state.layers : [];
+  const lookList = Array.isArray(state && state.looks) ? state.looks : [];
+  let best = null;
+  for (let i = 0; i < layers.length; i++) {
+    const l = layers[i];
+    if (!l || !l.on || !(l.level > 0) || !l.lookId) continue;
+    if (best && (Number(l.priority) || 0) < (Number(best.priority) || 0)) continue;
+    if (!lookList.some((k) => k.id === l.lookId)) continue;
+    best = l;
+  }
+  return best ? { lookId: best.lookId, layerId: best.id } : null;
+}
+
 module.exports = {
+  onAirOf,
   KINDS, MERGES, SCOPES, SPATIAL, MAX_LOOKS, MAX_LAYERS, MAX_STEPS,
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   kindAllows, evalLook, layerValues, stepBlend, stepPosition, spatialFrac,
