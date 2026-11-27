@@ -1583,6 +1583,7 @@ check('the show file on disk is always a complete show', async () => {
   await POST('/api/master', { master: 255 });
   await sleep(500);
   assert.ok(!fs.existsSync(path.join(dir, 'show.json.tmp')), 'no temp file left behind');
+  assert.ok(!fs.existsSync(path.join(dir, 'show.json.async.tmp')), 'no async temp file left behind');
   assert.ok(fs.existsSync(path.join(dir, 'show.prev.json')), 'the previous save is kept');
   JSON.parse(fs.readFileSync(path.join(dir, 'show.json'), 'utf8'));
   JSON.parse(fs.readFileSync(path.join(dir, 'show.prev.json'), 'utf8'));
@@ -2401,7 +2402,7 @@ function contractChecks(cls) {
 // over a read-only file succeeds, so the test would pass without the failure ever happening.
 check('a show file that cannot be written does not stop the desk, says so, keeps the edit and recovers', async () => {
   const file = path.join(process.env.DATA_DIR, 'show.json');
-  const blocker = file + '.tmp';
+  const blocker = file + '.async.tmp';   // the timer's save writes through its own temp file
   await POST('/api/master', { master: 200 });
   await sleep(700);                                   // the first save lands
   assert.ok(fs.existsSync(file), 'the show file exists');
@@ -2520,11 +2521,11 @@ check('a save that failed after an empty boot still keeps aside a show that turn
   const show = path.join(dir, 'show.json');
   const d = await deskOn(dir);                        // boots with nothing
   try {
-    fs.mkdirSync(show + '.tmp');                      // the first save fails
+    fs.mkdirSync(show + '.async.tmp');                      // the first save fails
     await d.post('/api/master', { master: 100 });
     await sleep(700);
     assert.ok(!fs.existsSync(show), 'nothing was written');
-    fs.rmSync(show + '.tmp', { recursive: true, force: true });
+    fs.rmSync(show + '.async.tmp', { recursive: true, force: true });
     fs.writeFileSync(show, JSON.stringify({ fixtures: [{ id: 'f1', profile: 'drgb', address: 1 }, { id: 'f2', profile: 'drgb', address: 5 }] }));
     await sleep(1500);                                // the retry fires
     const found = fs.readdirSync(dir).filter((f) => f.includes('-found-'));

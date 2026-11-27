@@ -319,10 +319,14 @@ async function pullState() {
   try {
     const askedAt = Date.now();
     // Say which looks we hold: while they are unchanged the desk leaves them out (42 MB on a big show).
-    const reply = await fetch(S && Array.isArray(S.looks) && S.looksRev != null ? 'api/state?looksRev=' + encodeURIComponent(S.looksRev) : 'api/state');
+    // The rev and the list are taken when the request is SENT: polls overlap, and a reply that lands after a newer one
+    // must be matched against what this request asked about, not against whatever S holds by then.
+    const heldRev = S && Array.isArray(S.looks) ? S.looksRev : null;
+    const heldLooks = heldRev != null ? S.looks : null;
+    const reply = await fetch(heldRev != null ? 'api/state?looksRev=' + encodeURIComponent(heldRev) : 'api/state');
     const next = await reply.json();
-    // looks left out and the rev still ours: keep the list we have (an older desk sends no looksRev and always sends looks).
-    if (next && !('looks' in next) && S && Array.isArray(S.looks) && next.looksRev === S.looksRev) next.looks = S.looks;
+    // looks left out and the rev still the one we sent: keep the list we sent it for (an older desk sends no looksRev and always sends looks).
+    if (next && !('looks' in next) && heldLooks && next.looksRev === heldRev) next.looks = (S && S.looksRev === heldRev && Array.isArray(S.looks)) ? S.looks : heldLooks;
     // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
     const wasOffline = pollFails >= 2;
     // Opened for one space while the desk runs another show: say which, and keep what is
@@ -5165,6 +5169,14 @@ function queueLayer(id, patch) {
   }
 }
 
+// A look the desk just made or replaced, into the list this page holds: by its id, the way putLook does. A poll that
+// already carries it must not leave it twice (the look pads go by position).
+function addLookLocal(look) {
+  if (!S || !S.looks) return;
+  const at = S.looks.findIndex((l) => l.id === look.id);
+  if (at >= 0) S.looks[at] = look; else S.looks.push(look);
+}
+
 // Write one look back. The library route is replace-whole; this one is add-or-replace,
 // because a person editing one look must not have to send the other five hundred.
 async function putLook(look, note) {
@@ -5423,7 +5435,7 @@ $('#lookRecord').addEventListener('click', async () => {
   });
   if (r && r.error) return say(r.error, true);
   $('#lookName').value = '';
-  if (S.looks) S.looks.push(r.look);
+  addLookLocal(r.look);
   selLook = r.look.id;
   buildLooks(); buildSteps();
   say(`recorded "${r.look.name}" — ${KIND_LABEL[kind]} of ${chosen.length ? chosen.length + ' selected' : 'every'} fixture${!chosen.length || chosen.length > 1 ? 's' : ''}`);
@@ -5651,7 +5663,7 @@ function colourCell(r, g, b) {
 async function startLook(look, layer, note) {
   const made = await post('api/looks/add', { look });
   if (made && made.error) return say(made.error, true);
-  if (S.looks) S.looks.push(made.look);
+  addLookLocal(made.look);
   const r = await post('api/layers/add', Object.assign({ lookId: made.look.id }, layer));
   if (r && r.error) return say(r.error, true);
   if (S.layers) S.layers.push(r.layer);

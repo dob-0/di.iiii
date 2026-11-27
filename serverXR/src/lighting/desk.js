@@ -680,6 +680,7 @@ function createDesk(opts = {}) {
   // Ctrl+C then threw the whole drag away. Exit flushes whatever is pending.
   let saveTimer = null;
   let dirty = false;
+  let asyncOwes = false;  // an async save in flight has cleared `dirty` for edits it has not landed yet
   let showWriteGen = 0;   // bumped by every synchronous save or show change; an async save in flight checks it
   // Whether the show is safely on disk, for the page (status.save). A save runs from a
   // timer: before this, a locked or read-only show file (OneDrive, an antivirus, a full
@@ -748,11 +749,7 @@ function createDesk(opts = {}) {
 
   // JSON.stringify(s), byte for byte, with the looks text spliced in from the cache (looksJson) instead of
   // walked again: at 43 MB of looks a save stringified them all, on the DMX loop's thread, 0.4 s after every fire.
-  function stateText(s) {
-    const p = stateParts(s);
-    return p.whole != null ? p.whole : p.head + looksJson() + p.tail;
-  }
-  // The same text in three pieces, so the async write can send the looks as bytes encoded once per change
+  // Here in three pieces, so the async write can send the looks as bytes encoded once per change
   // (looksBuffer) instead of flattening and encoding a 40+ MB string on the loop's thread on every save.
   function stateParts(s) {
     if (!Array.isArray(s.looks)) return { whole: JSON.stringify(s) };
@@ -840,8 +837,10 @@ function createDesk(opts = {}) {
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     // A space's show is written without the rig (normaliseOutput says why).
     const parts = stateParts(show.space ? withoutRig(state) : state);
-    const text = () => (parts.whole != null ? parts.whole : parts.head + looksJson() + parts.tail);
-    return { file, text, parts };
+    // The looks text is captured HERE, with the head and tail it belongs to: a later cache rebuild must not mix in.
+    const looksText = parts.whole != null ? null : looksJson();
+    const text = () => (parts.whole != null ? parts.whole : parts.head + looksText + parts.tail);
+    return { file, text, parts, looksText };
   }
 
   function writeShowFile() {
@@ -861,36 +860,45 @@ function createDesk(opts = {}) {
     // that turns up before the retry is still kept aside rather than written over.
     bootedWithNothing = false;
     dirty = false;
+    asyncOwes = false;   // this synchronous save has written everything an async save in flight owed
   }
 
   // The same write for the timer, off the DMX loop's thread: the text is made at once (the looks come from the
-  // cache), the 40-55 MB go out through the async fs. One save in flight at a time (saveTick waits); tmp + rename and
-  // show.prev.json work exactly as in writeShowFile. A show change, adoption or synchronous save that happens while it
-  // is in flight bumps showWriteGen, and this write then drops its tmp file instead of landing an older show.
+  // cache), the 40-55 MB go out through the async fs into a temp file of its OWN (`.async.tmp`: the synchronous saves of
+  // close(), a show import/restore or a switch use `.tmp`, and must never truncate a file this write still has open).
+  // One save in flight at a time (saveTick waits); show.prev.json works as in writeShowFile.
+  // The commit is one synchronous step: the check "is this still the newest write?" and the rename sit in the same
+  // tick, so no synchronous save can land between them (a rename queued on the thread pool could not be called back).
+  // A show change, adoption or synchronous save while this was in flight bumped showWriteGen: it then drops its own temp
+  // file and returns false, and the caller skips the after-save work (rig file, status) that belongs to the newer write.
   async function writeShowFileAsync() {
-    const { file, text, parts } = prepareShowWrite();
-    const looksBuf = parts.whole != null ? null : looksBuffer();
+    const { file, text, parts, looksText } = prepareShowWrite();
+    const looksBuf = looksText == null ? null : looksBuffer();
     const gen = showWriteGen;
     const inPlace = saveStatus.failures >= 3;
-    const tmp = file + '.tmp';
+    const tmp = file + '.async.tmp';
+    const drop = async () => { await fsp.unlink(tmp).catch(() => {}); return false; };   // awaited: the next async save (it waits for this one) must not open its temp file before this unlink has run, or the unlink would remove it   // asyncOwes stays as the newer write left it
     dirty = false;
+    asyncOwes = true;
     try {
       const fh = await fsp.open(tmp, 'w');
       try {
         if (looksBuf) { await fh.writeFile(parts.head); await fh.writeFile(looksBuf); await fh.writeFile(parts.tail); }
         else await fh.writeFile(parts.whole);
       } finally { await fh.close(); }
-      if (gen !== showWriteGen) { fsp.unlink(tmp).catch(() => {}); return; }
+      if (gen !== showWriteGen) return drop();
       try { await fsp.copyFile(file, file.replace(/\.json$/, '.prev.json')); } catch (e) { /* first save ever */ }
-      if (gen !== showWriteGen) { fsp.unlink(tmp).catch(() => {}); return; }
-      try { await fsp.rename(tmp, file); }
+      if (gen !== showWriteGen) return drop();
+      try { fs.renameSync(tmp, file); }
       catch (e) {
         if (!inPlace || !LOCKED.has(e.code)) throw e;
-        await fsp.writeFile(file, text());
-        fsp.unlink(tmp).catch(() => {});
+        fs.writeFileSync(file, text());
+        try { fs.unlinkSync(tmp); } catch (e2) { /* it goes with the next save */ }
       }
       bootedWithNothing = false;
-    } catch (e) { dirty = true; throw e; }
+      asyncOwes = false;
+      return true;
+    } catch (e) { await fsp.unlink(tmp).catch(() => {}); asyncOwes = false; if (gen === showWriteGen) dirty = true; throw e; }
   }
 
   // The timer: like saveSoon but the show file goes out asynchronously and a save already in flight makes this one wait.
@@ -908,7 +916,8 @@ function createDesk(opts = {}) {
     try {
       if (dirty) { writing = true; p = writeShowFileAsync(); }
     } catch (e) { writing = false; return fail(e); }
-    p.then(() => {
+    p.then((landed) => {
+      if (landed === false) return;   // a newer write (close, import, restore, switch) already stands: not this one's to report
       if (show.space) writeMachineOutput(); else machineOutputText = JSON.stringify(state.output);
       if (!saveStatus.ok) log('  the show saved again after ' + saveStatus.failures + ' failed attempt(s)');
       Object.assign(saveStatus, { ok: true, pending: dirty, lastOkAt: Date.now(), lastError: null, failures: 0 });
@@ -1676,7 +1685,7 @@ function createDesk(opts = {}) {
       let disk;
       try { disk = readShow(DATA); } catch (e) { return json(res, { error: 'This machine has no show of its own to copy.' }, 404); }
       // Whatever the empty space show had pending is dropped: the copy is its first save.
-      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
       writeWhole(showFile(), JSON.stringify(withoutRig(disk)));
       switchShow({ ...show });   // and loaded back from the file just written
       log('  copied this machine\'s show to ' + showFile() + ' (' + MACHINE_SHOW + ' is unchanged)');
@@ -2997,6 +3006,7 @@ function createDesk(opts = {}) {
     // failure is reported (status.save) and retried. The switch is then refused — loading
     // the next show replaces `state`, and the edits that could not be written would go
     // with it.
+    if (asyncOwes) dirty = true;   // an async save in flight cleared dirty and the gen bump below will drop it: save again, synchronously (import/restore/adopt clear asyncOwes: they wrote the file themselves)
     saveSoon();
     if (!saveStatus.ok) {
       const e = new Error('The show that is loaded could not be saved (' + saveStatus.lastError + '), so nothing was switched and none of it is lost. Try again once it has saved.');
@@ -3009,6 +3019,7 @@ function createDesk(opts = {}) {
     const rig = state.output;
     for (const p of customProfiles()) removeProfile(p.name);
     show = next;
+    showWriteGen++;   // an async save still in flight belongs to the show just left
     state = attachAudio(loadState({ keepOutput: rig }));
     engine.state = state;
     input.configure(state.output.input, { lanAllowed });
@@ -3038,7 +3049,7 @@ function createDesk(opts = {}) {
     const text = show.space ? JSON.stringify(withoutRig(disk)) : JSON.stringify({ ...disk, output: rigNow });
     const chase = { ...engine.chase };
     const origin = engine.chaseOrigin;
-    clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
+    clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
     try {
       fs.mkdirSync(show.dir, { recursive: true });
       writeWhole(showFile(), text);
@@ -3168,7 +3179,7 @@ function createDesk(opts = {}) {
     // when this desk is running something else.
     adoptShowFile: (id) => {
       if (show.space !== id) return false;
-      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
       switchShow({ ...show });
       return true;
     },
