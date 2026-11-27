@@ -2553,7 +2553,9 @@ function syncLimitPanel() {
 // pan/tilt has a fine channel (S.fineNames, published from roles.js, the list the renderer uses);
 // a light without one stays in whole steps, and the server rounds its trim the same way.
 const TRIM_STEPS = ['1', '0.1', '0.01'];
-let trimStep = TRIM_STEPS.includes(localStorage.getItem('trimStep')) ? localStorage.getItem('trimStep') : '0.1';
+// A browser that blocks site data throws on localStorage: the step then lives in memory only.
+let trimStep = '0.1';
+try { const t = localStorage.getItem('trimStep'); if (TRIM_STEPS.includes(t)) trimStep = t; } catch (e) { /* site data blocked */ }
 const hasFine = (f, axis) => {
   const names = (S && S.fineNames && S.fineNames[axis]) || [];
   return !!f && profileOf(f).channels.some((c) => names.includes(c));
@@ -2579,7 +2581,7 @@ function paintTrimStep() {
 for (const b of $$('.trimstep button')) {
   b.addEventListener('click', () => {
     trimStep = b.dataset.step;
-    localStorage.setItem('trimStep', trimStep);
+    try { localStorage.setItem('trimStep', trimStep); } catch (e) { /* site data blocked */ }
     paintTrimStep();
   });
 }
