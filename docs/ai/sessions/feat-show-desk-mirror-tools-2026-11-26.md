@@ -1,7 +1,8 @@
 ## 2026-11-26 — show desk tools: mirrored moving-bar pairs, tilt flip, looks loader
 
 - Moved three tools that lived only in a show report folder into `scripts/show/`: `mirror_sync.py`, `flip_truss_tilt.py`, `live_load.mjs`, with `scripts/show/desk-tools.test.mjs` (synthetic fixtures, loader against a throwaway offline desk from `createDesk`).
-- Rule behind them: both bar trusses hang the same way and tilt above 32768 turns a bar toward the left wall, so the mirror of (pan, tilt) is (65536 - pan, 65536 - tilt); equal left/right values send one side into its own wall (owner N7020, N7024).
+- Rule behind them is DATA read from the presets `constants` (`MIRROR_MODE_PAN/TILT` over `MIRROR_MODE`, `FACE_SIGN`, `CELL_MIRROR_LR`); no FACE_SIGN or axis mode = exit 2. Camera record 2026-11-26 22:4x (dob-3f's hold, all 18 bars at pan 128, viewed by dob-39): right bars hang turned 180 deg, tilt above centre lands inward on both sides; true mirror = pan R = 65536 - pan L, tilt R = tilt L, R cells = L cells reversed. The first rule (both trusses same way, mirror (65536 - pan, 65536 - tilt)) was measured wrong for that hall; it stays as presets values (`MIRROR_MODE negate, FACE_SIGN -1`) plus `--keep-cells`. Undo: the tools never change their input; the output is a new file (owner N7020, N7024).
+- Cells are mirrored by default from the same lead; `--keep-cells` leaves every colour. The output prints the rule it used. Mutation check: flipping the FACE_SIGN factor in `into` fails 8 of 23 tests.
 - Generalised: the pair list comes from presets units (`L<n>`/`R<n>` default, `--left/--right` options); the desk base URL is an option; no production names in code.
-- Golden check, local only, on the private show files: 28 of 28 and 27 of 27 looks identical to the looks the tool made that night.
+- The old golden check (28 of 28, 27 of 27 looks) was made with the old hard-coded rule; it is not repeated for the camera rule.
 - Not tested: against a live desk (never touched from this branch); full repo test suite.

@@ -22,17 +22,19 @@ const hasPython = spawnSync('python3', ['--version']).status === 0
 const py = (script, args) => spawnSync('python3', ['-I', path.join(here, script), ...args], { encoding: 'utf8' })
 
 // two pairs of bars: L1/R1, L2/R2, plus a fixture that is not a bar
-const PRESETS = { units: { L1: { id: 'fl1' }, L2: { id: 'fl2' }, R1: { id: 'fr1' }, R2: { id: 'fr2' }, X1: { id: 'fx' } } }
+const OLD = { MIRROR_MODE: 'negate', FACE_SIGN: -1, CELL_MIRROR_LR: true }
+const CAM = { MIRROR_MODE_PAN: 'negate', MIRROR_MODE_TILT: 'same', MIRROR_MODE: 'negate', FACE_SIGN: 1, CELL_MIRROR_LR: true }
+const PRESETS = { constants: OLD, units: { L1: { id: 'fl1' }, L2: { id: 'fl2' }, R1: { id: 'fr1' }, R2: { id: 'fr2' }, X1: { id: 'fx' } } }
 const g16 = (v, ch) => v[ch] * 256 + (v[ch + '_fine'] || 0)
 const put = (raw, p, t) => ({ pan: p >> 8, pan_fine: p & 255, tilt: t >> 8, tilt_fine: t & 255, dimmer: 200, red: 90 })
 const bar = (p, t) => put(null, p, t)
 const step = (l, r) => ({ values: { fl1: bar(...l), fr1: bar(...r), fl2: bar(...l), fr2: bar(...r), fx: { dimmer: 7, pan: 1, tilt: 2 } }, width: 1 })
-const intoRoom = (side, p, t) => (side === 'L' ? -1 : 1) * Math.sin(((t - 32768) * 270 / 65535) * Math.PI / 180) * Math.cos(((p - 32768) * 540 / 65535) * Math.PI / 180)
+const intoRoom = (side, p, t, face = side === 'L' ? -1 : 1) => face * Math.sin(((t - 32768) * 270 / 65535) * Math.PI / 180) * Math.cos(((p - 32768) * 540 / 65535) * Math.PI / 180)
 
-const runMirror = (looks, extra = []) => {
+const runMirror = (looks, extra = [], constants = OLD) => {
   const d = tmp()
   const pf = path.join(d, 'presets.json'), inf = path.join(d, 'in.json'), outf = path.join(d, 'out.json')
-  fs.writeFileSync(pf, JSON.stringify(PRESETS)); fs.writeFileSync(inf, JSON.stringify({ keep: 'me', looks }))
+  fs.writeFileSync(pf, JSON.stringify(constants === null ? { units: PRESETS.units } : { ...PRESETS, constants })); fs.writeFileSync(inf, JSON.stringify({ keep: 'me', looks }))
   const r = py('mirror_sync.py', [pf, inf, outf, ...extra])
   return { r, inf, out: fs.existsSync(outf) ? JSON.parse(fs.readFileSync(outf, 'utf8')) : null }
 }
@@ -143,12 +145,87 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
   it('--left/--right name other unit prefixes', () => {
     const d = tmp()
     const pf = path.join(d, 'p.json'), inf = path.join(d, 'i.json'), outf = path.join(d, 'o.json')
-    fs.writeFileSync(pf, JSON.stringify({ units: { A1: { id: 'fa' }, B1: { id: 'fb' } } }))
+    fs.writeFileSync(pf, JSON.stringify({ constants: OLD, units: { A1: { id: 'fa' }, B1: { id: 'fb' } } }))
     fs.writeFileSync(inf, JSON.stringify({ looks: [{ id: 'a', steps: [{ values: { fa: bar(32768, 40000), fb: bar(32768, 40000) } }] }] }))
     const r = py('mirror_sync.py', [pf, inf, outf, '--left', 'A', '--right', 'B'])
     expect(r.status, r.stdout + r.stderr).toBe(0)
     const v = JSON.parse(fs.readFileSync(outf, 'utf8')).looks[0].steps[0].values
     expect(Math.abs(g16(v.fa, 'tilt') + g16(v.fb, 'tilt') - 65536)).toBeLessThanOrEqual(2)
+  })
+
+  // The rule is data in the presets (camera record 2026-11-26 22:4x): FACE_SIGN +1, pan negate, tilt same, cells reversed.
+  const cellBar = (p, t, cs) => ({ ...bar(p, t), ...cs })
+  const cellsOf = (v) => Object.fromEntries(Object.keys(v).filter((k) => /^[rgbw]\d+$/.test(k)).map((k) => [k, v[k]]))
+  const L7 = { r1: 1, r2: 2, r3: 3, r4: 4, r5: 5, r6: 6, r7: 7, g1: 11, g2: 12, g3: 13, g4: 14, g5: 15, g6: 16, g7: 17 }
+  const flipped = (c) => Object.fromEntries(Object.entries(c).map(([k, x]) => [k[0] + (8 - Number(k.slice(1))), x]))
+  const camLook = (l, r, extra) => ({ id: 'c', name: 'C', steps: [{ values: { fl1: cellBar(...l, extra?.l || {}), fr1: cellBar(...r, extra?.r || {}), fl2: bar(...l), fr2: bar(...r) } }] })
+
+  it('camera rule: the partner is (65536 - pan, same tilt), into the room is equal on both sides', () => {
+    const { r, out } = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], CAM)
+    expect(r.status, r.stdout + r.stderr).toBe(0)
+    expect(r.stdout).toMatch(/rule from presets: pan negate, tilt same, FACE_SIGN \+1, cells reversed/)
+    const v = out.looks[0].steps[0].values
+    expect(g16(v.fl1, 'pan')).toBe(30001); expect(g16(v.fl1, 'tilt')).toBe(40000)
+    expect(g16(v.fr1, 'pan')).toBe(65536 - 30001); expect(g16(v.fr1, 'tilt')).toBe(40000)
+    const a = intoRoom('L', g16(v.fl1, 'pan'), g16(v.fl1, 'tilt'), 1), b = intoRoom('R', g16(v.fr1, 'pan'), g16(v.fr1, 'tilt'), 1)
+    expect(Math.abs(a - b)).toBeLessThan(1e-9)
+  })
+
+  it('camera rule: a look facing the walls is folded, nothing ends into a wall; a facing look stays', () => {
+    // tilt below centre = into the room with FACE_SIGN +1; tilt 40000 is above centre, so +sin > 0 means into the room
+    const walls = { id: 'w', name: 'W', steps: [step([32768, 26000], [32768, 26000]), step([32768, 24000], [32768, 24000])] }
+    const { r, out } = runMirror([walls], [], CAM)
+    expect(r.status, r.stdout + r.stderr).toBe(0)
+    for (const s of out.looks[0].steps) for (const [l, rr] of [['fl1', 'fr1'], ['fl2', 'fr2']]) {
+      expect(intoRoom('L', g16(s.values[l], 'pan'), g16(s.values[l], 'tilt'), 1)).toBeGreaterThanOrEqual(-1e-9)
+      expect(intoRoom('R', g16(s.values[rr], 'pan'), g16(s.values[rr], 'tilt'), 1)).toBeGreaterThanOrEqual(-1e-9)
+    }
+    // folded about the centre: tilt 26000 -> 39536 and 24000 -> 41536 on both sides; pan R = 65536 - pan L (= 32768 here)
+    out.looks[0].steps.forEach((s, k) => {
+      for (const id of ['fl1', 'fr1', 'fl2', 'fr2']) expect(g16(s.values[id], 'tilt')).toBe(65536 - [26000, 24000][k])
+    })
+    const ok = { id: 'ok', name: 'OK', steps: [step([30000, 40000], [35536, 40000])] }
+    expect(runMirror([ok], [], CAM).out.looks[0]).toEqual(ok)
+  })
+
+  it('cells come out reversed from the lead; same index under CELL_MIRROR_LR false; --keep-cells changes no cell', () => {
+    const look = camLook([32768, 40000], [32768, 40000], { l: L7, r: Object.fromEntries(Object.keys(L7).map((k) => [k, 90])) })
+    const a = runMirror([look], [], CAM)
+    expect(a.r.status, a.r.stdout + a.r.stderr).toBe(0)
+    const v = a.out.looks[0].steps[0].values
+    expect(cellsOf(v.fl1)).toEqual(L7)
+    expect(cellsOf(v.fr1)).toEqual(flipped(L7))
+    expect(a.r.stdout).toMatch(/cells after \(pair-steps\): uniform 0, reversed 1/)
+    const b = runMirror([look], [], { ...CAM, CELL_MIRROR_LR: false })
+    expect(b.r.status, b.r.stdout + b.r.stderr).toBe(0)
+    expect(cellsOf(b.out.looks[0].steps[0].values.fr1)).toEqual(L7)
+    expect(b.r.stdout).toMatch(/cells reversed|same index/)
+    const c = runMirror([look], ['--keep-cells'], CAM)
+    expect(c.r.status, c.r.stdout + c.r.stderr).toBe(0)
+    expect(cellsOf(c.out.looks[0].steps[0].values.fl1)).toEqual(L7)
+    expect(cellsOf(c.out.looks[0].steps[0].values.fr1)).toEqual(cellsOf(look.steps[0].values.fr1))
+  })
+
+  it('a per-axis key wins over MIRROR_MODE', () => {
+    // MIRROR_MODE negate everywhere, but tilt is 'same' by its own key: the tilt is copied, not negated
+    const a = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'negate', MIRROR_MODE_TILT: 'same', FACE_SIGN: 1 })
+    expect(a.r.status, a.r.stdout + a.r.stderr).toBe(0)
+    expect(g16(a.out.looks[0].steps[0].values.fr1, 'tilt')).toBe(40000)
+    // and the other way round: MIRROR_MODE 'same', pan negated by its own key
+    const b = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'same', MIRROR_MODE_PAN: 'negate', FACE_SIGN: 1 })
+    expect(b.r.status, b.r.stdout + b.r.stderr).toBe(0)
+    expect(g16(b.out.looks[0].steps[0].values.fr1, 'pan')).toBe(65536 - 30001)
+  })
+
+  it('no FACE_SIGN or no mirror mode: exit 2 and one clean line, no file written', () => {
+    const look = { id: 'a', name: 'A', steps: [step([32768, 40000], [32768, 40000])] }
+    for (const c of [{ MIRROR_MODE: 'negate' }, { FACE_SIGN: 1 }, { FACE_SIGN: 1, MIRROR_MODE_PAN: 'negate' }, null]) {
+      const { r, out } = runMirror([look], [], c)
+      expect(r.status).toBe(2)
+      expect(r.stderr.trim().split('\n')).toHaveLength(1)
+      expect(r.stderr).toMatch(/measured rule is needed from a camera hold/)
+      expect(out).toBeNull()
+    }
   })
 
   it('no pair in the presets is refused', () => {

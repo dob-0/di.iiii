@@ -78,24 +78,34 @@ reading (the SRE launch checklist style). A reading that is missing is NO-GO wit
 Built 2026-11-26 on a show night; the tools had lived in a report folder and are now part of di. Why, the owner's words:
 N7020 "the right side truss ones need to swaped they looks no stage they look to the wall" and N7024 "look and fix the
 scenes i want that light work sync , now its bad becouse in scenes left line and right line is do the same movment and one
-the every time looks to the wall". Measured that night (camera frames 21:31:45 and 21:38:46, RDM GET 21:29): both bar
-trusses hang the same way (MovingBar43, 16-bit pan 540 deg, tilt 270 deg), DMX tilt above 32768 turns a bar toward the
-LEFT wall, so the true mirror of a bar's (pan, tilt) is `(65536 - pan, 65536 - tilt)` and equal values on both sides send
-one side into its own wall.
+the every time looks to the wall". Camera record (2026-11-26 22:4x, dob-3f's controlled hold, all 18 bars at pan 128; tilt 156 put both sides inward, tilt 100
+put both on their own walls; viewed by the lead dob-39): the right bars hang turned 180 degrees, DMX tilt above 32768 lands
+INWARD on both sides. The first reading of that evening (both trusses hang the same way, mirror `(65536 - pan, 65536 - tilt)`)
+was measured wrong for this hall.
 
 | tool | does |
 |---|---|
-| `python3 scripts/show/mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R]` | every left/right pair mirrors and faces the room in every step of every look |
-| `python3 scripts/show/flip_truss_tilt.py <presets.json> <in.json> <out.json> [--sides L,R] [--left L] [--right R]` | tilt of the chosen sides mirrored about straight down (the N7020 fix) |
+| `python3 scripts/show/mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R] [--keep-cells]` | every left/right pair mirrors and faces the room in every step of every look |
+| `python3 scripts/show/flip_truss_tilt.py <presets.json> <in.json> <out.json> [--sides L,R] [--left L] [--right R]` | tilt of the chosen sides mirrored about straight down (for a side whose tilt sign is wrong) |
 | `node scripts/show/live_load.mjs <looks.json> <cues.json> [--base URL] [--replace-prefix P] [--apply] [--go] [--looks-only]` | adds a file's looks after the desk's own looks; dry run by default |
 
-**The rule (mirror_sync).** A pair is `L<n>` and `R<n>` in the presets `.units` (`--left/--right` change the two prefixes;
+**The rule (mirror_sync) is data, read from the presets `constants`** (the convention of the show kit's `_m()` and
+`cell_mirror()`, replicated in the tool): `MIRROR_MODE_PAN` / `MIRROR_MODE_TILT` override `MIRROR_MODE`; `'negate'` means the
+partner's value is `65536 - lead` on that axis (m = +1 left, -1 right), anything else means equal. Into the room is
+`m_tilt(side) * FACE_SIGN * sin(tilt) * cos(pan)`. `CELL_MIRROR_LR` (falls back to `CELL_MIRROR`, default true): the partner
+shows the lead's cells `<c><i>` in reversed order (false: same index). No `FACE_SIGN` or no mode for an axis: exit 2, never a guess.
+Presets values: the camera rule is `MIRROR_MODE_PAN negate, MIRROR_MODE_TILT same, FACE_SIGN 1, CELL_MIRROR_LR true`
+(pan R = 65536 - pan L, tilt R = tilt L, R cells = L cells reversed). The OLD rule is `MIRROR_MODE negate, FACE_SIGN -1`;
+with `--keep-cells` it is the old tool exactly. The output names the rule it used.
+A pair is `L<n>` and `R<n>` in the presets `.units` (`--left/--right` change the two prefixes;
 only numbers present on both sides are pairs; each unit's `id` is its fixture id). A look whose pair-steps all mirror (within 2
-of 65536 on both axes) with no bar more than 5 deg into its own wall stays as it is. In any other look the lead bar keeps
+on both axes, cells too) with no bar more than 5 deg into its own wall stays as it is. In any other look the lead bar keeps
 its move, folded at exactly 0 (where it points into its own wall its tilt mirrors about the centre), its partner gets the
 mirror. The lead is chosen per look by the least growth of step moves (per-step, left, or right). Only `pan`, `pan_fine`,
-`tilt`, `tilt_fine` of the pair bars change, proved by walking every value; the tool re-audits its output and exits 1 when
+`tilt`, `tilt_fine` of the pair bars change (plus the cell channels unless `--keep-cells`), proved by walking every value; the
+tool re-audits its output (cells counted uniform / reversed / same / other) and exits 1 when
 a pair is not mirrored, a bar points into a wall, or a bar's largest step move grew more than `--max-grow` (default 5 deg).
+Undo: the input is never changed; the output is a new file.
 `--copy-suffix S` writes copies (`id+S`, `name + S`) and leaves the originals.
 
 **Loader.** Reads the desk (`--base`, default `http://diiii.localhost/light`), checks names and cue targets, writes nothing

@@ -4,34 +4,47 @@
 Why (a show night, 2026-11-26), the owner N7024 (relayed by dob-3f 21:4x), his words: "look and fix the scenes i want that
 light work sync , now its bad becouse in scenes left line and right line is do the same movment and one the every time looks
 to the wall".
-Measured (camera frames 21:31:45 and 21:38:46, RDM GET 21:29, the N7020 fix): both trusses hang the same way; DMX tilt above
-its centre (32768) turns a bar toward the LEFT wall while its pan is centred, and at pan centre the tilt moves the beam across
-the room. So equal values on L<n> and R<n> send one bar into the room and its partner into its own wall, and the true mirror
-of a bar's (pan, tilt) is (65536 - pan, 65536 - tilt) (beam (x, y, z) -> (-x, y, z)).
+
+The rig's mirror rule is DATA, read from the presets file's `constants` (the show kit's convention, replicated from
+presets_lib_measured.py `_m()` and `cell_mirror()`; not imported):
+  MIRROR_MODE_PAN / MIRROR_MODE_TILT override MIRROR_MODE. 'negate': m(side) = +1 for the left prefix, -1 for the right
+  prefix; any other value: m = 1. The partner's value on an axis is 65536 - lead when that axis is 'negate', equal to the
+  lead otherwise.
+  into(side, p, t) = m_tilt(side) * FACE_SIGN * sin(t) * cos(p)   (angles from the centres; 270 deg tilt, 540 deg pan)
+  CELL_MIRROR_LR (falls back to CELL_MIRROR, default True): True = the partner shows the lead's cells in reversed index
+  order, False = the same index. Cell channels are the keys <c><i> (c in r, g, b, w; i = 1..N, N from the keys present).
+  No FACE_SIGN, or no mirror mode for an axis: exit 2 (never a guessed sign: two wrong loads happened on 2026-11-26).
+Measured rule of the Reika rig (camera record, 2026-11-26 22:4x, dob-3f's controlled hold, all 18 bars at pan 128; tilt 156
+put both sides inward, tilt 100 put both on their own walls; the lead dob-39 viewed the frame): the right bars hang turned
+180 degrees, DMX tilt above centre lands INWARD on both sides. Presets values: MIRROR_MODE_PAN negate, MIRROR_MODE_TILT
+same, FACE_SIGN +1, CELL_MIRROR_LR True (pan R = 65536 - pan L, tilt R = tilt L, R cells = L cells reversed).
+The OLD rule (measured wrong for that hall, kept as presets values for other rigs): both trusses hang the same way,
+MIRROR_MODE negate, FACE_SIGN -1, so the mirror is (65536 - pan, 65536 - tilt); with --keep-cells it is the old tool.
 
 Rule, for every look and every pair n = 1..9 (the 5th left bar gives no light, but it stays in every scene: owner N7030):
-  into(bar) = how far the beam points into the room: -sin(tilt) cos(pan) for L, +sin(tilt) cos(pan) for R
-              (tilt and pan in degrees from their centres; 270 and 540 degree ranges)
-  a look whose pair-steps all mirror (within 2 of 65536 on both axes) with no bar more than 5 deg into its own wall
+  a look whose pair-steps all mirror (within 2 on both axes, cells too) with no bar more than 5 deg into its own wall
   (into >= -sin 5 deg) stays as it is. In any other look, at every pair-step the LEAD bar keeps its move, folded at exactly
   0: where it points into its own wall (into < 0) its tilt is mirrored about the centre (pan kept), so a move through
-  straight down stays continuous; its partner gets the mirror of the lead. The lead is tried three ways per look: the bar
-  more into the room at each step ('step'), the left bar ('L'), the right bar ('R'); the tool keeps the way whose bars'
-  largest step-to-step moves (and last -> first) grow least. Why: a lead that changes side between two steps swings a bar by
-  twice its pan (seen 2026-11-26 21:52 on the older scenes with the per-step lead only: 2 -> 42 deg, 11 -> 101 deg), and a
-  fold at -5 deg instead of 0 made 10 deg jumps (21:59).
-Only pan, pan_fine, tilt and tilt_fine of the 18 moving bars change; colour, dimmer, cells, timing and the desk trims stay.
-The tool proves that by walking every value, re-audits every pair-step of the output (0 not mirrored, 0 into a wall), and
-refuses (exit 1) when a bar's largest step move grew by more than --max-grow degrees (default 5).
+  straight down stays continuous; its partner gets the mirror of the lead (pan, tilt, and cells unless --keep-cells). The
+  lead is tried three ways per look: the bar more into the room at each step ('step'), the left bar ('L'), the right bar
+  ('R'); the tool keeps the way whose bars' largest step-to-step moves (and last -> first) grow least. Why: a lead that
+  changes side between two steps swings a bar by twice its pan (seen 2026-11-26 21:52), and a fold at -5 deg instead of 0
+  made 10 deg jumps (21:59).
+Only pan, pan_fine, tilt, tilt_fine of the moving bars change, plus the partner's cell channels unless --keep-cells; colour,
+dimmer, timing and the desk trims stay. The tool proves that by walking every value, re-audits every pair-step of the
+output (0 not mirrored, 0 into a wall; the cell counts uniform / reversed / same / other are printed), and refuses (exit 1)
+when a bar's largest step move grew by more than --max-grow degrees (default 5).
+Undo: the output is a new file (--copy-suffix writes copies next to the originals); the input is never changed.
 
 Usage: mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG]
-                      [--left L] [--right R]
+                      [--left L] [--right R] [--keep-cells]
   --left/--right: the unit-key prefixes of the two sides in presets .units (default L and R: L1..Ln pairs with R1..Rn;
                   only numbers present on both sides are pairs).
+  --keep-cells: leave every colour/cell as it is (the old behaviour).
   in: a file with .looks[] (a suite or review file, or a desk /api/looks answer). Other top-level fields are kept.
   --copy-suffix S: the output looks get id+S and name+' '+S (copies; the originals stay where they are).
 """
-import json, sys, math
+import json, sys, math, re
 from collections import Counter
 
 
@@ -44,19 +57,37 @@ def opt(name):
     return None
 
 
+KEEP_CELLS = '--keep-cells' in sys.argv
+if KEEP_CELLS:
+    sys.argv.remove('--keep-cells')
 only, skip, suffix = opt('--only-prefix'), opt('--skip-prefix'), opt('--copy-suffix')
 max_grow = float(opt('--max-grow') or 5)
 LEFT, RIGHT = opt('--left') or 'L', opt('--right') or 'R'
 if len(sys.argv) != 4:
-    sys.exit('usage: mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R]')
+    sys.exit('usage: mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R] [--keep-cells]')
 presets_f, in_f, out_f = sys.argv[1:4]
-units = json.load(open(presets_f))['units']
+presets = json.load(open(presets_f))
+units = presets['units']
+C = presets.get('constants') or {}
 bars = {k: u['id'] for k, u in units.items() if k[:len(LEFT)] == LEFT and k[len(LEFT):].isdigit() or k[:len(RIGHT)] == RIGHT and k[len(RIGHT):].isdigit()}
 PAIRS = sorted(int(k[len(LEFT):]) for k in bars if k[:len(LEFT)] == LEFT and f'{RIGHT}{k[len(LEFT):]}' in bars)
 if not PAIRS:
     sys.exit(f'no {LEFT}<n>/{RIGHT}<n> pair in the presets units')
 bars = {k: v for k, v in bars.items() if k[len(LEFT):] in {str(n) for n in PAIRS} or k[len(RIGHT):] in {str(n) for n in PAIRS}}
 EPS = math.sin(math.radians(5))
+_mode = C.get('MIRROR_MODE')
+MODE = {'pan': C.get('MIRROR_MODE_PAN', _mode), 'tilt': C.get('MIRROR_MODE_TILT', _mode)}
+FACE = C.get('FACE_SIGN')
+if FACE not in (1, -1) or any(m is None for m in MODE.values()) or isinstance(FACE, bool):
+    sys.stderr.write('the presets give no complete mirror rule (FACE_SIGN and a mirror mode for pan and tilt): a measured rule is needed '
+             'from a camera hold; this tool never guesses a sign\n')
+    sys.exit(2)
+NEG = {ax: m == 'negate' for ax, m in MODE.items()}
+CELL_REV = bool(C.get('CELL_MIRROR_LR', C.get('CELL_MIRROR', True)))
+CELLS = not KEEP_CELLS
+RULE = (f"rule from presets: pan {'negate' if NEG['pan'] else 'same'}, tilt {'negate' if NEG['tilt'] else 'same'}, "
+        f"FACE_SIGN {FACE:+d}, " + ('cells kept (--keep-cells)' if KEEP_CELLS else 'cells reversed' if CELL_REV else 'cells same index'))
+CELL_KEY = re.compile(r'^([rgbw])(\d+)$')
 BARS = set(bars.values())
 src = json.load(open(in_f))
 all_looks = src.get('looks', src) if isinstance(src, dict) else src
@@ -78,12 +109,51 @@ def s16(v, ch, x):
         v[ch] = min(255, (x + 128) >> 8)
 
 
+def mside(side, ax):
+    """The rule's m(side) for one axis: +1 left, -1 right when that axis is 'negate', else 1."""
+    return (1 if side == 'L' else -1) if NEG[ax] else 1
+
+
 def into(side, p, t):
-    return (-1 if side == 'L' else 1) * math.sin(math.radians((t - 32768) * 270 / 65535)) * math.cos(math.radians((p - 32768) * 540 / 65535))
+    return mside(side, 'tilt') * FACE * math.sin(math.radians((t - 32768) * 270 / 65535)) * math.cos(math.radians((p - 32768) * 540 / 65535))
 
 
-def mir(a, b):
-    return abs(a + b - 65536) <= 2
+def partner(ax, x):
+    return 65536 - x if NEG[ax] else x
+
+
+def mir(ax, a, b):
+    return abs(partner(ax, a) - b) <= 2
+
+
+def cells(v):
+    """{channel: {index: value}} of the cell keys <c><i> present in one bar's values."""
+    out = {}
+    for k, x in v.items():
+        m = CELL_KEY.match(k)
+        if m:
+            out.setdefault(m.group(1), {})[int(m.group(2))] = x
+    return out
+
+
+def cell_state(a, b):
+    """uniform / reversed / same / other for one pair-step (None when either bar has no cells). Lead a, partner b."""
+    ca, cb = cells(a), cells(b)
+    if not ca or not cb or set(ca) != set(cb):
+        return None
+    rev = same = True
+    for c in ca:
+        n = max(ca[c])
+        if set(ca[c]) != set(range(1, n + 1)) or set(cb[c]) != set(ca[c]):
+            return 'other'
+        rev = rev and all(cb[c][i] == ca[c][n + 1 - i] for i in ca[c])
+        same = same and all(cb[c][i] == ca[c][i] for i in ca[c])
+    return 'uniform' if rev and same else 'reversed' if rev else 'same' if same else 'other'
+
+
+def cells_ok(a, b):
+    st = cell_state(a, b)
+    return st is None or st == 'uniform' or st == ('reversed' if CELL_REV else 'same')
 
 
 def pairs(look):
@@ -100,7 +170,12 @@ def audit(look):
     for n, a, b in pairs(look):
         pa, ta, pb, tb = g16(a, 'pan'), g16(a, 'tilt'), g16(b, 'pan'), g16(b, 'tilt')
         c['pairs'] += 1
-        c['mirrored' if mir(pa, pb) and mir(ta, tb) else 'same' if abs(pa - pb) <= 2 and abs(ta - tb) <= 2 else 'other'] += 1
+        c['mirrored' if mir('pan', pa, pb) and mir('tilt', ta, tb) else 'same' if abs(pa - pb) <= 2 and abs(ta - tb) <= 2 else 'other'] += 1
+        if CELLS:
+            st = cell_state(a, b)
+            if st:
+                c['cells ' + st] += 1
+                c['cells bad'] += not cells_ok(a, b)
         c['wall'] += min(into('L', pa, ta), into('R', pb, tb)) < -EPS
     return c
 
@@ -133,7 +208,7 @@ def grown(j0, j1):
 def needs(look):
     """A look is changed only if some pair-step is not mirrored or has a bar more than 5 deg into its own wall."""
     a = audit(look)
-    return bool(a['same'] or a['other'] or a['wall'])
+    return bool(a['same'] or a['other'] or a['wall'] or a['cells bad'])
 
 
 def sync(look, lead):
@@ -152,9 +227,15 @@ def sync(look, lead):
             rt = 65536 - rt
             s16(ref, 'tilt', rt)
             ch['turned'] += 1
-        if turned or not (mir(rp, qp) and mir(rt, qt)):
-            s16(part, 'pan', 65536 - rp)
-            s16(part, 'tilt', 65536 - rt)
+        if turned or not (mir('pan', rp, qp) and mir('tilt', rt, qt)) or (CELLS and not cells_ok(ref, part)):
+            s16(part, 'pan', partner('pan', rp))
+            s16(part, 'tilt', partner('tilt', rt))
+            if CELLS:
+                cr = cells(ref)
+                for c, d in cr.items():
+                    n = max(d)
+                    for i in d:
+                        part[f'{c}{i}'] = d[n + 1 - i] if CELL_REV and set(d) == set(range(1, n + 1)) else d[i]
             ch['changed'] += 1
     return ch
 
@@ -182,6 +263,8 @@ for i, look in enumerate(looks):
     rows.append((look.get('name', look['id']), a0, a1, ch, worst(j0), worst(j1), lead, gmax))
     total.update({'looks': 1, 'changed looks': bool(ch), 'pair-steps changed': ch['changed'], 'turned': ch['turned'],
                   'pairs': a1['pairs'], 'after not mirrored': a1['same'] + a1['other'], 'after into a wall': a1['wall'],
+                  'cells uniform': a1['cells uniform'], 'cells reversed': a1['cells reversed'], 'cells same': a1['cells same'],
+                  'cells other': a1['cells other'], 'cells bad': a1['cells bad'],
                   'before same': a0['same'], 'before other': a0['other'], 'before into a wall': a0['wall'],
                   'moves grew': gmax > max_grow})
 
@@ -205,7 +288,7 @@ def walk(a, b, path):
             return
         for i, (x, y) in enumerate(zip(a, b)):
             walk(x, y, path + [i])
-    elif a != b and not (len(path) >= 2 and path[-1] in ALLOWED and path[-2] in BARS):
+    elif a != b and not (len(path) >= 2 and path[-2] in BARS and (path[-1] in ALLOWED or (CELLS and CELL_KEY.match(str(path[-1]))))):
         other += 1
 
 
@@ -224,4 +307,8 @@ print(f"{total['looks']} looks, {total['changed looks']} changed: {total['pair-s
       f"changed ({total['turned']} turned to face the room); before: same {total['before same']}, other {total['before other']}, "
       f"into a wall {total['before into a wall']}; after: not mirrored {total['after not mirrored']}, into a wall {total['after into a wall']}; "
       f"{total['moves grew']} looks where a bar's step move grew more than {max_grow:g} deg; {other} other values changed; wrote {out_f}")
-sys.exit(1 if other or total['after not mirrored'] or total['after into a wall'] or total['moves grew'] else 0)
+if CELLS:
+    print(f"cells after (pair-steps): uniform {total['cells uniform']}, reversed {total['cells reversed']}, same {total['cells same']}, "
+          f"other {total['cells other']}, not as the rule says {total['cells bad']}")
+print(RULE)
+sys.exit(1 if other or total['cells bad'] or total['after not mirrored'] or total['after into a wall'] or total['moves grew'] else 0)
