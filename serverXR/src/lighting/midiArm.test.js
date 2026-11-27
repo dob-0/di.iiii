@@ -28,7 +28,7 @@ const grabLine = (re) => {
 
 // One page: the MIDI half of app.js with stubbed globals. `o` seeds the desk's state, the ports and the storage.
 function page(o = {}) {
-  const log = { sends: [], fetches: [], paints: 0, draws: 0, resets: 0, onAirApplied: 0, say: [] }
+  const log = { sends: [], fetches: [], paints: 0, draws: 0, resets: 0, onAirApplied: 0, say: [], flashes: [], leds: [] }
   const store = Object.assign({}, o.store || {})
   const ports = o.ports || []
   const els = {}
@@ -42,6 +42,11 @@ function page(o = {}) {
     const midiPickup = {}, midiLastVal = {}, midiMap = A.map, midiPending = new Map(), midiLedSent = new Set();
     const midiTabId = 'tab';
     const midiTargets = [], midiReleaseAll = () => {};   // the APC40 patch's hold release and relative-knob exemption (#1397)
+    const window = { deskMidiCues: A.mcl, deskPanicKeys: { midiBlackoutToggle: (b) => ({ blackout: !b }) } };
+    const looksOf = () => (Array.isArray(S && S.looks) ? S.looks : []);
+    let midiLookPage = 0, midiBlackoutSentAt = 0;
+    const midiCueSent = {}, CUES = null;
+    const midiFlash = (m) => { L.flashes.push(m); }, midiLookLed = (id) => { L.leds.push(id); };
     const midiPainter = { reset() { L.resets++; } };
     const midiBlackoutNow = () => false;
     const midiDraw = () => { L.draws++; }, midiPaintLights = () => { L.paints++; }, midiLedsOff = () => {}, midiBindLights = () => {};
@@ -50,14 +55,15 @@ function page(o = {}) {
     const applyOnAir = () => { L.onAirApplied++; return true; };
     const MIDI_PREF_KEY = 'lightdeskMidiPrefs';
     ${grabLine(/const MIDI_ONAIR_MS = \d+;/)}
-    ${['midiPrefs', 'midiPrefSet', 'midiRefreshLive', 'midiLiveArrived', 'midiSend', 'midiFlush', 'midiSetArmed', 'midiOnAirTick', 'midiOnAirStart', 'midiOnAirStop', 'midiListInputs', 'midiBindInput', 'midiRestoreTry'].map(grab).join('\n')}
+    ${['midiPrefs', 'midiPrefSet', 'midiRefreshLive', 'midiLiveArrived', 'midiSend', 'midiFlush', 'midiSetArmed', 'midiOnAirTick', 'midiOnAirStart', 'midiOnAirStop', 'midiListInputs', 'midiBindInput', 'midiRestoreTry', 'midiLookPress', 'midiBlackoutPress'].map(grab).join('\n')}
     ${grabLine(/if \(midiPrefs\(\)\.enabled\) midiEnable\(\);/).replace('midiEnable()', 'A.enable()')}
     return {
       get armed() { return midiArmed; }, get wait() { return midiLiveWait; }, live: midiLive, pickup: midiPickup, pending: midiPending,
       get input() { return midiInput; }, get timer() { return midiOnAirTimer; },
-      setS(v) { S = v; }, midiSetArmed, midiLiveArrived, midiSend, midiOnAirTick, midiListInputs, midiRestoreTry, midiPrefSet, midiPrefs,
+      setS(v) { S = v; }, get ov() { return midiBlackoutOv; }, midiLookPress, midiBlackoutPress, midiSetArmed, midiLiveArrived, midiSend, midiOnAirTick, midiListInputs, midiRestoreTry, midiPrefSet, midiPrefs,
     };`
   const A = {
+    mcl: require('./ui/midiCues.js'),
     map: o.map || { master: { type: 'cc', ch: 1, num: 14 } },
     enable: () => { log.enabled = true },
     access: { inputs: new Map(ports.map((p) => [p.id, Object.assign({ onmidimessage: null }, p)])) },
@@ -265,5 +271,96 @@ describe('state.onAir is the desk\'s own fact and the page follows it', () => {
     const after = await j('GET', '/api/state')
     expect(after.onAir.lookId).toBe('lk1')
     expect((await j('GET', '/api/onair')).lookId).toBe('lk1')
+  })
+})
+
+const withLooks = (extra = {}) => desk(128, { looks: [{ id: 'l1', name: 'On air' }, { id: 'l2', name: 'Other' }], ...extra })
+
+// ARM's own one-time hold clear (#1397 L2: a hit whose release never came lets go on ARM) and the on-air poll are not presses.
+const notArmNoise = (f) => f.route !== 'api/onair' && !(f.route === 'api/raw' && f.body && f.body.owner === 'apc40' && f.body.clear === true)
+
+describe('round 3: the look pad press at the handler (N4, and the two mutations the round-2 review found alive)', () => {
+  it('a look pad press is ONE fire call carrying autoplayOff, sent at once with no 40 ms wait', async () => {
+    vi.useFakeTimers()
+    try {
+      const { api, log } = page({ S: withLooks() })
+      api.midiSetArmed(true)
+      api.midiLookPress(1)
+      await vi.advanceTimersByTimeAsync(5)   // far under the 40 ms merge timer
+      // exactly one call: a separate api/cues/autoplay call before the fire ("two calls again") makes this two
+      expect(log.fetches.filter(notArmNoise)).toEqual([{ route: 'api/looks/fire', body: { id: 'l2', autoplayOff: true } }])
+      expect(log.leds).toEqual(['l2'])
+    } finally { vi.useRealTimers() }
+  })
+  it('autoplayOff rides whatever this tab believes about play-in-order (a hidden tab holds a stale cue view)', async () => {
+    vi.useFakeTimers()
+    try {
+      const { api, log } = page({ S: withLooks() })
+      api.midiSetArmed(true)
+      api.midiLookPress(0)
+      await vi.advanceTimersByTimeAsync(5)
+      const fire = log.fetches.find((f) => f.route === 'api/looks/fire')
+      expect(fire && fire.body.autoplayOff).toBe(true)
+    } finally { vi.useRealTimers() }
+  })
+  it('the desk takes autoplayOff as a no-op when play-in-order is off (desk.js reads it only when on)', () => {
+    const src = fs.readFileSync(path.join(__dirname, 'desk.js'), 'utf8')
+    expect(src).toMatch(/if \(body\.autoplayOff === true && \(cueRunner\.brief\(\) \|\| \{\}\)\.autoplay\) cueRunner\.setAutoplay\(false\);/)
+  })
+})
+
+describe('round 3: waiting for the first desk state (N1, N2, N3)', () => {
+  it('N1: an error body as the first state keeps the wait; the next good state ends it with the desk values', () => {
+    const { api } = page({ S: null })
+    api.midiSetArmed(true)
+    api.setS({ error: 'desk busy' }); api.midiLiveArrived()
+    expect(api.wait).toBe(true)
+    expect(Number.isNaN(api.live.master)).toBe(false)
+    expect(api.live.master).toBe(255)        // untouched, and never undefined or NaN
+    api.setS(desk(128)); api.midiLiveArrived()
+    expect(api.wait).toBe(false)
+    expect(api.live.master).toBe(128)
+    expect(api.live.fxDepth).toBe(100)
+  })
+  it('N1: arming on top of an error body waits, and a half state does not count either', () => {
+    const a = page({ S: { error: 'x' } })
+    a.api.midiSetArmed(true)
+    expect(a.api.wait).toBe(true)
+    const b = page({ S: { master: 10 } })
+    b.api.midiSetArmed(true)
+    expect(b.api.wait).toBe(true)
+  })
+  it('N1: a soft takeover never catches on a target that is not a number', () => {
+    expect(SRC).toMatch(/if \(!Number\.isFinite\(target\)\) \{ midiLastVal\[key\] = unit; return; \}/)
+  })
+  it('N2, N3: a look pad press while waiting sends nothing, lights no pad, and says so', async () => {
+    const { api, log } = page({ S: null })
+    api.midiSetArmed(true)
+    api.setS(withLooks()); api.midiLiveArrived()   // looks known, then a bad state puts the wait back is not needed: use a fresh wait below
+    const w = page({ S: { error: 'x', looks: [{ id: 'l1', name: 'On air' }] } })
+    w.api.midiSetArmed(true)
+    expect(w.api.wait).toBe(true)
+    w.api.midiLookPress(0)
+    expect(w.log.leds).toEqual([])
+    expect(w.log.fetches.filter(notArmNoise)).toEqual([])
+    expect(w.log.flashes[0]).toMatch(/waiting for the desk — nothing sent/)
+    expect(log.leds).toEqual([])
+  })
+  it('N2, N3: a blackout pad press while waiting sets no override, no guess, and sends nothing', () => {
+    const { api, log } = page({ S: { error: 'x' } })
+    api.midiSetArmed(true)
+    api.midiBlackoutPress()
+    expect(api.ov).toBe(null)
+    expect(api.live.blackout).toBe(false)
+    expect(log.paints).toBe(1)   // only ARM's own full repaint, none for the press
+    expect(log.flashes[0]).toMatch(/waiting for the desk — nothing sent/)
+    expect(log.fetches.filter(notArmNoise)).toEqual([])
+  })
+  it('after the wait, the blackout pad flips and sends as before', async () => {
+    const { api, log } = page({ S: desk() })
+    api.midiSetArmed(true)
+    api.midiBlackoutPress()
+    expect(api.ov && api.ov.value).toBe(true)
+    await vi.waitFor(() => expect(log.fetches.filter((f) => f.route === 'api/master').length).toBe(1))
   })
 })
