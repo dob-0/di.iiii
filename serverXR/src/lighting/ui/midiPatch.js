@@ -11,11 +11,11 @@
 
 (function (root) {
   // ---- relative encoders ----
-  // The raw 0-127 value a relative knob sends -> a signed click count. 0 and 64 are "no move".
+  // The raw 0-127 value a relative knob sends -> a signed click count (Akai CC2 table: 0x40 = -64, 0x7F = -1, 0 = none).
   function relDelta(raw) {
     const v = Math.round(Number(raw));
-    if (!Number.isFinite(v) || v <= 0 || v > 127 || v === 64) return 0;
-    return v < 64 ? v : v - 128;
+    if (!Number.isFinite(v) || v <= 0 || v > 127) return 0;
+    return v < 64 ? v : v - 128;   // 64 -> -64 as the document says
   }
 
   // ---- tempo ----
@@ -133,6 +133,10 @@
     return out.filter((c) => c.channel >= 1 && c.channel <= 512);
   }
   const releaseOf = (channels) => channels.map((c) => ({ universe: c.universe, channel: c.channel, value: -1 }));
+  // ACTIVATOR is a toggle in Generic Mode (Akai protocol p.11): the unit may send note-on, then note-off on the NEXT
+  // press. A note-off close behind its note-on is a momentary release (ignore); a late one is a second press (flip).
+  const TOGGLE_OFF_MIN_MS = 600;
+  const activatorOffFlips = (lastOnAt, now) => Number.isFinite(lastOnAt) && now - lastOnAt >= TOGGLE_OFF_MIN_MS;
   const MAX_HOLD_MS = 15000;   // a flash the page forgot to release lets go by itself
 
   // ---- zoom ----
@@ -249,7 +253,7 @@
 
   const api = { relDelta, BPM_MIN, BPM_MAX, clampBpm, bpmStep, createTapper, TAP_RESET_MS, TAP_KEEP, NUDGE_MS, nudgeEpoch,
     rateFromUnit, unitFromRate, CFX_MODES, CFX_BEATS, cfxModeStep, cfxBeatsFromUnit, unitFromCfxBeats, cfxToggle,
-    GROUPS, rigGroups, groupDimRead, groupIsOn, HOLD_OWNER, flashChannels, releaseOf, MAX_HOLD_MS, zoomRoles,
+    GROUPS, rigGroups, groupDimRead, groupIsOn, HOLD_OWNER, flashChannels, releaseOf, MAX_HOLD_MS, TOGGLE_OFF_MIN_MS, activatorOffFlips, zoomRoles,
     STROBE_MAX_HZ, STROBE_DMX_CAP, capStrobeDmx, strobeDmxFromHz, strobeHzFromDmx, strobeHzFromUnit, strobeDmxFromUnit, strobeHit,
     KNOB_PAGES, KNOBS, knobByKey, knobValue, knobUnit, knobSend, knobRings, headScaleFromUnit };
   if (typeof module === 'object' && module && module.exports) module.exports = api;

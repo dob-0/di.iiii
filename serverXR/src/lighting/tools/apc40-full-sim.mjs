@@ -5,7 +5,11 @@ import { createRequire } from 'node:module'
 const require = createRequire(process.env.PW_FROM + '/')
 const { chromium } = require('playwright')
 
+import { execFileSync } from 'node:child_process'
+import { checkSimTarget } from './simGuard.mjs'
 const base = process.argv[2]
+{ let ls = ''; try { ls = execFileSync('di-dev', ['ls'], { encoding: 'utf8' }) } catch { /* the guard then refuses */ }
+  const why = checkSimTarget(base, ls); if (why) { console.error(why); process.exit(2) } }
 const shot = process.argv[3]
 const api = async (p, body) => (await fetch(base + p, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined)).json()
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -70,7 +74,7 @@ check('fader 1 = Left truss dimmer (universe 5 ~ 129), the others untouched', Ma
 await cc(2, 7, 127, 150); await cc(2, 7, 32, 700)
 s = await st()
 check('fader 2 = Right truss dimmer (universe 4 ~ 64), left stays', Math.abs(dimOf(s, 4) - 64.5) <= 2 && Math.abs(dimOf(s, 5) - 129) <= 2, { right: dimOf(s, 4), left: dimOf(s, 5) })
-await cc(3, 7, 127, 150); await cc(3, 7, 96, 700)
+await cc(3, 7, 127, 150); await cc(3, 7, 96, 1500)
 s = await st()
 const backDim = mean([...byU(s, 2), ...byU(s, 3)].map((f) => f.values.dimmer))
 check('fader 3 = Back bars dimmer (universes 2+3 ~ 193), trusses stay', Math.abs(backDim - 193) <= 2 && Math.abs(dimOf(s, 4) - 64.5) <= 2, { back: backDim })
@@ -78,13 +82,13 @@ check('fader 3 = Back bars dimmer (universes 2+3 ~ 193), trusses stay', Math.abs
 // ---- 1b. on/off + LED ----
 const ledsFrom = async (n) => (await ledNow()).slice(n).filter((m) => m[1] === 0x32)
 let n0 = (await ledNow()).length
-await on(1, 0x32, 700); await off(1, 0x32, 100)
+await on(1, 0x32, 150); await off(1, 0x32, 600)
 s = await st()
 check('activator 1: Left truss off (9 of 9), right and back stay on', byU(s, 5).every((f) => f.on === false) && byU(s, 4).every((f) => f.on !== false) && byU(s, 2).every((f) => f.on !== false), { left: byU(s, 5).map((f) => f.on) })
 let L = await ledsFrom(n0)
 check('activator 1 LED goes dark on channel 0x90 (track 1)', L.some((m) => m[0] === 0x90 && m[2] === 0), L)
 n0 = (await ledNow()).length
-await on(1, 0x32, 700); await off(1, 0x32, 100)
+await on(1, 0x32, 150); await off(1, 0x32, 600)
 s = await st()
 L = await ledsFrom(n0)
 check('pressed again: Left truss on, LED lit', byU(s, 5).every((f) => f.on !== false) && L.some((m) => m[0] === 0x90 && m[2] === 1), L)
@@ -285,6 +289,31 @@ const led = await ledNow()
 check('rings: ring type 1 on CC 0x18+ of each bank, ring values on CC 0x10+ on the bank channel', led.some((m) => m[0] === 0xb0 && m[1] === 0x1a && m[2] === 1) && led.some((m) => m[0] === 0xb1 && m[1] === 0x10) && led.some((m) => m[0] === 0xb0 && m[1] === 0x12), led.filter((m) => (m[0] & 0xf0) === 0xb0).slice(0, 6))
 const depthRing = led.filter((m) => m[0] === 0xb0 && m[1] === 0x12).map((m) => m[2])
 check('FX depth ring followed the desk (last write ~ 64/127 of 255 read back)', depthRing.length > 0 && Math.abs(depthRing[depthRing.length - 1] - 64) <= 3, depthRing)
+
+
+// ---- review I1: a group fader catches at the DESK's value, not a copy from page build ----
+{
+  const left = byU(await st(), 5)
+  for (const f of left) await api('api/fixture', { id: f.id, values: { dimmer: 77 } })   // as if from another surface
+  await sleep(2500)                                   // two polls replace the page's state
+  await page.click('#miArm'); await sleep(400)       // Safe
+  await page.click('#miArm'); await sleep(600)       // ARM again: every fader is caught again
+  await cc(1, 7, 127, 600)
+  const after = byU(await st(), 5).map((f) => f.values.dimmer)
+  check('I1: truss at 77 on the desk, Safe then ARM, fader at the top: stays 77 (no jump to 255)', after.every((v) => v === 77), after)
+  await cc(1, 7, 30, 500); await cc(1, 7, 127, 500)
+}
+// ---- review I2: the activator's second press may arrive as a late note-off (toggle on the unit) ----
+{
+  await on(1, 0x32, 150); await sleep(100)           // press 1: note-on, no note-off (unit keeps the toggle)
+  let s2 = await st(); const offFirst = byU(s2, 5).every((f) => f.on === false)
+  await off(1, 0x32, 700)                            // press 2: the late note-off
+  s2 = await st(); const onSecond = byU(s2, 5).every((f) => f.on !== false)
+  check('I2: toggle style (note-on, later note-off): press 1 turns the truss off, press 2 turns it on', offFirst && onSecond, { offFirst, onSecond })
+  await on(1, 0x32, 100); await off(1, 0x32, 100)    // momentary style (quick on+off) = one flip only
+  s2 = await st()
+  check('I2: momentary style (note-on then a quick note-off) flips once', byU(s2, 5).every((f) => f.on === false), byU(s2, 5).map((f) => f.on))
+}
 
 // ---- pictures: the MIDI pane at two real sizes ----
 await page.evaluate(() => { const t = document.querySelector('#miMapBody tr[data-key="grp:left:dim"]'); t && t.scrollIntoView({ block: 'start' }); window.scrollBy(0, -170) })

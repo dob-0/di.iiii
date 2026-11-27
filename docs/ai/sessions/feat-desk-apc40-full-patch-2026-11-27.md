@@ -52,3 +52,10 @@ Device knobs 1-8 = CC 0x10-0x17 on the channel of the TRACK SELECT bank (bank 1-
 | 2 | Pixel map | pixel size 1-30 % | mix 0-255 | speed 0.1-4 x | brightness -100..100 | contrast 0-300 | left-right +-1000 | up-down +-1000 | - |
 | 3 | Pixel animation | size 0.1-5 x | beats 0-64 | phase 0-1 | direction (3) | easing (3) | travel x +-1000 | travel y +-1000 | mix breathing 0-1 |
 | 4 | LFO 1 | wave (5) | beats 0.25-64 | depth 0-255 | spread 0-1 | - | - | - | - |
+
+## Round 3 (review of a51cddb04, REVIEW-1397)
+- I1 fixed: group dimmer and zoom read S.fixtures at catch time (test fails if the read goes back to a copy; sim: truss at 77, Safe, ARM, fader top stays 77).
+- I2: chose to handle the toggle's late note-off (not SysEx mode): a note-off 600 ms or more after its note-on flips the group, a quick one is a momentary release. Sim covers both styles. UNCHECKED on the real unit (10-s check at install: press ACTIVATOR 1 twice with the MIDI monitor open).
+- I3: tools/simGuard.mjs; the sim refuses diiii.localhost, shared hosts and any port that is not a di-dev scratch web port (simGuard.test.js).
+- L1 relDelta(64) = -64. L2: ARM sends {owner:'apc40', clear:true}. Not done: L3-L6, L8, L9 (low).
+- Sim 67 of 67 on a scratch desk; lighting suite 20 files, 244 tests.

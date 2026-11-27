@@ -12,7 +12,10 @@ describe('relative encoder (tempo, cue level)', () => {
     expect(P.relDelta(127)).toBe(-1)
     expect(P.relDelta(65)).toBe(-63)
     expect(P.relDelta(0)).toBe(0)
-    expect(P.relDelta(64)).toBe(0)
+    expect(P.relDelta(64)).toBe(-64)
+    expect(P.activatorOffFlips(1000, 1100)).toBe(false)
+    expect(P.activatorOffFlips(1000, 2000)).toBe(true)
+    expect(P.activatorOffFlips(undefined, 2000)).toBe(false)
     expect(P.relDelta(200)).toBe(0)
     expect(P.relDelta(NaN)).toBe(0)
   })
@@ -348,5 +351,21 @@ describe('device knob pages (banked by TRACK SELECT, channel = page)', () => {
       state: () => ({ rings: { 'kn:pixelmap:1': 1 } }), looks: () => [], page: () => 0, setPage: () => {}, polledId: () => '', now: () => 0 })
     painter.paint()
     expect(out).toEqual([[0xB1, 0x19, 1], [0xB1, 0x11, 127]])
+  })
+})
+
+describe('group reads come from the desk at catch time (#1397 review I1, mutation M3)', () => {
+  const fs = require('node:fs')
+  const SRC = fs.readFileSync(require('node:path').join(__dirname, 'ui/app.js'), 'utf8')
+  it('the group dimmer and zoom read S.fixtures live, not the list captured when the targets were built', () => {
+    expect(SRC).toMatch(/mp\.groupDimRead\(\(S && S\.fixtures\) \|\| \[\], g\)/)
+    expect(SRC).not.toMatch(/groupDimRead\(fixtures, g\)/)
+    expect(SRC).toMatch(/const f = zoomers\[0\] && fxById\(zoomers\[0\]\.id\)/)
+  })
+  it('groupDimRead follows the fixtures it is handed (a poll replaces them)', () => {
+    const P = require('./ui/midiPatch.js')
+    const g = { ids: ['a'] }
+    expect(P.groupDimRead([{ id: 'a', values: { dimmer: 255 } }], g)).toBe(1)
+    expect(P.groupDimRead([{ id: 'a', values: { dimmer: 77 } }], g)).toBeCloseTo(77 / 255)
   })
 })

@@ -81,7 +81,7 @@ describe('I1: an armed tab never takes over from the page defaults', () => {
     expect(api.wait).toBe(true)
     api.midiSend('api/master', { master: 10 })
     expect(api.pending.size).toBe(0)
-    expect(log.fetches.filter((f) => f.route !== 'api/onair')).toEqual([])
+    expect(log.fetches.filter((f) => f.route !== 'api/onair' && f.route !== 'api/raw')).toEqual([])   // api/raw = the arm-time clear of a stale hit (#1397)
     api.setS(desk(128)); api.midiLiveArrived()
     expect(api.wait).toBe(false)
     expect(api.live.master).toBe(128)        // not the default 255
@@ -107,6 +107,15 @@ describe('I1: an armed tab never takes over from the page defaults', () => {
   })
   it('every applied desk state tells the mirror', () => {
     expect(SRC).toMatch(/S = next;\s*midiLiveArrived\(\);/)
+  })
+})
+
+describe('a stale hit is cleared on ARM (#1397 review L2)', () => {
+  it('arming sends one owner-scoped raw clear, so a hit whose release never came cannot stay on', async () => {
+    const { api, log } = page({ S: desk() })
+    api.midiSetArmed(true)
+    await vi.waitFor(() => expect(log.fetches.filter((f) => f.route === 'api/raw').length).toBe(1))
+    expect(log.fetches.find((f) => f.route === 'api/raw').body).toEqual({ owner: 'apc40', clear: true })
   })
 })
 
@@ -208,7 +217,7 @@ describe('the fast poll and the urgent sends', () => {
       api.midiSetArmed(true)
       api.midiSend('api/looks/fire', { id: 'l1', autoplayOff: true }, 'lookpad:3', true)
       await vi.advanceTimersByTimeAsync(5)   // 5 ms: far under the 40 ms merge timer
-      expect(log.fetches.filter((f) => f.route !== 'api/onair')).toEqual([{ route: 'api/looks/fire', body: { id: 'l1', autoplayOff: true } }])
+      expect(log.fetches.filter((f) => f.route !== 'api/onair' && f.route !== 'api/raw')).toEqual([{ route: 'api/looks/fire', body: { id: 'l1', autoplayOff: true } }])
     } finally { vi.useRealTimers() }
   })
   it('the pad handler builds that one call: fire body + autoplayOff, sent as the urgent key', () => {

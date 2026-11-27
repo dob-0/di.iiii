@@ -6290,7 +6290,7 @@ function buildMidiTargets() {
     T.push({ group: 'Groups  (left truss · right truss · back bars)' });
     for (const g of groups) {
       const ids = g.ids;
-      cc(`grp:${g.key}:dim`, `${g.label} dimmer  (${ids.length})`, () => mp.groupDimRead(fixtures, g),
+      cc(`grp:${g.key}:dim`, `${g.label} dimmer  (${ids.length})`, () => mp.groupDimRead((S && S.fixtures) || [], g),   // the desk's values at catch time, never the copy taken at build
         (u) => { const v = Math.round(u * 255); for (const id of ids) midiSend('api/fixture', { id, values: { dimmer: v } }, 'api/fixture:' + id); });
       pad(`grp:${g.key}:on`, `${g.label} on / off  (a press flips it)`, () => {
         if (!midiArmed) return;
@@ -6354,7 +6354,7 @@ function buildMidiTargets() {
     const zoomers = fixtures.filter((f) => mp.zoomRoles(S.profiles[f.profile]).length);
     if (zoomers.length) {
       cc('zoom', `Zoom  (${zoomers.length} fixtures with a zoom channel)`,
-        () => { const f = zoomers[0]; return f && f.values && f.values.zoom != null ? f.values.zoom / 255 : 0; },
+        () => { const f = zoomers[0] && fxById(zoomers[0].id); return f && f.values && f.values.zoom != null ? f.values.zoom / 255 : 0; },
         (u) => { const v = Math.round(u * 255); for (const f of zoomers) midiSend('api/fixture', { id: f.id, values: Object.fromEntries(mp.zoomRoles(S.profiles[f.profile]).map((r) => [r, v])) }, 'api/fixture:zoom:' + f.id); });
     }
     const cfx = () => (S && S.colorFx) || {};
@@ -6687,7 +6687,10 @@ function midiRelease(ch, num) {
   const key = midiKeyFor('note', ch, num);
   const t = key && midiTargets.find((x) => x.key === key);
   if (t && t.up) t.up();
+  // ACTIVATOR is a toggle on the unit (Akai p.11): its second press may arrive as a late note-off. Flip then, behind ARM.
+  else if (t && midiArmed && /^grp:\w+:on$/.test(key) && window.deskMidiPatch.activatorOffFlips(midiLastOn[key], Date.now())) { midiLastOn[key] = undefined; t.apply(); midiHit(key); }
 }
+const midiLastOn = {};
 
 function midiHandle(type, ch, num, unit, raw) {
   // A scene armed on the grid takes the next PAD, whatever it was bound to before.
@@ -6711,7 +6714,7 @@ function midiHandle(type, ch, num, unit, raw) {
   if (!t) { buildMidiTargets(); t = midiTargets.find((x) => x.key === key); }
   if (!t) return;
 
-  if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
+  if (t.kind === 'note') { if (type !== 'note') return; midiLastOn[key] = Date.now(); t.apply(); midiHit(key); return; }
   if (type === 'note') return;
   // A relative encoder (TEMPO, CUE LEVEL): clicks, not a position, so no takeover; Safe sends nothing.
   if (t.rel) {
@@ -7174,6 +7177,7 @@ function midiPrefSet(patch) {
 function midiSetArmed(on, byClaim) {
   if (!on && midiArmed) midiReleaseAll();   // a held flash lets go before the gate closes
   midiArmed = on;
+  if (on) midiSend('api/raw', { owner: 'apc40', clear: true }, 'hold:clear', true);   // a hit whose release never came (crash, sleep, reload) lets go on ARM
   const b = $('#miArm');
   b.className = 'miarm ' + (midiArmed ? 'live' : 'safe');
   b.textContent = midiArmed ? 'ARMED — sending to rig' : 'Safe — not sending';
