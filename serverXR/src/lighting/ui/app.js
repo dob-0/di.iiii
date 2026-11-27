@@ -5141,6 +5141,11 @@ const layerOpen = new Set();  // layer ids whose mask/merge/rate row is unfolded
 let renameLook = null;      // look id whose inline rename field is showing
 
 const looksOf = () => (Array.isArray(S && S.looks) ? S.looks : []);
+// The looks as the APC40 pads see them (padOrder, or desk order): midiCues.js padLooks, the one mapping.
+// The order this tab just set wins for 3 s over a state poll that was already in flight (it would bring the old one back).
+let midiOrderWin = null;
+function curPadOrder() { return midiOrderWin && Date.now() - midiOrderWin.at < 3000 ? midiOrderWin.order : (S && S.padOrder); }
+function padLooksOf() { return window.deskMidiCues ? window.deskMidiCues.padLooks(Array.isArray(S && S.looks) ? S.looks : [], curPadOrder()) : looksOf(); }
 const layersOf = () => (Array.isArray(S && S.layers) ? S.layers : []);
 const lookById = (id) => looksOf().find((l) => l.id === id) || null;
 const layerById = (id) => layersOf().find((l) => l.id === id) || null;
@@ -6595,7 +6600,7 @@ function midiApplyPreset() {
 function midiLookPageStep(dir) {
   const mc = window.deskMidiCues;
   if (!mc) return;
-  const n = looksOf().length;
+  const n = padLooksOf().length;
   const was = midiLookPage;
   midiLookPage = mc.clampLookPage(midiLookPage + dir, n);
   if (midiLookPage !== was) midiRepaintLookPads();
@@ -6614,9 +6619,12 @@ function midiRepaintLookPads() {
 function midiDrawLookPage() {
   const el = $('#miLookPage');
   if (!el || !window.deskMidiCues) return;
-  const mc = window.deskMidiCues, n = looksOf().length;
+  const mc = window.deskMidiCues, n = padLooksOf().length;
   midiLookPage = mc.clampLookPage(midiLookPage, n);
-  el.textContent = `look page ${midiLookPage + 1}/${mc.lookPageCount(n)} · ${n} looks`;
+  // Looks, not slots: an order has empty slots and repeats, and a look made after it may have no pad.
+  const total = looksOf().length, onPads = new Set(padLooksOf().filter(Boolean).map((l) => l.id)).size;
+  const off = curPadOrder() && total > onPads ? ` (${total - onPads} not on the pads)` : '';
+  el.textContent = `look page ${midiLookPage + 1}/${mc.lookPageCount(n)} · ${total} looks${off}`;
 }
 
 function midiStepFx(dir) {
@@ -6842,6 +6850,37 @@ function buildMidi() {
 // colours the pad lights are sent (apc40Lights), so it cannot disagree with the real unit, and
 // a click on it goes through the same target.apply() + ARM gate as the real pad.
 let midiApc = null;
+// Brightness x 100 of every look by id (GET api/midi/padorder), for the drawn APC40's column headers.
+let midiPadBright = null, midiPadBrightBusy = false;
+async function midiLoadPadBright() {
+  if (midiPadBrightBusy) return;
+  midiPadBrightBusy = true;
+  try {
+    const r = await (await fetch('api/midi/padorder')).json();
+    const m = {};
+    for (const p of (r && r.pads) || []) if (p.id) m[p.id] = p.brightness;
+    midiPadBright = m;
+  } catch (e) { midiPadBright = midiPadBright || {}; }
+  midiPadBrightBusy = false;
+  midiApcUpdate();
+}
+// The pad order is a desk setting, not a MIDI message: it never touches the rig, so it needs no ARM.
+async function midiSetPadOrder(body, said) {
+  // Every pad changes at once, under the fingers of whoever plays (an armed controller may be in ANOTHER tab): always ask.
+  if (!window.confirm('This moves looks to other pads on every controller now. Continue?')) return;
+  const r = await post('api/midi/padorder', body);
+  const note = $('#miOrderNote');
+  if (!r || r.error) { if (note) note.textContent = 'not changed: ' + ((r && r.error) || 'no answer'); return; }
+  if (S) S.padOrder = r.padOrder;
+  midiOrderWin = { order: r.padOrder, at: Date.now() };
+  midiPadBright = null;   // the shading needs the scores again (the GET sends none while the order is off)
+  midiLookPage = 0;
+  midiRepaintLookPads(); midiDrawLookPage(); midiApcUpdate();
+  if (note) note.textContent = said;
+  midiFlash(said);
+}
+$('#miOrderBright').addEventListener('click', () => midiSetPadOrder({ mode: 'brightness' }, 'pads: dark (left) to bright (right)'));
+$('#miOrderDesk').addEventListener('click', () => midiSetPadOrder({ clear: true }, 'pads: desk order'));
 // The blackout the pad and its LED go by: the desk's last reading (state.onAir.blackout / api/onair), with the
 // pad's own send held over it until a reading ASKED FOR after the desk answered that send has arrived.
 let midiBlackoutOv = null;   // { value, at, answeredAt|null }
@@ -6884,11 +6923,12 @@ function midiApcValues() {
 }
 function midiApcUpdate() {
   if (page !== 'midi' || !window.deskApc40Draw || !$('#miApc')) return;
+  if (!midiPadBright && !midiPadBrightBusy && S) midiLoadPadBright();
   if (!midiApc) midiApc = window.deskApc40Draw.create($('#miApc'), { press: midiApcPress, send: midiApcMsg, armed: () => midiArmed });
   const mv = midiArmed ? midiLive.master : (S ? S.master : null);
   midiApc.update({
     map: midiMap, cues: CUES, state: { blackout: midiBlackoutNow() },
-    looks: Array.isArray(S && S.looks) ? S.looks : [], page: midiLookPage, activeId: lookOnAirId(),
+    looks: padLooksOf(), order: curPadOrder(), bright: midiPadBright, page: midiLookPage, activeId: lookOnAirId(),
     master: mv == null ? undefined : mv / 255, values: midiApcValues(),
   });
 }
@@ -7082,7 +7122,7 @@ function midiLeds() {
       map: () => midiMap,
       cues: () => CUES,
       state: () => ({ blackout: midiBlackoutNow(), groupOn: midiGroupOn(), rings: midiRings() }),
-      looks: () => (Array.isArray(S && S.looks) ? S.looks : []),   // not looksOf(): a const further down
+      looks: () => padLooksOf(),   // a function declaration, hoisted: the const looksOf is further down
       page: () => midiLookPage,
       setPage: (p) => { midiLookPage = p; },
       polledId: () => lookOnAirId(),
@@ -7115,9 +7155,9 @@ function midiBlackoutPress() {
 // nothing is sent, so nothing shows as taken (N2): the press is refused the way a Safe press is.
 function midiLookPress(k) {
   const mcl = window.deskMidiCues;
-  const fire = mcl.lookPadFire(looksOf(), midiLookPage, k);
+  const fire = mcl.lookPadFire(padLooksOf(), midiLookPage, k);
   if (!fire) { midiFlash(`look pad ${k + 1}: empty (page ${midiLookPage + 1})`); return; }
-  const l = mcl.lookAt(looksOf(), midiLookPage, k);
+  const l = mcl.lookAt(padLooksOf(), midiLookPage, k);
   const n = midiLookPage * mcl.LOOK_PADS + k + 1;
   if (midiArmed && midiLiveWait) { midiFlash(`${n} ${l.name}  (waiting for the desk — nothing sent)`); return; }
   // The owner's rule (cuerun.js, 2026-10-09): you press, the scene changes, and auto play stops.

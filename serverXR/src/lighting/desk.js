@@ -44,6 +44,7 @@ const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows, onAirOf,
 } = require('./looks');
+const { sanitizePadOrder, placeLook, warmBrightness, brightnessOrder, lookBrightness, describePadOrder } = require('./padOrder');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
 const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
@@ -113,6 +114,8 @@ function createDesk(opts = {}) {
       // every `beats` beats — the desk running on the music instead of beside it.
       sync: 'clock', beats: 4 },
     midi: { maps: [] },
+    // Which look sits on which APC40 pad: look ids (null = empty slot), or null for desk order (padOrder.js). Never reorders `looks`.
+    padOrder: null,
     // The content model: looks are lists of steps, layers are looks under a finger.
     // Both empty means the desk renders exactly as it did before they existed.
     looks: [],
@@ -388,6 +391,8 @@ function createDesk(opts = {}) {
       s.colors = sanitizeColors(disk.colors);
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
+      s.padOrder = sanitizePadOrder(disk.padOrder, s.looks);
+      if (s.padOrder) warmBrightness(s.looks);   // a few looks at a time, so a later looks/add scores only the new look
       s.layers = sanitizeLayers(disk.layers) || [];
       s.cues = sanitizeCues(disk.cues);
       s.strips = strips.sanitizeStrips(disk.strips);
@@ -742,38 +747,73 @@ function createDesk(opts = {}) {
   let looksEdits = 0;
   // Starts from the clock, so a page holding a rev from before a restart can never match a new one.
   let looksRev = Date.now();
-  let looksCache = { arr: null, items: [], edits: -1, text: '[]' };
-  function looksEdited() { looksEdits++; }
-  function looksJson() {
+  let looksCache = { arr: null, items: [], edits: -1, entries: [], text: null };
+  // One look's JSON text (and its UTF-8 bytes, made when the file is written), kept per look OBJECT: a save serialises
+  // only the looks that are new since the last one. Exact because a look is replaced, never changed in place; the one
+  // way to change one in place is looksEdited(), which throws every entry away.
+  let lookEntries = new WeakMap();
+  function looksEdited() { looksEdits++; lookEntries = new WeakMap(); }
+  function lookEntry(l) {
+    const keyed = l !== null && typeof l === 'object';
+    let e = keyed ? lookEntries.get(l) : undefined;
+    if (!e) {
+      const t = JSON.stringify(l);   // undefined (a function, a symbol) is what JSON.stringify([x]) writes as null
+      e = { text: t === undefined ? 'null' : t, buf: null };
+      if (keyed) lookEntries.set(l, e);
+    }
+    return e;
+  }
+  // The cache is rebuilt (cheaply: per-look entries) whenever the array, its elements or looksEdits differ.
+  function looksEntries() {
     const arr = state.looks;
     const c = looksCache;
     let same = c.arr === arr && c.edits === looksEdits && c.items.length === arr.length;
     if (same) for (let i = 0; i < arr.length; i++) if (c.items[i] !== arr[i]) { same = false; break; }
     if (!same) {
-      looksCache = { arr, items: arr.slice(), edits: looksEdits, text: JSON.stringify(arr) };
+      looksCache = { arr, items: arr.slice(), edits: looksEdits, entries: arr.map(lookEntry), text: null };
       looksRev++;
     }
+    return looksCache.entries;
+  }
+  // JSON.stringify(state.looks), byte for byte, joined from the per-look texts (made once per change).
+  function looksJson() {
+    const entries = looksEntries();
+    if (looksCache.text == null) looksCache.text = '[' + entries.map((e) => e.text).join(',') + ']';
     return looksCache.text;
+  }
+  // Serialises, one per 5 ms timer, every look that has no entry yet (at boot, after a show load or import, after an
+  // edit), so the save's own tick never has to stringify more than it can't avoid and a frame never waits for it.
+  let warming = false;
+  function warmLooks() {
+    if (warming) return;
+    warming = true;
+    const step = () => {
+      const arr = state.looks;
+      if (Array.isArray(arr)) {
+        for (const l of arr) {
+          if (l !== null && typeof l === 'object' && !lookEntries.has(l)) { lookEntry(l); return setTimeout(step, 5); }
+        }
+      }
+      warming = false;
+    };
+    setTimeout(step, 5);   // a timer, not setImmediate: a frame's timer can run between two looks
   }
   const LOOKS_PLACEHOLDER = '\u0000looks\u0000';
   const LOOKS_TOKEN = JSON.stringify(LOOKS_PLACEHOLDER);
 
-  // JSON.stringify(s), byte for byte, with the looks text spliced in from the cache (looksJson) instead of
-  // walked again: at 43 MB of looks a save stringified them all, on the DMX loop's thread, 0.4 s after every fire.
-  // Here in three pieces, so the async write can send the looks as bytes encoded once per change
-  // (looksBuffer) instead of flattening and encoding a 40+ MB string on the loop's thread on every save.
+  // JSON.stringify(s), byte for byte, with the looks spliced in from the per-look cache instead of walked again: at
+  // 43 MB of looks a save stringified them all, on the DMX loop's thread, 0.4 s after every fire.
+  // Three pieces, so the async write can send the looks as bytes encoded once per look (not one 40+ MB string
+  // flattened and encoded on the loop's thread on every save). `entries` is the looks as they are NOW.
   function stateParts(s) {
     if (!Array.isArray(s.looks)) return { whole: JSON.stringify(s) };
-    looksJson();
+    const entries = looksEntries();
     const text = JSON.stringify(Object.assign({}, s, { looks: LOOKS_PLACEHOLDER }));
     const at = text.indexOf(LOOKS_TOKEN);
-    return { head: text.slice(0, at), tail: text.slice(at + LOOKS_TOKEN.length) };
+    return { head: text.slice(0, at), tail: text.slice(at + LOOKS_TOKEN.length), entries };
   }
-  function looksBuffer() {
-    looksJson();
-    if (!looksCache.buf) looksCache.buf = Buffer.from(looksCache.text);
-    return looksCache.buf;
-  }
+  const COMMA = Buffer.from(',');
+  const entryBuf = (e) => e.buf || (e.buf = Buffer.from(e.text));
 
   let machineOutputText = JSON.stringify(state.output);
 
@@ -848,10 +888,9 @@ function createDesk(opts = {}) {
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     // A space's show is written without the rig (normaliseOutput says why).
     const parts = stateParts(show.space ? withoutRig(state) : state);
-    // The looks text is captured HERE, with the head and tail it belongs to: a later cache rebuild must not mix in.
-    const looksText = parts.whole != null ? null : looksJson();
-    const text = () => (parts.whole != null ? parts.whole : parts.head + looksText + parts.tail);
-    return { file, text, parts, looksText };
+    // The looks are captured HERE (parts.entries), with the head and tail they belong to: a later cache rebuild must not mix in.
+    const text = () => (parts.whole != null ? parts.whole : parts.head + '[' + parts.entries.map((e) => e.text).join(',') + ']' + parts.tail);
+    return { file, text, parts };
   }
 
   function writeShowFile() {
@@ -883,8 +922,7 @@ function createDesk(opts = {}) {
   // A show change, adoption or synchronous save while this was in flight bumped showWriteGen: it then drops its own temp
   // file and returns false, and the caller skips the after-save work (rig file, status) that belongs to the newer write.
   async function writeShowFileAsync() {
-    const { file, text, parts, looksText } = prepareShowWrite();
-    const looksBuf = looksText == null ? null : looksBuffer();
+    const { file, text, parts } = prepareShowWrite();
     const gen = showWriteGen;
     const inPlace = saveStatus.failures >= 3;
     const tmp = file + '.async.tmp';
@@ -894,7 +932,11 @@ function createDesk(opts = {}) {
     try {
       const fh = await fsp.open(tmp, 'w');
       try {
-        if (looksBuf) { await fh.writeFile(parts.head); await fh.writeFile(looksBuf); await fh.writeFile(parts.tail); }
+        if (parts.entries) {
+          await fh.writeFile(parts.head + '[');
+          for (let i = 0; i < parts.entries.length; i++) await fh.writeFile(i ? Buffer.concat([COMMA, entryBuf(parts.entries[i])]) : entryBuf(parts.entries[i]));
+          await fh.writeFile(']' + parts.tail);
+        }
         else await fh.writeFile(parts.whole);
       } finally { await fh.close(); }
       if (gen !== showWriteGen) return drop();
@@ -966,7 +1008,8 @@ function createDesk(opts = {}) {
   // jump to the end of the list the operator is reading.
   function putLook(look) {
     const at = state.looks.findIndex((l) => l.id === look.id);
-    if (at >= 0) state.looks[at] = look; else state.looks.push(look);
+    if (at >= 0) state.looks[at] = look;
+    else { state.looks.push(look); if (state.padOrder) state.padOrder = placeLook(state.padOrder, state.looks, look); }
   }
 
   let stateVersion = 0;
@@ -975,7 +1018,9 @@ function createDesk(opts = {}) {
     saveStatus.pending = true;
     stateVersion++;
     if (!saveTimer) saveTimer = setTimeout(saveTick, 400);
+    warmLooks();
   }
+  warmLooks();   // the looks the show was loaded with, before the first save needs them
 
   // ---- the pushed frame (dmxstream.js): every rendered frame to every room listening ----
   const dmxStream = createDmxStream();
@@ -1354,7 +1399,9 @@ function createDesk(opts = {}) {
   // with keys that can never do anything.
   // `owner` is the caller's tag (holds.js): a value takes the channel for it, a release
   // lets go only of a channel it holds. Returns the holder a release was refused for.
-  // THE ROOM'S FLASH RULE, AT THE DESK (PR #1397 round 4, R3-I1; WCAG 2.3.1): no more than 3 flashes a second, whoever asks.
+  // THE ROOM'S FLASH RULE FOR THE api/raw HOLDS (PR #1397 round 4, R3-I1; WCAG 2.3.1): no more than 3 flashes a second.
+  // SCOPE (R4-I1): ONLY api/raw (the APC40 hits and any raw client). NOT capped here, on purpose and pending the owner's answer on
+  // scene strobe speed: api/fixture values, scene recall, cue GO, looks/fire (tests/test-strobe-cap.js pins this).
   // The page caps its own strobe, but any client can POST api/raw, so the desk holds the line itself, two ways:
   //  1. a raw write to a `strobe`-role channel is capped like the page's capStrobeDmx: DMX 4-103 (the 1-20 Hz band of the
   //     BAR1240PIX57) is written as at most 14 (= 2.92 Hz), a value past the band as 0 (open), 0-3 stay open;
@@ -1362,6 +1409,7 @@ function createDesk(opts = {}) {
   //     crossing up through 128); the next one inside the same second is refused as 'rate' and the channel stays as it was.
   const RAW_STROBE_LO = 4, RAW_STROBE_HI = 103, RAW_STROBE_CAP = 14;
   const RAW_RISES_PER_S = 3;
+  const RAW_RISE_GAP_MS = 334;
   const FLASH_LEASE_MS = 3000;       // a software-strobe hit lives this long after its last api/fx call
   const riseLog = new Map();          // 'universe:address' -> [ms of recent rising edges]
   function rawFixtureAt(universe, ch) {
@@ -1398,7 +1446,8 @@ function createDesk(opts = {}) {
       const fk = (hit.f.universe | 0) + ':' + (hit.f.address | 0);
       if (!seen.has(fk)) {
         const log = (riseLog.get(fk) || []).filter((t) => now - t < 1000);
-        const ok = log.length < RAW_RISES_PER_S;
+        // at most 3 in any second AND spaced (>= 334 ms apart), so the flashes read as a 3 Hz strobe, not a burst (R4-L5)
+        const ok = log.length < RAW_RISES_PER_S && (!log.length || now - log[log.length - 1] >= RAW_RISE_GAP_MS);
         if (ok) log.push(now);
         riseLog.set(fk, log);
         seen.set(fk, ok);
@@ -1803,7 +1852,13 @@ function createDesk(opts = {}) {
     'POST /api/looks': (req, res, body) => {
       const looks = sanitizeLooks(body.looks);
       if (!looks) return json(res, { error: 'looks must be a list, each with an id and at least one step' }, 400);
+      const had = new Set(state.looks.map((l) => l.id));
       state.looks = looks;
+      state.padOrder = sanitizePadOrder(state.padOrder, looks);   // ids that vanished leave an empty slot, nothing moves
+      if (state.padOrder && looks.some((l) => !had.has(l.id))) {
+        const sc = looks.map(lookBrightness);   // once: the looks are heavy
+        looks.forEach((l, i) => { if (!had.has(l.id)) state.padOrder = placeLook(state.padOrder, looks, l, sc); });
+      }
       // No pushFrame: replacing the library is a data change. A layer pointing at a look
       // that just vanished simply stops contributing on the next tick, which is the
       // honest behaviour — nothing snaps and nothing is quietly held.
@@ -1918,6 +1973,7 @@ function createDesk(opts = {}) {
       if (state.looks.length === before) return json(res, { error: 'no such look' }, 404);
       // A layer left pointing at nothing is emptied rather than deleted: the operator
       // put that layer there, and its fader keeps its place in the stack.
+      state.padOrder = sanitizePadOrder(state.padOrder, state.looks);   // its pad goes empty, the others stay
       let emptied = 0;
       for (const layer of state.layers) if (layer.lookId === body.id) { layer.lookId = null; emptied++; }
       save(); pushFrame(); json(res, { ok: true, emptied });
@@ -2024,6 +2080,19 @@ function createDesk(opts = {}) {
       if (!midi) return json(res, { error: 'midi must be {maps: [...]} with at most 400 entries of plain fields' }, 400);
       state.midi = midi;
       save(); json(res, { ok: true, midi: state.midi });
+    },
+
+    // The APC40 pad order (padOrder.js). {mode:'brightness'} sorts the looks dark to bright into 8 columns,
+    // {order:[ids]} sets it by hand, {clear:true} goes back to desk order. `looks` itself is never reordered.
+    'GET /api/midi/padorder': (req, res) => json(res, { padOrder: state.padOrder, pads: describePadOrder(state.looks, state.padOrder, !!state.padOrder) }),   // no scoring while the order is off
+    'POST /api/midi/padorder': (req, res, body) => {
+      if (body && body.clear === true) state.padOrder = null;
+      else if (body && body.mode === 'brightness') {
+        state.padOrder = sanitizePadOrder(brightnessOrder(state.looks, state.looks.map(lookBrightness)), state.looks);
+      } else if (body && Array.isArray(body.order)) {
+        state.padOrder = sanitizePadOrder(body.order, state.looks);
+      } else return json(res, { error: "send {mode:'brightness'}, {order:[look ids]} or {clear:true}" }, 400);
+      save(); json(res, { ok: true, padOrder: state.padOrder, pads: describePadOrder(state.looks, state.padOrder) });
     },
 
     // Just the live DMX buffers — polled fast so the stage view animates smoothly.

@@ -11,3 +11,12 @@ export function checkSimTarget(url, devLsText) {
   if (!re.test(String(devLsText || ''))) return 'refused: port ' + u.port + ' is not the web port of a di-dev scratch tree (di-dev ls)'
   return null
 }
+
+// The di-dev ls label can be stale (a stopped tree keeps its row, and its port may now belong to another program). Ask the desk
+// itself: refuse unless something answers api/dmx on that port right now. Run it AFTER checkSimTarget.
+export async function checkDeskAnswers(url, fetchFn = fetch) {
+  try {
+    const r = await fetchFn(new URL('api/dmx', url.endsWith('/') ? url : url + '/'), { signal: AbortSignal.timeout(3000) })
+    return r.ok ? null : 'refused: the desk at ' + url + ' answered ' + r.status
+  } catch { return 'refused: nothing answers at ' + url + ' (a stopped tree keeps its di-dev ls row)' }
+}

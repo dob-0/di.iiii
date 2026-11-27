@@ -15,13 +15,14 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { checkSimTarget } from './simGuard.mjs';
+import { checkSimTarget, checkDeskAnswers } from './simGuard.mjs';
 
 const args = process.argv.slice(2);
 const base = (args[0] || '').replace(/\/?$/, '/');
 if (!/^http/.test(base)) { console.error('usage: pressLatency.mjs <desk base url> [--n 20] [--gap 1500] [--burst 4] [--out f.json]'); process.exit(2); }
 { let ls = ''; try { ls = execFileSync('di-dev', ['ls'], { encoding: 'utf8' }); } catch { /* the guard then refuses */ }
-  const why = checkSimTarget(base, ls); if (why) { console.error(why); process.exit(2); } }   // a scratch tree only (R3 L4)
+  const why = checkSimTarget(base, ls); if (why) { console.error(why); process.exit(2); }
+  const why2 = await checkDeskAnswers(base); if (why2) { console.error(why2); process.exit(2); } }   // a scratch tree only, and answering (R3 L4)
 const opt = (k, d) => { const i = args.indexOf('--' + k); return i > 0 ? args[i + 1] : d; };
 const N = Number(opt('n', 20));
 const GAP = Number(opt('gap', 1500));

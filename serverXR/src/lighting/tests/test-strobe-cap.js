@@ -108,6 +108,36 @@ check('R3-I2: ARM / release clears every lease with api/fx {clearFlash}', async 
   assert.deepStrictEqual(fx, [undefined, undefined]);
 });
 
+check('R4-I1 (pins the scope): the cap is api/raw ONLY; api/fixture values and scene recall are NOT capped, until the owner decides', async () => {
+  const f = await add('drgbs', 120);
+  const ch = f.address + 4;
+  await POST('/api/fixture', { id: f.id, values: { strobe: 255 } });
+  await sleep(150);
+  assert.strictEqual(await wire(f.universe, ch), 255, 'api/fixture strobe=255 reaches the wire uncapped (scene strobe speed is the owner\'s call)');
+  const sc = (await POST('/api/scenes/save', { name: 'strobe-scope' })).body.scene;
+  await POST('/api/fixture', { id: f.id, values: { strobe: 0 } });
+  await POST('/api/scenes/recall', { id: sc.id });
+  await sleep(150);
+  assert.strictEqual(await wire(f.universe, ch), 255, 'a recalled scene carries its strobe value uncapped');
+  await POST('/api/scenes/remove', { ids: [sc.id] });
+  await POST('/api/fixture', { id: f.id, values: { strobe: 0 } });
+});
+
+check('R4-L5: the 3 raw flashes a second are spaced, not a burst', async () => {
+  const f = await add('drgb', 140);
+  const ch = f.address, ok = [];
+  const t0 = Date.now();
+  for (let i = 0; i < 20; i++) {                    // an unpaced mash for ~1.2 s
+    const up = await POST('/api/raw', { channel: ch, universe: f.universe, value: 255 });
+    if (!(up.body.refused && up.body.refused.rate)) ok.push(Date.now() - t0);
+    await POST('/api/raw', { channel: ch, universe: f.universe, value: -1 });
+    await sleep(60);
+  }
+  assert.ok(ok.length >= 2 && ok.length <= 4, 'accepted ' + ok.length);
+  for (let i = 1; i < ok.length; i++) assert.ok(ok[i] - ok[i - 1] >= 320, 'gap ' + (ok[i] - ok[i - 1]) + ' ms');
+  await POST('/api/raw', { clear: true, all: true });
+});
+
 (async function main() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'strobecap-test-'));
   const child = spawn(process.execPath, [path.join(__dirname, '..', 'standalone.js')], {

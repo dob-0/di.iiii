@@ -130,6 +130,20 @@
         bind: slot == null ? null : (eff['lookpad:' + slot] || null),
       });
     }
+    // Column headers: with a pad order set, each column's mean look brightness on this page, shaded dark -> bright
+    // (m.bright = { lookId: brightness x 100 }, m.order = state.padOrder). Without an order they are plain.
+    const bvals = m.bright && typeof m.bright === 'object' ? Object.values(m.bright).filter((x) => typeof x === 'number') : [];
+    const top = bvals.length ? Math.max(...bvals) : 0;
+    const columns = [];
+    for (let c = 0; c < 8; c++) {
+      const ids = [];
+      for (let r = 0; r < 5; r++) { const l = pads[r * 8 + c]; const look = l && l.key ? mc.lookAt(looks, page, l.slot) : null; if (look) ids.push(look.id); }
+      const vals = ids.map((id) => m.bright && m.bright[id]).filter((x) => typeof x === 'number');
+      const mean = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+      const on = Array.isArray(m.order) && m.order.length && mean != null && top > 0;
+      const g = on ? Math.round(40 + 190 * Math.sqrt(Math.min(1, mean / top))) : 0;
+      columns.push({ c, mean, shaded: !!on, hex: on ? 'rgb(' + g + ',' + g + ',' + g + ')' : null });
+    }
     const buttons = [];
     for (const key of Object.keys(BUTTONS)) {
       const note = noteOf(key);
@@ -145,10 +159,10 @@
       hw: 'BANK ' + eff[k.key].ch + ' KNOB ' + (eff[k.key].num - 0x0f), does: k.label, range: k.unitLabel, where: ccName(eff[k.key]) }));
     const mb = eff.master;
     const view = {
-      pads, buttons, controls, knobs, bindings: eff,
-      page, pages: mc.lookPageCount(looks.length), total: looks.length,
+      pads, buttons, controls, knobs, bindings: eff, columns, ordered: Array.isArray(m.order) && m.order.length > 0,
+      page, pages: mc.lookPageCount(looks.length), total: new Set(looks.filter(Boolean).map((l) => l.id)).size,
       master: { mapped: !!(mb && mb.type === 'cc'), cc: mb ? mb.num : null, does: 'Master fader = desk master' },
-      onAir: (looks.find((l) => l.id === m.activeId) || {}).name || '',
+      onAir: (looks.find((l) => l && l.id === m.activeId) || {}).name || '',
       mapped: bound > 0,
     };
     view.callouts = bound > 0 ? apc40Callouts(own, view) : [];
@@ -295,6 +309,7 @@
       '.apcp .pad.ember{background:linear-gradient(180deg,#7a3a14,#591d00);color:#f0d0b8}',
       '.apcp .pad.hit{background:linear-gradient(180deg,#ffd28a,#ff9a2a);box-shadow:0 0 1.3cqw #ff9a2a;color:#151515}',
       '.apcp .pad.empty{cursor:default}',
+      '.apcp .colhd{border-radius:2px;background:transparent;border:1px solid transparent}.apcp .colhd.on{border-color:#3a3a3e}',
       '.apcp .lb{position:absolute;inset:1px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;font:600 11px/1.05 var(--mono);letter-spacing:0;overflow-wrap:normal;word-break:normal;pointer-events:none;z-index:2;white-space:pre-line}',
       '.apcp .cs .lb{inset:16% 9% 8%}',
       '.apcp .cross .ar:has(.lb)::after{display:none}',
@@ -344,7 +359,7 @@
       const stage = el('div', 'apcstage', body);
       const ap = el('div', 'apcp', stage);
       const R = {};   // geometry key -> element, for the leader lines and the live display
-      const A = { pads: [], scene: [], btn: {}, fad: [], arrows: {} };
+      const A = { cols: [], pads: [], scene: [], btn: {}, fad: [], arrows: {} };
       const notePress = new Map();   // note -> key, refreshed by update()
 
       function Y(y, x) { const t = x >= 68.5 ? INS_R : INS_L; let o = 0; for (const q of t) if (y >= q[0]) o += q[1]; return y + o; }
@@ -372,6 +387,8 @@
       for (let i = 0; i < 8; i++) kn('tk.' + i, false, 'Track knob ' + (i + 1));
       G.lines.forEach((g) => { const l = el('div', 'ln', ap), t = Y(g[1], g[0]), b = Y(g[1] + g[3], g[0]); l.style.left = g[0] + '%'; l.style.top = PY(t) + '%'; l.style.width = g[2] + '%'; l.style.height = PY(Math.max(b - t, g[3])) + '%'; });
       const logo = Cx(el('div', 'logo', ap), 'logo', true); el('span', 'o', logo, 'APC'); el('span', '', logo, '40'); el('span', 'm', logo, 'MKII');
+      // Column headers: a thin bar over each pad column, shaded dark -> bright when a pad order is set (update()).
+      for (let c = 0; c < 8; c++) { const hd = el('div', 'colhd', ap); const g = G.box['pad.0.' + c]; hd.style.left = (g[0] + .25) + '%'; hd.style.top = PY(Y(12.2, g[0])) + '%'; hd.style.width = (g[2] - .5) + '%'; hd.style.height = PY(2.6) + '%'; A.cols.push(hd); }
       for (let r = 0; r < 5; r++) {
         for (let c = 0; c < 8; c++) {
           const p = Bx(el('div', 'pad empty', ap), 'pad.' + r + '.' + c);
@@ -655,6 +672,12 @@
           fitLabel(e.firstChild, p.name, PAD_FONT);
           if (p.key) { keyOfEl.set(e, p.key); if (p.bind) bindOfEl.set(e, p.bind); } else bindOfEl.delete(e);
         });
+        v.columns.forEach((col, c) => {
+          const e = A.cols[c];
+          e.style.background = col.hex || '';
+          e.className = 'colhd' + (col.shaded ? ' on' : '');
+          e.title = col.shaded ? `column ${c + 1}: mean brightness ${Math.round(col.mean * 10) / 10} (x100)` : '';
+        });
         // buttons: clear, then label what the map names
         for (const n of Object.keys(A.btn)) { const e = A.btn[n]; const lb = e.querySelector(':scope > .lb'); if (lb) fitLabel(lb, '', [7]); e.classList.remove('lit', 'red'); e.style.background = ''; e.style.boxShadow = ''; }
         for (const b of v.buttons) {
@@ -671,7 +694,7 @@
         applyDeskValues(model.values, v.bindings);
         setCallouts(v.callouts);
         // legend
-        sp.textContent = `Looks page ${v.page + 1} of ${v.pages}  ·  ${v.total} looks, 40 a page  ·  RIGHT / LEFT turn the page`;
+        sp.textContent = `Looks page ${v.page + 1} of ${v.pages}  ·  ${v.total} looks, 40 a page  ·  RIGHT / LEFT turn the page` + (v.ordered ? '  ·  columns dark to bright' : '');
         air.textContent = 'On air: ' + (v.onAir || 'none');
         const rows = [];
         for (const b of v.buttons) rows.push(`<tr class="${b.danger ? 'danger' : ''}"><td class="hw">${b.hex && b.vel > 1 ? `<span class="sw" style="background:${b.hex}"></span>` : ''}${esc(b.hw)}</td><td class="do">${esc(b.does)}</td></tr>`);
