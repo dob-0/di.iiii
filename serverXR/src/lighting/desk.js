@@ -134,6 +134,9 @@ function createDesk(opts = {}) {
       // false: broadcast skips every network that carries a LaserCube (broadcastPlan, artnet.js).
       // true: every network, as before the laser link was kept clean.
       broadcastAll: false,
+      // true: the old strobe cap (3 flashes a second: api/raw strobe channel <= DMX 14, 3 rises a second, fx strobe slice, APC40 knob
+      // 1-3 Hz). Off by default since the owner's word N7618 (2026-11-27: no limits).
+      strobeLimit: false,
       // sACN's priority, 0..200. Two senders on one universe stop being a coin toss:
       // the higher number wins and the receiver ignores the other, which is the thing
       // Art-Net cannot express at all.
@@ -1400,6 +1403,8 @@ function createDesk(opts = {}) {
   // `owner` is the caller's tag (holds.js): a value takes the channel for it, a release
   // lets go only of a channel it holds. Returns the holder a release was refused for.
   // THE ROOM'S FLASH RULE FOR THE api/raw HOLDS (PR #1397 round 4, R3-I1; WCAG 2.3.1): no more than 3 flashes a second.
+  // SINCE 2026-11-27 (owner N7618, "i dont want any limits") THIS RULE IS A DESK SETTING, OFF BY DEFAULT: output.strobeLimit
+  // (POST api/output {strobeLimit:true}). Off = no cap on raw strobe, no rise limit; on = everything below, as it was.
   // SCOPE (R4-I1): ONLY api/raw (the APC40 hits and any raw client). NOT capped here, on purpose and pending the owner's answer on
   // scene strobe speed: api/fixture values, scene recall, cue GO, looks/fire (tests/test-strobe-cap.js pins this).
   // The page caps its own strobe, but any client can POST api/raw, so the desk holds the line itself, two ways:
@@ -1425,6 +1430,7 @@ function createDesk(opts = {}) {
   function capRawStrobe(v) {
     const n = Math.round(Number(v));
     if (!Number.isFinite(n) || n < 0) return 0;
+    if (!state.output.strobeLimit) return Math.min(255, n);   // N7618: no cap, the lamp's own strobe channel decides
     if (n < RAW_STROBE_LO) return n;
     if (n > RAW_STROBE_HI) return 0;
     return Math.min(n, RAW_STROBE_CAP);
@@ -2656,7 +2662,7 @@ function createDesk(opts = {}) {
         const refused = {};
         const one = (u, ch, v) => { const by = setRaw(u, ch, v, owner, all); if (by) refused[by] = (refused[by] || 0) + 1; };
         const list = Array.isArray(body.channels) ? body.channels : (body.channel ? [{ universe: body.universe, channel: body.channel, value: body.value }] : []);
-        const tooFast = rawRiseRefusals(list, Date.now());
+        const tooFast = state.output.strobeLimit ? rawRiseRefusals(list, Date.now()) : new Set();   // the 3 a second rule only with the switch on
         list.forEach((c, idx) => {
           if (tooFast.has(idx)) { refused.rate = (refused.rate || 0) + 1; return; }
           one(c && c.universe, c && c.channel, c && c.value);
@@ -2989,6 +2995,7 @@ function createDesk(opts = {}) {
       if (body.priority != null) state.output.priority = Math.max(0, Math.min(200, body.priority | 0));
       if (body.enabled != null) state.output.enabled = !!body.enabled;
       if (body.broadcastAll != null) state.output.broadcastAll = !!body.broadcastAll;
+      if (body.strobeLimit != null) state.output.strobeLimit = !!body.strobeLimit;   // the old 3 flashes a second cap; off by default (N7618)
       if (body.serialPort && PORT_NAME.test(String(body.serialPort).trim())) state.output.serialPort = portName(body.serialPort);
       // Rebuild the driver before answering, so the reply carries the real outcome of the
       // switch. Selecting a port that will not open has to say so here — finding out by

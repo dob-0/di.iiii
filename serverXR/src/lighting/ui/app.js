@@ -6197,6 +6197,7 @@ function midiHoldUp(key) {
 function midiStrobeDown(key, kind) {
   const mp = window.deskMidiPatch;
   if (!midiArmed || !mp || midiHeld.has(key)) return;
+  mp.setStrobeLimit(!!(S && S.output && S.output.strobeLimit));   // N7618: the old 3 Hz cap only when the desk setting is on
   const hit = mp.strobeHit((S && S.fixtures) || [], (f) => S.profiles[f.profile], kind, midiLive.strobeU);
   if (!hit.holds.length && !hit.fxIds.length) return;
   const h = { channels: hit.holds, fxIds: hit.fxIds, timer: setTimeout(() => midiHoldUp(key), mp.MAX_HOLD_MS) };
@@ -6215,10 +6216,12 @@ function midiStrobeRate() {
   const mp = window.deskMidiPatch;
   const h = midiHeld.get('hit:strobe-all');
   if (!h || !h.channels) return;
+  mp.setStrobeLimit(!!(S && S.output && S.output.strobeLimit));
   const dmx = mp.strobeDmxFromUnit(midiLive.strobeU);
-  const upd = h.channels.filter((c) => c.value !== 255 && c.value >= 4 && c.value <= 14).map((c) => ({ ...c, value: dmx }));
+  const inBand = (c) => c.value !== 255 && c.value >= 4 && c.value <= 103;   // the strobe band (was <= 14, the capped top)
+  const upd = h.channels.filter(inBand).map((c) => ({ ...c, value: dmx }));
   if (!upd.length) return;
-  h.channels = h.channels.map((c) => (c.value !== 255 && c.value >= 4 && c.value <= 14 ? { ...c, value: dmx } : c));
+  h.channels = h.channels.map((c) => (inBand(c) ? { ...c, value: dmx } : c));
   midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: upd }, 'hold:strobe-rate', true);
 }
 // Every hit lets go: disarm, a new controller, page close. Goes out even as the gate closes.
@@ -6416,7 +6419,7 @@ function buildMidiTargets() {
     hit('hit:white', 'Hit: white flash, every fixture', () => fixtures);
     for (const g of groups.filter((x) => x.key !== 'back')) hit(`hit:${g.key}`, `Hit: ${g.label} flash`, () => fixtures.filter((f) => g.ids.includes(f.id)));
     // Strobe (N7314). Rate = track knob 1, 1-3 Hz; the page caps it (midiPatch.capStrobeDmx). Hits release on pad up, disarm, close.
-    cc('strobe:rate', 'Strobe rate  1-3 Hz  (hits below; capped at 3 Hz)', () => midiLive.strobeU, (u) => { midiLive.strobeU = u; midiStrobeRate(); });
+    cc('strobe:rate', 'Strobe rate  1-20 Hz  (hits below; no cap, 3 Hz only with Strobe limit on)', () => midiLive.strobeU, (u) => { midiLive.strobeU = u; midiStrobeRate(); });
     T.push({ key: 'hit:strobe-all', label: 'Hit: strobe, back bars + soft strobe on the rest (hold)', kind: 'note',
       apply: () => midiStrobeDown('hit:strobe-all', 'all'), up: () => midiHoldUp('hit:strobe-all') });
     T.push({ key: 'hit:strobe-movers', label: 'Hit: strobe, movers, software only (hold)', kind: 'note',
