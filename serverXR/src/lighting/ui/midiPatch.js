@@ -160,6 +160,15 @@
     if (!Number.isFinite(n) || n < STROBE_BAND_LO || n > STROBE_BAND_HI) return 0;
     return strobeLimited ? Math.min(n, STROBE_DMX_CAP) : n;
   }
+  // A held channel is a strobe rate (the knob moves it) when it sits in the lamp's strobe band; with the desk setting
+  // output.strobeLimit on that band ends at the 3 Hz cap, off (the default, PR #1403) it is the whole 4..103.
+  const isStrobeRate = (v, limit) => v !== 255 && v >= STROBE_BAND_LO && v <= (limit ? STROBE_DMX_CAP : STROBE_BAND_HI);
+  // The fader "base" of a group (F1, #1404 review): the level the fader last set. The desk can change the group behind it
+  // (scene recall, the desk's own fader): when the live level is not what this page last wrote, the live level is the base.
+  const groupBase = (base, wrote, live, factor) => {
+    if (base == null || wrote == null || Math.abs(live - wrote) > 3 / 255) return Math.max(0, Math.min(1, factor > 0 ? live / factor : live));
+    return base;
+  };
   // The rate knob, 0..1 -> 1..20 Hz (1..3 Hz with the limit on) -> the DMX value.
   const strobeHzFromUnit = (u) => 1 + ((strobeLimited ? STROBE_MAX_HZ : STROBE_BAND_MAX_HZ) - 1) * Math.max(0, Math.min(1, Number.isFinite(+u) ? +u : 0));
   const strobeDmxFromUnit = (u) => capStrobeDmx(strobeDmxFromHz(strobeHzFromUnit(u)));
@@ -208,6 +217,18 @@
   const lfok = (field, spec, label, unitLabel) => ({ ...spec, label, unitLabel, route: 'api/lfos',
     read: (S) => { const l = S && Array.isArray(S.lfos) ? S.lfos[0] : null; return l ? l[field] : undefined; },
     body: (val, S) => (S && Array.isArray(S.lfos) && S.lfos[0] ? { lfos: S.lfos.map((l, i) => (i === 0 ? { ...l, [field]: val } : l)) } : null) });
+  const layerk = (field, spec, label, unitLabel) => ({ ...spec, label, unitLabel, route: 'api/layer',
+    read: (S) => { const l = S && Array.isArray(S.layers) ? S.layers.find((x) => x.id === 'cue') : null; return l ? l[field] : undefined; },
+    body: (val) => ({ id: 'cue', [field]: val }) });
+  const cfxk = (field, spec, label, unitLabel) => ({ ...spec, label, unitLabel, route: 'api/colorfx',
+    read: (S) => (S && S.colorFx ? S.colorFx[field] : undefined), body: (val) => ({ [field]: val }) });
+  const chasek = (field, spec, label, unitLabel) => ({ ...spec, label, unitLabel, route: 'api/chase',
+    read: (S) => (S && S.chase ? S.chase[field] : undefined), body: (val) => ({ [field]: val }) });
+  const masterk = (spec, label, unitLabel) => ({ ...spec, label, unitLabel, route: 'api/master',
+    read: (S) => (S ? S.master : undefined), body: (val) => ({ master: val }) });
+  const alldimk = (spec, label, unitLabel) => ({ ...spec, label, unitLabel, route: 'api/fixtures/all',
+    read: (S) => { const f = S && Array.isArray(S.fixtures) ? S.fixtures.filter((x) => x.values && Number.isFinite(+x.values.dimmer)) : []; return f.length ? f.reduce((a, x) => a + (+x.values.dimmer), 0) / f.length : undefined; },
+    body: (val) => ({ values: { dimmer: val } }) });
   const KNOB_PAGES = [
     { ch: 1, id: 'fx', name: 'FX engine', knobs: [
       fxk('mode', enm(FX_MODE_LIST), 'FX mode', '15 modes'), fxk('spatial', enm(FX_SPATIAL_LIST), 'FX spread', 'patch x y radial'),
@@ -225,6 +246,22 @@
     { ch: 4, id: 'lfo1', name: 'LFO 1', knobs: [
       lfok('wave', enm(LFO_WAVE_LIST), 'LFO 1 wave', '5 waves'), lfok('beats', lin(0.25, 64, 2), 'LFO 1 beats', '0.25-64'),
       lfok('depth', lin(0, 255), 'LFO 1 depth', '0-255'), lfok('spread', lin(0, 1, 2), 'LFO 1 spread', '0-1')] },
+    // Pages 5-9 (map-all, owner 2026-11-27): TRACK SELECT 5-8 and MASTER SELECT choose them, so every select button has a page.
+    { ch: 5, id: 'cfx', name: 'Colour FX', knobs: [
+      cfxk('mode', enm(CFX_MODES), 'Colour FX mode', 'none hue chase swap'), cfxk('beats', lin(1, 32), 'Colour FX beats', '1-32'),
+      cfxk('spread', lin(0, 1, 2), 'Colour FX spread', '0-1'), cfxk('amount', lin(0, 255), 'Colour FX amount', '0-255')] },
+    { ch: 6, id: 'layer', name: 'Cues layer', knobs: [
+      layerk('level', lin(0, 1, 2), 'Layer level', '0-1'), layerk('rate', lin(0.125, 8, 2), 'Layer rate', '0.125-8 x'),
+      layerk('headScale', lin(0, 1, 2), 'Movement size', '0-1')] },
+    { ch: 7, id: 'chase', name: 'Chase', knobs: [
+      chasek('holdMs', lin(50, 2000), 'Chase hold', '50-2000 ms'), chasek('fadeMs', lin(0, 2000), 'Chase fade', '0-2000 ms'),
+      chasek('beats', lin(0.25, 64, 2), 'Chase beats', '0.25-64')] },
+    { ch: 8, id: 'mix', name: 'Mix', knobs: [
+      masterk(lin(0, 255), 'Master', '0-255'), alldimk(lin(0, 255), 'All dimmer', '0-255'),
+      fxk('depth', lin(0, 255), 'FX depth', '0-255'), fxk('bpm', lin(20, 300), 'FX tempo', '20-300 BPM')] },
+    { ch: 9, id: 'hand', name: 'One hand', knobs: [
+      layerk('level', lin(0, 1, 2), 'Layer level', '0-1'), cfxk('amount', lin(0, 255), 'Colour FX amount', '0-255'),
+      fxk('depth', lin(0, 255), 'FX depth', '0-255'), masterk(lin(0, 255), 'Master', '0-255')] },
   ];
   const KNOBS = [];
   KNOB_PAGES.forEach((page) => page.knobs.forEach((spec, k) => KNOBS.push({ ...spec, key: 'kn:' + page.id + ':' + k, ch: page.ch, num: 0x10 + k, page: page.id, pageName: page.name })));
@@ -251,13 +288,25 @@
     return out;
   }
 
+  // ---- map-all (owner 2026-11-27): crossfader sides, solo, flash length ----
+  // Crossfader: side A is full left of centre and fades out to the right, side B the mirror; the centre keeps both full.
+  const xfadeFactor = (side, u) => { const x = Math.max(0, Math.min(1, Number.isFinite(+u) ? +u : 0.5)); return side === 'B' ? Math.min(1, x * 2) : Math.min(1, (1 - x) * 2); };
+  // Solo: with a non-empty solo set, every fixture outside it sits at 15 %.
+  const SOLO_REST = 0.15;
+  const soloFactor = (soloIds, id) => (soloIds && soloIds.size && !soloIds.has(id) ? SOLO_REST : 1);
+  // A toggle-type button (RECORD ARM) may never send its note-off in Mode 0 (Akai v1.2 p.10; unchecked), so its flash lets go by itself.
+  const ARM_FLASH_MS = 1500;
+  const isMover = (fixture, profile) => ((profile && profile.channels) || []).some((r) => r === 'pan' || r === 'tilt');
+  const rateStep = (rate, dir) => Math.max(0.125, Math.min(8, Math.round((Number.isFinite(+rate) && +rate > 0 ? +rate : 1) * (dir > 0 ? 2 : 0.5) * 1000) / 1000));
+
   // ---- movement size (engine: layer.headScale 0..1, 1 = as the look was written) ----
   const headScaleFromUnit = (u) => Math.max(0, Math.min(1, Number.isFinite(+u) ? +u : 1));
 
   const api = { relDelta, BPM_MIN, BPM_MAX, clampBpm, bpmStep, createTapper, TAP_RESET_MS, TAP_KEEP, NUDGE_MS, nudgeEpoch,
     rateFromUnit, unitFromRate, CFX_MODES, CFX_BEATS, cfxModeStep, cfxBeatsFromUnit, unitFromCfxBeats, cfxToggle,
     GROUPS, rigGroups, groupDimRead, groupIsOn, HOLD_OWNER, flashChannels, releaseOf, MAX_HOLD_MS, zoomRoles,
-    STROBE_MAX_HZ, STROBE_DMX_CAP, setStrobeLimit, capStrobeDmx, strobeDmxFromHz, strobeHzFromDmx, strobeHzFromUnit, strobeDmxFromUnit, strobeHit,
+    STROBE_MAX_HZ, STROBE_DMX_CAP, STROBE_BAND_HI, setStrobeLimit, isStrobeRate, groupBase, capStrobeDmx, strobeDmxFromHz, strobeHzFromDmx, strobeHzFromUnit, strobeDmxFromUnit, strobeHit,
+    xfadeFactor, SOLO_REST, soloFactor, ARM_FLASH_MS, isMover, rateStep,
     KNOB_PAGES, KNOBS, knobByKey, knobValue, knobUnit, knobSend, knobRings, headScaleFromUnit };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiPatch = api;

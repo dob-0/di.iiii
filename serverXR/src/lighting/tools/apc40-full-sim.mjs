@@ -21,7 +21,7 @@ const browser = await chromium.launch({ headless: true })
 const ctx = await browser.newContext({ viewport: { width: 1534, height: 830 } })
 const page = await ctx.newPage()
 const posts = []
-ctx.on('response', async (r) => { if (/api\/raw/.test(r.url()) && r.request().method()==='POST') { try { const j = await r.json(); console.log('raw resp', r.status(), Object.keys(j.raw||{}).length, JSON.stringify(j.refused||j.error||'').slice(0,100)) } catch (e) { console.log('raw resp err', r.status()) } } })
+ctx.on('response', async (r) => { if (/api\/raw/.test(r.url()) && r.request().method()==='POST') { try { const j = JSON.parse(await r.text()); console.log('raw resp', r.status(), Object.keys(j.raw||{}).length, JSON.stringify(j.refused||j.error||'').slice(0,100)) } catch (e) { console.log('raw resp err', r.status(), String(e.message).slice(0,80)) } } })
 ctx.on('request', (r) => { if (r.method() === 'POST' && /\/api\//.test(r.url())) posts.push(r.url().split('/api/')[1]) })
 page.on('pageerror', (e) => console.log('PAGE ERROR ' + e.message))
 await ctx.addInitScript(() => {
@@ -39,10 +39,11 @@ await sleep(2500)
 await page.click('#miPreset')
 await sleep(1200)
 const flash = await page.evaluate(() => document.body.innerText.match(/Akai APC40 mkII: \d+ controls mapped/)?.[0] || null)
-check('Map my controller binds 49 + 24 + 27 (round 2) = 100 controls', /: 100 controls mapped/.test(flash || ''), flash)
+const mappedN = +((flash || '').match(/: (\d+) controls mapped/) || [])[1]
+check('Map my controller binds the full preset (map-all: every control, 100 + the rest)', mappedN >= 170, flash)
 const saved = await api('api/midi')
 const keys = saved.midi.maps.map((m) => m.key)
-check('map saved with the show, 100 rows', saved.midi.maps.length === 100, saved.midi.maps.length)
+check('map saved with the show, every row', saved.midi.maps.length === mappedN, saved.midi.maps.length)
 check('strobe rate + 2 strobe hits are bound, no shutter and no ch: row', ['strobe:rate', 'hit:strobe-all', 'hit:strobe-movers'].every((k) => keys.includes(k)) && !keys.some((k) => /shutter|^ch:/.test(k)), keys.filter((k) => /strobe|shutter|^ch:/.test(k)))
 
 const midi = async (bytes, ms = 450) => { await page.evaluate((b) => window.__midi(b), bytes); await sleep(ms) }
@@ -65,7 +66,10 @@ const s1 = await st()
 check('Safe: every new control pressed, nothing posted, nothing moved', posts.length === p0 && JSON.stringify(s1.fixtures.map((f) => f.on)) === JSON.stringify(s0.fixtures.map((f) => f.on)) && s1.fx.bpm === s0.fx.bpm && !Object.keys(s1.raw).length, { posts: posts.length - p0 })
 
 await page.click('#miArm')
-await sleep(500)
+// wait on the page's own readback, not a fixed time: until the first desk state has arrived the page drops every post and
+// catches every fader again (midiLiveWait), so a fader moved inside that window is lost (the flaky 'fader 1' of run 1)
+await page.waitForFunction(() => typeof midiLiveWait !== 'undefined' && midiLiveWait === false, null, { timeout: 8000 })
+await sleep(300)
 
 // ---- 1. group dimmers ----
 const d0 = [dimOf(s0, 5), dimOf(s0, 4), mean([...byU(s0, 2), ...byU(s0, 3)].map((f) => f.values.dimmer))]
@@ -138,9 +142,9 @@ check('tempo knob 65 = down 63 clicks', s.fx.bpm === Math.max(20, bsc0 + 2 - 63)
 // ---- 4. zoom and colour effect ----
 const zoomers = (x) => x.fixtures.filter((f) => f.values.zoom != null)
 const nz = zoomers(s).length
-await cc(6, 7, 0, 150); await cc(6, 7, 100, 800)
+await cc(6, 7, 0, 150); await cc(6, 7, 100, 2000)
 s = await st()
-check(`fader 6 = zoom on the ${nz} fixtures that have one (100/127 = 201)`, nz > 0 && zoomers(s).every((f) => Math.abs(f.values.zoom - 201) <= 1 && (f.values.zoom2 == null || Math.abs(f.values.zoom2 - 201) <= 1)), zoomers(s).map((f) => f.values.zoom).slice(0, 4))
+check(`fader 6 = zoom on the ${nz} fixtures that have one (100/127 = 201)`, nz > 0 && zoomers(s).every((f) => Math.abs(f.values.zoom - 201) <= 1 && (f.values.zoom2 == null || Math.abs(f.values.zoom2 - 201) <= 1)), zoomers(s).map((f) => f.id + ":" + f.values.zoom + "/" + f.values.zoom2))
 check('fixtures without a zoom channel are untouched', s.fixtures.filter((f) => f.values.zoom == null).every((f) => f.values.zoom === undefined), 'ok')
 await cc(8, 7, 0, 150); await cc(8, 7, 127, 150); await cc(8, 7, 64, 700)
 s = await st()
@@ -242,7 +246,7 @@ await cc(1, 48, 127, 250)                     // knob to the maximum
 await on(1, 0x57, 700)
 r2 = await st()
 const sv = rawOf(r2).filter(([k]) => barStrobe(r2).includes(k)).map(([, v]) => v)
-check('strobe hit (PAN 0x57) at the knob maximum: all 15 bar strobe channels at DMX 14 (2.92 Hz), not above', sv.length === 15 && sv.every((v) => v === 14), sv)
+check('strobe hit (PAN 0x57) at the knob maximum: all 15 bar strobe channels at the top of the band (output.strobeLimit off, #1403: DMX 103, above the old 14 cap)', sv.length === 15 && sv.every((v) => v === 103), sv)
 check('the movers\' shutter is never written by the strobe hit', rawOf(r2).every(([k]) => !moverShutter(r2).includes(k)), rawOf(r2).filter(([k]) => moverShutter(r2).includes(k)))
 const movFx = r2.fixtures.filter((f) => moverShutter(r2).length && s2has(f)).length
 function s2has(f) { return f.fx && f.fx.mode === 'strobe' }
@@ -280,7 +284,7 @@ await cc(3, 0x10, 0, 500)
 r2 = await st()
 check('bank change: the first message on bank 3 is a position, not a turn (animation size unchanged)', r2.video.anim.bscale === anim0, [anim0, r2.video.anim.bscale])
 await api('api/lfos', { lfos: [{ id: 't1', wave: 'sine', beats: 1, depth: 255, enabled: false }] })
-await sleep(1300)
+await sleep(2500)
 await cc(4, 0x10, 13, 200); await cc(4, 0x10, 127, 500)
 r2 = await st()
 check('bank 4 knob 1 = LFO 1 wave: top -> random, list keeps its id', r2.lfos && r2.lfos[0] && r2.lfos[0].wave === 'random' && r2.lfos[0].id === 't1', r2.lfos && r2.lfos[0])
@@ -330,7 +334,63 @@ await sleep(500)
 await page.screenshot({ path: shot + '-1536x864-top.png' })
 const rows = await page.evaluate(() => [...document.querySelectorAll('#miMapBody tr[data-key]')].filter((r) => !/^ch:/.test(r.dataset.key) && /grp:|layer|tap|nudge|tempo|^zoom|cfx|hit:|blackoutoff|panic/.test(r.dataset.key)).map((r) => [r.dataset.key, r.children[1].textContent.trim()]))
 console.log('new rows in the mapping table: ' + rows.length + ' ' + JSON.stringify(rows.slice(0, 30)))
-check('mapping table shows 26 new rows (24 + 2 strobe hits), each with a ch/CC or ch/note', rows.length === 26 && rows.every(([, b]) => /(ch\d+\s+(CC|note) \d+|catch)/.test(b)), rows.length)
+check('mapping table shows the 26 round-2 rows and the map-all rows, each with a ch/CC or ch/note', rows.length >= 26 && rows.every(([, b]) => /(ch\d+\s+(CC|note) \d+|catch)/.test(b)), rows.length)
+
+// ---- map-all (owner 2026-11-27): crossfader, solo, release, flashes, strobe cap, knob pages 5-9 ----
+if (!/ARMED/.test(await page.evaluate(() => document.querySelector('#miArm').textContent))) { await page.click('#miArm'); await sleep(600) }
+await api('api/fixtures/all', { values: { dimmer: 200 } })
+for (const f of (await st()).fixtures) await api('api/fixture', { id: f.id, on: true })
+for (const c of [1, 2, 3]) { await cc(c, 7, 0, 150); await cc(c, 7, 127, 150); await cc(c, 7, 100, 150) }   // cross the desk value from both sides, settle at 100
+await sleep(2500)
+let m0 = await st()
+const lv = [dimOf(m0, 5), dimOf(m0, 4)]
+await cc(1, 15, 64, 150)
+await on(1, 0x42, 150); await off(1, 0x42, 100)           // A/B 1: left truss to side B
+await cc(1, 15, 0, 2500)                                    // crossfader to A: B faded out
+let m1 = await st()
+check('A/B 1 + crossfader at A: left truss (side B) dark, right truss (side A) untouched', dimOf(m1, 5) <= 2 && Math.abs(dimOf(m1, 4) - lv[1]) <= 2, { left: dimOf(m1, 5), right: dimOf(m1, 4), lv })
+await cc(1, 15, 64, 2500)
+m1 = await st()
+check('crossfader at centre: both sides full again', Math.abs(dimOf(m1, 5) - lv[0]) <= 3, dimOf(m1, 5))
+await on(1, 0x31, 150); await off(1, 0x31, 100)           // solo 1: left truss; the rest to 15 %
+await sleep(2500)
+m1 = await st()
+check('solo 1: left truss keeps its level, the right truss sits at 15 %', Math.abs(dimOf(m1, 5) - lv[0]) <= 3 && Math.abs(dimOf(m1, 4) - lv[1] * 0.15) <= 3, { left: dimOf(m1, 5), right: dimOf(m1, 4) })
+await on(1, 0x34, 150); await off(1, 0x34, 100); await sleep(2500)
+m1 = await st()
+check('clip stop 1: column 1 released to 100 % and the solo is gone', Math.abs(dimOf(m1, 5) - 255) <= 2 && dimOf(m1, 4) >= lv[1] * 0.9, { left: dimOf(m1, 5), right: dimOf(m1, 4) })
+await on(2, 0x30, 400)                                    // record arm 2: right truss white flash, held (auto-release at 1.5 s)
+m1 = await st()
+var rawU = (s, u) => rawOf(s).filter(([k]) => k.startsWith(u + ':')).length
+check('record arm 2 held: raw hold on the right truss universe only', rawU(m1, 4) > 0 && rawU(m1, 5) === 0, { u4: rawU(m1, 4), u5: rawU(m1, 5), keys: rawOf(m1).slice(0, 4), owners: m1.rawOwners })
+await off(2, 0x30, 500)
+m1 = await st()
+check('record arm 2 note-off: every hold released', rawOf(m1).length === 0, rawOf(m1).length)
+await cc(1, 48, 0, 150); await cc(1, 48, 64, 150); await cc(1, 48, 127, 250)   // pick the knob up from where it was left, then to the maximum
+await on(8, 0x30, 500)                                    // record arm 8: strobe back bars, rate knob at maximum
+m1 = await st()
+const bs = rawOf(m1).filter(([k]) => barStrobe(m1).includes(k)).map(([, v]) => v)
+check('record arm 8 (strobe back bars) at the knob maximum: strobe channels in the band 4..103 and above the old DMX 14 cap (output.strobeLimit off, #1403)', bs.length === 15 && bs.every((v) => v === 103), bs)
+await off(8, 0x30, 600)
+m1 = await st()
+check('record arm 8 note-off: strobe released, nothing held, no per-fixture fx', rawOf(m1).length === 0 && m1.fixtures.every((f) => !f.fx), [rawOf(m1).length, m1.fixtures.filter((f) => f.fx).length])
+await on(5, 0x30, 100)                                    // a toggle that never sends its note-off: the flash lets go by itself
+await sleep(2200)
+m1 = await st()
+check('record arm 5 without a note-off: the flash lets go after 1.5 s', rawOf(m1).length === 0, rawOf(m1).length)
+await on(6, 0x31, 500)                                    // solo 6: colour FX hue
+check('solo 6 = colour FX hue', (await st()).colorFx.mode === 'hue', (await st()).colorFx.mode)
+await on(1, 0x62, 100)                                    // shift down
+await on(8, 0x34, 3000)
+check('shift + clip stop 8: colour FX off (and every column released)', (await st()).colorFx.mode === 'none', (await st()).colorFx.mode)
+await off(1, 0x62, 100)
+await on(1, 0x5e, 300); await on(1, 0x5f, 300)
+await cc(5, 16, 64, 100); await cc(5, 16, 100, 400)       // knob bank 5 (TRACK SELECT 5): colour FX mode
+check('device knob 1 on bank 5 (colour FX mode) answers', ['none', 'hue', 'chase', 'swap'].includes((await st()).colorFx.mode), (await st()).colorFx.mode)
+const pc = posts.length
+await on(1, 0x5d, 400)
+check('record (0x5D) posts api/chase (the desk keeps it off with no scenes)', posts.slice(pc).includes('chase'), posts.slice(pc))
+await on(1, 0x5d, 400)
 
 await browser.close()
 const fails = results.filter((r) => !r.ok).length

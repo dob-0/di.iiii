@@ -83,6 +83,37 @@
     { key: 'tempo:rel', hw: 'TEMPO knob', does: 'Tempo, 1 BPM a click', range: '20-300 BPM' },
     { key: 'cfxmode:rel', hw: 'CUE LEVEL knob', does: 'Colour effect mode, one step a click', range: 'none hue chase swap' },
   ];
+  // Map-all (owner 2026-11-27, apc40-map-all.md): the legend rows of the remaining controls (labels only; the layout is untouched).
+  const COL = ['left truss', 'right truss', 'back bars', 'movers', 'all', 'zoom', 'layer', 'colour FX'];
+  const CFXM = ['none', 'hue', 'chase', 'swap'];
+  const AB = ['flip left truss side A/B', 'flip right truss side A/B', 'flip back bars side A/B', 'swap every side', 'half time', 'double time', 'rate back to 1x', 'crossfader to centre'];
+  const ACT = { 4: 'movers on / off', 5: 'all on / off', 6: 'Cues layer on / off', 7: 'freeze the heads', 8: 'release every hold and strobe' };
+  const MAPALL = [
+    { key: 'beamdim', hw: 'TRACK FADER 4', does: 'Movers dimmer', range: '0-100 %' },
+    { key: 'alldim', hw: 'TRACK FADER 5', does: 'All fixtures dimmer', range: '0-255' },
+    { key: 'xfade', hw: 'CROSSFADER', does: 'Blend side A / side B of the trusses and bars', range: 'centre = both full' },
+    { key: 'fxbpm', hw: 'TRACK KNOB 3', does: 'FX tempo', range: '20-300 BPM' },
+    { key: 'fxdepth', hw: 'TRACK KNOB 4', does: 'FX depth', range: '0-255' },
+    { key: 'hold', hw: 'TRACK KNOB 5', does: 'Chase hold', range: '50-2000 ms' },
+    { key: 'shift', hw: 'SHIFT', does: 'Hold: clip stop releases every column', range: 'hold' },
+    { key: 'fxon', hw: 'SCENE LAUNCH 4', does: 'FX on / off', range: 'switch' },
+    { key: 'chaseon', hw: 'RECORD', does: 'Chase run / stop', range: 'switch' },
+    { key: 'lookpage:home', hw: 'USER', does: 'Look page 1', range: 'press' },
+    { key: 'fx:up', hw: 'UP', does: 'FX depth +32', range: 'press' },
+    { key: 'fx:down', hw: 'DOWN', does: 'FX depth -32', range: 'press' },
+    { key: 'fxprev', hw: 'DEVICE LEFT (1)', does: 'FX mode previous', range: 'press' },
+    { key: 'fxnext', hw: 'DEVICE RIGHT (2)', does: 'FX mode next', range: 'press' },
+    { key: 'spread:prev', hw: 'BANK LEFT (3)', does: 'FX spread previous', range: 'press' },
+    { key: 'spread:next', hw: 'BANK RIGHT (4)', does: 'FX spread next', range: 'press' },
+  ];
+  for (let n = 1; n <= 8; n++) {
+    MAPALL.push({ key: 'col:release:' + n, hw: 'CLIP STOP ' + n, does: 'Release ' + COL[n - 1] + (n === 1 ? ' (with Shift: every column)' : ''), range: 'press' });
+    MAPALL.push({ key: 'solo:' + n, hw: 'SOLO ' + n, does: n <= 4 ? 'Solo ' + COL[n - 1] + ' (others to 15 %)' : 'Colour FX ' + CFXM[n - 5], range: 'switch' });
+    MAPALL.push({ key: 'arm:' + n, hw: 'RECORD ARM ' + n, does: n <= 5 ? 'Hold: white flash, ' + COL[n - 1] : 'Hold: strobe ' + COL[n - 6] + ' (rate: track knob 1)', range: 'hold' });
+    MAPALL.push({ key: 'ab:' + n, hw: 'A/B ' + n, does: AB[n - 1], range: 'press' });
+    if (n >= 4) MAPALL.push({ key: 'act:' + n, hw: 'ACTIVATOR ' + n, does: ACT[n], range: 'switch' });
+  }
+  CONTROLS.push(...MAPALL);
   // Printed names (protocol v1.2 inbound table) for the notes the drawing labels.
   const HW = { 0x63: 'TAP TEMPO', 0x64: 'NUDGE -', 0x65: 'NUDGE +', 0x5a: 'METRONOME', 0x3e: 'DEVICE BUTTON 5 (Dev. On/Off)', 0x3f: 'DEVICE BUTTON 6 (Dev. Lock)', 0x40: 'DEVICE BUTTON 7 (Clip/Dev. View)', 0x41: 'DEVICE BUTTON 8 (Detail View)', 0x57: 'PAN', 0x58: 'SENDS', 0x66: 'SESSION REC', 0x67: 'BANK LOCK', 0x5b: 'PLAY', 0x51: 'STOP ALL CLIPS', 0x52: 'SCENE LAUNCH 1', 0x53: 'SCENE LAUNCH 2', 0x54: 'SCENE LAUNCH 3', 0x55: 'SCENE LAUNCH 4', 0x56: 'SCENE LAUNCH 5', 0x60: 'RIGHT', 0x61: 'LEFT' };
   const pm = () => (typeof module === 'object' && module && module.exports) ? require('./midiPatch.js') : root.deskMidiPatch;
@@ -278,8 +309,7 @@
 ".apcp .fader b{position:absolute;left:4%;right:4%;height:21%;border-radius:.4cqw;background:linear-gradient(180deg,#3a3a3d,#08080a 50%,#1c1c1e);box-shadow:0 .2cqw .5cqw #000;bottom:calc(var(--v,.8) * 79%)}",
 ".apcp .fader b::after{content:\"\";position:absolute;left:0;right:0;top:46%;height:max(1px,.22cqw);background:#f4f4f4}",
 ".apcp .xf::before{content:\"\";position:absolute;top:50%;left:0;right:0;height:1px;background:#8a8a8e}",
-".apcp .xf b{position:absolute;top:0;bottom:0;width:14%;border-radius:.4cqw;background:linear-gradient(180deg,#303033,#070708 55%,#1a1a1c);box-shadow:0 .2cqw .5cqw #000;left:calc(var(--v,.5) * 86%)}",
-".apcp .xf b::before{content:\"\";position:absolute;right:100%;top:44%;height:12%;width:380%;background:#0a0a0b}",
+".apcp .xf b{position:absolute;top:0;bottom:0;width:16%;border-radius:.4cqw;background:linear-gradient(180deg,#303033,#070708 55%,#1a1a1c);box-shadow:0 .2cqw .5cqw #000;left:calc(var(--v,.5) * 84%)}",
 ".apcp .xf b::after{content:\"\";position:absolute;left:0;right:0;top:46%;height:max(1px,.22cqw);background:#f4f4f4}",
 ".apcp .xt{background:#cfcfd3;width:max(1px,.15cqw)}",
 ".apcp .xab{transform:translate(-50%,-50%);border:max(1px,.15cqw) solid #e8e8ea;font:600 max(4px,.7cqw)/1 var(--sans);color:#f2f2f2;display:flex;align-items:center;justify-content:center}",
@@ -454,9 +484,13 @@
         const a = el('div', 'ar', cr); a.style.left = p[2]; a.style.top = p[3]; a.style.width = p[4]; a.style.height = p[5]; a.style.setProperty('--rot', p[6]); a.style.position = 'absolute'; a.title = p[0]; A.btn[p[1]] = a;
         if (p[1] === 0x60 || p[1] === 0x61) el('span', 'lb', a);
       });
-      Cx(el('div', 'xab', ap, 'A'), 'xA'); Cx(el('div', 'xab', ap, 'B'), 'xB');
-      Bx(el('div', 'xt', ap), 'xt.0'); Bx(el('div', 'xt', ap), 'xt.1');
-      const xf = Bx(el('div', 'xf', ap), 'xfader'); el('b', '', xf); R.xfader = xf;
+      // Crossfader: a horizontal track with a short, wide cap riding ON it; A at the left end, B at the right end, close to the track;
+      // the end stops sit AT the ends and never cross it. All of it stays right of the AKAI logo (G.ctr.akai ends at x = 79.06).
+      const xg = G.box.xfader, xcy = PY(Y(xg[1], xg[0]) + xg[3] / 2), xw = xg[2], xh = 3.2;   // track centre line (panel %), cap height (panel % of height)
+      const xa = Cx(el('div', 'xab', ap, 'A'), 'xA'), xb = Cx(el('div', 'xab', ap, 'B'), 'xB');
+      xa.style.left = (xg[0] - 1.2) + '%'; xb.style.left = (xg[0] + xw + 1.2) + '%'; xa.style.top = xb.style.top = xcy + '%';
+      [xg[0], xg[0] + xw].forEach((x, n) => { const t = el('div', 'xt', ap); t.style.left = x + '%'; t.style.width = 'max(1px, .09%)'; if (!n) t.style.transform = 'translateX(-100%)'; t.style.top = (xcy - xh * .7) + '%'; t.style.height = (xh * 1.4) + '%'; });   // left stop ends at the track start, right stop starts at its end
+      const xf = Bx(el('div', 'xf', ap), 'xfader'); xf.style.top = (xcy - xh / 2) + '%'; xf.style.height = xh + '%'; el('b', '', xf); R.xfader = xf;
       const ak = Cx(el('div', 'akai', ap), 'akai', true); ak.textContent = 'AKAI'; el('small', '', ak, 'Professional');
 
       // ---- the unit is a controller: the same messages the real APC40 sends, through the desk's own binding map ----
