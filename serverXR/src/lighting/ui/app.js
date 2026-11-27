@@ -5080,6 +5080,8 @@ function buildSerial() {
 }
 
 /* =============== the stack: layers, looks, steps =============== */
+// Same cap as MAX_STEPS in looks.js (the server cuts anything above it, so the editor stops here too).
+const MAX_LOOK_STEPS = 320;
 /* A look is a list of steps; a layer is a look under a finger. Scene, palette, chase and
    wave stopped being four objects on the server, so they are one editor here: the step
    list IS the difference between them, and the words under it say which one you have
@@ -5555,7 +5557,7 @@ function buildSteps() {
   $('#stepAdd').addEventListener('click', () => {
     const l = lookById(selLook); if (!l) return;
     if (!S.fixtures.length) return say('nothing patched to record', true);
-    if (l.steps.length >= 64) return say('that is as many steps as a look holds', true);
+    if (l.steps.length >= MAX_LOOK_STEPS) return say('that is as many steps as a look holds', true);
     edit({ steps: l.steps.concat([stageStep(l)]) });
   });
   // Follow: every role this palette carries stops being a number in this look and
