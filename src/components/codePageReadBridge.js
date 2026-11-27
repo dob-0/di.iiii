@@ -75,6 +75,8 @@ export function sanitizeReadBody(path, body) {
             blackout: body.blackout,
             fixtures: (Array.isArray(body.fixtures) ? body.fixtures : []).map((f) => ({
                 id: f?.id, name: f?.name, universe: f?.universe, address: f?.address, profile: f?.profile,
+                // the light's place on the stage plan, so a page can draw the rig as the desk's minimap does
+                x: f?.x, y: f?.y,
                 // channel names in profile order, with their levels; nothing else of the fixture
                 values: f?.values && typeof f.values === 'object' ? { ...f.values } : {}
             }))
