@@ -41,6 +41,7 @@ function page(o = {}) {
     const midiLive = { master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null, fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255 };
     const midiPickup = {}, midiLastVal = {}, midiMap = A.map, midiPending = new Map(), midiLedSent = new Set();
     const midiTabId = 'tab';
+    const midiTargets = [], midiReleaseAll = () => {};   // the APC40 patch's hold release and relative-knob exemption (#1397)
     const window = { deskMidiCues: A.mcl, deskPanicKeys: { midiBlackoutToggle: (b) => ({ blackout: !b }) } };
     const looksOf = () => (Array.isArray(S && S.looks) ? S.looks : []);
     const padLooksOf = looksOf;   // no pad order in this harness: the pads read the desk order
@@ -86,8 +87,8 @@ describe('I1: an armed tab never takes over from the page defaults', () => {
     expect(api.armed).toBe(true)
     expect(api.wait).toBe(true)
     api.midiSend('api/master', { master: 10 })
-    expect(api.pending.size).toBe(0)
-    expect(log.fetches.filter((f) => f.route !== 'api/onair')).toEqual([])
+    expect([...api.pending.keys()].filter((k) => k !== 'hold:clearflash')).toEqual([])   // only the arm-time clearFlash may wait behind the clear
+    expect(log.fetches.filter((f) => f.route !== 'api/onair' && f.route !== 'api/raw' && f.route !== 'api/fx')).toEqual([])   // api/raw + api/fx = the arm-time clear of a stale hit and of a stale software strobe (#1397)
     api.setS(desk(128)); api.midiLiveArrived()
     expect(api.wait).toBe(false)
     expect(api.live.master).toBe(128)        // not the default 255
@@ -113,6 +114,15 @@ describe('I1: an armed tab never takes over from the page defaults', () => {
   })
   it('every applied desk state tells the mirror', () => {
     expect(SRC).toMatch(/S = next;\s*midiLiveArrived\(\);/)
+  })
+})
+
+describe('a stale hit is cleared on ARM (#1397 review L2)', () => {
+  it('arming sends one owner-scoped raw clear, so a hit whose release never came cannot stay on', async () => {
+    const { api, log } = page({ S: desk() })
+    api.midiSetArmed(true)
+    await vi.waitFor(() => expect(log.fetches.filter((f) => f.route === 'api/raw').length).toBe(1))
+    expect(log.fetches.find((f) => f.route === 'api/raw').body).toEqual({ owner: 'apc40', clear: true })
   })
 })
 
@@ -214,7 +224,7 @@ describe('the fast poll and the urgent sends', () => {
       api.midiSetArmed(true)
       api.midiSend('api/looks/fire', { id: 'l1', autoplayOff: true }, 'lookpad:3', true)
       await vi.advanceTimersByTimeAsync(5)   // 5 ms: far under the 40 ms merge timer
-      expect(log.fetches.filter((f) => f.route !== 'api/onair')).toEqual([{ route: 'api/looks/fire', body: { id: 'l1', autoplayOff: true } }])
+      expect(log.fetches.filter((f) => f.route !== 'api/onair' && f.route !== 'api/raw' && f.route !== 'api/fx')).toEqual([{ route: 'api/looks/fire', body: { id: 'l1', autoplayOff: true } }])
     } finally { vi.useRealTimers() }
   })
   it('the pad handler builds that one call: fire body + autoplayOff, sent as the urgent key', () => {
@@ -267,6 +277,9 @@ describe('state.onAir is the desk\'s own fact and the page follows it', () => {
 
 const withLooks = (extra = {}) => desk(128, { looks: [{ id: 'l1', name: 'On air' }, { id: 'l2', name: 'Other' }], ...extra })
 
+// ARM's own one-time hold clear (#1397 L2: a hit whose release never came lets go on ARM) and the on-air poll are not presses.
+const notArmNoise = (f) => f.route !== 'api/onair' && !(f.route === 'api/raw' && f.body && f.body.owner === 'apc40' && f.body.clear === true) && !(f.route === 'api/fx' && f.body && f.body.clearFlash === true)
+
 describe('round 3: the look pad press at the handler (N4, and the two mutations the round-2 review found alive)', () => {
   it('a look pad press is ONE fire call carrying autoplayOff, sent at once with no 40 ms wait', async () => {
     vi.useFakeTimers()
@@ -276,7 +289,7 @@ describe('round 3: the look pad press at the handler (N4, and the two mutations 
       api.midiLookPress(1)
       await vi.advanceTimersByTimeAsync(5)   // far under the 40 ms merge timer
       // exactly one call: a separate api/cues/autoplay call before the fire ("two calls again") makes this two
-      expect(log.fetches.filter((f) => f.route !== 'api/onair')).toEqual([{ route: 'api/looks/fire', body: { id: 'l2', autoplayOff: true } }])
+      expect(log.fetches.filter(notArmNoise)).toEqual([{ route: 'api/looks/fire', body: { id: 'l2', autoplayOff: true } }])
       expect(log.leds).toEqual(['l2'])
     } finally { vi.useRealTimers() }
   })
@@ -330,7 +343,7 @@ describe('round 3: waiting for the first desk state (N1, N2, N3)', () => {
     expect(w.api.wait).toBe(true)
     w.api.midiLookPress(0)
     expect(w.log.leds).toEqual([])
-    expect(w.log.fetches.filter((f) => f.route !== 'api/onair')).toEqual([])
+    expect(w.log.fetches.filter(notArmNoise)).toEqual([])
     expect(w.log.flashes[0]).toMatch(/waiting for the desk — nothing sent/)
     expect(log.leds).toEqual([])
   })
@@ -342,7 +355,7 @@ describe('round 3: waiting for the first desk state (N1, N2, N3)', () => {
     expect(api.live.blackout).toBe(false)
     expect(log.paints).toBe(1)   // only ARM's own full repaint, none for the press
     expect(log.flashes[0]).toMatch(/waiting for the desk — nothing sent/)
-    expect(log.fetches.filter((f) => f.route !== 'api/onair')).toEqual([])
+    expect(log.fetches.filter(notArmNoise)).toEqual([])
   })
   it('after the wait, the blackout pad flips and sends as before', async () => {
     const { api, log } = page({ S: desk() })

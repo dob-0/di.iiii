@@ -211,7 +211,9 @@ function headsFrame(state, now, kindAllows) {
     const offsets = headOffsets(now, epoch, look.heads, look.heads.units);
     for (const unit of look.heads.units) {
       const off = offsets.get(unit.id);
-      if (off) out.set(unit.id, { off, unit, level: layer.level });
+      // Movement size: scale the swing around the look's own centre (the rest pan/tilt). Absent or 1 = the offset as it was.
+      const hs = Number.isFinite(layer.headScale) ? clamp(layer.headScale, 0, 1) : 1;
+      if (off) out.set(unit.id, { off: hs === 1 ? off : { pan: off.pan * hs, tilt: off.tilt * hs }, unit, level: layer.level });
     }
   }
   return out.size ? out : null;

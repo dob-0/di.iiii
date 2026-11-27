@@ -16,7 +16,7 @@ const path = require('path');
 const { ArtNet, broadcastPlan, localAddresses } = require('./artnet');
 const { decideIdentify } = require('./identify');
 const { readTestMove, pressTestMove, stopTestMove, testMoveLive } = require('./testmove');
-const { FINE_NAMES, fineRoleIn } = require('./roles');
+const { FINE_NAMES, fineRoleIn, roleKind } = require('./roles');
 const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
   Engine, PROFILES, makeFixture, DEFAULT_LIMITS, roleKinds, ROLE_DEFAULTS,
@@ -1399,6 +1399,63 @@ function createDesk(opts = {}) {
   // with keys that can never do anything.
   // `owner` is the caller's tag (holds.js): a value takes the channel for it, a release
   // lets go only of a channel it holds. Returns the holder a release was refused for.
+  // THE ROOM'S FLASH RULE FOR THE api/raw HOLDS (PR #1397 round 4, R3-I1; WCAG 2.3.1): no more than 3 flashes a second.
+  // SCOPE (R4-I1): ONLY api/raw (the APC40 hits and any raw client). NOT capped here, on purpose and pending the owner's answer on
+  // scene strobe speed: api/fixture values, scene recall, cue GO, looks/fire (tests/test-strobe-cap.js pins this).
+  // The page caps its own strobe, but any client can POST api/raw, so the desk holds the line itself, two ways:
+  //  1. a raw write to a `strobe`-role channel is capped like the page's capStrobeDmx: DMX 4-103 (the 1-20 Hz band of the
+  //     BAR1240PIX57) is written as at most 14 (= 2.92 Hz), a value past the band as 0 (open), 0-3 stay open;
+  //  2. a fixture takes at most RAW_RISES_PER_S rising edges a second on its light channels through api/raw (a value
+  //     crossing up through 128); the next one inside the same second is refused as 'rate' and the channel stays as it was.
+  const RAW_STROBE_LO = 4, RAW_STROBE_HI = 103, RAW_STROBE_CAP = 14;
+  const RAW_RISES_PER_S = 3;
+  const RAW_RISE_GAP_MS = 334;
+  const FLASH_LEASE_MS = 3000;       // a software-strobe hit lives this long after its last api/fx call
+  const riseLog = new Map();          // 'universe:address' -> [ms of recent rising edges]
+  function rawFixtureAt(universe, ch) {
+    const u = Math.max(0, Math.min(32767, universe | 0));
+    for (const f of state.fixtures) {
+      if ((f.universe | 0) !== u) continue;
+      const p = PROFILES[f.profile];
+      const i = ch - (f.address | 0);
+      if (p && i >= 0 && i < p.channels.length) return { f, role: p.channels[i] };
+    }
+    return null;
+  }
+  function capRawStrobe(v) {
+    const n = Math.round(Number(v));
+    if (!Number.isFinite(n) || n < 0) return 0;
+    if (n < RAW_STROBE_LO) return n;
+    if (n > RAW_STROBE_HI) return 0;
+    return Math.min(n, RAW_STROBE_CAP);
+  }
+  // The channels of one request that would go over the rise limit. A fixture counts once per request (a hit raises its
+  // dimmer and colours together = one flash).
+  function rawRiseRefusals(list, now) {
+    const refuse = new Set();
+    const seen = new Map();            // fixture key -> allowed (true) / refused (false) for this request
+    list.forEach((c, idx) => {
+      const ch = c ? c.channel | 0 : 0;
+      if (ch < 1 || ch > 512 || c.value == null || c.value < 128) return;
+      const hit = rawFixtureAt(c.universe, ch);
+      if (!hit) return;
+      const kind = roleKind(hit.role);
+      if (kind !== 'level' && kind !== 'emitter') return;
+      const prev = state.raw[Math.max(0, Math.min(32767, c.universe | 0)) + ':' + ch];
+      if (prev != null && prev >= 128) return;                   // already up: not a new flash
+      const fk = (hit.f.universe | 0) + ':' + (hit.f.address | 0);
+      if (!seen.has(fk)) {
+        const log = (riseLog.get(fk) || []).filter((t) => now - t < 1000);
+        // at most 3 in any second AND spaced (>= 334 ms apart), so the flashes read as a 3 Hz strobe, not a burst (R4-L5)
+        const ok = log.length < RAW_RISES_PER_S && (!log.length || now - log[log.length - 1] >= RAW_RISE_GAP_MS);
+        if (ok) log.push(now);
+        riseLog.set(fk, log);
+        seen.set(fk, ok);
+      }
+      if (!seen.get(fk)) refuse.add(idx);
+    });
+    return refuse;
+  }
   function setRaw(universe, channel, value, owner, all) {
     const ch = channel | 0;
     if (ch < 1 || ch > 512) return null;
@@ -1407,7 +1464,10 @@ function createDesk(opts = {}) {
       const r = holds.release(state, key, owner, all);
       return r === 'released' || r === 'free' ? null : r;
     }
-    holds.hold(state, key, Math.max(0, Math.min(255, value | 0)), owner);
+    let v = Math.max(0, Math.min(255, value | 0));
+    const hit = rawFixtureAt(universe, ch);
+    if (hit && hit.role === 'strobe') v = capRawStrobe(v);
+    holds.hold(state, key, v, owner);
     return null;
   }
 
@@ -2001,6 +2061,10 @@ function createDesk(opts = {}) {
       if (body.on != null) layer.on = !!body.on;
       if (body.lookId !== undefined) layer.lookId = typeof body.lookId === 'string' && body.lookId ? body.lookId.slice(0, 40) : null;
       if (body.rate != null && Number.isFinite(+body.rate)) layer.rate = Math.max(0.01, Math.min(64, +body.rate));
+      if (body.headScale != null && Number.isFinite(+body.headScale)) {
+        const hs = Math.max(0, Math.min(1, +body.headScale));
+        if (hs < 1) layer.headScale = hs; else delete layer.headScale;
+      }
       if (body.name != null) layer.name = String(body.name).slice(0, 60);
       if (LAYER_MERGES.includes(body.merge)) layer.merge = body.merge;
       if (LOOK_KINDS.includes(body.mask)) layer.mask = body.mask;
@@ -2591,8 +2655,12 @@ function createDesk(opts = {}) {
       } else {
         const refused = {};
         const one = (u, ch, v) => { const by = setRaw(u, ch, v, owner, all); if (by) refused[by] = (refused[by] || 0) + 1; };
-        if (Array.isArray(body.channels)) for (const c of body.channels) one(c && c.universe, c && c.channel, c && c.value);
-        else if (body.channel) one(body.universe, body.channel, body.value);
+        const list = Array.isArray(body.channels) ? body.channels : (body.channel ? [{ universe: body.universe, channel: body.channel, value: body.value }] : []);
+        const tooFast = rawRiseRefusals(list, Date.now());
+        list.forEach((c, idx) => {
+          if (tooFast.has(idx)) { refused.rate = (refused.rate || 0) + 1; return; }
+          one(c && c.universe, c && c.channel, c && c.value);
+        });
         if (Object.keys(refused).length) out.refused = refused;
       }
       engine.cancelFade(); save(); pushFrame();
@@ -2804,6 +2872,13 @@ function createDesk(opts = {}) {
       // Per-fixture effect: {mode, ids:[...]} gives just those fixtures their own mode and
       // leaves the rig-wide effect alone ('none' holds them still while the rest run;
       // 'rig' hands them back to the rig-wide effect).
+      // {clearFlash:true}: every software-strobe lease lets go (ARM sends it: nothing a closed tab left behind survives).
+      if (body.clearFlash === true) {
+        let n = 0;
+        for (const f of state.fixtures) if (f.fx && f.fx.flash) { delete f.fx; n++; }
+        if (n) { save(); pushFrame(); }
+        return json(res, { ok: true, cleared: n, fx: state.fx });
+      }
       if (Array.isArray(body.ids)) {
         if (body.mode !== 'rig' && !FX_MODES.includes(body.mode)) {
           return json(res, { error: `"${body.mode}" is not an effect` }, 400);
@@ -2812,7 +2887,11 @@ function createDesk(opts = {}) {
         const hit = state.fixtures.filter((f) => ids.has(f.id));
         if (!hit.length) return json(res, { error: 'none of those fixtures is patched' }, 400);
         for (const f of hit) {
-          if (body.mode === 'rig') delete f.fx; else f.fx = { mode: body.mode };
+          if (body.mode === 'rig') delete f.fx;
+          // flash:true (strobe only) = a leased hit: it flashes a dark lamp too and expires FLASH_LEASE_MS after the last
+          // call, so the page re-sends it while the pad is held and a dropped page cannot leave it on.
+          else if (body.flash === true && body.mode === 'strobe') f.fx = { mode: 'strobe', flash: true, until: Date.now() + FLASH_LEASE_MS };
+          else f.fx = { mode: body.mode };
         }
         state.activeScene = null;
         save(); pushFrame(); return json(res, { ok: true, fx: state.fx, fixtures: hit.length });

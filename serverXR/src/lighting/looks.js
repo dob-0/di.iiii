@@ -180,6 +180,9 @@ function sanitizeLayer(layer) {
     mask: KINDS.includes(layer.mask) ? layer.mask : 'all',
     // Speed against the desk's clock, so one layer can run at half time.
     rate: Math.max(0.01, Math.min(64, num(layer.rate, 1))),
+    // Movement size (owner N7315): a live 0-1 scale of this layer's head motion around each look's own centre. Left out at
+    // 1 (the default) so a saved layer is byte-identical to before until somebody turns it.
+    ...(num(layer.headScale, 1) < 1 ? { headScale: clamp01(num(layer.headScale, 1)) } : {}),
   };
 }
 
