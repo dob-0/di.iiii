@@ -83,6 +83,37 @@
     { key: 'tempo:rel', hw: 'TEMPO knob', does: 'Tempo, 1 BPM a click', range: '20-300 BPM' },
     { key: 'cfxmode:rel', hw: 'CUE LEVEL knob', does: 'Colour effect mode, one step a click', range: 'none hue chase swap' },
   ];
+  // Map-all (owner 2026-11-27, apc40-map-all.md): the legend rows of the remaining controls (labels only; the layout is untouched).
+  const COL = ['left truss', 'right truss', 'back bars', 'movers', 'all', 'zoom', 'layer', 'colour FX'];
+  const CFXM = ['none', 'hue', 'chase', 'swap'];
+  const AB = ['flip left truss side A/B', 'flip right truss side A/B', 'flip back bars side A/B', 'swap every side', 'half time', 'double time', 'rate back to 1x', 'crossfader to centre'];
+  const ACT = { 4: 'movers on / off', 5: 'all on / off', 6: 'Cues layer on / off', 7: 'freeze the heads', 8: 'release every hold and strobe' };
+  const MAPALL = [
+    { key: 'beamdim', hw: 'TRACK FADER 4', does: 'Movers dimmer', range: '0-100 %' },
+    { key: 'alldim', hw: 'TRACK FADER 5', does: 'All fixtures dimmer', range: '0-255' },
+    { key: 'xfade', hw: 'CROSSFADER', does: 'Blend side A / side B of the trusses and bars', range: 'centre = both full' },
+    { key: 'fxbpm', hw: 'TRACK KNOB 3', does: 'FX tempo', range: '20-300 BPM' },
+    { key: 'fxdepth', hw: 'TRACK KNOB 4', does: 'FX depth', range: '0-255' },
+    { key: 'hold', hw: 'TRACK KNOB 5', does: 'Chase hold', range: '50-2000 ms' },
+    { key: 'shift', hw: 'SHIFT', does: 'Hold: clip stop releases every column', range: 'hold' },
+    { key: 'fxon', hw: 'SCENE LAUNCH 4', does: 'FX on / off', range: 'switch' },
+    { key: 'chaseon', hw: 'RECORD', does: 'Chase run / stop', range: 'switch' },
+    { key: 'lookpage:home', hw: 'USER', does: 'Look page 1', range: 'press' },
+    { key: 'fx:up', hw: 'UP', does: 'FX depth +32', range: 'press' },
+    { key: 'fx:down', hw: 'DOWN', does: 'FX depth -32', range: 'press' },
+    { key: 'fxprev', hw: 'DEVICE LEFT (1)', does: 'FX mode previous', range: 'press' },
+    { key: 'fxnext', hw: 'DEVICE RIGHT (2)', does: 'FX mode next', range: 'press' },
+    { key: 'spread:prev', hw: 'BANK LEFT (3)', does: 'FX spread previous', range: 'press' },
+    { key: 'spread:next', hw: 'BANK RIGHT (4)', does: 'FX spread next', range: 'press' },
+  ];
+  for (let n = 1; n <= 8; n++) {
+    MAPALL.push({ key: 'col:release:' + n, hw: 'CLIP STOP ' + n, does: 'Release ' + COL[n - 1] + (n === 1 ? ' (with Shift: every column)' : ''), range: 'press' });
+    MAPALL.push({ key: 'solo:' + n, hw: 'SOLO ' + n, does: n <= 4 ? 'Solo ' + COL[n - 1] + ' (others to 15 %)' : 'Colour FX ' + CFXM[n - 5], range: 'switch' });
+    MAPALL.push({ key: 'arm:' + n, hw: 'RECORD ARM ' + n, does: n <= 5 ? 'Hold: white flash, ' + COL[n - 1] : 'Hold: strobe ' + COL[n - 6] + ' (3 Hz cap)', range: 'hold' });
+    MAPALL.push({ key: 'ab:' + n, hw: 'A/B ' + n, does: AB[n - 1], range: 'press' });
+    if (n >= 4) MAPALL.push({ key: 'act:' + n, hw: 'ACTIVATOR ' + n, does: ACT[n], range: 'switch' });
+  }
+  CONTROLS.push(...MAPALL);
   // Printed names (protocol v1.2 inbound table) for the notes the drawing labels.
   const HW = { 0x63: 'TAP TEMPO', 0x64: 'NUDGE -', 0x65: 'NUDGE +', 0x5a: 'METRONOME', 0x3e: 'DEVICE BUTTON 5 (Dev. On/Off)', 0x3f: 'DEVICE BUTTON 6 (Dev. Lock)', 0x40: 'DEVICE BUTTON 7 (Clip/Dev. View)', 0x41: 'DEVICE BUTTON 8 (Detail View)', 0x57: 'PAN', 0x58: 'SENDS', 0x66: 'SESSION REC', 0x67: 'BANK LOCK', 0x5b: 'PLAY', 0x51: 'STOP ALL CLIPS', 0x52: 'SCENE LAUNCH 1', 0x53: 'SCENE LAUNCH 2', 0x54: 'SCENE LAUNCH 3', 0x55: 'SCENE LAUNCH 4', 0x56: 'SCENE LAUNCH 5', 0x60: 'RIGHT', 0x61: 'LEFT' };
   const pm = () => (typeof module === 'object' && module && module.exports) ? require('./midiPatch.js') : root.deskMidiPatch;

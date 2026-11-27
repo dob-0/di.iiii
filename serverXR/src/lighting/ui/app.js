@@ -6100,7 +6100,8 @@ const midiSeenNote = new Set();
 // fader against, and re-reading a 500-scene state blob per message is not that. While
 // disarmed it is refreshed from the desk; while armed this page is the one moving them.
 const midiLive = { strobeU: 0.5, master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null,
-  fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255 };
+  fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255,
+  xf: 0.5, base: {}, side: { left: 'A', right: 'A', back: 'A' }, solo: new Set(), shift: false, freeze: null };
 
 /* ---- the send queue ---- */
 const midiPending = new Map();
@@ -6119,6 +6120,8 @@ function midiSend(route, body, key, last) {
   const urgent = !!last || k.startsWith('lookpad:');
   if (cur) { Object.assign(cur.body, body); if (urgent) cur.urgent = true; }
   else midiPending.set(k, { route, body: Object.assign({}, body), urgent });
+  // A hit (its press or its release) leaves before the queued fader writes: a flash must not wait behind 30 dimmer posts.
+  if (k.startsWith('hold:') && midiPending.size > 1) { const it = midiPending.get(k); const rest = [...midiPending].filter(([x]) => x !== k); midiPending.clear(); midiPending.set(k, it); for (const [x, v] of rest) midiPending.set(x, v); }
   if (urgent && !midiFlushing) { clearTimeout(midiFlushTimer); midiFlushTimer = null; midiFlush(); }
   else if (!midiFlushTimer && !midiFlushing) midiFlushTimer = setTimeout(midiFlush, 40);
 }
@@ -6173,13 +6176,13 @@ async function midiFlush() {
 const midiCueSent = {};
 // Hold-to-flash state (see the Hits group): target key -> { channels, timer }.
 const midiHeld = new Map();
-function midiHoldDown(key, fixtures) {
+function midiHoldDown(key, fixtures, maxMs) {
   const mp = window.deskMidiPatch;
   if (!midiArmed || !mp || midiHeld.has(key)) return;
   const channels = [];
   for (const f of fixtures) channels.push(...mp.flashChannels(f, S.profiles[f.profile]));
   if (!channels.length) return;
-  midiHeld.set(key, { channels, timer: setTimeout(() => midiHoldUp(key), mp.MAX_HOLD_MS) });
+  midiHeld.set(key, { channels, timer: setTimeout(() => midiHoldUp(key), maxMs || mp.MAX_HOLD_MS) });
   midiSend('api/raw', { owner: mp.HOLD_OWNER, channels }, 'hold:' + key, true);
 }
 function midiHoldUp(key) {
@@ -6194,12 +6197,12 @@ function midiHoldUp(key) {
 }
 // Strobe hits (N7314): hold-to-flash plus the strobe. The bar's strobe channel is held at the rate knob, capped at 3 Hz in
 // midiPatch.js (capStrobeDmx); fixtures with no strobe channel get the software strobe (fx.js, also <= 3 Hz); a shutter is never written.
-function midiStrobeDown(key, kind) {
+function midiStrobeDown(key, kind, list, maxMs) {
   const mp = window.deskMidiPatch;
   if (!midiArmed || !mp || midiHeld.has(key)) return;
-  const hit = mp.strobeHit((S && S.fixtures) || [], (f) => S.profiles[f.profile], kind, midiLive.strobeU);
+  const hit = mp.strobeHit(list || (S && S.fixtures) || [], (f) => S.profiles[f.profile], kind, midiLive.strobeU);
   if (!hit.holds.length && !hit.fxIds.length) return;
-  const h = { channels: hit.holds, fxIds: hit.fxIds, timer: setTimeout(() => midiHoldUp(key), mp.MAX_HOLD_MS) };
+  const h = { channels: hit.holds, fxIds: hit.fxIds, strobe: true, timer: setTimeout(() => midiHoldUp(key), maxMs || mp.MAX_HOLD_MS) };
   midiHeld.set(key, h);
   if (hit.holds.length) midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: hit.holds }, 'hold:' + key, true);
   // The software strobe is a LEASE on the desk (api/fx flash:true, 3 s): it flashes the lamps even from a dark look, and the
@@ -6213,13 +6216,14 @@ function midiStrobeDown(key, kind) {
 // The rate knob turned while a strobe is held: the held strobe channel follows (still through the cap).
 function midiStrobeRate() {
   const mp = window.deskMidiPatch;
-  const h = midiHeld.get('hit:strobe-all');
-  if (!h || !h.channels) return;
   const dmx = mp.strobeDmxFromUnit(midiLive.strobeU);
-  const upd = h.channels.filter((c) => c.value !== 255 && c.value >= 4 && c.value <= 14).map((c) => ({ ...c, value: dmx }));
-  if (!upd.length) return;
-  h.channels = h.channels.map((c) => (c.value !== 255 && c.value >= 4 && c.value <= 14 ? { ...c, value: dmx } : c));
-  midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: upd }, 'hold:strobe-rate', true);
+  for (const [key, h] of midiHeld) {
+    if (!h.strobe || !h.channels) continue;
+    const upd = h.channels.filter((c) => c.value !== 255 && c.value >= 4 && c.value <= 14).map((c) => ({ ...c, value: dmx }));
+    if (!upd.length) continue;
+    h.channels = h.channels.map((c) => (c.value !== 255 && c.value >= 4 && c.value <= 14 ? { ...c, value: dmx } : c));
+    midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: upd }, 'hold:strobe-rate:' + key, true);
+  }
 }
 // Every hit lets go: disarm, a new controller, page close. Goes out even as the gate closes.
 function midiReleaseAll() {
@@ -6321,7 +6325,7 @@ function buildMidiTargets() {
     for (const g of groups) {
       const ids = g.ids;
       cc(`grp:${g.key}:dim`, `${g.label} dimmer  (${ids.length})`, () => mp.groupDimRead((S && S.fixtures) || [], g),   // the desk's values at catch time, never the copy taken at build
-        (u) => { const v = Math.round(u * 255); for (const id of ids) midiSend('api/fixture', { id, values: { dimmer: v } }, 'api/fixture:' + id); });
+        (u) => { midiLive.base[g.key] = u; applyLevels([g.key]); });
       pad(`grp:${g.key}:on`, `${g.label} on / off  (a press flips it)`, () => {
         if (!midiArmed) return;
         // flips what the desk shows now, not a copy; the LED follows at once
@@ -6434,6 +6438,122 @@ function buildMidiTargets() {
         sendCfx({ mode: 'swap', amount: 255 }, 'cfx:hit');
       },
       up: swapUp });
+
+
+    // ---- map-all (owner 2026-11-27, agent-reports-2026-11-27/apc40-map-all.md) ----
+    // Columns = tracks 1-8: left truss, right truss, back bars, movers, all, zoom, layer, colour FX. Everything below goes
+    // through midiSend (ARM gate); a hit lets go on note-off, disarm, page close or its own timer.
+    T.push({ group: 'Columns  (clip stop · solo · record arm · A/B · activator · crossfader)' });
+    const colKeys = ['left', 'right', 'back'];
+    const gById = Object.fromEntries(groups.map((g) => [g.key, g]));
+    const colName = ['Left truss', 'Right truss', 'Back bars', 'Movers', 'All'];
+    const moverFx = () => fixtures.filter((f) => mp.isMover(f, S.profiles[f.profile]));
+    const colFx = (n) => (n <= 3 ? fixtures.filter((f) => ((gById[colKeys[n - 1]] || {}).ids || []).includes(f.id)) : n === 4 ? moverFx() : n === 5 ? fixtures : []);
+    const soloIds = () => { const out = new Set(); for (const n of midiLive.solo) for (const f of colFx(n)) out.add(f.id); return out; };
+    // A group's level = its fader x the crossfader (by side) x solo; the fader's own value is remembered per group.
+    function applyLevels(keys) {
+      const solo = soloIds();
+      for (const key of keys) {
+        const g = gById[key]; if (!g) continue;
+        if (midiLive.base[key] == null) midiLive.base[key] = mp.groupDimRead((S && S.fixtures) || [], g);
+        for (const id of g.ids) {
+          const v = Math.round(255 * midiLive.base[key] * mp.xfadeFactor(midiLive.side[key], midiLive.xf) * mp.soloFactor(solo, id));
+          const f = fxById(id); if (f && f.values) f.values.dimmer = v;
+          midiSend('api/fixture', { id, values: { dimmer: v } }, 'api/fixture:' + id);
+        }
+      }
+    }
+    const allKeys = () => colKeys.filter((k) => gById[k]);
+    cc('xfade', 'Crossfader  (side A <-> side B of the three groups; centre = both full)', () => midiLive.xf,
+      (u) => { midiLive.xf = u; applyLevels(allKeys()); });
+    for (let n = 1; n <= 8; n++) {
+      // A/B: 1-3 flip the group's side, 4 swaps every side, 5-8 time and crossfader reset.
+      pad('ab:' + n, n <= 3 ? `A/B ${n}  ${colName[n - 1]} side A / B` : ['', '', '', 'A/B 4  swap every side', 'A/B 5  half time', 'A/B 6  double time', 'A/B 7  rate back to 1x', 'A/B 8  crossfader to centre'][n - 1], () => {
+        if (!midiArmed) return;
+        if (n <= 3) { const k = colKeys[n - 1]; midiLive.side[k] = midiLive.side[k] === 'A' ? 'B' : 'A'; applyLevels([k]); midiFlash(`${colName[n - 1]} side ${midiLive.side[k]}`); }
+        else if (n === 4) { for (const k of colKeys) midiLive.side[k] = midiLive.side[k] === 'A' ? 'B' : 'A'; applyLevels(allKeys()); midiFlash('sides swapped'); }
+        else if (n === 8) { midiLive.xf = 0.5; applyLevels(allKeys()); midiFlash('crossfader centre'); }
+        else {
+          const l = layerById(TOUCH_LOOK_LAYER);
+          const to = n === 7 ? 1 : mp.rateStep(l ? l.rate : 1, n === 6 ? 1 : -1);
+          if (l) l.rate = to;
+          midiSend('api/layer', { id: TOUCH_LOOK_LAYER, rate: to }, 'api/layer:rate');
+          midiFlash('layer rate ' + to + 'x');
+        }
+        midiPaintLights();
+      });
+    }
+    // Clip stop = release the column (back to neutral). With SHIFT held it releases every column.
+    const zoomersAll = () => fixtures.filter((f) => mp.zoomRoles(S.profiles[f.profile]).length);
+    function releaseCol(n) {
+      if (n <= 5) {
+        const hadSolo = midiLive.solo.size;
+        midiLive.solo.delete(n);
+        if (n === 5) midiLive.solo.clear();
+        if (midiLive.solo.size !== hadSolo) applyLevels(allKeys());   // the others come back from 15 %
+        for (const f of colFx(n)) { f.on = true; midiSend('api/fixture', { id: f.id, on: true }, 'api/fixture:on:' + f.id, true); }
+        if (n <= 3) { midiLive.base[colKeys[n - 1]] = 1; applyLevels([colKeys[n - 1]]); }
+        else if (n === 5) { for (const k of allKeys()) midiLive.base[k] = 1; applyLevels(allKeys()); }
+        else for (const f of colFx(4)) midiSend('api/fixture', { id: f.id, values: { dimmer: 255 } }, 'api/fixture:' + f.id);
+      } else if (n === 6) {
+        for (const f of zoomersAll()) midiSend('api/fixture', { id: f.id, values: Object.fromEntries(mp.zoomRoles(S.profiles[f.profile]).map((r) => [r, 0])) }, 'api/fixture:zoom:' + f.id);
+      } else if (n === 7) {
+        const l = layerById(TOUCH_LOOK_LAYER); if (l) { l.level = 1; l.rate = 1; delete l.headScale; }
+        midiSend('api/layer', { id: TOUCH_LOOK_LAYER, level: 1, rate: 1, headScale: 1 }, 'api/layer:release');
+      } else sendCfx({ mode: 'none' }, 'cfx:mode');
+    }
+    for (let n = 1; n <= 8; n++) {
+      pad('col:release:' + n, `Clip stop ${n}  release column ${n}  (shift: every column)`, () => {
+        if (!midiArmed) return;
+        if (midiLive.shift) { for (let i = 1; i <= 8; i++) releaseCol(i); midiFlash('every column released'); } else { releaseCol(n); midiFlash(`column ${n} released`); }
+        midiPaintLights();
+      });
+    }
+    T.push({ key: 'shift', label: 'Shift  (hold: clip stop releases every column)', kind: 'note',
+      apply: () => { if (midiArmed) midiLive.shift = true; }, up: () => { midiLive.shift = false; } });
+    // Solo 1-4: the column stays, the rest sits at 15 %. Solo 5-8: the colour effect mode, direct.
+    for (let n = 1; n <= 8; n++) {
+      pad('solo:' + n, n <= 4 ? `Solo ${n}  ${colName[n - 1]}  (others to ${Math.round(mp.SOLO_REST * 100)} %)` : `Solo ${n}  colour FX ${mp.CFX_MODES[n - 5]}`, () => {
+        if (!midiArmed) return;
+        if (n <= 4) { if (midiLive.solo.has(n)) midiLive.solo.delete(n); else midiLive.solo.add(n); applyLevels(allKeys()); midiFlash(midiLive.solo.size ? 'solo ' + [...midiLive.solo].map((i) => colName[i - 1]).join(' + ') : 'solo off'); }
+        else { sendCfx({ mode: mp.CFX_MODES[n - 5] }, 'cfx:mode'); midiFlash('colour FX ' + mp.CFX_MODES[n - 5]); }
+        midiPaintLights();
+      });
+    }
+    // Record arm: a flash that ends on note-off, or after ARM_FLASH_MS (a toggle button may never send its note-off in Mode 0).
+    const armKeys = (n) => 'arm:' + n;
+    for (let n = 1; n <= 8; n++) {
+      const key = armKeys(n);
+      const down = () => (n <= 5 ? midiHoldDown(key, colFx(n), mp.ARM_FLASH_MS)   // 6 left, 7 right (software strobe), 8 back bars (strobe channel, capped)
+        : midiStrobeDown(key, 'all', colFx(n - 5), mp.ARM_FLASH_MS));
+      T.push({ key, label: n <= 5 ? `Record arm ${n}  hold: white flash, ${colName[n - 1]}` : `Record arm ${n}  hold: strobe ${colName[n - 6]}  (<= 3 Hz)`, kind: 'note', apply: down, up: () => midiHoldUp(key) });
+    }
+    // Activator 4-8 (1-3 are the group switches above).
+    const layerOn = () => { const l = layerById(TOUCH_LOOK_LAYER); return !l || l.on !== false; };
+    const actDo = {
+      4: () => { const to = !colFx(4).every((f) => f.on !== false); for (const f of colFx(4)) { f.on = to; midiSend('api/fixture', { id: f.id, on: to }, 'api/fixture:on:' + f.id, true); } midiFlash('movers ' + (to ? 'on' : 'off')); },
+      5: () => { const to = !fixtures.every((f) => f.on !== false); for (const f of fixtures) { f.on = to; midiSend('api/fixture', { id: f.id, on: to }, 'api/fixture:on:' + f.id, true); } midiFlash('all ' + (to ? 'on' : 'off')); },
+      6: () => { const to = !layerOn(); const l = layerById(TOUCH_LOOK_LAYER); if (l) l.on = to; midiSend('api/layer', { id: TOUCH_LOOK_LAYER, on: to }, 'api/layer:on', true); midiFlash('Cues layer ' + (to ? 'on' : 'off')); },
+      7: () => { const l = layerById(TOUCH_LOOK_LAYER); const frozen = l && Number.isFinite(+l.headScale) && l.headScale === 0; const to = frozen ? 1 : 0; if (l) { if (to < 1) l.headScale = 0; else delete l.headScale; } midiSend('api/layer', { id: TOUCH_LOOK_LAYER, headScale: to }, 'api/layer:head', true); midiFlash(to ? 'heads move' : 'heads frozen'); },
+      8: () => { midiReleaseAll(); midiFlash('every hold and strobe released'); },
+    };
+    const actLabel = { 4: 'movers on / off', 5: 'all on / off', 6: 'Cues layer on / off', 7: 'freeze the heads', 8: 'release every hold and strobe' };
+    for (let n = 4; n <= 8; n++) pad('act:' + n, `Activator ${n}  ${actLabel[n]}`, () => { if (!midiArmed) return; actDo[n](); midiPaintLights(); });
+
+    T.push({ group: 'Transport extras  (user · arrows · device and bank buttons)' });
+    pad('lookpage:home', 'Look page  first', () => midiLookPageStep(-1000));
+    const fxStep = (d) => () => { if (!midiArmed) return; midiLive.fxDepth = Math.max(0, Math.min(255, midiLive.fxDepth + d)); midiSend('api/fx', { depth: midiLive.fxDepth }, 'fx:depth'); midiFlash('FX depth ' + midiLive.fxDepth); };
+    pad('fx:up', 'FX depth  +32', fxStep(32));
+    pad('fx:down', 'FX depth  -32', fxStep(-32));
+    const spreadStep = (d) => () => {
+      if (!midiArmed) return;
+      const list = mp.KNOB_PAGES[0].knobs[1].values; const cur = list.indexOf(S && S.fx ? S.fx.spatial : 'patch');
+      const to = list[(Math.max(0, cur) + d + list.length) % list.length];
+      if (S && S.fx) S.fx.spatial = to;
+      midiSend('api/fx', { spatial: to }, 'fx:spatial', true); midiFlash('FX spread ' + to);
+    };
+    pad('spread:prev', 'FX spread  previous', spreadStep(-1));
+    pad('spread:next', 'FX spread  next', spreadStep(1));
 
     T.push({ group: 'Safety' });
     pad('blackoutoff', 'Blackout release  (always off)', () => {
@@ -7104,6 +7224,26 @@ function midiBindLights() {
 // answer of api/looks/fire corrects them, the next poll confirms them.
 let midiPainter = null;
 // Is each rig group on, as the desk shows it now (the activator LEDs).
+// Lights of the per-track buttons: { key: velocity } (0 off, 1 on, 2 = the second colour of the A/B buttons).
+function midiColLeds() {
+  const mp = window.deskMidiPatch;
+  if (!mp || !S) return {};
+  const out = {};
+  const ks = ['left', 'right', 'back'];
+  for (let n = 1; n <= 3; n++) out['ab:' + n] = midiLive.side[ks[n - 1]] === 'B' ? 2 : 1;
+  for (let n = 1; n <= 4; n++) out['solo:' + n] = midiLive.solo.has(n) ? 1 : 0;
+  const cm = (S.colorFx && S.colorFx.mode) || 'none';
+  for (let n = 5; n <= 8; n++) out['solo:' + n] = mp.CFX_MODES[n - 5] === cm ? 1 : 0;
+  const fx = S.fixtures || [];
+  const mv = fx.filter((f) => mp.isMover(f, S.profiles[f.profile]));
+  out['act:4'] = mv.length && mv.every((f) => f.on !== false) ? 1 : 0;
+  out['act:5'] = fx.length && fx.every((f) => f.on !== false) ? 1 : 0;
+  const l = layerById(TOUCH_LOOK_LAYER);
+  out['act:6'] = !l || l.on !== false ? 1 : 0;
+  out['act:7'] = l && l.headScale === 0 ? 0 : 1;
+  out['act:8'] = midiHeld.size ? 1 : 0;
+  return out;
+}
 function midiGroupOn() {
   const mp = window.deskMidiPatch;
   if (!mp || !S) return {};
@@ -7121,7 +7261,7 @@ function midiLeds() {
       armed: () => midiArmed,   // only the armed tab owns the pads' lights (a getter: midiArmed is declared further down)
       map: () => midiMap,
       cues: () => CUES,
-      state: () => ({ blackout: midiBlackoutNow(), groupOn: midiGroupOn(), rings: midiRings() }),
+      state: () => ({ blackout: midiBlackoutNow(), groupOn: midiGroupOn(), rings: midiRings(), cols: midiColLeds() }),
       looks: () => padLooksOf(),   // a function declaration, hoisted: the const looksOf is further down
       page: () => midiLookPage,
       setPage: (p) => { midiLookPage = p; },
@@ -7233,7 +7373,7 @@ function midiLedsOff() {
     for (const k of Object.keys(midiMap)) {
       const b = midiMap[k];
       if (b && b.type === 'note' && b.ch === 1 && Number.isInteger(b.num)) midiLedOut.send([0x90, b.num, 0]);
-      else if (b && b.type === 'note' && /^grp:\w+:on$/.test(k) && b.ch >= 1 && b.ch <= 8) midiLedOut.send([0x90 | (b.ch - 1), b.num, 0]);
+      else if (b && b.type === 'note' && /^(grp:\w+:on|act:\d|solo:\d|ab:\d)$/.test(k) && b.ch >= 1 && b.ch <= 8) midiLedOut.send([0x90 | (b.ch - 1), b.num, 0]);
       else if (b && b.type === 'cc' && /^kn:/.test(k) && b.ch >= 1 && b.ch <= 9) midiLedOut.send([0xB0 | (b.ch - 1), b.num + 8, 0]);   // ring off
     }
   } catch (e) { /* port gone */ }
