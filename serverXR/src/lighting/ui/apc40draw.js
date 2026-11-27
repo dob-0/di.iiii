@@ -302,12 +302,16 @@
     // the PADS list. Owner 2026-11-27: "fix and update ui that i can see what is what".
     const PAD_RENDERED = [14, 13, 12, 11.5, 11];
     const READ_MIN = 11;
-    const NARROW_W = 1000;   // pane narrower than this: OVERVIEW (the whole unit fitted to the width, like the di music page; pads show their number)
+    const NARROW_W = 1000, READ_SCALE = 1.1;   // pane narrower than this: OVERVIEW (the whole unit fitted to the width, like the di music page; pads show their number)
 
     const css = document.createElement('style');
     css.textContent = CSS.join('\n') + [
       '.apc40{display:flex;flex-direction:column;gap:12px;align-items:stretch;min-width:0}',
       '.apc40 .apcwrap{position:relative;overflow:hidden;flex:none;min-width:0}',
+      '.apc40.pan .apcwrap{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain}',
+      '.apc40 .apcjump{display:none;gap:8px;align-items:center;font:12px/1.3 var(--mono);color:var(--muted)}',
+      '.apc40.pan .apcjump{display:flex}.apc40 .apcjump button{font:600 12px/1 var(--mono);padding:8px 12px;min-height:32px}',
+      '.apcview{display:inline-flex;gap:0}.apcview button{font:600 12px/1 var(--mono);padding:7px 12px;min-height:30px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer}.apcview button+button{border-left:0}.apcview button[aria-pressed=true]{background:var(--accent,#2b6cff);color:#fff}',
       '.apc40 .apcp{flex:none;width:' + NATIVE_W + 'px}',
       '.apcp .pad{border:1px solid rgba(255,255,255,.08);color:#151515;cursor:pointer;padding:0}',
       '.apcp .pad.live{background:linear-gradient(180deg,' + LIVE_GRADIENT[0] + ',' + LIVE_GRADIENT[1] + ');box-shadow:0 0 1.3cqw #ff0000;color:#fff;font-weight:700}',
@@ -363,10 +367,16 @@
     api.create = function (host, deps) {
       host.textContent = '';
       const wrap = el('div', 'apc40', host);
+      const jump = el('div', 'apcjump', wrap);
       const body = el('div', 'apcwrap', wrap);
       const side = el('div', 'apcside', wrap);
       const stage = el('div', 'apcstage', body);
       const ap = el('div', 'apcp', stage);
+      // Narrow pane, Labelled view: Left / Right buttons pan the unit (the pan box also scrolls by trackpad and scrollbar).
+      { const step = (d) => body.scrollBy({ left: d * Math.max(120, body.clientWidth - 90), behavior: 'smooth' });
+        const bl = el('button', 'sq', jump, '\u25C0 Left'), br = el('button', 'sq', jump, 'Right \u25B6');
+        bl.type = br.type = 'button'; bl.onclick = () => step(-1); br.onclick = () => step(1);
+        el('span', '', jump, 'the unit scrolls sideways (trackpad, scrollbar or buttons)'); }
       const R = {};   // geometry key -> element, for the leader lines and the live display
       const A = { cols: [], pads: [], scene: [], btn: {}, fad: [], arrows: {} };
       const notePress = new Map();   // note -> key, refreshed by update()
@@ -572,6 +582,12 @@
       const svgNS = 'http://www.w3.org/2000/svg';
       const leads = document.createElementNS(svgNS, 'svg'); leads.setAttribute('class', 'apcleads'); stage.appendChild(leads);
       let cur = [], curSig = '';
+      // Two views, both at every width (owner N7621): LABELLED = leader lines saying what each control does (panned at READ_SCALE in a
+      // narrow pane); REAL LAYOUT = the di music page's view (whole unit fitted to the width, pad numbers, lists below).
+      // The choice is kept per browser; until he picks: Labelled when the pane is wide, Real layout when it is narrow.
+      let picked = null;
+      try { const v = window.localStorage && window.localStorage.getItem('deskApcView'); if (v === 'labelled' || v === 'real') picked = v; } catch (e) { /* storage blocked: default by width */ }
+      const viewNow = () => picked || (wrap.clientWidth < NARROW_W ? 'real' : 'labelled');
       let overview = false;   // narrow pane: the whole unit at the width, no leader labels, pads carry their number (the PADS list below names them)
       const callouts = () => labelsOn && !overview;
       const margins = () => (callouts() ? MARGIN : NO_MARGIN);
@@ -763,25 +779,36 @@
       }
 
       // The panel is scaled to the room the pane has, by width (the legend sits below it and the page scrolls).
-      // Under NARROW_W the whole unit is fitted to the width like the di music page (devices.js fitApc: native panel, uniform scale,
-      // no sideways scroll). At that scale a pad name and a leader label would be under 11 px, so they are not drawn: each pad shows
-      // its NUMBER (>= 11 px) and the PADS / BUTTONS lists below name every one. Never hidden, never 3 px type.
+      // REAL LAYOUT: the whole unit at the width like the di music page (devices.js fitApc), pads show their NUMBER (>= 11 px), no leader labels.
+      // LABELLED in a pane narrower than the unit at READ_SCALE: drawn at READ_SCALE (every name and leader label >= 11 px) in a pan box.
       let scale = 1;
       function fitScale() {
         const total = wrap.clientWidth; if (!total) return;
-        const ov = total < NARROW_W;
-        if (ov !== overview) { overview = ov; wrap.classList.toggle('overview', ov); wrap.classList.toggle('nolabels', !callouts()); layoutCallouts(); }
+        const real = viewNow() === 'real';
+        if (real !== overview) { overview = real; wrap.classList.toggle('overview', real); wrap.classList.toggle('nolabels', !callouts()); layoutCallouts(); }
+        for (const b of viewBtns) b.setAttribute('aria-pressed', String((b.dataset.v === 'real') === real));
         const m = margins(), SW = NATIVE_W + m.l + m.r, SH = NATIVE_H + m.t + m.b;
-        scale = Math.max(.3, Math.min(total / SW, 2));
+        const pan = !real && total < NARROW_W && total < SW * READ_SCALE;
+        wrap.classList.toggle('pan', pan);
+        scale = pan ? READ_SCALE : Math.max(.3, Math.min(total / SW, 2));
         stage.style.setProperty('--clpx', Math.max(10.5, Math.round(12 / scale * 100) / 100) + 'px');   // leader labels: 12 px on screen
         ap.style.left = m.l + 'px'; ap.style.top = m.t + 'px';
         stage.style.width = SW + 'px'; stage.style.height = SH + 'px';
         stage.style.transform = 'scale(' + scale + ')';
-        body.style.width = Math.floor(SW * scale) + 'px';
-        body.style.height = Math.ceil(SH * scale) + 'px';
+        body.style.width = pan ? '100%' : Math.floor(SW * scale) + 'px';
+        body.style.height = Math.ceil(SH * scale) + (pan ? 18 : 0) + 'px';
+        if (!pan) body.scrollLeft = 0;
         if (lastView) lastView.pads.forEach((p, i) => fitPad(A.pads[i].firstChild, p.name, p.no));   // names are sized in px on screen: refit at every scale
         layoutCallouts();
       }
+      // The two-button switch sits in the pane heading, next to the title.
+      const viewBtns = [];
+      { const head = host.closest('.miapcpane') && host.closest('.miapcpane').querySelector('.pane-head h2');
+        if (head) {
+          const grp = document.createElement('span'); grp.className = 'apcview'; grp.setAttribute('role', 'group'); grp.setAttribute('aria-label', 'Drawing view');
+          [['labelled', 'Labelled'], ['real', 'Real layout']].forEach(([v, t]) => { const b = el('button', '', grp, t); b.type = 'button'; b.dataset.v = v; b.onclick = () => { picked = v; try { window.localStorage.setItem('deskApcView', v); } catch (e) { /* storage blocked: lasts this page */ } fitScale(); }; viewBtns.push(b); });
+          head.after(grp);
+        } }
       if (window.ResizeObserver) new ResizeObserver(fitScale).observe(wrap);
       window.addEventListener('resize', fitScale);
 
