@@ -7183,7 +7183,7 @@ function midiApcSoon() {
     // Only when something it draws has changed: the 1 s cue paint and every state poll land here.
     const c = CUES || {};
     const sig = [lookOnAirId(), midiLookPage, midiArmed, midiBlackoutNow(),
-      midiArmed ? midiLive.master : (S && S.master), c.index, c.running, c.autoplay, c.loop, c.n, S && S.looksRev, !!(S && S.output && S.output.strobeLimit), Object.keys(midiMap).length, JSON.stringify(midiApcValues())].join('|');
+      midiArmed ? midiLive.master : (S && S.master), c.index, c.running, c.autoplay, c.loop, c.n, S && S.looksRev, !!(S && S.output && S.output.strobeLimit), Object.keys(midiMap).sort().map((k) => { const b = midiMap[k]; return k + ':' + b.type + b.ch + '.' + b.num; }).join(','), JSON.stringify(midiApcValues())].join('|');
     if (sig === midiApcSig) return;
     midiApcSig = sig; midiApcAt = Date.now(); midiApcUpdate();
   }, Math.max(0, midiApcAt + 250 - Date.now()));

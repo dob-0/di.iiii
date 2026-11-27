@@ -5,3 +5,4 @@
 - Also fixed: report() threw ReferenceError (a local const shadowed the callouts() function), so the fit check could not run at all.
 - Test: serverXR/src/lighting/apc40fit.browser.test.js, headless Chromium, 7 widths (360..2560) x 3 saved view choices. Needs playwright; without it the test is skipped with a loud warning (DI_APC_FIT_PLAYWRIGHT / DI_APC_FIT_CHROMIUM point it at one).
 - Not done: the Labelled view at 1000-1400 px still prints captions at 7-8 px on screen (scaled with the unit); readable on a big screen only.
+- Legend follows the live MIDI map: apc40View.slots lists track fader 1-8, track knob 1-8 and activator 1-8, each naming the control the map binds to that cc / note on that channel, empty when unbound; hw of every legend row comes from the binding (hwOf). The drawing's redraw signature in app.js now includes each binding's type/ch/num, so a remap with the same key count redraws.

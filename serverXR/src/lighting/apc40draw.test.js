@@ -145,3 +145,26 @@ describe('round 2: safe look, contrast, callouts', () => {
     expect(draw.apc40Callouts({}, view({ map: {} })).length).toBeLessThan(c.length)
   })
 })
+
+describe('legend follows the live MIDI map (not the key\'s preset place)', () => {
+  // Today's live map of the desk: track faders are cc 7 on ch 1-8; left dim ch 6, back ch 7, right ch 8, layer level ch 5, colour fx amount ch 1;
+  // zoom, headscale, layerrate unmapped; the group activators (note 0x32) moved with their faders.
+  const live = {
+    'grp:left:dim': { type: 'cc', ch: 6, num: 7 }, 'grp:back:dim': { type: 'cc', ch: 7, num: 7 }, 'grp:right:dim': { type: 'cc', ch: 8, num: 7 },
+    layerlevel: { type: 'cc', ch: 5, num: 7 }, cfxamount: { type: 'cc', ch: 1, num: 7 },
+    'grp:left:on': { type: 'note', ch: 6, num: 50 }, 'grp:back:on': { type: 'note', ch: 7, num: 50 }, 'grp:right:on': { type: 'note', ch: 8, num: 50 },
+  }
+  const v = apc40View({ map: live, cues: { list: [] }, state: {}, looks, page: 0, activeId: '' })
+  const slot = (hw) => v.slots.find((s) => s.hw === hw)
+  it('TRACK FADER 6 reads the left truss dimmer, TRACK FADER 2 is empty', () => {
+    expect(slot('TRACK FADER 6')).toMatchObject({ key: 'grp:left:dim', does: 'Left truss dimmer' })
+    expect(slot('TRACK FADER 2')).toMatchObject({ key: null, does: '', range: '' })
+  })
+  it('the others sit where the map puts them; unmapped controls stay empty', () => {
+    expect(slot('TRACK FADER 7').does).toBe('Back bars dimmer'); expect(slot('TRACK FADER 8').does).toBe('Right truss dimmer')
+    expect(slot('TRACK FADER 5').does).toBe('Layer level'); expect(slot('TRACK FADER 1').does).toBe('Colour effect amount')
+    expect(slot('ACTIVATOR 6').does).toBe('Left truss on / off'); expect(slot('ACTIVATOR 1').key).toBeNull()
+    expect(v.slots.some((s) => ['zoom', 'headscale', 'layerrate'].includes(s.key))).toBe(false)
+    expect(v.controls.find((c) => c.key === 'grp:left:dim').hw).toBe('TRACK FADER 6')
+  })
+})

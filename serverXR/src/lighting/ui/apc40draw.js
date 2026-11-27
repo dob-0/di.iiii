@@ -89,6 +89,19 @@
   const ALL_KEYS = Object.keys(BUTTONS).concat(['master'], CONTROLS.map((c) => c.key), pm().KNOBS.map((k) => k.key));
   for (let k = 0; k < mc.LOOK_PADS; k++) ALL_KEYS.push('lookpad:' + k);
 
+  // The printed name of the control a binding (type, ch, num) lands on (Akai protocol v1.2): one rule for the legend rows and the tests.
+  function hwOf(b) {
+    if (!b) return '';
+    if (b.type === 'cc') {
+      if (b.num === 7 && b.ch >= 1 && b.ch <= 8) return 'TRACK FADER ' + b.ch;
+      if (b.num >= 48 && b.num <= 55 && b.ch === 1) return 'TRACK KNOB ' + (b.num - 47);
+      if (b.num === 13) return 'TEMPO knob';
+      if (b.num === 47) return 'CUE LEVEL knob';
+      return 'CC ' + b.num + ' ch ' + b.ch;
+    }
+    if (b.num === 0x32 && b.ch >= 1 && b.ch <= 8) return 'ACTIVATOR ' + b.ch;
+    return 'NOTE ' + b.num + ' ch ' + b.ch;
+  }
   function presetRows() { return mc.apc40Preset(ALL_KEYS); }
 
   // The strobe labels follow the desk setting output.strobeLimit (model.strobeLimit): off (default, N7618) = the lamp's whole band,
@@ -157,12 +170,20 @@
     }
     // Faders, knobs, activators, and the 8 device knobs of each TRACK SELECT bank: what each does and its range.
     const ccName = (b) => (b.type === 'cc' ? 'CC ' + b.num + ' ch ' + b.ch : 'note ' + b.num + ' ch ' + b.ch);
-    const controls = CONTROLS.filter((c) => eff[c.key]).map((c) => ({ ...c, ...(c.key === 'strobe:rate' ? { range: m.strobeLimit ? STROBE_RANGE.on : STROBE_RANGE.off } : {}), where: ccName(eff[c.key]) }));
+    const controls = CONTROLS.filter((c) => eff[c.key]).map((c) => ({ ...c, hw: hwOf(eff[c.key]) || c.hw, ...(c.key === 'strobe:rate' ? { range: m.strobeLimit ? STROBE_RANGE.on : STROBE_RANGE.off } : {}), where: ccName(eff[c.key]) }));
     const knobs = pm().KNOBS.filter((k) => eff[k.key]).map((k) => ({ key: k.key, page: k.page, pageName: k.pageName, bank: eff[k.key].ch,
       hw: 'BANK ' + eff[k.key].ch + ' KNOB ' + (eff[k.key].num - 0x0f), does: k.label, range: k.unitLabel, where: ccName(eff[k.key]) }));
+    // The legend follows the LIVE map, not the key's preset place: a slot of the unit (track fader 1-8, track knob 1-8, activator 1-8)
+    // names the control the map binds to that cc / note on that channel, and is empty when nothing is bound there.
+    const bindKey = (type, ch, num) => { const c = CONTROLS.find((x) => eff[x.key] && eff[x.key].type === type && eff[x.key].ch === ch && eff[x.key].num === num); return c || null; };
+    const slots = [];
+    const slot = (hw, type, ch, num) => { const c = bindKey(type, ch, num); slots.push({ hw, type, ch, num, key: c ? c.key : null, does: c ? c.does : '', range: c ? c.range : '' }); };
+    for (let n = 1; n <= 8; n++) slot('TRACK FADER ' + n, 'cc', n, 7);
+    for (let n = 1; n <= 8; n++) slot('TRACK KNOB ' + n, 'cc', 1, 47 + n);
+    for (let n = 1; n <= 8; n++) slot('ACTIVATOR ' + n, 'note', n, 0x32);
     const mb = eff.master;
     const view = {
-      pads, buttons, controls, knobs, bindings: eff, columns, ordered: Array.isArray(m.order) && m.order.length > 0,
+      pads, buttons, controls, knobs, slots, bindings: eff, columns, ordered: Array.isArray(m.order) && m.order.length > 0,
       page, pages: mc.lookPageCount(looks.length), total: new Set(looks.filter(Boolean).map((l) => l.id)).size,
       master: { mapped: !!(mb && mb.type === 'cc'), cc: mb ? mb.num : null, does: 'Master fader = desk master' },
       onAir: (looks.find((l) => l && l.id === m.activeId) || {}).name || '',
@@ -235,7 +256,7 @@
   // The on-air pad: white label on this gradient is at least 4.5:1 at both ends (review L1; test pins it).
   const LIVE_GRADIENT = ['#dd2c22', '#cc0000'];
 
-  const api = { apc40View, apc40Callouts, ccTarget, takeover, ledHex, LED_HEX, BUTTONS, HW, CONTROLS, LIVE_GRADIENT };
+  const api = { hwOf, apc40View, apc40Callouts, ccTarget, takeover, ledHex, LED_HEX, BUTTONS, HW, CONTROLS, LIVE_GRADIENT };
 
   // ---------------------------------------------------------------- the drawing (browser only)
   if (typeof document !== 'undefined') {
@@ -769,7 +790,9 @@
         const rows = [];
         padlist.innerHTML = v.pads.filter((p) => p.name).map((p) => `<li class="${p.state === 'live' ? 'live' : ''}"><span class="no">${p.no}</span>${esc(p.name)}</li>`).join('') || '<li>no looks on this page</li>';
         for (const b of v.buttons) rows.push(`<tr class="${b.danger ? 'danger' : ''}"><td class="hw">${b.hex && b.vel > 1 ? `<span class="sw" style="background:${b.hex}"></span>` : ''}${esc(b.hw)}</td><td class="do">${esc(b.does)}</td></tr>`);
-        for (const c of v.controls.concat(v.knobs)) rows.push(`<tr><td class="hw">${esc(c.hw)}</td><td class="do">${esc(c.does)}  [${esc(c.range)}]</td></tr>`);
+        const slotted = new Set(v.slots.map((x) => x.key).filter(Boolean));
+        for (const x of v.slots) rows.push(`<tr class="${x.key ? '' : 'empty'}"><td class="hw">${esc(x.hw)}</td><td class="do">${x.key ? esc(x.does) + '  [' + esc(x.range) + ']' : ''}</td></tr>`);
+        for (const c of v.controls.filter((x) => !slotted.has(x.key)).concat(v.knobs)) rows.push(`<tr><td class="hw">${esc(c.hw)}</td><td class="do">${esc(c.does)}  [${esc(c.range)}]</td></tr>`);
         if (v.master.mapped) rows.push(`<tr><td class="hw">MASTER fader (CC ${v.master.cc})</td><td class="do">${esc(v.master.does)}</td></tr>`);
         tbody.innerHTML = rows.join('') || '<tr><td colspan="2">no button is mapped</td></tr>';
         note.textContent = v.mapped ? '' : 'Nothing is bound yet: this is the preset layout. Press "Map my controller" to bind it.';
