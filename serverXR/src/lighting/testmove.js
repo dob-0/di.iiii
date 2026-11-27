@@ -8,7 +8,7 @@
 // trim (engine.js), so it moves the head exactly the way the Pan or Tilt fader would:
 // after Invert is ticked the same press turns the head the other way, which is the check.
 //
-// It is live only, like Identify: fixtureId -> { axis, from, until }, never in show.json,
+// It is live only, like Identify: fixtureId -> { axis, from, until, prev? }, never in show.json,
 // never in a scene, and the head is back on its own position the moment it ends. The
 // swing is a raised cosine from 0 to `steps` and back, a whole number of times, so it
 // starts and ends at rest with no jump.
@@ -32,6 +32,62 @@ function testMoveAt(entry, now) {
 }
 
 /**
+ * The swing, in coarse steps, of ONE axis at `now`: the entry's own axis plus the `prev` axis that
+ * is finishing its last swing after the other axis was pressed. 0 when that axis is not moving.
+ */
+function testMoveSteps(entry, now, axis) {
+  if (!entry) return 0;
+  let s = 0;
+  const m = testMoveAt(entry, now);
+  if (m && m.axis === axis) s += m.steps;
+  const p = testMoveAt(entry.prev, now);
+  if (p && p.axis === axis) s += p.steps;
+  return s;
+}
+
+/** Is any part of this entry (its axis or the finishing one) still moving at `now`? */
+function testMoveLive(entry, now) {
+  return !!entry && (entry.until > now || !!(entry.prev && entry.prev.until > now));
+}
+
+/**
+ * The entry after a press ({axis, ms} from readTestMove) at `now`, given the light's old entry.
+ * A re-press of the axis already swinging keeps its start (`from`, so the head never snaps back
+ * to the foot of the swing) and runs on to a whole swing at or past now + ms. A press of the
+ * other axis lets the running one finish the swing it is in (it ends at rest) while the new one
+ * starts; that one is kept as `prev`.
+ */
+function pressTestMove(old, press, now) {
+  const P = TEST_MOVE.periodMs;
+  const live = {};
+  for (const e of [old && old.prev, old]) if (e && AXES.includes(e.axis) && e.until > now) live[e.axis] = e;
+  const same = live[press.axis];
+  const entry = same
+    ? { axis: press.axis, from: same.from, until: Math.max(same.until, same.from + Math.ceil((now + press.ms - same.from) / P) * P) }
+    : { axis: press.axis, from: now, until: now + press.ms };
+  const other = live[press.axis === 'pan' ? 'tilt' : 'pan'];
+  if (other) {
+    entry.prev = { axis: other.axis, from: other.from, until: Math.min(other.until, other.from + Math.ceil((now - other.from) / P) * P) };
+  }
+  return entry;
+}
+
+/**
+ * The entry after an Off at `now`: each running axis finishes the swing it is in (it ends at rest),
+ * like a re-press of the other axis does, so the head never snaps. Null when nothing is left.
+ */
+function stopTestMove(old, now) {
+  if (!old) return null;
+  const P = TEST_MOVE.periodMs;
+  const cut = (e) => (e && AXES.includes(e.axis) && e.until > now
+    ? { axis: e.axis, from: e.from, until: Math.min(e.until, e.from + Math.ceil((now - e.from) / P) * P) } : null);
+  const entry = cut(old);
+  const prev = cut(old.prev);
+  if (entry && prev) entry.prev = prev;
+  return entry || (prev ? prev : null);
+}
+
+/**
  * A press, as the route receives it: { ids, axis, seconds } -> { axis, ms } or { error }.
  * The length is rounded up to whole swings so the head always ends where it started.
  */
@@ -42,4 +98,4 @@ function readTestMove(body) {
   return { axis, ms: Math.ceil((s * 1000) / TEST_MOVE.periodMs) * TEST_MOVE.periodMs };
 }
 
-module.exports = { TEST_MOVE, testMoveAt, readTestMove };
+module.exports = { TEST_MOVE, testMoveAt, testMoveSteps, testMoveLive, pressTestMove, stopTestMove, readTestMove };

@@ -44,7 +44,12 @@ const SPATIAL = ['patch', 'x', 'x-', 'y', 'y-', 'radial', 'radial-', 'angle', 'a
 const SCOPES = ['each', 'type', 'global'];
 const MAX_LOOKS = 2000;
 const MAX_LAYERS = 64;
-const MAX_STEPS = 64;
+// 320 = the 318 pixel positions of the Tunnel ping-pong look plus a little room, so one
+// step can be one pixel (2026-11-27, "i want to see each pixel"). The old cap of 64 cut every
+// step above it, so a 318-position look skipped about 5 pixels per step. One 320-step look is
+// about 3.4 MB of JSON; the desk's POST body limit is 16 MB (desk.js BODY_MAX) and the app's
+// express.json limit is 10 MB (src/index.js), so one look per request fits in both.
+const MAX_STEPS = 320;
 // Deep enough for a palette of a palette, shallow enough that a cycle cannot cost a frame.
 const MAX_REF_DEPTH = 4;
 const TAU = Math.PI * 2;
@@ -125,6 +130,10 @@ function sanitizeLook(look) {
     // Beats for one full loop. Held against the desk's clock, so tapping a tempo
     // retimes every running look at once.
     measure: Math.max(0.01, Math.min(64, num(look.measure, 1))),
+    // How a step blends into the next while it is moving: 'linear' mixes in a straight line,
+    // so a pixel travelling one step per step does not pulse. Absent (or 'cosine', which is
+    // dropped on the way in) is the desk's own ease, exactly as every look played before.
+    ...(look.blend === 'linear' ? { blend: 'linear' } : {}),
     // Degrees of offset spread across the selection. 0 = the whole rig in unison,
     // 360 = one full cycle walking round it, 720 = two.
     phase: Math.max(-3600, Math.min(3600, num(look.phase, 0))),
@@ -256,7 +265,8 @@ function stepBlend(look, pos) {
       // the rest. transition 0 never moves — it snaps at the boundary, which is a chase.
       if (step.transition <= 0) return { a: step, b: step, t: 0 };
       const start = 1 - step.transition;
-      const t = u <= start ? 0 : ease((u - start) / step.transition);
+      const raw = (u - start) / step.transition;
+      const t = u <= start ? 0 : (look.blend === 'linear' ? clamp01(raw) : ease(raw));
       return { a: step, b: next, t };
     }
     acc += w;
@@ -367,7 +377,25 @@ function layerValues(state, fixtures, now, clockBpm, epoch = 0) {
   return out;
 }
 
+// The look that is ON AIR: the top layer of the mix (layerValues' own order — highest priority,
+// a tie goes to the later layer) that is on, above level 0 and holds a look that exists. null when
+// none. Every source lands here: the cue layer, play in order, a tap, MIDI, another tab.
+function onAirOf(state) {
+  const layers = Array.isArray(state && state.layers) ? state.layers : [];
+  const lookList = Array.isArray(state && state.looks) ? state.looks : [];
+  let best = null;
+  for (let i = 0; i < layers.length; i++) {
+    const l = layers[i];
+    if (!l || !l.on || !(l.level > 0) || !l.lookId) continue;
+    if (best && (Number(l.priority) || 0) < (Number(best.priority) || 0)) continue;
+    if (!lookList.some((k) => k.id === l.lookId)) continue;
+    best = l;
+  }
+  return best ? { lookId: best.lookId, layerId: best.id } : null;
+}
+
 module.exports = {
+  onAirOf,
   KINDS, MERGES, SCOPES, SPATIAL, MAX_LOOKS, MAX_LAYERS, MAX_STEPS,
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   kindAllows, evalLook, layerValues, stepBlend, stepPosition, spatialFrac,

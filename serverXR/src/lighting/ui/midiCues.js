@@ -183,7 +183,53 @@
     return send;
   }
 
-  const api = { LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
+  // The pad lights, one painter per page. The pressed look goes red at once (optimistic), the
+  // old one back to ember in the same paint; the desk's answer corrects it (answer(id, false)
+  // drops it). The guess ends by REQUEST TIME, not by age: once the desk has answered the fire
+  // (answer(id, true)), the first on-air reading that was ASKED FOR at or after that moment
+  // knows the press, so it rules at once, whatever it says (another source may have moved on);
+  // a reading asked for earlier cannot know it and never undoes the guess. OPT_LOOK_MS is only a
+  // backstop for a fire that is never answered. Only the armed page lights (Safe: nothing is painted).
+  // deps: out() port|null, armed(), map(), cues(), state(), looks(), page(), setPage(p),
+  // polledId(), polledAt() (when the request behind polledId was sent; optional), now().
+  const OPT_LOOK_MS = 10000;
+  function createLedPainter(deps) {
+    const sent = deps.sent || new Map();
+    let opt = null;   // { id, at, answeredAt|null }
+    function lookId() {
+      const polled = deps.polledId() || '';
+      if (opt) {
+        const askedAt = deps.polledAt ? deps.polledAt() : 0;
+        if (polled === opt.id || deps.now() - opt.at > OPT_LOOK_MS
+          || (opt.answeredAt != null && askedAt >= opt.answeredAt)) opt = null;
+        else return opt.id;
+      }
+      return polled;
+    }
+    function paint() {
+      const out = deps.out();
+      if (!out || !deps.armed()) return;
+      try {
+        const looks = deps.looks();
+        deps.setPage(clampLookPage(deps.page(), looks.length));
+        const lights = apc40Lights(deps.map(), deps.cues(), deps.state(), { looks, page: deps.page(), activeId: lookId() });
+        for (const l of lightDiff(lights, sent)) out.send([0x90, l.note, l.vel]);
+      } catch (e) { sent.clear(); }   // port gone: repaint everything when it is back
+    }
+    return {
+      paint,
+      pressLook(id) { if (!deps.armed()) return; opt = { id, at: deps.now(), answeredAt: null }; paint(); },
+      answer(id, ok) {
+        if (!opt || opt.id !== id) return;
+        if (!ok) { opt = null; paint(); } else if (opt.answeredAt == null) opt.answeredAt = deps.now();
+      },
+      forget(note) { sent.delete(note); },
+      reset() { sent.clear(); opt = null; },
+      sent,
+    };
+  }
+
+  const api = { createLedPainter, OPT_LOOK_MS, LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiCues = api;
 })(typeof window !== 'undefined' ? window : this);

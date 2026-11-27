@@ -347,7 +347,7 @@ check('a fraction of a trim goes to the fine byte on a 16-bit head, whichever wa
   const g = makeFixture({ profile: 'test bar fine', address: 1, values: { pan: 128, tilt: 100, dimmer: 255 } });
   g.limits.panTrim = 0.5; g.limits.tiltTrim = -1.01;
   assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 4)], [128, 128, 98, 253],
-    'pan_fine / tilt_fine (a hand-made profile, the Reika bars) are the same partner; 98.99 = 98 / 253');
+    'pan_fine / tilt_fine (a hand-made profile spells them so) are the same partner; 98.99 = 98 / 253');
   removeProfile('test bar fine');
 });
 
@@ -363,23 +363,99 @@ check('whole trims give exactly the old bytes on a 16-bit head, fine value and a
 check('a 16-bit trim past the end stops at the very end, never wraps', () => {
   const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 250, panFine: 9, tilt: 2, tiltFine: 9 } });
   f.limits.panTrim = 10.5; f.limits.tiltTrim = -10.5;
-  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [255, 255, 0, 0]);
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [255, 9, 0, 9],
+    'the whole 10 clamps like the old engine; the half step cannot pass the old end byte (end coarse + the fine pass-through)');
   f.limits.panMax = 200; f.limits.tiltMin = 20;
-  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [200, 255, 20, 0], 'the limits are whole coarse steps');
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [200, 9, 20, 9], 'the limits are whole coarse steps');
 });
 
-check('invert mirrors the fine byte with its coarse; fine 0 is exactly the 8-bit mirror', () => {
-  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 100, panFine: 64, tilt: 0, tiltFine: 0 } });
+// Review of #1374, should 1: nudging a trim past a range end must never step the head back.
+check('a 16-bit trim past the range end never steps back as it grows (both ends, both axes)', () => {
+  // the trim grows outward from 0 in the direction of the end it nears: the byte pair never steps back
+  for (const [at, sign] of [[255, 1], [0, -1], [250, 1], [5, -1]]) {
+    for (const fine of [0, 77, 255]) {
+      const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: at, panFine: fine, tilt: at, tiltFine: fine } });
+      let last = null;
+      for (let d = 0; d <= 1000; d++) {
+        const tr = sign * d / 100;
+        f.limits.panTrim = tr; f.limits.tiltTrim = tr;
+        const b = new Engine(baseState([f])).render().get(0);
+        const v = b[2] * 256 + b[3];
+        if (last != null) assert.ok((v - last) * sign >= 0, `tilt at ${at}/${fine}: trim ${tr} stepped back ${last} -> ${v}`);
+        last = v;
+      }
+      if (at === 0 || at === 255) {
+        f.limits.tiltTrim = 1.5 * sign;
+        assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0)].slice(2, 4), [at, fine], 'past the end it holds the old end byte');
+      }
+    }
+  }
+});
+
+// Review of #1373 (2026-11-26): with NO fraction, NO swing and NO fine value the bytes are the old engine's,
+// on any head: min/max not 0..255, a trim past the end, Invert and Swap, one fine channel. With a fine value,
+// Invert and Swap move the fine byte with its coarse (lead's call 2026-11-27): the next check.
+check('findings 1-4: a whole trim or none, and no fine value, gives the pre-fine-trim bytes, whatever the head, limits, Invert, Swap', () => {
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 100, panFine: 0, tilt: 50, tiltFine: 0 } });
+  f.limits.panMin = 10; f.limits.panMax = 200; f.limits.tiltMin = 0; f.limits.tiltMax = 255;
+  const b = () => [...new Engine(baseState([f])).render().get(0).slice(0, 4)];
+  assert.deepStrictEqual(b(), [85, 0, 50, 0], '1: min/max 10..200 with no trim: the old 85 / 0 (84.51 rounded), the fine channel not given the fraction');
+  f.limits.panMin = 0; f.limits.panMax = 255;
+  f.values.pan = 250; f.values.panFine = 0; f.limits.panTrim = 10;
+  assert.deepStrictEqual(b().slice(0, 2), [255, 0], '2: a whole trim past the end: the old 255 / 0, not 255 / 255');
+  f.limits.panTrim = 0; f.values.pan = 100; f.values.panFine = 0; f.limits.invertPan = true;
+  assert.deepStrictEqual(b().slice(0, 2), [155, 0], '3: Invert with no fine value: the old 155 / 0');
+  f.limits.invertPan = false; f.values.pan = 10; f.values.panFine = 0; f.values.tilt = 100; f.values.tiltFine = 0; f.limits.swapPT = true;
+  assert.deepStrictEqual(b(), [100, 0, 10, 0], '4: Swap with no fine values: the old bytes');
+  f.limits.invertPan = true; f.limits.invertTilt = true;
+  assert.deepStrictEqual(b(), [155, 0, 245, 0], '4: Swap and Invert with no fine values: the old bytes');
+  addProfile('test one fine', ['pan', 'pan_fine', 'tilt'], { replace: true });
+  const g = makeFixture({ profile: 'test one fine', address: 1, values: { pan: 10, tilt: 100 } });
+  g.limits.swapPT = true;
+  assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 3)], [100, 0, 10], '4: one fine channel plus Swap, no fine value: the old bytes');
+  removeProfile('test one fine');
+});
+
+// Lead's call 2026-11-27: since #1381 head-motion looks write fine bytes, so on a 16-bit head the fine byte
+// travels with its coarse. Invert mirrors the pair as one position, 255 - (coarse + fine/256); Swap takes the
+// source axis's fine value along. Before, an inverted head stepped the wrong way inside each coarse step.
+check('Invert and Swap move the fine byte with its coarse, as one 16-bit pair', () => {
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 100, panFine: 200, tilt: 50, tiltFine: 0 } });
+  const b = () => [...new Engine(baseState([f])).render().get(0).slice(0, 4)];
   f.limits.invertPan = true;
-  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [154, 192], '255 - 100.25 = 154.75');
-  f.values.panFine = 0;
-  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [155, 0], '255 - 100, as before');
+  assert.deepStrictEqual(b().slice(0, 2), [154, 56], 'Invert 100 / 200 (100.78) gives 154 / 56 (154.22), not 155 / 200');
+  f.values.panFine = 255;
+  assert.deepStrictEqual(b().slice(0, 2), [154, 1], 'Invert 100 / 255 gives 154 / 1');
+  f.values.pan = 255; f.values.panFine = 100;
+  assert.deepStrictEqual(b().slice(0, 2), [0, 0], 'Invert past 255.0 holds the low end: 0 / 0');
+  let last = null;
+  for (let pos = 100 * 256; pos <= 102 * 256; pos += 7) {
+    f.values.pan = pos >> 8; f.values.panFine = pos & 255;
+    const o = b(), out = o[0] * 256 + o[1];
+    if (last != null) assert.ok(out < last, `a slow inverted sweep stepped the wrong way at ${pos >> 8} / ${pos & 255}: ${last} -> ${out}`);
+    last = out;
+  }
+  f.limits.invertPan = false; f.limits.swapPT = true;
+  f.values.pan = 10; f.values.panFine = 7; f.values.tilt = 100; f.values.tiltFine = 200;
+  assert.deepStrictEqual(b(), [100, 200, 10, 7], 'Swap takes each fine value along with its coarse');
+  f.limits.invertPan = true;
+  assert.deepStrictEqual(b(), [154, 56, 10, 7], 'Swap then Invert: the pan output is the mirrored tilt pair');
+  addProfile('test one fine', ['pan', 'pan_fine', 'tilt'], { replace: true });
+  const g = makeFixture({ profile: 'test one fine', address: 1, values: { pan: 10, pan_fine: 9, tilt: 100 } });
+  g.limits.swapPT = true;
+  assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 3)], [100, 0, 10], 'one fine channel plus Swap: the pan output takes tilt, which has no fine value');
+  removeProfile('test one fine');
 });
 
-check('swap takes the fine byte along with its coarse', () => {
-  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 10, panFine: 7, tilt: 100, tiltFine: 200 } });
-  f.limits.swapPT = true;
-  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 4)], [100, 200, 10, 7]);
+check('a fraction on a head with min/max and Invert is added to the OLD coarse and the fine that travels with it', () => {
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 100, panFine: 0, tilt: 50, tiltFine: 0 } });
+  f.limits.panMin = 10; f.limits.panMax = 200; f.limits.panTrim = 0.5;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [85, 128], 'old coarse 85 (84.51 rounded) + half a step');
+  f.limits.panTrim = 0; f.limits.panMin = 0; f.limits.panMax = 255; f.limits.invertPan = true; f.values.panFine = 255; f.limits.panTrim = -0.25;
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [153, 193], 'Invert 100 / 255 is 154 / 1, minus a quarter step');
+  f.limits.panMin = '5'; f.limits.panTrim = 0.5; f.limits.invertPan = false; f.values.panFine = 0;
+  const out = [...new Engine(baseState([f])).render().get(0).slice(0, 2)];
+  assert.ok(out.every((x) => Number.isInteger(x) && x >= 0 && x <= 255), 'a hand-edited string limit never makes a garbage byte: ' + out);
 });
 
 check('a fraction stored on a head without a fine channel is rounded to whole steps', () => {
@@ -414,6 +490,31 @@ check('a test move swings the asked axis on the desk side and ends where it bega
   assert.deepStrictEqual(readTestMove({ axis: 'pan', seconds: 1 }), { axis: 'pan', ms: 2000 }, 'rounded up to whole swings');
   assert.deepStrictEqual(readTestMove({ axis: 'tilt' }), { axis: 'tilt', ms: 4000 }, 'a press is 4 s');
   assert.ok(readTestMove({ axis: 'zoom' }).error, 'only pan or tilt');
+});
+
+// Review of #1373, finding 8: a press never snaps a head that is mid-swing.
+check('a test move re-press keeps the swing going; the other axis lets the first finish its swing', () => {
+  const { pressTestMove, testMoveSteps, testMoveLive } = require('../testmove');
+  const press = { axis: 'pan', ms: 4000 };
+  let e = pressTestMove(null, press, 10000);
+  assert.deepStrictEqual(e, { axis: 'pan', from: 10000, until: 14000 }, 'a first press: now .. now + 4 s');
+  const before = testMoveSteps(e, 11000, 'pan');
+  e = pressTestMove(e, press, 11000);
+  assert.strictEqual(e.from, 10000, 're-press keeps the start');
+  assert.strictEqual(e.until, 16000, 'and runs on to a whole swing at or past now + 4 s (10000 + 3 x 2000)');
+  assert.strictEqual(testMoveSteps(e, 11000, 'pan'), before, 'the head does not jump at the press (same 20 steps)');
+  e = pressTestMove(e, { axis: 'tilt', ms: 4000 }, 11500);
+  assert.strictEqual(e.axis, 'tilt');
+  assert.deepStrictEqual(e.prev, { axis: 'pan', from: 10000, until: 12000 }, 'pan finishes the swing it is in (ends at rest)');
+  assert.ok(testMoveSteps(e, 11500, 'pan') > 0 && testMoveSteps(e, 12000, 'pan') === 0, 'pan carries on, then rests at 12000');
+  assert.strictEqual(testMoveSteps(e, 11500, 'pan'), TM_PAN_AT(11500), 'pan has no jump when tilt is pressed');
+  assert.ok(testMoveLive(e, 11999) && testMoveLive(e, 15000) && !testMoveLive(e, 16000));
+  function TM_PAN_AT(now) { return 20 * (1 - Math.cos(2 * Math.PI * ((now - 10000) % 2000) / 2000)) / 2; }
+  const f = makeFixture({ profile: 'pt', address: 1, values: { pan: 100, tilt: 100 } });
+  const state = { ...baseState([f]), testMove: { [f.id]: e } };
+  const b = [...new Engine(state).render(state, 11500).get(0)];
+  assert.deepStrictEqual(b.slice(0, 2), [110, 100], 'at 11.5 s pan is mid swing and tilt only starting');
+  assert.deepStrictEqual([...new Engine(state).render(state, 12000).get(0)].slice(0, 2), [100, 110], 'pan back at rest, tilt a quarter in');
 });
 
 check('pan/tilt ignore master and blackout', () => {
@@ -2608,6 +2709,22 @@ check('video: the mix breathes with its LFO; settings merge field by field', () 
   assert.deepStrictEqual([v1.anim.on, v1.anim.bx, v1.anim.beats, v1.anim.dir, v1.anim.ease, v1.contrast, v1.speed], [true, 0.7, 16, 'forward', 'smooth', 300, 0.1],
     'a partial patch keeps the rest; values are clamped');
   assert.deepStrictEqual(pm.sanitizeVideo(null, {}).lfo, pm.DEFAULT_LFO);
+});
+
+check('a test move Off lets the swing in progress finish, so the head never snaps', () => {
+  const { stopTestMove, testMoveSteps, testMoveLive } = require('../testmove');
+  const e = { axis: 'pan', from: 10000, until: 18000 };
+  const s = stopTestMove(e, 11000);
+  assert.deepStrictEqual(s, { axis: 'pan', from: 10000, until: 12000 }, 'ends at the next whole swing');
+  assert.strictEqual(testMoveSteps(s, 11000, 'pan'), testMoveSteps(e, 11000, 'pan'), 'no jump at the stop');
+  assert.ok(testMoveLive(s, 11999) && !testMoveLive(s, 12000));
+  let worst = 0, prevV = testMoveSteps(s, 11000, 'pan');
+  for (let t = 11001; t <= 12100; t++) { const v = testMoveSteps(s, t, 'pan'); worst = Math.max(worst, Math.abs(v - prevV)); prevV = v; }
+  assert.ok(worst < 0.1, 'no 1 ms jump after the stop: ' + worst);
+  const both = stopTestMove({ axis: 'tilt', from: 11500, until: 15500, prev: { axis: 'pan', from: 10000, until: 12000 } }, 11600);
+  assert.ok(both.prev && both.prev.until === 12000 && both.until === 13500, 'both axes finish their own swing');
+  assert.strictEqual(stopTestMove(null, 1), null);
+  assert.strictEqual(stopTestMove({ axis: 'pan', from: 0, until: 100 }, 500), null, 'an ended one leaves nothing');
 });
 
 console.log(failures ? '\n' + failures + ' failing\n' : '\nall passing\n');

@@ -194,7 +194,7 @@ const startDesk = async (withSpace) => {
   await new Promise((r) => sv.listen(0, '127.0.0.1', r))
   const b = 'http://127.0.0.1:' + sv.address().port
   const post = async (route, body) => { const r = await fetch(b + route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }); return { status: r.status, body: await r.json() } }
-  return { dk, post, d, spaceDir, stop: async () => { dk.close(); sv.closeAllConnections?.(); await new Promise((r) => sv.close(r)); fs.rmSync(d, { recursive: true, force: true }) } }
+  return { dk, post, d, spaceDir, port: sv.address().port, stop: async () => { dk.close(); sv.closeAllConnections?.(); await new Promise((r) => sv.close(r)); fs.rmSync(d, { recursive: true, force: true }) } }
 }
 const waitFor = async (fn, ms = 5000) => { const t = Date.now(); while (Date.now() - t < ms) { if (fn()) return true; await new Promise((r) => setTimeout(r, 25)) } return false }
 const oldText = (dk, space) => { const s = dk.state; if (!space) return JSON.stringify(s); const c = Object.assign({}, s); delete c.output; return JSON.stringify(c) }
@@ -223,6 +223,7 @@ describe.each([['this machine\'s own show', false], ['a space\'s show (withoutRi
     expect(fs.readFileSync(file, 'utf8')).not.toContain('new-look')
     expect(fs.existsSync(file.replace(/\.json$/, '.prev.json'))).toBe(true)
     expect(fs.existsSync(file + '.tmp')).toBe(false)
+    expect(fs.existsSync(file + '.async.tmp')).toBe(false)
   })
   it('a snapshot parses deep-equal to the old clone, with the new looks, and is listed without a re-read', async () => {
     await k.post('/api/looks/add', { look: { id: 'snap-look', name: 'S', kind: 'all', fixtures: [], steps: [{ values: { a: { dimmer: 3 } } }] } })
@@ -241,4 +242,164 @@ describe.each([['this machine\'s own show', false], ['a space\'s show (withoutRi
     expect(fs.readFileSync(snapFile, 'utf8')).toBe(JSON.stringify(doc))
     expect(JSON.stringify(doc.show.looks)).toBe(JSON.stringify(k.dk.state.looks))
   })
+})
+
+// ---- a synchronous save (close, import, restore, switch) while the timer's async save is in flight ----
+// The async save has its own temp file (show.json.async.tmp); the sync saves use show.json.tmp. Before, both used
+// show.json.tmp and the second truncated the file the first still had open, so show.json ended up unreadable.
+
+const inFlight = async (k, file) => {
+  await k.post('/api/master', { master: 40 + Math.floor(Math.random() * 100) })   // the save is due 400 ms later
+  const tmp = file + '.async.tmp'
+  return waitFor(() => fs.existsSync(tmp), 3000)
+}
+const bigDesk = async () => {
+  const k = await startDesk(false)
+  for (const l of makeBigLooks(30, { steps: 64, fixtures: 205 })) await k.post('/api/looks/add', { look: l })
+  const file = path.join(k.d, 'data', 'show.json')
+  await waitFor(() => fs.existsSync(file) && fs.statSync(file).size > 10e6)
+  await new Promise((r) => setTimeout(r, 600))      // let the timer's own saves settle
+  return { k, file }
+}
+
+describe('a synchronous save during an async one leaves show.json whole', () => {
+  it('an import (replaceShow) while a timer save is in flight: show.json is the imported show', async () => {
+    const { k, file } = await bigDesk()
+    try {
+      const exp = await (await fetch(`http://127.0.0.1:${k.port}/api/show/export`)).json()
+      exp.show.looks = [look('imported-1'), look('imported-2')]
+      expect(await inFlight(k, file)).toBe(true)
+      const r = await k.post('/api/show/import', { mode: 'replace', show: exp })
+      expect(r.status).toBe(200)
+      await new Promise((r2) => setTimeout(r2, 1500))
+      const got = JSON.parse(fs.readFileSync(file, 'utf8'))
+      expect(got.looks.map((l) => l.id)).toEqual(['imported-1', 'imported-2'])   // replaceShow writes the file as imported, then loads it
+      expect(k.dk.state.looks.map((l) => l.id)).toEqual(['imported-1', 'imported-2'])
+      expect(fs.existsSync(file + '.async.tmp')).toBe(false)
+    } finally { await k.stop() }
+  }, 60000)
+
+  it('a snapshot restore while a timer save is in flight: show.json is the restored show', async () => {
+    const { k, file } = await bigDesk()
+    try {
+      const snap = await k.post('/api/snapshots', { name: 'before' })
+      await k.post('/api/looks', { looks: [look('later')] })
+      expect(await inFlight(k, file)).toBe(true)
+      const r = await k.post('/api/snapshots/restore', { id: snap.body.snapshot.id })
+      expect(r.status).toBe(200)
+      await new Promise((r2) => setTimeout(r2, 1500))
+      const got = JSON.parse(fs.readFileSync(file, 'utf8'))
+      expect(got.looks.length).toBe(30)
+      expect(got).toEqual(JSON.parse(JSON.stringify(k.dk.state)))
+    } finally { await k.stop() }
+  }, 60000)
+})
+
+// ---- gated: the async save is held between its chunks, so the overlap is certain, not a race ----
+
+// Every fs.promises.open of show.json.tmp / show.json.async.tmp for writing gets a handle whose 2nd writeFile
+// waits on the gate (the looks chunk is the 2nd of three). `reached` resolves when it is waiting.
+const gateWrites = () => {
+  const real = fs.promises.open
+  let release; const gate = new Promise((r) => { release = r })
+  let reach; const reached = new Promise((r) => { reach = r })
+  fs.promises.open = async (file, flags, ...rest) => {
+    const fh = await real.call(fs.promises, file, flags, ...rest)
+    if (!(flags === 'w' && /show\.json\.(async\.)?tmp$/.test(String(file)))) return fh
+    let n = 0
+    const wf = fh.writeFile.bind(fh)
+    fh.writeFile = async (...a) => { if (++n === 2) { reach(); await gate } return wf(...a) }
+    return fh
+  }
+  return { reached, release, restore: () => { fs.promises.open = real; release() } }
+}
+// A gate that is never reached must say so, not run into the 30 s test timeout.
+const reachedIn = (g, ms = 5000) => Promise.race([g.reached, new Promise((_, rej) => setTimeout(() => rej(new Error('the async save never reached the gate within ' + ms + ' ms')), ms).unref())])
+const settled = async (k, file) => {
+  for (const l of makeBigLooks(3, { steps: 4, fixtures: 6 })) await k.post('/api/looks/add', { look: l })
+  await waitFor(() => fs.existsSync(file))
+  await new Promise((r) => setTimeout(r, 700))
+}
+
+describe('gated: a save held in flight', () => {
+  it('NEW-I1: switching shows during an in-flight timer save keeps the left show\'s last change', async () => {
+    const k = await startDesk(true)
+    const file = path.join(k.d, 'data', 'show.json')
+    let g = { restore() {} }
+    try {
+      await settled(k, file)
+      g = gateWrites()   // armed only now: the saves while settling must not be held
+      await k.post('/api/master', { master: 77 })
+      await reachedIn(g)
+      const r = await k.post('/api/show/open', { space: 'space-a' })
+      expect(r.status).toBe(200)
+      g.release()
+      await new Promise((r2) => setTimeout(r2, 800))
+      expect(JSON.parse(fs.readFileSync(file, 'utf8')).master).toBe(77)
+    } finally { g.restore(); await k.stop() }
+  }, 30000)
+
+  it('R2-I1: close() while the timer save is held: show.json parses and equals the state', async () => {
+    const k = await startDesk(false)
+    const file = path.join(k.d, 'data', 'show.json')
+    let g = { restore() {} }
+    try {
+      await settled(k, file)
+      g = gateWrites()   // armed only now: the saves while settling must not be held
+      await k.post('/api/master', { master: 88 })
+      await reachedIn(g)
+      await k.post('/api/looks/add', { look: look('after-the-write-began', 5) })   // the held write holds the OLD looks: a longer newer text must not be overwritten by it
+      k.dk.close()
+      const want = JSON.parse(JSON.stringify(k.dk.state))
+      g.release()
+      await new Promise((r2) => setTimeout(r2, 800))
+      expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual(want)
+    } finally { g.restore(); fs.rmSync(k.d, { recursive: true, force: true }) }
+  }, 30000)
+})
+
+// ---- R3-I1: a synchronous save clears what an async save in flight owed ----
+// The gate holds the FIRST writeFile and finds the save by its open() call, not by the temp file's name.
+const holdAsyncWrite = () => {
+  const realOpen = fs.promises.open
+  let open, held = false
+  const gate = new Promise((r) => { open = r })
+  fs.promises.open = async function (p, flags, ...rest) {
+    const fh = await realOpen.call(fs.promises, p, flags, ...rest)
+    if (flags === 'w' && /show\.json\.(async\.)?tmp$/.test(String(p))) {
+      const realWrite = fh.writeFile.bind(fh)
+      let n = 0
+      fh.writeFile = async (...a) => { if (n++ === 0) { held = true; await gate } return realWrite(...a) }
+    }
+    return fh
+  }
+  return { isHeld: () => held, release: () => { fs.promises.open = realOpen; open() } }
+}
+const settle = (ms) => new Promise((r) => setTimeout(r, ms))
+
+describe('R3-I1: asyncOwes is cleared by a synchronous save', () => {
+  it('after a switch during a held save, leaving the new never-edited space writes nothing into it', async () => {
+    const k = await startDesk(true)
+    try {
+      const file = path.join(k.d, 'data', 'show.json')
+      const spaceFile = path.join(k.spaceDir, 'show.json')
+      await k.post('/api/looks/add', { look: look('m-1') })
+      expect(await waitFor(() => fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes('m-1'))).toBe(true)
+      await settle(300)
+      const h = holdAsyncWrite()
+      try {
+        await k.post('/api/master', { master: 66 })
+        expect(await waitFor(h.isHeld, 3000)).toBe(true)
+        expect((await k.post('/api/show/open', { space: 'space-a' })).status).toBe(200)
+      } finally { h.release() }
+      await settle(500)
+      expect(JSON.parse(fs.readFileSync(file, 'utf8')).master).toBe(66)
+      expect(fs.existsSync(spaceFile)).toBe(false)
+      expect((await k.post('/api/show/open', { space: null })).status).toBe(200)
+      await settle(300)
+      expect(fs.existsSync(spaceFile), 'leaving the never-edited space-a wrote a show into it').toBe(false)
+      expect((await k.post('/api/show/open', { space: 'space-a' })).status).toBe(200)
+      expect((await k.post('/api/show/copy-machine', {})).status).toBe(200)
+    } finally { await k.stop() }
+  }, 30000)
 })

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createRequire } from 'node:module'
 
-const { LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff } =
+const { createLedPainter, OPT_LOOK_MS, LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff } =
   createRequire(import.meta.url)('./ui/midiCues.js')
 
 const cues = (n, extra = {}) => ({ list: Array.from({ length: n }, (_, i) => ({ id: 'c' + i, name: 'Look ' + (i + 1) })), ...extra })
@@ -184,5 +184,99 @@ describe('looks on the grid, 40 to a page', () => {
   })
   it('no look view lights no look pad (the cue pads keep working)', () => {
     expect(apc40Lights(map, cues(3), {}).filter((l) => l.note < 0x28)).toEqual([])
+  })
+})
+
+describe('pad lights go out at the press (fake APC40 port)', () => {
+  const looks = Array.from({ length: 67 }, (_, i) => ({ id: 'l' + (i + 1), name: 'Look ' + (i + 1) }))
+  const keys = ['lookpage:prev', 'lookpage:next', 'cuego', 'cueback', 'cuestop', 'cueauto', 'cueloop', 'blackout', ...lookPadTargets().map((t) => t.key)]
+  const map = Object.fromEntries(apc40Preset(keys).map((m) => [m.key, { type: m.type, ch: m.ch, num: m.num }]))
+  // The fake Web MIDI output port: records every message with the harness clock.
+  const rig = (armed = true) => {
+    const h = { t: 0, polled: '', at: 0, page: 0, armed, msgs: [] }
+    const port = { send: (b) => h.msgs.push({ t: h.t, note: b[1], vel: b[2] }) }
+    h.p = createLedPainter({
+      out: () => port, armed: () => h.armed, map: () => map, cues: () => ({ list: [] }), state: () => ({}),
+      looks: () => looks, page: () => h.page, setPage: (p) => { h.page = p }, polledId: () => h.polled, polledAt: () => h.at, now: () => h.t,
+    })
+    return h
+  }
+  const note = (k) => apc40PadNote(k)
+  const velOf = (h, n) => h.msgs.filter((m) => m.note === n).pop().vel
+
+  it('the pressed pad is red in the same tick, the old one back to ember', () => {
+    const h = rig(); h.polled = 'l1'; h.p.paint(); h.msgs.length = 0
+    h.t = 100; h.p.pressLook('l3')
+    expect(h.msgs.length).toBe(2)
+    expect(h.msgs.every((m) => m.t === 100)).toBe(true)
+    expect(velOf(h, note(2))).toBe(APC40_COLOUR.running); expect(velOf(h, note(0))).toBe(APC40_COLOUR.cue)
+  })
+  it('modelled: press to LED message on a fake clock, before = next poll (1.5 s gap + 0.9 s state), after = same tick', () => {
+    const POLL_MS = 1500, STATE_MS = 900
+    // before: the painter learns of the new look only from a poll that comes back after the fire
+    const before = rig(); before.polled = 'l1'; before.p.paint(); before.msgs.length = 0
+    const pressAt = 0
+    before.t = pressAt + POLL_MS + STATE_MS; before.polled = 'l3'; before.p.paint()
+    const beforeMs = before.msgs[0].t - pressAt
+    const after = rig(); after.polled = 'l1'; after.p.paint(); after.msgs.length = 0
+    const t0 = performance.now(); after.p.pressLook('l3'); const realMs = performance.now() - t0
+    const afterMs = after.msgs[0].t - pressAt
+    console.log(`press-to-LED  before ${beforeMs} ms  after ${afterMs} ms (fake clock); real send call ${realMs.toFixed(3)} ms`)
+    expect(afterMs).toBe(0)
+    expect(realMs).toBeLessThan(30)   // the only measured number here: one real send call
+  })
+  it('a poll that still shows the old look does not flip the pad back; the poll that agrees confirms', () => {
+    const h = rig(); h.polled = 'l1'; h.p.paint(); h.p.pressLook('l3'); h.msgs.length = 0
+    h.t = 1000; h.p.paint(); expect(h.msgs).toEqual([])
+    h.t = 2000; h.polled = 'l3'; h.p.paint(); expect(h.msgs).toEqual([])
+    h.polled = 'l5'; h.p.paint(); expect(velOf(h, note(2))).toBe(APC40_COLOUR.cue)   // desk moved on: the poll rules again
+  })
+  it('a refused or failed fire takes the guess back', () => {
+    const h = rig(); h.polled = 'l1'; h.p.paint(); h.p.pressLook('l3'); h.msgs.length = 0
+    h.p.answer('l3', true); expect(h.msgs).toEqual([])
+    h.p.answer('l3', false)
+    expect(velOf(h, note(2))).toBe(APC40_COLOUR.cue); expect(velOf(h, note(0))).toBe(APC40_COLOUR.running)
+  })
+  it('a guess the poll never confirms expires', () => {
+    const h = rig(); h.polled = 'l1'; h.p.paint(); h.p.pressLook('l3'); h.msgs.length = 0
+    h.t = OPT_LOOK_MS + 1; h.p.paint()
+    expect(velOf(h, note(0))).toBe(APC40_COLOUR.running)
+  })
+  // I1 of the #1388 review: the guess ends by request time, not by age.
+  it('a reading asked for BEFORE the desk answered the press never undoes the guess, past the old 4 s', () => {
+    const h = rig(); h.polled = 'l1'; h.at = 0; h.p.paint(); h.t = 100; h.p.pressLook('l3'); h.msgs.length = 0
+    h.t = 700; h.p.answer('l3', true)
+    h.t = 9000; h.at = 650; h.p.paint()                // a busy-held poll, asked before the answer, 9 s later (the old 4 s guess would have flipped)
+    expect(h.msgs).toEqual([])
+  })
+  it('a reading asked for AFTER the answer rules at once: it agrees, or it shows a third look', () => {
+    const h = rig(); h.polled = 'l1'; h.at = 0; h.p.paint(); h.t = 100; h.p.pressLook('l3'); h.t = 700; h.p.answer('l3', true); h.msgs.length = 0
+    h.t = 800; h.polled = 'l5'; h.at = 760; h.p.paint()   // another surface moved the desk on; no 4 s of waiting
+    expect(velOf(h, note(4))).toBe(APC40_COLOUR.running); expect(velOf(h, note(2))).toBe(APC40_COLOUR.cue)
+  })
+  it('a reading asked in the SAME millisecond as the answer counts as after it (>= not >)', () => {
+    const h = rig(); h.polled = 'l1'; h.at = 0; h.p.paint(); h.t = 100; h.p.pressLook('l3'); h.t = 700; h.p.answer('l3', true); h.msgs.length = 0
+    h.t = 800; h.polled = 'l5'; h.at = 700; h.p.paint()
+    expect(velOf(h, note(4))).toBe(APC40_COLOUR.running)
+  })
+  it('an unanswered fire is held for the backstop only', () => {
+    const h = rig(); h.polled = 'l1'; h.at = 0; h.p.paint(); h.p.pressLook('l3'); h.msgs.length = 0
+    h.t = 5000; h.at = 4900; h.p.paint(); expect(h.msgs).toEqual([])
+    h.t = OPT_LOOK_MS + 1; h.p.paint(); expect(velOf(h, note(0))).toBe(APC40_COLOUR.running)
+  })
+  it('a disarm drops the guess (L1): the re-armed pads show what the desk shows', () => {
+    const h = rig(); h.polled = 'l1'; h.p.paint(); h.p.pressLook('l3'); h.p.reset(); h.msgs.length = 0
+    h.p.paint()
+    expect(velOf(h, note(0))).toBe(APC40_COLOUR.running); expect(velOf(h, note(2))).toBe(APC40_COLOUR.cue)
+  })
+  it('Safe: nothing is painted and a press sends no light', () => {
+    const h = rig(false); h.p.pressLook('l3'); h.p.paint()
+    expect(h.msgs).toEqual([])
+  })
+  it('a press on a look off this page lights nothing here; a page change repaints at once', () => {
+    const h = rig(); h.polled = 'l1'; h.p.paint(); h.msgs.length = 0
+    h.p.pressLook('l50'); expect(velOf(h, note(0))).toBe(APC40_COLOUR.cue)
+    h.msgs.length = 0; h.page = 1; h.p.reset(); h.p.paint()
+    expect(h.msgs.filter((m) => m.note < 0x28).length).toBe(40)
   })
 })

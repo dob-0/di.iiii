@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import StudioViewport from './StudioViewport.jsx'
 import { useViewportMode } from '../utils/viewportMode.js'
 import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { pageAllow } from '../../utils/pageFramePermissions.js'
+import { createCodePageReadBridge } from '../../components/codePageReadBridge.js'
 
 const overlayCardStyle = {
     position: 'absolute',
@@ -79,6 +80,17 @@ export default function StudioPresentationSurface({
     const [laserTest, setLaserTest] = useState(false)
     const presentationState = document.presentationState || {}
     const viewportMode = useViewportMode(document)
+    // The Studio view of a code page reads the desk like the public view does
+    // (codePageReadBridge, #1380): the owner opened the Reika page here and its
+    // live tiles stayed empty (2026-11-27).
+    const codeFrameRef = useRef(null)
+    const codeViewOn = viewportMode === 'code'
+    useEffect(() => {
+        if (!codeViewOn) return undefined
+        const bridge = createCodePageReadBridge({ getFrameWindow: () => codeFrameRef.current?.contentWindow })
+        window.addEventListener('message', bridge)
+        return () => window.removeEventListener('message', bridge)
+    }, [codeViewOn])
     const previewMode = viewportMode
     const isFixedCamera = previewMode === 'fixed-camera'
     // The composed shot is where the camera STARTS; it holds the camera still only when
@@ -151,6 +163,7 @@ export default function StudioPresentationSurface({
         return (
             <iframe
                 title={document.projectMeta?.title || document.projectMeta?.id || 'Studio code preview'}
+                ref={codeFrameRef}
                 srcDoc={previewDocument}
                 sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
                     allow={pageAllow(presentationState.deviceAccess)}
