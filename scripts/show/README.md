@@ -78,7 +78,7 @@ reading (the SRE launch checklist style). A reading that is missing is NO-GO wit
 Built 2026-11-26 on a show night; the tools had lived in a report folder and are now part of di. Why, the owner's words:
 N7020 "the right side truss ones need to swaped they looks no stage they look to the wall" and N7024 "look and fix the
 scenes i want that light work sync , now its bad becouse in scenes left line and right line is do the same movment and one
-the every time looks to the wall". Camera record (2026-11-26 22:4x, dob-3f's controlled hold, all 18 bars at pan 128; tilt 156 put both sides inward, tilt 100
+the every time looks to the wall". Camera record (2026-11-26 22:40 +04 (record time), dob-3f's controlled hold, all 18 bars at pan 128; tilt 156 put both sides inward, tilt 100
 put both on their own walls; viewed by the lead dob-39): the right bars hang turned 180 degrees, DMX tilt above 32768 lands
 INWARD on both sides. The first reading of that evening (both trusses hang the same way, mirror `(65536 - pan, 65536 - tilt)`)
 was measured wrong for this hall.
@@ -144,12 +144,19 @@ Remove the `show` line from `COMMANDS` in `scripts/di/cli.mjs` and the `show` en
 
 `node scripts/show/light_page_check.mjs --url URL --out DIR [--sizes 1536x864,844x390,1536x864,766x830] [--expect N | --show SHOW.json]`
 pictures the light page's Touch minimap in headless Chromium with `--disable-gpu` and checks each size: every light inside the box
-(0 cut), the rig fills at least 50 % of the box, and a size that comes again gives the same rig within 2 px. `--expect N` or the
-fixture count of `--show` (a top-level `show` key is unwrapped) is the light count. Exit 0 all sizes pass, 1 one failed (named), 2 usage.
-**It refuses the live desk**: any host but `127.0.0.1`, `localhost` or `<name>-test.diiii.localhost` (so `diiii.localhost`) is exit 2 with one line. Pictures and `run.txt` go to `--out`.
+(0 cut), the rig fills at least 50 % of the box (the larger of its width share and its height share), the exact light count is shown, and a size that comes again gives the same rig within 2 px
+(the PASS line says "the return check did not run" when no size repeats). A light is cut when any edge (left, right, top, bottom) passes the box. `--expect N` or the
+fixture count of `--show` (a top-level `show` key is unwrapped) is the exact light count: more or fewer fails. Exit 0 all sizes pass, 1 one failed (named), 2 usage, a refused URL, or `LIGHT_PAGE_CHECK_NO_BROWSER=1` (the tests set it: the tool stops before it loads a browser).
+**Refused URLs** (exit 2, one line each, before any network call): (a) host `diiii.localhost`, or any `*.diiii.localhost` that is not a `<name>-test.diiii.localhost` test copy; (b) `127.0.0.1`, `::1` or `localhost` with no explicit port, or port 80 or 443;
+(c) a loopback host on the port the installed di serves (`PORT` in `$HOME/.di/run/server.env`, read, never printed; a missing file is fine); (d) any host that is not local.
+Allowed: a loopback host on any other explicit port, and `<name>-test.diiii.localhost` copies. Pictures and `run.txt` go to `--out`.
 Recipe (N7279.7), with `<job>` a worktree name `~/work/di.iiii-<job>`:
-1. Worktree of the build to check, with `node_modules` linked (`ln -s <other checkout>/node_modules <wt>/node_modules`, same for `<wt>/serverXR/node_modules` from `~/.di/current/serverXR/node_modules`); remove both links at the end, never commit them.
-2. The show copy goes in BEFORE `di-dev up`: `install -d -m 700 ~/.cache/di-dev/<job>/data/lighting`, then a python copy (read-only source, nothing written under `~/.di`) of the space's `lighting/show.json` with `s['midi'] = {'maps': []}` and every layer `on = False`, written to `~/.cache/di-dev/<job>/data/lighting/show.json`.
+1. Worktree of the INSTALLED build, with `node_modules` linked: `v=$(di version | head -1 | sed 's/.*dev\.//')`; `git -C ~/work/<any di.iiii worktree> worktree add --detach ~/work/di.iiii-<job> $v`;
+   `ln -s ~/work/<a checkout with node_modules>/node_modules <wt>/node_modules`; `ln -s ~/.di/current/serverXR/node_modules <wt>/serverXR/node_modules`.
+   Check: `diff -rq ~/.di/current/serverXR/src <wt>/serverXR/src | wc -l` gives 0 (test files aside). Remove both links at the end, never commit them.
+2. The show copy goes in BEFORE `di-dev up` (the source is only read, nothing is written under `~/.di`): `install -d -m 700 ~/.cache/di-dev/<job>/data/lighting`, then
+   `python3 -I -c "import json,os; s=json.load(open(os.path.expanduser('~/.di/data/spaces/<space>/lighting/show.json'))); s['midi']={'maps':[]}; [l.update(on=False) for l in s['layers']]; json.dump(s, open(os.path.expanduser('~/.cache/di-dev/<job>/data/lighting/show.json'),'w'))"`
+   (midi maps empty and every layer off; the desk reads `DATA_ROOT/lighting/show.json`).
 3. CPU fence: `systemctl --user set-property --runtime di-api@<job>.service CPUWeight=1` (same for `di-web@`), `nice -n 19 taskset -c 5-7,13-15 di-dev up <job> --api scratch --no-keep`, then `taskset -a -cp 5-7,13-15` and `renice -n 19` on every pid and thread of each unit's cgroup (`systemctl --user show -p ControlGroup --value <unit>`, then `cgroup.procs`).
 4. Checks before the run: `grep -c '^ARTNET_OFFLINE=1$' ~/.config/di-dev/env/<job>.env` gives 1; `ss -uapn | grep -c "pid=<api MainPID>,"` gives 0 (no UDP socket, so no Art-Net); `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:<api port>/light/` gives 200 (port from `di-dev ls`, the `api :NNNN`).
 5. Run: `nice -n 19 taskset -c 5-7,13-15 node scripts/show/light_page_check.mjs --url 'http://127.0.0.1:<api port>/light/#touch' --out <dir> --show <show copy>`; open the pictures. Negative control: the same with `--expect <count + 1>` must exit 1.
@@ -160,8 +167,9 @@ Never load the live desk's light page, never read its `/api/state`, never send A
 
 `python3 scripts/show/desk_missing_looks.py OLD_SHOW.json NOW_SHOW.json [RECORD ...]` lists the looks of an old show copy that are not on the desk now and says
 whether each has a removal record. Give it the old copy, the desk copy and EVERY record: removal archives (`.json` with a `looks` list), handovers (`.md`) and the owner's ledger.
-A text line counts when it names the look (id, name, or name without its number; names shorter than 5 letters never match) and says remov / delet / archiv.
-Exit 0 every missing look has a record · 1 some have none (named; ask the lead before calling them lost) · 2 usage. Read-only. Lesson N7279.3: a "16 looks lost" finding went out before the record was read; all 16 had been removed on the owner's word.
+A text line is only a candidate for a person to read, not proof: it must name the look (id, name, or name without its number; whole word, any case; names shorter than 5 letters never match) and hold the whole word removed, deleted or archived.
+The tool prints the file, the line number and the line (cut to 160 characters) under "named on a text line, read it".
+Exit 0 every missing look has a structured (JSON archive) record · 3 the rest are only text candidates · 1 some look has no record at all (named; ask the lead before calling it lost; 1 wins over 3) · 2 usage or a bad or unreadable input (one line, no traceback). Read-only. Lesson N7279.3: a "16 looks lost" finding went out before the record was read; all 16 had been removed on the owner's word.
 
 ## Loading looks onto a desk: mirror_sync.py first (lesson N7034.4)
 

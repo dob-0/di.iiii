@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """mirror_sync.py: (di show desk tools) every left/right moving-bar pair mirrors its partner and faces the room, in every step of every look.
 
-Why (a show night, 2026-11-26), the owner N7024 (relayed by dob-3f 21:4x), his words: "look and fix the scenes i want that
+Why (a show night, 2026-11-26), the owner N7024 (relayed by dob-3f, 2026-11-26 21:42 (ledger stamp)), his words: "look and fix the scenes i want that
 light work sync , now its bad becouse in scenes left line and right line is do the same movment and one the every time looks
 to the wall".
 
@@ -16,7 +16,7 @@ presets_lib_measured.py `_m()` and `cell_mirror()`; not imported):
   No FACE_SIGN, or no mirror mode for an axis: exit 2 (never a guessed sign: two wrong loads happened on 2026-11-26).
   Each key the rule uses (FACE_SIGN, the pan key, the tilt key, and unless --keep-cells the cell key) also needs
   measured.<KEY> in the presets: the same value (a boolean measured value for a number constant is refused) and a confidence other than none; else exit 2 naming the key.
-Measured rule of the Reika rig (camera record, 2026-11-26 22:4x, dob-3f's controlled hold, all 18 bars at pan 128; tilt 156
+Measured rule of the Reika rig (camera record, 2026-11-26 22:40 +04 (record time), dob-3f's controlled hold, all 18 bars at pan 128; tilt 156
 put both sides inward, tilt 100 put both on their own walls; the lead dob-39 viewed the frame): the right bars hang turned
 180 degrees, DMX tilt above centre lands INWARD on both sides. Presets values: MIRROR_MODE_PAN negate, MIRROR_MODE_TILT
 same, FACE_SIGN +1, CELL_MIRROR_LR True (pan R = 65536 - pan L, tilt R = tilt L, R cells = L cells reversed).

@@ -6,3 +6,4 @@
 - Real run on a scratch desk made by the recipe from this worktree (show copy of the Reika desk, read-only): PASS at 4 of 4 sizes, 33 lights, 0 cut; `--expect 34` exits 1. Output in the chat's scratch folder.
 - README: scratch-desk recipe, "Before a look is called lost", and the mirror_sync-first rule for loading looks (exit 2 = a sign never seen on the rig; the load stops).
 - Fixed the hand-typed time in `fix-aim-fine-trim-compat-2026-11-26.md` (05:0 + x) with the commit time of e30c50a3f.
+- 08:29 (dob-7a, fix round 1 of #1400): merged origin/dev; light_page_check: symlink-safe start, exact refusal rules (a)-(d) incl. the installed di port, LIGHT_PAGE_CHECK_NO_BROWSER for tests, a cut case per edge, exact light count, honest PASS line; desk_missing_looks: whole-word candidates printed for a person, exit 3/1/2 (text alone never exits 0); README recipe steps 1-2 exact; the camera-record time written as the record holds it (2026-11-26 22:40 +04, record time).

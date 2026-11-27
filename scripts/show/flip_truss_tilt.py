@@ -6,7 +6,7 @@ Why (a show night, 2026-11-26):
 - 21:27, fix_right_truss.py flipped the right bars only. The camera frame at 21:31:45 (cue "R6 Unison", read by dob-3f
   and by the lead) then showed the right bars facing the room and the LEFT bars lighting the left wall behind them.
 - 21:29, RDM GET by dob-3f: R1 and L1 report pan invert 0 and tilt invert 0.
-Later record (camera, 2026-11-26 22:4x, dob-3f's controlled hold, all 18 bars at pan 128; tilt 156 put both sides inward,
+Later record (camera, 2026-11-26 22:40 +04 (record time), dob-3f's controlled hold, all 18 bars at pan 128; tilt 156 put both sides inward,
 tilt 100 put both on their own walls; viewed by the lead dob-39): the right bars hang turned 180 degrees, DMX tilt above
 centre lands INWARD on both sides. So "both trusses hang the same way" (the first reading above) was wrong for this hall.
 The true mirror there is pan R = 65536 - pan L, tilt R = tilt L (see mirror_sync.py, whose rule is read from the presets).

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // light_page_check.mjs: a read-only picture check of the light desk's Touch minimap (owner N7040/N7110, PR #1384; moved into di N7279.7).
 // It opens the light page of a SCRATCH desk in headless Chromium with no GPU (nothing on his screens, no load on the graphics card).
-// It only looks: it clicks nothing but the Touch page tab and never writes to the desk. The live desk is refused (exit 2).
-// Per size it checks: every light inside the box (0 cut), the rig fills at least half of the box, and a size that comes
+// It only looks: it clicks nothing but the Touch page tab and never writes to the desk. The live desk is refused (exit 2), see hostCheck for the exact rules.
+// Per size it checks: every light inside the box (0 cut; each edge counts), the exact light count, the rig fills at least half of the box (the larger of width share and height share), the light count is exact, and a size that comes
 // again after a squeeze brings the rig back to its first size within 2 px (before #1384 the 33 lights stayed one 8 px square).
 // Usage: node scripts/show/light_page_check.mjs --url URL --out DIR [--sizes 1536x864,844x390,1536x864,766x830] [--expect N | --show SHOW.json]
-// Exit 0 = every size passed, 1 = one failed (named), 2 = usage or refused host.
+// Exit 0 = every size passed, 1 = one failed (named), 2 = usage, refused host, or LIGHT_PAGE_CHECK_NO_BROWSER=1 (tests: no browser may start).
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -14,14 +15,45 @@ export const DEFAULT_SIZES = '1536x864,844x390,1536x864,766x830'
 export const MIN_FILL = 50
 export const BACK_PX = 2
 
-// Only a scratch desk may be looked at: 127.0.0.1, localhost, or a <name>-test.diiii.localhost test copy.
-export function hostCheck(urlStr) {
+// The port the installed di serves, from $HOME/.di/run/server.env (PORT='443'); null when the file or the key is missing. Never printed.
+export function installedPort(home = process.env.HOME || os.homedir()) {
+  try {
+    const m = /^\s*(?:export\s+)?PORT=['"]?(\d+)['"]?\s*$/m.exec(fs.readFileSync(path.join(home, '.di', 'run', 'server.env'), 'utf8'))
+    return m ? m[1] : null
+  } catch { return null }
+}
+
+// Only a scratch desk may be looked at. Refused, each with its own reason:
+//  (a) diiii.localhost, or any *.diiii.localhost that is not a <name>-test.diiii.localhost test copy;
+//  (b) a loopback host (127.0.0.1, ::1, localhost) with no explicit port, or port 80 or 443 (the URL parser drops a default port);
+//  (c) a loopback host on the port the installed di serves (PORT in $HOME/.di/run/server.env);
+//  (d) any host that is not local.
+// Allowed: a loopback host on any other explicit port, and a <name>-test.diiii.localhost copy. Runs before any network call.
+export function hostCheck(urlStr, home) {
   let u
   try { u = new URL(urlStr) } catch { return { ok: false, reason: `not a URL: ${urlStr}` } }
   const h = u.hostname.toLowerCase()
-  if (h === 'diiii.localhost') return { ok: false, reason: 'refused: diiii.localhost is the live desk' }
-  if (h === '127.0.0.1' || h === 'localhost' || /^[a-z0-9-]+-test\.diiii\.localhost$/.test(h)) return { ok: true, reason: '' }
-  return { ok: false, reason: `refused: host ${h} is not 127.0.0.1, localhost or a *-test.diiii.localhost copy` }
+  if (h === 'diiii.localhost' || h.endsWith('.diiii.localhost')) {
+    if (/^[a-z0-9-]+-test\.diiii\.localhost$/.test(h)) return { ok: true, reason: '' }
+    return { ok: false, reason: `refused: ${h} is the live desk or not a <name>-test.diiii.localhost test copy` }
+  }
+  if (h === '127.0.0.1' || h === '[::1]' || h === 'localhost') {
+    if (u.port === '' || u.port === '80' || u.port === '443') return { ok: false, reason: `refused: ${h} with no explicit scratch port (or port 80/443) is the live desk's door` }
+    if (u.port === installedPort(home)) return { ok: false, reason: `refused: port ${u.port} is the port the installed di serves (the live desk)` }
+    return { ok: true, reason: '' }
+  }
+  return { ok: false, reason: `refused: host ${h} is not local` }
+}
+
+// One measured line of a run, and its parser (the run.txt of an older run is read by the same code in the tests).
+export function formatLine(label, m) {
+  return `${label}: box ${m.box.join('x')}, ${m.lights} lights, ${m.cut} cut, rig ${m.rig.join('x')} px, fills ${m.fill}% of the box`
+}
+export function parseLine(line) {
+  const r = /^(\S+): box (\d+)x(\d+), (\d+) lights, (\d+) cut, rig (\d+)x(\d+) px, fills (\d+)% of the box$/.exec(line.trim())
+  if (!r) return null
+  const size = /(\d+x\d+)/.exec(r[1])
+  return { label: r[1], size: size ? size[1] : r[1], m: { box: [+r[2], +r[3]], lights: +r[4], cut: +r[5], rig: [+r[6], +r[7]], fill: +r[8] } }
 }
 
 export function parseSizes(str) {
@@ -47,6 +79,7 @@ export function fitFromBoxes(stage, items) {
   if (!bs.length) return { box: [Math.round(stage.width), Math.round(stage.height)], lights: 0, cut: 0, rig: [0, 0], fill: 0 }
   const x0 = Math.min(...bs.map((b) => b.left)), x1 = Math.max(...bs.map((b) => b.right))
   const y0 = Math.min(...bs.map((b) => b.top)), y1 = Math.max(...bs.map((b) => b.bottom))
+  // a light is cut when ANY edge passes the box edge (left, right, top or bottom); it counts once
   const cut = bs.filter((b) => b.left < stage.left - 0.5 || b.right > stage.right + 0.5 || b.top < stage.top - 0.5 || b.bottom > stage.bottom + 0.5).length
   return {
     box: [Math.round(stage.width), Math.round(stage.height)],
@@ -66,9 +99,9 @@ export function judge(results, expect) {
   const firstOf = new Map()
   for (const r of results) {
     const { m, label } = r
-    if (m.lights < expect) fails.push(`${label}: ${m.lights} lights, expected at least ${expect}`)
+    if (m.lights !== expect) fails.push(`${label}: ${m.lights} lights, expected exactly ${expect}`)
     if (m.cut !== 0) fails.push(`${label}: ${m.cut} light(s) cut by the box edge`)
-    if (m.fill < MIN_FILL) fails.push(`${label}: rig fills ${m.fill}% of the box, needs at least ${MIN_FILL}%`)
+    if (m.fill < MIN_FILL) fails.push(`${label}: rig fills ${m.fill}% of the box (the larger of width share and height share), needs at least ${MIN_FILL}%`)
     if (firstOf.has(r.size)) {
       const first = firstOf.get(r.size)
       if (!returnOk(first.m, m)) fails.push(`${label}: back at ${r.size} the rig is ${m.rig.join('x')} px, first it was ${first.m.rig.join('x')} px (more than ${BACK_PX} px apart)`)
@@ -106,6 +139,7 @@ async function main() {
     expect = o.expect !== undefined ? +o.expect : countFixtures(JSON.parse(fs.readFileSync(o.show, 'utf8')))
     sizes = parseSizes(o.sizes)
   } catch (e) { console.error(`usage error: ${e.message}`); return 2 }
+  if (process.env.LIGHT_PAGE_CHECK_NO_BROWSER === '1') { console.error('no browser: LIGHT_PAGE_CHECK_NO_BROWSER=1 is set, nothing was started'); return 2 }
   fs.mkdirSync(o.out, { recursive: true })
   const lines = []
   const say = (s) => { lines.push(s); console.log(s) }
@@ -131,17 +165,20 @@ async function main() {
       })
       const m = fitFromBoxes(raw.stage, raw.items)
       await page.screenshot({ path: path.join(o.out, `${label}.png`) })
-      say(`${label}: box ${m.box.join('x')}, ${m.lights} lights, ${m.cut} cut, rig ${m.rig.join('x')} px, fills ${m.fill}% of the box`)
+      say(formatLine(label, m))
       results.push({ label, size, m })
     }
   } finally { await browser.close() }
   const v = judge(results, expect)
-  if (v.ok) say(`PASS: ${results.length} of ${results.length} sizes show all ${results[0].m.lights} lights (expected ${expect}) inside the box, filling at least half of it, and a repeated size gives the same rig within ${BACK_PX} px`)
+  const repeats = new Set(results.map((r) => r.size)).size < results.length
+  const back = repeats ? `a repeated size gives the same rig within ${BACK_PX} px` : 'the return check did not run (no size repeats)'
+  if (v.ok) say(`PASS: ${results.length} of ${results.length} sizes show the exact light count (${expect}) inside the box, the rig fills at least half of it (the larger of width share and height share), and ${back}`)
   else { for (const f of v.fails) say(`FAIL ${f}`); say(`FAIL: ${v.fails.length} problem(s); see the lines above`) }
   fs.writeFileSync(path.join(o.out, 'run.txt'), lines.join('\n') + '\n')
   return v.ok ? 0 : 1
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+const isMain = (() => { try { return !!process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url) } catch { return false } })()
+if (isMain) {
   main().then((c) => process.exit(c), (e) => { console.error(e.stack || e.message); process.exit(2) })
 }
