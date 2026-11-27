@@ -6325,7 +6325,7 @@ function buildMidiTargets() {
     for (const g of groups) {
       const ids = g.ids;
       cc(`grp:${g.key}:dim`, `${g.label} dimmer  (${ids.length})`, () => mp.groupDimRead((S && S.fixtures) || [], g),   // the desk's values at catch time, never the copy taken at build
-        (u) => { const v = Math.round(u * 255); for (const id of ids) midiSend('api/fixture', { id, values: { dimmer: v } }, 'api/fixture:' + id); });
+        (u) => { const v = Math.round(u * 255); for (const id of ids) { const f = fxById(id); if (f) { if (v >= 255) delete f.sub; else f.sub = v; } midiSend('api/fixture', { id, sub: v }, 'api/fixture:sub:' + id); } });
       pad(`grp:${g.key}:on`, `${g.label} on / off  (a press flips it)`, () => {
         if (!midiArmed) return;
         // flips what the desk shows now, not a copy; the LED follows at once

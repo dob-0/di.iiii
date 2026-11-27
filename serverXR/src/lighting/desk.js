@@ -2226,6 +2226,12 @@ function createDesk(opts = {}) {
         || body.universe != null || body.profile != null || body.limits != null;
       if (body.values) Object.assign(f.values, sanitizeValues(body.values));
       if (body.on != null) f.on = !!body.on;
+      // The group fader (N7670): a multiplier over whatever plays; 255 or null = full and the field goes away.
+      if (body.sub !== undefined) {
+        const n = Number(body.sub);
+        if (body.sub === null || !Number.isFinite(n) || n >= 255) delete f.sub; else f.sub = Math.max(0, Math.round(n));
+        if (!look) pushFrame();
+      }
       if (body.name != null) f.name = String(body.name).slice(0, 40);
       if (body.address != null) f.address = Math.max(1, Math.min(512, body.address | 0));
       if (body.universe != null) f.universe = Math.max(0, Math.min(32767, body.universe | 0));

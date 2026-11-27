@@ -228,6 +228,9 @@ function makeFixture(f = {}) {
     // rigpatch.js); absent on every fixture patched by hand, so a show saved before it
     // existed reads back byte for byte.
     ...(typeof f.rigKey === 'string' && f.rigKey && f.rigKey.length <= 300 ? { rigKey: f.rigKey } : {}),
+    // A group fader's share of this lamp (0..255), a multiplier ON TOP of whatever plays — a look writes the dimmer
+    // itself, so a fader on values.dimmer did nothing under a running look (owner N7670). Absent = full.
+    ...(f.sub != null && Number.isFinite(+f.sub) && +f.sub < 255 ? { sub: Math.max(0, Math.round(+f.sub)) } : {}),
     // A fixture's own effect, beating the rig-wide one for it alone (see render).
     // A flash lease (api/fx flash:true) is live only: a saved or reloaded show never comes back strobing.
     ...(f.fx && !f.fx.flash && FX_MODES.includes(f.fx.mode) ? { fx: { mode: f.fx.mode } } : {}),
@@ -453,6 +456,7 @@ class Engine {
       const level = flash != null ? flash * 255 : (f.on === false ? 0 : (val('dimmer') ?? 255));
       const dim = mapRange(level, lim.dimMin, lim.dimMax) / 255;
       let lvl = master;
+      if (f.sub != null && Number.isFinite(+f.sub)) lvl *= Math.max(0, Math.min(255, +f.sub)) / 255;   // the group fader (N7670)
       // The look's own motion first (lookMotion.js), then the desk's global FX on top, as before; a generic-channel or an
       // excluded profile sits out both. Two STROBES never stack on one lamp: a look that strobes is the one flashing
       // source for its lamps and the global strobe sits out for them, so no lamp flashes faster than fx.js's cap.
@@ -477,6 +481,16 @@ class Engine {
         const kind = roleKind(role);
         if (kind === 'level') {
           v = dim * 255 * lvl;
+          // A 16-bit dimmer: its fine byte is part of the SAME level, so it is scaled with the coarse one. It used to
+          // pass through as a control byte, so a blackout or a master at 0 still left coarse 0 + fine N = a faint glow
+          // (N7671: 119 light channels lit on the back bars during blackout).
+          const dfi = role === 'dimmer' ? profile.channels.indexOf('dimmer_fine') : -1;
+          if (dfi >= 0 && f.address - 1 + dfi <= 511) {
+            const fineIn = flash != null ? 0 : clamp8(+(val('dimmer_fine') ?? 0) || 0);
+            const exact = Math.max(0, Math.min(255 + 255 / 256, (dim * 255 + (fineIn / 256) * (lim.dimMax - lim.dimMin) / 255) * lvl));
+            v = Math.floor(exact);
+            (fineWrites || (fineWrites = [])).push([f.address - 1 + dfi, Math.min(255, Math.floor((exact - v) * 256))]);
+          }
         } else if (kind === 'position') {
           // The old engine's value FIRST, exactly (pre-fine-trim): Swap -> desk value -> Invert -> the
           // min/max mapping -> a WHOLE trim (truncated toward 0) clamped to the limits. A show that

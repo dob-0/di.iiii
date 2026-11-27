@@ -115,8 +115,10 @@ describe('rig groups', () => {
   it('no fixtures, no groups', () => {
     expect(P.rigGroups(null, null).map((x) => x.ids.length)).toEqual([0, 0, 0])
   })
-  it('the dimmer reads the mean of the group, on means every member on', () => {
+  it('the dimmer reads the mean of the group fader level (sub, absent = full), on means every member on', () => {
     const f = rig(), [l, r] = P.rigGroups(f, [])
+    expect(P.groupDimRead(f, l)).toBe(1)   // the stored dimmer is not the fader any more (N7670): a look overrides it
+    for (const x of f) x.sub = l.ids.includes(x.id) ? 200 : 100
     expect(P.groupDimRead(f, l)).toBeCloseTo(200 / 255, 6)
     expect(P.groupDimRead(f, r)).toBeCloseTo(100 / 255, 6)
     expect(P.groupIsOn(f, l)).toBe(true)
@@ -384,7 +386,7 @@ describe('group reads come from the desk at catch time (#1397 review I1, mutatio
   it('groupDimRead follows the fixtures it is handed (a poll replaces them)', () => {
     const P = require('./ui/midiPatch.js')
     const g = { ids: ['a'] }
-    expect(P.groupDimRead([{ id: 'a', values: { dimmer: 255 } }], g)).toBe(1)
-    expect(P.groupDimRead([{ id: 'a', values: { dimmer: 77 } }], g)).toBeCloseTo(77 / 255)
+    expect(P.groupDimRead([{ id: 'a', values: { dimmer: 77 } }], g)).toBe(1)
+    expect(P.groupDimRead([{ id: 'a', sub: 77 }], g)).toBeCloseTo(77 / 255)
   })
 })
