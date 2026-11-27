@@ -18,7 +18,7 @@ const { chromium } = require('playwright')
 const FLOOR = 11
 const base = process.argv[2]
 const out = process.argv[3]
-const sizes = (process.argv.length > 4 ? process.argv.slice(4) : ['1534x830', '1536x864', '606x780']).map((s) => s.split('x').map(Number))
+const sizes = (process.argv.length > 4 ? process.argv.slice(4) : ['1534x830', '1536x864', '606x780', '662x830']).map((s) => s.split('x').map(Number))
 {
   let u
   try { u = new URL(base) } catch { console.error('not a URL: ' + base); process.exit(2) }
@@ -88,9 +88,17 @@ for (const [w, h, view] of sizes.flatMap(([w, h]) => [[w, h, 'labelled'], [w, h,
         whole: !!aw && ar.left >= 0 && ar.right <= window.innerWidth + 1 && document.querySelector('.apcstage').getBoundingClientRect().right <= ar.right + 1 && getComputedStyle(aw).overflowX !== 'auto' }   // the whole unit, no sideways pan
       const sw = [...document.querySelectorAll('.apcview button')]
       const switchOk = sw.length === 2 && sw.every(inView) && sw.filter((b) => b.getAttribute('aria-pressed') === 'true').length === 1
-      return { switchOk, drawing, scale: Math.round(k * 1000) / 1000, pads: pads.length, padMin: Math.min(...padPx), clN: cl.length, clMin: cl.length ? Math.min(...clPx) : null, cut, clCut, short, noTitle, list, firstView, underBar, dup, topLabels: tops.length }
+      // overlaps (as drawn, in screen px): the logos, the crossfader (track, cap, end stops), A/B, every label (.pl) and every control must not intersect
+      const ap0 = document.querySelector('.apcp'), kids = [...ap0.children].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' })
+      const cls = (e) => e.className && e.className.baseVal === undefined ? String(e.className) : ''
+      const isX = (e) => /\b(logo|akai|xf|xab|xt)\b/.test(cls(e)), isLab = (e) => /\bpl\b/.test(cls(e))
+      const nm = (e) => cls(e).trim().replace(/\s+/g, '.') + (e.textContent ? '"' + e.textContent.trim().slice(0, 8) + '"' : '')
+      const hit = (a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(); return Math.min(x.right, y.right) - Math.max(x.left, y.left) > 1 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 1 }
+      const overlaps = []
+      for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) { const a = kids[i], b = kids[j]; if ((isX(a) || isX(b) || (isLab(a) && isLab(b))) && hit(a, b)) overlaps.push(nm(a) + ' x ' + nm(b)) }
+      return { overlaps, overlapChecked: kids.length, switchOk, drawing, scale: Math.round(k * 1000) / 1000, pads: pads.length, padMin: Math.min(...padPx), clN: cl.length, clMin: cl.length ? Math.min(...clPx) : null, cut, clCut, short, noTitle, list, firstView, underBar, dup, topLabels: tops.length }
     }, pg + 1)
-    const ok = m.padMin >= FLOOR - 0.05 && (m.clMin == null || m.clMin >= FLOOR - 0.05) && m.cut === 0 && m.clCut === 0 && m.noTitle === 0 && m.list === m.pads && m.firstView.scrollTop === 0 && m.firstView.heading && m.firstView.orderButtons >= 2 && m.firstView.orderButtonsInView === m.firstView.orderButtons && m.underBar.length === 0 && m.dup.length === 0 && m.drawing.visible && m.drawing.first && (view === 'real' ? m.drawing.whole && m.drawing.overview && m.clN === 0 : m.drawing.overview === false && m.clN > 0 && m.drawing.pan === (w < 1000)) && m.switchOk
+    const ok = m.padMin >= FLOOR - 0.05 && (m.clMin == null || m.clMin >= FLOOR - 0.05) && m.cut === 0 && m.clCut === 0 && m.noTitle === 0 && m.list === m.pads && m.firstView.scrollTop === 0 && m.firstView.heading && m.firstView.orderButtons >= 2 && m.firstView.orderButtonsInView === m.firstView.orderButtons && m.underBar.length === 0 && m.dup.length === 0 && m.overlaps.length === 0 && m.drawing.visible && m.drawing.first && (view === 'real' ? m.drawing.whole && m.drawing.overview && m.clN === 0 : m.drawing.overview === false && m.clN > 0 && m.drawing.pan === (w < 1000)) && m.switchOk
     if (!ok) fail++
     rows.push({ size: w + 'x' + h + ' ' + view, page: pg + 1, ...m, ok })
     console.log((ok ? 'PASS ' : 'FAIL ') + w + 'x' + h + ' ' + view + ' page ' + (pg + 1) + '  ' + JSON.stringify(m))

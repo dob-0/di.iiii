@@ -278,8 +278,7 @@
 ".apcp .fader b{position:absolute;left:4%;right:4%;height:21%;border-radius:.4cqw;background:linear-gradient(180deg,#3a3a3d,#08080a 50%,#1c1c1e);box-shadow:0 .2cqw .5cqw #000;bottom:calc(var(--v,.8) * 79%)}",
 ".apcp .fader b::after{content:\"\";position:absolute;left:0;right:0;top:46%;height:max(1px,.22cqw);background:#f4f4f4}",
 ".apcp .xf::before{content:\"\";position:absolute;top:50%;left:0;right:0;height:1px;background:#8a8a8e}",
-".apcp .xf b{position:absolute;top:0;bottom:0;width:14%;border-radius:.4cqw;background:linear-gradient(180deg,#303033,#070708 55%,#1a1a1c);box-shadow:0 .2cqw .5cqw #000;left:calc(var(--v,.5) * 86%)}",
-".apcp .xf b::before{content:\"\";position:absolute;right:100%;top:44%;height:12%;width:380%;background:#0a0a0b}",
+".apcp .xf b{position:absolute;top:0;bottom:0;width:16%;border-radius:.4cqw;background:linear-gradient(180deg,#303033,#070708 55%,#1a1a1c);box-shadow:0 .2cqw .5cqw #000;left:calc(var(--v,.5) * 84%)}",
 ".apcp .xf b::after{content:\"\";position:absolute;left:0;right:0;top:46%;height:max(1px,.22cqw);background:#f4f4f4}",
 ".apcp .xt{background:#cfcfd3;width:max(1px,.15cqw)}",
 ".apcp .xab{transform:translate(-50%,-50%);border:max(1px,.15cqw) solid #e8e8ea;font:600 max(4px,.7cqw)/1 var(--sans);color:#f2f2f2;display:flex;align-items:center;justify-content:center}",
@@ -454,9 +453,13 @@
         const a = el('div', 'ar', cr); a.style.left = p[2]; a.style.top = p[3]; a.style.width = p[4]; a.style.height = p[5]; a.style.setProperty('--rot', p[6]); a.style.position = 'absolute'; a.title = p[0]; A.btn[p[1]] = a;
         if (p[1] === 0x60 || p[1] === 0x61) el('span', 'lb', a);
       });
-      Cx(el('div', 'xab', ap, 'A'), 'xA'); Cx(el('div', 'xab', ap, 'B'), 'xB');
-      Bx(el('div', 'xt', ap), 'xt.0'); Bx(el('div', 'xt', ap), 'xt.1');
-      const xf = Bx(el('div', 'xf', ap), 'xfader'); el('b', '', xf); R.xfader = xf;
+      // Crossfader: a horizontal track with a short, wide cap riding ON it; A at the left end, B at the right end, close to the track;
+      // the end stops sit AT the ends and never cross it. All of it stays right of the AKAI logo (G.ctr.akai ends at x = 79.06).
+      const xg = G.box.xfader, xcy = PY(Y(xg[1], xg[0]) + xg[3] / 2), xw = xg[2], xh = 3.2;   // track centre line (panel %), cap height (panel % of height)
+      const xa = Cx(el('div', 'xab', ap, 'A'), 'xA'), xb = Cx(el('div', 'xab', ap, 'B'), 'xB');
+      xa.style.left = (xg[0] - 1.2) + '%'; xb.style.left = (xg[0] + xw + 1.2) + '%'; xa.style.top = xb.style.top = xcy + '%';
+      [xg[0] - .09, xg[0] + xw].forEach((x, n) => { const t = el('div', 'xt', ap); t.style.left = x + '%'; t.style.width = '.09%'; t.style.top = (xcy - xh * .7) + '%'; t.style.height = (xh * 1.4) + '%'; G.box['xt.' + n] = [x, 0, .09, 0]; });
+      const xf = Bx(el('div', 'xf', ap), 'xfader'); xf.style.top = (xcy - xh / 2) + '%'; xf.style.height = xh + '%'; el('b', '', xf); R.xfader = xf;
       const ak = Cx(el('div', 'akai', ap), 'akai', true); ak.textContent = 'AKAI'; el('small', '', ak, 'Professional');
 
       // ---- the unit is a controller: the same messages the real APC40 sends, through the desk's own binding map ----
