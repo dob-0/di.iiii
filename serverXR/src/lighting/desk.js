@@ -1354,7 +1354,9 @@ function createDesk(opts = {}) {
   // with keys that can never do anything.
   // `owner` is the caller's tag (holds.js): a value takes the channel for it, a release
   // lets go only of a channel it holds. Returns the holder a release was refused for.
-  // THE ROOM'S FLASH RULE, AT THE DESK (PR #1397 round 4, R3-I1; WCAG 2.3.1): no more than 3 flashes a second, whoever asks.
+  // THE ROOM'S FLASH RULE FOR THE api/raw HOLDS (PR #1397 round 4, R3-I1; WCAG 2.3.1): no more than 3 flashes a second.
+  // SCOPE (R4-I1): ONLY api/raw (the APC40 hits and any raw client). NOT capped here, on purpose and pending the owner's answer on
+  // scene strobe speed: api/fixture values, scene recall, cue GO, looks/fire (tests/test-strobe-cap.js pins this).
   // The page caps its own strobe, but any client can POST api/raw, so the desk holds the line itself, two ways:
   //  1. a raw write to a `strobe`-role channel is capped like the page's capStrobeDmx: DMX 4-103 (the 1-20 Hz band of the
   //     BAR1240PIX57) is written as at most 14 (= 2.92 Hz), a value past the band as 0 (open), 0-3 stay open;
@@ -1362,6 +1364,7 @@ function createDesk(opts = {}) {
   //     crossing up through 128); the next one inside the same second is refused as 'rate' and the channel stays as it was.
   const RAW_STROBE_LO = 4, RAW_STROBE_HI = 103, RAW_STROBE_CAP = 14;
   const RAW_RISES_PER_S = 3;
+  const RAW_RISE_GAP_MS = 334;
   const FLASH_LEASE_MS = 3000;       // a software-strobe hit lives this long after its last api/fx call
   const riseLog = new Map();          // 'universe:address' -> [ms of recent rising edges]
   function rawFixtureAt(universe, ch) {
@@ -1398,7 +1401,8 @@ function createDesk(opts = {}) {
       const fk = (hit.f.universe | 0) + ':' + (hit.f.address | 0);
       if (!seen.has(fk)) {
         const log = (riseLog.get(fk) || []).filter((t) => now - t < 1000);
-        const ok = log.length < RAW_RISES_PER_S;
+        // at most 3 in any second AND spaced (>= 334 ms apart), so the flashes read as a 3 Hz strobe, not a burst (R4-L5)
+        const ok = log.length < RAW_RISES_PER_S && (!log.length || now - log[log.length - 1] >= RAW_RISE_GAP_MS);
         if (ok) log.push(now);
         riseLog.set(fk, log);
         seen.set(fk, ok);

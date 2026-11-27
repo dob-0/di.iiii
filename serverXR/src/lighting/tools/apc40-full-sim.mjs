@@ -6,10 +6,11 @@ const require = createRequire(process.env.PW_FROM + '/')
 const { chromium } = require('playwright')
 
 import { execFileSync } from 'node:child_process'
-import { checkSimTarget } from './simGuard.mjs'
+import { checkSimTarget, checkDeskAnswers } from './simGuard.mjs'
 const base = process.argv[2]
 { let ls = ''; try { ls = execFileSync('di-dev', ['ls'], { encoding: 'utf8' }) } catch { /* the guard then refuses */ }
-  const why = checkSimTarget(base, ls); if (why) { console.error(why); process.exit(2) } }
+  const why = checkSimTarget(base, ls); if (why) { console.error(why); process.exit(2) }
+  const why2 = await checkDeskAnswers(base); if (why2) { console.error(why2); process.exit(2) } }
 const shot = process.argv[3]
 const api = async (p, body) => (await fetch(base + p, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined)).json()
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -303,16 +304,15 @@ check('FX depth ring followed the desk (last write ~ 64/127 of 255 read back)', 
   check('I1: truss at 77 on the desk, Safe then ARM, fader at the top: stays 77 (no jump to 255)', after.every((v) => v === 77), after)
   await cc(1, 7, 30, 500); await cc(1, 7, 127, 500)
 }
-// ---- review I2: the activator's second press may arrive as a late note-off (toggle on the unit) ----
+// ---- review I2 (round 4): an ACTIVATOR press flips it on the note-on, whatever its length; the note-off never flips ----
 {
-  await on(1, 0x32, 150); await sleep(100)           // press 1: note-on, no note-off (unit keeps the toggle)
-  let s2 = await st(); const offFirst = byU(s2, 5).every((f) => f.on === false)
-  await off(1, 0x32, 700)                            // press 2: the late note-off
-  s2 = await st(); const onSecond = byU(s2, 5).every((f) => f.on !== false)
-  check('I2: toggle style (note-on, later note-off): press 1 turns the truss off, press 2 turns it on', offFirst && onSecond, { offFirst, onSecond })
-  await on(1, 0x32, 100); await off(1, 0x32, 100)    // momentary style (quick on+off) = one flip only
+  let s2 = await st(); const was = byU(s2, 5).map((f) => f.on !== false)
+  await on(1, 0x32, 150); await off(1, 0x32, 50); await sleep(150)       // a 50 ms press
   s2 = await st()
-  check('I2: momentary style (note-on then a quick note-off) flips once', byU(s2, 5).every((f) => f.on === false), byU(s2, 5).map((f) => f.on))
+  check('I2: a 50 ms press flips the truss once', byU(s2, 5).every((f, i) => (f.on !== false) === !was[i]), byU(s2, 5).map((f) => f.on))
+  await on(1, 0x32, 150); await sleep(1000); await off(1, 0x32, 50); await sleep(300)   // a 1000 ms press
+  s2 = await st()
+  check('I2: a 1000 ms press flips it back once (the note-off does not flip)', byU(s2, 5).every((f, i) => (f.on !== false) === was[i]), byU(s2, 5).map((f) => f.on))
 }
 
 // ---- pictures: the MIDI pane at two real sizes ----
