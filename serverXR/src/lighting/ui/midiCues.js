@@ -138,6 +138,13 @@
     for (const [ch, key] of FULL_FADERS) { if (has.has(key)) out.push({ key, type: 'cc', ch, num: 7 }); }
     for (const [ch, key] of FULL_ACTIVATORS) { if (has.has(key)) out.push({ key, type: 'note', ch, num: 0x32 }); }
     for (const [num, key] of FULL_NOTES) note(num, key);
+    // Map-all (owner 2026-11-27, apc40-map-all.md): every other control. Per-track buttons arrive on the channel of their track.
+    for (const [num, key] of ALL_CC) cc(num, key);
+    for (const [num, key] of ALL_NOTES) note(num, key);
+    for (const [ch, key] of ALL_FADERS) { if (has.has(key)) out.push({ key, type: 'cc', ch, num: 7 }); }
+    for (const [num, prefix, from] of ALL_TRACK_ROWS) {
+      for (let n = from; n <= 8; n++) { const key = prefix + n; if (has.has(key)) out.push({ key, type: 'note', ch: n, num }); }
+    }
     // The 8 device knobs, one bank per TRACK SELECT (page = MIDI channel, midiPatch.js KNOBS).
     for (const k of patch().KNOBS) { if (has.has(k.key)) out.push({ key: k.key, type: 'cc', ch: k.ch, num: k.num }); }
     return out;
@@ -147,6 +154,14 @@
   const FULL_CC = [[48, 'strobe:rate'], [49, 'headscale'], [53, 'layerrate'], [54, 'cfxbeats'], [55, 'cfxspread'], [13, 'tempo:rel'], [47, 'cfxmode:rel']];
   const FULL_FADERS = [[1, 'grp:left:dim'], [2, 'grp:right:dim'], [3, 'grp:back:dim'], [6, 'zoom'], [7, 'layerlevel'], [8, 'cfxamount']];
   const FULL_ACTIVATORS = [[1, 'grp:left:on'], [2, 'grp:right:on'], [3, 'grp:back:on']];
+  // Map-all: [CC, target] on ch 1; faders 4 and 5 (CC 7 on ch 4 and 5); the notes that are one per panel;
+  // and the per-track rows [note, key prefix, first track]: CLIP STOP 0x34, SOLO 0x31, RECORD ARM 0x30, A/B 0x42, ACTIVATOR 0x32 (4-8).
+  // TRACK SELECT 1-8 and MASTER SELECT send no MIDI in Mode 0 (Akai v1.2 p.10): they page the device knobs (midiPatch KNOB_PAGES 1-9).
+  const ALL_CC = [[15, 'xfade'], [50, 'fxbpm'], [51, 'fxdepth'], [52, 'hold']];
+  const ALL_FADERS = [[4, 'beamdim'], [5, 'alldim']];
+  const ALL_NOTES = [[0x55, 'fxon'], [0x5d, 'chaseon'], [0x62, 'shift'], [0x59, 'lookpage:home'], [0x5e, 'fx:up'], [0x5f, 'fx:down'],
+    [0x3a, 'fxprev'], [0x3b, 'fxnext'], [0x3c, 'spread:prev'], [0x3d, 'spread:next']];
+  const ALL_TRACK_ROWS = [[0x34, 'col:release:', 1], [0x31, 'solo:', 1], [0x30, 'arm:', 1], [0x42, 'ab:', 1], [0x32, 'act:', 4]];
   const FULL_NOTES = [[0x63, 'tap'], [0x64, 'nudge:-'], [0x65, 'nudge:+'], [0x5a, 'cfxon'],
     [0x3e, 'hit:white'], [0x3f, 'hit:left'], [0x40, 'hit:right'], [0x41, 'hit:swap'],
     [0x57, 'hit:strobe-all'], [0x58, 'hit:strobe-movers'], [0x66, 'blackoutoff'], [0x67, 'panic']];
@@ -209,6 +224,11 @@
     const on = (state && state.groupOn) || {};
     for (const g of ['left', 'right', 'back']) if (g in on) putTrack('grp:' + g + ':on', on[g]);
     if (state && 'blackout' in state) put('blackoutoff', state.blackout ? 1 : 0);
+    // Map-all: the per-track buttons' lights, state.cols = { key: velocity } (A/B: 1 = side A, 2 = side B).
+    if (state && state.cols) for (const [key, vel] of Object.entries(state.cols)) {
+      const b = map && map[key];
+      if (b && b.type === 'note' && b.ch >= 1 && b.ch <= 8 && Number.isInteger(b.num)) out.push({ note: b.num, vel, ch: b.ch - 1 });
+    }
     // The device-knob rings: each ring shows its value (CC 0x10-0x17 written back on the bank's channel), the ring type
     // (CC 0x18-0x1F, 1 = single) once. state.rings = { key: 0..1 } from midiPatch.knobRings.
     if (state && state.rings) {
@@ -278,7 +298,7 @@
     };
   }
 
-  const api = { createLedPainter, OPT_LOOK_MS, LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, padLooks, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
+  const api = { ALL_CC, ALL_FADERS, ALL_NOTES, ALL_TRACK_ROWS, createLedPainter, OPT_LOOK_MS, LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, padLooks, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiCues = api;
 })(typeof window !== 'undefined' ? window : this);

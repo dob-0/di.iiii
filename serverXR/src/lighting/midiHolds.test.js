@@ -27,7 +27,7 @@ function page() {
     const midiTargets = [{ key: 'grp:left:on', kind: 'note', apply: () => L.applied.push('flip') }];
     const midiKeyFor = (type, ch, num) => (num === 10 ? 'grp:left:on' : null);
     const midiHit = () => {}, buildMidiTargets = () => {};
-    ${['midiSend', 'midiHoldUp', 'midiStrobeDown', 'midiReleaseAll', 'midiRelease', 'midiHandle'].map(grab).join('\n')}
+    ${['midiSend', 'midiBlind', 'midiHoldUp', 'midiStrobeDown', 'midiReleaseAll', 'midiRelease', 'midiHandle'].map(grab).join('\n')}
     function midiFlush() {}
     return { midiStrobeDown, midiHoldUp, midiReleaseAll, midiRelease, midiHandle, pending: midiPending, held: midiHeld };`
   const P = require('./ui/midiPatch.js')

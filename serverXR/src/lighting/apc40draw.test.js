@@ -103,10 +103,10 @@ describe('drawn APC40: the full patch, strobe and the knob pages (round 2)', () 
   const all = [...Object.keys(BUTTONS), 'master', ...require('./ui/apc40draw.js').CONTROLS.map((c) => c.key), ...P.KNOBS.map((k) => k.key), ...lookPadTargets().map((t) => t.key)]
   const full = Object.fromEntries(apc40Preset(all).map((m) => [m.key, { type: m.type, ch: m.ch, num: m.num }]))
   const v = apc40View({ map: full, cues: { list: [] }, state: {}, looks, page: 0, activeId: '' })
-  it('draws every new control: buttons, faders/knobs, and 23 device knobs on 4 banks', () => {
-    expect(v.knobs).toHaveLength(23)
-    expect(new Set(v.knobs.map((k) => k.bank))).toEqual(new Set([1, 2, 3, 4]))
-    expect(v.controls).toHaveLength(16)
+  it('draws every new control: buttons, faders/knobs, and 41 device knobs on 9 banks', () => {
+    expect(v.knobs).toHaveLength(41)
+    expect(new Set(v.knobs.map((k) => k.bank))).toEqual(new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]))
+    expect(v.controls).toHaveLength(require('./ui/apc40draw.js').CONTROLS.length)
     for (const key of ['hit:strobe-all', 'hit:strobe-movers', 'tap', 'panic', 'hit:white']) expect(v.buttons.map((b) => b.key)).toContain(key)
     expect(v.controls.find((c) => c.key === 'strobe:rate').range).toBe('1-20 Hz (DMX 4-103)')   // limit off = the default (N7618)
     const lim = apc40View({ map: full, cues: { list: [] }, state: {}, looks, page: 0, activeId: '', strobeLimit: true })

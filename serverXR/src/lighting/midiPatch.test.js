@@ -165,8 +165,8 @@ describe('APC40 preset, the full patch', () => {
   const rows = apc40Preset(FULL_KEYS)
   const by = Object.fromEntries(rows.map((r) => [r.key, r]))
   it('49 before, 49 + 24 now: every new target is bound once', () => {
-    expect(apc40Preset(FULL_KEYS.filter((k) => !/^(grp:|layer|tap|nudge|tempo|zoom|cfx|hit:|blackoutoff|panic)/.test(k)))).toHaveLength(49)
-    expect(rows).toHaveLength(73)
+    expect(apc40Preset(FULL_KEYS.filter((k) => !/^(grp:|layer|tap|nudge|tempo|zoom|cfx|hit:|blackoutoff|panic|xfade|fxbpm|fxdepth|hold|fxon|chaseon|shift|lookpage:home|fx:|fxprev|fxnext|spread:|col:|solo:|arm:|ab:|act:|beamdim|alldim)/.test(k)))).toHaveLength(49)
+    expect(rows.length).toBeGreaterThanOrEqual(73)   // map-all adds the rest, see apc40MapAll.test.js
   })
   it('faders 1-3 and activators 1-3 are the three groups, on the channel of their track', () => {
     expect(by['grp:left:dim']).toEqual({ key: 'grp:left:dim', type: 'cc', ch: 1, num: 7 })
@@ -313,10 +313,10 @@ describe('device knob pages (banked by TRACK SELECT, channel = page)', () => {
     video: { sample: 6, mix: 255, speed: 1, bright: 0, contrast: 100, x: 0, y: 0, anim: { bscale: 1, beats: 8, phase: 0, dir: 'pingpong', ease: 'smooth', bx: 0, by: 0 }, lfo: { depth: 0.5 } },
     lfos: [{ id: 'a', wave: 'sine', beats: 1, depth: 255, spread: 0, enabled: true }, { id: 'b', wave: 'saw' }],
   }
-  it('23 knobs on 4 pages; knob k is CC 0x10+k on the page channel; keys are unique', () => {
-    expect(P.KNOBS).toHaveLength(23)
-    expect(new Set(P.KNOBS.map((k) => k.key)).size).toBe(23)
-    for (const k of P.KNOBS) { expect(k.num).toBeGreaterThanOrEqual(0x10); expect(k.num).toBeLessThanOrEqual(0x17); expect(k.ch).toBeGreaterThanOrEqual(1); expect(k.ch).toBeLessThanOrEqual(4) }
+  it('41 knobs on 9 pages (4 + the map-all pages 5-9); knob k is CC 0x10+k on the page channel; keys are unique', () => {
+    expect(P.KNOBS).toHaveLength(41)
+    expect(new Set(P.KNOBS.map((k) => k.key)).size).toBe(41)
+    for (const k of P.KNOBS) { expect(k.num).toBeGreaterThanOrEqual(0x10); expect(k.num).toBeLessThanOrEqual(0x17); expect(k.ch).toBeGreaterThanOrEqual(1); expect(k.ch).toBeLessThanOrEqual(9) }
   })
   it('every knob sets values only inside the range its desk route accepts, end to end', () => {
     const lim = { sample: [1, 30], mix: [0, 255], speed: [0.1, 4], bright: [-100, 100], contrast: [0, 300], x: [-1000, 1000], y: [-1000, 1000],
