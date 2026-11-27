@@ -54,7 +54,7 @@ const FIND_GAP_MS = 5000
 //   GET  /laser/desk/api/state the bank, the live look, master, BPM, blackout, each cube's desk setup and hold
 //   GET  /laser/desk/api/view  what the engine keeps for each cube now (after the zone), rounded: the stage view
 //   GET  /laser/desk/api/thumbs a small picture of every look, for the bank's tiles
-//   POST /laser/desk/api/go    { look } — that look on the cubes        POST …/live { …fields } — edit the live look
+//   POST /laser/desk/api/go    { look, to? } — that look on the cubes (to: only those cube ids; the rest keep theirs)        POST …/live { …fields } — edit the live look
 //   POST /laser/desk/api/store { id?, name?, look? } — the live look (or the page's Preview) into its tile, or a new one
 //   POST /laser/desk/api/looks/rename { id, name } · …/looks/delete { id } · …/looks/order { ids }
 //   POST /laser/desk/api/looks/edit { id, …fields } — change a look of the bank (the cubes follow when it is on them)
@@ -299,7 +299,7 @@ function registerLaserRoutes(app, { dataDir, mountPaths = ['/laser'], log, engin
   router.get('/desk/api/state', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ ...getDesk().state(), version: deskVersion() }) })
   router.get('/desk/api/view', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().view()) })
   router.get('/desk/api/thumbs', (req, res) => { res.set('Cache-Control', 'no-store'); res.json(getDesk().thumbs()) })
-  router.post('/desk/api/go', requireSameMachine, (req, res) => answer(res, getDesk().go(req.body?.look)))
+  router.post('/desk/api/go', requireSameMachine, (req, res) => answer(res, getDesk().go(req.body?.look, req.body?.to)))
   router.post('/desk/api/live', requireSameMachine, (req, res) => answer(res, getDesk().editLive(req.body || {})))
   router.post('/desk/api/store', requireSameMachine, (req, res) => answer(res, getDesk().store({ id: req.body?.id, name: req.body?.name, look: req.body?.look })))
   router.post('/desk/api/looks/rename', requireSameMachine, (req, res) => answer(res, getDesk().rename(req.body?.id, req.body?.name)))
