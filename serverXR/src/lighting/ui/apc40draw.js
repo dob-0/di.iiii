@@ -59,7 +59,7 @@
     'hit:left': { short: 'HIT\nLEFT', does: 'Hold: flash the left truss' },
     'hit:right': { short: 'HIT\nRIGHT', does: 'Hold: flash the right truss' },
     'hit:swap': { short: 'HIT\nSWAP', does: 'Hold: swap the colour effect' },
-    'hit:strobe-all': { short: 'STRB\nALL', does: 'Hold: strobe the back bars (rate: track knob 1, 3 Hz cap) and software strobe on the rest' },
+    'hit:strobe-all': { short: 'STRB\nALL', does: 'Hold: strobe the back bars (rate: track knob 1) and software strobe on the rest' },
     'hit:strobe-movers': { short: 'STRB\nMOV', does: 'Hold: software strobe on the movers (the shutter is never touched)' },
     blackoutoff: { short: 'BO\nOFF', does: 'Blackout off (session record)' },
     panic: { short: 'PANIC', does: 'Panic (bank lock)' },
@@ -75,7 +75,7 @@
     { key: 'grp:left:on', hw: 'ACTIVATOR 1', does: 'Left truss on / off', range: 'switch' },
     { key: 'grp:right:on', hw: 'ACTIVATOR 2', does: 'Right truss on / off', range: 'switch' },
     { key: 'grp:back:on', hw: 'ACTIVATOR 3', does: 'Back bars on / off', range: 'switch' },
-    { key: 'strobe:rate', hw: 'TRACK KNOB 1', does: 'Strobe rate (hold-to-flash hits)', range: '1-3 Hz (DMX 4-14, capped)' },
+    { key: 'strobe:rate', hw: 'TRACK KNOB 1', does: 'Strobe rate (hold-to-flash hits)', range: '1-20 Hz (DMX 4-103)' },
     { key: 'headscale', hw: 'TRACK KNOB 2', does: 'Movement size (layer pan/tilt swing)', range: '0-100 %, 100 = as written' },
     { key: 'layerrate', hw: 'TRACK KNOB 6', does: 'Layer rate', range: '1/8 x - 8 x' },
     { key: 'cfxbeats', hw: 'TRACK KNOB 7', does: 'Colour effect beats', range: '1-32' },
@@ -91,6 +91,9 @@
 
   function presetRows() { return mc.apc40Preset(ALL_KEYS); }
 
+  // The strobe labels follow the desk setting output.strobeLimit (model.strobeLimit): off (default, N7618) = the lamp's whole band,
+  // on = the old 3 Hz cap.
+  const STROBE_RANGE = { off: '1-20 Hz (DMX 4-103)', on: '1-3 Hz (DMX 4-14, limit on)' };
   // The model of the drawing, pure: map = the page's midiMap, cues/state/looks as the painter
   // reads them. Returns what to draw; draw() only turns this into elements.
   //   pads[i]    i = 0 top-left; { i, slot, key, name, no, vel, hex, state: 'live'|'ember'|'empty' }
@@ -154,7 +157,7 @@
     }
     // Faders, knobs, activators, and the 8 device knobs of each TRACK SELECT bank: what each does and its range.
     const ccName = (b) => (b.type === 'cc' ? 'CC ' + b.num + ' ch ' + b.ch : 'note ' + b.num + ' ch ' + b.ch);
-    const controls = CONTROLS.filter((c) => eff[c.key]).map((c) => ({ ...c, where: ccName(eff[c.key]) }));
+    const controls = CONTROLS.filter((c) => eff[c.key]).map((c) => ({ ...c, ...(c.key === 'strobe:rate' ? { range: m.strobeLimit ? STROBE_RANGE.on : STROBE_RANGE.off } : {}), where: ccName(eff[c.key]) }));
     const knobs = pm().KNOBS.filter((k) => eff[k.key]).map((k) => ({ key: k.key, page: k.page, pageName: k.pageName, bank: eff[k.key].ch,
       hw: 'BANK ' + eff[k.key].ch + ' KNOB ' + (eff[k.key].num - 0x0f), does: k.label, range: k.unitLabel, where: ccName(eff[k.key]) }));
     const mb = eff.master;

@@ -69,10 +69,10 @@ function sanitizeMotion(value) {
  * The multipliers at server time `now`: Map(unit id -> 0..255), 255 = leave the lamp alone. fx.js's own fxLevel for unit
  * i of n at `now - epoch`; the room's motionFrame (lookMotion.js) does the same sum, so the two are one beat.
  */
-function motionLevels(motion, now, epoch = 0) {
+function motionLevels(motion, now, epoch = 0, strobeLimit = false) {
   const out = new Map();
   if (!motion || !MOTION_MODES.includes(motion.mode) || !Array.isArray(motion.units) || !motion.units.length) return out;
-  const cfg = { mode: motion.mode, bpm: motion.bpm, depth: motion.depth, spatial: motion.spatial, enabled: true, exclude: [], epoch: 0 };
+  const cfg = { mode: motion.mode, bpm: motion.bpm, depth: motion.depth, spatial: motion.spatial, enabled: true, exclude: [], epoch: 0, strobeLimit: !!strobeLimit };
   const t = fin(now, 0) - fin(epoch, 0);
   const n = motion.units.length;
   motion.units.forEach((u, i) => out.set(u.id, fxLevel(cfg, u, i, n, t)));
@@ -103,6 +103,7 @@ function motionFrame(state, now, kindAllows) {
     return look && look.motion && allows(look.kind) ? look.motion : null;
   };
   const out = new Map();
+  const strobeLimit = !!(state.output && state.output.strobeLimit);   // the old 3 Hz cap, off by default (N7618)
   for (const layer of [...live].sort((a, b) => a.priority - b.priority)) {
     const to = motionOf(layer.lookId);
     const epoch = Number.isFinite(layer.firedAt) ? layer.firedAt : 0;
@@ -110,8 +111,8 @@ function motionFrame(state, now, kindAllows) {
     const t = epoch > 0 && fadeMs > 0 ? clamp((fin(now, 0) - epoch) / fadeMs, 0, 1) : 1;
     const from = t < 1 ? motionOf(layer.fromLookId) : null;
     if (!to && !from) continue;
-    const toMap = to ? motionLevels(to, now, epoch) : new Map();
-    const fromMap = from ? motionLevels(from, now, Number.isFinite(layer.fromFiredAt) ? layer.fromFiredAt : 0) : new Map();
+    const toMap = to ? motionLevels(to, now, epoch, strobeLimit) : new Map();
+    const fromMap = from ? motionLevels(from, now, Number.isFinite(layer.fromFiredAt) ? layer.fromFiredAt : 0, strobeLimit) : new Map();
     for (const id of new Set([...fromMap.keys(), ...toMap.keys()])) {
       const a = fromMap.has(id) ? fromMap.get(id) : 255;
       const b = toMap.has(id) ? toMap.get(id) : 255;

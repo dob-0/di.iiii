@@ -21,7 +21,8 @@ const lamps = Array.from({ length: N }, (_, i) => ({ x: -1 + 3 * i / (N - 1), y:
 import(pathToFileURL(path.join(__dirname, '../../src/project/nodes/flashRule.js')).href).then((rule) => {
 const MAX = iMax >= 0 ? Number(args[iMax + 1]) : rule.FLASH_LIMIT_PER_SECOND
 function worst(mode, bpm, depth, spatial) {
-    const cfg = { mode, bpm, depth, spatial, enabled: true, epoch: 0 }
+    // strobeLimit: true = the desk's old 3 Hz cap; this check is the 3 flashes a second rule (N7618 made the cap a setting, off by default)
+    const cfg = { mode, bpm, depth, spatial, enabled: true, epoch: 0, strobeLimit: true }
     let worst1 = 0
     for (let i = 0; i < N; i++) {
         const samples = []

@@ -149,13 +149,17 @@
   const strobeHzFromDmx = (v) => (v >= STROBE_BAND_LO && v <= STROBE_BAND_HI ? 1 + (v - STROBE_BAND_LO) * (STROBE_BAND_MAX_HZ - 1) / (STROBE_BAND_HI - STROBE_BAND_LO) : 0);
   const STROBE_DMX_CAP = (() => { let v = STROBE_BAND_LO; while (strobeHzFromDmx(v + 1) > 0 && strobeHzFromDmx(v + 1) <= STROBE_MAX_HZ) v++; return v; })();   // 14
   // The last gate before DMX: nothing above the cap on the band, nothing past the band at all, never a non-number.
+  // Owner N7618 (2026-11-27, "no limits"): the 3 Hz cap is the desk setting output.strobeLimit, OFF by default; the page sets it
+  // from the desk's state (setStrobeLimit). Off: the knob runs the whole 1-20 Hz band of the lamp's strobe channel (DMX 4-103).
+  let strobeLimited = false;
+  const setStrobeLimit = (on) => { strobeLimited = !!on; };
   function capStrobeDmx(v) {
     const n = Math.round(Number(v));
     if (!Number.isFinite(n) || n < STROBE_BAND_LO || n > STROBE_BAND_HI) return 0;
-    return Math.min(n, STROBE_DMX_CAP);
+    return strobeLimited ? Math.min(n, STROBE_DMX_CAP) : n;
   }
-  // The rate knob, 0..1 -> 1..3 Hz -> the capped DMX value.
-  const strobeHzFromUnit = (u) => 1 + (STROBE_MAX_HZ - 1) * Math.max(0, Math.min(1, Number.isFinite(+u) ? +u : 0));
+  // The rate knob, 0..1 -> 1..20 Hz (1..3 Hz with the limit on) -> the DMX value.
+  const strobeHzFromUnit = (u) => 1 + ((strobeLimited ? STROBE_MAX_HZ : STROBE_BAND_MAX_HZ) - 1) * Math.max(0, Math.min(1, Number.isFinite(+u) ? +u : 0));
   const strobeDmxFromUnit = (u) => capStrobeDmx(strobeDmxFromHz(strobeHzFromUnit(u)));
   const strobeRoleChannels = (fixture, profile) => {
     const out = [];
@@ -251,7 +255,7 @@
   const api = { relDelta, BPM_MIN, BPM_MAX, clampBpm, bpmStep, createTapper, TAP_RESET_MS, TAP_KEEP, NUDGE_MS, nudgeEpoch,
     rateFromUnit, unitFromRate, CFX_MODES, CFX_BEATS, cfxModeStep, cfxBeatsFromUnit, unitFromCfxBeats, cfxToggle,
     GROUPS, rigGroups, groupDimRead, groupIsOn, HOLD_OWNER, flashChannels, releaseOf, MAX_HOLD_MS, zoomRoles,
-    STROBE_MAX_HZ, STROBE_DMX_CAP, capStrobeDmx, strobeDmxFromHz, strobeHzFromDmx, strobeHzFromUnit, strobeDmxFromUnit, strobeHit,
+    STROBE_MAX_HZ, STROBE_DMX_CAP, setStrobeLimit, capStrobeDmx, strobeDmxFromHz, strobeHzFromDmx, strobeHzFromUnit, strobeDmxFromUnit, strobeHit,
     KNOB_PAGES, KNOBS, knobByKey, knobValue, knobUnit, knobSend, knobRings, headScaleFromUnit };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiPatch = api;

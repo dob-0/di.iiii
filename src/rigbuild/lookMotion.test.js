@@ -29,7 +29,7 @@ describe('look motion parity with fx.js', () => {
         for (const mode of fx.FX_MODES) {
             for (const spatial of fx.FX_SPATIAL) {
                 for (const bpm of [20, 60, 124, 300]) {
-                    const cfg = { mode, bpm, depth: 255, enabled: true, spatial, exclude: [], epoch: 0 }
+                    const cfg = { mode, bpm, depth: 255, enabled: true, spatial, exclude: [], epoch: 0, strobeLimit: true }
                     const order = fx.fxOrder(FIXTURES)
                     for (const now of NOWS) {
                         FIXTURES.forEach((f) => {
@@ -51,7 +51,7 @@ describe('look motion parity with fx.js', () => {
         it(`mode ${mode}: matches fx.js at ${NOWS.length} instants (depth 255 and 128)`, () => {
             let max = 0
             for (const depth of [255, 128]) {
-                const cfg = { mode, bpm: 120, depth, enabled: true, spatial: 'x', exclude: [], epoch: 0 }
+                const cfg = { mode, bpm: 120, depth, enabled: true, spatial: 'x', exclude: [], epoch: 0, strobeLimit: true }
                 const order = fx.fxOrder(FIXTURES)
                 for (const now of NOWS) for (const f of FIXTURES) {
                     max = Math.max(max, Math.abs(fx.fxLevel(cfg, f, order.get(f.id), FIXTURES.length, now) - motionLevel(cfg, f, order.get(f.id), FIXTURES.length, now)))
@@ -139,7 +139,7 @@ describe('desk = room: a look\'s motion on the wire', () => {
             expect(desk.units.map((u) => [u.x, u.y])).toEqual(plan.lamps.map((l) => [l.x, l.y]))
             for (const epoch of [0, 1791551530500]) for (const now of NOWS) {
                 const room = motionFrame(plan, epoch + now, epoch)
-                const wire = srv.motionLevels(desk, epoch + now, epoch)
+                const wire = srv.motionLevels(desk, epoch + now, epoch, true)
                 for (const [id, m] of room) { max = Math.max(max, Math.abs(m * 255 - wire.get(deskIdOf({ id })))); count++ }
             }
         }
@@ -176,7 +176,7 @@ const wireOf = ({ motion = null, from = null, fadeMs = 0, level = 1, fx = null }
     layer.fadeMs = fadeMs
     layer.fromLookId = from ? 'A' : null
     layer.fromFiredAt = from ? FROM_FIRED : null
-    const e = new Engine({ master: 255, blackout: false, fixtures: [f], raw: {}, scenes: [], activeScene: null, chase: { enabled: false, sceneIds: [], holdMs: 1000, fadeMs: 0 }, looks, layers: [layer], fx: fx || { mode: 'none', enabled: false, bpm: 120, depth: 255, spatial: 'patch', exclude: [], epoch: 0 } })
+    const e = new Engine({ master: 255, blackout: false, fixtures: [f], raw: {}, scenes: [], activeScene: null, chase: { enabled: false, sceneIds: [], holdMs: 1000, fadeMs: 0 }, looks, layers: [layer], output: { strobeLimit: true }, fx: fx || { mode: 'none', enabled: false, bpm: 120, depth: 255, spatial: 'patch', exclude: [], epoch: 0, strobeLimit: true } })
     return { at: (now) => e.render(e.state, now).get(0)[0], state: e.state }
 }
 const expectDimmer = (m) => Math.round((200 * m) / 255)
@@ -220,10 +220,10 @@ describe('the desk engine plays a look\'s motion', () => {
             expect(r).toBeGreaterThan(2)
             expect(r).toBeLessThanOrEqual(3)
         }
-        const stacked = wireOf({ motion: motionOf('strobe', { bpm: 120, depth: 255 }), fx: { mode: 'strobe', enabled: true, bpm: 300, depth: 255, spatial: 'patch', exclude: [], epoch: 0 } })
+        const stacked = wireOf({ motion: motionOf('strobe', { bpm: 120, depth: 255 }), fx: { mode: 'strobe', enabled: true, bpm: 300, depth: 255, spatial: 'patch', exclude: [], epoch: 0, strobeLimit: true } })
         expect(risesPerSecond(stacked.at)).toBeLessThanOrEqual(3)
         // The global FX still rides a look that does not strobe: a breathe under a global pulse is both, multiplied.
-        const both = wireOf({ motion: motionOf('breathe'), fx: { mode: 'pulse', enabled: true, bpm: 120, depth: 255, spatial: 'patch', exclude: [], epoch: 0 } })
+        const both = wireOf({ motion: motionOf('breathe'), fx: { mode: 'pulse', enabled: true, bpm: 120, depth: 255, spatial: 'patch', exclude: [], epoch: 0, strobeLimit: true } })
         const breatheOnly = wireOf({ motion: motionOf('breathe') })
         const m = fx.fxLevel(both.state.fx, both.state.fixtures[0], 0, 1, FIRED + 1818) / 255
         expect(Math.abs(both.at(FIRED + 1818) - Math.round(breatheOnly.at(FIRED + 1818) * m))).toBeLessThanOrEqual(1)

@@ -29,7 +29,7 @@ describe('the desk strobe effect', () => {
         let rises = 0
         let prev = 0
         for (let t = 0; t < 10000; t += FRAME_MS) {
-            const v = fxLevel({ enabled: true, mode: 'strobe', bpm }, {}, 0, 1, t)
+            const v = fxLevel({ enabled: true, mode: 'strobe', bpm, strobeLimit: true }, {}, 0, 1, t)
             if (v > 127 && prev <= 127) rises++
             prev = v
         }

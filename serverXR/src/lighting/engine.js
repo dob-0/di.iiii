@@ -367,7 +367,7 @@ class Engine {
       }
       for (const [m, list] of lists) {
         fxGroups.set(m, {
-          fx: { ...state.fx, mode: m, enabled: true },
+          fx: { ...state.fx, mode: m, enabled: true, strobeLimit: !!(state.output && state.output.strobeLimit) },
           order: fxOrder(list), n: list.length,
           // Spatial sweeps run across the fixtures the effect actually moves, not the -1..2
           // stage world: a compact rig otherwise lands in one chase lane and flashes in
