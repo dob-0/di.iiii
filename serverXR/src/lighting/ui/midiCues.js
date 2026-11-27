@@ -185,19 +185,23 @@
 
   // The pad lights, one painter per page. The pressed look goes red at once (optimistic), the
   // old one back to ember in the same paint; the desk's answer corrects it (answer(id, false)
-  // drops it) and the poll confirms it (the polled active look equals it) or, if the poll still
-  // shows the old look, the guess holds for OPT_LOOK_MS so a poll that raced the fire cannot
-  // flip the pad back. Only the armed page lights (Safe: nothing is painted, as before).
+  // drops it). The guess ends by REQUEST TIME, not by age: once the desk has answered the fire
+  // (answer(id, true)), the first on-air reading that was ASKED FOR at or after that moment
+  // knows the press, so it rules at once, whatever it says (another source may have moved on);
+  // a reading asked for earlier cannot know it and never undoes the guess. OPT_LOOK_MS is only a
+  // backstop for a fire that is never answered. Only the armed page lights (Safe: nothing is painted).
   // deps: out() port|null, armed(), map(), cues(), state(), looks(), page(), setPage(p),
-  // polledId(), now().
-  const OPT_LOOK_MS = 4000;
+  // polledId(), polledAt() (when the request behind polledId was sent; optional), now().
+  const OPT_LOOK_MS = 10000;
   function createLedPainter(deps) {
     const sent = deps.sent || new Map();
-    let opt = null;   // { id, at }
+    let opt = null;   // { id, at, answeredAt|null }
     function lookId() {
       const polled = deps.polledId() || '';
       if (opt) {
-        if (polled === opt.id || deps.now() - opt.at > OPT_LOOK_MS) opt = null;
+        const askedAt = deps.polledAt ? deps.polledAt() : 0;
+        if (polled === opt.id || deps.now() - opt.at > OPT_LOOK_MS
+          || (opt.answeredAt != null && askedAt >= opt.answeredAt)) opt = null;
         else return opt.id;
       }
       return polled;
@@ -214,8 +218,11 @@
     }
     return {
       paint,
-      pressLook(id) { if (!deps.armed()) return; opt = { id, at: deps.now() }; paint(); },
-      answer(id, ok) { if (!ok && opt && opt.id === id) { opt = null; paint(); } },
+      pressLook(id) { if (!deps.armed()) return; opt = { id, at: deps.now(), answeredAt: null }; paint(); },
+      answer(id, ok) {
+        if (!opt || opt.id !== id) return;
+        if (!ok) { opt = null; paint(); } else if (opt.answeredAt == null) opt.answeredAt = deps.now();
+      },
       forget(note) { sent.delete(note); },
       reset() { sent.clear(); opt = null; },
       sent,

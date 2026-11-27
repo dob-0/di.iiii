@@ -51,6 +51,7 @@
     "optional": {
       "top": [
         "activeScene",
+        "onAir",
         "rawOwners",
         "looks",
         "sets",
@@ -130,6 +131,25 @@
       "class": "a",
       "reply": {
         "dmx": "object"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/onair",
+      "class": "c",
+      "reply": {
+        "lookId": "string",
+        "layerId": "string",
+        "blackout": "boolean",
+        "rev": "number"
+      },
+      "note": "The look on air (top layer that is on, above 0, holding a look), polled every 150 ms by the ARMED MIDI tab only. A desk without it answers 404 and the page falls back to state.onAir / the layers.",
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
       }
     },
     {

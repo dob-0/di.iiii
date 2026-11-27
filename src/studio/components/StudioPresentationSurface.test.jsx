@@ -101,6 +101,26 @@ describe('StudioPresentationSurface', () => {
         on.unmount()
     })
 
+    // Owner 2026-11-27: the Reika page opened in Studio kept its live tiles empty;
+    // the Studio frame now answers the page's desk reads like the public view.
+    it('answers a code page read from its own frame through the read bridge', async () => {
+        const fetchMock = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ live: 1 }) }))
+        vi.stubGlobal('fetch', fetchMock)
+        const props = {
+            selectedEntityId: null, onSelectEntity: vi.fn(), cursors: {}, onCursorMove: vi.fn(), onCursorLeave: vi.fn(),
+            cameraView: { position: [0, 2, 5], target: [0, 0, 0] }, controlsRef: { current: null }, xrStore: {}, onCameraChange: vi.fn()
+        }
+        const view = render(<StudioPresentationSurface {...props} document={buildDocument({ mode: 'code', codeHtml: '<main>a</main>' })} />)
+        const frameWindow = view.container.querySelector('iframe').contentWindow
+        const post = vi.spyOn(frameWindow, 'postMessage').mockImplementation(() => {})
+        window.dispatchEvent(new MessageEvent('message', { source: frameWindow, origin: 'null', data: { type: 'di-code-page-read', id: 'x', path: '/light/api/dmx' } }))
+        await vi.waitFor(() => expect(post).toHaveBeenCalled())
+        expect(fetchMock.mock.calls[0][0]).toBe('/light/api/dmx')
+        expect(post.mock.calls[0][0]).toMatchObject({ type: 'di-code-page-read-result', id: 'x', ok: true, body: { live: 1 } })
+        view.unmount()
+        vi.unstubAllGlobals()
+    })
+
     // Owner 2026-10-28: a project that is a page opened the empty 3D grid because the stored mode defaults to 'scene'.
     it('shows the page, not the empty 3D grid, for a project that holds code files and no scene (stored mode still the default)', () => {
         const props = {

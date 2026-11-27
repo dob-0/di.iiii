@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createRequire } from 'node:module'
-const { blackoutKeyIntent, midiBlackoutIntent, goLivePress, keepArmPrompt, armPrompt, driverChoice, driverPoll, createArm, ARM_MS } =
+const { blackoutKeyIntent, midiBlackoutIntent, midiBlackoutToggle, goLivePress, keepArmPrompt, armPrompt, driverChoice, driverPoll, createArm, ARM_MS } =
   createRequire(import.meta.url)('./ui/panicKeys.js')
 
 describe('row 14: the B key is one-way', () => {
@@ -41,8 +41,15 @@ describe('row 16: the driver radios only choose', () => {
   it('no confirmation while output is off', () => expect(driverChoice('enttec', 'artnet', false).confirm).toBe(false))
 })
 
-describe('row 17: the armed MIDI blackout pad is one-way', () => {
-  it('only ever blackout:true', () => expect(midiBlackoutIntent()).toEqual({ blackout: true }))
+describe('row 17: the armed MIDI blackout pad toggles (owner N7276; the B key stays one-way)', () => {
+  it('the B key intent is still only blackout:true', () => expect(midiBlackoutIntent()).toEqual({ blackout: true }))
+  it('pad pressed with blackout off sends on', () => expect(midiBlackoutToggle(false)).toEqual({ blackout: true }))
+  it('pad pressed with blackout on sends off', () => expect(midiBlackoutToggle(true)).toEqual({ blackout: false }))
+  it('two presses in a row end where they started', () => {
+    let on = false
+    for (let i = 0; i < 2; i++) on = midiBlackoutToggle(on).blackout
+    expect(on).toBe(false)
+  })
 })
 
 describe('row 16b: the live driver moving elsewhere ends the pending choice', () => {
