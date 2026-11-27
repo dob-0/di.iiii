@@ -155,7 +155,7 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
     expect(Math.abs(g16(v.fa, 'tilt') + g16(v.fb, 'tilt') - 65536)).toBeLessThanOrEqual(2)
   })
 
-  // The rule is data in the presets (camera record 2026-11-26 22:4x): FACE_SIGN +1, pan negate, tilt same, cells reversed.
+  // The rule is data in the presets (camera record 2026-11-26 22:40 +04 (record time)): FACE_SIGN +1, pan negate, tilt same, cells reversed.
   const cellBar = (p, t, cs) => ({ ...bar(p, t), ...cs })
   const cellsOf = (v) => Object.fromEntries(Object.keys(v).filter((k) => /^[rgbw]\d+$/.test(k)).map((k) => [k, v[k]]))
   const L7 = { r1: 1, r2: 2, r3: 3, r4: 4, r5: 5, r6: 6, r7: 7, g1: 11, g2: 12, g3: 13, g4: 14, g5: 15, g6: 16, g7: 17 }
