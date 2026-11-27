@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MapInspector from './MapInspector.jsx'
+import { pastedSurface, surfaceFromClipboardText, surfaceToClipboardText } from './surfaceClipboard.js'
 import { MapMachinesList, MapSurfaceList, MapWallView, nextCorners } from './MapDeskParts.jsx'
 import MapCueList from './MapCueList.jsx'
 import { cueForKey, isCueKey } from './cueFiring.js'
@@ -179,13 +180,32 @@ export default function MapSurface({ projectId, spaceId }) {
         if (!surface) return
         // Offset so the copy is visibly its own thing rather than hiding
         // exactly underneath the original.
-        const id = addSurface({
-            ...surface,
-            name: `${surface.name || surface.id} copy`,
-            corners: surface.corners.map(([x, y]) => [x + 0.02, y + 0.02])
-        })
-        setSelectedId(id)
+        setSelectedId(addSurface(pastedSurface(surface)))
     }, [surfaces, addSurface])
+
+    // Copy holds a surface here AND puts it on the system clipboard, so the
+    // same Ctrl+V works in another project's tab (src/map/surfaceClipboard.js).
+    // Pastes since the copy are counted so each one lands a step further on.
+    const pasteCount = useRef(0)
+    const holdSurface = useCallback((surface) => {
+        setClipboard(surface)
+        pasteCount.current = 0
+    }, [])
+
+    const onCopy = useCallback((surfaceId) => {
+        const surface = surfaces.find((entry) => entry.id === surfaceId)
+        if (!surface) return
+        holdSurface(surface)
+        navigator.clipboard?.writeText(surfaceToClipboardText(surface)).catch(() => { /* no clipboard permission: held in this tab only */ })
+    }, [surfaces, holdSurface])
+
+    // A paste is a NEW surface, selected, made in one op — so one Ctrl+Z
+    // takes the whole paste back.
+    const pasteSurface = useCallback((surface) => {
+        if (!surface) return
+        pasteCount.current += 1
+        setSelectedId(addSurface(pastedSurface(surface, pasteCount.current)))
+    }, [addSurface])
 
     const onPasteShape = useCallback((surfaceId) => {
         if (!clipboard) return
@@ -220,7 +240,10 @@ export default function MapSurface({ projectId, spaceId }) {
             const target = event.target
             if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
             // Undo / redo, the keys every editor here answers to: Ctrl/Cmd+Z,
-            // Shift+Ctrl/Cmd+Z and Ctrl+Y. Any other chord stays the browser's.
+            // Shift+Ctrl/Cmd+Z and Ctrl+Y. Any other chord stays the browser's —
+            // Ctrl/Cmd+C and V reach the desk as the browser's own copy and
+            // paste, below, which is the only way to read the system clipboard
+            // without asking permission.
             if (event.metaKey || event.ctrlKey) {
                 const key = event.key.toLowerCase()
                 if (key === 'z' && !event.shiftKey) { undo(); event.preventDefault() }
@@ -253,6 +276,38 @@ export default function MapSurface({ projectId, spaceId }) {
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
     }, [nudge, cues, onFireCue, undo, redo])
+
+    useEffect(() => {
+        // Typing in a field, or copying text you selected, stays the browser's.
+        const isTextTarget = (target) => Boolean(target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable))
+        const onCopyEvent = (event) => {
+            if (!selected || isTextTarget(event.target) || String(window.getSelection?.() || '')) return
+            event.clipboardData?.setData('text/plain', surfaceToClipboardText(selected))
+            holdSurface(selected)
+            event.preventDefault()
+        }
+        const onPasteEvent = (event) => {
+            // What the system clipboard holds wins — it may come from another
+            // tab — and the surface held here is the fallback.
+            const fromSystem = surfaceFromClipboardText(event.clipboardData?.getData('text/plain'))
+            // A copied surface is never text for a field: pasted into the
+            // Output width it read as "not a number" and set the width to 1.
+            // So it is pasted as a surface wherever the cursor is, and only
+            // other text goes on into a field.
+            if (!fromSystem && isTextTarget(event.target)) return
+            if (fromSystem && fromSystem.id !== clipboard?.id) holdSurface(fromSystem)
+            const surface = fromSystem || clipboard
+            if (!surface) return
+            pasteSurface(surface)
+            event.preventDefault()
+        }
+        window.addEventListener('copy', onCopyEvent)
+        window.addEventListener('paste', onPasteEvent)
+        return () => {
+            window.removeEventListener('copy', onCopyEvent)
+            window.removeEventListener('paste', onPasteEvent)
+        }
+    }, [selected, clipboard, holdSurface, pasteSurface])
 
     // --- carrying a mapping between machines ----------------------------
 
@@ -342,6 +397,10 @@ export default function MapSurface({ projectId, spaceId }) {
                         title="Undo the last change to the mapping (Ctrl/Cmd+Z)">Undo</button>
                     <button type="button" className="map-action" onClick={redo} disabled={!canRedo()}
                         title="Redo (Shift+Ctrl/Cmd+Z)">Redo</button>
+                    <button type="button" className="map-action" onClick={() => onCopy(selectedId)} disabled={!selected}
+                        title="Copy the selected surface (Ctrl/Cmd+C)">Copy</button>
+                    <button type="button" className="map-action" onClick={() => pasteSurface(clipboard)} disabled={!clipboard}
+                        title={clipboard ? `Paste “${clipboard.name || clipboard.id}” as a new surface (Ctrl/Cmd+V)` : 'Copy a surface first (Ctrl/Cmd+C)'}>Paste</button>
                     <label className="map-field map-field-inline">
                         <span>Output</span>
                         <input type="number" min="1" value={output.width}
@@ -479,7 +538,7 @@ export default function MapSurface({ projectId, spaceId }) {
                         onUpsertAsset={upsertAsset}
                         onDelete={(surfaceId) => { deleteSurface(surfaceId); setSelectedId(null) }}
                         onDuplicate={onDuplicate}
-                        onCopy={(surfaceId) => setClipboard(surfaces.find((surface) => surface.id === surfaceId) || null)}
+                        onCopy={onCopy}
                         onPasteShape={onPasteShape}
                         onPasteLook={onPasteLook}
                         onMaskFromOutline={onMaskFromOutline}
