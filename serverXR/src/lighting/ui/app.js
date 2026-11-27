@@ -6933,7 +6933,7 @@ function midiApcUpdate() {
   midiApc.update({
     map: midiMap, cues: CUES, state: { blackout: midiBlackoutNow() },
     looks: padLooksOf(), order: curPadOrder(), bright: midiPadBright, page: midiLookPage, activeId: lookOnAirId(),
-    master: mv == null ? undefined : mv / 255, values: midiApcValues(),
+    master: mv == null ? undefined : mv / 255, values: midiApcValues(), strobeLimit: !!(S && S.output && S.output.strobeLimit),
   });
 }
 
