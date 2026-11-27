@@ -302,15 +302,12 @@
     // the PADS list. Owner 2026-11-27: "fix and update ui that i can see what is what".
     const PAD_RENDERED = [14, 13, 12, 11.5, 11];
     const READ_MIN = 11;
-    const NARROW_W = 1000, READ_SCALE = 1.1;   // pane narrower than this: the unit is panned at READ_SCALE, not shrunk
+    const NARROW_W = 1000;   // pane narrower than this: OVERVIEW (the whole unit fitted to the width, like the di music page; pads show their number)
 
     const css = document.createElement('style');
     css.textContent = CSS.join('\n') + [
       '.apc40{display:flex;flex-direction:column;gap:12px;align-items:stretch;min-width:0}',
       '.apc40 .apcwrap{position:relative;overflow:hidden;flex:none;min-width:0}',
-      '.apc40.pan .apcwrap{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain}',
-      '.apc40 .apcjump{display:none;gap:8px;align-items:center;font:12px/1.3 var(--mono);color:var(--muted)}',
-      '.apc40.pan .apcjump{display:flex}.apc40 .apcjump button{font:600 12px/1 var(--mono);padding:8px 12px;min-height:32px}',
       '.apc40 .apcp{flex:none;width:' + NATIVE_W + 'px}',
       '.apcp .pad{border:1px solid rgba(255,255,255,.08);color:#151515;cursor:pointer;padding:0}',
       '.apcp .pad.live{background:linear-gradient(180deg,' + LIVE_GRADIENT[0] + ',' + LIVE_GRADIENT[1] + ');box-shadow:0 0 1.3cqw #ff0000;color:#fff;font-weight:700}',
@@ -366,16 +363,10 @@
     api.create = function (host, deps) {
       host.textContent = '';
       const wrap = el('div', 'apc40', host);
-      const jump = el('div', 'apcjump', wrap);
       const body = el('div', 'apcwrap', wrap);
       const side = el('div', 'apcside', wrap);
       const stage = el('div', 'apcstage', body);
       const ap = el('div', 'apcp', stage);
-      // Narrow pane: two jump buttons pan the unit (the pan box also scrolls by touch, wheel and its scrollbar).
-      { const step = (d) => body.scrollBy({ left: d * Math.max(120, body.clientWidth - 90), behavior: 'smooth' });
-        const bl = el('button', 'sq', jump, '\u25C0 Left'), br = el('button', 'sq', jump, 'Right \u25B6');
-        bl.type = br.type = 'button'; bl.onclick = () => step(-1); br.onclick = () => step(1);
-        el('span', '', jump, 'the unit scrolls sideways (drag or buttons)'); }
       const R = {};   // geometry key -> element, for the leader lines and the live display
       const A = { cols: [], pads: [], scene: [], btn: {}, fad: [], arrows: {} };
       const notePress = new Map();   // note -> key, refreshed by update()
@@ -581,7 +572,9 @@
       const svgNS = 'http://www.w3.org/2000/svg';
       const leads = document.createElementNS(svgNS, 'svg'); leads.setAttribute('class', 'apcleads'); stage.appendChild(leads);
       let cur = [], curSig = '';
-      const margins = () => (labelsOn ? MARGIN : NO_MARGIN);
+      let overview = false;   // narrow pane: the whole unit at the width, no leader labels, pads carry their number (the PADS list below names them)
+      const callouts = () => labelsOn && !overview;
+      const margins = () => (callouts() ? MARGIN : NO_MARGIN);
       function setCallouts(list) {
         const sig = JSON.stringify(list); if (sig === curSig) return;
         curSig = sig;
@@ -590,7 +583,7 @@
       }
       function layoutCallouts() {
         while (leads.firstChild) leads.removeChild(leads.firstChild);
-        if (!labelsOn) return;
+        if (!callouts()) return;
         const m = MARGIN, k = scale || 1, sr = stage.getBoundingClientRect();
         const SW = NATIVE_W + m.l + m.r, SH = NATIVE_H + m.t + m.b;
         leads.setAttribute('width', SW); leads.setAttribute('height', SH);
@@ -645,7 +638,7 @@
       const tog = el('label', 'tog', sideL); const cb = el('input', '', tog); cb.type = 'checkbox'; cb.checked = labelsOn; tog.appendChild(document.createTextNode('Labels with leader lines'));
       wrap.classList.toggle('nolabels', !labelsOn);
       cb.addEventListener('change', () => {
-        labelsOn = cb.checked; wrap.classList.toggle('nolabels', !labelsOn);
+        labelsOn = cb.checked; wrap.classList.toggle('nolabels', !callouts());
         try { window.localStorage.setItem('deskApcLabels', labelsOn ? '1' : '0'); } catch (e) { /* storage blocked: the choice lasts this page */ }
         fitScale();
       });
@@ -695,16 +688,16 @@
         return out;
       }
       // Fits `text` in the pad at the biggest size of PAD_RENDERED (px on screen); full name first, then the short form; else cut and counted.
-      function fitPad(lbEl, name) {
+      function fitPad(lbEl, name, no) {
         const sizes = PAD_RENDERED.map((r) => Math.round(r / (scale || 1) * 100) / 100);
-        const key = name + '|' + sizes.join();
+        const key = name + '|' + overview + '|' + sizes.join();
         if (fitted.get(lbEl) === key) return;
         fitted.set(lbEl, key);
         lbEl.removeAttribute('data-cut'); lbEl.removeAttribute('data-short'); lbEl.style.overflowWrap = 'normal';
-        lbEl.textContent = name;
+        lbEl.textContent = overview && name ? String(no) : name;
         if (!name) return;
         const fits = () => lbEl.scrollWidth <= lbEl.clientWidth && lbEl.scrollHeight <= lbEl.clientHeight;
-        for (const [text, isShort] of [[name, false], ...shortForms(name).map((t) => [t, true])]) {
+        for (const [text, isShort] of (overview ? [[String(no), false]] : [[name, false], ...shortForms(name).map((t) => [t, true])])) {
           lbEl.textContent = text;
           if (isShort) lbEl.dataset.short = '1';
           for (const px of sizes) { lbEl.style.fontSize = px + 'px'; if (fits()) { lbEl.dataset.px = px; return; } }
@@ -722,7 +715,7 @@
           e.className = 'pad ' + p.state + (e.classList.contains('hit') ? ' hit' : '');
           e.title = p.name ? `${p.no}  ${p.name}` : '';
           e.setAttribute('aria-label', p.name ? `look pad ${p.no} ${p.name}` : 'empty pad');
-          fitPad(e.firstChild, p.name);
+          fitPad(e.firstChild, p.name, p.no);
           if (p.key) { keyOfEl.set(e, p.key); if (p.bind) bindOfEl.set(e, p.bind); } else bindOfEl.delete(e);
         });
         v.columns.forEach((col, c) => {
@@ -769,25 +762,24 @@
         e.classList.add('hit'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('hit'), 160);
       }
 
-      // The panel is scaled to the room the pane has: width, and the window's height, so the whole unit is in view.
-      // Under NARROW_W the whole unit cannot be drawn at a readable size, so it is drawn at READ_SCALE (every pad name and
-      // leader label >= 11 px on screen) inside a pan box: the unit scrolls sideways under the two step buttons (left part: pads, knobs;
-      // right part: scene launch, transport, device knobs). It stays FIRST in the pane. Never hidden, never at 3 px type.
+      // The panel is scaled to the room the pane has, by width (the legend sits below it and the page scrolls).
+      // Under NARROW_W the whole unit is fitted to the width like the di music page (devices.js fitApc: native panel, uniform scale,
+      // no sideways scroll). At that scale a pad name and a leader label would be under 11 px, so they are not drawn: each pad shows
+      // its NUMBER (>= 11 px) and the PADS / BUTTONS lists below name every one. Never hidden, never 3 px type.
       let scale = 1;
       function fitScale() {
         const total = wrap.clientWidth; if (!total) return;
+        const ov = total < NARROW_W;
+        if (ov !== overview) { overview = ov; wrap.classList.toggle('overview', ov); wrap.classList.toggle('nolabels', !callouts()); layoutCallouts(); }
         const m = margins(), SW = NATIVE_W + m.l + m.r, SH = NATIVE_H + m.t + m.b;
-        const narrow = total < NARROW_W && total < SW * READ_SCALE;
-        wrap.classList.toggle('pan', narrow);
-        // By WIDTH only (the legend sits below it and the page scrolls): a height-bound scale drew the type at 4-7 px on screen.
-        scale = narrow ? READ_SCALE : Math.max(.3, Math.min(total / SW, 2));
+        scale = Math.max(.3, Math.min(total / SW, 2));
         stage.style.setProperty('--clpx', Math.max(10.5, Math.round(12 / scale * 100) / 100) + 'px');   // leader labels: 12 px on screen
         ap.style.left = m.l + 'px'; ap.style.top = m.t + 'px';
         stage.style.width = SW + 'px'; stage.style.height = SH + 'px';
         stage.style.transform = 'scale(' + scale + ')';
-        body.style.width = narrow ? '100%' : Math.floor(SW * scale) + 'px';
-        body.style.height = Math.ceil(SH * scale) + (narrow ? 18 : 0) + 'px';
-        if (lastView) lastView.pads.forEach((p, i) => fitPad(A.pads[i].firstChild, p.name));   // names are sized in px on screen: refit at every scale
+        body.style.width = Math.floor(SW * scale) + 'px';
+        body.style.height = Math.ceil(SH * scale) + 'px';
+        if (lastView) lastView.pads.forEach((p, i) => fitPad(A.pads[i].firstChild, p.name, p.no));   // names are sized in px on screen: refit at every scale
         layoutCallouts();
       }
       if (window.ResizeObserver) new ResizeObserver(fitScale).observe(wrap);
@@ -804,7 +796,7 @@
         const bad = [];
         for (const e of [...ap.children]) { const r = e.getBoundingClientRect(); if (r.right > pr.right + 1 || r.bottom > pr.bottom + 1 || r.left < pr.left - 1 || r.top < pr.top - 1) bad.push((e.className || e.tagName) + ''); }
         const sideCut = [...side.querySelectorAll('td,p,h3')].filter((n) => n.scrollWidth > n.clientWidth + 1).length;
-        const cls = [...stage.querySelectorAll('.cl')].filter((e) => e.style.display !== 'none' && labelsOn);
+        const cls = [...stage.querySelectorAll('.cl')].filter((e) => e.style.display !== 'none' && callouts());
         const rects = cls.map((e) => e.getBoundingClientRect()), stg = stage.getBoundingClientRect();
         const clCut = cls.filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1).length;
         let clOverlap = 0, clOnUnit = 0, clOut = 0;

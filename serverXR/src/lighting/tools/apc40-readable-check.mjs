@@ -5,7 +5,7 @@
 //   - the smallest pad name and the smallest leader label: must be >= FLOOR (11 px)
 //   - pads cut (a name or its short form still overflowing its pad), leader labels cut
 //   - how many pads show the short form (full name is then the pad title and the PADS list row)
-// Under 1000 px wide the drawing must still be visible and FIRST in the pane (606x780 is the owner's light window), panned at a readable scale: also asserts no label under a bar and 0 duplicate short names, and the two step buttons reach both ends of the pan box.
+// Under 1000 px wide (606x780 is the owner's light window) the whole unit is fitted to the width like the di music page: the drawing must be visible, FIRST in the pane, whole (no sideways pan), every pad number >= 11 px, 0 cut, 0 duplicates, 0 labels under bars.
 // Exit 1 when any floor/cut check fails. Pictures: <out>/readable-<w>x<h>-page<N>.png (the pane, scrolled) + -full.png.
 // usage: PW_FROM=<dir with node_modules/playwright> node apc40-readable-check.mjs <http://127.0.0.1:PORT/> <out dir> [WxH ...]
 import { createRequire } from 'node:module'
@@ -60,7 +60,7 @@ for (const [w, h] of sizes) {
       const px = (e) => parseFloat(getComputedStyle(e).fontSize) * k
       const pads = [...document.querySelectorAll('.apcp .pad')].filter((p) => p.firstChild && p.firstChild.textContent)
       const lbs = pads.map((p) => p.firstChild)
-      const cl = [...document.querySelectorAll('.apcstage .cl')].filter((e) => e.style.display !== 'none')
+      const cl = [...document.querySelectorAll('.apcstage .cl')].filter((e) => e.style.display !== 'none' && getComputedStyle(e).display !== 'none')
       const padPx = lbs.map(px), clPx = cl.map(px)
       const cut = lbs.filter((l) => l.scrollWidth > l.clientWidth || l.scrollHeight > l.clientHeight).length
       const clCut = cl.filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1).length
@@ -83,30 +83,15 @@ for (const [w, h] of sizes) {
       const ar = aw ? aw.getBoundingClientRect() : null
       const drawing = { visible: !!aw && getComputedStyle(aw).display !== 'none' && ar.width > 100 && ar.height > 100,
         first: !!aw && !!side && !!pb && pb.querySelector('table, ol') === side.querySelector('table, ol') && !!(aw.compareDocumentPosition(side) & Node.DOCUMENT_POSITION_FOLLOWING) && !!(aw.compareDocumentPosition(pb.querySelector('table, ol')) & Node.DOCUMENT_POSITION_FOLLOWING),
-        pan: !!document.querySelector('.apc40.pan') }
+        overview: !!document.querySelector('.apc40.overview'),
+        whole: !!aw && ar.left >= 0 && ar.right <= window.innerWidth + 1 && document.querySelector('.apcstage').getBoundingClientRect().right <= ar.right + 1 && getComputedStyle(aw).overflowX !== 'auto' }   // the whole unit, no sideways pan
       return { drawing, scale: Math.round(k * 1000) / 1000, pads: pads.length, padMin: Math.min(...padPx), clN: cl.length, clMin: cl.length ? Math.min(...clPx) : null, cut, clCut, short, noTitle, list, firstView, underBar, dup, topLabels: tops.length }
     }, pg + 1)
-    const ok = m.padMin >= FLOOR - 0.05 && (m.clMin == null || m.clMin >= FLOOR - 0.05) && m.cut === 0 && m.clCut === 0 && m.noTitle === 0 && m.list === m.pads && m.firstView.scrollTop === 0 && m.firstView.heading && m.firstView.orderButtons >= 2 && m.firstView.orderButtonsInView === m.firstView.orderButtons && m.underBar.length === 0 && m.dup.length === 0 && m.drawing.visible && m.drawing.first
+    const ok = m.padMin >= FLOOR - 0.05 && (m.clMin == null || m.clMin >= FLOOR - 0.05) && m.cut === 0 && m.clCut === 0 && m.noTitle === 0 && m.list === m.pads && m.firstView.scrollTop === 0 && m.firstView.heading && m.firstView.orderButtons >= 2 && m.firstView.orderButtonsInView === m.firstView.orderButtons && m.underBar.length === 0 && m.dup.length === 0 && m.drawing.visible && m.drawing.first && m.drawing.whole
     if (!ok) fail++
     rows.push({ size: w + 'x' + h, page: pg + 1, ...m, ok })
     console.log((ok ? 'PASS ' : 'FAIL ') + w + 'x' + h + ' page ' + (pg + 1) + '  ' + JSON.stringify(m))
     await page.screenshot({ path: path.join(out, `readable-${w}x${h}-page${pg + 1}.png`) })
-    if (rows[rows.length - 1].drawing.pan) {   // narrow: the pan box. Jump right, jump left; picture each stop; the jump must really move it
-      const box = page.locator('.apcwrap'), sl = () => page.evaluate(() => Math.round(document.querySelector('.apcwrap').scrollLeft))
-      const reach = []   // step right until the end (every part of the unit gets a picture), then back to the start
-      for (let n = 0; n < 6; n++) {
-        await page.getByRole('button', { name: /^Right/ }).click(); await page.waitForTimeout(900)
-        const at = await page.evaluate(() => { const b = document.querySelector('.apcwrap'); return [Math.round(b.scrollLeft), b.scrollLeft + b.clientWidth >= b.scrollWidth - 2] })
-        reach.push(at[0]); await box.screenshot({ path: path.join(out, `readable-${w}x${h}-page${pg + 1}-pan-${n + 1}.png`) })
-        if (at[1]) break
-      }
-      const right = await sl(), atEnd = await page.evaluate(() => { const b = document.querySelector('.apcwrap'); return b.scrollLeft + b.clientWidth >= b.scrollWidth - 2 })
-      for (let n = 0; n < 6 && (await sl()) > 0; n++) { await page.getByRole('button', { name: /Left/ }).click(); await page.waitForTimeout(900) }
-      const left = await sl()
-      const jumpOk = right > 100 && atEnd && left === 0
-      console.log((jumpOk ? 'PASS' : 'FAIL') + ' pan buttons ' + w + 'x' + h + ' steps ' + JSON.stringify(reach) + ', end reached ' + atEnd + ', back to ' + left)
-      if (!jumpOk) fail++
-    }
     // The pane scrolls inside the page: a tall window for the whole pane's picture (width, hence scale, unchanged).
     const paneH = await page.evaluate(() => Math.ceil(document.querySelector('.miapcpane').getBoundingClientRect().height))
     await page.setViewportSize({ width: w, height: Math.min(8000, paneH + 160) })
@@ -119,7 +104,7 @@ for (const [w, h] of sizes) {
 await browser.close()
 for (const [w, h] of sizes) {
   const r = rows.filter((x) => x.size === w + 'x' + h)
-  console.log(`MIN ${w}x${h}: pad name ${Math.min(...r.map((x) => x.padMin)).toFixed(1)} px, leader label ${Math.min(...r.map((x) => x.clMin ?? 99)).toFixed(1)} px, scale ${r[0].scale}, short-form pads ${r.reduce((a, x) => a + x.short, 0)}`)
+  console.log(`MIN ${w}x${h}: pad name ${Math.min(...r.map((x) => x.padMin)).toFixed(1)} px, leader label ${r.every((x) => x.clMin == null) ? 'none drawn' : Math.min(...r.map((x) => x.clMin ?? 99)).toFixed(1) + ' px'}, scale ${r[0].scale}, short-form pads ${r.reduce((a, x) => a + x.short, 0)}`)
 }
 console.log(fail ? 'FAIL: ' + fail + ' check(s) failed' : 'PASS: every pad name and leader label >= ' + FLOOR + ' px on screen, nothing cut')
 process.exit(fail ? 1 : 0)
