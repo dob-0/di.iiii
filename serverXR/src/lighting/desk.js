@@ -747,38 +747,73 @@ function createDesk(opts = {}) {
   let looksEdits = 0;
   // Starts from the clock, so a page holding a rev from before a restart can never match a new one.
   let looksRev = Date.now();
-  let looksCache = { arr: null, items: [], edits: -1, text: '[]' };
-  function looksEdited() { looksEdits++; }
-  function looksJson() {
+  let looksCache = { arr: null, items: [], edits: -1, entries: [], text: null };
+  // One look's JSON text (and its UTF-8 bytes, made when the file is written), kept per look OBJECT: a save serialises
+  // only the looks that are new since the last one. Exact because a look is replaced, never changed in place; the one
+  // way to change one in place is looksEdited(), which throws every entry away.
+  let lookEntries = new WeakMap();
+  function looksEdited() { looksEdits++; lookEntries = new WeakMap(); }
+  function lookEntry(l) {
+    const keyed = l !== null && typeof l === 'object';
+    let e = keyed ? lookEntries.get(l) : undefined;
+    if (!e) {
+      const t = JSON.stringify(l);   // undefined (a function, a symbol) is what JSON.stringify([x]) writes as null
+      e = { text: t === undefined ? 'null' : t, buf: null };
+      if (keyed) lookEntries.set(l, e);
+    }
+    return e;
+  }
+  // The cache is rebuilt (cheaply: per-look entries) whenever the array, its elements or looksEdits differ.
+  function looksEntries() {
     const arr = state.looks;
     const c = looksCache;
     let same = c.arr === arr && c.edits === looksEdits && c.items.length === arr.length;
     if (same) for (let i = 0; i < arr.length; i++) if (c.items[i] !== arr[i]) { same = false; break; }
     if (!same) {
-      looksCache = { arr, items: arr.slice(), edits: looksEdits, text: JSON.stringify(arr) };
+      looksCache = { arr, items: arr.slice(), edits: looksEdits, entries: arr.map(lookEntry), text: null };
       looksRev++;
     }
+    return looksCache.entries;
+  }
+  // JSON.stringify(state.looks), byte for byte, joined from the per-look texts (made once per change).
+  function looksJson() {
+    const entries = looksEntries();
+    if (looksCache.text == null) looksCache.text = '[' + entries.map((e) => e.text).join(',') + ']';
     return looksCache.text;
+  }
+  // Serialises, one per 5 ms timer, every look that has no entry yet (at boot, after a show load or import, after an
+  // edit), so the save's own tick never has to stringify more than it can't avoid and a frame never waits for it.
+  let warming = false;
+  function warmLooks() {
+    if (warming) return;
+    warming = true;
+    const step = () => {
+      const arr = state.looks;
+      if (Array.isArray(arr)) {
+        for (const l of arr) {
+          if (l !== null && typeof l === 'object' && !lookEntries.has(l)) { lookEntry(l); return setTimeout(step, 5); }
+        }
+      }
+      warming = false;
+    };
+    setTimeout(step, 5);   // a timer, not setImmediate: a frame's timer can run between two looks
   }
   const LOOKS_PLACEHOLDER = '\u0000looks\u0000';
   const LOOKS_TOKEN = JSON.stringify(LOOKS_PLACEHOLDER);
 
-  // JSON.stringify(s), byte for byte, with the looks text spliced in from the cache (looksJson) instead of
-  // walked again: at 43 MB of looks a save stringified them all, on the DMX loop's thread, 0.4 s after every fire.
-  // Here in three pieces, so the async write can send the looks as bytes encoded once per change
-  // (looksBuffer) instead of flattening and encoding a 40+ MB string on the loop's thread on every save.
+  // JSON.stringify(s), byte for byte, with the looks spliced in from the per-look cache instead of walked again: at
+  // 43 MB of looks a save stringified them all, on the DMX loop's thread, 0.4 s after every fire.
+  // Three pieces, so the async write can send the looks as bytes encoded once per look (not one 40+ MB string
+  // flattened and encoded on the loop's thread on every save). `entries` is the looks as they are NOW.
   function stateParts(s) {
     if (!Array.isArray(s.looks)) return { whole: JSON.stringify(s) };
-    looksJson();
+    const entries = looksEntries();
     const text = JSON.stringify(Object.assign({}, s, { looks: LOOKS_PLACEHOLDER }));
     const at = text.indexOf(LOOKS_TOKEN);
-    return { head: text.slice(0, at), tail: text.slice(at + LOOKS_TOKEN.length) };
+    return { head: text.slice(0, at), tail: text.slice(at + LOOKS_TOKEN.length), entries };
   }
-  function looksBuffer() {
-    looksJson();
-    if (!looksCache.buf) looksCache.buf = Buffer.from(looksCache.text);
-    return looksCache.buf;
-  }
+  const COMMA = Buffer.from(',');
+  const entryBuf = (e) => e.buf || (e.buf = Buffer.from(e.text));
 
   let machineOutputText = JSON.stringify(state.output);
 
@@ -853,10 +888,9 @@ function createDesk(opts = {}) {
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     // A space's show is written without the rig (normaliseOutput says why).
     const parts = stateParts(show.space ? withoutRig(state) : state);
-    // The looks text is captured HERE, with the head and tail it belongs to: a later cache rebuild must not mix in.
-    const looksText = parts.whole != null ? null : looksJson();
-    const text = () => (parts.whole != null ? parts.whole : parts.head + looksText + parts.tail);
-    return { file, text, parts, looksText };
+    // The looks are captured HERE (parts.entries), with the head and tail they belong to: a later cache rebuild must not mix in.
+    const text = () => (parts.whole != null ? parts.whole : parts.head + '[' + parts.entries.map((e) => e.text).join(',') + ']' + parts.tail);
+    return { file, text, parts };
   }
 
   function writeShowFile() {
@@ -888,8 +922,7 @@ function createDesk(opts = {}) {
   // A show change, adoption or synchronous save while this was in flight bumped showWriteGen: it then drops its own temp
   // file and returns false, and the caller skips the after-save work (rig file, status) that belongs to the newer write.
   async function writeShowFileAsync() {
-    const { file, text, parts, looksText } = prepareShowWrite();
-    const looksBuf = looksText == null ? null : looksBuffer();
+    const { file, text, parts } = prepareShowWrite();
     const gen = showWriteGen;
     const inPlace = saveStatus.failures >= 3;
     const tmp = file + '.async.tmp';
@@ -899,7 +932,11 @@ function createDesk(opts = {}) {
     try {
       const fh = await fsp.open(tmp, 'w');
       try {
-        if (looksBuf) { await fh.writeFile(parts.head); await fh.writeFile(looksBuf); await fh.writeFile(parts.tail); }
+        if (parts.entries) {
+          await fh.writeFile(parts.head + '[');
+          for (let i = 0; i < parts.entries.length; i++) await fh.writeFile(i ? Buffer.concat([COMMA, entryBuf(parts.entries[i])]) : entryBuf(parts.entries[i]));
+          await fh.writeFile(']' + parts.tail);
+        }
         else await fh.writeFile(parts.whole);
       } finally { await fh.close(); }
       if (gen !== showWriteGen) return drop();
@@ -981,7 +1018,9 @@ function createDesk(opts = {}) {
     saveStatus.pending = true;
     stateVersion++;
     if (!saveTimer) saveTimer = setTimeout(saveTick, 400);
+    warmLooks();
   }
+  warmLooks();   // the looks the show was loaded with, before the first save needs them
 
   // ---- the pushed frame (dmxstream.js): every rendered frame to every room listening ----
   const dmxStream = createDmxStream();
