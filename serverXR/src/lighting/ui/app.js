@@ -6193,8 +6193,8 @@ function midiHoldUp(key) {
   // a strobe hit's software part (fixtures with no strobe channel) goes back to the rig's own effect
   if (h.fxIds && h.fxIds.length) midiSend('api/fx', { mode: 'rig', ids: h.fxIds }, 'hold:fx:' + key, true);
 }
-// Strobe hits (N7314): hold-to-flash plus the strobe. The bar's strobe channel is held at the rate knob, capped at 3 Hz in
-// midiPatch.js (capStrobeDmx); fixtures with no strobe channel get the software strobe (fx.js, also <= 3 Hz); a shutter is never written.
+// Strobe hits (N7314): hold-to-flash plus the strobe. The bar's strobe channel is held at the rate knob, 1-20 Hz, or capped at 3 Hz when the desk's Strobe limit is on (N7618), in
+// midiPatch.js (capStrobeDmx); fixtures with no strobe channel get the software strobe (fx.js, also capped only with the limit on); a shutter is never written.
 function midiStrobeDown(key, kind) {
   const mp = window.deskMidiPatch;
   if (!midiArmed || !mp || midiHeld.has(key)) return;
@@ -7183,7 +7183,7 @@ function midiApcSoon() {
     // Only when something it draws has changed: the 1 s cue paint and every state poll land here.
     const c = CUES || {};
     const sig = [lookOnAirId(), midiLookPage, midiArmed, midiBlackoutNow(),
-      midiArmed ? midiLive.master : (S && S.master), c.index, c.running, c.autoplay, c.loop, c.n, S && S.looksRev, Object.keys(midiMap).length, JSON.stringify(midiApcValues())].join('|');
+      midiArmed ? midiLive.master : (S && S.master), c.index, c.running, c.autoplay, c.loop, c.n, S && S.looksRev, !!(S && S.output && S.output.strobeLimit), Object.keys(midiMap).length, JSON.stringify(midiApcValues())].join('|');
     if (sig === midiApcSig) return;
     midiApcSig = sig; midiApcAt = Date.now(); midiApcUpdate();
   }, Math.max(0, midiApcAt + 250 - Date.now()));
