@@ -111,7 +111,10 @@ input:focus, select:focus { outline: 1px solid var(--accent); }
   position: sticky; top: 0; z-index: 50; flex: none;
 }
 .dots { background: none; border: 0; color: var(--muted); padding: 0 14px; font-size: 15px; }
-.pages { display: flex; }
+/* The tabs are wider than a phone (8 tabs, about 520 px at 360 px wide): the row wraps onto a second
+   line, so every tab is whole and reachable and none is pushed past the window edge. */
+.pages { display: flex; flex-wrap: wrap; max-width: 100%; }
+.page-tab { flex: none; white-space: nowrap; min-height: 34px; }
 .page-tab {
   background: none; border: 0; border-bottom: 2px solid transparent;
   color: var(--muted); padding: 0 18px; letter-spacing: .01em; font-size: 13px;
