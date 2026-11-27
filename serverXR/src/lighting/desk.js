@@ -48,6 +48,7 @@ const { createCueRunner, sanitizeCues } = require('./cuerun');
 const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
 const holds = require('./holds');
+const { createCamera } = require('./camera');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -1594,7 +1595,34 @@ function createDesk(opts = {}) {
     });
   }
 
+  // The camera page: a v4l2 camera named in <data dir>/camera.json, opened only while a page
+  // asks for frames (camera.js). Machine-level, so it is not part of any show.
+  const camera = opts.camera || createCamera({ dataDir: DATA, log });
+
   const routes = {
+
+    // The camera routes have the SAME access rule as the desk's own read routes (GET /api/state, /api/cues):
+    // none of their own. Who may reach the desk is decided where it is mounted (serverXR requireLocalRuntime,
+    // loopback or DI_ALLOW_LAN_DEVICES, through the proxy chain), so a phone that reaches the desk through the
+    // gateway reaches the camera too. The laser guard (ownPageRefusal) is not used: a camera is not a laser.
+    'GET /api/camera': (req, res) => json(res, camera.status()),
+    'POST /api/camera/config': (req, res, body) => json(res, camera.configure(body)),
+    // One JPEG, the newest. The page asks about twice a second at most while it is open (a viewer
+    // asking faster gets 429, camera.js viewerFps); asking is what keeps the camera open, and a
+    // camera nobody asks of is let go after ~10 s. A frame older than staleMs is a 503 "stalled"
+    // with its age; the headers carry the frame's age and number so a page counts only new frames.
+    'GET /api/camera/frame': async (req, res) => {
+      const f = await camera.frame(req.ip || (req.socket && req.socket.remoteAddress))   // the real client: behind the gateway every socket is 127.0.0.1;
+      if (f.error) {
+        const status = f.code === 'unconfigured' ? 404 : f.code === 'rate' ? 429 : 503;
+        const headers = { 'content-type': 'application/json', 'cache-control': 'no-store' };
+        if (f.code === 'rate') headers['retry-after'] = String(Math.max(1, Math.ceil((f.retryMs || 500) / 1000)));
+        res.writeHead(status, headers);
+        return res.end(JSON.stringify({ error: f.error, code: f.code, ageMs: f.ageMs, retryMs: f.retryMs }));
+      }
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': f.buf.length, 'x-frame-age': String(Date.now() - f.at), 'x-frame-seq': String(f.seq) });
+      return res.end(f.buf);
+    },
 
     'GET /api/state': (req, res) => json(res, publicStateJson(new URL(req.url, 'http://localhost').searchParams.get('looksRev')), 200, req),
 
@@ -1830,6 +1858,10 @@ function createDesk(opts = {}) {
     'POST /api/looks/fire': (req, res, body) => {
       const look = state.looks.find((l) => l.id === body.id);
       if (!look) return json(res, { error: 'no such look' }, 404);
+      // `autoplayOff: true`: the press also turns play-in-order off (the owner's rule, cuerun.js 2026-10-09), in this one
+      // call: a pad used to send api/cues/autoplay first, a second request that waited its turn behind the pad queue.
+      // Only when it is on, so a press that leaves it off saves nothing extra.
+      if (body.autoplayOff === true && (cueRunner.brief() || {}).autoplay) cueRunner.setAutoplay(false);
       const wait = quantiseWait(body.quantize);
       if (wait > 0) {
         const at = Date.now() + wait;
@@ -2893,7 +2925,7 @@ function createDesk(opts = {}) {
   const SPACE_ID = /^[a-z0-9-]{3,48}$/;
   // The routes a page opened for one space may use while another show is loaded: the
   // ones that say which show is loaded, and the ones that change it.
-  const SHOW_ROUTES = new Set(['GET /api/show', 'POST /api/show/open', 'POST /api/show/copy-machine']);
+  const SHOW_ROUTES = new Set(['GET /api/camera', 'POST /api/camera/config', 'GET /api/camera/frame', 'GET /api/show', 'POST /api/show/open', 'POST /api/show/copy-machine']);
 
   const who = () => (show.space ? `${show.label || show.space}'s show` : "this machine's own show");
 
@@ -3066,6 +3098,7 @@ function createDesk(opts = {}) {
   }
 
   function close() {
+    camera.close();   // the caller that must wait for the camera to be let go uses closeCamera()
     dmxStream.close();
     clearInterval(timer);
     clearInterval(pollTimer);
@@ -3107,6 +3140,8 @@ function createDesk(opts = {}) {
     handle, close, engine, writeShow, summary, input,
     // For a caller that edits a look object in place: the cached looks JSON is rebuilt on the next poll.
     looksEdited,
+    // Let the camera go and wait until its ffmpeg has ended (shutdown waits on this).
+    closeCamera: () => camera.close(),
     // The cue runner itself, for a caller in this process that drives the list on a
     // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
     // /api/cues routes call, so there is still ONE clock.

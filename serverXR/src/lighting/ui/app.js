@@ -6208,8 +6208,9 @@ function buildMidiTargets() {
         // The owner's rule (cuerun.js, 2026-10-09): you press, the scene changes, and auto play
         // stops. The desk's tile tap and fireLook stay as they are; the pad turns play-in-order
         // off first, in the same queue, before the fire.
+        // The autoplay-off rides in the fire call (autoplayOff): one request, so the light never waits on a second.
         if (mcl.cueView(CUES, midiCueSent, Date.now()).autoplay) {
-          midiSend('api/cues/autoplay', { autoplay: false }, 'lookpad:autoplayoff');
+          fire.body = Object.assign({}, fire.body, { autoplayOff: true });
           if (midiArmed) mcl.noteSent(midiCueSent, { autoplay: false }, Date.now());
         }
         midiSend(fire.route, fire.body, 'lookpad:' + k, true);
@@ -6963,7 +6964,7 @@ $('#showNoteBtn').addEventListener('click', async () => {
 /* =============== wiring =============== */
 
 function showPage(name) {
-  page = ['setup', 'control', 'stage', 'touch', 'fader', 'aim', 'midi'].includes(name) ? name : 'setup';
+  page = ['setup', 'control', 'stage', 'touch', 'fader', 'aim', 'camera', 'midi'].includes(name) ? name : 'setup';
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';
@@ -6972,6 +6973,7 @@ function showPage(name) {
   // there on the phone. Skipped mid-edit: a pending save is newer than the server.
   if (page === 'midi' && !midiSaveTimer) loadMidiMap();
   if (window.stagePageShown) window.stagePageShown(page);   // stagepage.js
+  if (window.cameraPageShown) window.cameraPageShown(page);   // camera.js
   if (S) renderAll(false);
 }
 $$('.page-tab').forEach((t) => t.addEventListener('click', () => {
