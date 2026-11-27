@@ -23,8 +23,8 @@ A keepalive fetch is capped near 64 KB; a white hit over 33 fixtures is ~60 KB a
 ## Rollback
 Revert the PR; "Clear map" + "Map my controller" returns to 49.
 
-## Round 2: strobe, effect knob pages, movement size (N7314, N7315) - engine, preset, tests done; app.js wiring WAITS
-State: 73 -> 100 preset controls (73 + 23 device knobs + strobe rate + movement size + 2 strobe hits). The page wiring in `ui/app.js` is not in this commit: #1394 (the base) is being reworked there; head was e6c410f2a (the base) when checked.
+## Round 2: strobe, effect knob pages, movement size (N7314, N7315) - engine, preset, tests, app.js wiring done
+State: 73 -> 100 preset controls (73 + 23 device knobs + strobe rate + movement size + 2 strobe hits). The page wiring in `ui/app.js` is in, merged onto #1394 head a9499a48b (soft takeover kept; bank change returns all knob keys to pickup). Sim on a scratch desk from the Reika checkpoint: 64 of 64 after the row-count fix (the run before it, 63 of 64, differed only in that count). Fix found by the sim: a keepalive release body over about 12 KB is dropped by the browser, so the 750-channel strobe release left holds; the cap is now 12000 bytes (larger bodies go without keepalive). Not tried on a real APC40, real lamps or the real bars.
 - Engine: `layer.headScale` 0-1 (api/layer `headScale`, saved only below 1). `headMotion.headsFrame` scales each look's pan/tilt swing around the look's own rest position. 100 % = the same bytes as before; 0 % = heads hold the centre; never outside 0-255 (`headScale.test.js`).
 - Strobe: `midiPatch.capStrobeDmx` caps the BAR1240PIX57 `strobe` hold at DMX 14 (= 2.92 Hz, WCAG 2.3.1); test sweeps the knob 0..1 in 1000 steps. MovingBar43 `shutter` is never written: movers get the software strobe (fx.js, slice >= 350 ms) only.
 - Pixel COUNT: the pixel map has no live count / segments / repeat parameter (a strip's `pixels` is a patch, not a live knob); not bound, patch untouched.
@@ -52,3 +52,10 @@ Device knobs 1-8 = CC 0x10-0x17 on the channel of the TRACK SELECT bank (bank 1-
 | 2 | Pixel map | pixel size 1-30 % | mix 0-255 | speed 0.1-4 x | brightness -100..100 | contrast 0-300 | left-right +-1000 | up-down +-1000 | - |
 | 3 | Pixel animation | size 0.1-5 x | beats 0-64 | phase 0-1 | direction (3) | easing (3) | travel x +-1000 | travel y +-1000 | mix breathing 0-1 |
 | 4 | LFO 1 | wave (5) | beats 0.25-64 | depth 0-255 | spread 0-1 | - | - | - | - |
+
+## Round 3 (review of a51cddb04, REVIEW-1397)
+- I1 fixed: group dimmer and zoom read S.fixtures at catch time (test fails if the read goes back to a copy; sim: truss at 77, Safe, ARM, fader top stays 77).
+- I2: chose to handle the toggle's late note-off (not SysEx mode): a note-off 600 ms or more after its note-on flips the group, a quick one is a momentary release. Sim covers both styles. UNCHECKED on the real unit (10-s check at install: press ACTIVATOR 1 twice with the MIDI monitor open).
+- I3: tools/simGuard.mjs; the sim refuses diiii.localhost, shared hosts and any port that is not a di-dev scratch web port (simGuard.test.js).
+- L1 relDelta(64) = -64. L2: ARM sends {owner:'apc40', clear:true}. Not done: L3-L6, L8, L9 (low).
+- Sim 67 of 67 on a scratch desk; lighting suite 20 files, 244 tests.

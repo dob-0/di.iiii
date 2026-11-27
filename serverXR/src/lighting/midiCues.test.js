@@ -254,6 +254,11 @@ describe('pad lights go out at the press (fake APC40 port)', () => {
     h.t = 800; h.polled = 'l5'; h.at = 760; h.p.paint()   // another surface moved the desk on; no 4 s of waiting
     expect(velOf(h, note(4))).toBe(APC40_COLOUR.running); expect(velOf(h, note(2))).toBe(APC40_COLOUR.cue)
   })
+  it('a reading asked in the SAME millisecond as the answer counts as after it (>= not >)', () => {
+    const h = rig(); h.polled = 'l1'; h.at = 0; h.p.paint(); h.t = 100; h.p.pressLook('l3'); h.t = 700; h.p.answer('l3', true); h.msgs.length = 0
+    h.t = 800; h.polled = 'l5'; h.at = 700; h.p.paint()
+    expect(velOf(h, note(4))).toBe(APC40_COLOUR.running)
+  })
   it('an unanswered fire is held for the backstop only', () => {
     const h = rig(); h.polled = 'l1'; h.at = 0; h.p.paint(); h.p.pressLook('l3'); h.msgs.length = 0
     h.t = 5000; h.at = 4900; h.p.paint(); expect(h.msgs).toEqual([])

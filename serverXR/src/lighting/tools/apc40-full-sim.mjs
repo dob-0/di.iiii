@@ -5,7 +5,11 @@ import { createRequire } from 'node:module'
 const require = createRequire(process.env.PW_FROM + '/')
 const { chromium } = require('playwright')
 
+import { execFileSync } from 'node:child_process'
+import { checkSimTarget } from './simGuard.mjs'
 const base = process.argv[2]
+{ let ls = ''; try { ls = execFileSync('di-dev', ['ls'], { encoding: 'utf8' }) } catch { /* the guard then refuses */ }
+  const why = checkSimTarget(base, ls); if (why) { console.error(why); process.exit(2) } }
 const shot = process.argv[3]
 const api = async (p, body) => (await fetch(base + p, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined)).json()
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -34,11 +38,11 @@ await sleep(2500)
 await page.click('#miPreset')
 await sleep(1200)
 const flash = await page.evaluate(() => document.body.innerText.match(/Akai APC40 mkII: \d+ controls mapped/)?.[0] || null)
-check('Map my controller binds 49 + 24 = 73 controls', /: 73 controls mapped/.test(flash || ''), flash)
+check('Map my controller binds 49 + 24 + 27 (round 2) = 100 controls', /: 100 controls mapped/.test(flash || ''), flash)
 const saved = await api('api/midi')
 const keys = saved.midi.maps.map((m) => m.key)
-check('map saved with the show, 73 rows', saved.midi.maps.length === 73, saved.midi.maps.length)
-check('strobe is not bound (venue safety decision)', !keys.some((k) => /strobe|shutter|^ch:/.test(k)), keys.filter((k) => /strobe|shutter|^ch:/.test(k)))
+check('map saved with the show, 100 rows', saved.midi.maps.length === 100, saved.midi.maps.length)
+check('strobe rate + 2 strobe hits are bound, no shutter and no ch: row', ['strobe:rate', 'hit:strobe-all', 'hit:strobe-movers'].every((k) => keys.includes(k)) && !keys.some((k) => /shutter|^ch:/.test(k)), keys.filter((k) => /strobe|shutter|^ch:/.test(k)))
 
 const midi = async (bytes, ms = 450) => { await page.evaluate((b) => window.__midi(b), bytes); await sleep(ms) }
 const cc = (ch, num, v, ms) => midi([0xb0 | (ch - 1), num, v], ms)
@@ -70,7 +74,7 @@ check('fader 1 = Left truss dimmer (universe 5 ~ 129), the others untouched', Ma
 await cc(2, 7, 127, 150); await cc(2, 7, 32, 700)
 s = await st()
 check('fader 2 = Right truss dimmer (universe 4 ~ 64), left stays', Math.abs(dimOf(s, 4) - 64.5) <= 2 && Math.abs(dimOf(s, 5) - 129) <= 2, { right: dimOf(s, 4), left: dimOf(s, 5) })
-await cc(3, 7, 127, 150); await cc(3, 7, 96, 700)
+await cc(3, 7, 127, 150); await cc(3, 7, 96, 1500)
 s = await st()
 const backDim = mean([...byU(s, 2), ...byU(s, 3)].map((f) => f.values.dimmer))
 check('fader 3 = Back bars dimmer (universes 2+3 ~ 193), trusses stay', Math.abs(backDim - 193) <= 2 && Math.abs(dimOf(s, 4) - 64.5) <= 2, { back: backDim })
@@ -78,13 +82,13 @@ check('fader 3 = Back bars dimmer (universes 2+3 ~ 193), trusses stay', Math.abs
 // ---- 1b. on/off + LED ----
 const ledsFrom = async (n) => (await ledNow()).slice(n).filter((m) => m[1] === 0x32)
 let n0 = (await ledNow()).length
-await on(1, 0x32, 700); await off(1, 0x32, 100)
+await on(1, 0x32, 150); await off(1, 0x32, 600)
 s = await st()
 check('activator 1: Left truss off (9 of 9), right and back stay on', byU(s, 5).every((f) => f.on === false) && byU(s, 4).every((f) => f.on !== false) && byU(s, 2).every((f) => f.on !== false), { left: byU(s, 5).map((f) => f.on) })
 let L = await ledsFrom(n0)
 check('activator 1 LED goes dark on channel 0x90 (track 1)', L.some((m) => m[0] === 0x90 && m[2] === 0), L)
 n0 = (await ledNow()).length
-await on(1, 0x32, 700); await off(1, 0x32, 100)
+await on(1, 0x32, 150); await off(1, 0x32, 600)
 s = await st()
 L = await ledsFrom(n0)
 check('pressed again: Left truss on, LED lit', byU(s, 5).every((f) => f.on !== false) && L.some((m) => m[0] === 0x90 && m[2] === 1), L)
@@ -119,16 +123,16 @@ check('nudge + moves the beat later by 25 ms', s.fx.epoch - e0 === 25, s.fx.epoc
 await on(1, 0x64, 500); await on(1, 0x64, 500)
 s = await st()
 check('nudge - twice moves it earlier by 50 ms', s.fx.epoch - e0 === -25, s.fx.epoch - e0)
-const b0 = s.fx.bpm
+const bsc0 = s.fx.bpm
 await cc(1, 13, 3, 600)
 s = await st()
-check('tempo knob up 3 clicks = +3 BPM (no takeover)', s.fx.bpm === b0 + 3, [b0, s.fx.bpm])
+check('tempo knob up 3 clicks = +3 BPM (no takeover)', s.fx.bpm === bsc0 + 3, [bsc0, s.fx.bpm])
 await cc(1, 13, 127, 500)
 s = await st()
-check('tempo knob down 1 click (127) = -1 BPM', s.fx.bpm === b0 + 2, [b0, s.fx.bpm])
+check('tempo knob down 1 click (127) = -1 BPM', s.fx.bpm === bsc0 + 2, [bsc0, s.fx.bpm])
 await cc(1, 13, 128 - 63, 500)
 s = await st()
-check('tempo knob 65 = down 63 clicks', s.fx.bpm === Math.max(20, b0 + 2 - 63), s.fx.bpm)
+check('tempo knob 65 = down 63 clicks', s.fx.bpm === Math.max(20, bsc0 + 2 - 63), s.fx.bpm)
 
 // ---- 4. zoom and colour effect ----
 const zoomers = (x) => x.fixtures.filter((f) => f.values.zoom != null)
@@ -223,6 +227,94 @@ const after = { black: s.blackout, chase: s.chase.enabled, fx: s.fx.enabled, cue
 check('BANK LOCK = panic: blackout on, FX off, cues stopped (chase has no scenes in this show: its off is unit-tested)', before.fx && after.black === true && !after.chase && !after.fx && !after.cue, { before, after })
 await on(1, 0x66, 700)
 
+
+// ---- round 2: strobe (N7314), movement size and effect knobs (N7315) ----
+await api('api/master', { blackout: false })
+if (!/ARMED/.test(await page.evaluate(() => document.querySelector('#miArm').textContent))) { await page.click('#miArm'); await sleep(600) }
+const rawOf = (s) => Object.entries(s.raw || {})
+const barStrobe = (s) => { const out = []; for (const f of s.fixtures) { const ch = s.profiles[f.profile].channels; const i = ch.indexOf('strobe'); if (i >= 0) out.push(f.universe + ':' + (f.address + i)) } return out }
+const moverShutter = (s) => { const out = []; for (const f of s.fixtures) { const ch = s.profiles[f.profile].channels; const i = ch.indexOf('shutter'); if (i >= 0 && ch.indexOf('strobe') < 0) out.push(f.universe + ':' + (f.address + i)) } return out }
+let r2 = await st()
+check('rig has back bars with a strobe channel and movers with a shutter', barStrobe(r2).length === 15 && moverShutter(r2).length === 18, [barStrobe(r2).length, moverShutter(r2).length])
+await cc(1, 48, 64, 150)                      // catch the rate knob at its default (half = 2 Hz)
+await cc(1, 48, 127, 250)                     // knob to the maximum
+await on(1, 0x57, 700)
+r2 = await st()
+const sv = rawOf(r2).filter(([k]) => barStrobe(r2).includes(k)).map(([, v]) => v)
+check('strobe hit (PAN 0x57) at the knob maximum: all 15 bar strobe channels at DMX 14 (2.92 Hz), not above', sv.length === 15 && sv.every((v) => v === 14), sv)
+check('the movers\' shutter is never written by the strobe hit', rawOf(r2).every(([k]) => !moverShutter(r2).includes(k)), rawOf(r2).filter(([k]) => moverShutter(r2).includes(k)))
+const movFx = r2.fixtures.filter((f) => moverShutter(r2).length && s2has(f)).length
+function s2has(f) { return f.fx && f.fx.mode === 'strobe' }
+check('movers get the software strobe (per-fixture fx) while held', r2.fixtures.filter((f) => f.fx && f.fx.mode === 'strobe').length === 18, r2.fixtures.filter((f) => f.fx && f.fx.mode === 'strobe').length)
+await cc(1, 48, 0, 400)                       // rate down while held: the channel follows, through the cap
+r2 = await st()
+check('rate knob at 0 while held: bar strobe channels follow to DMX 4 (1 Hz)', rawOf(r2).filter(([k]) => barStrobe(r2).includes(k)).every(([, v]) => v === 4), rawOf(r2).filter(([k]) => barStrobe(r2).includes(k)).map(([, v]) => v).slice(0, 3))
+await off(1, 0x57, 700)
+r2 = await st()
+check('strobe hit released: no raw hold left, no per-fixture fx left', rawOf(r2).length === 0 && r2.fixtures.every((f) => !f.fx), [rawOf(r2).length, r2.fixtures.filter((f) => f.fx).length])
+await on(1, 0x58, 600)
+r2 = await st()
+check('movers strobe hit (SENDS 0x58): software strobe on the 18 movers only, no raw write', rawOf(r2).length === 0 && r2.fixtures.filter((f) => f.fx && f.fx.mode === 'strobe').length === 18, [rawOf(r2).length, r2.fixtures.filter((f) => f.fx).length])
+await off(1, 0x58, 600)
+r2 = await st()
+check('movers strobe released', r2.fixtures.every((f) => !f.fx), r2.fixtures.filter((f) => f.fx).length)
+// movement size
+const lay0 = (await api('api/layers')).layers.find((l) => l.id === 'cue')
+check('layer headScale defaults to absent (= 100 %)', lay0 && lay0.headScale === undefined, lay0 && lay0.headScale)
+await cc(1, 49, 127, 150); await cc(1, 49, 32, 500)
+const lay1 = (await api('api/layers')).layers.find((l) => l.id === 'cue')
+check('track knob 2 = movement size: 32/127 -> 0.25 on the Cues layer', lay1 && Math.abs(lay1.headScale - 0.25) <= 0.01, lay1 && lay1.headScale)
+await cc(1, 49, 127, 500)
+check('knob back to the top: headScale removed (100 %, saved as before)', (await api('api/layers')).layers.find((l) => l.id === 'cue').headScale === undefined, 'ok')
+// effect knobs
+await cc(1, 0x12, 127, 150); await cc(1, 0x12, 64, 500)
+r2 = await st()
+check('bank 1 knob 3 = FX depth: 64/127 -> ~128', Math.abs(r2.fx.depth - 128) <= 2, r2.fx.depth)
+const sample0 = (r2.video || {}).sample
+await cc(2, 0x10, 22, 150); await cc(2, 0x10, 127, 500)
+r2 = await st()
+check('bank 2 knob 1 = pixel size: knob to the top -> 30', r2.video && r2.video.sample === 30, [sample0, r2.video && r2.video.sample])
+const anim0 = r2.video && r2.video.anim ? r2.video.anim.bscale : null
+await cc(3, 0x10, 0, 500)
+r2 = await st()
+check('bank change: the first message on bank 3 is a position, not a turn (animation size unchanged)', r2.video.anim.bscale === anim0, [anim0, r2.video.anim.bscale])
+await api('api/lfos', { lfos: [{ id: 't1', wave: 'sine', beats: 1, depth: 255, enabled: false }] })
+await sleep(1300)
+await cc(4, 0x10, 13, 200); await cc(4, 0x10, 127, 500)
+r2 = await st()
+check('bank 4 knob 1 = LFO 1 wave: top -> random, list keeps its id', r2.lfos && r2.lfos[0] && r2.lfos[0].wave === 'random' && r2.lfos[0].id === 't1', r2.lfos && r2.lfos[0])
+await api('api/lfos', { lfos: [] })
+// rings
+const led = await ledNow()
+check('rings: ring type 1 on CC 0x18+ of each bank, ring values on CC 0x10+ on the bank channel', led.some((m) => m[0] === 0xb0 && m[1] === 0x1a && m[2] === 1) && led.some((m) => m[0] === 0xb1 && m[1] === 0x10) && led.some((m) => m[0] === 0xb0 && m[1] === 0x12), led.filter((m) => (m[0] & 0xf0) === 0xb0).slice(0, 6))
+const depthRing = led.filter((m) => m[0] === 0xb0 && m[1] === 0x12).map((m) => m[2])
+check('FX depth ring followed the desk (last write ~ 64/127 of 255 read back)', depthRing.length > 0 && Math.abs(depthRing[depthRing.length - 1] - 64) <= 3, depthRing)
+
+
+// ---- review I1: a group fader catches at the DESK's value, not a copy from page build ----
+{
+  const left = byU(await st(), 5)
+  for (const f of left) await api('api/fixture', { id: f.id, values: { dimmer: 77 } })   // as if from another surface
+  await sleep(2500)                                   // two polls replace the page's state
+  await page.click('#miArm'); await sleep(400)       // Safe
+  await page.click('#miArm'); await sleep(600)       // ARM again: every fader is caught again
+  await cc(1, 7, 127, 600)
+  const after = byU(await st(), 5).map((f) => f.values.dimmer)
+  check('I1: truss at 77 on the desk, Safe then ARM, fader at the top: stays 77 (no jump to 255)', after.every((v) => v === 77), after)
+  await cc(1, 7, 30, 500); await cc(1, 7, 127, 500)
+}
+// ---- review I2: the activator's second press may arrive as a late note-off (toggle on the unit) ----
+{
+  await on(1, 0x32, 150); await sleep(100)           // press 1: note-on, no note-off (unit keeps the toggle)
+  let s2 = await st(); const offFirst = byU(s2, 5).every((f) => f.on === false)
+  await off(1, 0x32, 700)                            // press 2: the late note-off
+  s2 = await st(); const onSecond = byU(s2, 5).every((f) => f.on !== false)
+  check('I2: toggle style (note-on, later note-off): press 1 turns the truss off, press 2 turns it on', offFirst && onSecond, { offFirst, onSecond })
+  await on(1, 0x32, 100); await off(1, 0x32, 100)    // momentary style (quick on+off) = one flip only
+  s2 = await st()
+  check('I2: momentary style (note-on then a quick note-off) flips once', byU(s2, 5).every((f) => f.on === false), byU(s2, 5).map((f) => f.on))
+}
+
 // ---- pictures: the MIDI pane at two real sizes ----
 await page.evaluate(() => { const t = document.querySelector('#miMapBody tr[data-key="grp:left:dim"]'); t && t.scrollIntoView({ block: 'start' }); window.scrollBy(0, -170) })
 await sleep(300)
@@ -238,7 +330,7 @@ await sleep(500)
 await page.screenshot({ path: shot + '-1536x864-top.png' })
 const rows = await page.evaluate(() => [...document.querySelectorAll('#miMapBody tr[data-key]')].filter((r) => !/^ch:/.test(r.dataset.key) && /grp:|layer|tap|nudge|tempo|^zoom|cfx|hit:|blackoutoff|panic/.test(r.dataset.key)).map((r) => [r.dataset.key, r.children[1].textContent.trim()]))
 console.log('new rows in the mapping table: ' + rows.length + ' ' + JSON.stringify(rows.slice(0, 30)))
-check('mapping table shows 24 new rows, each with a ch/CC or ch/note', rows.length === 24 && rows.every(([, b]) => /(ch\d+\s+(CC|note) \d+|catch)/.test(b)), rows.length)
+check('mapping table shows 26 new rows (24 + 2 strobe hits), each with a ch/CC or ch/note', rows.length === 26 && rows.every(([, b]) => /(ch\d+\s+(CC|note) \d+|catch)/.test(b)), rows.length)
 
 await browser.close()
 const fails = results.filter((r) => !r.ok).length

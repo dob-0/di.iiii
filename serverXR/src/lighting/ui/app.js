@@ -331,10 +331,14 @@ async function pullState() {
   try {
     const askedAt = Date.now();
     // Say which looks we hold: while they are unchanged the desk leaves them out (42 MB on a big show).
-    const reply = await fetch(S && Array.isArray(S.looks) && S.looksRev != null ? 'api/state?looksRev=' + encodeURIComponent(S.looksRev) : 'api/state');
+    // The rev and the list are taken when the request is SENT: polls overlap, and a reply that lands after a newer one
+    // must be matched against what this request asked about, not against whatever S holds by then.
+    const heldRev = S && Array.isArray(S.looks) ? S.looksRev : null;
+    const heldLooks = heldRev != null ? S.looks : null;
+    const reply = await fetch(heldRev != null ? 'api/state?looksRev=' + encodeURIComponent(heldRev) : 'api/state');
     const next = await reply.json();
-    // looks left out and the rev still ours: keep the list we have (an older desk sends no looksRev and always sends looks).
-    if (next && !('looks' in next) && S && Array.isArray(S.looks) && next.looksRev === S.looksRev) next.looks = S.looks;
+    // looks left out and the rev still the one we sent: keep the list we sent it for (an older desk sends no looksRev and always sends looks).
+    if (next && !('looks' in next) && heldLooks && next.looksRev === heldRev) next.looks = (S && S.looksRev === heldRev && Array.isArray(S.looks)) ? S.looks : heldLooks;
     // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
     const wasOffline = pollFails >= 2;
     // Opened for one space while the desk runs another show: say which, and keep what is
@@ -371,6 +375,7 @@ async function pullState() {
     }
     const lastGood = S;
     S = next;
+    midiLiveArrived();
     // Not held back by the busy guard: it is the desk's own fact, not a fader this page is dragging.
     if (next.onAir) applyOnAir(next.onAir, askedAt);
     else if (!busy) layersAskedAt = askedAt;
@@ -2568,7 +2573,9 @@ function syncLimitPanel() {
 // pan/tilt has a fine channel (S.fineNames, published from roles.js, the list the renderer uses);
 // a light without one stays in whole steps, and the server rounds its trim the same way.
 const TRIM_STEPS = ['1', '0.1', '0.01'];
-let trimStep = TRIM_STEPS.includes(localStorage.getItem('trimStep')) ? localStorage.getItem('trimStep') : '0.1';
+// A browser that blocks site data throws on localStorage: the step then lives in memory only.
+let trimStep = '0.1';
+try { const t = localStorage.getItem('trimStep'); if (TRIM_STEPS.includes(t)) trimStep = t; } catch (e) { /* site data blocked */ }
 const hasFine = (f, axis) => {
   const names = (S && S.fineNames && S.fineNames[axis]) || [];
   return !!f && profileOf(f).channels.some((c) => names.includes(c));
@@ -2594,7 +2601,7 @@ function paintTrimStep() {
 for (const b of $$('.trimstep button')) {
   b.addEventListener('click', () => {
     trimStep = b.dataset.step;
-    localStorage.setItem('trimStep', trimStep);
+    try { localStorage.setItem('trimStep', trimStep); } catch (e) { /* site data blocked */ }
     paintTrimStep();
   });
 }
@@ -5097,6 +5104,8 @@ function buildSerial() {
 }
 
 /* =============== the stack: layers, looks, steps =============== */
+// Same cap as MAX_STEPS in looks.js (the server cuts anything above it, so the editor stops here too).
+const MAX_LOOK_STEPS = 320;
 /* A look is a list of steps; a layer is a look under a finger. Scene, palette, chase and
    wave stopped being four objects on the server, so they are one editor here: the step
    list IS the difference between them, and the words under it say which one you have
@@ -5178,6 +5187,14 @@ function queueLayer(id, patch) {
     if (Date.now() - lastLayerFlush > 60) flushLayers();
     else layerTimer = setTimeout(flushLayers, 25);
   }
+}
+
+// A look the desk just made or replaced, into the list this page holds: by its id, the way putLook does. A poll that
+// already carries it must not leave it twice (the look pads go by position).
+function addLookLocal(look) {
+  if (!S || !S.looks) return;
+  const at = S.looks.findIndex((l) => l.id === look.id);
+  if (at >= 0) S.looks[at] = look; else S.looks.push(look);
 }
 
 // Write one look back. The library route is replace-whole; this one is add-or-replace,
@@ -5438,7 +5455,7 @@ $('#lookRecord').addEventListener('click', async () => {
   });
   if (r && r.error) return say(r.error, true);
   $('#lookName').value = '';
-  if (S.looks) S.looks.push(r.look);
+  addLookLocal(r.look);
   selLook = r.look.id;
   buildLooks(); buildSteps();
   say(`recorded "${r.look.name}" — ${KIND_LABEL[kind]} of ${chosen.length ? chosen.length + ' selected' : 'every'} fixture${!chosen.length || chosen.length > 1 ? 's' : ''}`);
@@ -5572,7 +5589,7 @@ function buildSteps() {
   $('#stepAdd').addEventListener('click', () => {
     const l = lookById(selLook); if (!l) return;
     if (!S.fixtures.length) return say('nothing patched to record', true);
-    if (l.steps.length >= 64) return say('that is as many steps as a look holds', true);
+    if (l.steps.length >= MAX_LOOK_STEPS) return say('that is as many steps as a look holds', true);
     edit({ steps: l.steps.concat([stageStep(l)]) });
   });
   // Follow: every role this palette carries stops being a number in this look and
@@ -5666,7 +5683,7 @@ function colourCell(r, g, b) {
 async function startLook(look, layer, note) {
   const made = await post('api/looks/add', { look });
   if (made && made.error) return say(made.error, true);
-  if (S.looks) S.looks.push(made.look);
+  addLookLocal(made.look);
   const r = await post('api/layers/add', Object.assign({ lookId: made.look.id }, layer));
   if (r && r.error) return say(r.error, true);
   if (S.layers) S.layers.push(r.layer);
@@ -6068,6 +6085,7 @@ let midiSceneLearn = null;       // scene id waiting for a pad
 let midiBank = 0;
 let midiTargets = [];
 let midiSig = '';
+let midiKnobBank = null;           // the device-knob bank (MIDI channel) last heard
 const midiPickup = {};           // target key -> true while waiting to be caught
 const midiLastVal = {};          // target key -> last incoming 0..1
 const midiSeenCC = new Set();
@@ -6076,7 +6094,7 @@ const midiSeenNote = new Set();
 // A mirror of the values this page drives. Soft takeover needs something to compare a
 // fader against, and re-reading a 500-scene state blob per message is not that. While
 // disarmed it is refreshed from the desk; while armed this page is the one moving them.
-const midiLive = { master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null,
+const midiLive = { strobeU: 0.5, master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null,
   fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255 };
 
 /* ---- the send queue ---- */
@@ -6087,7 +6105,7 @@ let midiFlushTimer = null;
 // `last`: a pad press (note target) is a whole call; pressed again it goes to the back of the
 // queue, so the last press wins (press A, B, A -> A ends on air).
 function midiSend(route, body, key, last) {
-  if (!midiArmed) return;
+  if (!midiArmed || midiLiveWait) return;
   const k = key || route;
   if (last) midiPending.delete(k);
   const cur = midiPending.get(k);
@@ -6118,7 +6136,7 @@ async function midiFlush() {
           // keepalive lets a release leave when the page closes, but a keepalive body is capped near 64 KB
           // by the browser (a white hit over a big rig is ~60 KB): big bodies go without it, and the
           // page-close backstop is the tiny {clear} post in midiReleaseAll.
-          keepalive: bodyText.length < 30000,
+          keepalive: bodyText.length < 12000,
           body: bodyText,
         });
         if (item.route === 'api/looks/fire' && item.body && item.body.id) midiLookAnswer(item.body.id, r.ok);
@@ -6164,7 +6182,31 @@ function midiHoldUp(key) {
   if (!h) return;
   clearTimeout(h.timer);
   midiHeld.delete(key);
-  midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, channels: window.deskMidiPatch.releaseOf(h.channels) }, 'hold:' + key, true);
+  if (h.channels && h.channels.length) midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, channels: window.deskMidiPatch.releaseOf(h.channels) }, 'hold:' + key, true);
+  // a strobe hit's software part (fixtures with no strobe channel) goes back to the rig's own effect
+  if (h.fxIds && h.fxIds.length) midiSend('api/fx', { mode: 'rig', ids: h.fxIds }, 'hold:fx:' + key, true);
+}
+// Strobe hits (N7314): hold-to-flash plus the strobe. The bar's strobe channel is held at the rate knob, capped at 3 Hz in
+// midiPatch.js (capStrobeDmx); fixtures with no strobe channel get the software strobe (fx.js, also <= 3 Hz); a shutter is never written.
+function midiStrobeDown(key, kind) {
+  const mp = window.deskMidiPatch;
+  if (!midiArmed || !mp || midiHeld.has(key)) return;
+  const hit = mp.strobeHit((S && S.fixtures) || [], (f) => S.profiles[f.profile], kind, midiLive.strobeU);
+  if (!hit.holds.length && !hit.fxIds.length) return;
+  midiHeld.set(key, { channels: hit.holds, fxIds: hit.fxIds, timer: setTimeout(() => midiHoldUp(key), mp.MAX_HOLD_MS) });
+  if (hit.holds.length) midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: hit.holds }, 'hold:' + key, true);
+  if (hit.fxIds.length) midiSend('api/fx', { mode: 'strobe', ids: hit.fxIds }, 'hold:fx:' + key, true);
+}
+// The rate knob turned while a strobe is held: the held strobe channel follows (still through the cap).
+function midiStrobeRate() {
+  const mp = window.deskMidiPatch;
+  const h = midiHeld.get('hit:strobe-all');
+  if (!h || !h.channels) return;
+  const dmx = mp.strobeDmxFromUnit(midiLive.strobeU);
+  const upd = h.channels.filter((c) => c.value !== 255 && c.value >= 4 && c.value <= 14).map((c) => ({ ...c, value: dmx }));
+  if (!upd.length) return;
+  h.channels = h.channels.map((c) => (c.value !== 255 && c.value >= 4 && c.value <= 14 ? { ...c, value: dmx } : c));
+  midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: upd }, 'hold:strobe-rate', true);
 }
 // Every hit lets go: disarm, a new controller, page close. Goes out even as the gate closes.
 function midiReleaseAll() {
@@ -6264,7 +6306,7 @@ function buildMidiTargets() {
     T.push({ group: 'Groups  (left truss · right truss · back bars)' });
     for (const g of groups) {
       const ids = g.ids;
-      cc(`grp:${g.key}:dim`, `${g.label} dimmer  (${ids.length})`, () => mp.groupDimRead(fixtures, g),
+      cc(`grp:${g.key}:dim`, `${g.label} dimmer  (${ids.length})`, () => mp.groupDimRead((S && S.fixtures) || [], g),   // the desk's values at catch time, never the copy taken at build
         (u) => { const v = Math.round(u * 255); for (const id of ids) midiSend('api/fixture', { id, values: { dimmer: v } }, 'api/fixture:' + id); });
       pad(`grp:${g.key}:on`, `${g.label} on / off  (a press flips it)`, () => {
         if (!midiArmed) return;
@@ -6282,6 +6324,23 @@ function buildMidiTargets() {
       (u) => midiSend('api/layer', { id: TOUCH_LOOK_LAYER, level: Math.round(u * 1000) / 1000 }, 'api/layer:level'));
     cc('layerrate', 'Layer rate  (look speed 1/8x - 8x, centre 1x)', () => { const l = cueLayer(); return mp.unitFromRate(l ? l.rate : 1); },
       (u) => midiSend('api/layer', { id: TOUCH_LOOK_LAYER, rate: mp.rateFromUnit(u) }, 'api/layer:rate'));
+
+    // Movement size (N7315): the Cues layer's pan/tilt swing around each look's own centre, 0-100 %, 100 = as written.
+    cc('headscale', 'Movement size  (head swing 0-100 %, 100 = as the look is written)', () => { const l = cueLayer(); return l && Number.isFinite(+l.headScale) ? +l.headScale : 1; },
+      (u) => { const v = mp.headScaleFromUnit(Math.round(u * 100) / 100); const l = cueLayer(); if (l) { if (v < 1) l.headScale = v; else delete l.headScale; } midiSend('api/layer', { id: TOUCH_LOOK_LAYER, headScale: v }, 'api/layer:headscale'); });
+
+    // The 8 device knobs, one bank per TRACK SELECT (page = MIDI channel); each ring shows the desk's value.
+    T.push({ group: 'Effect knobs  (device knobs 1-8, banked by TRACK SELECT 1-4)' });
+    for (const k of mp.KNOBS) {
+      cc(k.key, `${k.pageName}: ${k.label}  [${k.unitLabel}]  (bank ${k.ch} knob ${k.num - 15})`,
+        () => { const u = mp.knobUnit(k, k.read(S)); return u === undefined ? 0.5 : u; },
+        (u) => {
+          const r = mp.knobSend(k, u, S);
+          if (!r) return;
+          if (r.route === 'api/lfos') S.lfos = r.body.lfos;   // the next knob of this page edits this list, not a stale one
+          midiSend(r.route, r.body, 'kn:' + k.key);
+        });
+    }
 
     T.push({ group: 'Tempo  (tap · nudge · knob)' });
     const tapper = mp.createTapper();
@@ -6311,7 +6370,7 @@ function buildMidiTargets() {
     const zoomers = fixtures.filter((f) => mp.zoomRoles(S.profiles[f.profile]).length);
     if (zoomers.length) {
       cc('zoom', `Zoom  (${zoomers.length} fixtures with a zoom channel)`,
-        () => { const f = zoomers[0]; return f && f.values && f.values.zoom != null ? f.values.zoom / 255 : 0; },
+        () => { const f = zoomers[0] && fxById(zoomers[0].id); return f && f.values && f.values.zoom != null ? f.values.zoom / 255 : 0; },
         (u) => { const v = Math.round(u * 255); for (const f of zoomers) midiSend('api/fixture', { id: f.id, values: Object.fromEntries(mp.zoomRoles(S.profiles[f.profile]).map((r) => [r, v])) }, 'api/fixture:zoom:' + f.id); });
     }
     const cfx = () => (S && S.colorFx) || {};
@@ -6342,6 +6401,12 @@ function buildMidiTargets() {
       up: () => midiHoldUp(key) });
     hit('hit:white', 'Hit: white flash, every fixture', () => fixtures);
     for (const g of groups.filter((x) => x.key !== 'back')) hit(`hit:${g.key}`, `Hit: ${g.label} flash`, () => fixtures.filter((f) => g.ids.includes(f.id)));
+    // Strobe (N7314). Rate = track knob 1, 1-3 Hz; the page caps it (midiPatch.capStrobeDmx). Hits release on pad up, disarm, close.
+    cc('strobe:rate', 'Strobe rate  1-3 Hz  (hits below; capped at 3 Hz)', () => midiLive.strobeU, (u) => { midiLive.strobeU = u; midiStrobeRate(); });
+    T.push({ key: 'hit:strobe-all', label: 'Hit: strobe, back bars + soft strobe on the rest (hold)', kind: 'note',
+      apply: () => midiStrobeDown('hit:strobe-all', 'all'), up: () => midiHoldUp('hit:strobe-all') });
+    T.push({ key: 'hit:strobe-movers', label: 'Hit: strobe, movers, software only (hold)', kind: 'note',
+      apply: () => midiStrobeDown('hit:strobe-movers', 'movers'), up: () => midiHoldUp('hit:strobe-movers') });
     const swapUp = () => {
       const h = midiHeld.get('hit:swap'); if (!h) return;
       clearTimeout(h.timer); midiHeld.delete('hit:swap');
@@ -6387,39 +6452,13 @@ function buildMidiTargets() {
     pad('lookpage:next', 'Look page  next', () => midiLookPageStep(1));
     for (const t of window.deskMidiCues.lookPadTargets()) {
       const k = Number(t.key.slice(8));
-      pad(t.key, t.label, () => {
-        const mcl = window.deskMidiCues;
-        const fire = mcl.lookPadFire(looksOf(), midiLookPage, k);
-        if (!fire) { midiFlash(`look pad ${k + 1}: empty (page ${midiLookPage + 1})`); return; }
-        // The owner's rule (cuerun.js, 2026-10-09): you press, the scene changes, and auto play
-        // stops. The desk's tile tap and fireLook stay as they are; the pad turns play-in-order
-        // off first, in the same queue, before the fire.
-        if (mcl.cueView(CUES, midiCueSent, Date.now()).autoplay) {
-          midiSend('api/cues/autoplay', { autoplay: false }, 'lookpad:autoplayoff');
-          if (midiArmed) mcl.noteSent(midiCueSent, { autoplay: false }, Date.now());
-        }
-        midiSend(fire.route, fire.body, 'lookpad:' + k, true);
-        midiLookLed(fire.body.id);   // the pad goes red now, not at the next poll
-        const l = mcl.lookAt(looksOf(), midiLookPage, k);
-        midiFlash(`${midiLookPage * mcl.LOOK_PADS + k + 1} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
-      });
+      pad(t.key, t.label, () => midiLookPress(k));
     }
   }
 
   T.push({ group: 'Pads & buttons' });
 
-  pad('blackout', 'Blackout  on / off  (a press flips it)', () => {
-    // A toggle (owner N7276): one press sets blackout on, the next sets it off. midiLive.blackout is
-    // this page's last send, else the desk's poll; the send goes through midiSend, so Safe sends nothing.
-    if (!midiArmed) return;
-    // The press flips what the DESK shows now (also after the page's own button or the B key), not a copy
-    // that only the MIDI page refreshes (I1 of the #1389 review).
-    const intent = window.deskPanicKeys.midiBlackoutToggle(midiBlackoutNow());
-    midiLive.blackout = intent.blackout; midiBlackoutSentAt = Date.now();
-    midiBlackoutOv = { value: intent.blackout, at: Date.now(), answeredAt: null };
-    midiSend('api/master', intent);
-    midiPaintLights();   // the LED follows the press at once
-  });
+  pad('blackout', 'Blackout  on / off  (a press flips it)', midiBlackoutPress);
   pad('chaseon', 'Chase run / stop', () => {
     midiLive.chase = !midiLive.chase;
     midiSend('api/chase', { enabled: midiLive.chase });
@@ -6640,7 +6679,10 @@ function midiRelease(ch, num) {
   const key = midiKeyFor('note', ch, num);
   const t = key && midiTargets.find((x) => x.key === key);
   if (t && t.up) t.up();
+  // ACTIVATOR is a toggle on the unit (Akai p.11): its second press may arrive as a late note-off. Flip then, behind ARM.
+  else if (t && midiArmed && /^grp:\w+:on$/.test(key) && window.deskMidiPatch.activatorOffFlips(midiLastOn[key], Date.now())) { midiLastOn[key] = undefined; t.apply(); midiHit(key); }
 }
+const midiLastOn = {};
 
 function midiHandle(type, ch, num, unit, raw) {
   // A scene armed on the grid takes the next PAD, whatever it was bound to before.
@@ -6664,7 +6706,7 @@ function midiHandle(type, ch, num, unit, raw) {
   if (!t) { buildMidiTargets(); t = midiTargets.find((x) => x.key === key); }
   if (!t) return;
 
-  if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
+  if (t.kind === 'note') { if (type !== 'note') return; midiLastOn[key] = Date.now(); t.apply(); midiHit(key); return; }
   if (type === 'note') return;
   // A relative encoder (TEMPO, CUE LEVEL): clicks, not a position, so no takeover; Safe sends nothing.
   if (t.rel) {
@@ -6675,11 +6717,18 @@ function midiHandle(type, ch, num, unit, raw) {
   }
   // Safe: a fader only records where it is. Applying it would move the mirror the takeover reads
   // (a master pulled to 0 in Safe, then ARM, then 1/127 = caught at once = the rig goes dark).
-  if (!midiArmed) { midiLastVal[key] = unit; return; }
+  if (!midiArmed || midiLiveWait) { midiLastVal[key] = unit; return; }
 
+  // A device knob bank change: the unit re-sends all 8 positions on the new channel. Those are positions, not turns, so
+  // every knob waits to be caught again (else the bank change would jump every value).
+  if (key.startsWith('kn:') && midiKnobBank !== ch) {
+    if (midiKnobBank != null) for (const k of Object.keys(midiMap)) if (k.startsWith('kn:')) { midiPickup[k] = true; delete midiLastVal[k]; }
+    midiKnobBank = ch;
+  }
   // soft takeover: ignore until the physical control crosses the desk's value
   if (midiPickup[key]) {
     const target = t.read ? t.read() : 0;
+    if (!Number.isFinite(target)) { midiLastVal[key] = unit; return; }   // never catch on a target that is not a number (N1)
     const prev = midiLastVal[key];
     midiLastVal[key] = unit;
     const crossed = prev != null
@@ -6734,13 +6783,29 @@ function midiMapByNumber() {
 
 /* ---- drawing ---- */
 // The mirror of what the desk holds. Read from the desk while Safe, and once more at ARM.
+// midiLiveWait: armed before the desk's first state arrived. Nothing that reads the mirror may act then (the
+// mirror holds the page's defaults, master 255): the first state fills it, see midiLiveArrived.
+let midiLiveWait = false;
 function midiRefreshLive() {
-  if (!S) return;
+  // Only a real desk state counts (N1): an error body or a half state must not end the wait with the page's defaults.
+  if (!S || !Number.isFinite(S.master) || !S.fx || !S.chase) return false;
   midiLive.master = S.master;
   midiLive.fxDepth = S.fx.depth; midiLive.fxBpm = S.fx.bpm;
   midiLive.fxMode = S.fx.mode; midiLive.fxOn = !!S.fx.enabled;
   midiLive.holdMs = S.chase.holdMs; midiLive.fadeMs = S.chase.fadeMs;
   midiLive.chase = !!S.chase.enabled;
+  return true;
+}
+// Called with every state this page applies. While armed and still waiting for the first one, the mirror is
+// read from the desk's real values and every fader must be caught again from there (I1 of the #1394 review).
+function midiLiveArrived() {
+  if (!midiArmed || !midiLiveWait || !S) return;
+  if (!midiRefreshLive()) return;   // not a desk state: keep waiting, the next poll tries again
+  midiLiveWait = false;
+  midiLive.blackout = midiBlackoutNow();
+  for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') { midiPickup[k] = true; delete midiLastVal[k]; }
+  midiDraw();
+  midiPaintLights();
 }
 
 function buildMidi() {
@@ -6928,22 +6993,33 @@ const midiExplain = (html) => { $('#miCheckNote').innerHTML = html; };
 function midiListInputs() {
   if (!midiAccess) return;
   const sel = $('#miInputs');
-  const prev = sel.value || midiPrefs().input || '';
   const ins = [...midiAccess.inputs.values()];
+  const saved = midiPrefs().inputName || '';
   if (!ins.length) {
     sel.innerHTML = '<option value="">— no MIDI inputs found —</option>';
     midiPill('#miMidiStat', 'MIDI <b>no devices</b>', 'bad');
+    midiBindInput('');
     return;
   }
-  sel.innerHTML = ins.map((i) =>
+  const opts = ins.map((i) =>
     `<option value="${esc(i.id)}">${esc(i.name + (i.manufacturer ? '  ·  ' + i.manufacturer : ''))}</option>`).join('');
-  // Prefer a real device over a loopback/"through" port, which never sends anything.
-  const pick = ins.find((i) => i.id === prev)
-    || ins.find((i) => i.name && i.name === midiPrefs().inputName)
-    || ins.find((i) => !/through|loopmidi/i.test(i.name)) || ins[0];
+  // The remembered port is matched by its exact name and by nothing else: if it is absent, no other port is
+  // taken in its place. With nothing remembered, a real device is picked; a loopback/"through" port never
+  // is, because it never sends anything (L5 of the #1394 review). The operator's own choice (change) wins.
+  const cur = sel.value ? ins.find((i) => i.id === sel.value) : null;
+  const pick = cur || (saved ? ins.find((i) => i.name === saved) : ins.find((i) => !/through|loopmidi/i.test(i.name))) || null;
+  if (!pick) {
+    sel.innerHTML = `<option value="">${saved ? esc('— ' + saved + ' — not connected —') : '— choose an input —'}</option>` + opts;
+    sel.value = '';
+    midiBindInput('');
+    midiPill('#miMidiStat', saved ? `MIDI <b>${esc(saved)} not connected</b>` : `MIDI <b>${ins.length} in, none chosen</b>`, 'bad');
+    midiAccessReady = true;
+    midiRestoreTry();
+    return;
+  }
+  sel.innerHTML = opts;
   sel.value = pick.id;
   midiBindInput(pick.id);
-  midiPrefSet({ input: pick.id, inputName: pick.name });
   midiPill('#miMidiStat', `MIDI <b>${ins.length} in</b>`, 'good');
   midiAccessReady = true;
   midiRestoreTry();
@@ -6980,6 +7056,8 @@ function midiGroupOn() {
   for (const g of mp.rigGroups(S.fixtures, S.groups)) if (g.ids.length) out[g.key] = mp.groupIsOn(S.fixtures, g);
   return out;
 }
+// Each device-knob ring shows the desk's value (midiPatch.knobRings); none before the desk's state arrives.
+function midiRings() { try { return S && window.deskMidiPatch ? window.deskMidiPatch.knobRings(S) : {}; } catch (e) { return {}; } }
 function midiLeds() {
   if (!midiPainter && window.deskMidiCues) {
     midiPainter = window.deskMidiCues.createLedPainter({
@@ -6988,7 +7066,7 @@ function midiLeds() {
       armed: () => midiArmed,   // only the armed tab owns the pads' lights (a getter: midiArmed is declared further down)
       map: () => midiMap,
       cues: () => CUES,
-      state: () => ({ blackout: midiBlackoutNow(), groupOn: midiGroupOn() }),
+      state: () => ({ blackout: midiBlackoutNow(), groupOn: midiGroupOn(), rings: midiRings() }),
       looks: () => (Array.isArray(S && S.looks) ? S.looks : []),   // not looksOf(): a const further down
       page: () => midiLookPage,
       setPage: (p) => { midiLookPage = p; },
@@ -7001,6 +7079,39 @@ function midiLeds() {
 }
 // Lights never decide whether a press fires: a throw here is the LEDs' problem, not the tile's or the pad's.
 function midiLookLed(id) { try { const p = midiLeds(); if (p) p.pressLook(id); } catch (e) { console.error('pad light', e); } }
+
+// The blackout pad (a toggle, owner N7276): one press sets blackout on, the next sets it off. Safe sends nothing; while the
+// page waits for the desk's first state it sends nothing either, and sets no guess and no override (N2 of the #1394 review).
+function midiBlackoutPress() {
+  if (!midiArmed) return;
+  if (midiLiveWait) { midiFlash('blackout: waiting for the desk — nothing sent'); return; }
+  // The press flips what the DESK shows now (also after the page's own button or the B key), not a copy
+  // that only the MIDI page refreshes (I1 of the #1389 review).
+  const intent = window.deskPanicKeys.midiBlackoutToggle(midiBlackoutNow());
+  midiLive.blackout = intent.blackout; midiBlackoutSentAt = Date.now();
+  midiBlackoutOv = { value: intent.blackout, at: Date.now(), answeredAt: null };
+  midiSend('api/master', intent);
+  midiPaintLights();   // the LED follows the press at once
+}
+
+// A look pad press (slot k of this page). One call: the fire carries autoplayOff, ALWAYS (N4 of the #1394 review): the desk
+// acts on it only when play-in-order is on (desk.js POST api/looks/fire), so it is a no-op otherwise, and it no longer
+// depends on this tab's cue view, which a hidden tab does not refresh. While the page waits for the desk's first state
+// nothing is sent, so nothing shows as taken (N2): the press is refused the way a Safe press is.
+function midiLookPress(k) {
+  const mcl = window.deskMidiCues;
+  const fire = mcl.lookPadFire(looksOf(), midiLookPage, k);
+  if (!fire) { midiFlash(`look pad ${k + 1}: empty (page ${midiLookPage + 1})`); return; }
+  const l = mcl.lookAt(looksOf(), midiLookPage, k);
+  const n = midiLookPage * mcl.LOOK_PADS + k + 1;
+  if (midiArmed && midiLiveWait) { midiFlash(`${n} ${l.name}  (waiting for the desk — nothing sent)`); return; }
+  // The owner's rule (cuerun.js, 2026-10-09): you press, the scene changes, and auto play stops.
+  fire.body = Object.assign({}, fire.body, { autoplayOff: true });
+  if (midiArmed) mcl.noteSent(midiCueSent, { autoplay: false }, Date.now());
+  midiSend(fire.route, fire.body, 'lookpad:' + k, true);
+  midiLookLed(fire.body.id);   // the pad goes red now, not at the next poll
+  midiFlash(`${n} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
+}
 function midiLookAnswer(id, ok) { try { if (midiPainter) midiPainter.answer(id, ok); } catch (e) { console.error('pad light', e); } }
 // The pads' lights go out now; the picture of the controller on the MIDI page is redrawn after them, at most
 // every 250 ms: redrawing it took 90-170 ms on a full desk (measured), and that must not hold up the lights
@@ -7043,7 +7154,8 @@ $('#miRescan').addEventListener('click', midiListInputs);
 $('#miInputs').addEventListener('change', (e) => {
   midiBindInput(e.target.value);
   const o = e.target.selectedOptions[0];
-  midiPrefSet({ input: e.target.value, inputName: o ? o.textContent.split('  ·  ')[0] : '' });
+  // Remembered only when the operator chooses: an automatic pick is never stored.
+  if (e.target.value) midiPrefSet({ input: e.target.value, inputName: o ? o.textContent.split('  ·  ')[0] : '' });
 });
 $('#miClearMon').addEventListener('click', () => { $('#miMon').innerHTML = '<div class="empty">cleared</div>'; });
 
@@ -7056,7 +7168,6 @@ try {
   midiClaim = new BroadcastChannel('di-light-midi');
   midiClaim.onmessage = (e) => {
     if (e.data && e.data.claim && e.data.claim !== midiTabId && midiArmed) midiSetArmed(false, true);
-    if (e.data && e.data.ping === midiTabId) { try { midiClaim.postMessage({ pong: midiTabId }); } catch (err) { /* no channel */ } }
   };
 } catch (e) { midiClaim = null; }
 
@@ -7068,6 +7179,7 @@ function midiLedsOff() {
       const b = midiMap[k];
       if (b && b.type === 'note' && b.ch === 1 && Number.isInteger(b.num)) midiLedOut.send([0x90, b.num, 0]);
       else if (b && b.type === 'note' && /^grp:\w+:on$/.test(k) && b.ch >= 1 && b.ch <= 8) midiLedOut.send([0x90 | (b.ch - 1), b.num, 0]);
+      else if (b && b.type === 'cc' && /^kn:/.test(k) && b.ch >= 1 && b.ch <= 9) midiLedOut.send([0xB0 | (b.ch - 1), b.num + 8, 0]);   // ring off
     }
   } catch (e) { /* port gone */ }
   midiLedSent.clear();
@@ -7094,25 +7206,20 @@ async function midiOnAirTick() {
 function midiOnAirStart() { if (!midiOnAirTimer && !midiOnAirGone) midiOnAirTimer = setTimeout(midiOnAirTick, 0); }
 function midiOnAirStop() { clearTimeout(midiOnAirTimer); midiOnAirTimer = null; }
 
-// ---- what this browser remembers of MIDI (localStorage), and what this TAB remembers (sessionStorage) ----
-// Enable, the chosen input and the preset belong to the browser. ARM belongs to the tab: a reload of the
-// same tab re-arms it (through the one takeover, midiSetArmed -> claim), a new tab or browser never arms.
+// ---- what this browser remembers of MIDI (localStorage): enable, input, preset. Never ARM. ----
+// Enable, the chosen input and the preset belong to the browser. ARM is never stored anywhere: every load,
+// reload, show-change reload and session restore starts Safe, and only a press on ARM arms (owner's rule).
 const MIDI_PREF_KEY = 'lightdeskMidiPrefs';
-const MIDI_ARM_KEY = 'lightdeskMidiArmed';
 function midiPrefs() {
   try { const p = JSON.parse(localStorage.getItem(MIDI_PREF_KEY)); return p && typeof p === 'object' ? p : {}; } catch (e) { return {}; }
 }
 function midiPrefSet(patch) {
   try { localStorage.setItem(MIDI_PREF_KEY, JSON.stringify(Object.assign(midiPrefs(), patch))); } catch (e) { /* this session only */ }
 }
-function midiArmedStore(on) {
-  try { if (on) sessionStorage.setItem(MIDI_ARM_KEY, midiTabId); else sessionStorage.removeItem(MIDI_ARM_KEY); } catch (e) { /* nothing kept */ }
-}
-
 function midiSetArmed(on, byClaim) {
   if (!on && midiArmed) midiReleaseAll();   // a held flash lets go before the gate closes
   midiArmed = on;
-  midiArmedStore(on);
+  if (on) midiSend('api/raw', { owner: 'apc40', clear: true }, 'hold:clear', true);   // a hit whose release never came (crash, sleep, reload) lets go on ARM
   const b = $('#miArm');
   b.className = 'miarm ' + (midiArmed ? 'live' : 'safe');
   b.textContent = midiArmed ? 'ARMED — sending to rig' : 'Safe — not sending';
@@ -7120,7 +7227,7 @@ function midiSetArmed(on, byClaim) {
     try { if (midiClaim) midiClaim.postMessage({ claim: midiTabId }); } catch (e) { /* no channel */ }
     // Every fader must be caught again, so arming can never jump the rig: the mirror is read
     // from the desk now, and where a fader was in Safe is forgotten.
-    midiRefreshLive();
+    midiLiveWait = !midiRefreshLive();   // no state yet: the first one fills the mirror (midiLiveArrived)
     for (const k of Object.keys(midiMap)) {
       const tg = midiTargets.find((x) => x.key === k);
       if (midiMap[k].type !== 'note' && !(tg && tg.rel)) { midiPickup[k] = true; delete midiLastVal[k]; }
@@ -7131,6 +7238,7 @@ function midiSetArmed(on, byClaim) {
     midiOnAirStart();
     say('MIDI armed — the controller is driving the rig');
   } else {
+    midiLiveWait = false;
     // what is still queued is dropped, except a hit's release: it must still reach the rig
     for (const k of [...midiPending.keys()]) if (!k.startsWith('hold:') && k !== 'cfx:hit') midiPending.delete(k);
     midiOnAirStop();
@@ -7143,9 +7251,7 @@ function midiSetArmed(on, byClaim) {
 }
 $('#miArm').addEventListener('click', () => midiSetArmed(!midiArmed));
 
-// After a reload: MIDI comes back on its own when this browser had it on, and ARM comes back only in the
-// tab that was armed (sessionStorage), through the same takeover as a click. A DUPLICATED tab copies the
-// sessionStorage of the original: it asks first, and when the tab named there still answers, it stays Safe.
+// After a reload: MIDI comes back on its own when this browser had it on (enable, input, preset). ARM never does.
 let midiAccessReady = false;
 let midiRestored = false;
 function midiRestoreTry() {
@@ -7154,21 +7260,6 @@ function midiRestoreTry() {
   const prefs = midiPrefs();
   // The remembered preset, only onto an EMPTY map (nothing of the show's is overwritten).
   if (prefs.preset && !Object.keys(midiMap).length && midiInput && midiPresetFor(midiInput.name) && midiPresetFor(midiInput.name).name === prefs.preset) midiApplyPreset();
-  let was = null;
-  try { was = sessionStorage.getItem(MIDI_ARM_KEY); } catch (e) { /* no storage: Safe */ }
-  if (!was || !midiClaim) return;   // no ARM to bring back; without the channel one armed tab cannot be promised, so Safe
-  midiRearmAfterReload(was);
-}
-function midiRearmAfterReload(was) {
-  let alive = false;
-  const onMsg = (e) => { if (e.data && e.data.pong === was) alive = true; };
-  midiClaim.addEventListener('message', onMsg);
-  try { midiClaim.postMessage({ ping: was }); } catch (e) { /* no channel */ }
-  setTimeout(() => {
-    midiClaim.removeEventListener('message', onMsg);
-    if (alive) { midiArmedStore(false); return; }   // a copy of a live tab: the original keeps the controller
-    if (!midiArmed) midiSetArmed(true);
-  }, 250);
 }
 if (midiPrefs().enabled) midiEnable();
 window.addEventListener('pagehide', () => { if (midiArmed) { midiReleaseAll(); midiLedsOff(); } });
