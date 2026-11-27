@@ -75,6 +75,16 @@
     if (!Number.isInteger(k) || k < 0 || k >= LOOK_PADS) return null;
     return list[clampLookPage(page, list.length) * LOOK_PADS + k] || null;
   }
+  // The ONE mapping from the desk's looks to the pad slots (state.padOrder, padOrder.js): with an order set,
+  // slot i is the look padOrder[i] (null = empty, an id no look has = empty, the same look may sit twice);
+  // without one, slot i is looks[i]. Everything on the grid (the real pads, their LEDs, the drawn APC40,
+  // the page buttons and the page count) reads this list and never `looks` directly.
+  function padLooks(looks, padOrder) {
+    const list = Array.isArray(looks) ? looks : [];
+    if (!Array.isArray(padOrder) || !padOrder.length) return list;
+    const byId = new Map(list.map((l) => [l.id, l]));
+    return padOrder.map((id) => (id == null ? null : byId.get(id) || null));
+  }
   // What a look pad press sends: the call a tap on that look's tile makes (api/looks/fire {id}),
   // no layer, no quantize (the desk falls back to its cue layer). null for an empty slot.
   function lookPadFire(looks, page, k) {
@@ -229,7 +239,7 @@
     };
   }
 
-  const api = { createLedPainter, OPT_LOOK_MS, LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
+  const api = { createLedPainter, OPT_LOOK_MS, LOOK_PADS, LOOK_PAGE_KEYS, lookPageCount, clampLookPage, padLooks, lookAt, lookPadFire, lookPadTargets, MAX_CUE_PADS, SENT_WINS_MS, APC40_COLOUR, cuePadTargets, cueTransport, cueView, noteSent, apc40PadNote, apc40Preset, nextIndex, apc40Lights, lightDiff };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskMidiCues = api;
 })(typeof window !== 'undefined' ? window : this);

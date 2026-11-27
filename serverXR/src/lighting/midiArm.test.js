@@ -43,6 +43,7 @@ function page(o = {}) {
     const midiTabId = 'tab';
     const window = { deskMidiCues: A.mcl, deskPanicKeys: { midiBlackoutToggle: (b) => ({ blackout: !b }) } };
     const looksOf = () => (Array.isArray(S && S.looks) ? S.looks : []);
+    const padLooksOf = looksOf;   // no pad order in this harness: the pads read the desk order
     let midiLookPage = 0, midiBlackoutSentAt = 0;
     const midiCueSent = {}, CUES = null;
     const midiFlash = (m) => { L.flashes.push(m); }, midiLookLed = (id) => { L.leds.push(id); };
