@@ -139,3 +139,31 @@ failed, 2 refused before any write. Against a live desk, take `di show checkpoin
 
 Remove the `show` line from `COMMANDS` in `scripts/di/cli.mjs` and the `show` entry in `scripts/di/ui.mjs`, then delete
 `scripts/show/`. A marker is undone by `rm ~/.config/di/venue`. Checkpoint folders are kept on purpose (they are the way back).
+
+## Check the light page on a scratch desk (light_page_check.mjs)
+
+`node scripts/show/light_page_check.mjs --url URL --out DIR [--sizes 1536x864,844x390,1536x864,766x830] [--expect N | --show SHOW.json]`
+pictures the light page's Touch minimap in headless Chromium with `--disable-gpu` and checks each size: every light inside the box
+(0 cut), the rig fills at least 50 % of the box, and a size that comes again gives the same rig within 2 px. `--expect N` or the
+fixture count of `--show` (a top-level `show` key is unwrapped) is the light count. Exit 0 all sizes pass, 1 one failed (named), 2 usage.
+**It refuses the live desk**: any host but `127.0.0.1`, `localhost` or `<name>-test.diiii.localhost` (so `diiii.localhost`) is exit 2 with one line. Pictures and `run.txt` go to `--out`.
+Recipe (N7279.7), with `<job>` a worktree name `~/work/di.iiii-<job>`:
+1. Worktree of the build to check, with `node_modules` linked (`ln -s <other checkout>/node_modules <wt>/node_modules`, same for `<wt>/serverXR/node_modules` from `~/.di/current/serverXR/node_modules`); remove both links at the end, never commit them.
+2. The show copy goes in BEFORE `di-dev up`: `install -d -m 700 ~/.cache/di-dev/<job>/data/lighting`, then a python copy (read-only source, nothing written under `~/.di`) of the space's `lighting/show.json` with `s['midi'] = {'maps': []}` and every layer `on = False`, written to `~/.cache/di-dev/<job>/data/lighting/show.json`.
+3. CPU fence: `systemctl --user set-property --runtime di-api@<job>.service CPUWeight=1` (same for `di-web@`), `nice -n 19 taskset -c 5-7,13-15 di-dev up <job> --api scratch --no-keep`, then `taskset -a -cp 5-7,13-15` and `renice -n 19` on every pid and thread of each unit's cgroup (`systemctl --user show -p ControlGroup --value <unit>`, then `cgroup.procs`).
+4. Checks before the run: `grep -c '^ARTNET_OFFLINE=1$' ~/.config/di-dev/env/<job>.env` gives 1; `ss -uapn | grep -c "pid=<api MainPID>,"` gives 0 (no UDP socket, so no Art-Net); `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:<api port>/light/` gives 200 (port from `di-dev ls`, the `api :NNNN`).
+5. Run: `nice -n 19 taskset -c 5-7,13-15 node scripts/show/light_page_check.mjs --url 'http://127.0.0.1:<api port>/light/#touch' --out <dir> --show <show copy>`; open the pictures. Negative control: the same with `--expect <count + 1>` must exit 1.
+6. Teardown: `di-dev down <job> --wipe`, `di-dev forget <job>`, `systemctl --user revert di-api@<job>.service di-web@<job>.service`, remove the two links, `git worktree remove` (if it was a throwaway), `rmdir ~/.cache/di-dev/<job>`; count leftovers with `pgrep` in a command of its own.
+Never load the live desk's light page, never read its `/api/state`, never send Art-Net while a show is running.
+
+## Before a look is called lost (desk_missing_looks.py)
+
+`python3 scripts/show/desk_missing_looks.py OLD_SHOW.json NOW_SHOW.json [RECORD ...]` lists the looks of an old show copy that are not on the desk now and says
+whether each has a removal record. Give it the old copy, the desk copy and EVERY record: removal archives (`.json` with a `looks` list), handovers (`.md`) and the owner's ledger.
+A text line counts when it names the look (id, name, or name without its number; names shorter than 5 letters never match) and says remov / delet / archiv.
+Exit 0 every missing look has a record · 1 some have none (named; ask the lead before calling them lost) · 2 usage. Read-only. Lesson N7279.3: a "16 looks lost" finding went out before the record was read; all 16 had been removed on the owner's word.
+
+## Loading looks onto a desk: mirror_sync.py first (lesson N7034.4)
+
+Before any look is added to a desk (`live_load.mjs`), `mirror_sync.py` runs with the measured presets (the `measured.<KEY>` records of the camera hold). Its exit 2 means a pan/tilt
+sign was never seen on the rig (no `FACE_SIGN`, no mode for an axis, or an unmeasured key): the load stops there. `--rule-unmeasured-ok` is for other rigs only, never for a hall whose sign was not seen.
