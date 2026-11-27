@@ -6112,9 +6112,14 @@ async function midiFlush() {
       // does — without it a poll landing between messages snaps the value back.
       touchedAt = Date.now();
       try {
+        const bodyText = JSON.stringify(item.body);
         const r = await fetch(item.route, {
           method: 'POST', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(item.body),
+          // keepalive lets a release leave when the page closes, but a keepalive body is capped near 64 KB
+          // by the browser (a white hit over a big rig is ~60 KB): big bodies go without it, and the
+          // page-close backstop is the tiny {clear} post in midiReleaseAll.
+          keepalive: bodyText.length < 30000,
+          body: bodyText,
         });
         if (item.route === 'api/looks/fire' && item.body && item.body.id) midiLookAnswer(item.body.id, r.ok);
         if (item.route === 'api/master' && item.body && 'blackout' in item.body && midiBlackoutOv) {
@@ -6143,6 +6148,33 @@ async function midiFlush() {
 // The switches this page flipped in the last moments (midiCues.js cueView): a poll that left
 // before the press landed must not undo a second press.
 const midiCueSent = {};
+// Hold-to-flash state (see the Hits group): target key -> { channels, timer }.
+const midiHeld = new Map();
+function midiHoldDown(key, fixtures) {
+  const mp = window.deskMidiPatch;
+  if (!midiArmed || !mp || midiHeld.has(key)) return;
+  const channels = [];
+  for (const f of fixtures) channels.push(...mp.flashChannels(f, S.profiles[f.profile]));
+  if (!channels.length) return;
+  midiHeld.set(key, { channels, timer: setTimeout(() => midiHoldUp(key), mp.MAX_HOLD_MS) });
+  midiSend('api/raw', { owner: mp.HOLD_OWNER, channels }, 'hold:' + key, true);
+}
+function midiHoldUp(key) {
+  const h = midiHeld.get(key);
+  if (!h) return;
+  clearTimeout(h.timer);
+  midiHeld.delete(key);
+  midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, channels: window.deskMidiPatch.releaseOf(h.channels) }, 'hold:' + key, true);
+}
+// Every hit lets go: disarm, a new controller, page close. Goes out even as the gate closes.
+function midiReleaseAll() {
+  if (midiHeld.size && window.deskMidiPatch) midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, clear: true }, 'hold:clearall', true);
+  for (const key of [...midiHeld.keys()]) {
+    const t = midiTargets.find((x) => x.key === key);
+    if (t && t.up) t.up(); else midiHoldUp(key);
+  }
+}
+
 function buildMidiTargets() {
   const T = [];
   const cc = (key, label, read, apply) => T.push({ key, label, kind: 'cc', read, apply });
@@ -6217,6 +6249,133 @@ function buildMidiTargets() {
         (u) => midiSend('api/fixture', { id: f.id, values: { [role]: Math.round(u * 255) } },
           `api/fixture:${f.id}:${role}`));
     }
+  }
+
+  // ---- the full patch (owner N7277; pure parts in midiPatch.js, design apc40-full-patch-design.md) ----
+  // Group dimmers and switches, layer level and rate, tempo (tap, nudge, relative knob), zoom, the
+  // colour effect, hold-to-flash hits, blackout release and panic. Movers STROBE is not here on
+  // purpose: a venue safety decision, the owner's.
+  const mp = window.deskMidiPatch;
+  if (mp) {
+    const rel = (key, label, step) => T.push({ key, label, kind: 'cc', rel: true, read: () => 0, apply: () => {}, step });
+    const sendFx = (body, key) => midiSend('api/fx', body, key);
+    const groups = mp.rigGroups(fixtures, S && S.groups).filter((g) => g.ids.length);
+
+    T.push({ group: 'Groups  (left truss · right truss · back bars)' });
+    for (const g of groups) {
+      const ids = g.ids;
+      cc(`grp:${g.key}:dim`, `${g.label} dimmer  (${ids.length})`, () => mp.groupDimRead(fixtures, g),
+        (u) => { const v = Math.round(u * 255); for (const id of ids) midiSend('api/fixture', { id, values: { dimmer: v } }, 'api/fixture:' + id); });
+      pad(`grp:${g.key}:on`, `${g.label} on / off  (a press flips it)`, () => {
+        if (!midiArmed) return;
+        // flips what the desk shows now, not a copy; the LED follows at once
+        const to = !mp.groupIsOn((S && S.fixtures) || [], g);
+        for (const id of ids) { const f = fxById(id); if (f) f.on = to; midiSend('api/fixture', { id, on: to }, 'api/fixture:on:' + id, true); }
+        midiPaintLights();
+        midiFlash(`${g.label} ${to ? 'on' : 'off'}`);
+      });
+    }
+
+    T.push({ group: 'Layer  (the Cues layer)' });
+    const cueLayer = () => layerById(TOUCH_LOOK_LAYER);
+    cc('layerlevel', 'Layer level  (Cues)', () => { const l = cueLayer(); return l && Number.isFinite(+l.level) ? +l.level : 1; },
+      (u) => midiSend('api/layer', { id: TOUCH_LOOK_LAYER, level: Math.round(u * 1000) / 1000 }, 'api/layer:level'));
+    cc('layerrate', 'Layer rate  (look speed 1/8x - 8x, centre 1x)', () => { const l = cueLayer(); return mp.unitFromRate(l ? l.rate : 1); },
+      (u) => midiSend('api/layer', { id: TOUCH_LOOK_LAYER, rate: mp.rateFromUnit(u) }, 'api/layer:rate'));
+
+    T.push({ group: 'Tempo  (tap · nudge · knob)' });
+    const tapper = mp.createTapper();
+    pad('tap', 'Tap tempo  (the beat and the speed)', () => {
+      if (!midiArmed) return;
+      const r = tapper.tap(Date.now());
+      if (r.bpm != null) midiLive.fxBpm = r.bpm;
+      sendFx(r, 'fx:tap');
+      midiFlash(r.bpm != null ? `tap tempo ${r.bpm} BPM` : 'tap tempo: the beat is here, tap again for the speed');
+    });
+    const nudge = (dir) => () => {
+      if (!midiArmed) return;
+      const e = mp.nudgeEpoch(S && S.fx ? S.fx.epoch : 0, dir, Date.now());
+      if (S && S.fx) S.fx.epoch = e;   // a second press before the poll moves on from here
+      sendFx({ epoch: e }, 'fx:nudge');
+      midiFlash(`beat nudge ${dir > 0 ? '+' : '-'}${mp.NUDGE_MS} ms`);
+    };
+    pad('nudge:-', `Beat nudge  -${mp.NUDGE_MS} ms  (earlier)`, nudge(-1));
+    pad('nudge:+', `Beat nudge  +${mp.NUDGE_MS} ms  (later)`, nudge(1));
+    rel('tempo:rel', 'FX tempo  relative knob  (1 click = 1 BPM)', (d) => {
+      midiLive.fxBpm = mp.bpmStep(midiLive.fxBpm, d);
+      sendFx({ bpm: midiLive.fxBpm }, 'fx:bpm');
+      midiFlash('FX tempo ' + midiLive.fxBpm + ' BPM');
+    });
+
+    T.push({ group: 'Beam and colour' });
+    const zoomers = fixtures.filter((f) => mp.zoomRoles(S.profiles[f.profile]).length);
+    if (zoomers.length) {
+      cc('zoom', `Zoom  (${zoomers.length} fixtures with a zoom channel)`,
+        () => { const f = zoomers[0]; return f && f.values && f.values.zoom != null ? f.values.zoom / 255 : 0; },
+        (u) => { const v = Math.round(u * 255); for (const f of zoomers) midiSend('api/fixture', { id: f.id, values: Object.fromEntries(mp.zoomRoles(S.profiles[f.profile]).map((r) => [r, v])) }, 'api/fixture:zoom:' + f.id); });
+    }
+    const cfx = () => (S && S.colorFx) || {};
+    const sendCfx = (body, key) => { if (S) S.colorFx = Object.assign({}, cfx(), body); midiSend('api/colorfx', body, key); };
+    cc('cfxamount', 'Colour FX amount', () => (cfx().amount != null ? cfx().amount : 255) / 255, (u) => sendCfx({ amount: Math.round(u * 255) }, 'cfx:amount'));
+    cc('cfxbeats', 'Colour FX beats  (1 2 4 8 16 32)', () => mp.unitFromCfxBeats(cfx().beats), (u) => sendCfx({ beats: mp.cfxBeatsFromUnit(u) }, 'cfx:beats'));
+    cc('cfxspread', 'Colour FX spread', () => (cfx().spread != null ? cfx().spread : 0.5), (u) => sendCfx({ spread: Math.round(u * 1000) / 1000 }, 'cfx:spread'));
+    rel('cfxmode:rel', 'Colour FX mode  relative knob  (none hue chase swap)', (d) => {
+      const m = mp.cfxModeStep(cfx().mode, d);
+      if (m !== cfx().mode) { sendCfx({ mode: m }, 'cfx:mode'); midiFlash('colour FX ' + m); }
+    });
+    let cfxLast = 'hue';
+    pad('cfxon', 'Colour FX on / off  (back to the last mode)', () => {
+      if (!midiArmed) return;
+      const cur = cfx().mode;
+      if (cur && cur !== 'none') cfxLast = cur;
+      const m = mp.cfxToggle(cur, cfxLast);
+      sendCfx({ mode: m }, 'cfx:mode');
+      midiFlash('colour FX ' + m);
+    });
+
+    // Hold-to-flash: white on while the pad is held, back on release. A raw hold sits over every look
+    // and still rides the master and the blackout (midiPatch.js); the page releases it on pad up, on
+    // disarm, on page close, and after MAX_HOLD_MS if the release never comes.
+    T.push({ group: 'Hits  (on while held)' });
+    const hit = (key, label, targets) => T.push({ key, label, kind: 'note',
+      apply: () => midiHoldDown(key, targets()),
+      up: () => midiHoldUp(key) });
+    hit('hit:white', 'Hit: white flash, every fixture', () => fixtures);
+    for (const g of groups.filter((x) => x.key !== 'back')) hit(`hit:${g.key}`, `Hit: ${g.label} flash`, () => fixtures.filter((f) => g.ids.includes(f.id)));
+    const swapUp = () => {
+      const h = midiHeld.get('hit:swap'); if (!h) return;
+      clearTimeout(h.timer); midiHeld.delete('hit:swap');
+      sendCfx(h.was, 'cfx:hit');
+    };
+    T.push({ key: 'hit:swap', label: 'Hit: colour swap, while held', kind: 'note',
+      apply: () => {
+        if (!midiArmed || midiHeld.has('hit:swap')) return;
+        const was = { mode: cfx().mode || 'none', amount: cfx().amount != null ? cfx().amount : 255 };
+        midiHeld.set('hit:swap', { was, timer: setTimeout(swapUp, mp.MAX_HOLD_MS) });
+        sendCfx({ mode: 'swap', amount: 255 }, 'cfx:hit');
+      },
+      up: swapUp });
+
+    T.push({ group: 'Safety' });
+    pad('blackoutoff', 'Blackout release  (always off)', () => {
+      if (!midiArmed) return;
+      midiLive.blackout = false; midiBlackoutSentAt = Date.now();
+      midiBlackoutOv = { value: false, at: Date.now(), answeredAt: null };
+      midiSend('api/master', { blackout: false });
+      midiPaintLights();
+    });
+    pad('panic', 'Panic  (blackout, chase off, FX off, cues stop)', () => {
+      if (!midiArmed) return;
+      midiLive.blackout = true; midiBlackoutSentAt = Date.now();
+      midiBlackoutOv = { value: true, at: Date.now(), answeredAt: null };
+      midiLive.chase = false; midiLive.fxOn = false;
+      midiSend('api/master', { blackout: true });
+      midiSend('api/chase', { enabled: false });
+      midiSend('api/fx', { enabled: false, all: true });
+      midiSend('api/cues/stop', {}, 'panic:cues', true);
+      midiPaintLights();
+      midiFlash('PANIC: blackout, chase off, FX off, cues stopped');
+    });
   }
 
   // The looks on the grid (midiCues.js lookAt): slot k of this page fires looks[40 * page + k],
@@ -6452,7 +6611,7 @@ function midiPageMessage(e) {
     midiSeenCC.add(ch + ':' + b);
     // Clamped: a controller sending a byte above 127 is out of spec, and without this it
     // drives a target past full and reads "157%" in the value column.
-    midiHandle('cc', ch, b, clamp(c / 127, 0, 1));
+    midiHandle('cc', ch, b, clamp(c / 127, 0, 1), c);
     midiMonitor('cc', `ch${mpad(ch, 2)}  CC ${mpad(b, 3)}   ${mpad(c, 3)}${midiBar(c / 127)}`);
   } else if (type === 0x90 && c > 0) {                    // note on
     midiSeenNote.add(ch + ':' + b);
@@ -6460,6 +6619,7 @@ function midiPageMessage(e) {
     midiMonitor('note', `ch${mpad(ch, 2)}  NOTE ${mpad(b, 3)} on  vel ${mpad(c, 3)}`);
   } else if (type === 0x80 || (type === 0x90 && c === 0)) {
     midiMonitor('other', `ch${mpad(ch, 2)}  NOTE ${mpad(b, 3)} off`);
+    midiRelease(ch, b);
   } else if (type === 0xe0) {                             // pitch bend — some faders use it
     const v = ((c << 7) | b) / 16383;
     midiHandle('bend', ch, 0, v);
@@ -6471,7 +6631,15 @@ function midiPageMessage(e) {
   $('#miSeen').textContent = `seen: ${midiSeenCC.size} controls, ${midiSeenNote.size} pads`;
 }
 
-function midiHandle(type, ch, num, unit) {
+// A pad let go. Only a hit (a target with up()) cares; everything else fires on the press.
+function midiRelease(ch, num) {
+  if (midiLearnRow || midiWizardOn || midiSceneLearn) return;
+  const key = midiKeyFor('note', ch, num);
+  const t = key && midiTargets.find((x) => x.key === key);
+  if (t && t.up) t.up();
+}
+
+function midiHandle(type, ch, num, unit, raw) {
   // A scene armed on the grid takes the next PAD, whatever it was bound to before.
   if (midiSceneLearn) {
     if (type !== 'note') { midiSceneMsg('that was a fader — press a pad for a scene'); return; }
@@ -6495,6 +6663,13 @@ function midiHandle(type, ch, num, unit) {
 
   if (t.kind === 'note') { if (type !== 'note') return; t.apply(); midiHit(key); return; }
   if (type === 'note') return;
+  // A relative encoder (TEMPO, CUE LEVEL): clicks, not a position, so no takeover; Safe sends nothing.
+  if (t.rel) {
+    if (!midiArmed) return;
+    const d = window.deskMidiPatch ? window.deskMidiPatch.relDelta(raw) : 0;
+    if (d) { t.step(d); midiHit(key); }
+    return;
+  }
   // Safe: a fader only records where it is. Applying it would move the mirror the takeover reads
   // (a master pulled to 0 in Safe, then ARM, then 1/127 = caught at once = the rig goes dark).
   if (!midiArmed) { midiLastVal[key] = unit; return; }
@@ -6524,14 +6699,15 @@ function midiAssign(key, type, ch, num) {
     if (b && b.type === type && b.ch === ch && b.num === num) delete midiMap[k];
   }
   midiMap[key] = { type, ch, num };
-  midiPickup[key] = type !== 'note';   // a pad has no position to catch; only faders and knobs wait for takeover
+  const tgt = midiTargets.find((x) => x.key === key);
+  midiPickup[key] = type !== 'note' && !(tgt && tgt.rel);   // a relative knob has no position either; a pad has no position to catch; only faders and knobs wait for takeover
   delete midiLastVal[key];
   saveMidiMap();
 }
 
 function midiWizardAssign(type, ch, num) {
   const want = (type === 'note') ? 'note' : 'cc';
-  const next = midiTargets.find((t) => t.key && t.kind === want && !midiMap[t.key]);
+  const next = midiTargets.find((t) => t.key && t.kind === want && !t.rel && !midiMap[t.key]);
   if (!next) { midiFlash(`every ${want} target is already mapped`); return; }
   midiAssign(next.key, type, ch, num);
   midiFlash(`bound ${next.label}  ←  ${midiDescribe(midiMap[next.key])}`);
@@ -6546,7 +6722,7 @@ function midiMapByNumber() {
   let n = 0;
   for (const t of midiTargets) {
     if (!t.key) continue;
-    if (t.kind === 'cc' && ccs.length) { const c = ccs.shift(); midiAssign(t.key, 'cc', c[0], c[1]); n++; }
+    if (t.kind === 'cc' && !t.rel && ccs.length) { const c = ccs.shift(); midiAssign(t.key, 'cc', c[0], c[1]); n++; }
     else if (t.kind === 'note' && nts.length) { const c = nts.shift(); midiAssign(t.key, 'note', c[0], c[1]); n++; }
   }
   midiDraw();
@@ -6580,7 +6756,7 @@ function buildMidi() {
   const mv = midiArmed ? midiLive.master : (S ? S.master : null);
   const black = midiBlackoutNow();
   midiPill('#miMasterStat', `master <b>${mv == null ? '—' : mv}</b>${black ? ' · BLACK' : ''}`, black ? 'bad' : '');
-  const sig = (S ? S.fixtures.map((f) => f.id + f.name + f.profile).join('|') + '#' + S.scenes.length : '')
+  const sig = (S ? S.fixtures.map((f) => f.id + f.name + f.profile + ':' + f.universe).join('|') + '#' + S.scenes.length + '#' + (S.groups || []).map((g) => g.name + (g.ids || []).length).join('|') : '')
     + '#' + (S && Array.isArray(S.looks) ? S.looks.map((l) => l.id).join(',') : '') + '#' + (CUES && Array.isArray(CUES.list) ? CUES.list.map((c) => c.id + c.name).join('|') + (CUES.autoplay ? 'A' : '') + (CUES.loop ? 'L' : '') : '');
   if (sig !== midiSig) { midiSig = sig; buildMidiTargets(); midiDraw(); midiDrawBank(); }
   midiApcUpdate();
@@ -6778,6 +6954,14 @@ function midiBindLights() {
 // One painter (midiCues.js createLedPainter): lights go out at the press (optimistic), the
 // answer of api/looks/fire corrects them, the next poll confirms them.
 let midiPainter = null;
+// Is each rig group on, as the desk shows it now (the activator LEDs).
+function midiGroupOn() {
+  const mp = window.deskMidiPatch;
+  if (!mp || !S) return {};
+  const out = {};
+  for (const g of mp.rigGroups(S.fixtures, S.groups)) if (g.ids.length) out[g.key] = mp.groupIsOn(S.fixtures, g);
+  return out;
+}
 function midiLeds() {
   if (!midiPainter && window.deskMidiCues) {
     midiPainter = window.deskMidiCues.createLedPainter({
@@ -6786,7 +6970,7 @@ function midiLeds() {
       armed: () => midiArmed,   // only the armed tab owns the pads' lights (a getter: midiArmed is declared further down)
       map: () => midiMap,
       cues: () => CUES,
-      state: () => ({ blackout: midiBlackoutNow() }),
+      state: () => ({ blackout: midiBlackoutNow(), groupOn: midiGroupOn() }),
       looks: () => (Array.isArray(S && S.looks) ? S.looks : []),   // not looksOf(): a const further down
       page: () => midiLookPage,
       setPage: (p) => { midiLookPage = p; },
@@ -6865,6 +7049,7 @@ function midiLedsOff() {
     for (const k of Object.keys(midiMap)) {
       const b = midiMap[k];
       if (b && b.type === 'note' && b.ch === 1 && Number.isInteger(b.num)) midiLedOut.send([0x90, b.num, 0]);
+      else if (b && b.type === 'note' && /^grp:\w+:on$/.test(k) && b.ch >= 1 && b.ch <= 8) midiLedOut.send([0x90 | (b.ch - 1), b.num, 0]);
     }
   } catch (e) { /* port gone */ }
   midiLedSent.clear();
@@ -6907,6 +7092,7 @@ function midiArmedStore(on) {
 }
 
 function midiSetArmed(on, byClaim) {
+  if (!on && midiArmed) midiReleaseAll();   // a held flash lets go before the gate closes
   midiArmed = on;
   midiArmedStore(on);
   const b = $('#miArm');
@@ -6917,14 +7103,18 @@ function midiSetArmed(on, byClaim) {
     // Every fader must be caught again, so arming can never jump the rig: the mirror is read
     // from the desk now, and where a fader was in Safe is forgotten.
     midiRefreshLive();
-    for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') { midiPickup[k] = true; delete midiLastVal[k]; }
+    for (const k of Object.keys(midiMap)) {
+      const tg = midiTargets.find((x) => x.key === k);
+      if (midiMap[k].type !== 'note' && !(tg && tg.rel)) { midiPickup[k] = true; delete midiLastVal[k]; }
+    }
     midiDraw();
     midiLedSent.clear();
     midiPaintLights();   // full repaint
     midiOnAirStart();
     say('MIDI armed — the controller is driving the rig');
   } else {
-    midiPending.clear();
+    // what is still queued is dropped, except a hit's release: it must still reach the rig
+    for (const k of [...midiPending.keys()]) if (!k.startsWith('hold:') && k !== 'cfx:hit') midiPending.delete(k);
     midiOnAirStop();
     // Another tab took over: it owns the lights now, so ours stay as the claimer painted them.
     if (byClaim) midiLedSent.clear(); else midiLedsOff();
@@ -6963,7 +7153,7 @@ function midiRearmAfterReload(was) {
   }, 250);
 }
 if (midiPrefs().enabled) midiEnable();
-window.addEventListener('pagehide', () => { if (midiArmed) midiLedsOff(); });
+window.addEventListener('pagehide', () => { if (midiArmed) { midiReleaseAll(); midiLedsOff(); } });
 
 $('#miWizard').addEventListener('click', () => {
   midiWizardOn = !midiWizardOn;

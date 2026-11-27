@@ -120,8 +120,23 @@
     note(0x60, LOOK_PAGE_KEYS.next);
     note(0x61, LOOK_PAGE_KEYS.prev);
     for (let k = 0; k < LOOK_PADS; k++) note(apc40PadNote(k), 'lookpad:' + k);
+    // The full patch (owner N7277, midiPatch.js; design agent-reports-2026-11-27/apc40-full-patch-design.md).
+    // Track faders and activators arrive on the channel of their track (CC 7 / note 0x32, ch 1-8);
+    // the four momentary device buttons on the channel of the device-knob bank (bank 1 = ch 1).
+    // Left out on purpose: movers STROBE (a venue safety decision, the owner's), every `ch:` row.
+    for (const [num, key] of FULL_CC) cc(num, key);
+    for (const [ch, key] of FULL_FADERS) { if (has.has(key)) out.push({ key, type: 'cc', ch, num: 7 }); }
+    for (const [ch, key] of FULL_ACTIVATORS) { if (has.has(key)) out.push({ key, type: 'note', ch, num: 0x32 }); }
+    for (const [num, key] of FULL_NOTES) note(num, key);
     return out;
   }
+  // [CC number, target] on ch 1: track knobs 6-8 (CC 53-55), TEMPO (13) and CUE LEVEL (47) are relative.
+  const FULL_CC = [[53, 'layerrate'], [54, 'cfxbeats'], [55, 'cfxspread'], [13, 'tempo:rel'], [47, 'cfxmode:rel']];
+  const FULL_FADERS = [[1, 'grp:left:dim'], [2, 'grp:right:dim'], [3, 'grp:back:dim'], [6, 'zoom'], [7, 'layerlevel'], [8, 'cfxamount']];
+  const FULL_ACTIVATORS = [[1, 'grp:left:on'], [2, 'grp:right:on'], [3, 'grp:back:on']];
+  const FULL_NOTES = [[0x63, 'tap'], [0x64, 'nudge:-'], [0x65, 'nudge:+'], [0x5a, 'cfxon'],
+    [0x3e, 'hit:white'], [0x3f, 'hit:left'], [0x40, 'hit:right'], [0x41, 'hit:swap'],
+    [0x66, 'blackoutoff'], [0x67, 'panic']];
 
   // Pad lights. Akai protocol v1.2, "Outbound Message Type 1: LEDs": a note-on to the pad's
   // note, MIDI channel = LED type (0 = primary colour, solid), velocity = colour from the RGB
@@ -152,6 +167,11 @@
       const b = map && map[key];
       if (b && b.type === 'note' && b.ch === 1 && Number.isInteger(b.num)) out.push({ note: b.num, vel });
     };
+    // A track button (ACTIVATOR) is lit on the channel of its track: single colour, 0 off, 1-127 on.
+    const putTrack = (key, on) => {
+      const b = map && map[key];
+      if (b && b.type === 'note' && b.ch >= 1 && b.ch <= 8 && Number.isInteger(b.num)) out.push({ note: b.num, vel: on ? 1 : 0, ch: b.ch - 1 });
+    };
     for (let i = 0; i < MAX_CUE_PADS; i++) {
       const vel = i >= n ? APC40_COLOUR.off
         : i === running ? APC40_COLOUR.running
@@ -172,6 +192,10 @@
     put('cueauto', c.autoplay ? APC40_COLOUR.next : APC40_COLOUR.cue);
     put('cueloop', c.loop ? APC40_COLOUR.next : APC40_COLOUR.cue);
     put('blackout', state && state.blackout ? APC40_COLOUR.running : APC40_COLOUR.dim);
+    // The full patch: the group switches show the groups' state; SESSION RECORD (blackout release) is lit while blacked out.
+    const on = (state && state.groupOn) || {};
+    for (const g of ['left', 'right', 'back']) if (g in on) putTrack('grp:' + g + ':on', on[g]);
+    if (state && 'blackout' in state) put('blackoutoff', state.blackout ? 1 : 0);
     return out;
   }
 
@@ -179,7 +203,9 @@
   // in Generic Mode, dark on release) is forgotten on release so the next paint restores it.
   function lightDiff(lights, sent) {
     const send = [];
-    for (const l of lights) if (sent.get(l.note) !== l.vel) { send.push(l); sent.set(l.note, l.vel); }
+    // Pads are keyed by note alone; a track button (l.ch 1-7) by channel and note, so three
+    // activators on note 0x32 are three lights.
+    for (const l of lights) { const k = l.ch ? l.ch * 256 + l.note : l.note; if (sent.get(k) !== l.vel) { send.push(l); sent.set(k, l.vel); } }
     return send;
   }
 
@@ -213,7 +239,7 @@
         const looks = deps.looks();
         deps.setPage(clampLookPage(deps.page(), looks.length));
         const lights = apc40Lights(deps.map(), deps.cues(), deps.state(), { looks, page: deps.page(), activeId: lookId() });
-        for (const l of lightDiff(lights, sent)) out.send([0x90, l.note, l.vel]);
+        for (const l of lightDiff(lights, sent)) out.send([0x90 | (l.ch || 0), l.note, l.vel]);
       } catch (e) { sent.clear(); }   // port gone: repaint everything when it is back
     }
     return {
