@@ -10,6 +10,8 @@
 import { createRequire } from 'node:module'
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { checkSimTarget, checkDeskAnswers } from './simGuard.mjs'
 const require = createRequire((process.env.PW_FROM || process.cwd()) + '/')
 const { chromium } = require('playwright')
 const FLOOR = 11
@@ -20,6 +22,11 @@ const sizes = (process.argv.length > 4 ? process.argv.slice(4) : ['1534x830', '1
   let u
   try { u = new URL(base) } catch { console.error('not a URL: ' + base); process.exit(2) }
   if (u.hostname !== '127.0.0.1' || !u.port) { console.error('refused: only a scratch desk at 127.0.0.1:<port> (never diiii.localhost or a shared desk)'); process.exit(2) }
+}
+{ // the same guard as apc40-full-sim.mjs and pressLatency.mjs: a scratch tree that answers, never the live desk's port (#1401 R2-I1)
+  let ls = ''; try { ls = execFileSync('di-dev', ['ls'], { encoding: 'utf8' }) } catch { /* the guard then refuses */ }
+  const why = checkSimTarget(base, ls); if (why) { console.error(why); process.exit(2) }
+  const why2 = await checkDeskAnswers(base); if (why2) { console.error(why2); process.exit(2) }
 }
 fs.mkdirSync(out, { recursive: true })
 const api = async (p, body) => (await fetch(base + p, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined)).json()
