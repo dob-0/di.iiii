@@ -1,8 +1,8 @@
+/* global window, document -- the page functions run inside the browser */
 // The drawn APC40 must fit its pane at every window width (owner 2026-11-27: at 710x780 css px, dpr 1.667, the drawing
 // was cut off at both sides and 3300 px tall because the Labelled view panned at 1.1x). A real layout, so this runs
 // in headless Chromium (playwright). Set DI_APC_FIT_CHROMIUM=<path> to use a given browser binary. Without playwright
 // or a browser the test is SKIPPED with a loud warning, never silently passed; CI installs playwright (root devDependency).
-import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
