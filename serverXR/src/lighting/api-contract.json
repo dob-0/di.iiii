@@ -1035,6 +1035,37 @@
       }
     },
     {
+      "method": "GET",
+      "path": "api/midi/padorder",
+      "class": "c",
+      "reply": {
+        "padOrder": "array|null",
+        "pads": "array"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/midi/padorder",
+      "class": "c",
+      "reply": {
+        "ok": "boolean"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
       "method": "POST",
       "path": "api/show/open",
       "class": "c",

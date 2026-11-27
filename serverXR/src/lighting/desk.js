@@ -44,6 +44,7 @@ const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
+const { sanitizePadOrder, brightnessOrder, lookBrightness, describePadOrder } = require('./padOrder');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
 const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
@@ -113,6 +114,8 @@ function createDesk(opts = {}) {
       // every `beats` beats — the desk running on the music instead of beside it.
       sync: 'clock', beats: 4 },
     midi: { maps: [] },
+    // Which look sits on which APC40 pad: look ids (null = empty slot), or null for desk order (padOrder.js). Never reorders `looks`.
+    padOrder: null,
     // The content model: looks are lists of steps, layers are looks under a finger.
     // Both empty means the desk renders exactly as it did before they existed.
     looks: [],
@@ -388,6 +391,7 @@ function createDesk(opts = {}) {
       s.colors = sanitizeColors(disk.colors);
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
+      s.padOrder = sanitizePadOrder(disk.padOrder, s.looks);
       s.layers = sanitizeLayers(disk.layers) || [];
       s.cues = sanitizeCues(disk.cues);
       s.strips = strips.sanitizeStrips(disk.strips);
@@ -1725,6 +1729,7 @@ function createDesk(opts = {}) {
       const looks = sanitizeLooks(body.looks);
       if (!looks) return json(res, { error: 'looks must be a list, each with an id and at least one step' }, 400);
       state.looks = looks;
+      state.padOrder = sanitizePadOrder(state.padOrder, looks);   // ids that vanished leave the pads
       // No pushFrame: replacing the library is a data change. A layer pointing at a look
       // that just vanished simply stops contributing on the next tick, which is the
       // honest behaviour — nothing snaps and nothing is quietly held.
@@ -1937,6 +1942,19 @@ function createDesk(opts = {}) {
       if (!midi) return json(res, { error: 'midi must be {maps: [...]} with at most 400 entries of plain fields' }, 400);
       state.midi = midi;
       save(); json(res, { ok: true, midi: state.midi });
+    },
+
+    // The APC40 pad order (padOrder.js). {mode:'brightness'} sorts the looks dark to bright into 8 columns,
+    // {order:[ids]} sets it by hand, {clear:true} goes back to desk order. `looks` itself is never reordered.
+    'GET /api/midi/padorder': (req, res) => json(res, { padOrder: state.padOrder, pads: describePadOrder(state.looks, state.padOrder) }),
+    'POST /api/midi/padorder': (req, res, body) => {
+      if (body && body.clear === true) state.padOrder = null;
+      else if (body && body.mode === 'brightness') {
+        state.padOrder = sanitizePadOrder(brightnessOrder(state.looks, state.looks.map(lookBrightness)), state.looks);
+      } else if (body && Array.isArray(body.order)) {
+        state.padOrder = sanitizePadOrder(body.order, state.looks);
+      } else return json(res, { error: "send {mode:'brightness'}, {order:[look ids]} or {clear:true}" }, 400);
+      save(); json(res, { ok: true, padOrder: state.padOrder, pads: describePadOrder(state.looks, state.padOrder) });
     },
 
     // Just the live DMX buffers — polled fast so the stage view animates smoothly.
