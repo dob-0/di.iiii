@@ -6871,8 +6871,8 @@ function midiApcMsg(m) {
   const tg = key && midiTargets.find((x) => x.key === key);
   const pos = !!(tg && !tg.rel);
   if (pos) midiPickup[key] = false;
-  midiHandle(m.type, m.ch, m.num, m.unit, m.raw);
-  if (pos) { midiPickup[key] = true; delete midiLastVal[key]; }
+  try { midiHandle(m.type, m.ch, m.num, m.unit, m.raw); }
+  finally { if (pos) { midiPickup[key] = true; delete midiLastVal[key]; } }
 }
 // What the desk reads for every bound fader / knob (0..1), so a change made anywhere on the desk moves the drawn control.
 function midiApcValues() {

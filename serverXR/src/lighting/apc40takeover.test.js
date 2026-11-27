@@ -47,6 +47,10 @@ describe('1: a drawn fader uses soft takeover', () => {
     for (const u of [20 / 127, 22 / 127, 21 / 127]) { const t = D.takeover(s, u, 129 / 255); s = t.state; if (t.send) sent++ }
     expect(sent).toBe(0)
   })
+  it('takeover(): an unknown desk value sends nothing', () => {
+    expect(D.takeover(null, 0.5, null).send).toBe(false)
+    expect(D.takeover(null, 0.5, undefined).send).toBe(false)
+  })
   it('takeover(): a press that lands on the cap catches at once', () => {
     expect(D.takeover(null, 0.5, 0.5).send).toBe(true)
   })
@@ -75,21 +79,35 @@ describe('2: the drawing leaves the real unit\'s takeover intact', () => {
 })
 
 describe('3: labels come only from the live binding map (reika map shape)', () => {
-  const noteB = (n) => ({ type: 'note', ch: 1, num: n })
-  const map = { master: { type: 'cc', ch: 1, num: 14 }, cuego: noteB(0x5b), cuestop: noteB(0x51), blackout: noteB(0x52), blackoutoff: noteB(0x53), cueback: noteB(0x54), cueauto: noteB(0x56), cueloop: noteB(0x60) }
-  for (let i = 0; i < 40; i++) map['lookpad:' + i] = noteB(i)
+  // The REAL reika map: midi.maps of the show copy of 2026-11-27 07:31 (100 rows), saved in reikaMap.fixture.json.
+  const map = {}
+  for (const r of JSON.parse(fs.readFileSync(path.join(__dirname, 'reikaMap.fixture.json'), 'utf8')).maps) map[r.key] = { type: r.type, ch: r.ch, num: r.num }
   const looks = Array.from({ length: 60 }, (_, i) => ({ id: 'l' + i, name: 'Look ' + i }))
   const v = D.apc40View({ map, looks, cues: [], state: {}, page: 0, activeId: '' })
-  it('names only bound functions', () => {
+  it('names only bound functions, with the scene keys as the show binds them', () => {
     const text = v.callouts.map((c) => c.text).join(' | ')
-    for (const bad of ['Left truss', 'Strobe', 'Panic', 'Hold', 'Tempo', 'Zoom', 'Device knobs', 'Group on', 'Colour fx', 'Layer']) expect(text).not.toContain(bad)
     expect(text).toContain('Master')
     expect(text).toContain('Look pads')
+    expect(text).toContain('Cue back')
+    const row = (key) => v.buttons.find((b) => b.key === key)
+    expect(row('cueback')).toMatchObject({ note: 82, hw: 'SCENE LAUNCH 1' })
+    expect(row('cueauto')).toMatchObject({ note: 83, hw: 'SCENE LAUNCH 2' })
+    expect(row('cueloop')).toMatchObject({ note: 84, hw: 'SCENE LAUNCH 3' })
+    expect(row('blackout')).toMatchObject({ note: 86, hw: 'SCENE LAUNCH 5' })
+    expect(row('lookpage:next')).toMatchObject({ note: 96, hw: 'RIGHT' })
+    expect(row('lookpage:prev')).toMatchObject({ note: 97, hw: 'LEFT' })
+  })
+  it('every label names a key the map binds', () => {
+    const bound = (k) => !!map[k]
+    expect(bound('panic') && bound('cuego') && bound('strobe:rate')).toBe(true)   // this show binds them, so they may be labelled
+    for (const k of ['grp:left:dim']) expect(bound(k)).toBe(true)
+    const none = D.apc40View({ map: { master: map.master }, looks, cues: [], state: {}, page: 0 }).callouts.map((c) => c.text).join('|')
+    for (const bad of ['Panic', 'Strobe', 'Zoom', 'Tempo']) expect(none).not.toContain(bad)
   })
   it('the buttons and controls tables list only bound keys', () => {
     for (const b of v.buttons) expect(map[b.key]).toBeTruthy()
     expect(v.controls.map((c) => c.key).every((k) => map[k])).toBe(true)
-    expect(v.knobs.length).toBe(0)
+    for (const k of v.knobs) expect(map[k.key]).toBeTruthy()
   })
   it('an empty map still shows the preset layout, with no labels', () => {
     const e = D.apc40View({ map: {}, looks, cues: [], state: {}, page: 0 })

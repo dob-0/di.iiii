@@ -172,6 +172,7 @@
   // Soft takeover of a drawn fader: `st` is null before the first move, then { prev, caught }. The desk's value is `desk`; a drag
   // sends nothing until it lands within 1/127 of it or steps across it, then follows the pointer.
   function takeover(st, u, desk) {
+    if (typeof desk !== 'number' || !Number.isFinite(desk)) return { send: false, state: st || { prev: u, caught: false } };   // desk value unknown: send nothing
     const s = st || { prev: null, caught: false };
     if (s.caught) return { send: true, state: { prev: u, caught: true } };
     const near = Math.abs(u - desk) <= 1 / 127 + 1e-9;
@@ -450,7 +451,7 @@
         const info = ce && ccByEl.get(ce);
         if (info) {
           if (!armed()) { say(NOTE_SAFE); return; }
-          drag = { info, y0: ev.clientY, u0: info.u == null ? .5 : info.u, done: 0, pointer: ev.pointerId, tk: null };
+          drag = { info, y0: ev.clientY, u0: info.u == null ? .5 : info.u, done: 0, pointer: ev.pointerId, tk: null, off: null };
           try { ap.setPointerCapture(ev.pointerId); } catch (e) { /* no capture: moves still arrive over the unit */ }
           ev.preventDefault(); return;
         }
@@ -479,14 +480,19 @@
           }
           return;
         }
-        let u;
-        if (info.kind === 'fader') u = 1 - (ev.clientY - r.top - r.height * .105) / (r.height * .79);
-        else if (info.kind === 'xf') u = (ev.clientX - r.left) / r.width;
-        else u = drag.u0 + (drag.y0 - ev.clientY) / (150 * (scale || 1));
-        u = Math.round(clamp01(u) * 127) / 127;
-        // Soft takeover for the drawn fader (round 3, finding 1): nothing moves until the pointer crosses the desk's value.
+        const raw = info.kind === 'fader' ? 1 - (ev.clientY - r.top - r.height * .105) / (r.height * .79)
+          : info.kind === 'xf' ? (ev.clientX - r.left) / r.width
+            : drag.u0 + (drag.y0 - ev.clientY) / (150 * (scale || 1));
+        let u = raw;
         if (info.kind !== 'knob') {
-          const t = takeover(drag.tk, u, drag.u0);
+          // A grab on the cap itself (within 8 % of the desk value) keeps its offset, so the cap follows from where it was grabbed.
+          if (drag.off == null) drag.off = (typeof info.u === 'number' && Math.abs(raw - info.u) <= .08) ? raw - info.u : 0;
+          u = raw - drag.off;
+        }
+        u = Math.round(clamp01(u) * 127) / 127;
+        // Soft takeover for the drawn fader (round 3/4): nothing moves until the pointer crosses the desk's value; an unknown value sends nothing.
+        if (info.kind !== 'knob') {
+          const t = takeover(drag.tk, u, info.u);
           drag.tk = t.state;
           if (!t.send) return;
         }
