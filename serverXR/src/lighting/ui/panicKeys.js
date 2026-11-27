@@ -13,6 +13,9 @@
     return { ...BLACKOUT_ON };
   }
   function midiBlackoutIntent() { return { ...BLACKOUT_ON }; }
+  // The armed MIDI pad toggles (owner N7276, 2026-11-27: he hit it twice by accident and could not undo it from the controller).
+  // `on` = what the page believes now (its own last send, else the desk's poll): the press sends the opposite.
+  function midiBlackoutToggle(on) { return { blackout: !on }; }
 
   const ARM_MS = 4000;
   const DOUBLE_MS = 400;
@@ -73,7 +76,7 @@
     return { state, start, cancel };
   }
 
-  const api = { driverPoll, createArm, ARM_MS, DOUBLE_MS, blackoutKeyIntent, midiBlackoutIntent, goLivePress, keepArmPrompt, armPrompt, driverChoice };
+  const api = { driverPoll, createArm, ARM_MS, DOUBLE_MS, blackoutKeyIntent, midiBlackoutIntent, midiBlackoutToggle, goLivePress, keepArmPrompt, armPrompt, driverChoice };
   if (typeof module === 'object' && module && module.exports) module.exports = api;
   else root.deskPanicKeys = api;
 })(typeof window !== 'undefined' ? window : this);
