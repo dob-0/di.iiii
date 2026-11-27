@@ -6,3 +6,4 @@
 - Generalised: the pair list comes from presets units (`L<n>`/`R<n>` default, `--left/--right` options); the desk base URL is an option; no production names in code.
 - The old golden check (28 of 28, 27 of 27 looks) was made with the old hard-coded rule; it is not repeated for the camera rule.
 - Not tested: against a live desk (never touched from this branch); full repo test suite.
+- Round 2 (review): the walk proof allows the partner's cells only; each key the rule uses needs `measured.<KEY>` (same value, confidence not none) or exit 2, `--rule-unmeasured-ok` skips it; the rule line prints confidence and method; a float FACE_SIGN 1.0/-1.0 works. Mutations: flipping FACE_SIGN in `into` fails 8 of 29 tests; letting the walk allow the lead's cells fails the patched-copy test.

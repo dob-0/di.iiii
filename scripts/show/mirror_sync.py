@@ -38,9 +38,11 @@ Undo: the output is a new file (--copy-suffix writes copies next to the original
 
 Usage: mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG]
                       [--left L] [--right R] [--keep-cells]
+                      [--rule-unmeasured-ok]
   --left/--right: the unit-key prefixes of the two sides in presets .units (default L and R: L1..Ln pairs with R1..Rn;
                   only numbers present on both sides are pairs).
   --keep-cells: leave every colour/cell as it is (the old behaviour).
+  --rule-unmeasured-ok: skip the provenance check (other rigs, test fixtures); the rule line then says "rule NOT measured".
   in: a file with .looks[] (a suite or review file, or a desk /api/looks answer). Other top-level fields are kept.
   --copy-suffix S: the output looks get id+S and name+' '+S (copies; the originals stay where they are).
 """
@@ -60,11 +62,14 @@ def opt(name):
 KEEP_CELLS = '--keep-cells' in sys.argv
 if KEEP_CELLS:
     sys.argv.remove('--keep-cells')
+UNMEASURED_OK = '--rule-unmeasured-ok' in sys.argv
+if UNMEASURED_OK:
+    sys.argv.remove('--rule-unmeasured-ok')
 only, skip, suffix = opt('--only-prefix'), opt('--skip-prefix'), opt('--copy-suffix')
 max_grow = float(opt('--max-grow') or 5)
 LEFT, RIGHT = opt('--left') or 'L', opt('--right') or 'R'
 if len(sys.argv) != 4:
-    sys.exit('usage: mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R] [--keep-cells]')
+    sys.exit('usage: mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R] [--keep-cells] [--rule-unmeasured-ok]')
 presets_f, in_f, out_f = sys.argv[1:4]
 presets = json.load(open(presets_f))
 units = presets['units']
@@ -78,15 +83,48 @@ EPS = math.sin(math.radians(5))
 _mode = C.get('MIRROR_MODE')
 MODE = {'pan': C.get('MIRROR_MODE_PAN', _mode), 'tilt': C.get('MIRROR_MODE_TILT', _mode)}
 FACE = C.get('FACE_SIGN')
-if FACE not in (1, -1) or any(m is None for m in MODE.values()) or isinstance(FACE, bool):
+if isinstance(FACE, bool) or not isinstance(FACE, (int, float)) or FACE not in (1, -1) or any(m is None for m in MODE.values()):
     sys.stderr.write('the presets give no complete mirror rule (FACE_SIGN and a mirror mode for pan and tilt): a measured rule is needed '
              'from a camera hold; this tool never guesses a sign\n')
     sys.exit(2)
+FACE = int(FACE)
 NEG = {ax: m == 'negate' for ax, m in MODE.items()}
 CELL_REV = bool(C.get('CELL_MIRROR_LR', C.get('CELL_MIRROR', True)))
 CELLS = not KEEP_CELLS
-RULE = (f"rule from presets: pan {'negate' if NEG['pan'] else 'same'}, tilt {'negate' if NEG['tilt'] else 'same'}, "
-        f"FACE_SIGN {FACE:+d}, " + ('cells kept (--keep-cells)' if KEEP_CELLS else 'cells reversed' if CELL_REV else 'cells same index'))
+KEYS = [('FACE_SIGN', FACE)]
+KEYS += [(('MIRROR_MODE_PAN' if 'MIRROR_MODE_PAN' in C else 'MIRROR_MODE'), MODE['pan']),
+         (('MIRROR_MODE_TILT' if 'MIRROR_MODE_TILT' in C else 'MIRROR_MODE'), MODE['tilt'])]
+if CELLS:
+    KEYS.append((('CELL_MIRROR_LR' if 'CELL_MIRROR_LR' in C else 'CELL_MIRROR'), C.get('CELL_MIRROR_LR', C.get('CELL_MIRROR', True))))
+MEAS = presets.get('measured') or {}
+
+
+def provenance():
+    """Each key the rule uses needs a camera record: measured.<KEY> with the same value and a confidence that is not none.
+    Returns the per-key text for the rule line, or exits 2 with one line."""
+    out = []
+    for k, v in KEYS:
+        m = MEAS.get(k) if isinstance(MEAS, dict) else None
+        if not isinstance(m, dict):
+            why = 'no measured entry'
+        elif m.get('value') != v:
+            why = f"measured value {m.get('value')!r} differs from the constant {v!r}"
+        elif str(m.get('confidence', 'none')).strip().lower() in ('', 'none'):
+            why = 'confidence is none'
+        else:
+            out.append(f"{k}={v} ({m['confidence']}: {str(m.get('method', ''))[:60]})")
+            continue
+        sys.stderr.write(f'the presets have no camera record for {k} ({why}): a measured rule is needed from a camera hold; '
+                         'pass --rule-unmeasured-ok only for another rig or a test\n')
+        sys.exit(2)
+    return out
+
+
+PROV = [] if UNMEASURED_OK else provenance()
+RULE = (('rule NOT measured (--rule-unmeasured-ok)' if UNMEASURED_OK else 'rule from presets') +
+        f": pan {'negate' if NEG['pan'] else 'same'}, tilt {'negate' if NEG['tilt'] else 'same'}, "
+        f"FACE_SIGN {FACE:+d}, " + ('cells kept (--keep-cells)' if KEEP_CELLS else 'cells reversed' if CELL_REV else 'cells same index') +
+        ('; ' + '; '.join(PROV) if PROV else ''))
 CELL_KEY = re.compile(r'^([rgbw])(\d+)$')
 BARS = set(bars.values())
 src = json.load(open(in_f))
@@ -157,17 +195,17 @@ def cells_ok(a, b):
 
 
 def pairs(look):
-    for st in look.get('steps', []):
+    for si, st in enumerate(look.get('steps', [])):
         v = st.get('values') or {}
         for n in PAIRS:
             a, b = v.get(bars[f'{LEFT}{n}']), v.get(bars[f'{RIGHT}{n}'])
             if a and b and all(ch in x for x in (a, b) for ch in ('pan', 'tilt')):
-                yield n, a, b
+                yield si, n, a, b
 
 
 def audit(look):
     c = Counter()
-    for n, a, b in pairs(look):
+    for _, n, a, b in pairs(look):
         pa, ta, pb, tb = g16(a, 'pan'), g16(a, 'tilt'), g16(b, 'pan'), g16(b, 'tilt')
         c['pairs'] += 1
         c['mirrored' if mir('pan', pa, pb) and mir('tilt', ta, tb) else 'same' if abs(pa - pb) <= 2 and abs(ta - tb) <= 2 else 'other'] += 1
@@ -211,12 +249,12 @@ def needs(look):
     return bool(a['same'] or a['other'] or a['wall'] or a['cells bad'])
 
 
-def sync(look, lead):
+def sync(look, lead, parts):
     """Mirror every pair-step of one look in place; lead = 'step' (the bar more into the room at that step), 'L' or 'R'.
     The lead is folded at exactly 0 (into < 0: tilt mirrored about the centre), the same rule at every step of the look, so a
     move through straight down stays continuous (a 5 deg threshold here made 10 deg jumps, seen 21:59)."""
     ch = Counter()
-    for n, a, b in pairs(look):
+    for si, n, a, b in pairs(look):
         pa, ta, pb, tb = g16(a, 'pan'), g16(a, 'tilt'), g16(b, 'pan'), g16(b, 'tilt')
         ia, ib = into('L', pa, ta), into('R', pb, tb)
         left_leads = ia >= ib if lead == 'step' else lead == 'L'
@@ -231,6 +269,7 @@ def sync(look, lead):
             s16(part, 'pan', partner('pan', rp))
             s16(part, 'tilt', partner('tilt', rt))
             if CELLS:
+                parts.add((si, bars[f'{RIGHT if left_leads else LEFT}{n}']))
                 cr = cells(ref)
                 for c, d in cr.items():
                     n = max(d)
@@ -241,18 +280,21 @@ def sync(look, lead):
 
 
 rows, total = [], Counter()
+PARTS = {}  # look index -> {(step index, partner fixture id)}: the only bars whose cells the tool may rewrite
 for i, look in enumerate(looks):
     a0, j0 = audit(look), jumps(look)
     best = None
     for lead in (('step', 'L', 'R') if needs(look) else ()):
         trial = json.loads(json.dumps(look))
-        ch = sync(trial, lead)
+        parts = set()
+        ch = sync(trial, lead, parts)
         gsum, gmax = grown(j0, jumps(trial))
         key = (round(gsum, 1), ch['turned'], ch['changed'])
         if best is None or key < best[0]:
-            best = (key, lead, trial, ch, gmax)
-    _, lead, look, ch, gmax = best or (None, '-', look, Counter(), 0.0)
+            best = (key, lead, trial, ch, gmax, parts)
+    _, lead, look, ch, gmax, parts = best or (None, '-', look, Counter(), 0.0, set())
     looks[i] = look
+    PARTS[i] = parts
     if ch:
         look['aim_fix_sync'] = ('left/right pairs mirrored and facing the room in every step (owner N7024, 2026-11-26): '
                                 f"{ch['changed']} pair-steps changed, {ch['turned']} turned to face the room, lead {lead}")
@@ -288,12 +330,14 @@ def walk(a, b, path):
             return
         for i, (x, y) in enumerate(zip(a, b)):
             walk(x, y, path + [i])
-    elif a != b and not (len(path) >= 2 and path[-2] in BARS and (path[-1] in ALLOWED or (CELLS and CELL_KEY.match(str(path[-1]))))):
+    elif a != b and not (len(path) == 6 and path[1:2] + path[3:4] == ['steps', 'values'] and path[4] in BARS and (
+            path[-1] in ALLOWED or (CELLS and CELL_KEY.match(str(path[-1])) and (path[0], path[2], path[4]) in PARTS_OK))):
         other += 1
 
 
-for x, y in zip(before, looks):
-    walk(x, y, [0])
+PARTS_OK = {(i, si, fid) for i, p in PARTS.items() for si, fid in p}
+for k, (x, y) in enumerate(zip(before, looks)):
+    walk(x, y, [k])
 
 for name, a0, a1, ch, w0, w1, lead, gmax in rows:
     if ch or a0['wall'] or a0['same'] or a0['other']:

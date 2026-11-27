@@ -14,7 +14,8 @@ This tool stays for a side whose tilt sign is wrong: it mirrors one side's tilt 
 
 What it does: tilt16 -> 65536 - tilt16 (clamped to 65535) for the chosen sides; 32768 (straight down) stays exactly
 32768, and a mirrored pair (R = 65536 - L) stays exactly mirrored. On a yoke this turns the beam 180 degrees about the
-vertical, so it equals FACE_SIGN -1 in the presets. Pan, colour, dimmer, cells, timing and the desk trims are untouched;
+vertical. On the camera-measured Reika rig the rule is tilt same with FACE_SIGN +1 (mirror_sync.py), so this tool is not
+the fix there; it is for a side whose tilt sign is wrong. Pan, colour, dimmer, cells, timing and the desk trims are untouched;
 the tool proves that by comparing every value of the input and the output.
 
 Usage: flip_truss_tilt.py <presets.json> <in.json> <out.json> [--sides L,R] [--left L] [--right R]   (in/out: a file with .looks[])

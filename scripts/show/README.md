@@ -85,7 +85,7 @@ was measured wrong for this hall.
 
 | tool | does |
 |---|---|
-| `python3 scripts/show/mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R] [--keep-cells]` | every left/right pair mirrors and faces the room in every step of every look |
+| `python3 scripts/show/mirror_sync.py <presets.json> <in.json> <out.json> [--only-prefix P] [--skip-prefix P] [--copy-suffix S] [--max-grow DEG] [--left L] [--right R] [--keep-cells] [--rule-unmeasured-ok]` | every left/right pair mirrors and faces the room in every step of every look |
 | `python3 scripts/show/flip_truss_tilt.py <presets.json> <in.json> <out.json> [--sides L,R] [--left L] [--right R]` | tilt of the chosen sides mirrored about straight down (for a side whose tilt sign is wrong) |
 | `node scripts/show/live_load.mjs <looks.json> <cues.json> [--base URL] [--replace-prefix P] [--apply] [--go] [--looks-only]` | adds a file's looks after the desk's own looks; dry run by default |
 
@@ -103,8 +103,14 @@ on both axes, cells too) with no bar more than 5 deg into its own wall stays as 
 its move, folded at exactly 0 (where it points into its own wall its tilt mirrors about the centre), its partner gets the
 mirror. The lead is chosen per look by the least growth of step moves (per-step, left, or right). Only `pan`, `pan_fine`,
 `tilt`, `tilt_fine` of the pair bars change (plus the cell channels unless `--keep-cells`), proved by walking every value; the
-tool re-audits its output (cells counted uniform / reversed / same / other) and exits 1 when
-a pair is not mirrored, a bar points into a wall, or a bar's largest step move grew more than `--max-grow` (default 5 deg).
+tool re-audits its output (cells counted uniform / reversed / same / other). The walk proof allows pan/tilt of the bars and
+the cell channels of the PARTNER bar only (never the lead's), and only when cells are mirrored. Exit 1 when: another value changed,
+a pair is not mirrored, a cell is not as the rule says, a bar points into a wall, or a bar's largest step move grew more than
+`--max-grow` (default 5 deg). Exit 2 (one line, nothing written) when the rule is incomplete or unmeasured.
+**Provenance.** Each key the rule uses (`FACE_SIGN`, the pan key, the tilt key, and, unless `--keep-cells`, the cell key) needs
+`measured.<KEY>` in the presets with the same value as `constants.<KEY>` and a confidence other than `none`; otherwise exit 2
+naming the key. The rule line prints each key's confidence and the first 60 characters of its method. `--rule-unmeasured-ok`
+skips the check (other rigs, fixtures); the line then says "rule NOT measured". `FACE_SIGN` may be 1, -1, 1.0 or -1.0.
 Undo: the input is never changed; the output is a new file.
 `--copy-suffix S` writes copies (`id+S`, `name + S`) and leaves the originals.
 

@@ -19,11 +19,13 @@ const tmp = () => { const d = fs.mkdtempSync(path.join(os.tmpdir(), 'di-desk-too
 afterEach(() => { while (tmps.length) fs.rmSync(tmps.pop(), { recursive: true, force: true }) })
 
 const hasPython = spawnSync('python3', ['--version']).status === 0
-const py = (script, args) => spawnSync('python3', ['-I', path.join(here, script), ...args], { encoding: 'utf8' })
+const py = (script, args, dir = here) => spawnSync('python3', ['-I', path.join(dir, script), ...args], { encoding: 'utf8' })
 
 // two pairs of bars: L1/R1, L2/R2, plus a fixture that is not a bar
 const OLD = { MIRROR_MODE: 'negate', FACE_SIGN: -1, CELL_MIRROR_LR: true }
 const CAM = { MIRROR_MODE_PAN: 'negate', MIRROR_MODE_TILT: 'same', MIRROR_MODE: 'negate', FACE_SIGN: 1, CELL_MIRROR_LR: true }
+// every key of a fixture gets a camera record (measured.<KEY> with the same value), as the tool requires
+const meas = (c) => Object.fromEntries(Object.entries(c).map(([k, value]) => [k, { value, confidence: 'high', method: `test fixture, ${k}` }]))
 const PRESETS = { constants: OLD, units: { L1: { id: 'fl1' }, L2: { id: 'fl2' }, R1: { id: 'fr1' }, R2: { id: 'fr2' }, X1: { id: 'fx' } } }
 const g16 = (v, ch) => v[ch] * 256 + (v[ch + '_fine'] || 0)
 const put = (raw, p, t) => ({ pan: p >> 8, pan_fine: p & 255, tilt: t >> 8, tilt_fine: t & 255, dimmer: 200, red: 90 })
@@ -31,11 +33,11 @@ const bar = (p, t) => put(null, p, t)
 const step = (l, r) => ({ values: { fl1: bar(...l), fr1: bar(...r), fl2: bar(...l), fr2: bar(...r), fx: { dimmer: 7, pan: 1, tilt: 2 } }, width: 1 })
 const intoRoom = (side, p, t, face = side === 'L' ? -1 : 1) => face * Math.sin(((t - 32768) * 270 / 65535) * Math.PI / 180) * Math.cos(((p - 32768) * 540 / 65535) * Math.PI / 180)
 
-const runMirror = (looks, extra = [], constants = OLD) => {
+const runMirror = (looks, extra = [], constants = OLD, measured, script = [here]) => {
   const d = tmp()
   const pf = path.join(d, 'presets.json'), inf = path.join(d, 'in.json'), outf = path.join(d, 'out.json')
-  fs.writeFileSync(pf, JSON.stringify(constants === null ? { units: PRESETS.units } : { ...PRESETS, constants })); fs.writeFileSync(inf, JSON.stringify({ keep: 'me', looks }))
-  const r = py('mirror_sync.py', [pf, inf, outf, ...extra])
+  fs.writeFileSync(pf, JSON.stringify(constants === null ? { units: PRESETS.units } : { ...PRESETS, constants, measured: measured === undefined ? meas(constants) : measured })); fs.writeFileSync(inf, JSON.stringify({ keep: 'me', looks }))
+  const r = py('mirror_sync.py', [pf, inf, outf, ...extra], script[0])
   return { r, inf, out: fs.existsSync(outf) ? JSON.parse(fs.readFileSync(outf, 'utf8')) : null }
 }
 
@@ -127,7 +129,7 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
   })
 
   it('changes nothing but pan/tilt of the bars', () => {
-    const { out } = runMirror([{ id: 'a', name: 'A', steps: [step([32768, 40000], [32768, 40000])] }])
+    const { out } = runMirror([{ id: 'a', name: 'A', steps: [step([32768, 40000], [32768, 40000])] }], ['--keep-cells'])
     const v = out.looks[0].steps[0].values
     for (const id of ['fl1', 'fr1', 'fl2', 'fr2']) { expect(v[id].dimmer).toBe(200); expect(v[id].red).toBe(90) }
     expect(v.fx).toEqual({ dimmer: 7, pan: 1, tilt: 2 })
@@ -145,7 +147,7 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
   it('--left/--right name other unit prefixes', () => {
     const d = tmp()
     const pf = path.join(d, 'p.json'), inf = path.join(d, 'i.json'), outf = path.join(d, 'o.json')
-    fs.writeFileSync(pf, JSON.stringify({ constants: OLD, units: { A1: { id: 'fa' }, B1: { id: 'fb' } } }))
+    fs.writeFileSync(pf, JSON.stringify({ constants: OLD, measured: meas(OLD), units: { A1: { id: 'fa' }, B1: { id: 'fb' } } }))
     fs.writeFileSync(inf, JSON.stringify({ looks: [{ id: 'a', steps: [{ values: { fa: bar(32768, 40000), fb: bar(32768, 40000) } }] }] }))
     const r = py('mirror_sync.py', [pf, inf, outf, '--left', 'A', '--right', 'B'])
     expect(r.status, r.stdout + r.stderr).toBe(0)
@@ -157,7 +159,8 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
   const cellBar = (p, t, cs) => ({ ...bar(p, t), ...cs })
   const cellsOf = (v) => Object.fromEntries(Object.keys(v).filter((k) => /^[rgbw]\d+$/.test(k)).map((k) => [k, v[k]]))
   const L7 = { r1: 1, r2: 2, r3: 3, r4: 4, r5: 5, r6: 6, r7: 7, g1: 11, g2: 12, g3: 13, g4: 14, g5: 15, g6: 16, g7: 17 }
-  const flipped = (c) => Object.fromEntries(Object.entries(c).map(([k, x]) => [k[0] + (8 - Number(k.slice(1))), x]))
+  const flipped = (c, n = 7) => Object.fromEntries(Object.entries(c).map(([k, x]) => [k[0] + (n + 1 - Number(k.slice(1))), x]))
+  const L5 = { r1: 1, r2: 2, r3: 3, r4: 4, r5: 5, g1: 11, g2: 12, g3: 13, g4: 14, g5: 15 }
   const camLook = (l, r, extra) => ({ id: 'c', name: 'C', steps: [{ values: { fl1: cellBar(...l, extra?.l || {}), fr1: cellBar(...r, extra?.r || {}), fl2: bar(...l), fr2: bar(...r) } }] })
 
   it('camera rule: the partner is (65536 - pan, same tilt), into the room is equal on both sides', () => {
@@ -172,7 +175,7 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
   })
 
   it('camera rule: a look facing the walls is folded, nothing ends into a wall; a facing look stays', () => {
-    // tilt below centre = into the room with FACE_SIGN +1; tilt 40000 is above centre, so +sin > 0 means into the room
+    // FACE_SIGN +1: tilt above centre (32768) points into the room, tilt below it into the wall; 26000 and 24000 are below, so both sides fold
     const walls = { id: 'w', name: 'W', steps: [step([32768, 26000], [32768, 26000]), step([32768, 24000], [32768, 24000])] }
     const { r, out } = runMirror([walls], [], CAM)
     expect(r.status, r.stdout + r.stderr).toBe(0)
@@ -188,31 +191,109 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
     expect(runMirror([ok], [], CAM).out.looks[0]).toEqual(ok)
   })
 
-  it('cells come out reversed from the lead; same index under CELL_MIRROR_LR false; --keep-cells changes no cell', () => {
-    const look = camLook([32768, 40000], [32768, 40000], { l: L7, r: Object.fromEntries(Object.keys(L7).map((k) => [k, 90])) })
+  const allR = (L) => Object.fromEntries(Object.keys(L).map((k) => [k, 90]))
+  const ruleLine = (stdout) => stdout.split('\n').find((x) => x.startsWith('rule '))
+
+  it('cells come out reversed from the lead, and the rule line says reversed', () => {
+    const look = camLook([32768, 40000], [32768, 40000], { l: L7, r: allR(L7) })
     const a = runMirror([look], [], CAM)
     expect(a.r.status, a.r.stdout + a.r.stderr).toBe(0)
     const v = a.out.looks[0].steps[0].values
     expect(cellsOf(v.fl1)).toEqual(L7)
     expect(cellsOf(v.fr1)).toEqual(flipped(L7))
     expect(a.r.stdout).toMatch(/cells after \(pair-steps\): uniform 0, reversed 1/)
+    expect(ruleLine(a.r.stdout)).toMatch(/^rule from presets: pan negate, tilt same, FACE_SIGN \+1, cells reversed;/)
+  })
+
+  it('CELL_MIRROR_LR false: the partner gets the same index, and the rule line says same index', () => {
+    const look = camLook([32768, 40000], [32768, 40000], { l: L7, r: allR(L7) })
     const b = runMirror([look], [], { ...CAM, CELL_MIRROR_LR: false })
     expect(b.r.status, b.r.stdout + b.r.stderr).toBe(0)
     expect(cellsOf(b.out.looks[0].steps[0].values.fr1)).toEqual(L7)
-    expect(b.r.stdout).toMatch(/cells reversed|same index/)
-    const c = runMirror([look], ['--keep-cells'], CAM)
-    expect(c.r.status, c.r.stdout + c.r.stderr).toBe(0)
-    expect(cellsOf(c.out.looks[0].steps[0].values.fl1)).toEqual(L7)
-    expect(cellsOf(c.out.looks[0].steps[0].values.fr1)).toEqual(cellsOf(look.steps[0].values.fr1))
+    expect(ruleLine(b.r.stdout)).toMatch(/FACE_SIGN \+1, cells same index;/)
+    expect(ruleLine(b.r.stdout)).not.toMatch(/cells reversed/)
+  })
+
+  it('a bar with 5 cells: N comes from the keys, not 7', () => {
+    const look = camLook([32768, 40000], [32768, 40000], { l: L5, r: allR(L5) })
+    const a = runMirror([look], [], CAM)
+    expect(a.r.status, a.r.stdout + a.r.stderr).toBe(0)
+    expect(cellsOf(a.out.looks[0].steps[0].values.fr1)).toEqual(flipped(L5, 5))
+  })
+
+  it('--keep-cells: a look whose right cells are not the left reversed has them changed without it, and byte-equal with it', () => {
+    const look = camLook([32768, 40000], [32768, 40000], { l: L7, r: allR(L7) })
+    const without = runMirror([look], [], CAM)
+    expect(cellsOf(without.out.looks[0].steps[0].values.fr1)).not.toEqual(cellsOf(look.steps[0].values.fr1))
+    const kept = runMirror([look], ['--keep-cells'], CAM)
+    expect(kept.r.status, kept.r.stdout + kept.r.stderr).toBe(0)
+    for (const id of ['fl1', 'fr1', 'fl2', 'fr2']) expect(cellsOf(kept.out.looks[0].steps[0].values[id])).toEqual(cellsOf(look.steps[0].values[id]))
+    expect(ruleLine(kept.r.stdout)).toMatch(/cells kept \(--keep-cells\)/)
+  })
+
+  it('the walk proof refuses a run that rewrote the LEAD bar\'s own cells (patched copy of the tool)', () => {
+    const src = fs.readFileSync(path.join(here, 'mirror_sync.py'), 'utf8')
+    const hook = "                        part[f'{c}{i}'] = d[n + 1 - i] if CELL_REV and set(d) == set(range(1, n + 1)) else d[i]\n"
+    expect(src).toContain(hook)
+    const dir = tmp()
+    fs.writeFileSync(path.join(dir, 'mirror_sync.py'), src.replace(hook, hook + "                        ref[f'{c}{i}'] = 99\n"))
+    const look = camLook([32768, 40000], [32768, 40000], { l: L7, r: allR(L7) })
+    const { r } = runMirror([look], [], CAM, undefined, [dir])
+    expect(r.status, r.stdout + r.stderr).toBe(1)
+    expect(r.stdout).toMatch(/[1-9]\d* other values changed/)
+    const ok = runMirror([look], [], CAM)
+    expect(ok.r.stdout).toMatch(/0 other values changed/)
+  })
+
+  it('provenance: every key used needs a camera record with the same value and a confidence other than none', () => {
+    const look = { id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }
+    const good = meas(CAM)
+    const cases = [
+      [{ ...good, FACE_SIGN: { ...good.FACE_SIGN, confidence: 'none' } }, /FACE_SIGN.*confidence is none/],
+      [{ ...good, MIRROR_MODE_TILT: { ...good.MIRROR_MODE_TILT, value: 'negate' } }, /MIRROR_MODE_TILT.*differs/],
+      [{ ...good, CELL_MIRROR_LR: undefined }, /CELL_MIRROR_LR.*no measured entry/],
+      [{ ...good, MIRROR_MODE_PAN: { value: 'negate' } }, /MIRROR_MODE_PAN.*confidence is none/],
+      [null, /no measured entry/],
+    ]
+    for (const [m, re] of cases) {
+      const { r, out } = runMirror([look], [], CAM, m)
+      expect(r.status, r.stdout).toBe(2)
+      expect(r.stderr.trim().split('\n')).toHaveLength(1)
+      expect(r.stderr).toMatch(re)
+      expect(out).toBeNull()
+    }
+    // --keep-cells does not use the cell key, so its record is not needed
+    expect(runMirror([look], ['--keep-cells'], CAM, { ...good, CELL_MIRROR_LR: undefined }).r.status).toBe(0)
+    // the flag skips the check and says so
+    const f = runMirror([look], ['--rule-unmeasured-ok'], CAM, null)
+    expect(f.r.status, f.r.stdout + f.r.stderr).toBe(0)
+    expect(ruleLine(f.r.stdout)).toMatch(/^rule NOT measured/)
+    // the measured rule line carries each key's confidence and the start of its method
+    const m = runMirror([look], [], CAM)
+    expect(ruleLine(m.r.stdout)).toMatch(/FACE_SIGN=1 \(high: test fixture, FACE_SIGN\); MIRROR_MODE_PAN=negate \(high: test fixture, MIRROR_MODE_PAN\); MIRROR_MODE_TILT=same \(high: /)
+  })
+
+  it('FACE_SIGN as a float 1.0 / -1.0 works; any other number exits 2 with one line', () => {
+    const look = { id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }
+    for (const f of [1.0, -1.0]) {
+      const { r } = runMirror([look], [], { ...CAM, FACE_SIGN: f })
+      expect(r.status, r.stdout + r.stderr).not.toBe(2)
+      expect(r.stderr).not.toMatch(/Traceback/)
+    }
+    for (const f of [0.5, 2, '1', true]) {
+      const { r } = runMirror([look], [], { ...CAM, FACE_SIGN: f })
+      expect(r.status).toBe(2)
+      expect(r.stderr.trim().split('\n')).toHaveLength(1)
+    }
   })
 
   it('a per-axis key wins over MIRROR_MODE', () => {
     // MIRROR_MODE negate everywhere, but tilt is 'same' by its own key: the tilt is copied, not negated
-    const a = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'negate', MIRROR_MODE_TILT: 'same', FACE_SIGN: 1 })
+    const a = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'negate', MIRROR_MODE_TILT: 'same', FACE_SIGN: 1, CELL_MIRROR_LR: true })
     expect(a.r.status, a.r.stdout + a.r.stderr).toBe(0)
     expect(g16(a.out.looks[0].steps[0].values.fr1, 'tilt')).toBe(40000)
     // and the other way round: MIRROR_MODE 'same', pan negated by its own key
-    const b = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'same', MIRROR_MODE_PAN: 'negate', FACE_SIGN: 1 })
+    const b = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'same', MIRROR_MODE_PAN: 'negate', FACE_SIGN: 1, CELL_MIRROR_LR: true })
     expect(b.r.status, b.r.stdout + b.r.stderr).toBe(0)
     expect(g16(b.out.looks[0].steps[0].values.fr1, 'pan')).toBe(65536 - 30001)
   })
