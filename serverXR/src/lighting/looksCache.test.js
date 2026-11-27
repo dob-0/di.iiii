@@ -306,3 +306,64 @@ describe('a synchronous save during an async one leaves show.json whole', () => 
     } finally { await k.stop() }
   }, 60000)
 })
+
+// ---- gated: the async save is held between its chunks, so the overlap is certain, not a race ----
+
+// Every fs.promises.open of show.json.tmp / show.json.async.tmp for writing gets a handle whose 2nd writeFile
+// waits on the gate (the looks chunk is the 2nd of three). `reached` resolves when it is waiting.
+const gateWrites = () => {
+  const real = fs.promises.open
+  let release; const gate = new Promise((r) => { release = r })
+  let reach; const reached = new Promise((r) => { reach = r })
+  fs.promises.open = async (file, flags, ...rest) => {
+    const fh = await real.call(fs.promises, file, flags, ...rest)
+    if (!(flags === 'w' && /show\.json\.(async\.)?tmp$/.test(String(file)))) return fh
+    let n = 0
+    const wf = fh.writeFile.bind(fh)
+    fh.writeFile = async (...a) => { if (++n === 2) { reach(); await gate } return wf(...a) }
+    return fh
+  }
+  return { reached, release, restore: () => { fs.promises.open = real; release() } }
+}
+const settled = async (k, file) => {
+  for (const l of makeBigLooks(3, { steps: 4, fixtures: 6 })) await k.post('/api/looks/add', { look: l })
+  await waitFor(() => fs.existsSync(file))
+  await new Promise((r) => setTimeout(r, 700))
+}
+
+describe('gated: a save held in flight', () => {
+  it('NEW-I1: switching shows during an in-flight timer save keeps the left show\'s last change', async () => {
+    const k = await startDesk(true)
+    const file = path.join(k.d, 'data', 'show.json')
+    let g = { restore() {} }
+    try {
+      await settled(k, file)
+      g = gateWrites()   // armed only now: the saves while settling must not be held
+      await k.post('/api/master', { master: 77 })
+      await g.reached
+      const r = await k.post('/api/show/open', { space: 'space-a' })
+      expect(r.status).toBe(200)
+      g.release()
+      await new Promise((r2) => setTimeout(r2, 800))
+      expect(JSON.parse(fs.readFileSync(file, 'utf8')).master).toBe(77)
+    } finally { g.restore(); await k.stop() }
+  }, 30000)
+
+  it('R2-I1: close() while the timer save is held: show.json parses and equals the state', async () => {
+    const k = await startDesk(false)
+    const file = path.join(k.d, 'data', 'show.json')
+    let g = { restore() {} }
+    try {
+      await settled(k, file)
+      g = gateWrites()   // armed only now: the saves while settling must not be held
+      await k.post('/api/master', { master: 88 })
+      await g.reached
+      await k.post('/api/looks/add', { look: look('after-the-write-began', 5) })   // the held write holds the OLD looks: a longer newer text must not be overwritten by it
+      k.dk.close()
+      const want = JSON.parse(JSON.stringify(k.dk.state))
+      g.release()
+      await new Promise((r2) => setTimeout(r2, 800))
+      expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual(want)
+    } finally { g.restore(); fs.rmSync(k.d, { recursive: true, force: true }) }
+  }, 30000)
+})

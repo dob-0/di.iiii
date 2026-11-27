@@ -680,6 +680,7 @@ function createDesk(opts = {}) {
   // Ctrl+C then threw the whole drag away. Exit flushes whatever is pending.
   let saveTimer = null;
   let dirty = false;
+  let asyncOwes = false;  // an async save in flight has cleared `dirty` for edits it has not landed yet
   let showWriteGen = 0;   // bumped by every synchronous save or show change; an async save in flight checks it
   // Whether the show is safely on disk, for the page (status.save). A save runs from a
   // timer: before this, a locked or read-only show file (OneDrive, an antivirus, a full
@@ -875,8 +876,9 @@ function createDesk(opts = {}) {
     const gen = showWriteGen;
     const inPlace = saveStatus.failures >= 3;
     const tmp = file + '.async.tmp';
-    const drop = () => { fsp.unlink(tmp).catch(() => {}); return false; };
+    const drop = () => { fsp.unlink(tmp).catch(() => {}); return false; };   // asyncOwes stays as the newer write left it
     dirty = false;
+    asyncOwes = true;
     try {
       const fh = await fsp.open(tmp, 'w');
       try {
@@ -893,8 +895,9 @@ function createDesk(opts = {}) {
         try { fs.unlinkSync(tmp); } catch (e2) { /* it goes with the next save */ }
       }
       bootedWithNothing = false;
+      asyncOwes = false;
       return true;
-    } catch (e) { fsp.unlink(tmp).catch(() => {}); if (gen === showWriteGen) dirty = true; throw e; }
+    } catch (e) { fsp.unlink(tmp).catch(() => {}); asyncOwes = false; if (gen === showWriteGen) dirty = true; throw e; }
   }
 
   // The timer: like saveSoon but the show file goes out asynchronously and a save already in flight makes this one wait.
@@ -1681,7 +1684,7 @@ function createDesk(opts = {}) {
       let disk;
       try { disk = readShow(DATA); } catch (e) { return json(res, { error: 'This machine has no show of its own to copy.' }, 404); }
       // Whatever the empty space show had pending is dropped: the copy is its first save.
-      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
       writeWhole(showFile(), JSON.stringify(withoutRig(disk)));
       switchShow({ ...show });   // and loaded back from the file just written
       log('  copied this machine\'s show to ' + showFile() + ' (' + MACHINE_SHOW + ' is unchanged)');
@@ -2986,6 +2989,7 @@ function createDesk(opts = {}) {
     // failure is reported (status.save) and retried. The switch is then refused — loading
     // the next show replaces `state`, and the edits that could not be written would go
     // with it.
+    if (asyncOwes) dirty = true;   // an async save in flight cleared dirty and the gen bump below will drop it: save again, synchronously (import/restore/adopt clear asyncOwes: they wrote the file themselves)
     saveSoon();
     if (!saveStatus.ok) {
       const e = new Error('The show that is loaded could not be saved (' + saveStatus.lastError + '), so nothing was switched and none of it is lost. Try again once it has saved.');
@@ -3028,7 +3032,7 @@ function createDesk(opts = {}) {
     const text = show.space ? JSON.stringify(withoutRig(disk)) : JSON.stringify({ ...disk, output: rigNow });
     const chase = { ...engine.chase };
     const origin = engine.chaseOrigin;
-    clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
+    clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
     try {
       fs.mkdirSync(show.dir, { recursive: true });
       writeWhole(showFile(), text);
@@ -3158,7 +3162,7 @@ function createDesk(opts = {}) {
     // when this desk is running something else.
     adoptShowFile: (id) => {
       if (show.space !== id) return false;
-      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
       switchShow({ ...show });
       return true;
     },
