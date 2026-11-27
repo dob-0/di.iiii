@@ -109,8 +109,8 @@ written to the output exactly as it came in, never mirrored, never counted as ch
 (`kept as designed (twoSided): <ids>`). Today nothing sets the flag: no builder or merge step writes it, so set it by hand in the suite file on each call-and-answer look before a run, until a build step sets it. The run proves it: a twoSided look that is not as it came in (or is copied) exits 1, named. The desk keeps
 the field only from an install that carries this change (`sanitizeLook` in `serverXR/src/lighting/looks.js` writes it only when it is exactly `true`; older desks drop it). Re-recording an existing look id with the desk's capture rebuilds the look and drops `twoSided` (it drops `motion` and `heads` the same way; the UI never sends an id), so set the flag again in the suite file.
 Exit 1 when: wrong argument count (usage), no pair in the presets, "no looks selected", another value changed,
-a pair is not mirrored, a cell is not as the rule says, a bar points into a wall, or a bar's largest step move grew more than
-`--max-grow` (default 5 deg). Exit 2 (one line, nothing written) when the rule is incomplete or unmeasured, or a constant or measured value is a boolean or not valid.
+a pair is not mirrored, a cell is not as the rule says, a bar points into a wall, a bar's largest step move grew more than
+`--max-grow` (default 5 deg), or a `twoSided` look is not as it came in or got copied. Exit 2 (one line, nothing written) when the rule is incomplete or unmeasured, or a constant or measured value is a boolean or not valid.
 **Provenance.** Each key the rule uses (`FACE_SIGN`, the pan key, the tilt key, and, unless `--keep-cells`, the cell key) needs
 `measured.<KEY>` in the presets with the same value as `constants.<KEY>` (a boolean measured value for a number constant is refused) and a confidence other than `none`; otherwise exit 2
 naming the key. The rule line prints each key's confidence and the first 60 characters of its method. `--rule-unmeasured-ok`

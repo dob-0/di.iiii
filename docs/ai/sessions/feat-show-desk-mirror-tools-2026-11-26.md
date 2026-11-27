@@ -10,3 +10,4 @@
 - Round 3 (05:28): `twoSided: true` on a look is kept by the desk (`sanitizeLook`, only when exactly true) and left as it is by mirror_sync.py (named in one line); a boolean measured value for a number constant is refused (exit 2); the float test writes a literal 1.0/-1.0; the --keep-cells test now runs sync. Mutations (FACE int() removed; `if CELLS:` -> `if True:`) each fail one test.
 - Round 3b (05:32): a twoSided look still gets the wall check (exit 1, named); with --copy-suffix it is not copied (named "not copied"); mutation (twoSided ignored) fails 3 tests.
 - Round 4 (05:49): docs say nothing sets twoSided yet (set it by hand); the run proves its twoSided looks leave as they came in (exit 1 naming it); boolean message fixed; wall line names own id/name; capture drops twoSided noted.
+- Round 5 (06:00): test for the --copy-suffix half of the twoSided proof (fails when its BROKEN line is replaced by pass); both exit-1 lists name the new cause.

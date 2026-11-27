@@ -372,6 +372,18 @@ describe.skipIf(!hasPython)('mirror_sync.py', () => {
     expect(s2.r.status).toBe(1)
   })
 
+  it('the run proves its twoSided rule for --copy-suffix too: a patched copy that copies a designed look exits 1 and names it', () => {
+    const src = fs.readFileSync(path.join(here, 'mirror_sync.py'), 'utf8')
+    const filter = "[l for l in looks if not (suffix and l.get('twoSided') is True)]"
+    expect(src).toContain(filter)
+    const dir = tmp()
+    fs.writeFileSync(path.join(dir, 'mirror_sync.py'), src.replace(filter, 'list(looks)'))
+    const designed = { id: 'duel', name: 'Duel', twoSided: true, steps: [step([30001, 40000], [30001, 40000])] }
+    const { r } = runMirror([designed], ['--copy-suffix', '-m'], CAM, undefined, [dir])
+    expect(r.status, r.stdout + r.stderr).toBe(1)
+    expect(r.stdout).toMatch(/twoSided look duel-m: not as it came in/)
+  })
+
   it('a per-axis key wins over MIRROR_MODE', () => {
     // MIRROR_MODE negate everywhere, but tilt is 'same' by its own key: the tilt is copied, not negated
     const a = runMirror([{ id: 'a', name: 'A', steps: [step([30001, 40000], [30001, 40000])] }], [], { MIRROR_MODE: 'negate', MIRROR_MODE_TILT: 'same', FACE_SIGN: 1, CELL_MIRROR_LR: true })

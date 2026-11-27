@@ -43,7 +43,7 @@ the output exactly as it came in, never mirrored and never counted as changed (t
 before a run, until a build step sets it. The run proves it: a twoSided look that is not as it came in (or is copied) exits 1, named. The desk keeps the field only from
 an install that carries this change (older desks drop unknown look fields, so a look read back from one has lost the flag).
 Exit codes: 0 ok; 1 wrong argument count (usage), no pair in the presets, "no looks selected", or a failed proof (another value
-changed, a pair not mirrored, a cell not as the rule says, a bar into a wall, a step move grew more than --max-grow); 2 the rule
+changed, a pair not mirrored, a cell not as the rule says, a bar into a wall, a step move grew more than --max-grow, a twoSided look not as it came in or copied); 2 the rule
 is incomplete or unmeasured, or a constant or measured value is not valid.
 Undo: the output is a new file (--copy-suffix writes copies next to the originals); the input is never changed.
 
