@@ -143,6 +143,9 @@ function sanitizeLook(look) {
     ...(heads ? { heads } : {}),
     // The levels this look moves (lookMotion.js): fx.js's curve on its units, played from the layer's firedAt. Absent = still.
     ...(motion ? { motion } : {}),
+    // A designed two-sided look (call and answer: the two sides do different things on purpose). Kept only when it is exactly true,
+    // so every other look and show file stays byte-identical. scripts/show/mirror_sync.py leaves such a look as it is.
+    ...(look.twoSided === true ? { twoSided: true } : {}),
   };
 }
 
