@@ -860,6 +860,7 @@ function createDesk(opts = {}) {
     // that turns up before the retry is still kept aside rather than written over.
     bootedWithNothing = false;
     dirty = false;
+    asyncOwes = false;   // this synchronous save has written everything an async save in flight owed
   }
 
   // The same write for the timer, off the DMX loop's thread: the text is made at once (the looks come from the
@@ -876,7 +877,7 @@ function createDesk(opts = {}) {
     const gen = showWriteGen;
     const inPlace = saveStatus.failures >= 3;
     const tmp = file + '.async.tmp';
-    const drop = () => { fsp.unlink(tmp).catch(() => {}); return false; };   // asyncOwes stays as the newer write left it
+    const drop = async () => { await fsp.unlink(tmp).catch(() => {}); return false; };   // awaited: the next async save (it waits for this one) must not open its temp file before this unlink has run, or the unlink would remove it   // asyncOwes stays as the newer write left it
     dirty = false;
     asyncOwes = true;
     try {
@@ -897,7 +898,7 @@ function createDesk(opts = {}) {
       bootedWithNothing = false;
       asyncOwes = false;
       return true;
-    } catch (e) { fsp.unlink(tmp).catch(() => {}); asyncOwes = false; if (gen === showWriteGen) dirty = true; throw e; }
+    } catch (e) { await fsp.unlink(tmp).catch(() => {}); asyncOwes = false; if (gen === showWriteGen) dirty = true; throw e; }
   }
 
   // The timer: like saveSoon but the show file goes out asynchronously and a save already in flight makes this one wait.

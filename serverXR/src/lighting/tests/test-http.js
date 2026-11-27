@@ -1548,6 +1548,7 @@ check('the show file on disk is always a complete show', async () => {
   await POST('/api/master', { master: 255 });
   await sleep(500);
   assert.ok(!fs.existsSync(path.join(dir, 'show.json.tmp')), 'no temp file left behind');
+  assert.ok(!fs.existsSync(path.join(dir, 'show.json.async.tmp')), 'no async temp file left behind');
   assert.ok(fs.existsSync(path.join(dir, 'show.prev.json')), 'the previous save is kept');
   JSON.parse(fs.readFileSync(path.join(dir, 'show.json'), 'utf8'));
   JSON.parse(fs.readFileSync(path.join(dir, 'show.prev.json'), 'utf8'));

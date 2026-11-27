@@ -223,6 +223,7 @@ describe.each([['this machine\'s own show', false], ['a space\'s show (withoutRi
     expect(fs.readFileSync(file, 'utf8')).not.toContain('new-look')
     expect(fs.existsSync(file.replace(/\.json$/, '.prev.json'))).toBe(true)
     expect(fs.existsSync(file + '.tmp')).toBe(false)
+    expect(fs.existsSync(file + '.async.tmp')).toBe(false)
   })
   it('a snapshot parses deep-equal to the old clone, with the new looks, and is listed without a re-read', async () => {
     await k.post('/api/looks/add', { look: { id: 'snap-look', name: 'S', kind: 'all', fixtures: [], steps: [{ values: { a: { dimmer: 3 } } }] } })
@@ -262,19 +263,6 @@ const bigDesk = async () => {
 }
 
 describe('a synchronous save during an async one leaves show.json whole', () => {
-  it('close() while a timer save is in flight: show.json parses and equals the state', async () => {
-    const { k, file } = await bigDesk()
-    try {
-      expect(await inFlight(k, file)).toBe(true)
-      k.dk.close()
-      const want = JSON.parse(JSON.stringify(k.dk.state))
-      await new Promise((r) => setTimeout(r, 1500))   // the async write finishes or drops after close
-      const got = JSON.parse(fs.readFileSync(file, 'utf8'))
-      expect(got).toEqual(want)
-      expect(fs.existsSync(file + '.async.tmp')).toBe(false)
-    } finally { fs.rmSync(k.d, { recursive: true, force: true }) }
-  }, 60000)
-
   it('an import (replaceShow) while a timer save is in flight: show.json is the imported show', async () => {
     const { k, file } = await bigDesk()
     try {
@@ -325,6 +313,8 @@ const gateWrites = () => {
   }
   return { reached, release, restore: () => { fs.promises.open = real; release() } }
 }
+// A gate that is never reached must say so, not run into the 30 s test timeout.
+const reachedIn = (g, ms = 5000) => Promise.race([g.reached, new Promise((_, rej) => setTimeout(() => rej(new Error('the async save never reached the gate within ' + ms + ' ms')), ms).unref())])
 const settled = async (k, file) => {
   for (const l of makeBigLooks(3, { steps: 4, fixtures: 6 })) await k.post('/api/looks/add', { look: l })
   await waitFor(() => fs.existsSync(file))
@@ -340,7 +330,7 @@ describe('gated: a save held in flight', () => {
       await settled(k, file)
       g = gateWrites()   // armed only now: the saves while settling must not be held
       await k.post('/api/master', { master: 77 })
-      await g.reached
+      await reachedIn(g)
       const r = await k.post('/api/show/open', { space: 'space-a' })
       expect(r.status).toBe(200)
       g.release()
@@ -357,7 +347,7 @@ describe('gated: a save held in flight', () => {
       await settled(k, file)
       g = gateWrites()   // armed only now: the saves while settling must not be held
       await k.post('/api/master', { master: 88 })
-      await g.reached
+      await reachedIn(g)
       await k.post('/api/looks/add', { look: look('after-the-write-began', 5) })   // the held write holds the OLD looks: a longer newer text must not be overwritten by it
       k.dk.close()
       const want = JSON.parse(JSON.stringify(k.dk.state))
@@ -365,5 +355,51 @@ describe('gated: a save held in flight', () => {
       await new Promise((r2) => setTimeout(r2, 800))
       expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual(want)
     } finally { g.restore(); fs.rmSync(k.d, { recursive: true, force: true }) }
+  }, 30000)
+})
+
+// ---- R3-I1: a synchronous save clears what an async save in flight owed ----
+// The gate holds the FIRST writeFile and finds the save by its open() call, not by the temp file's name.
+const holdAsyncWrite = () => {
+  const realOpen = fs.promises.open
+  let open, held = false
+  const gate = new Promise((r) => { open = r })
+  fs.promises.open = async function (p, flags, ...rest) {
+    const fh = await realOpen.call(fs.promises, p, flags, ...rest)
+    if (flags === 'w' && /show\.json\.(async\.)?tmp$/.test(String(p))) {
+      const realWrite = fh.writeFile.bind(fh)
+      let n = 0
+      fh.writeFile = async (...a) => { if (n++ === 0) { held = true; await gate } return realWrite(...a) }
+    }
+    return fh
+  }
+  return { isHeld: () => held, release: () => { fs.promises.open = realOpen; open() } }
+}
+const settle = (ms) => new Promise((r) => setTimeout(r, ms))
+
+describe('R3-I1: asyncOwes is cleared by a synchronous save', () => {
+  it('after a switch during a held save, leaving the new never-edited space writes nothing into it', async () => {
+    const k = await startDesk(true)
+    try {
+      const file = path.join(k.d, 'data', 'show.json')
+      const spaceFile = path.join(k.spaceDir, 'show.json')
+      await k.post('/api/looks/add', { look: look('m-1') })
+      expect(await waitFor(() => fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes('m-1'))).toBe(true)
+      await settle(300)
+      const h = holdAsyncWrite()
+      try {
+        await k.post('/api/master', { master: 66 })
+        expect(await waitFor(h.isHeld, 3000)).toBe(true)
+        expect((await k.post('/api/show/open', { space: 'space-a' })).status).toBe(200)
+      } finally { h.release() }
+      await settle(500)
+      expect(JSON.parse(fs.readFileSync(file, 'utf8')).master).toBe(66)
+      expect(fs.existsSync(spaceFile)).toBe(false)
+      expect((await k.post('/api/show/open', { space: null })).status).toBe(200)
+      await settle(300)
+      expect(fs.existsSync(spaceFile), 'leaving the never-edited space-a wrote a show into it').toBe(false)
+      expect((await k.post('/api/show/open', { space: 'space-a' })).status).toBe(200)
+      expect((await k.post('/api/show/copy-machine', {})).status).toBe(200)
+    } finally { await k.stop() }
   }, 30000)
 })

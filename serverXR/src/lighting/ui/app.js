@@ -326,7 +326,7 @@ async function pullState() {
     const reply = await fetch(heldRev != null ? 'api/state?looksRev=' + encodeURIComponent(heldRev) : 'api/state');
     const next = await reply.json();
     // looks left out and the rev still the one we sent: keep the list we sent it for (an older desk sends no looksRev and always sends looks).
-    if (next && !('looks' in next) && heldLooks && next.looksRev === heldRev) next.looks = heldLooks;
+    if (next && !('looks' in next) && heldLooks && next.looksRev === heldRev) next.looks = (S && S.looksRev === heldRev && Array.isArray(S.looks)) ? S.looks : heldLooks;
     // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
     const wasOffline = pollFails >= 2;
     // Opened for one space while the desk runs another show: say which, and keep what is
