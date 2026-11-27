@@ -101,10 +101,13 @@
     const m = model || {};
     const map = m.map || {};
     const rows = presetRows();
-    const eff = {};
-    for (const r of rows) eff[r.key] = { type: r.type, ch: r.ch, num: r.num };
+    const pre = {};
+    for (const r of rows) pre[r.key] = { type: r.type, ch: r.ch, num: r.num };
+    // Only what the live map binds is drawn and labelled (round 3, finding 3). The preset layout shows only while nothing is bound.
+    const own = {};
     let bound = 0;
-    for (const k of Object.keys(map)) { if (k in eff || /^(lookpad:|cue:)/.test(k)) { eff[k] = map[k]; bound++; } }
+    for (const k of Object.keys(map)) { if (k in pre || /^(lookpad:|cue:)/.test(k)) { own[k] = map[k]; bound++; } }
+    const eff = bound > 0 ? own : pre;
     const looks = Array.isArray(m.looks) ? m.looks : [];
     const page = mc.clampLookPage(m.page, looks.length);
     const lights = mc.apc40Lights(eff, m.cues, m.state, { looks, page, activeId: m.activeId || '' });
@@ -148,7 +151,7 @@
       onAir: (looks.find((l) => l.id === m.activeId) || {}).name || '',
       mapped: bound > 0,
     };
-    view.callouts = apc40Callouts(eff, view);
+    view.callouts = bound > 0 ? apc40Callouts(own, view) : [];
     return view;
   }
 
@@ -165,6 +168,15 @@
     if (num >= 16 && num <= 23) return { id: 'dk.' + (num - 16), kind: 'knob', bank: ch };
     if (num >= 48 && num <= 55) return { id: 'tk.' + (num - 48), kind: 'knob' };
     return null;
+  }
+  // Soft takeover of a drawn fader: `st` is null before the first move, then { prev, caught }. The desk's value is `desk`; a drag
+  // sends nothing until it lands within 1/127 of it or steps across it, then follows the pointer.
+  function takeover(st, u, desk) {
+    const s = st || { prev: null, caught: false };
+    if (s.caught) return { send: true, state: { prev: u, caught: true } };
+    const near = Math.abs(u - desk) <= 1 / 127 + 1e-9;
+    const crossed = s.prev != null && ((s.prev <= desk && u >= desk) || (s.prev >= desk && u <= desk));
+    return { send: near || crossed, state: { prev: u, caught: near || crossed } };
   }
   // Short names for the leader-line labels: what the control does on THIS desk.
   const LBL = { 'grp:left:dim': 'Left truss dimmer', 'grp:right:dim': 'Right truss dimmer', 'grp:back:dim': 'Back bars dimmer', zoom: 'Zoom, all bars',
@@ -205,7 +217,7 @@
   // The on-air pad: white label on this gradient is at least 4.5:1 at both ends (review L1; test pins it).
   const LIVE_GRADIENT = ['#dd2c22', '#cc0000'];
 
-  const api = { apc40View, apc40Callouts, ccTarget, ledHex, LED_HEX, BUTTONS, HW, CONTROLS, LIVE_GRADIENT };
+  const api = { apc40View, apc40Callouts, ccTarget, takeover, ledHex, LED_HEX, BUTTONS, HW, CONTROLS, LIVE_GRADIENT };
 
   // ---------------------------------------------------------------- the drawing (browser only)
   if (typeof document !== 'undefined') {
@@ -438,7 +450,7 @@
         const info = ce && ccByEl.get(ce);
         if (info) {
           if (!armed()) { say(NOTE_SAFE); return; }
-          drag = { info, y0: ev.clientY, u0: info.u == null ? .5 : info.u, done: 0, pointer: ev.pointerId };
+          drag = { info, y0: ev.clientY, u0: info.u == null ? .5 : info.u, done: 0, pointer: ev.pointerId, tk: null };
           try { ap.setPointerCapture(ev.pointerId); } catch (e) { /* no capture: moves still arrive over the unit */ }
           ev.preventDefault(); return;
         }
@@ -472,6 +484,12 @@
         else if (info.kind === 'xf') u = (ev.clientX - r.left) / r.width;
         else u = drag.u0 + (drag.y0 - ev.clientY) / (150 * (scale || 1));
         u = Math.round(clamp01(u) * 127) / 127;
+        // Soft takeover for the drawn fader (round 3, finding 1): nothing moves until the pointer crosses the desk's value.
+        if (info.kind !== 'knob') {
+          const t = takeover(drag.tk, u, drag.u0);
+          drag.tk = t.state;
+          if (!t.send) return;
+        }
         if (u === info.u) return;
         info.u = u; info.set(u);
         const ch = info.kind === 'knob' && /^dk\./.test(info.id) ? bankCh : info.ch;

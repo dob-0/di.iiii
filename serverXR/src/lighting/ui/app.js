@@ -6856,8 +6856,15 @@ function midiApcPress(key) {
 // the desk's own binding map, soft takeover, the ARM gate), never a second copy of what each control does.
 function midiApcMsg(m) {
   if (!midiArmed || midiLearnRow || midiWizardOn || midiSceneLearn) return;
-  if (m.type === 'note' && !m.down) midiRelease(m.ch, m.num);
-  else midiHandle(m.type, m.ch, m.num, m.unit, m.raw);
+  if (m.type === 'note' && !m.down) { midiRelease(m.ch, m.num); return; }
+  // A drawn fader has its own takeover (the drag), so it skips the real unit's pickup; afterwards the REAL unit must catch
+  // the desk again and forgets its last value, else its next move jumps the rig (round 3, finding 2).
+  const key = m.type === 'cc' ? midiKeyFor('cc', m.ch, m.num) : null;
+  const tg = key && midiTargets.find((x) => x.key === key);
+  const pos = !!(tg && !tg.rel);
+  if (pos) midiPickup[key] = false;
+  midiHandle(m.type, m.ch, m.num, m.unit, m.raw);
+  if (pos) { midiPickup[key] = true; delete midiLastVal[key]; }
 }
 // What the desk reads for every bound fader / knob (0..1), so a change made anywhere on the desk moves the drawn control.
 function midiApcValues() {

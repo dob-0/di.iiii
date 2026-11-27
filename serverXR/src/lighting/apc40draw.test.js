@@ -51,7 +51,7 @@ describe('drawn APC40: buttons', () => {
     expect(b.cueback.hw).toBe('SCENE LAUNCH 1'); expect(b.cueauto.hw).toBe('SCENE LAUNCH 2'); expect(b.cueloop.hw).toBe('SCENE LAUNCH 3')
     expect(b.blackout).toMatchObject({ note: 0x56, hw: 'SCENE LAUNCH 5', danger: true })
     expect(b['lookpage:next'].hw).toBe('RIGHT'); expect(b['lookpage:prev'].hw).toBe('LEFT')
-    expect(Object.keys(b).sort()).toEqual(Object.keys(BUTTONS).sort())
+    expect(Object.keys(b).sort()).toEqual(Object.keys(map).filter((k) => BUTTONS[k]).sort())   // round 3: only what the map binds
     expect(view().master).toMatchObject({ mapped: true, cc: 0x0e })
   })
   it('blackout is the only one marked danger; its LED goes bright red when on, dim red when off', () => {
@@ -69,8 +69,8 @@ describe('drawn APC40: buttons', () => {
     delete m2.blackout
     const v = apc40View({ map: m2, cues: { list: [] }, state: {}, looks, page: 0 })
     expect(v.buttons.find((x) => x.key === 'cuego').note).toBe(0x5d)
-    // blackout still comes from the preset layout: the drawing never invents a binding the preset lacks
-    expect(v.buttons.find((x) => x.key === 'blackout').note).toBe(0x56)
+    // round 3: an unbound key is not drawn, not even from the preset
+    expect(v.buttons.find((x) => x.key === 'blackout')).toBeUndefined()
   })
   it('an empty map draws the preset layout and says it is not mapped; a bound map says so', () => {
     expect(apc40View({ map: {}, looks, page: 0 }).mapped).toBe(false)
