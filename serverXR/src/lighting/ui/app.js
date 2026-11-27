@@ -6069,6 +6069,7 @@ let midiSceneLearn = null;       // scene id waiting for a pad
 let midiBank = 0;
 let midiTargets = [];
 let midiSig = '';
+let midiKnobBank = null;           // the device-knob bank (MIDI channel) last heard
 const midiPickup = {};           // target key -> true while waiting to be caught
 const midiLastVal = {};          // target key -> last incoming 0..1
 const midiSeenCC = new Set();
@@ -6077,7 +6078,7 @@ const midiSeenNote = new Set();
 // A mirror of the values this page drives. Soft takeover needs something to compare a
 // fader against, and re-reading a 500-scene state blob per message is not that. While
 // disarmed it is refreshed from the desk; while armed this page is the one moving them.
-const midiLive = { master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null,
+const midiLive = { strobeU: 0.5, master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null,
   fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255 };
 
 /* ---- the send queue ---- */
@@ -6119,7 +6120,7 @@ async function midiFlush() {
           // keepalive lets a release leave when the page closes, but a keepalive body is capped near 64 KB
           // by the browser (a white hit over a big rig is ~60 KB): big bodies go without it, and the
           // page-close backstop is the tiny {clear} post in midiReleaseAll.
-          keepalive: bodyText.length < 30000,
+          keepalive: bodyText.length < 12000,
           body: bodyText,
         });
         if (item.route === 'api/looks/fire' && item.body && item.body.id) midiLookAnswer(item.body.id, r.ok);
@@ -6165,7 +6166,31 @@ function midiHoldUp(key) {
   if (!h) return;
   clearTimeout(h.timer);
   midiHeld.delete(key);
-  midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, channels: window.deskMidiPatch.releaseOf(h.channels) }, 'hold:' + key, true);
+  if (h.channels && h.channels.length) midiSend('api/raw', { owner: window.deskMidiPatch.HOLD_OWNER, channels: window.deskMidiPatch.releaseOf(h.channels) }, 'hold:' + key, true);
+  // a strobe hit's software part (fixtures with no strobe channel) goes back to the rig's own effect
+  if (h.fxIds && h.fxIds.length) midiSend('api/fx', { mode: 'rig', ids: h.fxIds }, 'hold:fx:' + key, true);
+}
+// Strobe hits (N7314): hold-to-flash plus the strobe. The bar's strobe channel is held at the rate knob, capped at 3 Hz in
+// midiPatch.js (capStrobeDmx); fixtures with no strobe channel get the software strobe (fx.js, also <= 3 Hz); a shutter is never written.
+function midiStrobeDown(key, kind) {
+  const mp = window.deskMidiPatch;
+  if (!midiArmed || !mp || midiHeld.has(key)) return;
+  const hit = mp.strobeHit((S && S.fixtures) || [], (f) => S.profiles[f.profile], kind, midiLive.strobeU);
+  if (!hit.holds.length && !hit.fxIds.length) return;
+  midiHeld.set(key, { channels: hit.holds, fxIds: hit.fxIds, timer: setTimeout(() => midiHoldUp(key), mp.MAX_HOLD_MS) });
+  if (hit.holds.length) midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: hit.holds }, 'hold:' + key, true);
+  if (hit.fxIds.length) midiSend('api/fx', { mode: 'strobe', ids: hit.fxIds }, 'hold:fx:' + key, true);
+}
+// The rate knob turned while a strobe is held: the held strobe channel follows (still through the cap).
+function midiStrobeRate() {
+  const mp = window.deskMidiPatch;
+  const h = midiHeld.get('hit:strobe-all');
+  if (!h || !h.channels) return;
+  const dmx = mp.strobeDmxFromUnit(midiLive.strobeU);
+  const upd = h.channels.filter((c) => c.value !== 255 && c.value >= 4 && c.value <= 14).map((c) => ({ ...c, value: dmx }));
+  if (!upd.length) return;
+  h.channels = h.channels.map((c) => (c.value !== 255 && c.value >= 4 && c.value <= 14 ? { ...c, value: dmx } : c));
+  midiSend('api/raw', { owner: mp.HOLD_OWNER, channels: upd }, 'hold:strobe-rate', true);
 }
 // Every hit lets go: disarm, a new controller, page close. Goes out even as the gate closes.
 function midiReleaseAll() {
@@ -6284,6 +6309,23 @@ function buildMidiTargets() {
     cc('layerrate', 'Layer rate  (look speed 1/8x - 8x, centre 1x)', () => { const l = cueLayer(); return mp.unitFromRate(l ? l.rate : 1); },
       (u) => midiSend('api/layer', { id: TOUCH_LOOK_LAYER, rate: mp.rateFromUnit(u) }, 'api/layer:rate'));
 
+    // Movement size (N7315): the Cues layer's pan/tilt swing around each look's own centre, 0-100 %, 100 = as written.
+    cc('headscale', 'Movement size  (head swing 0-100 %, 100 = as the look is written)', () => { const l = cueLayer(); return l && Number.isFinite(+l.headScale) ? +l.headScale : 1; },
+      (u) => { const v = mp.headScaleFromUnit(Math.round(u * 100) / 100); const l = cueLayer(); if (l) { if (v < 1) l.headScale = v; else delete l.headScale; } midiSend('api/layer', { id: TOUCH_LOOK_LAYER, headScale: v }, 'api/layer:headscale'); });
+
+    // The 8 device knobs, one bank per TRACK SELECT (page = MIDI channel); each ring shows the desk's value.
+    T.push({ group: 'Effect knobs  (device knobs 1-8, banked by TRACK SELECT 1-4)' });
+    for (const k of mp.KNOBS) {
+      cc(k.key, `${k.pageName}: ${k.label}  [${k.unitLabel}]  (bank ${k.ch} knob ${k.num - 15})`,
+        () => { const u = mp.knobUnit(k, k.read(S)); return u === undefined ? 0.5 : u; },
+        (u) => {
+          const r = mp.knobSend(k, u, S);
+          if (!r) return;
+          if (r.route === 'api/lfos') S.lfos = r.body.lfos;   // the next knob of this page edits this list, not a stale one
+          midiSend(r.route, r.body, 'kn:' + k.key);
+        });
+    }
+
     T.push({ group: 'Tempo  (tap · nudge · knob)' });
     const tapper = mp.createTapper();
     pad('tap', 'Tap tempo  (the beat and the speed)', () => {
@@ -6343,6 +6385,12 @@ function buildMidiTargets() {
       up: () => midiHoldUp(key) });
     hit('hit:white', 'Hit: white flash, every fixture', () => fixtures);
     for (const g of groups.filter((x) => x.key !== 'back')) hit(`hit:${g.key}`, `Hit: ${g.label} flash`, () => fixtures.filter((f) => g.ids.includes(f.id)));
+    // Strobe (N7314). Rate = track knob 1, 1-3 Hz; the page caps it (midiPatch.capStrobeDmx). Hits release on pad up, disarm, close.
+    cc('strobe:rate', 'Strobe rate  1-3 Hz  (hits below; capped at 3 Hz)', () => midiLive.strobeU, (u) => { midiLive.strobeU = u; midiStrobeRate(); });
+    T.push({ key: 'hit:strobe-all', label: 'Hit: strobe, back bars + soft strobe on the rest (hold)', kind: 'note',
+      apply: () => midiStrobeDown('hit:strobe-all', 'all'), up: () => midiHoldUp('hit:strobe-all') });
+    T.push({ key: 'hit:strobe-movers', label: 'Hit: strobe, movers, software only (hold)', kind: 'note',
+      apply: () => midiStrobeDown('hit:strobe-movers', 'movers'), up: () => midiHoldUp('hit:strobe-movers') });
     const swapUp = () => {
       const h = midiHeld.get('hit:swap'); if (!h) return;
       clearTimeout(h.timer); midiHeld.delete('hit:swap');
@@ -6676,6 +6724,12 @@ function midiHandle(type, ch, num, unit, raw) {
   // (a master pulled to 0 in Safe, then ARM, then 1/127 = caught at once = the rig goes dark).
   if (!midiArmed || midiLiveWait) { midiLastVal[key] = unit; return; }
 
+  // A device knob bank change: the unit re-sends all 8 positions on the new channel. Those are positions, not turns, so
+  // every knob waits to be caught again (else the bank change would jump every value).
+  if (key.startsWith('kn:') && midiKnobBank !== ch) {
+    if (midiKnobBank != null) for (const k of Object.keys(midiMap)) if (k.startsWith('kn:')) { midiPickup[k] = true; delete midiLastVal[k]; }
+    midiKnobBank = ch;
+  }
   // soft takeover: ignore until the physical control crosses the desk's value
   if (midiPickup[key]) {
     const target = t.read ? t.read() : 0;
@@ -6990,6 +7044,8 @@ function midiGroupOn() {
   for (const g of mp.rigGroups(S.fixtures, S.groups)) if (g.ids.length) out[g.key] = mp.groupIsOn(S.fixtures, g);
   return out;
 }
+// Each device-knob ring shows the desk's value (midiPatch.knobRings); none before the desk's state arrives.
+function midiRings() { try { return S && window.deskMidiPatch ? window.deskMidiPatch.knobRings(S) : {}; } catch (e) { return {}; } }
 function midiLeds() {
   if (!midiPainter && window.deskMidiCues) {
     midiPainter = window.deskMidiCues.createLedPainter({
@@ -6998,7 +7054,7 @@ function midiLeds() {
       armed: () => midiArmed,   // only the armed tab owns the pads' lights (a getter: midiArmed is declared further down)
       map: () => midiMap,
       cues: () => CUES,
-      state: () => ({ blackout: midiBlackoutNow(), groupOn: midiGroupOn() }),
+      state: () => ({ blackout: midiBlackoutNow(), groupOn: midiGroupOn(), rings: midiRings() }),
       looks: () => (Array.isArray(S && S.looks) ? S.looks : []),   // not looksOf(): a const further down
       page: () => midiLookPage,
       setPage: (p) => { midiLookPage = p; },
@@ -7078,6 +7134,7 @@ function midiLedsOff() {
       const b = midiMap[k];
       if (b && b.type === 'note' && b.ch === 1 && Number.isInteger(b.num)) midiLedOut.send([0x90, b.num, 0]);
       else if (b && b.type === 'note' && /^grp:\w+:on$/.test(k) && b.ch >= 1 && b.ch <= 8) midiLedOut.send([0x90 | (b.ch - 1), b.num, 0]);
+      else if (b && b.type === 'cc' && /^kn:/.test(k) && b.ch >= 1 && b.ch <= 9) midiLedOut.send([0xB0 | (b.ch - 1), b.num + 8, 0]);   // ring off
     }
   } catch (e) { /* port gone */ }
   midiLedSent.clear();

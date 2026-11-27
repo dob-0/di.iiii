@@ -23,8 +23,8 @@ A keepalive fetch is capped near 64 KB; a white hit over 33 fixtures is ~60 KB a
 ## Rollback
 Revert the PR; "Clear map" + "Map my controller" returns to 49.
 
-## Round 2: strobe, effect knob pages, movement size (N7314, N7315) - engine, preset, tests done; app.js wiring WAITS
-State: 73 -> 100 preset controls (73 + 23 device knobs + strobe rate + movement size + 2 strobe hits). The page wiring in `ui/app.js` is not in this commit: #1394 (the base) is being reworked there; head was e6c410f2a (the base) when checked.
+## Round 2: strobe, effect knob pages, movement size (N7314, N7315) - engine, preset, tests, app.js wiring done
+State: 73 -> 100 preset controls (73 + 23 device knobs + strobe rate + movement size + 2 strobe hits). The page wiring in `ui/app.js` is in, merged onto #1394 head a9499a48b (soft takeover kept; bank change returns all knob keys to pickup). Sim on a scratch desk from the Reika checkpoint: 64 of 64 after the row-count fix (the run before it, 63 of 64, differed only in that count). Fix found by the sim: a keepalive release body over about 12 KB is dropped by the browser, so the 750-channel strobe release left holds; the cap is now 12000 bytes (larger bodies go without keepalive). Not tried on a real APC40, real lamps or the real bars.
 - Engine: `layer.headScale` 0-1 (api/layer `headScale`, saved only below 1). `headMotion.headsFrame` scales each look's pan/tilt swing around the look's own rest position. 100 % = the same bytes as before; 0 % = heads hold the centre; never outside 0-255 (`headScale.test.js`).
 - Strobe: `midiPatch.capStrobeDmx` caps the BAR1240PIX57 `strobe` hold at DMX 14 (= 2.92 Hz, WCAG 2.3.1); test sweeps the knob 0..1 in 1000 steps. MovingBar43 `shutter` is never written: movers get the software strobe (fx.js, slice >= 350 ms) only.
 - Pixel COUNT: the pixel map has no live count / segments / repeat parameter (a strip's `pixels` is a patch, not a live knob); not bound, patch untouched.

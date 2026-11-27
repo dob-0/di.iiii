@@ -41,6 +41,7 @@ function page(o = {}) {
     const midiLive = { master: 255, blackout: false, fxDepth: 255, fxBpm: 120, fxMode: null, fxOn: false, holdMs: 2000, fadeMs: 800, chase: false, allDim: 255 };
     const midiPickup = {}, midiLastVal = {}, midiMap = A.map, midiPending = new Map(), midiLedSent = new Set();
     const midiTabId = 'tab';
+    const midiTargets = [], midiReleaseAll = () => {};   // the APC40 patch's hold release and relative-knob exemption (#1397)
     const midiPainter = { reset() { L.resets++; } };
     const midiBlackoutNow = () => false;
     const midiDraw = () => { L.draws++; }, midiPaintLights = () => { L.paints++; }, midiLedsOff = () => {}, midiBindLights = () => {};
