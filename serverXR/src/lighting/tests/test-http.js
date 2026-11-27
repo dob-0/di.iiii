@@ -167,6 +167,19 @@ check('master and blackout reach the wire, and blackout is recoverable', async (
   assert.strictEqual(await wire(11, 1), 255, 'and it comes back');
 });
 
+check('group fader (sub) dims over a running level, and a non-number is refused', async () => {
+  const d = await patch('drgb', { universe: 13, address: 1 });
+  await POST('/api/fixture', { id: d.id, values: { dimmer: 255, r: 255, g: 255, b: 255 } });
+  await POST('/api/fixture', { id: d.id, sub: 0 });
+  await settle();
+  assert.strictEqual(await wire(13, 1), 0, 'sub 0 darkens the dimmer');
+  const bad = await POST('/api/fixture', { id: d.id, sub: '' });
+  assert.strictEqual(bad.status, 400, 'an empty string is not a fader level');
+  await POST('/api/fixture', { id: d.id, sub: null });
+  await settle();
+  assert.strictEqual(await wire(13, 1), 255, 'null brings it back to full');
+});
+
 check('master is not applied twice to a fixture with a dimmer channel', async () => {
   const d = await patch('drgb', { universe: 12, address: 1 });
   const g = await patch('rgb', { universe: 12, address: 10 });
