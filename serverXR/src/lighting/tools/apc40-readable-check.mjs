@@ -46,6 +46,7 @@ for (const [w, h] of sizes) {
   const pages = await page.evaluate(() => Math.max(1, Math.ceil((S.looks || []).length / 40)))
   for (let pg = 0; pg < pages; pg++) {
     if (pg > 0) { await page.evaluate(() => midiLookPageStep(1)); await page.waitForTimeout(500) }
+    await page.evaluate(() => { const w = document.querySelector('.midiwrap'); if (w && w.scrollTop < 3) w.scrollTop = 0 })
     const m = await page.evaluate((pageNo) => {
       const stage = document.querySelector('.apcstage'), k = stage.getBoundingClientRect().width / stage.offsetWidth
       const px = (e) => parseFloat(getComputedStyle(e).fontSize) * k
@@ -58,13 +59,23 @@ for (const [w, h] of sizes) {
       const short = pads.filter((p) => p.firstChild.dataset.short).length
       const noTitle = pads.filter((p) => p.firstChild.dataset.short && !/\S/.test(p.title || '')).length
       const list = document.querySelectorAll('ol.padlist li').length
-      return { scale: Math.round(k * 1000) / 1000, pads: pads.length, padMin: Math.min(...padPx), clN: cl.length, clMin: cl.length ? Math.min(...clPx) : null, cut, clCut, short, noTitle, list }
+      // first view: opens unscrolled, the pane heading + both pad-order buttons are on screen, no leader label is under a bar
+      const wrap = document.querySelector('.midiwrap'), vh = window.innerHeight
+      const inView = (e) => { const r = e.getBoundingClientRect(); return !!e && r.top >= 0 && r.bottom <= vh && r.height > 0 }
+      const head = document.querySelector('.miapcpane .pane-head h2'), btns = [...document.querySelectorAll('.miapcpane .pane-head button')]
+      const firstView = { scrollTop: wrap ? Math.round(wrap.scrollTop) : -1, heading: !!head && inView(head), orderButtons: btns.length, orderButtonsInView: btns.filter(inView).length }
+      const tops = cl.filter((e) => e.classList.contains('top'))
+      const bars = [...document.querySelectorAll('*')].filter((e) => { const c = getComputedStyle(e).position; return (c === 'sticky' || c === 'fixed') && e.getBoundingClientRect().height > 0 && !e.closest('.apcstage') }).map((e) => e.getBoundingClientRect())
+      const underBar = cl.filter((e) => { const r = e.getBoundingClientRect(); return (r.top < 0 && e.classList.contains('top')) || bars.some((b) => r.left < b.right && r.right > b.left && r.top < b.bottom - 1 && r.bottom > b.top + 1) }).map((e) => e.textContent.slice(0, 20))
+      // short forms: two different looks on one page never show the same text
+      const seen = new Map(), dup = []
+      for (const p of pads) { const t = p.firstChild.textContent.trim(); const full = p.title || ''; if (seen.has(t) && seen.get(t) !== full) dup.push(t); seen.set(t, full) }
+      return { scale: Math.round(k * 1000) / 1000, pads: pads.length, padMin: Math.min(...padPx), clN: cl.length, clMin: cl.length ? Math.min(...clPx) : null, cut, clCut, short, noTitle, list, firstView, underBar, dup, topLabels: tops.length }
     }, pg + 1)
-    const ok = m.padMin >= FLOOR - 0.05 && (m.clMin == null || m.clMin >= FLOOR - 0.05) && m.cut === 0 && m.clCut === 0 && m.noTitle === 0 && m.list === m.pads
+    const ok = m.padMin >= FLOOR - 0.05 && (m.clMin == null || m.clMin >= FLOOR - 0.05) && m.cut === 0 && m.clCut === 0 && m.noTitle === 0 && m.list === m.pads && m.firstView.scrollTop === 0 && m.firstView.heading && m.firstView.orderButtons >= 2 && m.firstView.orderButtonsInView === m.firstView.orderButtons && m.underBar.length === 0 && m.dup.length === 0
     if (!ok) fail++
     rows.push({ size: w + 'x' + h, page: pg + 1, ...m, ok })
     console.log((ok ? 'PASS ' : 'FAIL ') + w + 'x' + h + ' page ' + (pg + 1) + '  ' + JSON.stringify(m))
-    await page.locator('#miApc').scrollIntoViewIfNeeded()
     await page.screenshot({ path: path.join(out, `readable-${w}x${h}-page${pg + 1}.png`) })
     // The pane scrolls inside the page: a tall window for the whole pane's picture (width, hence scale, unchanged).
     const paneH = await page.evaluate(() => Math.ceil(document.querySelector('.miapcpane').getBoundingClientRect().height))

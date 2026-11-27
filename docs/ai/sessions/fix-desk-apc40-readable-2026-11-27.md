@@ -5,3 +5,8 @@
 - Check: `serverXR/src/lighting/tools/apc40-readable-check.mjs` (headless, scratch desk on 127.0.0.1 only, the 100-row reikaMap.fixture.json, all 3 look pages of the 98-look Reika copy): min pad name 11.0 px, min leader label 12.0 px at both sizes, 0 cut.
 - Not checked: the owner's real screen, the live desk, other widths below 1000 px (single column).
 - Rollback: revert the PR.
+
+## Round 2 (review of #1401 not clean)
+- Merged origin/dev (carries #1398 and CI fix 114870032).
+- I1: the check no longer scrolls the pane; it asserts the first view opens at scrollTop 0 and no leader label overlaps a sticky/fixed bar. I2: short forms are code + first word + "mirr." (e.g. "R5 Interrog.", "5 Comet mirr."), and the check asserts no two different looks show the same text on a page (0 duplicates). Item 4: heading and both pad-order buttons asserted inside the first view.
+- Pictures: apc-look/readable/r2/ at 1534x830 and 1536x864, 3 pages each.

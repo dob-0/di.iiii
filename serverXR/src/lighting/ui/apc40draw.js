@@ -298,7 +298,7 @@
     INS_R.push([86.5, TOT - INS_R.reduce((a, q) => a + q[1], 0)]);
     const NATIVE_W = 1108, NATIVE_H = 664 * (100 + TOT) / 100;
     // Pad names are sized in px AS DRAWN ON SCREEN (the stage is scaled, so native = rendered / scale), never under READ_MIN.
-    // A name that does not fit its pad at READ_MIN shows its short form (shortName) with the full name as the pad's title and in
+    // A name that does not fit its pad at READ_MIN shows its short form (shortForms) with the full name as the pad's title and in
     // the PADS list. Owner 2026-11-27: "fix and update ui that i can see what is what".
     const PAD_RENDERED = [14, 13, 12, 11.5, 11];
     const READ_MIN = 11;
@@ -669,12 +669,20 @@
         lbEl.dataset.cut = '1'; lbEl.dataset.px = sizes[sizes.length - 1];
       }
 
-      // Short form of a look name for a pad too small for it at READ_MIN: the leading code ("R1", "H3", "X1b"), or number + first word ("5 Comet").
-      function shortName(name) {
-        const w = String(name).trim().split(/\s+/);
-        if (/^[A-Za-z]{1,2}\d+[a-z]?$/.test(w[0])) return w[0];
-        if (/^\d+$/.test(w[0]) && w[1]) return w[0] + ' ' + w[1].replace(/[^\p{L}\p{N}-]+$/u, '');
-        return w[0].length > 8 ? w[0].slice(0, 8) : w[0];
+      // Short forms of a look name for a pad too small for it at READ_MIN, most informative first: the code + the first word
+      // ("R5 Interrog.", "5 Comet mirr.", "X1b Matrix"), then fewer letters, then the code alone. A trailing "mirrored" always
+      // stays ("mirr." / "M"), so a look and its mirrored twin never show the same text.
+      function shortForms(name) {
+        let w = String(name).trim().split(/\s+/), mirr = false;
+        if (w.length > 1 && /^mirrored$/i.test(w[w.length - 1])) { mirr = true; w = w.slice(0, -1); }
+        const cut = (x, n) => { const t = x.replace(/[^\p{L}\p{N}-]+/gu, ''); return t.length > n ? t.slice(0, n - 1) + '.' : t; };
+        const code = w[0], word = w[1] ? cut(w[1], 9) : '', word5 = w[1] ? cut(w[1], 5) : '';
+        const out = [];
+        const add = (t) => { if (t && !out.includes(t)) out.push(t); };
+        add([code, word, mirr ? 'mirr.' : ''].filter(Boolean).join(' '));
+        add([code, word5, mirr ? 'M' : ''].filter(Boolean).join(' '));
+        add([code, mirr ? 'M' : ''].filter(Boolean).join(' '));
+        return out;
       }
       // Fits `text` in the pad at the biggest size of PAD_RENDERED (px on screen); full name first, then the short form; else cut and counted.
       function fitPad(lbEl, name) {
@@ -686,7 +694,7 @@
         lbEl.textContent = name;
         if (!name) return;
         const fits = () => lbEl.scrollWidth <= lbEl.clientWidth && lbEl.scrollHeight <= lbEl.clientHeight;
-        for (const [text, isShort] of [[name, false], [shortName(name), true]]) {
+        for (const [text, isShort] of [[name, false], ...shortForms(name).map((t) => [t, true])]) {
           lbEl.textContent = text;
           if (isShort) lbEl.dataset.short = '1';
           for (const px of sizes) { lbEl.style.fontSize = px + 'px'; if (fits()) { lbEl.dataset.px = px; return; } }
