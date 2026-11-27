@@ -4962,6 +4962,7 @@ function buildOutput() {
     // The way back from "broadcast keeps off the laser network": only meaningful for Art-Net broadcast.
     $('#broadcastAllRow').hidden = !(S.output.driver === 'artnet' && S.output.mode === 'broadcast');
     $('#broadcastAll').checked = !!S.output.broadcastAll;
+    $('#strobeLimit').checked = !!S.output.strobeLimit;
     $('#refreshHz').value = S.output.refreshHz || 40;
   }
   if (typing) return;
@@ -7967,6 +7968,9 @@ $('#addNode').addEventListener('click', addNodeByIp);
   el.addEventListener('keydown', (e) => { if (e.key === 'Enter') addNodeByIp(); }));
 $('#broadcastAll').addEventListener('change', (e) => {
   post('api/output', { broadcastAll: e.target.checked }).then(pullState);
+});
+$('#strobeLimit').addEventListener('change', (e) => {
+  post('api/output', { strobeLimit: e.target.checked }).then(pullState);
 });
 $('#saveOutput').addEventListener('click', () => {
   const entries = $('#targets').value.split(',').map((s) => s.trim()).filter(Boolean);

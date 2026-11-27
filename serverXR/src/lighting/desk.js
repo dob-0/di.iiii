@@ -1405,8 +1405,8 @@ function createDesk(opts = {}) {
   // THE ROOM'S FLASH RULE FOR THE api/raw HOLDS (PR #1397 round 4, R3-I1; WCAG 2.3.1): no more than 3 flashes a second.
   // SINCE 2026-11-27 (owner N7618, "i dont want any limits") THIS RULE IS A DESK SETTING, OFF BY DEFAULT: output.strobeLimit
   // (POST api/output {strobeLimit:true}). Off = no cap on raw strobe, no rise limit; on = everything below, as it was.
-  // SCOPE (R4-I1): ONLY api/raw (the APC40 hits and any raw client). NOT capped here, on purpose and pending the owner's answer on
-  // scene strobe speed: api/fixture values, scene recall, cue GO, looks/fire (tests/test-strobe-cap.js pins this).
+  // SCOPE (R4-I1): ONLY api/raw (the APC40 hits and any raw client). NOT capped here, on purpose (the owner answered N7618, 2026-11-27:
+  // no limits at all, so with the setting off nothing is capped): api/fixture values, scene recall, cue GO, looks/fire.
   // The page caps its own strobe, but any client can POST api/raw, so the desk holds the line itself, two ways:
   //  1. a raw write to a `strobe`-role channel is capped like the page's capStrobeDmx: DMX 4-103 (the 1-20 Hz band of the
   //     BAR1240PIX57) is written as at most 14 (= 2.92 Hz), a value past the band as 0 (open), 0-3 stay open;

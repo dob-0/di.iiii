@@ -214,6 +214,16 @@ check('the broadcastAll checkbox is in the page and posts only its own key', () 
   assert.ok(js.includes("S.output.driver === 'artnet' && S.output.mode === 'broadcast'"), 'shown only for Art-Net broadcast');
 });
 
+check('the Strobe limit checkbox is in the page, off by default, and posts only its own key (N7618)', async () => {
+  const html = fs.readFileSync(path.join(__dirname, '../ui/index.html'), 'utf8');
+  const js = fs.readFileSync(path.join(__dirname, '../ui/app.js'), 'utf8');
+  assert.ok(/id="strobeLimit"/.test(html) && /Strobe limit \(3 Hz\)/.test(html));
+  assert.ok(js.includes("post('api/output', { strobeLimit: e.target.checked })"), 'posts the one changed key');
+  assert.ok(!(await GET('/api/state')).body.output.strobeLimit, 'off by default');
+  assert.strictEqual((await POST('/api/output', { strobeLimit: true })).body.output.strobeLimit, true);
+  assert.strictEqual((await POST('/api/output', { strobeLimit: false })).body.output.strobeLimit, false);
+});
+
 check('broadcastAll reaches the server as a boolean and a lone key leaves the rest alone', async () => {
   const before = (await GET('/api/state')).body.output;
   const on = await POST('/api/output', { broadcastAll: 1 });
