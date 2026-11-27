@@ -1291,6 +1291,52 @@
         },
         "text": "404 with a JSON body"
       }
+    },
+    {
+      "method": "GET",
+      "path": "api/camera",
+      "class": "c",
+      "reply": {
+        "configured": "boolean",
+        "cameras": "array",
+        "active": "boolean"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "api/camera/config",
+      "class": "c",
+      "reply": {
+        "configured": "boolean",
+        "cameras": "array"
+      },
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "api/camera/frame",
+      "class": "c",
+      "reply": {},
+      "node": {
+        "status": 404,
+        "body": {
+          "error": "string"
+        },
+        "text": "404 with a JSON body"
+      }
     }
   ],
   "node_routes": {
