@@ -302,11 +302,15 @@
     // the PADS list. Owner 2026-11-27: "fix and update ui that i can see what is what".
     const PAD_RENDERED = [14, 13, 12, 11.5, 11];
     const READ_MIN = 11;
+    const NARROW_W = 1000, READ_SCALE = 1.1;   // pane narrower than this: the unit is panned at READ_SCALE, not shrunk
 
     const css = document.createElement('style');
     css.textContent = CSS.join('\n') + [
       '.apc40{display:flex;flex-direction:column;gap:12px;align-items:stretch;min-width:0}',
       '.apc40 .apcwrap{position:relative;overflow:hidden;flex:none;min-width:0}',
+      '.apc40.pan .apcwrap{overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain}',
+      '.apc40 .apcjump{display:none;gap:8px;align-items:center;font:12px/1.3 var(--mono);color:var(--muted)}',
+      '.apc40.pan .apcjump{display:flex}.apc40 .apcjump button{font:600 12px/1 var(--mono);padding:8px 12px;min-height:32px}',
       '.apc40 .apcp{flex:none;width:' + NATIVE_W + 'px}',
       '.apcp .pad{border:1px solid rgba(255,255,255,.08);color:#151515;cursor:pointer;padding:0}',
       '.apcp .pad.live{background:linear-gradient(180deg,' + LIVE_GRADIENT[0] + ',' + LIVE_GRADIENT[1] + ');box-shadow:0 0 1.3cqw #ff0000;color:#fff;font-weight:700}',
@@ -362,10 +366,16 @@
     api.create = function (host, deps) {
       host.textContent = '';
       const wrap = el('div', 'apc40', host);
+      const jump = el('div', 'apcjump', wrap);
       const body = el('div', 'apcwrap', wrap);
       const side = el('div', 'apcside', wrap);
       const stage = el('div', 'apcstage', body);
       const ap = el('div', 'apcp', stage);
+      // Narrow pane: two jump buttons pan the unit (the pan box also scrolls by touch, wheel and its scrollbar).
+      { const step = (d) => body.scrollBy({ left: d * Math.max(120, body.clientWidth - 90), behavior: 'smooth' });
+        const bl = el('button', 'sq', jump, '\u25C0 Left'), br = el('button', 'sq', jump, 'Right \u25B6');
+        bl.type = br.type = 'button'; bl.onclick = () => step(-1); br.onclick = () => step(1);
+        el('span', '', jump, 'the unit scrolls sideways (drag or buttons)'); }
       const R = {};   // geometry key -> element, for the leader lines and the live display
       const A = { cols: [], pads: [], scene: [], btn: {}, fad: [], arrows: {} };
       const notePress = new Map();   // note -> key, refreshed by update()
@@ -760,21 +770,23 @@
       }
 
       // The panel is scaled to the room the pane has: width, and the window's height, so the whole unit is in view.
+      // Under NARROW_W the whole unit cannot be drawn at a readable size, so it is drawn at READ_SCALE (every pad name and
+      // leader label >= 11 px on screen) inside a pan box: the unit scrolls sideways under the two step buttons (left part: pads, knobs;
+      // right part: scene launch, transport, device knobs). It stays FIRST in the pane. Never hidden, never at 3 px type.
       let scale = 1;
       function fitScale() {
         const total = wrap.clientWidth; if (!total) return;
-        // Under 640 px the unit would be drawn at about 3 px type: say it in the table instead, which stays complete.
-        body.style.display = total < 640 ? 'none' : '';
-        if (total < 640) return;
         const m = margins(), SW = NATIVE_W + m.l + m.r, SH = NATIVE_H + m.t + m.b;
+        const narrow = total < NARROW_W && total < SW * READ_SCALE;
+        wrap.classList.toggle('pan', narrow);
         // By WIDTH only (the legend sits below it and the page scrolls): a height-bound scale drew the type at 4-7 px on screen.
-        scale = Math.max(.3, Math.min(total / SW, 2));
+        scale = narrow ? READ_SCALE : Math.max(.3, Math.min(total / SW, 2));
         stage.style.setProperty('--clpx', Math.max(10.5, Math.round(12 / scale * 100) / 100) + 'px');   // leader labels: 12 px on screen
         ap.style.left = m.l + 'px'; ap.style.top = m.t + 'px';
         stage.style.width = SW + 'px'; stage.style.height = SH + 'px';
         stage.style.transform = 'scale(' + scale + ')';
-        body.style.width = Math.floor(SW * scale) + 'px';
-        body.style.height = Math.ceil(SH * scale) + 'px';
+        body.style.width = narrow ? '100%' : Math.floor(SW * scale) + 'px';
+        body.style.height = Math.ceil(SH * scale) + (narrow ? 18 : 0) + 'px';
         if (lastView) lastView.pads.forEach((p, i) => fitPad(A.pads[i].firstChild, p.name));   // names are sized in px on screen: refit at every scale
         layoutCallouts();
       }
