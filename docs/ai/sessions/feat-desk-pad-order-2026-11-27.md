@@ -26,3 +26,10 @@ Stacks on #1389 (`feat/desk-apc40-drawn-2026-11-27`, the drawn APC40 + blackout 
 
 ## Turn it on / off
 `POST api/midi/padorder {"mode":"brightness"}` (the desk's /light/ base path); off: `{"clear":true}`. Rollback: revert the PR (a saved padOrder is ignored by the older code).
+
+## Review fixes, round 2 (#1393)
+- I2: `lookBrightness` memoised per look object (WeakMap); `placeLook` scores only the new look; GET `api/midi/padorder` does not score while the order is off; a desk with an order warms the memo 1 look per 5 ms after load. Measured on the 80-look checkpoint (scratch desk, same harness): looks/add order on 50 ms (order off 44 ms, same harness: the rest is the save); GET padorder 4 ms on, 1-3 ms off. Reviewer's before: 942/1041 ms and 746/799 ms.
+- L16: the delete test reads show.json guarded, runs alone 3 times: 27 passed each.
+- L13: the order change always asks for confirmation, in any tab.
+- L15: a new look fills the last row's free pads first.
+- Tests: 179 passed (15 files).

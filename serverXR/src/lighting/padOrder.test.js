@@ -6,7 +6,7 @@ import path from 'node:path'
 import http from 'node:http'
 
 const require = createRequire(import.meta.url)
-const { lookBrightness, cellLights, brightnessOrder, sanitizePadOrder, placeLook, describePadOrder, PAD_SLOTS } = require('./padOrder.js')
+const { brightnessComputed, lookBrightness, cellLights, brightnessOrder, sanitizePadOrder, placeLook, describePadOrder, PAD_SLOTS } = require('./padOrder.js')
 const { createDesk } = require('./desk.js')
 const mc = require('./ui/midiCues.js')
 const { apc40View } = require('./ui/apc40draw.js')
@@ -213,7 +213,9 @@ describe('route api/midi/padorder, saved with the show', () => {
     await call('POST', '/api/looks/remove', { id: gone })
     const file = path.join(dir, 'show.json')
     const t = Date.now()
-    while (Date.now() - t < 5000 && fs.readFileSync(file, 'utf8').includes('"' + gone + '"')) await new Promise((r) => setTimeout(r, 25))
+    const saved = () => { try { const x = fs.readFileSync(file, 'utf8'); return x.length > 0 && !x.includes('"' + gone + '"') } catch (e) { return false } }   // the file may not exist yet
+    while (Date.now() - t < 5000 && !saved()) await new Promise((r) => setTimeout(r, 25))
+    expect(saved()).toBe(true)
     await stop(); await boot()
     const after = (await call('GET', '/api/midi/padorder')).body.padOrder
     before.forEach((id, i) => { if (id !== gone) expect(after[i]).toBe(id) })
@@ -243,3 +245,38 @@ describe('placeLook', () => {
     expect(placeLook(null, L, L[0])).toBeNull()
   })
 })
+
+describe('cost: a look is scored once', () => {
+  it('lookBrightness is memoised per look object; a new look costs one score, not a pass over the library', () => {
+    const L = looks(40)
+    const order = brightnessOrder(L, L.map(lookBrightness))
+    const base = brightnessComputed()
+    for (let i = 0; i < 3; i++) L.map(lookBrightness)
+    expect(brightnessComputed()).toBe(base)               // warm: nothing recomputed
+    const nl = mk('fresh', 120)
+    placeLook(order, L.concat(nl), nl)
+    placeLook(order, L.concat(nl), nl)
+    expect(brightnessComputed()).toBe(base + 1)           // only the new look, once
+  })
+  it('GET api/midi/padorder does not score while the order is off', () => {
+    const L = looks(5)
+    const base = brightnessComputed()
+    const d = describePadOrder(L, null, false)
+    expect(d).toHaveLength(5); expect(d.every((p) => p.brightness === null)).toBe(true)
+    expect(brightnessComputed()).toBe(base)
+  })
+})
+
+describe('placeLook: the last row\'s free pads first (L15)', () => {
+  it('slot 79 free after a trailing cut: a column-7 look takes it, never a new page', () => {
+    const L = looks(7)   // the brightest of 8 looks is band 8 = column 8
+    const order = Array(79).fill('l0')                       // 79 full slots: indices 0..78
+    const nl = mk('top', 250)
+    const o = placeLook(order, [...L, nl], nl)
+    expect(o.indexOf('top')).toBe(79)                         // column 7 of the last row, not 88
+    expect(o).toHaveLength(80)
+    const o2 = placeLook(Array(80).fill('l0'), [...L, nl], nl)
+    expect(o2.indexOf('top')).toBe(87)                        // the last row is full: a new row
+  })
+})
+

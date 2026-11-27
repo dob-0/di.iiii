@@ -6582,13 +6582,14 @@ async function midiLoadPadBright() {
 }
 // The pad order is a desk setting, not a MIDI message: it never touches the rig, so it needs no ARM.
 async function midiSetPadOrder(body, said) {
-  // Armed, every pad under the player's fingers changes at once: ask first.
-  if (midiArmed && !window.confirm('The controller is ARMED. This moves every look to another pad now. Continue?')) return;
+  // Every pad changes at once, under the fingers of whoever plays (an armed controller may be in ANOTHER tab): always ask.
+  if (!window.confirm('This moves looks to other pads on every controller now. Continue?')) return;
   const r = await post('api/midi/padorder', body);
   const note = $('#miOrderNote');
   if (!r || r.error) { if (note) note.textContent = 'not changed: ' + ((r && r.error) || 'no answer'); return; }
   if (S) S.padOrder = r.padOrder;
   midiOrderWin = { order: r.padOrder, at: Date.now() };
+  midiPadBright = null;   // the shading needs the scores again (the GET sends none while the order is off)
   midiLookPage = 0;
   midiRepaintLookPads(); midiDrawLookPage(); midiApcUpdate();
   if (note) note.textContent = said;

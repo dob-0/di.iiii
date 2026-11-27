@@ -39,7 +39,19 @@ function cellLights(values) {
 
 // One number per look, 0 = dark, about 1 = one colour channel full. Mean over every cell of
 // every fixture of every step.
+const memo = new WeakMap();   // look object -> score: every look change puts a NEW object in the list (desk.js), so this is exact
+let computed = 0;             // how many scores were really computed (the test counts it)
 function lookBrightness(look) {
+  if (look && typeof look === 'object') {
+    if (memo.has(look)) return memo.get(look);
+    const v = scoreLook(look);
+    memo.set(look, v);
+    return v;
+  }
+  return 0;
+}
+function scoreLook(look) {
+  computed++;
   let sum = 0, n = 0;
   for (const step of (look && Array.isArray(look.steps)) ? look.steps : []) {
     const values = step && step.values;
@@ -96,22 +108,32 @@ function placeLook(order, looks, look, scores) {
   if (!Array.isArray(order) || !order.length || !look) return order || null;
   if (order.includes(look.id)) return order;
   const me = list.findIndex((l) => l.id === look.id);
-  const sc = scores || list.map(lookBrightness);
+  const sc = scores || list.map(lookBrightness);   // memoised: only the new look is computed once the rest are warm
   const mine = me >= 0 ? sc[me] : lookBrightness(look);
   const rank = sc.filter((s, j) => s < mine || (s === mine && j < me)).length;
   const col = Math.min(COLUMNS - 1, Math.floor(rank * COLUMNS / Math.max(1, list.length)));
   const out = order.slice();
   let at = out.findIndex((v, i) => v === null && i % COLUMNS === col);
   if (at < 0) {
-    at = Math.ceil(out.length / COLUMNS) * COLUMNS + col;
+    // the free pads of the last row first (sanitize cuts trailing empties), then a new row
+    const rowStart = Math.floor(Math.max(out.length - 1, 0) / COLUMNS) * COLUMNS;
+    at = rowStart + col >= out.length ? rowStart + col : rowStart + COLUMNS + col;
     while (out.length < at) out.push(null);
   }
   out[at] = look.id;
   return out;
 }
 
+// Warm the memo a few looks at a time so no one request pays for the whole library.
+function warmBrightness(looks, isOpen) {
+  const list = Array.isArray(looks) ? looks : [];
+  let i = 0;
+  const step = () => { if (isOpen && !isOpen()) return; if (i < list.length) { lookBrightness(list[i++]); const t = setTimeout(step, 5); if (t.unref) t.unref(); } };
+  const t = setTimeout(step, 50); if (t.unref) t.unref();
+}
+
 // What GET returns: each pad (flat slot number) with its look and brightness x 100.
-function describePadOrder(looks, padOrder) {
+function describePadOrder(looks, padOrder, withBrightness = true) {
   const list = Array.isArray(looks) ? looks : [];
   const byId = new Map(list.map((l) => [l.id, l]));
   const src = Array.isArray(padOrder) ? padOrder : list.map((l) => l.id);
@@ -121,9 +143,9 @@ function describePadOrder(looks, padOrder) {
       slot, page: Math.floor(slot / PAD_SLOTS), pad: slot % PAD_SLOTS,
       row: Math.floor((slot % PAD_SLOTS) / COLUMNS), column: slot % COLUMNS,
       id: l ? l.id : null, name: l ? l.name : null,
-      brightness: l ? Math.round(lookBrightness(l) * 1000) / 10 : null,
+      brightness: l && withBrightness ? Math.round(lookBrightness(l) * 1000) / 10 : null,
     };
   });
 }
 
-module.exports = { COLUMNS, ROWS_PER_PAGE, PAD_SLOTS, cellLights, lookBrightness, brightnessOrder, sanitizePadOrder, placeLook, describePadOrder };
+module.exports = { COLUMNS, ROWS_PER_PAGE, PAD_SLOTS, cellLights, lookBrightness, brightnessOrder, sanitizePadOrder, placeLook, describePadOrder, warmBrightness, brightnessComputed: () => computed };

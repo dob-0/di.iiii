@@ -44,7 +44,7 @@ const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
   KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
 } = require('./looks');
-const { sanitizePadOrder, placeLook, brightnessOrder, lookBrightness, describePadOrder } = require('./padOrder');
+const { sanitizePadOrder, placeLook, warmBrightness, brightnessOrder, lookBrightness, describePadOrder } = require('./padOrder');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
 const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
@@ -392,6 +392,7 @@ function createDesk(opts = {}) {
       s.midi = sanitizeMidi(disk.midi) || { maps: [] };
       s.looks = sanitizeLooks(disk.looks) || [];
       s.padOrder = sanitizePadOrder(disk.padOrder, s.looks);
+      if (s.padOrder) warmBrightness(s.looks);   // a few looks at a time, so a later looks/add scores only the new look
       s.layers = sanitizeLayers(disk.layers) || [];
       s.cues = sanitizeCues(disk.cues);
       s.strips = strips.sanitizeStrips(disk.strips);
@@ -1953,7 +1954,7 @@ function createDesk(opts = {}) {
 
     // The APC40 pad order (padOrder.js). {mode:'brightness'} sorts the looks dark to bright into 8 columns,
     // {order:[ids]} sets it by hand, {clear:true} goes back to desk order. `looks` itself is never reordered.
-    'GET /api/midi/padorder': (req, res) => json(res, { padOrder: state.padOrder, pads: describePadOrder(state.looks, state.padOrder) }),
+    'GET /api/midi/padorder': (req, res) => json(res, { padOrder: state.padOrder, pads: describePadOrder(state.looks, state.padOrder, !!state.padOrder) }),   // no scoring while the order is off
     'POST /api/midi/padorder': (req, res, body) => {
       if (body && body.clear === true) state.padOrder = null;
       else if (body && body.mode === 'brightness') {
