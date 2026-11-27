@@ -6245,40 +6245,13 @@ function buildMidiTargets() {
     pad('lookpage:next', 'Look page  next', () => midiLookPageStep(1));
     for (const t of window.deskMidiCues.lookPadTargets()) {
       const k = Number(t.key.slice(8));
-      pad(t.key, t.label, () => {
-        const mcl = window.deskMidiCues;
-        const fire = mcl.lookPadFire(looksOf(), midiLookPage, k);
-        if (!fire) { midiFlash(`look pad ${k + 1}: empty (page ${midiLookPage + 1})`); return; }
-        // The owner's rule (cuerun.js, 2026-10-09): you press, the scene changes, and auto play
-        // stops. The desk's tile tap and fireLook stay as they are; the pad turns play-in-order
-        // off first, in the same queue, before the fire.
-        // The autoplay-off rides in the fire call (autoplayOff): one request, so the light never waits on a second.
-        if (mcl.cueView(CUES, midiCueSent, Date.now()).autoplay) {
-          fire.body = Object.assign({}, fire.body, { autoplayOff: true });
-          if (midiArmed) mcl.noteSent(midiCueSent, { autoplay: false }, Date.now());
-        }
-        midiSend(fire.route, fire.body, 'lookpad:' + k, true);
-        midiLookLed(fire.body.id);   // the pad goes red now, not at the next poll
-        const l = mcl.lookAt(looksOf(), midiLookPage, k);
-        midiFlash(`${midiLookPage * mcl.LOOK_PADS + k + 1} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
-      });
+      pad(t.key, t.label, () => midiLookPress(k));
     }
   }
 
   T.push({ group: 'Pads & buttons' });
 
-  pad('blackout', 'Blackout  on / off  (a press flips it)', () => {
-    // A toggle (owner N7276): one press sets blackout on, the next sets it off. midiLive.blackout is
-    // this page's last send, else the desk's poll; the send goes through midiSend, so Safe sends nothing.
-    if (!midiArmed) return;
-    // The press flips what the DESK shows now (also after the page's own button or the B key), not a copy
-    // that only the MIDI page refreshes (I1 of the #1389 review).
-    const intent = window.deskPanicKeys.midiBlackoutToggle(midiBlackoutNow());
-    midiLive.blackout = intent.blackout; midiBlackoutSentAt = Date.now();
-    midiBlackoutOv = { value: intent.blackout, at: Date.now(), answeredAt: null };
-    midiSend('api/master', intent);
-    midiPaintLights();   // the LED follows the press at once
-  });
+  pad('blackout', 'Blackout  on / off  (a press flips it)', midiBlackoutPress);
   pad('chaseon', 'Chase run / stop', () => {
     midiLive.chase = !midiLive.chase;
     midiSend('api/chase', { enabled: midiLive.chase });
@@ -6520,6 +6493,7 @@ function midiHandle(type, ch, num, unit) {
   // soft takeover: ignore until the physical control crosses the desk's value
   if (midiPickup[key]) {
     const target = t.read ? t.read() : 0;
+    if (!Number.isFinite(target)) { midiLastVal[key] = unit; return; }   // never catch on a target that is not a number (N1)
     const prev = midiLastVal[key];
     midiLastVal[key] = unit;
     const crossed = prev != null
@@ -6577,7 +6551,8 @@ function midiMapByNumber() {
 // mirror holds the page's defaults, master 255): the first state fills it, see midiLiveArrived.
 let midiLiveWait = false;
 function midiRefreshLive() {
-  if (!S) return false;
+  // Only a real desk state counts (N1): an error body or a half state must not end the wait with the page's defaults.
+  if (!S || !Number.isFinite(S.master) || !S.fx || !S.chase) return false;
   midiLive.master = S.master;
   midiLive.fxDepth = S.fx.depth; midiLive.fxBpm = S.fx.bpm;
   midiLive.fxMode = S.fx.mode; midiLive.fxOn = !!S.fx.enabled;
@@ -6589,8 +6564,8 @@ function midiRefreshLive() {
 // read from the desk's real values and every fader must be caught again from there (I1 of the #1394 review).
 function midiLiveArrived() {
   if (!midiArmed || !midiLiveWait || !S) return;
+  if (!midiRefreshLive()) return;   // not a desk state: keep waiting, the next poll tries again
   midiLiveWait = false;
-  midiRefreshLive();
   midiLive.blackout = midiBlackoutNow();
   for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') { midiPickup[k] = true; delete midiLastVal[k]; }
   midiDraw();
@@ -6843,6 +6818,39 @@ function midiLeds() {
 }
 // Lights never decide whether a press fires: a throw here is the LEDs' problem, not the tile's or the pad's.
 function midiLookLed(id) { try { const p = midiLeds(); if (p) p.pressLook(id); } catch (e) { console.error('pad light', e); } }
+
+// The blackout pad (a toggle, owner N7276): one press sets blackout on, the next sets it off. Safe sends nothing; while the
+// page waits for the desk's first state it sends nothing either, and sets no guess and no override (N2 of the #1394 review).
+function midiBlackoutPress() {
+  if (!midiArmed) return;
+  if (midiLiveWait) { midiFlash('blackout: waiting for the desk — nothing sent'); return; }
+  // The press flips what the DESK shows now (also after the page's own button or the B key), not a copy
+  // that only the MIDI page refreshes (I1 of the #1389 review).
+  const intent = window.deskPanicKeys.midiBlackoutToggle(midiBlackoutNow());
+  midiLive.blackout = intent.blackout; midiBlackoutSentAt = Date.now();
+  midiBlackoutOv = { value: intent.blackout, at: Date.now(), answeredAt: null };
+  midiSend('api/master', intent);
+  midiPaintLights();   // the LED follows the press at once
+}
+
+// A look pad press (slot k of this page). One call: the fire carries autoplayOff, ALWAYS (N4 of the #1394 review): the desk
+// acts on it only when play-in-order is on (desk.js POST api/looks/fire), so it is a no-op otherwise, and it no longer
+// depends on this tab's cue view, which a hidden tab does not refresh. While the page waits for the desk's first state
+// nothing is sent, so nothing shows as taken (N2): the press is refused the way a Safe press is.
+function midiLookPress(k) {
+  const mcl = window.deskMidiCues;
+  const fire = mcl.lookPadFire(looksOf(), midiLookPage, k);
+  if (!fire) { midiFlash(`look pad ${k + 1}: empty (page ${midiLookPage + 1})`); return; }
+  const l = mcl.lookAt(looksOf(), midiLookPage, k);
+  const n = midiLookPage * mcl.LOOK_PADS + k + 1;
+  if (midiArmed && midiLiveWait) { midiFlash(`${n} ${l.name}  (waiting for the desk — nothing sent)`); return; }
+  // The owner's rule (cuerun.js, 2026-10-09): you press, the scene changes, and auto play stops.
+  fire.body = Object.assign({}, fire.body, { autoplayOff: true });
+  if (midiArmed) mcl.noteSent(midiCueSent, { autoplay: false }, Date.now());
+  midiSend(fire.route, fire.body, 'lookpad:' + k, true);
+  midiLookLed(fire.body.id);   // the pad goes red now, not at the next poll
+  midiFlash(`${n} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
+}
 function midiLookAnswer(id, ok) { try { if (midiPainter) midiPainter.answer(id, ok); } catch (e) { console.error('pad light', e); } }
 // The pads' lights go out now; the picture of the controller on the MIDI page is redrawn after them, at most
 // every 250 ms: redrawing it took 90-170 ms on a full desk (measured), and that must not hold up the lights
