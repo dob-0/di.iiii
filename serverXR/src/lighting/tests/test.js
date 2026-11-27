@@ -392,9 +392,10 @@ check('a 16-bit trim past the range end never steps back as it grows (both ends,
   }
 });
 
-// Review of #1373 (2026-11-26): with NO fraction and NO swing the bytes are the old engine's, on any
-// head: min/max not 0..255, a trim past the end, Invert and Swap with a fine value, one fine channel.
-check('findings 1-4: a whole trim or none gives the pre-fine-trim bytes, whatever the head, limits, Invert, Swap', () => {
+// Review of #1373 (2026-11-26): with NO fraction, NO swing and NO fine value the bytes are the old engine's,
+// on any head: min/max not 0..255, a trim past the end, Invert and Swap, one fine channel. With a fine value,
+// Invert and Swap move the fine byte with its coarse (lead's call 2026-11-27): the next check.
+check('findings 1-4: a whole trim or none, and no fine value, gives the pre-fine-trim bytes, whatever the head, limits, Invert, Swap', () => {
   const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 100, panFine: 0, tilt: 50, tiltFine: 0 } });
   f.limits.panMin = 10; f.limits.panMax = 200; f.limits.tiltMin = 0; f.limits.tiltMax = 255;
   const b = () => [...new Engine(baseState([f])).render().get(0).slice(0, 4)];
@@ -402,23 +403,56 @@ check('findings 1-4: a whole trim or none gives the pre-fine-trim bytes, whateve
   f.limits.panMin = 0; f.limits.panMax = 255;
   f.values.pan = 250; f.values.panFine = 0; f.limits.panTrim = 10;
   assert.deepStrictEqual(b().slice(0, 2), [255, 0], '2: a whole trim past the end: the old 255 / 0, not 255 / 255');
-  f.limits.panTrim = 0; f.values.pan = 100; f.values.panFine = 255; f.limits.invertPan = true;
-  assert.deepStrictEqual(b().slice(0, 2), [155, 255], '3: Invert passes the fine value through: the old 155 / 255, not 154 / 1');
-  f.limits.invertPan = false; f.values.pan = 10; f.values.panFine = 7; f.values.tilt = 100; f.values.tiltFine = 200; f.limits.swapPT = true;
-  assert.deepStrictEqual(b(), [100, 7, 10, 200], '4: Swap swaps the coarse and leaves each fine channel where it was');
+  f.limits.panTrim = 0; f.values.pan = 100; f.values.panFine = 0; f.limits.invertPan = true;
+  assert.deepStrictEqual(b().slice(0, 2), [155, 0], '3: Invert with no fine value: the old 155 / 0');
+  f.limits.invertPan = false; f.values.pan = 10; f.values.panFine = 0; f.values.tilt = 100; f.values.tiltFine = 0; f.limits.swapPT = true;
+  assert.deepStrictEqual(b(), [100, 0, 10, 0], '4: Swap with no fine values: the old bytes');
+  f.limits.invertPan = true; f.limits.invertTilt = true;
+  assert.deepStrictEqual(b(), [155, 0, 245, 0], '4: Swap and Invert with no fine values: the old bytes');
   addProfile('test one fine', ['pan', 'pan_fine', 'tilt'], { replace: true });
-  const g = makeFixture({ profile: 'test one fine', address: 1, values: { pan: 10, pan_fine: 9, tilt: 100 } });
+  const g = makeFixture({ profile: 'test one fine', address: 1, values: { pan: 10, tilt: 100 } });
   g.limits.swapPT = true;
-  assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 3)], [100, 9, 10], '4: one fine channel plus Swap keeps its value');
+  assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 3)], [100, 0, 10], '4: one fine channel plus Swap, no fine value: the old bytes');
   removeProfile('test one fine');
 });
 
-check('a fraction on a head with min/max and Invert is added to the OLD coarse and the pass-through fine', () => {
+// Lead's call 2026-11-27: since #1381 head-motion looks write fine bytes, so on a 16-bit head the fine byte
+// travels with its coarse. Invert mirrors the pair as one position, 255 - (coarse + fine/256); Swap takes the
+// source axis's fine value along. Before, an inverted head stepped the wrong way inside each coarse step.
+check('Invert and Swap move the fine byte with its coarse, as one 16-bit pair', () => {
+  const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 100, panFine: 200, tilt: 50, tiltFine: 0 } });
+  const b = () => [...new Engine(baseState([f])).render().get(0).slice(0, 4)];
+  f.limits.invertPan = true;
+  assert.deepStrictEqual(b().slice(0, 2), [154, 56], 'Invert 100 / 200 (100.78) gives 154 / 56 (154.22), not 155 / 200');
+  f.values.panFine = 255;
+  assert.deepStrictEqual(b().slice(0, 2), [154, 1], 'Invert 100 / 255 gives 154 / 1');
+  f.values.pan = 255; f.values.panFine = 100;
+  assert.deepStrictEqual(b().slice(0, 2), [0, 0], 'Invert past 255.0 holds the low end: 0 / 0');
+  let last = null;
+  for (let pos = 100 * 256; pos <= 102 * 256; pos += 7) {
+    f.values.pan = pos >> 8; f.values.panFine = pos & 255;
+    const o = b(), out = o[0] * 256 + o[1];
+    if (last != null) assert.ok(out < last, `a slow inverted sweep stepped the wrong way at ${pos >> 8} / ${pos & 255}: ${last} -> ${out}`);
+    last = out;
+  }
+  f.limits.invertPan = false; f.limits.swapPT = true;
+  f.values.pan = 10; f.values.panFine = 7; f.values.tilt = 100; f.values.tiltFine = 200;
+  assert.deepStrictEqual(b(), [100, 200, 10, 7], 'Swap takes each fine value along with its coarse');
+  f.limits.invertPan = true;
+  assert.deepStrictEqual(b(), [154, 56, 10, 7], 'Swap then Invert: the pan output is the mirrored tilt pair');
+  addProfile('test one fine', ['pan', 'pan_fine', 'tilt'], { replace: true });
+  const g = makeFixture({ profile: 'test one fine', address: 1, values: { pan: 10, pan_fine: 9, tilt: 100 } });
+  g.limits.swapPT = true;
+  assert.deepStrictEqual([...new Engine(baseState([g])).render().get(0).slice(0, 3)], [100, 0, 10], 'one fine channel plus Swap: the pan output takes tilt, which has no fine value');
+  removeProfile('test one fine');
+});
+
+check('a fraction on a head with min/max and Invert is added to the OLD coarse and the fine that travels with it', () => {
   const f = makeFixture({ profile: 'pptt', address: 1, values: { pan: 100, panFine: 0, tilt: 50, tiltFine: 0 } });
   f.limits.panMin = 10; f.limits.panMax = 200; f.limits.panTrim = 0.5;
   assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [85, 128], 'old coarse 85 (84.51 rounded) + half a step');
   f.limits.panTrim = 0; f.limits.panMin = 0; f.limits.panMax = 255; f.limits.invertPan = true; f.values.panFine = 255; f.limits.panTrim = -0.25;
-  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [155, 191], 'old 155 / 255, minus a quarter step');
+  assert.deepStrictEqual([...new Engine(baseState([f])).render().get(0).slice(0, 2)], [153, 193], 'Invert 100 / 255 is 154 / 1, minus a quarter step');
   f.limits.panMin = '5'; f.limits.panTrim = 0.5; f.limits.invertPan = false; f.values.panFine = 0;
   const out = [...new Engine(baseState([f])).render().get(0).slice(0, 2)];
   assert.ok(out.every((x) => Number.isInteger(x) && x >= 0 && x <= 255), 'a hand-edited string limit never makes a garbage byte: ' + out);
