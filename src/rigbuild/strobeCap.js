@@ -5,14 +5,21 @@
 // threshold for photosensitive epilepsy (WCAG 2.x SC 2.3.1 "Three Flashes or Below Threshold";
 // ITU-R BT.1702 for broadcast). UNVERIFIED here: the clause wording was recalled from memory,
 // not read from the documents (neither is in this repo) — check the text before quoting it.
-// TODO (owed, NOT built): an explicit override for a venue with a signed waiver.
+// SINCE 2026-11-27 (owner N7618, "i dont want any limits") the cap is the desk setting output.strobeLimit, OFF by default:
+// off = no clamp (what the rig does is what the preview shows); on = the 3 Hz clamp as before. The desk's state feeds
+// setStrobeLimit (rigMirror/useLightingMirror.js); same switch as serverXR/src/lighting.
 
 export const MAX_STROBE_HZ = 3
 
-/** A requested rate as the rate that may be played: [0, MAX_STROBE_HZ]; junk is 0. */
+let limited = false
+/** The desk setting output.strobeLimit (false = no cap). */
+export const setStrobeLimit = (on) => { limited = !!on }
+export const strobeLimited = () => limited
+
+/** A requested rate as the rate that may be played: [0, MAX_STROBE_HZ] with the limit on, any rate >= 0 with it off; junk is 0. */
 export const capStrobeHz = (hz) => {
     const n = Number(hz)
-    return Number.isFinite(n) && n > 0 ? Math.min(MAX_STROBE_HZ, n) : 0
+    return Number.isFinite(n) && n > 0 ? (limited ? Math.min(MAX_STROBE_HZ, n) : n) : 0
 }
 
 /** A look's strobe rate: its own strobeHz clamped; none stated = the cap (was a fixed 10). */

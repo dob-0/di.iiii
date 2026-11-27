@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { lightingApiUrl, probeLightingDesk } from '../map/lightingLink.js'
 import { fixtureColour } from './fixtureColour.js'
+import { setStrobeLimit } from '../rigbuild/strobeCap.js'
 
 // THE REAL RIG, READ BACK INTO THE APP. Read-only, always.
 //
@@ -268,6 +269,7 @@ export function createLightingMirror({ fetchImpl, doc, EventSourceImpl } = {}) {
         patchInFlight = true
         try {
             const state = await getJson(call, lightingApiUrl('api/state'))
+            setStrobeLimit(state?.output?.strobeLimit)   // the desk's strobe limit setting (off = no cap, N7618)
             patch = {
                 fixtures: Array.isArray(state?.fixtures) ? state.fixtures : [],
                 profiles: state?.profiles || {},

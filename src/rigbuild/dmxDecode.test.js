@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, beforeAll } from 'vitest'
 import { decodeDmx, degFromHome, encodeDmx, rateAt, shutterAt, sixteen, wheelAt } from './dmxDecode.js'
 import { ASSUMED_PROFILES, assumedModesOf } from './assumedProfiles.js'
 import { TYPE_LIBRARY as TYPES } from './types/index.js'
@@ -256,6 +256,9 @@ describe('per-emitter colour mixing (XYZ → linear Rec.709)', async () => {
 
 import { decodeDmx as decodeForLaser } from './dmxDecode.js'
 import { TESTED_CHANNEL_LISTS as LISTS_FOR_LASER } from './fixtureTypes.js'
+import { setStrobeLimit } from './strobeCap.js'
+// N7618 (2026-11-27): no cap by default; this file pins the OLD 3 Hz cap, i.e. the desk setting output.strobeLimit ON.
+beforeAll(() => setStrobeLimit(true))
 describe('a laser drawn in the colour the desk picked (MOXIR 2026-10-17)', () => {
     it('reads UP-LA40WF ch 5 as its colour slot', () => {
         const find = (o) => { if (Array.isArray(o)) { if (o.some((c) => c?.cap?.laserColour)) return o; for (const x of o) { const r = find(x); if (r) return r } } else if (o && typeof o === 'object') for (const v of Object.values(o)) { const r = find(v); if (r) return r } return null }
