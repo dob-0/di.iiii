@@ -978,11 +978,46 @@ check('a test move swings the lights for a moment, says which, and is never save
   assert.strictEqual((await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'zoom' })).status, 400, 'no such axis');
   await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'tilt' });
   await POST('/api/fixtures/testmove', { off: true });
+  await sleep(2300);   // off lets the swing in progress finish (at most one 2 s swing), then home
   await settle();
-  assert.deepStrictEqual([await wire(77, 1), await wire(77, 2)], [100, 100], 'off: home at once');
+  assert.deepStrictEqual([await wire(77, 1), await wire(77, 2)], [100, 100], 'off: home after the swing in progress');
   await sleep(700);   // save() debounces at 400ms
   const disk = fs.readFileSync(path.join(process.env.DATA_DIR, 'show.json'), 'utf8');
   assert.ok(!disk.includes('testMove'), 'nothing of it is in the saved show');
+});
+
+check('a test move re-press and the off call: only the asked lights stop, the head never snaps', async () => {
+  const f = await patch('pt', { universe: 78, address: 1 });
+  const g = await patch('pt', { universe: 78, address: 11 });
+  await POST('/api/fixture', { id: f.id, values: { pan: 100, tilt: 100 } });
+  await POST('/api/fixture', { id: g.id, values: { pan: 100, tilt: 100 } });
+  await POST('/api/fixtures/testmove', { ids: [f.id, g.id], axis: 'pan', seconds: 4 });
+  await sleep(1100);
+  const mid = await wire(78, 1);
+  const r1 = await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'pan', seconds: 4 });
+  await settle();
+  const after = await wire(78, 1);
+  assert.ok(Math.abs(after - mid) <= 6, `a re-press does not snap the head back to rest: ${mid} -> ${after}`);
+  assert.ok(r1.body.until > Date.now() + 3000, 'and it runs on');
+  await POST('/api/fixtures/testmove', { ids: [f.id], axis: 'tilt', seconds: 4 });
+  let st = (await GET('/api/state')).body.status.testMoving;
+  assert.strictEqual(st[f.id], 'tilt', 'the new axis is the one shown');
+  await sleep(100);
+  assert.ok((await wire(78, 1)) !== 100 || (await wire(78, 2)) !== 100, 'both axes live, pan not snapped');
+  const beforeOff = [await wire(78, 1), await wire(78, 2)];
+  await POST('/api/fixtures/testmove', { off: true, ids: [f.id] });
+  await settle();
+  const afterOff = [await wire(78, 1), await wire(78, 2)];
+  assert.ok(Math.abs(afterOff[0] - beforeOff[0]) <= 6 && Math.abs(afterOff[1] - beforeOff[1]) <= 6,
+    `off does not snap the head to rest: ${beforeOff} -> ${afterOff}`);
+  await sleep(2300);   // the swing in progress finishes (never a snap), then the light is home
+  await settle();
+  assert.deepStrictEqual([await wire(78, 1), await wire(78, 2)], [100, 100], 'the asked light is home after its swing');
+  st = (await GET('/api/state')).body.status.testMoving;
+  assert.ok(!st[f.id] && st[g.id] === 'pan', 'the other light still swings');
+  await POST('/api/fixtures/testmove', { off: true });
+  await sleep(2300);
+  assert.deepStrictEqual((await GET('/api/state')).body.status.testMoving, {}, 'off with no ids stops every light, after their swing');
 });
 
 check('the Aim page markup exists and is wired to the limits route', () => {
@@ -991,7 +1026,7 @@ check('the Aim page markup exists and is wired to the limits route', () => {
   assert.ok(/<button class="page-tab" data-page="aim"/.test(html), 'tab');
   assert.ok(/<main class="page" data-page="aim">/.test(html) && /id="aimBank"/.test(html), 'page');
   assert.ok(js.includes("post('api/fixtures/limits', { ids: [f.id], limits: { [key]: val } })"), 'posts one light, one key');
-  assert.ok(js.includes("'fader', 'aim', 'midi'"), 'page is routable');
+  assert.ok(js.includes("'fader', 'aim', 'camera', 'midi'"), 'page is routable');
   assert.ok(js.includes('min="-128" max="128"'), 'fader range');
 });
 
@@ -1028,7 +1063,7 @@ check('the Setup Aim panel sits beside the map and writes only through api/fixtu
   assert.ok(/id="aimPane"/.test(html) && /id="apPanVal"/.test(html) && /data-axis="tilt" data-dir="-1"/.test(html) && /data-step="5"/.test(html) && /id="apZero"/.test(html), 'panel markup');
   assert.ok(html.indexOf('id="aimPane"') > html.indexOf('class="stage-inner"') && html.indexOf('id="aimPane"') < html.indexOf('data-split="setup-sel"'), 'right beside the map');
   assert.ok(html.indexOf('aimpanel.js') < html.indexOf('src="app.js"'), 'script order');
-  assert.ok(js.includes("h.post('api/fixtures/limits', { ids: j.ids, limits: j.limits })") && js.includes("fetch('api/state')"), 'writes via limits, reads back from state');
+  assert.ok(js.includes("h.post('api/fixtures/limits', { ids: j.ids, limits: j.limits })") && js.includes("'api/state'"), 'writes via limits, reads back from state');
   assert.ok(!/api\/(fixture'|fixtures\/(?!limits|identify))/.test(js), 'no other route');
   assert.ok(js.includes('+(lim(f)[k]) || 0') && !js.includes('] | 0') && js.includes('* 100) / 100') && js.includes("'trimStep'") && /data-step="0.01"/.test(html), 'fractional trims are read whole and rounded to 2 decimals; step in trimStep');
   for (const k2 of ["'ArrowLeft'", "'ArrowUp'", "'Tab'"]) assert.ok(js.includes(k2), k2);
@@ -1548,6 +1583,7 @@ check('the show file on disk is always a complete show', async () => {
   await POST('/api/master', { master: 255 });
   await sleep(500);
   assert.ok(!fs.existsSync(path.join(dir, 'show.json.tmp')), 'no temp file left behind');
+  assert.ok(!fs.existsSync(path.join(dir, 'show.json.async.tmp')), 'no async temp file left behind');
   assert.ok(fs.existsSync(path.join(dir, 'show.prev.json')), 'the previous save is kept');
   JSON.parse(fs.readFileSync(path.join(dir, 'show.json'), 'utf8'));
   JSON.parse(fs.readFileSync(path.join(dir, 'show.prev.json'), 'utf8'));
@@ -2366,7 +2402,7 @@ function contractChecks(cls) {
 // over a read-only file succeeds, so the test would pass without the failure ever happening.
 check('a show file that cannot be written does not stop the desk, says so, keeps the edit and recovers', async () => {
   const file = path.join(process.env.DATA_DIR, 'show.json');
-  const blocker = file + '.tmp';
+  const blocker = file + '.async.tmp';   // the timer's save writes through its own temp file
   await POST('/api/master', { master: 200 });
   await sleep(700);                                   // the first save lands
   assert.ok(fs.existsSync(file), 'the show file exists');
@@ -2485,11 +2521,11 @@ check('a save that failed after an empty boot still keeps aside a show that turn
   const show = path.join(dir, 'show.json');
   const d = await deskOn(dir);                        // boots with nothing
   try {
-    fs.mkdirSync(show + '.tmp');                      // the first save fails
+    fs.mkdirSync(show + '.async.tmp');                      // the first save fails
     await d.post('/api/master', { master: 100 });
     await sleep(700);
     assert.ok(!fs.existsSync(show), 'nothing was written');
-    fs.rmSync(show + '.tmp', { recursive: true, force: true });
+    fs.rmSync(show + '.async.tmp', { recursive: true, force: true });
     fs.writeFileSync(show, JSON.stringify({ fixtures: [{ id: 'f1', profile: 'drgb', address: 1 }, { id: 'f2', profile: 'drgb', address: 5 }] }));
     await sleep(1500);                                // the retry fires
     const found = fs.readdirSync(dir).filter((f) => f.includes('-found-'));

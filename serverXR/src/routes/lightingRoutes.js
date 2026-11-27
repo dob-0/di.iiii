@@ -104,7 +104,10 @@ function registerLightingRoutes(app, { dataDir, spacesDir = null, findSpace = nu
     // Never builds one — no desk, nothing loaded, nothing to reload.
     adoptShowFile: (id) => (desk ? desk.adoptShowFile(id) : false),
     // Only the desk that was actually built is closed; asking never builds one.
-    close: () => { if (desk) { desk.close(); desk = null } }
+    close: () => { if (desk) { desk.close(); desk = null } },
+    // Shutdown: let the room camera go and wait until its ffmpeg has ended, so it never outlives the server and holds /dev/videoN.
+    // Never builds a desk.
+    closeCamera: () => (desk ? desk.closeCamera() : Promise.resolve())
   }
 }
 

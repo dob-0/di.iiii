@@ -318,8 +318,15 @@ function renderNote(text) {
 async function pullState() {
   try {
     const askedAt = Date.now();
-    const reply = await fetch('api/state');
+    // Say which looks we hold: while they are unchanged the desk leaves them out (42 MB on a big show).
+    // The rev and the list are taken when the request is SENT: polls overlap, and a reply that lands after a newer one
+    // must be matched against what this request asked about, not against whatever S holds by then.
+    const heldRev = S && Array.isArray(S.looks) ? S.looksRev : null;
+    const heldLooks = heldRev != null ? S.looks : null;
+    const reply = await fetch(heldRev != null ? 'api/state?looksRev=' + encodeURIComponent(heldRev) : 'api/state');
     const next = await reply.json();
+    // looks left out and the rev still the one we sent: keep the list we sent it for (an older desk sends no looksRev and always sends looks).
+    if (next && !('looks' in next) && heldLooks && next.looksRev === heldRev) next.looks = (S && S.looksRev === heldRev && Array.isArray(S.looks)) ? S.looks : heldLooks;
     // A reply is not yet proof the desk is fine: the counter resets only once it has drawn.
     const wasOffline = pollFails >= 2;
     // Opened for one space while the desk runs another show: say which, and keep what is
@@ -2550,7 +2557,9 @@ function syncLimitPanel() {
 // pan/tilt has a fine channel (S.fineNames, published from roles.js, the list the renderer uses);
 // a light without one stays in whole steps, and the server rounds its trim the same way.
 const TRIM_STEPS = ['1', '0.1', '0.01'];
-let trimStep = TRIM_STEPS.includes(localStorage.getItem('trimStep')) ? localStorage.getItem('trimStep') : '0.1';
+// A browser that blocks site data throws on localStorage: the step then lives in memory only.
+let trimStep = '0.1';
+try { const t = localStorage.getItem('trimStep'); if (TRIM_STEPS.includes(t)) trimStep = t; } catch (e) { /* site data blocked */ }
 const hasFine = (f, axis) => {
   const names = (S && S.fineNames && S.fineNames[axis]) || [];
   return !!f && profileOf(f).channels.some((c) => names.includes(c));
@@ -2576,7 +2585,7 @@ function paintTrimStep() {
 for (const b of $$('.trimstep button')) {
   b.addEventListener('click', () => {
     trimStep = b.dataset.step;
-    localStorage.setItem('trimStep', trimStep);
+    try { localStorage.setItem('trimStep', trimStep); } catch (e) { /* site data blocked */ }
     paintTrimStep();
   });
 }
@@ -3474,8 +3483,9 @@ $('#touchLooks').addEventListener('click', async (e) => {
   const b = e.target.closest('.lookbtn');
   if (!b || !b.dataset.look) return;
   const look = looksOf().find((l) => l.id === b.dataset.look);
+  midiLookLed(b.dataset.look);   // pad lights follow the click at once
   const r = await post('api/looks/fire', { id: b.dataset.look });
-  if (!r || r.error) { say(`look did not fire — ${(r && r.error) || 'no answer'}`, true); return; }
+  if (!r || r.error) { if (midiPainter) midiPainter.answer(b.dataset.look, false); say(`look did not fire — ${(r && r.error) || 'no answer'}`, true); return; }
   // Mark it now from the answer, not from the next poll: the tile has to be seen to take.
   if (r.layer && S) {
     const ls = layersOf();
@@ -5074,6 +5084,8 @@ function buildSerial() {
 }
 
 /* =============== the stack: layers, looks, steps =============== */
+// Same cap as MAX_STEPS in looks.js (the server cuts anything above it, so the editor stops here too).
+const MAX_LOOK_STEPS = 320;
 /* A look is a list of steps; a layer is a look under a finger. Scene, palette, chase and
    wave stopped being four objects on the server, so they are one editor here: the step
    list IS the difference between them, and the words under it say which one you have
@@ -5155,6 +5167,14 @@ function queueLayer(id, patch) {
     if (Date.now() - lastLayerFlush > 60) flushLayers();
     else layerTimer = setTimeout(flushLayers, 25);
   }
+}
+
+// A look the desk just made or replaced, into the list this page holds: by its id, the way putLook does. A poll that
+// already carries it must not leave it twice (the look pads go by position).
+function addLookLocal(look) {
+  if (!S || !S.looks) return;
+  const at = S.looks.findIndex((l) => l.id === look.id);
+  if (at >= 0) S.looks[at] = look; else S.looks.push(look);
 }
 
 // Write one look back. The library route is replace-whole; this one is add-or-replace,
@@ -5415,7 +5435,7 @@ $('#lookRecord').addEventListener('click', async () => {
   });
   if (r && r.error) return say(r.error, true);
   $('#lookName').value = '';
-  if (S.looks) S.looks.push(r.look);
+  addLookLocal(r.look);
   selLook = r.look.id;
   buildLooks(); buildSteps();
   say(`recorded "${r.look.name}" — ${KIND_LABEL[kind]} of ${chosen.length ? chosen.length + ' selected' : 'every'} fixture${!chosen.length || chosen.length > 1 ? 's' : ''}`);
@@ -5549,7 +5569,7 @@ function buildSteps() {
   $('#stepAdd').addEventListener('click', () => {
     const l = lookById(selLook); if (!l) return;
     if (!S.fixtures.length) return say('nothing patched to record', true);
-    if (l.steps.length >= 64) return say('that is as many steps as a look holds', true);
+    if (l.steps.length >= MAX_LOOK_STEPS) return say('that is as many steps as a look holds', true);
     edit({ steps: l.steps.concat([stageStep(l)]) });
   });
   // Follow: every role this palette carries stops being a number in this look and
@@ -5643,7 +5663,7 @@ function colourCell(r, g, b) {
 async function startLook(look, layer, note) {
   const made = await post('api/looks/add', { look });
   if (made && made.error) return say(made.error, true);
-  if (S.looks) S.looks.push(made.look);
+  addLookLocal(made.look);
   const r = await post('api/layers/add', Object.assign({ lookId: made.look.id }, layer));
   if (r && r.error) return say(r.error, true);
   if (S.layers) S.layers.push(r.layer);
@@ -6089,12 +6109,14 @@ async function midiFlush() {
           method: 'POST', headers: { 'content-type': 'application/json' },
           body: JSON.stringify(item.body),
         });
+        if (item.route === 'api/looks/fire' && item.body && item.body.id && midiPainter) midiPainter.answer(item.body.id, r.ok);
         if (!r.ok) {
           let why = 'HTTP ' + r.status;
           try { const j = await r.json(); if (j && j.error) why = j.error; } catch (e) { /* no body */ }
           say(`a MIDI press was refused by the desk — ${why}`, true);
         }
       } catch (e) {
+        if (item.route === 'api/looks/fire' && item.body && midiPainter) midiPainter.answer(item.body.id, false);
         // The pill is the poll's, and the poll would paint over a flag set here within a
         // second and a half. A send that died says so where messages go on every page.
         say('a MIDI move did not reach the desk', true);
@@ -6202,11 +6224,13 @@ function buildMidiTargets() {
         // The owner's rule (cuerun.js, 2026-10-09): you press, the scene changes, and auto play
         // stops. The desk's tile tap and fireLook stay as they are; the pad turns play-in-order
         // off first, in the same queue, before the fire.
+        // The autoplay-off rides in the fire call (autoplayOff): one request, so the light never waits on a second.
         if (mcl.cueView(CUES, midiCueSent, Date.now()).autoplay) {
-          midiSend('api/cues/autoplay', { autoplay: false }, 'lookpad:autoplayoff');
+          fire.body = Object.assign({}, fire.body, { autoplayOff: true });
           if (midiArmed) mcl.noteSent(midiCueSent, { autoplay: false }, Date.now());
         }
         midiSend(fire.route, fire.body, 'lookpad:' + k, true);
+        midiLookLed(fire.body.id);   // the pad goes red now, not at the next poll
         const l = mcl.lookAt(looksOf(), midiLookPage, k);
         midiFlash(`${midiLookPage * mcl.LOOK_PADS + k + 1} ${l.name}` + (midiArmed ? '' : '  (not armed — nothing sent)'));
       });
@@ -6692,17 +6716,29 @@ function midiBindLights() {
     || [...midiAccess.outputs.values()].find((o) => /apc\s*40/i.test(o.name || '')) || null;
   midiPaintLights();
 }
-function midiPaintLights() {
-  if (!midiLedOut || !window.deskMidiCues) return;
-  try {
-    if (!midiArmed) return;   // only the armed tab owns the pads' lights (inside the try: midiArmed is declared further down)
-    const looks = Array.isArray(S && S.looks) ? S.looks : [];   // not looksOf(): a const further down, may not be read yet
-    midiLookPage = window.deskMidiCues.clampLookPage(midiLookPage, looks.length);
-    const lights = window.deskMidiCues.apc40Lights(midiMap, CUES, { blackout: !!(S && S.blackout) },
-      { looks, page: midiLookPage, activeId: activeLookId() });
-    for (const l of window.deskMidiCues.lightDiff(lights, midiLedSent)) midiLedOut.send([0x90, l.note, l.vel]);
-  } catch (e) { midiLedSent.clear(); }   // port gone: repaint everything when it is back
+// One painter (midiCues.js createLedPainter): lights go out at the press (optimistic), the
+// answer of api/looks/fire corrects them, the next poll confirms them.
+let midiPainter = null;
+function midiLeds() {
+  if (!midiPainter && window.deskMidiCues) {
+    midiPainter = window.deskMidiCues.createLedPainter({
+      sent: midiLedSent,
+      out: () => midiLedOut,
+      armed: () => midiArmed,   // only the armed tab owns the pads' lights (a getter: midiArmed is declared further down)
+      map: () => midiMap,
+      cues: () => CUES,
+      state: () => ({ blackout: !!(S && S.blackout) }),
+      looks: () => (Array.isArray(S && S.looks) ? S.looks : []),   // not looksOf(): a const further down
+      page: () => midiLookPage,
+      setPage: (p) => { midiLookPage = p; },
+      polledId: () => activeLookId(),
+      now: () => Date.now(),
+    });
+  }
+  return midiPainter;
 }
+function midiLookLed(id) { const p = midiLeds(); if (p) p.pressLook(id); }
+function midiPaintLights() { const p = midiLeds(); if (p) p.paint(); }
 
 function midiEnable() {
   if (!navigator.requestMIDIAccess) {
@@ -6944,7 +6980,7 @@ $('#showNoteBtn').addEventListener('click', async () => {
 /* =============== wiring =============== */
 
 function showPage(name) {
-  page = ['setup', 'control', 'stage', 'touch', 'fader', 'aim', 'midi'].includes(name) ? name : 'setup';
+  page = ['setup', 'control', 'stage', 'touch', 'fader', 'aim', 'camera', 'midi'].includes(name) ? name : 'setup';
   $$('.page-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.page === page));
   $$('.page').forEach((p) => p.classList.toggle('is-active', p.dataset.page === page));
   structSig = ''; attrSig = '';
@@ -6953,6 +6989,7 @@ function showPage(name) {
   // there on the phone. Skipped mid-edit: a pending save is newer than the server.
   if (page === 'midi' && !midiSaveTimer) loadMidiMap();
   if (window.stagePageShown) window.stagePageShown(page);   // stagepage.js
+  if (window.cameraPageShown) window.cameraPageShown(page);   // camera.js
   if (S) renderAll(false);
 }
 $$('.page-tab').forEach((t) => t.addEventListener('click', () => {

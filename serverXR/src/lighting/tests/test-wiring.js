@@ -52,7 +52,7 @@ check('every control in the markup is read by the interface', () => {
   const DECORATIVE = new Set(['statusStrip', 'phoneBox']);
   // The stage modules from the studio desk read their own controls (objects.js: #objPill; the Stage
   // page's strip, inspector and effects: stagepage.js and colorfxui.js's #spCfx; aimpanel.js: the Setup Aim panel).
-  const pageJs = js + ['objects.js', 'markers.js', 'video.js', 'stagepage.js', 'colorfxui.js', 'showfile.js', 'aimpanel.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
+  const pageJs = js + ['objects.js', 'markers.js', 'video.js', 'stagepage.js', 'colorfxui.js', 'showfile.js', 'aimpanel.js', 'camera.js'].map((f) => fs.readFileSync(path.join(ROOT, '../ui', f), 'utf8')).join('\n');
   const orphans = [...htmlIds].filter((id) =>
     !DECORATIVE.has(id) && !pageJs.includes(`'#${id}'`) && !pageJs.includes(`"#${id}"`)
     && !pageJs.includes(`'${id}'`) && !pageJs.includes(`getElementById('${id}')`));

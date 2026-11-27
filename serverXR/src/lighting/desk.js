@@ -11,10 +11,11 @@ const WORLD = 1000;
 
 const zlib = require('zlib');
 const fs = require('fs');
+const fsp = fs.promises;
 const path = require('path');
 const { ArtNet, broadcastPlan, localAddresses } = require('./artnet');
 const { decideIdentify } = require('./identify');
-const { readTestMove } = require('./testmove');
+const { readTestMove, pressTestMove, stopTestMove, testMoveLive } = require('./testmove');
 const { FINE_NAMES, fineRoleIn } = require('./roles');
 const { Enttec, listPorts, describePort, PORT_NAME, DEFAULT_PORT } = require('./enttec');
 const {
@@ -47,6 +48,7 @@ const { createCueRunner, sanitizeCues } = require('./cuerun');
 const strips = require('./pixelstrip');
 const { createDmxStream } = require('./dmxstream');
 const holds = require('./holds');
+const { createCamera } = require('./camera');
 
 // The desk as a module. `createDesk` builds one lighting desk — state, engine, the 40 Hz
 // output loop, the HTTP routes and the interface files — and hands back `handle`, which
@@ -249,7 +251,7 @@ function createDesk(opts = {}) {
     Object.defineProperty(s, 'identify', {
       value: {}, enumerable: false, writable: true, configurable: true,
     });
-    // A test move too (testmove.js): fixtureId -> { axis, from, until }, a swing that ends by itself.
+    // A test move too (testmove.js): fixtureId -> { axis, from, until, prev? }, a swing that ends by itself.
     delete s.testMove;
     Object.defineProperty(s, 'testMove', {
       value: {}, enumerable: false, writable: true, configurable: true,
@@ -678,6 +680,8 @@ function createDesk(opts = {}) {
   // Ctrl+C then threw the whole drag away. Exit flushes whatever is pending.
   let saveTimer = null;
   let dirty = false;
+  let asyncOwes = false;  // an async save in flight has cleared `dirty` for edits it has not landed yet
+  let showWriteGen = 0;   // bumped by every synchronous save or show change; an async save in flight checks it
   // Whether the show is safely on disk, for the page (status.save). A save runs from a
   // timer: before this, a locked or read-only show file (OneDrive, an antivirus, a full
   // disk) threw out of that timer — inside serverXR nothing catches it, so one failed
@@ -718,6 +722,48 @@ function createDesk(opts = {}) {
 
   // The rig as last written into the machine's own show file, so a space's show being
   // saved rewrites that file only when the rig actually changed.
+  // The looks are the rest of that bulk (80 looks x 64 steps = 42 MB on the live desk) and cannot
+  // be keyed on stateVersion: a fader move calls save() too. So the cache is keyed on the looks
+  // themselves: the same array, the same length, every element the very same object, and looksEdits
+  // unchanged. Every route that changes a look puts a NEW object in the list (putLook, replace-all,
+  // remove, show load all do), so none of them needs to say anything; a change that edits a look
+  // object in place MUST call looksEdited(). There is no such place today (audited 2026-11-27).
+  let looksEdits = 0;
+  // Starts from the clock, so a page holding a rev from before a restart can never match a new one.
+  let looksRev = Date.now();
+  let looksCache = { arr: null, items: [], edits: -1, text: '[]' };
+  function looksEdited() { looksEdits++; }
+  function looksJson() {
+    const arr = state.looks;
+    const c = looksCache;
+    let same = c.arr === arr && c.edits === looksEdits && c.items.length === arr.length;
+    if (same) for (let i = 0; i < arr.length; i++) if (c.items[i] !== arr[i]) { same = false; break; }
+    if (!same) {
+      looksCache = { arr, items: arr.slice(), edits: looksEdits, text: JSON.stringify(arr) };
+      looksRev++;
+    }
+    return looksCache.text;
+  }
+  const LOOKS_PLACEHOLDER = '\u0000looks\u0000';
+  const LOOKS_TOKEN = JSON.stringify(LOOKS_PLACEHOLDER);
+
+  // JSON.stringify(s), byte for byte, with the looks text spliced in from the cache (looksJson) instead of
+  // walked again: at 43 MB of looks a save stringified them all, on the DMX loop's thread, 0.4 s after every fire.
+  // Here in three pieces, so the async write can send the looks as bytes encoded once per change
+  // (looksBuffer) instead of flattening and encoding a 40+ MB string on the loop's thread on every save.
+  function stateParts(s) {
+    if (!Array.isArray(s.looks)) return { whole: JSON.stringify(s) };
+    looksJson();
+    const text = JSON.stringify(Object.assign({}, s, { looks: LOOKS_PLACEHOLDER }));
+    const at = text.indexOf(LOOKS_TOKEN);
+    return { head: text.slice(0, at), tail: text.slice(at + LOOKS_TOKEN.length) };
+  }
+  function looksBuffer() {
+    looksJson();
+    if (!looksCache.buf) looksCache.buf = Buffer.from(looksCache.text);
+    return looksCache.buf;
+  }
+
   let machineOutputText = JSON.stringify(state.output);
 
   // While a space's show is loaded, the rig is still the machine's: a change under OUTPUT
@@ -762,7 +808,8 @@ function createDesk(opts = {}) {
 
   // The loaded show's own file. Throws when it cannot be written; both flags below are
   // then left as they were, so the retry does exactly what this attempt meant to.
-  function writeShowFile() {
+  // Everything before the bytes go out: the show that appeared under us is kept aside, and the text is made.
+  function prepareShowWrite() {
     const file = showFile();
     fs.mkdirSync(show.dir, { recursive: true });
     // A show that appeared after we booted with nothing belongs to somebody else — a
@@ -789,7 +836,17 @@ function createDesk(opts = {}) {
     // Compact, not pretty-printed: at 500+ scenes the indented form cost ~29ms to
     // stringify, over the 25ms frame budget at 40Hz. Compact is ~9ms and a third the size.
     // A space's show is written without the rig (normaliseOutput says why).
-    const text = show.space ? JSON.stringify(withoutRig(state)) : JSON.stringify(state);
+    const parts = stateParts(show.space ? withoutRig(state) : state);
+    // The looks text is captured HERE, with the head and tail it belongs to: a later cache rebuild must not mix in.
+    const looksText = parts.whole != null ? null : looksJson();
+    const text = () => (parts.whole != null ? parts.whole : parts.head + looksText + parts.tail);
+    return { file, text, parts, looksText };
+  }
+
+  function writeShowFile() {
+    const { file, text: makeText } = prepareShowWrite();
+    const text = makeText();
+    showWriteGen++;
     // The previous copy is COPIED aside, never renamed. Renaming the live file away
     // first left a window — microseconds, but real — in which show.json did not exist at
     // all, and a second desk booting into that window found no show, started empty, and
@@ -803,13 +860,78 @@ function createDesk(opts = {}) {
     // that turns up before the retry is still kept aside rather than written over.
     bootedWithNothing = false;
     dirty = false;
+    asyncOwes = false;   // this synchronous save has written everything an async save in flight owed
+  }
+
+  // The same write for the timer, off the DMX loop's thread: the text is made at once (the looks come from the
+  // cache), the 40-55 MB go out through the async fs into a temp file of its OWN (`.async.tmp`: the synchronous saves of
+  // close(), a show import/restore or a switch use `.tmp`, and must never truncate a file this write still has open).
+  // One save in flight at a time (saveTick waits); show.prev.json works as in writeShowFile.
+  // The commit is one synchronous step: the check "is this still the newest write?" and the rename sit in the same
+  // tick, so no synchronous save can land between them (a rename queued on the thread pool could not be called back).
+  // A show change, adoption or synchronous save while this was in flight bumped showWriteGen: it then drops its own temp
+  // file and returns false, and the caller skips the after-save work (rig file, status) that belongs to the newer write.
+  async function writeShowFileAsync() {
+    const { file, text, parts, looksText } = prepareShowWrite();
+    const looksBuf = looksText == null ? null : looksBuffer();
+    const gen = showWriteGen;
+    const inPlace = saveStatus.failures >= 3;
+    const tmp = file + '.async.tmp';
+    const drop = async () => { await fsp.unlink(tmp).catch(() => {}); return false; };   // awaited: the next async save (it waits for this one) must not open its temp file before this unlink has run, or the unlink would remove it   // asyncOwes stays as the newer write left it
+    dirty = false;
+    asyncOwes = true;
+    try {
+      const fh = await fsp.open(tmp, 'w');
+      try {
+        if (looksBuf) { await fh.writeFile(parts.head); await fh.writeFile(looksBuf); await fh.writeFile(parts.tail); }
+        else await fh.writeFile(parts.whole);
+      } finally { await fh.close(); }
+      if (gen !== showWriteGen) return drop();
+      try { await fsp.copyFile(file, file.replace(/\.json$/, '.prev.json')); } catch (e) { /* first save ever */ }
+      if (gen !== showWriteGen) return drop();
+      try { fs.renameSync(tmp, file); }
+      catch (e) {
+        if (!inPlace || !LOCKED.has(e.code)) throw e;
+        fs.writeFileSync(file, text());
+        try { fs.unlinkSync(tmp); } catch (e2) { /* it goes with the next save */ }
+      }
+      bootedWithNothing = false;
+      asyncOwes = false;
+      return true;
+    } catch (e) { await fsp.unlink(tmp).catch(() => {}); asyncOwes = false; if (gen === showWriteGen) dirty = true; throw e; }
+  }
+
+  // The timer: like saveSoon but the show file goes out asynchronously and a save already in flight makes this one wait.
+  let writing = false;
+  function saveTick() {
+    if (writing) { clearTimeout(saveTimer); saveTimer = setTimeout(saveTick, 25); return; }
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    const machineOwed = !!show.space && JSON.stringify(state.output) !== machineOutputText;
+    if (!dirty && !machineOwed) return saveSoon();   // nothing to write: the sync path only settles the status
+    const fail = (e) => {
+      try { throw e; } catch (err) { failSave(err); }
+    };
+    let p = Promise.resolve();
+    try {
+      if (dirty) { writing = true; p = writeShowFileAsync(); }
+    } catch (e) { writing = false; return fail(e); }
+    p.then((landed) => {
+      if (landed === false) return;   // a newer write (close, import, restore, switch) already stands: not this one's to report
+      if (show.space) writeMachineOutput(); else machineOutputText = JSON.stringify(state.output);
+      if (!saveStatus.ok) log('  the show saved again after ' + saveStatus.failures + ' failed attempt(s)');
+      Object.assign(saveStatus, { ok: true, pending: dirty, lastOkAt: Date.now(), lastError: null, failures: 0 });
+    }).catch(fail).finally(() => { writing = false; });
   }
 
   // The timer's way in: never throws. A failure is kept, retried with a growing wait
   // (0.5 s doubling, at most 15 s) and reported; the desk and the DMX loop run on.
   function saveSoon() {
     try { writeShow(); }
-    catch (e) {
+    catch (e) { failSave(e); }
+  }
+  function failSave(e) {
+    {
       saveStatus.ok = false;
       saveStatus.pending = true;
       saveStatus.failures++;
@@ -822,7 +944,7 @@ function createDesk(opts = {}) {
         log('  COULD NOT SAVE ' + showFile() + ' (' + (e.code || '') + ' ' + e.message + ') — still running, retrying in ' + wait + 'ms');
       }
       clearTimeout(saveTimer);
-      saveTimer = setTimeout(saveSoon, wait);
+      saveTimer = setTimeout(saveTick, wait);
     }
   }
   // The layer an outside caller's cue drives, unless it names another.
@@ -841,7 +963,7 @@ function createDesk(opts = {}) {
     dirty = true;
     saveStatus.pending = true;
     stateVersion++;
-    if (!saveTimer) saveTimer = setTimeout(saveSoon, 400);
+    if (!saveTimer) saveTimer = setTimeout(saveTick, 400);
   }
 
   // ---- the pushed frame (dmxstream.js): every rendered frame to every room listening ----
@@ -1256,9 +1378,17 @@ function createDesk(opts = {}) {
     sceneJsonCache = { version: stateVersion, text };
     return text;
   }
-  function publicStateJson() {
-    const body = JSON.stringify(Object.assign(publicState(false), { scenes: SCENES_PLACEHOLDER }));
-    return body.replace(SCENES_TOKEN, scenesJson());
+  // GET /api/state. `have` is the looksRev a page already holds: when it is still current the reply
+  // leaves looks out (and does not stringify them); looksRev is always in the reply.
+  function publicStateJson(have) {
+    const text = looksJson();
+    const skip = have != null && have !== '' && Number(have) === looksRev;
+    const parts = Object.assign(publicState(false), { scenes: SCENES_PLACEHOLDER, looks: LOOKS_PLACEHOLDER, looksRev });
+    if (skip) delete parts.looks;
+    let body = JSON.stringify(parts);
+    body = body.replace(SCENES_TOKEN, () => scenesJson());
+    if (!skip) body = body.replace(LOOKS_TOKEN, () => text);
+    return body;
   }
 
   // One answer per route (outputStatus.js): ok | unreachable | off, with the reason in words, for the
@@ -1431,8 +1561,8 @@ function createDesk(opts = {}) {
         // operator asked for while they are turned round looking at the rig.
         identifying: Object.entries(state.identify || {}).filter(([, t]) => t > Date.now()).map(([id]) => id),
         // Which lights are swinging for a test move, and on which axis: { id: 'pan' | 'tilt' }.
-        testMoving: Object.fromEntries(Object.entries(state.testMove || {})
-          .filter(([, e]) => e.until > Date.now()).map(([id, e]) => [id, e.axis])),
+        testMoving: ((now) => Object.fromEntries(Object.entries(state.testMove || {})
+          .filter(([, e]) => testMoveLive(e, now)).map(([id, e]) => [id, e.until > now ? e.axis : e.prev.axis])))(Date.now()),
         nodes: nodeList(),
         interfaces: localAddresses(),
         broadcast: bcPlan().use,
@@ -1474,9 +1604,36 @@ function createDesk(opts = {}) {
     });
   }
 
+  // The camera page: a v4l2 camera named in <data dir>/camera.json, opened only while a page
+  // asks for frames (camera.js). Machine-level, so it is not part of any show.
+  const camera = opts.camera || createCamera({ dataDir: DATA, log });
+
   const routes = {
 
-    'GET /api/state': (req, res) => json(res, publicStateJson(), 200, req),
+    // The camera routes have the SAME access rule as the desk's own read routes (GET /api/state, /api/cues):
+    // none of their own. Who may reach the desk is decided where it is mounted (serverXR requireLocalRuntime,
+    // loopback or DI_ALLOW_LAN_DEVICES, through the proxy chain), so a phone that reaches the desk through the
+    // gateway reaches the camera too. The laser guard (ownPageRefusal) is not used: a camera is not a laser.
+    'GET /api/camera': (req, res) => json(res, camera.status()),
+    'POST /api/camera/config': (req, res, body) => json(res, camera.configure(body)),
+    // One JPEG, the newest. The page asks about twice a second at most while it is open (a viewer
+    // asking faster gets 429, camera.js viewerFps); asking is what keeps the camera open, and a
+    // camera nobody asks of is let go after ~10 s. A frame older than staleMs is a 503 "stalled"
+    // with its age; the headers carry the frame's age and number so a page counts only new frames.
+    'GET /api/camera/frame': async (req, res) => {
+      const f = await camera.frame(req.ip || (req.socket && req.socket.remoteAddress))   // the real client: behind the gateway every socket is 127.0.0.1;
+      if (f.error) {
+        const status = f.code === 'unconfigured' ? 404 : f.code === 'rate' ? 429 : 503;
+        const headers = { 'content-type': 'application/json', 'cache-control': 'no-store' };
+        if (f.code === 'rate') headers['retry-after'] = String(Math.max(1, Math.ceil((f.retryMs || 500) / 1000)));
+        res.writeHead(status, headers);
+        return res.end(JSON.stringify({ error: f.error, code: f.code, ageMs: f.ageMs, retryMs: f.retryMs }));
+      }
+      res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': f.buf.length, 'x-frame-age': String(Date.now() - f.at), 'x-frame-seq': String(f.seq) });
+      return res.end(f.buf);
+    },
+
+    'GET /api/state': (req, res) => json(res, publicStateJson(new URL(req.url, 'http://localhost').searchParams.get('looksRev')), 200, req),
 
     // Which show this desk is running, where its file is, and whether the one offer a
     // new space's empty show gets applies. Answered whichever show a page asked for.
@@ -1528,7 +1685,7 @@ function createDesk(opts = {}) {
       let disk;
       try { disk = readShow(DATA); } catch (e) { return json(res, { error: 'This machine has no show of its own to copy.' }, 404); }
       // Whatever the empty space show had pending is dropped: the copy is its first save.
-      clearTimeout(saveTimer); saveTimer = null; dirty = false;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
       writeWhole(showFile(), JSON.stringify(withoutRig(disk)));
       switchShow({ ...show });   // and loaded back from the file just written
       log('  copied this machine\'s show to ' + showFile() + ' (' + MACHINE_SHOW + ' is unchanged)');
@@ -1710,6 +1867,10 @@ function createDesk(opts = {}) {
     'POST /api/looks/fire': (req, res, body) => {
       const look = state.looks.find((l) => l.id === body.id);
       if (!look) return json(res, { error: 'no such look' }, 404);
+      // `autoplayOff: true`: the press also turns play-in-order off (the owner's rule, cuerun.js 2026-10-09), in this one
+      // call: a pad used to send api/cues/autoplay first, a second request that waited its turn behind the pad queue.
+      // Only when it is on, so a press that leaves it off saves nothing extra.
+      if (body.autoplayOff === true && (cueRunner.brief() || {}).autoplay) cueRunner.setAutoplay(false);
       const wait = quantiseWait(body.quantize);
       if (wait > 0) {
         const at = Date.now() + wait;
@@ -1892,7 +2053,7 @@ function createDesk(opts = {}) {
     // opened for one space must never snapshot or import into another show.
     ...attachShowfile({
       getState: () => state, getShow: () => show, sanitizeScene, sanitizeBanks, replaceShow,
-      deskName: 'di.iiii light desk',
+      deskName: 'di.iiii light desk', looksJson: () => (Array.isArray(state.looks) ? looksJson() : null),
     }).routes(json),
 
     'POST /api/master': (req, res, body) => {
@@ -2247,7 +2408,18 @@ function createDesk(opts = {}) {
     // is saved and no value changes. `moving` is the lights that have that axis; a light
     // without one is not an error (a mixed selection still moves its heads), it is just left out.
     'POST /api/fixtures/testmove': (req, res, body) => {
-      if (body.off) { state.testMove = {}; return json(res, { ok: true, moving: [] }); }
+      // {off:true} stops every light; {off:true, ids:[...]} only those, and the others swing on. A stop
+      // lets the swing in progress finish (at most 2 s) so the head never jumps; it is home after that.
+      if (body.off) {
+        const now = Date.now();
+        const ask = Array.isArray(body.ids) && body.ids.length ? body.ids : null;
+        const next = {};
+        for (const [id, e] of Object.entries(state.testMove || {})) {
+          if (!ask || ask.includes(id)) { const st = stopTestMove(e, now); if (st) next[id] = st; } else next[id] = e;
+        }
+        state.testMove = next;
+        return json(res, { ok: true, moving: [] });
+      }
       const lights = (Array.isArray(body.ids) ? body.ids : [])
         .map((id) => state.fixtures.find((f) => f.id === id)).filter(Boolean);
       if (!lights.length) return json(res, { error: 'select a light to move' }, 400);
@@ -2255,11 +2427,12 @@ function createDesk(opts = {}) {
       if (press.error) return json(res, { error: press.error }, 400);
       const now = Date.now();
       const next = {};
-      for (const [id, e] of Object.entries(state.testMove || {})) if (e.until > now) next[id] = e;
+      for (const [id, e] of Object.entries(state.testMove || {})) if (testMoveLive(e, now)) next[id] = e;
       const moving = lights.filter((f) => (PROFILES[f.profile] || PROFILES.rgb).channels.includes(press.axis));
-      for (const f of moving) next[f.id] = { axis: press.axis, from: now, until: now + press.ms };
+      // A re-press keeps the swing going from where it is; the other axis finishes its swing (testmove.js).
+      for (const f of moving) next[f.id] = pressTestMove(next[f.id], press, now);
       state.testMove = next;
-      json(res, { ok: true, moving: moving.map((f) => f.id), until: now + press.ms });
+      json(res, { ok: true, moving: moving.map((f) => f.id), until: Math.max(now + press.ms, ...moving.map((f) => next[f.id].until)) });
     },
 
     'POST /api/fixtures/limits': (req, res, body) => {
@@ -2773,7 +2946,7 @@ function createDesk(opts = {}) {
   const SPACE_ID = /^[a-z0-9-]{3,48}$/;
   // The routes a page opened for one space may use while another show is loaded: the
   // ones that say which show is loaded, and the ones that change it.
-  const SHOW_ROUTES = new Set(['GET /api/show', 'POST /api/show/open', 'POST /api/show/copy-machine']);
+  const SHOW_ROUTES = new Set(['GET /api/camera', 'POST /api/camera/config', 'GET /api/camera/frame', 'GET /api/show', 'POST /api/show/open', 'POST /api/show/copy-machine']);
 
   const who = () => (show.space ? `${show.label || show.space}'s show` : "this machine's own show");
 
@@ -2833,6 +3006,7 @@ function createDesk(opts = {}) {
     // failure is reported (status.save) and retried. The switch is then refused — loading
     // the next show replaces `state`, and the edits that could not be written would go
     // with it.
+    if (asyncOwes) dirty = true;   // an async save in flight cleared dirty and the gen bump below will drop it: save again, synchronously (import/restore/adopt clear asyncOwes: they wrote the file themselves)
     saveSoon();
     if (!saveStatus.ok) {
       const e = new Error('The show that is loaded could not be saved (' + saveStatus.lastError + '), so nothing was switched and none of it is lost. Try again once it has saved.');
@@ -2845,6 +3019,7 @@ function createDesk(opts = {}) {
     const rig = state.output;
     for (const p of customProfiles()) removeProfile(p.name);
     show = next;
+    showWriteGen++;   // an async save still in flight belongs to the show just left
     state = attachAudio(loadState({ keepOutput: rig }));
     engine.state = state;
     input.configure(state.output.input, { lanAllowed });
@@ -2874,7 +3049,7 @@ function createDesk(opts = {}) {
     const text = show.space ? JSON.stringify(withoutRig(disk)) : JSON.stringify({ ...disk, output: rigNow });
     const chase = { ...engine.chase };
     const origin = engine.chaseOrigin;
-    clearTimeout(saveTimer); saveTimer = null; dirty = false;
+    clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
     try {
       fs.mkdirSync(show.dir, { recursive: true });
       writeWhole(showFile(), text);
@@ -2946,6 +3121,7 @@ function createDesk(opts = {}) {
   }
 
   function close() {
+    camera.close();   // the caller that must wait for the camera to be let go uses closeCamera()
     dmxStream.close();
     clearInterval(timer);
     clearInterval(pollTimer);
@@ -2954,6 +3130,7 @@ function createDesk(opts = {}) {
     // process that has gone, and every extra device is let go of like the main two.
     cancelPending();
     cueRunner.close();
+    if (writing) dirty = true;   // an async save in flight may not finish before the process ends: write it again, synchronously
     try { writeShow(); } catch (e) { log('could not save the show on close: ' + e.message); }
     artnet.close();
     input.close();
@@ -2984,6 +3161,10 @@ function createDesk(opts = {}) {
   // them: a caller holding the desk (the rig's blackout mirror) must reach the live one.
   return {
     handle, close, engine, writeShow, summary, input,
+    // For a caller that edits a look object in place: the cached looks JSON is rebuilt on the next poll.
+    looksEdited,
+    // Let the camera go and wait until its ffmpeg has ended (shutdown waits on this).
+    closeCamera: () => camera.close(),
     // The cue runner itself, for a caller in this process that drives the list on a
     // person's behalf (the show page, routes/showRoutes.js) — the same go/load the
     // /api/cues routes call, so there is still ONE clock.
@@ -2998,7 +3179,7 @@ function createDesk(opts = {}) {
     // when this desk is running something else.
     adoptShowFile: (id) => {
       if (show.space !== id) return false;
-      clearTimeout(saveTimer); saveTimer = null; dirty = false;
+      clearTimeout(saveTimer); saveTimer = null; dirty = false; showWriteGen++; asyncOwes = false;
       switchShow({ ...show });
       return true;
     },
