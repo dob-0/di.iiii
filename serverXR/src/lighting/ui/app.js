@@ -371,6 +371,7 @@ async function pullState() {
     }
     const lastGood = S;
     S = next;
+    midiLiveArrived();
     // Not held back by the busy guard: it is the desk's own fact, not a fader this page is dragging.
     if (next.onAir) applyOnAir(next.onAir, askedAt);
     else if (!busy) layersAskedAt = askedAt;
@@ -6087,7 +6088,7 @@ let midiFlushTimer = null;
 // `last`: a pad press (note target) is a whole call; pressed again it goes to the back of the
 // queue, so the last press wins (press A, B, A -> A ends on air).
 function midiSend(route, body, key, last) {
-  if (!midiArmed) return;
+  if (!midiArmed || midiLiveWait) return;
   const k = key || route;
   if (last) midiPending.delete(k);
   const cur = midiPending.get(k);
@@ -6497,7 +6498,7 @@ function midiHandle(type, ch, num, unit) {
   if (type === 'note') return;
   // Safe: a fader only records where it is. Applying it would move the mirror the takeover reads
   // (a master pulled to 0 in Safe, then ARM, then 1/127 = caught at once = the rig goes dark).
-  if (!midiArmed) { midiLastVal[key] = unit; return; }
+  if (!midiArmed || midiLiveWait) { midiLastVal[key] = unit; return; }
 
   // soft takeover: ignore until the physical control crosses the desk's value
   if (midiPickup[key]) {
@@ -6555,13 +6556,28 @@ function midiMapByNumber() {
 
 /* ---- drawing ---- */
 // The mirror of what the desk holds. Read from the desk while Safe, and once more at ARM.
+// midiLiveWait: armed before the desk's first state arrived. Nothing that reads the mirror may act then (the
+// mirror holds the page's defaults, master 255): the first state fills it, see midiLiveArrived.
+let midiLiveWait = false;
 function midiRefreshLive() {
-  if (!S) return;
+  if (!S) return false;
   midiLive.master = S.master;
   midiLive.fxDepth = S.fx.depth; midiLive.fxBpm = S.fx.bpm;
   midiLive.fxMode = S.fx.mode; midiLive.fxOn = !!S.fx.enabled;
   midiLive.holdMs = S.chase.holdMs; midiLive.fadeMs = S.chase.fadeMs;
   midiLive.chase = !!S.chase.enabled;
+  return true;
+}
+// Called with every state this page applies. While armed and still waiting for the first one, the mirror is
+// read from the desk's real values and every fader must be caught again from there (I1 of the #1394 review).
+function midiLiveArrived() {
+  if (!midiArmed || !midiLiveWait || !S) return;
+  midiLiveWait = false;
+  midiRefreshLive();
+  midiLive.blackout = midiBlackoutNow();
+  for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') { midiPickup[k] = true; delete midiLastVal[k]; }
+  midiDraw();
+  midiPaintLights();
 }
 
 function buildMidi() {
@@ -6734,22 +6750,33 @@ const midiExplain = (html) => { $('#miCheckNote').innerHTML = html; };
 function midiListInputs() {
   if (!midiAccess) return;
   const sel = $('#miInputs');
-  const prev = sel.value || midiPrefs().input || '';
   const ins = [...midiAccess.inputs.values()];
+  const saved = midiPrefs().inputName || '';
   if (!ins.length) {
     sel.innerHTML = '<option value="">— no MIDI inputs found —</option>';
     midiPill('#miMidiStat', 'MIDI <b>no devices</b>', 'bad');
+    midiBindInput('');
     return;
   }
-  sel.innerHTML = ins.map((i) =>
+  const opts = ins.map((i) =>
     `<option value="${esc(i.id)}">${esc(i.name + (i.manufacturer ? '  ·  ' + i.manufacturer : ''))}</option>`).join('');
-  // Prefer a real device over a loopback/"through" port, which never sends anything.
-  const pick = ins.find((i) => i.id === prev)
-    || ins.find((i) => i.name && i.name === midiPrefs().inputName)
-    || ins.find((i) => !/through|loopmidi/i.test(i.name)) || ins[0];
+  // The remembered port is matched by its exact name and by nothing else: if it is absent, no other port is
+  // taken in its place. With nothing remembered, a real device is picked; a loopback/"through" port never
+  // is, because it never sends anything (L5 of the #1394 review). The operator's own choice (change) wins.
+  const cur = sel.value ? ins.find((i) => i.id === sel.value) : null;
+  const pick = cur || (saved ? ins.find((i) => i.name === saved) : ins.find((i) => !/through|loopmidi/i.test(i.name))) || null;
+  if (!pick) {
+    sel.innerHTML = `<option value="">${saved ? esc('— ' + saved + ' — not connected —') : '— choose an input —'}</option>` + opts;
+    sel.value = '';
+    midiBindInput('');
+    midiPill('#miMidiStat', saved ? `MIDI <b>${esc(saved)} not connected</b>` : `MIDI <b>${ins.length} in, none chosen</b>`, 'bad');
+    midiAccessReady = true;
+    midiRestoreTry();
+    return;
+  }
+  sel.innerHTML = opts;
   sel.value = pick.id;
   midiBindInput(pick.id);
-  midiPrefSet({ input: pick.id, inputName: pick.name });
   midiPill('#miMidiStat', `MIDI <b>${ins.length} in</b>`, 'good');
   midiAccessReady = true;
   midiRestoreTry();
@@ -6841,7 +6868,8 @@ $('#miRescan').addEventListener('click', midiListInputs);
 $('#miInputs').addEventListener('change', (e) => {
   midiBindInput(e.target.value);
   const o = e.target.selectedOptions[0];
-  midiPrefSet({ input: e.target.value, inputName: o ? o.textContent.split('  ·  ')[0] : '' });
+  // Remembered only when the operator chooses: an automatic pick is never stored.
+  if (e.target.value) midiPrefSet({ input: e.target.value, inputName: o ? o.textContent.split('  ·  ')[0] : '' });
 });
 $('#miClearMon').addEventListener('click', () => { $('#miMon').innerHTML = '<div class="empty">cleared</div>'; });
 
@@ -6854,7 +6882,6 @@ try {
   midiClaim = new BroadcastChannel('di-light-midi');
   midiClaim.onmessage = (e) => {
     if (e.data && e.data.claim && e.data.claim !== midiTabId && midiArmed) midiSetArmed(false, true);
-    if (e.data && e.data.ping === midiTabId) { try { midiClaim.postMessage({ pong: midiTabId }); } catch (err) { /* no channel */ } }
   };
 } catch (e) { midiClaim = null; }
 
@@ -6891,24 +6918,18 @@ async function midiOnAirTick() {
 function midiOnAirStart() { if (!midiOnAirTimer && !midiOnAirGone) midiOnAirTimer = setTimeout(midiOnAirTick, 0); }
 function midiOnAirStop() { clearTimeout(midiOnAirTimer); midiOnAirTimer = null; }
 
-// ---- what this browser remembers of MIDI (localStorage), and what this TAB remembers (sessionStorage) ----
-// Enable, the chosen input and the preset belong to the browser. ARM belongs to the tab: a reload of the
-// same tab re-arms it (through the one takeover, midiSetArmed -> claim), a new tab or browser never arms.
+// ---- what this browser remembers of MIDI (localStorage): enable, input, preset. Never ARM. ----
+// Enable, the chosen input and the preset belong to the browser. ARM is never stored anywhere: every load,
+// reload, show-change reload and session restore starts Safe, and only a press on ARM arms (owner's rule).
 const MIDI_PREF_KEY = 'lightdeskMidiPrefs';
-const MIDI_ARM_KEY = 'lightdeskMidiArmed';
 function midiPrefs() {
   try { const p = JSON.parse(localStorage.getItem(MIDI_PREF_KEY)); return p && typeof p === 'object' ? p : {}; } catch (e) { return {}; }
 }
 function midiPrefSet(patch) {
   try { localStorage.setItem(MIDI_PREF_KEY, JSON.stringify(Object.assign(midiPrefs(), patch))); } catch (e) { /* this session only */ }
 }
-function midiArmedStore(on) {
-  try { if (on) sessionStorage.setItem(MIDI_ARM_KEY, midiTabId); else sessionStorage.removeItem(MIDI_ARM_KEY); } catch (e) { /* nothing kept */ }
-}
-
 function midiSetArmed(on, byClaim) {
   midiArmed = on;
-  midiArmedStore(on);
   const b = $('#miArm');
   b.className = 'miarm ' + (midiArmed ? 'live' : 'safe');
   b.textContent = midiArmed ? 'ARMED — sending to rig' : 'Safe — not sending';
@@ -6916,7 +6937,7 @@ function midiSetArmed(on, byClaim) {
     try { if (midiClaim) midiClaim.postMessage({ claim: midiTabId }); } catch (e) { /* no channel */ }
     // Every fader must be caught again, so arming can never jump the rig: the mirror is read
     // from the desk now, and where a fader was in Safe is forgotten.
-    midiRefreshLive();
+    midiLiveWait = !midiRefreshLive();   // no state yet: the first one fills the mirror (midiLiveArrived)
     for (const k of Object.keys(midiMap)) if (midiMap[k].type !== 'note') { midiPickup[k] = true; delete midiLastVal[k]; }
     midiDraw();
     midiLedSent.clear();
@@ -6924,6 +6945,7 @@ function midiSetArmed(on, byClaim) {
     midiOnAirStart();
     say('MIDI armed — the controller is driving the rig');
   } else {
+    midiLiveWait = false;
     midiPending.clear();
     midiOnAirStop();
     // Another tab took over: it owns the lights now, so ours stay as the claimer painted them.
@@ -6935,9 +6957,7 @@ function midiSetArmed(on, byClaim) {
 }
 $('#miArm').addEventListener('click', () => midiSetArmed(!midiArmed));
 
-// After a reload: MIDI comes back on its own when this browser had it on, and ARM comes back only in the
-// tab that was armed (sessionStorage), through the same takeover as a click. A DUPLICATED tab copies the
-// sessionStorage of the original: it asks first, and when the tab named there still answers, it stays Safe.
+// After a reload: MIDI comes back on its own when this browser had it on (enable, input, preset). ARM never does.
 let midiAccessReady = false;
 let midiRestored = false;
 function midiRestoreTry() {
@@ -6946,21 +6966,6 @@ function midiRestoreTry() {
   const prefs = midiPrefs();
   // The remembered preset, only onto an EMPTY map (nothing of the show's is overwritten).
   if (prefs.preset && !Object.keys(midiMap).length && midiInput && midiPresetFor(midiInput.name) && midiPresetFor(midiInput.name).name === prefs.preset) midiApplyPreset();
-  let was = null;
-  try { was = sessionStorage.getItem(MIDI_ARM_KEY); } catch (e) { /* no storage: Safe */ }
-  if (!was || !midiClaim) return;   // no ARM to bring back; without the channel one armed tab cannot be promised, so Safe
-  midiRearmAfterReload(was);
-}
-function midiRearmAfterReload(was) {
-  let alive = false;
-  const onMsg = (e) => { if (e.data && e.data.pong === was) alive = true; };
-  midiClaim.addEventListener('message', onMsg);
-  try { midiClaim.postMessage({ ping: was }); } catch (e) { /* no channel */ }
-  setTimeout(() => {
-    midiClaim.removeEventListener('message', onMsg);
-    if (alive) { midiArmedStore(false); return; }   // a copy of a live tab: the original keeps the controller
-    if (!midiArmed) midiSetArmed(true);
-  }, 250);
 }
 if (midiPrefs().enabled) midiEnable();
 window.addEventListener('pagehide', () => { if (midiArmed) midiLedsOff(); });
