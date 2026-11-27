@@ -123,20 +123,23 @@
     // The full patch (owner N7277, midiPatch.js; design agent-reports-2026-11-27/apc40-full-patch-design.md).
     // Track faders and activators arrive on the channel of their track (CC 7 / note 0x32, ch 1-8);
     // the four momentary device buttons on the channel of the device-knob bank (bank 1 = ch 1).
-    // Left out on purpose: movers STROBE (a venue safety decision, the owner's), every `ch:` row.
+    // Strobe (N7314): PAN 0x57 = back bars + software strobe, SENDS 0x58 = movers (software only), rate = track knob 1, capped at 3 Hz in midiPatch.js.
     for (const [num, key] of FULL_CC) cc(num, key);
     for (const [ch, key] of FULL_FADERS) { if (has.has(key)) out.push({ key, type: 'cc', ch, num: 7 }); }
     for (const [ch, key] of FULL_ACTIVATORS) { if (has.has(key)) out.push({ key, type: 'note', ch, num: 0x32 }); }
     for (const [num, key] of FULL_NOTES) note(num, key);
+    // The 8 device knobs, one bank per TRACK SELECT (page = MIDI channel, midiPatch.js KNOBS).
+    for (const k of patch().KNOBS) { if (has.has(k.key)) out.push({ key: k.key, type: 'cc', ch: k.ch, num: k.num }); }
     return out;
   }
   // [CC number, target] on ch 1: track knobs 6-8 (CC 53-55), TEMPO (13) and CUE LEVEL (47) are relative.
-  const FULL_CC = [[53, 'layerrate'], [54, 'cfxbeats'], [55, 'cfxspread'], [13, 'tempo:rel'], [47, 'cfxmode:rel']];
+  const patch = () => (typeof require === 'function' ? require('./midiPatch.js') : root.deskMidiPatch);
+  const FULL_CC = [[48, 'strobe:rate'], [49, 'headscale'], [53, 'layerrate'], [54, 'cfxbeats'], [55, 'cfxspread'], [13, 'tempo:rel'], [47, 'cfxmode:rel']];
   const FULL_FADERS = [[1, 'grp:left:dim'], [2, 'grp:right:dim'], [3, 'grp:back:dim'], [6, 'zoom'], [7, 'layerlevel'], [8, 'cfxamount']];
   const FULL_ACTIVATORS = [[1, 'grp:left:on'], [2, 'grp:right:on'], [3, 'grp:back:on']];
   const FULL_NOTES = [[0x63, 'tap'], [0x64, 'nudge:-'], [0x65, 'nudge:+'], [0x5a, 'cfxon'],
     [0x3e, 'hit:white'], [0x3f, 'hit:left'], [0x40, 'hit:right'], [0x41, 'hit:swap'],
-    [0x66, 'blackoutoff'], [0x67, 'panic']];
+    [0x57, 'hit:strobe-all'], [0x58, 'hit:strobe-movers'], [0x66, 'blackoutoff'], [0x67, 'panic']];
 
   // Pad lights. Akai protocol v1.2, "Outbound Message Type 1: LEDs": a note-on to the pad's
   // note, MIDI channel = LED type (0 = primary colour, solid), velocity = colour from the RGB
@@ -196,6 +199,16 @@
     const on = (state && state.groupOn) || {};
     for (const g of ['left', 'right', 'back']) if (g in on) putTrack('grp:' + g + ':on', on[g]);
     if (state && 'blackout' in state) put('blackoutoff', state.blackout ? 1 : 0);
+    // The device-knob rings: each ring shows its value (CC 0x10-0x17 written back on the bank's channel), the ring type
+    // (CC 0x18-0x1F, 1 = single) once. state.rings = { key: 0..1 } from midiPatch.knobRings.
+    if (state && state.rings) {
+      for (const [key, u] of Object.entries(state.rings)) {
+        const b = map && map[key];
+        if (!b || b.type !== 'cc' || !(b.num >= 0x10 && b.num <= 0x17) || !(b.ch >= 1 && b.ch <= 9)) continue;
+        out.push({ kind: 'ringtype', ch: b.ch - 1, num: b.num + 8, vel: 1 });
+        out.push({ kind: 'ring', ch: b.ch - 1, num: b.num, vel: Math.max(0, Math.min(127, Math.round(u * 127))) });
+      }
+    }
     return out;
   }
 
@@ -205,7 +218,7 @@
     const send = [];
     // Pads are keyed by note alone; a track button (l.ch 1-7) by channel and note, so three
     // activators on note 0x32 are three lights.
-    for (const l of lights) { const k = l.ch ? l.ch * 256 + l.note : l.note; if (sent.get(k) !== l.vel) { send.push(l); sent.set(k, l.vel); } }
+    for (const l of lights) { const k = l.kind ? (l.kind === 'ring' ? 100000 : 200000) + l.ch * 256 + l.num : l.ch ? l.ch * 256 + l.note : l.note; if (sent.get(k) !== l.vel) { send.push(l); sent.set(k, l.vel); } }
     return send;
   }
 
@@ -239,7 +252,7 @@
         const looks = deps.looks();
         deps.setPage(clampLookPage(deps.page(), looks.length));
         const lights = apc40Lights(deps.map(), deps.cues(), deps.state(), { looks, page: deps.page(), activeId: lookId() });
-        for (const l of lightDiff(lights, sent)) out.send([0x90 | (l.ch || 0), l.note, l.vel]);
+        for (const l of lightDiff(lights, sent)) out.send(l.kind ? [0xB0 | l.ch, l.num, l.vel] : [0x90 | (l.ch || 0), l.note, l.vel]);
       } catch (e) { sent.clear(); }   // port gone: repaint everything when it is back
     }
     return {

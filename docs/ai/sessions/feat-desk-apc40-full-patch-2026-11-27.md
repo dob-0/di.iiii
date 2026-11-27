@@ -22,3 +22,33 @@ A keepalive fetch is capped near 64 KB; a white hit over 33 fixtures is ~60 KB a
 - Not checked: the real APC40 (second-press message of toggle activators, LEDs, device-button channel = bank 1 = ch 1), real Web MIDI, a hit on real lamps, chase off (test show has no chase scenes; unit-tested only). The drawing (`apc40draw.js`) does not yet show the new buttons; the mapping table does.
 ## Rollback
 Revert the PR; "Clear map" + "Map my controller" returns to 49.
+
+## Round 2: strobe, effect knob pages, movement size (N7314, N7315) - engine, preset, tests done; app.js wiring WAITS
+State: 73 -> 100 preset controls (73 + 23 device knobs + strobe rate + movement size + 2 strobe hits). The page wiring in `ui/app.js` is not in this commit: #1394 (the base) is being reworked there; head was e6c410f2a (the base) when checked.
+- Engine: `layer.headScale` 0-1 (api/layer `headScale`, saved only below 1). `headMotion.headsFrame` scales each look's pan/tilt swing around the look's own rest position. 100 % = the same bytes as before; 0 % = heads hold the centre; never outside 0-255 (`headScale.test.js`).
+- Strobe: `midiPatch.capStrobeDmx` caps the BAR1240PIX57 `strobe` hold at DMX 14 (= 2.92 Hz, WCAG 2.3.1); test sweeps the knob 0..1 in 1000 steps. MovingBar43 `shutter` is never written: movers get the software strobe (fx.js, slice >= 350 ms) only.
+- Pixel COUNT: the pixel map has no live count / segments / repeat parameter (a strip's `pixels` is a patch, not a live knob); not bound, patch untouched.
+- Colour fx page: its 4 parameters (mode, beats, spread, amount) are already on CUE LEVEL, track knobs 7-8 and fader 8; a/b colours stay unbound (no-green rule). No second page.
+
+### Control -> parameter -> range (a key has one control; ch = MIDI channel)
+| Control | CC / note | Parameter | Range |
+|---|---|---|---|
+| Track fader 1-3 | CC 7, ch 1-3 | left / right / back group dimmer | 0-100 % |
+| Track fader 6 / 7 / 8 | CC 7, ch 6-8 | zoom / layer level / colour fx amount | 0-255 / 0-100 % / 0-255 |
+| Activator 1-3 | note 0x32, ch 1-3 | group on / off | switch |
+| Track knob 1 | CC 48 ch 1 | strobe rate (hits) | 1-3 Hz = DMX 4-14 (capped) |
+| Track knob 2 | CC 49 ch 1 | movement size (layer.headScale) | 0-100 % (100 = as written) |
+| Track knob 6 / 7 / 8 | CC 53-55 ch 1 | layer rate / colour fx beats / spread | 1/8-8 x / 1-32 / 0-1 |
+| TEMPO / CUE LEVEL | CC 13 / 47 (relative) | tempo / colour fx mode | 20-300 BPM / none hue chase swap |
+| PAN / SENDS | note 0x57 / 0x58 ch 1 | strobe hit: bars + soft / movers soft only | hold |
+| Device pads 1-4 | notes 0x3E-0x41 | white / left / right / swap hits | hold |
+| TAP, NUDGE -/+, METRONOME | 0x63, 0x64/65, 0x5A | tap tempo, beat nudge, colour fx on | press |
+| SESSION REC / BANK LOCK | 0x66 / 0x67 | blackout off / panic | press |
+
+Device knobs 1-8 = CC 0x10-0x17 on the channel of the TRACK SELECT bank (bank 1-4 = ch 1-4); each ring shows the value (CC written back) and its type (CC 0x18-0x1F = 1, once).
+| Bank | Page | Knob 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | FX engine | mode (15) | spread (7) | depth 0-255 | tempo 20-300 | - | - | - | - |
+| 2 | Pixel map | pixel size 1-30 % | mix 0-255 | speed 0.1-4 x | brightness -100..100 | contrast 0-300 | left-right +-1000 | up-down +-1000 | - |
+| 3 | Pixel animation | size 0.1-5 x | beats 0-64 | phase 0-1 | direction (3) | easing (3) | travel x +-1000 | travel y +-1000 | mix breathing 0-1 |
+| 4 | LFO 1 | wave (5) | beats 0.25-64 | depth 0-255 | spread 0-1 | - | - | - | - |

@@ -241,3 +241,112 @@ describe('activator lights', () => {
     expect(l.filter((x) => x.note === 0x32)).toEqual([])
   })
 })
+
+describe('strobe on the controller (N7314), capped at 3 Hz', () => {
+  it('the knob never passes DMX 14 on the 1-20 Hz band, from 0 to its maximum, in 1/1000 steps', () => {
+    expect(P.STROBE_DMX_CAP).toBe(14)
+    for (let i = 0; i <= 1000; i++) {
+      const dmx = P.strobeDmxFromUnit(i / 1000)
+      expect(dmx).toBeGreaterThanOrEqual(4)
+      expect(dmx).toBeLessThanOrEqual(14)
+      expect(P.strobeHzFromDmx(dmx)).toBeLessThanOrEqual(3)
+    }
+    expect(P.strobeDmxFromUnit(1)).toBe(14)
+    expect(P.strobeHzFromDmx(P.strobeDmxFromUnit(1))).toBeLessThanOrEqual(3)
+    expect(P.strobeDmxFromUnit(0)).toBe(4)
+  })
+  it('the gate holds for any value that reaches it, even a bad one', () => {
+    for (const v of [15, 50, 103]) expect(P.capStrobeDmx(v)).toBe(14)
+    for (const v of [104, 255, -1, NaN, 'x', null, undefined, 1e9]) expect(P.capStrobeDmx(v)).toBe(0)
+    for (const v of [4, 10, 14]) expect(P.capStrobeDmx(v)).toBe(v)
+    expect(P.strobeDmxFromUnit(5)).toBe(14)
+    expect(P.strobeDmxFromUnit(NaN)).toBe(4)
+  })
+  const bar = { id: 'b1', universe: 1, address: 10, profile: 'bar' }
+  const mov = { id: 'm1', universe: 2, address: 1, profile: 'mov' }
+  const profiles = {
+    bar: { channels: ['dimmer', 'r', 'g', 'b', 'w', 'zoom', 'zoom2', 'strobe'] },
+    mov: { channels: ['pan', 'tilt', 'shutter', 'dimmer'] },
+  }
+  const prof = (f) => profiles[f.profile]
+  it('hit "all": the bar strobe channel is held at the capped value, the mover gets only the software strobe', () => {
+    const h = P.strobeHit([bar, mov], prof, 'all', 1)
+    const st = h.holds.find((c) => c.channel === 17)
+    expect(st).toEqual({ universe: 1, channel: 17, value: 14 })
+    expect(h.holds.every((c) => c.universe === 1)).toBe(true)
+    expect(h.fxIds).toEqual(['m1'])
+  })
+  it('hit "movers": software strobe only, no raw write at all, the shutter is never written', () => {
+    const h = P.strobeHit([bar, mov], prof, 'movers', 1)
+    expect(h.holds).toEqual([])
+    expect(h.fxIds).toEqual(['m1'])
+    const all = P.strobeHit([bar, mov], prof, 'all', 0.5)
+    expect(all.holds.some((c) => c.universe === 2)).toBe(false)
+  })
+})
+
+describe('device knob pages (banked by TRACK SELECT, channel = page)', () => {
+  const S = {
+    fx: { mode: 'chase', depth: 255, bpm: 160, spatial: 'x' },
+    video: { sample: 6, mix: 255, speed: 1, bright: 0, contrast: 100, x: 0, y: 0, anim: { bscale: 1, beats: 8, phase: 0, dir: 'pingpong', ease: 'smooth', bx: 0, by: 0 }, lfo: { depth: 0.5 } },
+    lfos: [{ id: 'a', wave: 'sine', beats: 1, depth: 255, spread: 0, enabled: true }, { id: 'b', wave: 'saw' }],
+  }
+  it('23 knobs on 4 pages; knob k is CC 0x10+k on the page channel; keys are unique', () => {
+    expect(P.KNOBS).toHaveLength(23)
+    expect(new Set(P.KNOBS.map((k) => k.key)).size).toBe(23)
+    for (const k of P.KNOBS) { expect(k.num).toBeGreaterThanOrEqual(0x10); expect(k.num).toBeLessThanOrEqual(0x17); expect(k.ch).toBeGreaterThanOrEqual(1); expect(k.ch).toBeLessThanOrEqual(4) }
+  })
+  it('every knob sets values only inside the range its desk route accepts, end to end', () => {
+    const lim = { sample: [1, 30], mix: [0, 255], speed: [0.1, 4], bright: [-100, 100], contrast: [0, 300], x: [-1000, 1000], y: [-1000, 1000],
+      bscale: [0.1, 5], beats: [0, 64], phase: [0, 1], bx: [-1000, 1000], by: [-1000, 1000], depth: [0, 255], bpm: [20, 300], spread: [0, 1] }
+    for (const k of P.KNOBS) for (const u of [0, 0.25, 0.5, 0.999, 1]) {
+      const v = P.knobValue(k, u)
+      if (k.values) expect(k.values).toContain(v)
+      else expect(Number.isFinite(v)).toBe(true)
+    }
+    const px = P.knobByKey('kn:pixelmap:0')   // pixel size
+    expect(P.knobSend(px, 0, S).body).toEqual({ sample: 1 })
+    expect(P.knobSend(px, 1, S).body).toEqual({ sample: 30 })
+    const sz = P.knobByKey('kn:pixelanim:0')
+    expect(P.knobSend(sz, 1, S)).toEqual({ route: 'api/video', body: { anim: { bscale: 5 } } })
+    expect(P.knobSend(P.knobByKey('kn:fx:0'), 0.99, S)).toEqual({ route: 'api/fx', body: { mode: 'fade', all: true } })
+    expect(lim.speed[0]).toBe(0.1)
+  })
+  it('the LFO page edits the first LFO only, and does nothing when there is none', () => {
+    const r = P.knobSend(P.knobByKey('kn:lfo1:2'), 0.5, S)
+    expect(r.route).toBe('api/lfos')
+    expect(r.body.lfos[0].depth).toBe(128)
+    expect(r.body.lfos[1]).toEqual(S.lfos[1])
+    expect(P.knobSend(P.knobByKey('kn:lfo1:2'), 0.5, { lfos: [] })).toBeNull()
+  })
+  it('rings read the desk back: value, enum position, none when the desk has no value', () => {
+    const r = P.knobRings(S)
+    expect(r['kn:fx:2']).toBe(1)
+    expect(r['kn:fx:0']).toBeCloseTo(2.5 / 15, 5)
+    expect(r['kn:pixelmap:0']).toBeCloseTo(5 / 29, 5)
+    expect(P.knobRings({})['kn:fx:2']).toBeUndefined()
+    for (const u of Object.values(r)) { expect(u).toBeGreaterThanOrEqual(0); expect(u).toBeLessThanOrEqual(1) }
+  })
+  it('the preset maps the knobs on their page channel, strobe and movement size on track knobs 1 and 2', () => {
+    const keys = [...P.KNOBS.map((k) => k.key), 'strobe:rate', 'headscale', 'hit:strobe-all', 'hit:strobe-movers']
+    const rows = apc40Preset(keys)
+    expect(rows).toHaveLength(keys.length)
+    expect(rows.find((r) => r.key === 'kn:pixelmap:3')).toEqual({ key: 'kn:pixelmap:3', type: 'cc', ch: 2, num: 0x13 })
+    expect(rows.find((r) => r.key === 'strobe:rate')).toEqual({ key: 'strobe:rate', type: 'cc', ch: 1, num: 48 })
+    expect(rows.find((r) => r.key === 'headscale')).toEqual({ key: 'headscale', type: 'cc', ch: 1, num: 49 })
+    expect(rows.find((r) => r.key === 'hit:strobe-all').num).toBe(0x57)
+  })
+  it('the painter writes ring value on the bank channel and the ring type once', () => {
+    const map = { 'kn:pixelmap:1': { type: 'cc', ch: 2, num: 0x11 } }
+    const lights = apc40Lights(map, { list: [] }, { rings: { 'kn:pixelmap:1': 0.5 } }, null)
+    const sent = new Map()
+    const first = lightDiff(lights, sent)
+    expect(first.map((l) => [l.kind, l.ch, l.num, l.vel])).toEqual([['ringtype', 1, 0x19, 1], ['ring', 1, 0x11, 64]])
+    expect(lightDiff(apc40Lights(map, { list: [] }, { rings: { 'kn:pixelmap:1': 0.5 } }, null), sent)).toEqual([])
+    const out = []
+    const painter = createLedPainter({ out: () => ({ send: (b) => out.push(b) }), armed: () => true, map: () => map, cues: () => ({ list: [] }),
+      state: () => ({ rings: { 'kn:pixelmap:1': 1 } }), looks: () => [], page: () => 0, setPage: () => {}, polledId: () => '', now: () => 0 })
+    painter.paint()
+    expect(out).toEqual([[0xB1, 0x19, 1], [0xB1, 0x11, 127]])
+  })
+})

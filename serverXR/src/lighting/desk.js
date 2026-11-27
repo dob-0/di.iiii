@@ -1936,6 +1936,10 @@ function createDesk(opts = {}) {
       if (body.on != null) layer.on = !!body.on;
       if (body.lookId !== undefined) layer.lookId = typeof body.lookId === 'string' && body.lookId ? body.lookId.slice(0, 40) : null;
       if (body.rate != null && Number.isFinite(+body.rate)) layer.rate = Math.max(0.01, Math.min(64, +body.rate));
+      if (body.headScale != null && Number.isFinite(+body.headScale)) {
+        const hs = Math.max(0, Math.min(1, +body.headScale));
+        if (hs < 1) layer.headScale = hs; else delete layer.headScale;
+      }
       if (body.name != null) layer.name = String(body.name).slice(0, 60);
       if (LAYER_MERGES.includes(body.merge)) layer.merge = body.merge;
       if (LOOK_KINDS.includes(body.mask)) layer.mask = body.mask;

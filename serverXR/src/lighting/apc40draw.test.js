@@ -85,7 +85,7 @@ describe('drawn APC40 = the real LEDs (fake APC40 port)', () => {
     const port = { send: (b) => sent.set(b[1], b[2]) }
     const state = { polled: 'l5', page: 0 }
     const cues = { list: [{ id: 'c1' }, { id: 'c2' }], autoplay: true, loop: false }
-    const p = createLedPainter({ out: () => port, armed: () => true, map: () => map, cues: () => cues, state: () => ({ blackout: true }), looks: () => looks, page: () => state.page, setPage: (n) => { state.page = n }, polledId: () => state.polled, now: () => 0 })
+    const p = createLedPainter({ out: () => port, armed: () => true, map: () => Object.fromEntries(apc40Preset([...Object.keys(BUTTONS), 'master', ...lookPadTargets().map((t) => t.key)]).map((m) => [m.key, { type: m.type, ch: m.ch, num: m.num }])), cues: () => cues, state: () => ({ blackout: true }), looks: () => looks, page: () => state.page, setPage: (n) => { state.page = n }, polledId: () => state.polled, now: () => 0 })
     p.paint()
     const v = view({ cues, state: { blackout: true }, activeId: 'l5' })
     for (const pad of v.pads) expect(pad.vel).toBe(sent.get(apc40PadNote(pad.i)))
@@ -95,5 +95,23 @@ describe('drawn APC40 = the real LEDs (fake APC40 port)', () => {
   it('a velocity the table here lacks is grey and countable, never a made-up colour', () => {
     expect(ledHex(77)).toBe('#808080')
     expect(ledHex(5)).toBe('#ff0000')
+  })
+})
+
+describe('drawn APC40: the full patch, strobe and the knob pages (round 2)', () => {
+  const P = require('./ui/midiPatch.js')
+  const all = [...Object.keys(BUTTONS), 'master', ...require('./ui/apc40draw.js').CONTROLS.map((c) => c.key), ...P.KNOBS.map((k) => k.key), ...lookPadTargets().map((t) => t.key)]
+  const full = Object.fromEntries(apc40Preset(all).map((m) => [m.key, { type: m.type, ch: m.ch, num: m.num }]))
+  const v = apc40View({ map: full, cues: { list: [] }, state: {}, looks, page: 0, activeId: '' })
+  it('draws every new control: buttons, faders/knobs, and 23 device knobs on 4 banks', () => {
+    expect(v.knobs).toHaveLength(23)
+    expect(new Set(v.knobs.map((k) => k.bank))).toEqual(new Set([1, 2, 3, 4]))
+    expect(v.controls).toHaveLength(16)
+    for (const key of ['hit:strobe-all', 'hit:strobe-movers', 'tap', 'panic', 'hit:white']) expect(v.buttons.map((b) => b.key)).toContain(key)
+    expect(v.controls.find((c) => c.key === 'strobe:rate').range).toMatch(/3 Hz/)
+    expect(v.controls.find((c) => c.key === 'headscale').where).toBe('CC 49 ch 1')
+  })
+  it('every row has a printed name, a sentence and a range, none empty', () => {
+    for (const r of [...v.controls, ...v.knobs]) { expect(r.hw).toBeTruthy(); expect(r.does).toBeTruthy(); expect(r.range).toBeTruthy() }
   })
 })
