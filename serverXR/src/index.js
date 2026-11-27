@@ -3893,7 +3893,7 @@ initStorage()
       installShutdown({
         server: httpServer,
         // open Monitor streams count as requests in flight: end them first, or every stop waits
-        before: async (signal) => { try { monitorRoutes?.closeAll?.() } catch { /* the stop goes on */ } await stopLasers(signal) },
+        before: async (signal) => { try { monitorRoutes?.closeAll?.() } catch { /* the stop goes on */ } await Promise.all([stopLasers(signal), lighting.closeCamera().catch(() => {})]) },
         inflight,
         timers: shutdownTimers,
         checkpoint: () => getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)'),
