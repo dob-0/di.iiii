@@ -194,7 +194,7 @@ const startDesk = async (withSpace) => {
   await new Promise((r) => sv.listen(0, '127.0.0.1', r))
   const b = 'http://127.0.0.1:' + sv.address().port
   const post = async (route, body) => { const r = await fetch(b + route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) }); return { status: r.status, body: await r.json() } }
-  return { dk, post, d, spaceDir, stop: async () => { dk.close(); sv.closeAllConnections?.(); await new Promise((r) => sv.close(r)); fs.rmSync(d, { recursive: true, force: true }) } }
+  return { dk, post, d, spaceDir, port: sv.address().port, stop: async () => { dk.close(); sv.closeAllConnections?.(); await new Promise((r) => sv.close(r)); fs.rmSync(d, { recursive: true, force: true }) } }
 }
 const waitFor = async (fn, ms = 5000) => { const t = Date.now(); while (Date.now() - t < ms) { if (fn()) return true; await new Promise((r) => setTimeout(r, 25)) } return false }
 const oldText = (dk, space) => { const s = dk.state; if (!space) return JSON.stringify(s); const c = Object.assign({}, s); delete c.output; return JSON.stringify(c) }
@@ -241,4 +241,68 @@ describe.each([['this machine\'s own show', false], ['a space\'s show (withoutRi
     expect(fs.readFileSync(snapFile, 'utf8')).toBe(JSON.stringify(doc))
     expect(JSON.stringify(doc.show.looks)).toBe(JSON.stringify(k.dk.state.looks))
   })
+})
+
+// ---- a synchronous save (close, import, restore, switch) while the timer's async save is in flight ----
+// The async save has its own temp file (show.json.async.tmp); the sync saves use show.json.tmp. Before, both used
+// show.json.tmp and the second truncated the file the first still had open, so show.json ended up unreadable.
+
+const inFlight = async (k, file) => {
+  await k.post('/api/master', { master: 40 + Math.floor(Math.random() * 100) })   // the save is due 400 ms later
+  const tmp = file + '.async.tmp'
+  return waitFor(() => fs.existsSync(tmp), 3000)
+}
+const bigDesk = async () => {
+  const k = await startDesk(false)
+  for (const l of makeBigLooks(30, { steps: 64, fixtures: 205 })) await k.post('/api/looks/add', { look: l })
+  const file = path.join(k.d, 'data', 'show.json')
+  await waitFor(() => fs.existsSync(file) && fs.statSync(file).size > 10e6)
+  await new Promise((r) => setTimeout(r, 600))      // let the timer's own saves settle
+  return { k, file }
+}
+
+describe('a synchronous save during an async one leaves show.json whole', () => {
+  it('close() while a timer save is in flight: show.json parses and equals the state', async () => {
+    const { k, file } = await bigDesk()
+    try {
+      expect(await inFlight(k, file)).toBe(true)
+      k.dk.close()
+      const want = JSON.parse(JSON.stringify(k.dk.state))
+      await new Promise((r) => setTimeout(r, 1500))   // the async write finishes or drops after close
+      const got = JSON.parse(fs.readFileSync(file, 'utf8'))
+      expect(got).toEqual(want)
+      expect(fs.existsSync(file + '.async.tmp')).toBe(false)
+    } finally { fs.rmSync(k.d, { recursive: true, force: true }) }
+  }, 60000)
+
+  it('an import (replaceShow) while a timer save is in flight: show.json is the imported show', async () => {
+    const { k, file } = await bigDesk()
+    try {
+      const exp = await (await fetch(`http://127.0.0.1:${k.port}/api/show/export`)).json()
+      exp.show.looks = [look('imported-1'), look('imported-2')]
+      expect(await inFlight(k, file)).toBe(true)
+      const r = await k.post('/api/show/import', { mode: 'replace', show: exp })
+      expect(r.status).toBe(200)
+      await new Promise((r2) => setTimeout(r2, 1500))
+      const got = JSON.parse(fs.readFileSync(file, 'utf8'))
+      expect(got.looks.map((l) => l.id)).toEqual(['imported-1', 'imported-2'])   // replaceShow writes the file as imported, then loads it
+      expect(k.dk.state.looks.map((l) => l.id)).toEqual(['imported-1', 'imported-2'])
+      expect(fs.existsSync(file + '.async.tmp')).toBe(false)
+    } finally { await k.stop() }
+  }, 60000)
+
+  it('a snapshot restore while a timer save is in flight: show.json is the restored show', async () => {
+    const { k, file } = await bigDesk()
+    try {
+      const snap = await k.post('/api/snapshots', { name: 'before' })
+      await k.post('/api/looks', { looks: [look('later')] })
+      expect(await inFlight(k, file)).toBe(true)
+      const r = await k.post('/api/snapshots/restore', { id: snap.body.snapshot.id })
+      expect(r.status).toBe(200)
+      await new Promise((r2) => setTimeout(r2, 1500))
+      const got = JSON.parse(fs.readFileSync(file, 'utf8'))
+      expect(got.looks.length).toBe(30)
+      expect(got).toEqual(JSON.parse(JSON.stringify(k.dk.state)))
+    } finally { await k.stop() }
+  }, 60000)
 })
