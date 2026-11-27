@@ -115,3 +115,31 @@ describe('drawn APC40: the full patch, strobe and the knob pages (round 2)', () 
     for (const r of [...v.controls, ...v.knobs]) { expect(r.hw).toBeTruthy(); expect(r.does).toBeTruthy(); expect(r.range).toBeTruthy() }
   })
 })
+
+describe('round 2: safe look, contrast, callouts', () => {
+  const draw = require('./ui/apc40draw.js')
+  const fs = require('node:fs')
+  const src = fs.readFileSync(new URL('./ui/apc40draw.js', import.meta.url), 'utf8')
+  const lum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((x) => (x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4)); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2] }
+  it('Safe dims the pads and kills every glow (pinned in the CSS)', () => {
+    expect(src).toContain('.apc40.safe .apcp .pad')
+    expect(src).toMatch(/\.apc40\.safe \.apcp \*[^']*box-shadow:none!important;filter:none!important/)
+  })
+  it('on-air label gradient keeps white text at 4.5:1 or more', () => {
+    for (const bg of draw.LIVE_GRADIENT) expect(1.05 / (lum(bg) + .05)).toBeGreaterThanOrEqual(4.5)
+  })
+  it('crossfader A/B buttons have the press flash', () => { expect(src).toContain('.apcp .xab.hit') })
+  it('ccTarget reads the Akai table: track faders by channel, master, crossfader, bank knobs', () => {
+    expect(draw.ccTarget(3, 7)).toMatchObject({ id: 'fader.2' })
+    expect(draw.ccTarget(1, 14)).toMatchObject({ id: 'fader.8' })
+    expect(draw.ccTarget(1, 15)).toMatchObject({ id: 'xfader' })
+    expect(draw.ccTarget(2, 18)).toMatchObject({ id: 'dk.2', bank: 2 })
+    expect(draw.ccTarget(1, 13)).toMatchObject({ id: 'tempo', kind: 'rel' })
+  })
+  it('callouts come from the live binding map, one per bound group, none for unbound', () => {
+    const c = draw.apc40Callouts(map, view())
+    expect(c.length).toBeGreaterThan(0)
+    for (const x of c) { expect(['top', 'bottom', 'left', 'right']).toContain(x.side); expect(x.text).toBeTruthy(); expect(x.target).toBeTruthy() }
+    expect(draw.apc40Callouts({}, view({ map: {} })).length).toBeLessThan(c.length)
+  })
+})

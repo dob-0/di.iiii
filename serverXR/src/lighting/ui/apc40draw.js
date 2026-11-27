@@ -124,6 +124,7 @@
         name: look ? String(look.name || '(unnamed)') : '',
         no: look ? page * mc.LOOK_PADS + slot + 1 : 0,
         vel, hex: ledHex(vel), state,
+        bind: slot == null ? null : (eff['lookpad:' + slot] || null),
       });
     }
     const buttons = [];
@@ -132,7 +133,7 @@
       if (note == null) continue;
       const b = BUTTONS[key];
       const vel = velOf.has(note) ? velOf.get(note) : null;
-      buttons.push({ key, note, hw: HW[note] || ('NOTE ' + note), short: b.short, does: b.does, danger: !!b.danger, vel, hex: vel == null ? null : ledHex(vel) });
+      buttons.push({ key, note, hw: HW[note] || ('NOTE ' + note), short: b.short, does: b.does, danger: !!b.danger, vel, hex: vel == null ? null : ledHex(vel), bind: eff[key] || null });
     }
     // Faders, knobs, activators, and the 8 device knobs of each TRACK SELECT bank: what each does and its range.
     const ccName = (b) => (b.type === 'cc' ? 'CC ' + b.num + ' ch ' + b.ch : 'note ' + b.num + ' ch ' + b.ch);
@@ -140,16 +141,71 @@
     const knobs = pm().KNOBS.filter((k) => eff[k.key]).map((k) => ({ key: k.key, page: k.page, pageName: k.pageName, bank: eff[k.key].ch,
       hw: 'BANK ' + eff[k.key].ch + ' KNOB ' + (eff[k.key].num - 0x0f), does: k.label, range: k.unitLabel, where: ccName(eff[k.key]) }));
     const mb = eff.master;
-    return {
-      pads, buttons, controls, knobs,
+    const view = {
+      pads, buttons, controls, knobs, bindings: eff,
       page, pages: mc.lookPageCount(looks.length), total: looks.length,
       master: { mapped: !!(mb && mb.type === 'cc'), cc: mb ? mb.num : null, does: 'Master fader = desk master' },
       onAir: (looks.find((l) => l.id === m.activeId) || {}).name || '',
       mapped: bound > 0,
     };
+    view.callouts = apc40Callouts(eff, view);
+    return view;
   }
 
-  const api = { apc40View, ledHex, LED_HEX, BUTTONS, HW, CONTROLS };
+
+  // Which control of the drawn unit a MIDI controller message belongs to (Akai protocol v1.2 inbound table: CC 7 track fader on
+  // the channel of its track, 14 master, 15 crossfader, 13 TEMPO and 47 CUE LEVEL relative, 16-23 device knobs of the bank
+  // = channel, 48-55 track knobs). One table for the drag, the live display and the labels, so none can disagree.
+  function ccTarget(ch, num) {
+    if (num === 7 && ch >= 1 && ch <= 8) return { id: 'fader.' + (ch - 1), kind: 'fader' };
+    if (num === 14) return { id: 'fader.8', kind: 'fader' };
+    if (num === 15) return { id: 'xfader', kind: 'xf' };
+    if (num === 13) return { id: 'tempo', kind: 'rel' };
+    if (num === 47) return { id: 'cue', kind: 'rel' };
+    if (num >= 16 && num <= 23) return { id: 'dk.' + (num - 16), kind: 'knob', bank: ch };
+    if (num >= 48 && num <= 55) return { id: 'tk.' + (num - 48), kind: 'knob' };
+    return null;
+  }
+  // Short names for the leader-line labels: what the control does on THIS desk.
+  const LBL = { 'grp:left:dim': 'Left truss dimmer', 'grp:right:dim': 'Right truss dimmer', 'grp:back:dim': 'Back bars dimmer', zoom: 'Zoom, all bars',
+    layerlevel: 'Layer level', cfxamount: 'Colour fx amount', master: 'Master', 'strobe:rate': 'Strobe rate', headscale: 'Movement size', layerrate: 'Look speed',
+    cfxbeats: 'Colour fx beats', cfxspread: 'Colour fx spread', 'tempo:rel': 'Tempo', 'cfxmode:rel': 'Colour fx mode', cuego: 'Cue GO', cuestop: 'Cue stop',
+    cueback: 'Cue back', cueauto: 'Auto play', cueloop: 'Loop', blackout: 'Blackout', blackoutoff: 'Blackout off', panic: 'Panic', cfxon: 'Colour fx on / off',
+    'hit:white': 'white', 'hit:left': 'left', 'hit:right': 'right', 'hit:swap': 'swap', 'hit:strobe-all': 'back bars', 'hit:strobe-movers': 'movers',
+    'grp:left:on': 'left', 'grp:right:on': 'right', 'grp:back:on': 'back', tap: 'Tap', 'nudge:-': 'nudge', 'nudge:+': 'nudge' };
+  // The labels with leader lines: { id, side, target (a geometry key of the drawing, or btn:<note>), text }. Only what the live
+  // binding map binds gets one, so the drawing never names a control the desk does not use.
+  function apc40Callouts(eff, v) {
+    const keyAt = (type, ch, num) => Object.keys(eff).find((k) => { const b = eff[k]; return b && b.type === type && b.ch === ch && b.num === num && LBL[k]; });
+    const out = [];
+    const add = (id, side, target, text) => out.push({ id, side, target, text });
+    for (let i = 0; i < 8; i++) { const k = keyAt('cc', 1, 48 + i); if (k) add('tk.' + i, 'top', 'tk.' + i, LBL[k]); }
+    const nk = (key) => (eff[key] && eff[key].type === 'note' ? eff[key].num : null);
+    if (nk('cuego') != null) add('play', 'top', 'btn:' + nk('cuego'), LBL.cuego);
+    if (nk('blackoutoff') != null) add('session', 'top', 'btn:' + nk('blackoutoff'), LBL.blackoutoff);
+    const strobes = ['hit:strobe-all', 'hit:strobe-movers'].filter((k) => nk(k) != null);
+    if (strobes.length) add('strobe', 'top', 'btn:' + nk(strobes[0]), 'Hold to strobe: ' + strobes.map((k) => LBL[k]).join(' / '));
+    const scenes = ['cueback', 'cueauto', 'cueloop', 'blackout'].filter((k) => nk(k) != null);
+    if (scenes.length) add('scenes', 'top', 'scene.0', scenes.map((k) => LBL[k]).join(' / '));
+    for (let i = 0; i < 9; i++) { const k = i < 8 ? keyAt('cc', i + 1, 7) : keyAt('cc', 1, 14); if (k) add('fader.' + i, 'bottom', 'fader.' + i, LBL[k]); }
+    if (v.pads.some((p) => p.key)) add('pads', 'left', 'pad.2.0', 'Look pads: ' + v.total + ' looks, 40 a page, page ' + (v.page + 1) + ' of ' + v.pages);
+    const acts = ['grp:left:on', 'grp:right:on', 'grp:back:on'].filter((k) => eff[k]);
+    if (acts.length) add('acts', 'left', 'act.0', 'Group on / off: ' + acts.map((k) => LBL[k]).join(', '));
+    const tk = keyAt('cc', 1, 13); if (tk) add('tempo', 'right', 'tempo', 'Tempo: one click = 1 BPM');
+    const tn = ['tap', 'nudge:-', 'nudge:+', 'cfxon'].filter((k) => nk(k) != null);
+    if (tn.length) add('tapnudge', 'right', 'btn:' + (nk('nudge:+') != null ? nk('nudge:+') : nk(tn[0])), 'Tap, nudge: beat. Metronome: colour fx');
+    const dk = pm().KNOBS.filter((k) => eff[k.key] && eff[k.key].ch === 1);
+    if (dk.length) add('dk', 'right', 'dk.3', 'Device knobs: ' + dk[0].pageName + ' (banks 1-4)');
+    if (keyAt('cc', 1, 47)) add('cue', 'right', 'cue', 'Colour fx mode');
+    const hits = ['hit:white', 'hit:left', 'hit:right', 'hit:swap'].filter((k) => nk(k) != null);
+    if (hits.length) add('hits', 'right', 'btn:' + nk(hits[hits.length - 1]), 'Hold: flash ' + hits.map((k) => LBL[k]).join(' / '));
+    if (nk('panic') != null) add('panic', 'right', 'btn:' + nk('panic'), 'Panic');
+    return out;
+  }
+  // The on-air pad: white label on this gradient is at least 4.5:1 at both ends (review L1; test pins it).
+  const LIVE_GRADIENT = ['#dd2c22', '#cc0000'];
+
+  const api = { apc40View, apc40Callouts, ccTarget, ledHex, LED_HEX, BUTTONS, HW, CONTROLS, LIVE_GRADIENT };
 
   // ---------------------------------------------------------------- the drawing (browser only)
   if (typeof document !== 'undefined') {
@@ -162,10 +218,6 @@
 ".apcp .pl.num{font-size:max(6px,.8cqw);font-weight:500;line-height:1}",
 ".apcp .ln{background:#8a8a8e}",
 ".apcp .pad{border-radius:.7cqw;background:linear-gradient(180deg,#e9e9ec,#c4c4c9);box-shadow:inset 0 -1px 0 rgba(0,0,0,.25)}",
-".apcp .pad.loaded{background:linear-gradient(180deg,#8fe0f5,#3fb2d8);box-shadow:0 0 .9cqw #35bde6}",
-".apcp .pad.stepOn{background:linear-gradient(180deg,#c8f3ff,#6fd6ff);box-shadow:0 0 1.2cqw #6fd6ff}",
-".apcp .pad.cursor{background:#fff;box-shadow:0 0 1.2cqw #fff}",
-".apcp .pad.playing{background:#6fd6ff;box-shadow:0 0 1.2cqw #6fd6ff;animation:apl .5s steps(2) infinite}@keyframes apl{50%{background:#fff;box-shadow:0 0 1.2cqw #fff}}",
 ".apcp .pad.hit{background:linear-gradient(180deg,#ffd28a,#ff9a2a);box-shadow:0 0 1.3cqw #ff9a2a;outline:0}",
 ".apcp .scene{border-radius:.7cqw;background:linear-gradient(180deg,#e0e0e4,#bdbdc2);box-shadow:inset 0 -1px 0 rgba(0,0,0,.25)}",
 ".apcp .scene.hit{background:linear-gradient(180deg,#ffd28a,#ff9a2a);box-shadow:0 0 1.3cqw #ff9a2a}",
@@ -224,20 +276,33 @@
     css.textContent = CSS.join('\n') + [
       '.apc40{display:flex;gap:12px;align-items:flex-start;min-width:0}',
       '.apc40 .apcwrap{position:relative;overflow:hidden;flex:none;min-width:0}',
-      '.apc40 .apcp{flex:none;width:' + NATIVE_W + 'px;transform-origin:0 0}',
+      '.apc40 .apcp{flex:none;width:' + NATIVE_W + 'px}',
       '.apcp .pad{border:1px solid rgba(255,255,255,.08);color:#151515;cursor:pointer;padding:0}',
-      '.apcp .pad.live{background:linear-gradient(180deg,#ff6a5a,#ff0000);box-shadow:0 0 1.3cqw #ff0000;color:#fff;font-weight:700}',
+      '.apcp .pad.live{background:linear-gradient(180deg,' + LIVE_GRADIENT[0] + ',' + LIVE_GRADIENT[1] + ');box-shadow:0 0 1.3cqw #ff0000;color:#fff;font-weight:700}',
       '.apcp .pad.ember{background:linear-gradient(180deg,#7a3a14,#591d00);color:#f0d0b8}',
       '.apcp .pad.hit{background:linear-gradient(180deg,#ffd28a,#ff9a2a);box-shadow:0 0 1.3cqw #ff9a2a;color:#151515}',
       '.apcp .pad.empty{cursor:default}',
       '.apcp .lb{position:absolute;inset:1px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden;font:600 11px/1.05 var(--mono);letter-spacing:0;overflow-wrap:normal;word-break:normal;pointer-events:none;z-index:2;white-space:pre-line}',
       '.apcp .cs .lb{inset:16% 9% 8%}',
       '.apcp .cross .ar:has(.lb)::after{display:none}',
+      '.apcp .xab.hit{border-color:#ff9a2a;color:#ff9a2a;box-shadow:0 0 1.1cqw #ff9a2a}',
+      // Safe: the unit is dimmed and nothing glows, so it never looks live while the real pads are dark (review I1).
+      '.apc40.safe .apcp .pad,.apc40.safe .apcp .scene,.apc40.safe .apcp .cs,.apc40.safe .apcp .sqp,.apc40.safe .apcp .ar{opacity:.62}',
+      '.apc40.safe .apcp,.apc40.safe .apcp *,.apc40.safe .apcp *::before,.apc40.safe .apcp *::after{box-shadow:none!important;filter:none!important}',
+      '.apcp .fader,.apcp .xf,.apcp .knob{cursor:ns-resize;touch-action:none}.apcp .xf{cursor:ew-resize}',
+      '.apcstage{position:relative;transform-origin:0 0;flex:none}',
+      '.apcstage .apcp{position:absolute}',
+      '.apcleads{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}',
+      '.apcleads path{fill:none;stroke:#9a9aa0;stroke-width:1;vector-effect:non-scaling-stroke}',
+      '.apcleads circle{fill:#9a9aa0}',
+      '.apcstage .cl{position:absolute;box-sizing:border-box;font:600 10.5px/1.2 var(--mono);color:#e4e4e8;text-align:center;overflow-wrap:normal;word-break:normal;pointer-events:none}',
+      '.apcstage .cl.left{text-align:right}.apcstage .cl.right{text-align:left}',
+      '.apc40.nolabels .cl,.apc40.nolabels .apcleads{display:none}',
+      '.apcside .tog{display:flex;gap:6px;align-items:center;margin:0 0 8px;color:var(--text);cursor:pointer}',
       '.apcp .scene,.apcp .cs,.apcp .sqp,.apcp .cross .ar{cursor:pointer}',
       '.apcp .scene.lit{color:#fff}.apcp .scene.lit .lb{color:#fff}',
       '.apcp .scene .lb,.apcp .sqp .lb,.apcp .cs .lb{color:#151515}',
       '.apcp .scene.red{border:2px solid #e0524a}',
-      
       '.apcp .cross .ar .lb{position:absolute;inset:0;color:#e8e8ea}',
       '.apc40 .apcside{flex:1 1 280px;min-width:0;font:12px/1.4 var(--mono);color:var(--text)}',
       '.apcside h3{margin:0 0 6px;font:700 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}',
@@ -263,7 +328,9 @@
       const wrap = el('div', 'apc40', host);
       const body = el('div', 'apcwrap', wrap);
       const side = el('div', 'apcside', wrap);
-      const ap = el('div', 'apcp', body);
+      const stage = el('div', 'apcstage', body);
+      const ap = el('div', 'apcp', stage);
+      const R = {};   // geometry key -> element, for the leader lines and the live display
       const A = { pads: [], scene: [], btn: {}, fad: [], arrows: {} };
       const notePress = new Map();   // note -> key, refreshed by update()
 
@@ -273,8 +340,8 @@
       function Cx(e, k, noH) { const g = G.ctr[k], s = e.style; s.left = (g[0] + g[2] / 2) + '%'; s.top = PY(Y(g[1], g[0]) + g[3] / 2) + '%'; s.width = g[2] + '%'; if (!noH) s.height = PY(g[3]) + '%'; return e; }
       function Pt(e, x, y) { e.style.left = x + '%'; e.style.top = PY(Y(y, x)) + '%'; return e; }
       function Pm(e, x, u) { e.style.left = x + '%'; e.style.top = PY(u) + '%'; return e; }
-      function ctl(cls, note, key, title, text) { const e = Bx(el('div', cls, ap, text), key); if (title) e.title = title; if (note != null) A.btn[note] = e; return e; }
-      function kn(key, plain, title) { const k = el('div', 'knob' + (plain ? ' plain' : ''), ap); el('i', '', k); setKnob(k, 0); Cx(k, key, true); k.style.height = 'auto'; if (title) k.title = title; return k; }
+      function ctl(cls, note, key, title, text) { const e = Bx(el('div', cls, ap, text), key); if (title) e.title = title; if (note != null) A.btn[note] = e; if (key) R[key] = e; return e; }
+      function kn(key, plain, title) { const k = el('div', 'knob' + (plain ? ' plain' : ''), ap); el('i', '', k); setKnob(k, 0); Cx(k, key, true); k.style.height = 'auto'; if (title) k.title = title; R[key] = k; return k; }
       ap.style.aspectRatio = '1108/' + (664 * (100 + TOT) / 100).toFixed(1);
 
       // ---- the unit, as the music page draws it (same order, same numbers) ----
@@ -296,9 +363,10 @@
         for (let c = 0; c < 8; c++) {
           const p = Bx(el('div', 'pad empty', ap), 'pad.' + r + '.' + c);
           p.setAttribute('role', 'button'); p.tabIndex = -1; el('span', 'lb', p);
-          A.pads.push(p);
+          A.pads.push(p); R['pad.' + r + '.' + c] = p;
         }
         const sc = Bx(el('div', 'scene', ap), 'scene.' + r); sc.title = 'Scene launch ' + (r + 1); el('span', 'lb', sc); A.scene.push(sc); A.btn[0x52 + r] = sc;
+        R['scene.' + r] = sc;
       }
       for (let i = 0; i < 8; i++) {
         const cs = Bx(el('div', 'cs', ap), 'stop.' + i); cs.title = 'Clip stop ' + (i + 1);
@@ -315,7 +383,7 @@
         ctl('sq4 r', null, 'arm.' + i, 'Rec arm ' + (i + 1), '●');
       }
       const cue = kn('cue', true, 'Cue level'); cue.style.left = (parseFloat(cue.style.left) + .6) + '%'; setKnob(cue, .5);
-      for (let i = 0; i < 9; i++) { const f = Bx(el('div', 'fader', ap), 'fader.' + i); f.title = i === 8 ? 'Master fader' : 'Track fader ' + (i + 1); el('b', '', f); A.fad.push(f); }
+      for (let i = 0; i < 9; i++) { const f = Bx(el('div', 'fader', ap), 'fader.' + i); f.title = i === 8 ? 'Master fader' : 'Track fader ' + (i + 1); el('b', '', f); A.fad.push(f); R['fader.' + i] = f; }
       const dot = (x, y, col) => { const d = Pt(el('div', 'dot', ap), x, y); d.style.setProperty('--c', col); };
       void dot;
       const bdot = (k, col) => { const g = G.box[k]; Pm(el('div', 'dot', ap), g[0] + g[2] / 2, Y(g[1] - 2.6, g[0])).style.setProperty('--c', col); };
@@ -335,17 +403,192 @@
       });
       Cx(el('div', 'xab', ap, 'A'), 'xA'); Cx(el('div', 'xab', ap, 'B'), 'xB');
       Bx(el('div', 'xt', ap), 'xt.0'); Bx(el('div', 'xt', ap), 'xt.1');
-      const xf = Bx(el('div', 'xf', ap), 'xfader'); el('b', '', xf);
+      const xf = Bx(el('div', 'xf', ap), 'xfader'); el('b', '', xf); R.xfader = xf;
       const ak = Cx(el('div', 'akai', ap), 'akai', true); ak.textContent = 'AKAI'; el('small', '', ak, 'Professional');
 
-      // ---- clicks: the same call as the real pad (app.js press(key) = target.apply() through the ARM gate) ----
-      const keyOfEl = new Map();
-      ap.addEventListener('click', (ev) => {
-        let n = ev.target;
-        while (n && n !== ap) { if (keyOfEl.has(n)) { deps.press(keyOfEl.get(n)); return; } n = n.parentNode; }
+      // ---- the unit is a controller: the same messages the real APC40 sends, through the desk's own binding map ----
+      const clamp01 = (x) => Math.max(0, Math.min(1, x));
+      const keyOfEl = new Map();     // pad / button element -> its target key
+      const bindOfEl = new Map();    // pad / button element -> its binding { type, ch, num } from the desk's map
+      let bankCh = 1;                // the device-knob bank on show (TRACK SELECT = the MIDI channel)
+      const CC = {};                 // control id -> { el, kind, ch, num, u, set }
+      const ccByEl = new Map();
+      const setFader = (e) => (u) => e.style.setProperty('--v', u);
+      for (let i = 0; i < 9; i++) CC['fader.' + i] = { id: 'fader.' + i, el: R['fader.' + i], kind: 'fader', ch: i < 8 ? i + 1 : 1, num: i < 8 ? 7 : 14, u: .8, set: setFader(R['fader.' + i]) };
+      CC.xfader = { id: 'xfader', el: R.xfader, kind: 'xf', ch: 1, num: 15, u: .5, set: setFader(R.xfader) };
+      for (let i = 0; i < 8; i++) {
+        CC['tk.' + i] = { id: 'tk.' + i, el: R['tk.' + i], kind: 'knob', ch: 1, num: 48 + i, u: 0, set: (u) => setKnob(R['tk.' + i], u) };
+        CC['dk.' + i] = { id: 'dk.' + i, el: R['dk.' + i], kind: 'knob', ch: 1, num: 16 + i, u: 0, set: (u) => setKnob(R['dk.' + i], u) };
+      }
+      CC.tempo = { id: 'tempo', el: R.tempo, kind: 'rel', ch: 1, num: 13, u: .5, set: (u) => setKnob(R.tempo, u) };
+      CC.cue = { id: 'cue', el: R.cue, kind: 'rel', ch: 1, num: 47, u: .5, set: (u) => setKnob(R.cue, u) };
+      for (const c of Object.values(CC)) if (c.el) ccByEl.set(c.el, c);
+      const noteEl = (ch, num) => {
+        if (num <= 39) return A.pads[(4 - Math.floor(num / 8)) * 8 + (num % 8)] || null;
+        if (num === 0x32) return R['act.' + (ch - 1)] || null;
+        return A.btn[num] || null;
+      };
+      const armed = () => !!(deps.armed && deps.armed());
+      const NOTE_SAFE = 'Safe: nothing is sent. Press ARM to use the drawing as the controller.';
+      let drag = null, held = null, lastSent = null;
+      ap.addEventListener('pointerdown', (ev) => {
+        if (ev.button) return;
+        const t0 = ev.target;
+        const ce = t0.closest ? t0.closest('.fader,.xf,.knob') : null;
+        const info = ce && ccByEl.get(ce);
+        if (info) {
+          if (!armed()) { say(NOTE_SAFE); return; }
+          drag = { info, y0: ev.clientY, u0: info.u == null ? .5 : info.u, done: 0, pointer: ev.pointerId };
+          try { ap.setPointerCapture(ev.pointerId); } catch (e) { /* no capture: moves still arrive over the unit */ }
+          ev.preventDefault(); return;
+        }
+        let n = t0;
+        while (n && n !== ap) {
+          if (keyOfEl.has(n)) {
+            const b = bindOfEl.get(n);
+            if (b && b.type === 'note' && deps.send && armed()) { held = { b }; deps.send({ type: 'note', ch: b.ch, num: b.num, unit: 1, down: true }); try { ap.setPointerCapture(ev.pointerId); } catch (e) { /* ok */ } }
+            else deps.press(keyOfEl.get(n));   // Safe (or no sender): the desk says "not armed - nothing sent"
+            return;
+          }
+          n = n.parentNode;
+        }
       });
+      ap.addEventListener('pointermove', (ev) => {
+        if (!drag) return;
+        const { info } = drag;
+        const r = info.el.getBoundingClientRect();
+        if (info.kind === 'rel') {
+          const steps = Math.trunc((drag.y0 - ev.clientY) / (8 * (scale || 1)));
+          while (drag.done !== steps) {
+            const up = steps > drag.done; drag.done += up ? 1 : -1;
+            const raw = up ? 1 : 127;
+            info.u = clamp01(info.u + (up ? 1 : -1) / 40); info.set(info.u);
+            deps.send({ type: 'cc', ch: info.ch, num: info.num, unit: raw / 127, raw });
+          }
+          return;
+        }
+        let u;
+        if (info.kind === 'fader') u = 1 - (ev.clientY - r.top - r.height * .105) / (r.height * .79);
+        else if (info.kind === 'xf') u = (ev.clientX - r.left) / r.width;
+        else u = drag.u0 + (drag.y0 - ev.clientY) / (150 * (scale || 1));
+        u = Math.round(clamp01(u) * 127) / 127;
+        if (u === info.u) return;
+        info.u = u; info.set(u);
+        const ch = info.kind === 'knob' && /^dk\./.test(info.id) ? bankCh : info.ch;
+        deps.send({ type: 'cc', ch, num: info.num, unit: u, raw: Math.round(u * 127) });
+      });
+      const endPointer = () => {
+        if (held) { const b = held.b; held = null; deps.send({ type: 'note', ch: b.ch, num: b.num, unit: 0, down: false }); }
+        drag = null;
+      };
+      ap.addEventListener('pointerup', endPointer); ap.addEventListener('pointercancel', endPointer); ap.addEventListener('lostpointercapture', endPointer);
+
+      // A message of the real controller (the desk page tells the drawing): the same table moves the cap, the ring, the pad.
+      function live(m) {
+        if (!m) return;
+        if (m.type === 'cc') {
+          const t = mapCc(m.ch, m.num); if (!t) return;
+          if (t.bank) bankCh = t.bank;
+          const info = CC[t.id]; if (!info) return;
+          if (drag && drag.info === info) return;
+          if (info.kind === 'rel') { const d = typeof m.raw === 'number' ? pm().relDelta(m.raw) : 0; info.u = clamp01(info.u + d / 40); }
+          else info.u = m.unit;
+          info.set(info.u);
+        } else if (m.type === 'note') {
+          const e = noteEl(m.ch, m.num); if (!e) return;
+          e.classList.toggle('hit', !!m.down);
+        }
+      }
+      const mapCc = ccTarget;
+      const deskLast = new Map();   // control -> the last value the DESK reported, so only a desk change overrides a controller position
+      function applyDeskValues(vals, bindings) {
+        for (const key of Object.keys(vals || {})) {
+          const b = bindings[key]; if (!b || b.type !== 'cc') continue;
+          const t = mapCc(b.ch, b.num); if (!t || t.kind === 'rel') continue;
+          if (t.bank && t.bank !== bankCh) continue;
+          const info = CC[t.id]; if (!info) continue;
+          const u = vals[key];
+          if (typeof u !== 'number' || deskLast.get(info.id) === u) continue;
+          deskLast.set(info.id, u);
+          if (drag && drag.info === info) continue;
+          info.u = clamp01(u); info.set(info.u);
+        }
+      }
+
+      // ---- leader lines: a short label for each control group, outside the outline, from the live binding map ----
+      const MARGIN = { l: 96, r: 130, t: 72, b: 62 }, NO_MARGIN = { l: 0, r: 0, t: 0, b: 0 };
+      let labelsOn = true;
+      try { if (window.localStorage && window.localStorage.getItem('deskApcLabels') === '0') labelsOn = false; } catch (e) { /* storage blocked: default on */ }
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const leads = document.createElementNS(svgNS, 'svg'); leads.setAttribute('class', 'apcleads'); stage.appendChild(leads);
+      let cur = [], curSig = '';
+      const margins = () => (labelsOn ? MARGIN : NO_MARGIN);
+      function setCallouts(list) {
+        const sig = JSON.stringify(list); if (sig === curSig) return;
+        curSig = sig;
+        for (const c of cur) c.el.remove();
+        cur = list.map((c) => ({ ...c, el: el('div', 'cl ' + c.side, stage, c.text) }));
+      }
+      function layoutCallouts() {
+        while (leads.firstChild) leads.removeChild(leads.firstChild);
+        if (!labelsOn) return;
+        const m = MARGIN, k = scale || 1, sr = stage.getBoundingClientRect();
+        const SW = NATIVE_W + m.l + m.r, SH = NATIVE_H + m.t + m.b;
+        leads.setAttribute('width', SW); leads.setAttribute('height', SH);
+        const rel = (e) => { const r = e.getBoundingClientRect(); return { l: (r.left - sr.left) / k, t: (r.top - sr.top) / k, r: (r.right - sr.left) / k, b: (r.bottom - sr.top) / k }; };
+        const by = { top: [], bottom: [], left: [], right: [] };
+        for (const c of cur) {
+          const tg = c.target.indexOf('btn:') === 0 ? A.btn[+c.target.slice(4)] : R[c.target];
+          if (!tg) { c.el.style.display = 'none'; continue; }
+          c.el.style.display = ''; c.r = rel(tg);
+          c.w = c.side === 'bottom' ? 82 : c.side === 'top' ? 78 : c.side === 'left' ? m.l - 12 : m.r - 14;
+          c.el.style.width = c.w + 'px'; c.h = c.el.offsetHeight;
+          by[c.side].push(c);
+        }
+        const along = (items, horiz, ext) => {
+          const gap = 4, sz = (c) => (horiz ? c.w : c.h), pos = (c) => (horiz ? (c.r.l + c.r.r) / 2 : (c.r.t + c.r.b) / 2);
+          items.sort((a, b) => pos(a) - pos(b));
+          let edge = 0;
+          for (const c of items) { c.s = Math.max(pos(c) - sz(c) / 2, edge); edge = c.s + sz(c) + gap; }
+          let end = ext;
+          for (let i = items.length - 1; i >= 0; i--) { const c = items[i]; c.s = Math.min(c.s, end - sz(c)); end = c.s - gap; }
+        };
+        along(by.top, true, SW); along(by.bottom, true, SW); along(by.left, false, SH); along(by.right, false, SH);
+        const path = (pts, dot) => {
+          const p = document.createElementNS(svgNS, 'path'); p.setAttribute('d', 'M' + pts.map((q) => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join(' L')); leads.appendChild(p);
+          const c = document.createElementNS(svgNS, 'circle'); c.setAttribute('cx', dot[0]); c.setAttribute('cy', dot[1]); c.setAttribute('r', 2); leads.appendChild(c);
+        };
+        const clampIn = (v, a, b) => Math.max(a, Math.min(b, v));
+        for (const c of by.top) {
+          const y = m.t - 8 - c.h; c.el.style.left = c.s + 'px'; c.el.style.top = y + 'px';
+          const ax = (c.r.l + c.r.r) / 2, ay = c.r.t, lx = clampIn(ax, c.s + 6, c.s + c.w - 6);
+          path(lx === ax ? [[ax, ay], [ax, m.t - 8]] : [[ax, ay], [ax, m.t - 4], [lx, m.t - 4], [lx, m.t - 8]], [ax, ay]);
+        }
+        for (const c of by.bottom) {
+          const y = m.t + NATIVE_H + 8; c.el.style.left = c.s + 'px'; c.el.style.top = y + 'px';
+          const ax = (c.r.l + c.r.r) / 2, ay = c.r.b, lx = clampIn(ax, c.s + 6, c.s + c.w - 6), yb = m.t + NATIVE_H;
+          path(lx === ax ? [[ax, ay], [ax, y]] : [[ax, ay], [ax, yb + 4], [lx, yb + 4], [lx, y]], [ax, ay]);
+        }
+        for (const c of by.left) {
+          const x = m.l - 8 - c.w; c.el.style.left = x + 'px'; c.el.style.top = c.s + 'px';
+          const ay = (c.r.t + c.r.b) / 2, ax = c.r.l, ly = clampIn(ay, c.s + 6, c.s + c.h - 6);
+          path(ly === ay ? [[ax, ay], [m.l - 8, ay]] : [[ax, ay], [m.l - 4, ay], [m.l - 4, ly], [m.l - 8, ly]], [ax, ay]);
+        }
+        for (const c of by.right) {
+          const x = m.l + NATIVE_W + 8; c.el.style.left = x + 'px'; c.el.style.top = c.s + 'px';
+          const ay = (c.r.t + c.r.b) / 2, ax = c.r.r, ly = clampIn(ay, c.s + 6, c.s + c.h - 6), xr = m.l + NATIVE_W;
+          path(ly === ay ? [[ax, ay], [x, ay]] : [[ax, ay], [xr + 4, ay], [xr + 4, ly], [x, ly]], [ax, ay]);
+        }
+      }
 
       // ---- the legend and the readout ----
+      const tog = el('label', 'tog', side); const cb = el('input', '', tog); cb.type = 'checkbox'; cb.checked = labelsOn; tog.appendChild(document.createTextNode('Labels with leader lines'));
+      wrap.classList.toggle('nolabels', !labelsOn);
+      cb.addEventListener('change', () => {
+        labelsOn = cb.checked; wrap.classList.toggle('nolabels', !labelsOn);
+        try { window.localStorage.setItem('deskApcLabels', labelsOn ? '1' : '0'); } catch (e) { /* storage blocked: the choice lasts this page */ }
+        fitScale();
+      });
       const sh = el('h3', '', side, 'Pads');
       const sp = el('p', '', side);
       const air = el('p', 'air', side);
@@ -379,14 +622,14 @@
       function update(model) {
         const v = lastView = apc40View(model);
         wrap.classList.toggle('safe', !(deps.armed && deps.armed()));
-        keyOfEl.clear();
+        keyOfEl.clear(); bindOfEl.clear();
         v.pads.forEach((p, i) => {
           const e = A.pads[i];
           e.className = 'pad ' + p.state + (e.classList.contains('hit') ? ' hit' : '');
           e.title = p.name ? `${p.no}  ${p.name}` : '';
           e.setAttribute('aria-label', p.name ? `look pad ${p.no} ${p.name}` : 'empty pad');
           fitLabel(e.firstChild, p.name, PAD_FONT);
-          if (p.key) keyOfEl.set(e, p.key);
+          if (p.key) { keyOfEl.set(e, p.key); if (p.bind) bindOfEl.set(e, p.bind); } else bindOfEl.delete(e);
         });
         // buttons: clear, then label what the map names
         for (const n of Object.keys(A.btn)) { const e = A.btn[n]; const lb = e.querySelector(':scope > .lb'); if (lb) fitLabel(lb, '', [7]); e.classList.remove('lit', 'red'); e.style.background = ''; e.style.boxShadow = ''; }
@@ -396,11 +639,13 @@
           if (b.danger) e.classList.add('red');   // its border narrows the label: fit after it
           if (lb) fitLabel(lb, b.short, [9, 8, 7, 6.5, 6]);
           if (b.hex && b.vel > 1 && !e.classList.contains('ar')) { e.style.background = b.hex; e.style.boxShadow = '0 0 .9cqw ' + b.hex; e.classList.add('lit'); }
-          keyOfEl.set(e, b.key);
+          keyOfEl.set(e, b.key); if (b.bind) bindOfEl.set(e, b.bind);
           e.title = `${b.hw}: ${b.does}`;
         }
         // master fader (the desk's master, 0..1)
         const mf = A.fad[8]; if (mf && typeof model.master === 'number') mf.style.setProperty('--v', Math.max(0, Math.min(1, model.master)));
+        applyDeskValues(model.values, v.bindings);
+        setCallouts(v.callouts);
         // legend
         sp.textContent = `Looks page ${v.page + 1} of ${v.pages}  ·  ${v.total} looks, 40 a page  ·  RIGHT / LEFT turn the page`;
         air.textContent = 'On air: ' + (v.onAir || 'none');
@@ -430,15 +675,19 @@
         // Under 640 px the unit would be drawn at about 3 px type: say it in the table instead, which stays complete.
         body.style.display = total < 640 ? 'none' : '';
         if (total < 640) return;
+        const m = margins(), SW = NATIVE_W + m.l + m.r, SH = NATIVE_H + m.t + m.b;
         const narrow = total < 1000;
         const sideMin = 300, gap = 12;
         const availW = narrow ? total : total - sideMin - gap;
         const top = wrap.getBoundingClientRect().top;
         const availH = Math.max(420, window.innerHeight - Math.max(top, 0) - 16);
-        scale = Math.max(.3, Math.min(availW / NATIVE_W, (narrow ? 9 : 1) * availH / NATIVE_H, 1.6));
-        ap.style.transform = 'scale(' + scale + ')';
-        body.style.width = Math.floor(NATIVE_W * scale) + 'px';
-        body.style.height = Math.ceil(ap.offsetHeight * scale) + 'px';
+        scale = Math.max(.3, Math.min(availW / SW, (narrow ? 9 : 1) * availH / SH, 1.6));
+        ap.style.left = m.l + 'px'; ap.style.top = m.t + 'px';
+        stage.style.width = SW + 'px'; stage.style.height = SH + 'px';
+        stage.style.transform = 'scale(' + scale + ')';
+        body.style.width = Math.floor(SW * scale) + 'px';
+        body.style.height = Math.ceil(SH * scale) + 'px';
+        layoutCallouts();
       }
       if (window.ResizeObserver) new ResizeObserver(fitScale).observe(wrap);
       window.addEventListener('resize', fitScale);
@@ -449,15 +698,26 @@
         const cut = labels.filter((l) => l.dataset.cut || (l.textContent && (l.scrollWidth > l.clientWidth || l.scrollHeight > l.clientHeight)));
         const shown = labels.filter((l) => l.textContent);
         const px = shown.map((l) => parseFloat(l.dataset.px || l.style.fontSize) * scale);
-        const pr = body.getBoundingClientRect();
+        const pr = ap.getBoundingClientRect();
         const sr = side.getBoundingClientRect();
         const bad = [];
         for (const e of [...ap.children]) { const r = e.getBoundingClientRect(); if (r.right > pr.right + 1 || r.bottom > pr.bottom + 1 || r.left < pr.left - 1 || r.top < pr.top - 1) bad.push((e.className || e.tagName) + ''); }
         const sideCut = [...side.querySelectorAll('td,p,h3')].filter((n) => n.scrollWidth > n.clientWidth + 1).length;
-        return { labels: shown.length, cut: cut.length, cutTexts: cut.map((l) => l.textContent), outside: bad.length, outsideWho: bad.slice(0, 5), minPx: px.length ? Math.round(Math.min(...px) * 10) / 10 : 0, scale: Math.round(scale * 1000) / 1000, panel: [Math.round(pr.width), Math.round(pr.height)], side: [Math.round(sr.width), Math.round(sr.height)], sideCut, unknownLed: lastView ? lastView.pads.filter((p) => p.hex === UNKNOWN_HEX).length : 0 };
+        const cls = [...stage.querySelectorAll('.cl')].filter((e) => e.style.display !== 'none' && labelsOn);
+        const rects = cls.map((e) => e.getBoundingClientRect()), stg = stage.getBoundingClientRect();
+        const clCut = cls.filter((e) => e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1).length;
+        let clOverlap = 0, clOnUnit = 0, clOut = 0;
+        for (let a = 0; a < rects.length; a++) {
+          const r = rects[a];
+          if (r.left < pr.right && r.right > pr.left && r.top < pr.bottom && r.bottom > pr.top) clOnUnit++;
+          if (r.left < stg.left - 1 || r.top < stg.top - 1 || r.right > stg.right + 1 || r.bottom > stg.bottom + 1) clOut++;
+          for (let b = a + 1; b < rects.length; b++) { const q = rects[b]; if (r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top) clOverlap++; }
+        }
+        const callouts = { count: cls.length, cut: clCut, overlap: clOverlap, onUnit: clOnUnit, outsideStage: clOut, minPx: cls.length ? Math.round(10.5 * scale * 10) / 10 : 0 };
+        return { callouts, labels: shown.length, cut: cut.length, cutTexts: cut.map((l) => l.textContent), outside: bad.length, outsideWho: bad.slice(0, 5), minPx: px.length ? Math.round(Math.min(...px) * 10) / 10 : 0, scale: Math.round(scale * 1000) / 1000, panel: [Math.round(pr.width), Math.round(pr.height)], side: [Math.round(sr.width), Math.round(sr.height)], sideCut, unknownLed: lastView ? lastView.pads.filter((p) => p.hex === UNKNOWN_HEX).length : 0 };
       }
       function say(text) { last.textContent = text; }
-      return { update, hit, fit: fitScale, report, say, el: ap };
+      return { update, hit, live, fit: fitScale, report, say, el: ap };
     };
   }
 
