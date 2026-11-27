@@ -8,3 +8,5 @@
 - Rollback: the engine before #1373 truncates a fractional trim toward 0 (`trim | 0`), 2.5 becomes 2; whole trims are unaffected. Also in known-fixes.
 - Not run here: test-keymap.js and test-node-section.js need a browser / DESK_URL (no chromium at /opt/pw-browsers on this machine).
 - Lesson: a "same bytes as before" claim needs a grid over limits, flags and fine values plus the live show, not one frame (the first proof was one frame).
+
+- 2026-11-27 05:0x (dob-7a): re-review of the rebased head found that dev's guard line for "The fine byte stayed behind" named two checks aa042bdeb folded into "Invert and Swap move the fine byte with its coarse, as one 16-bit pair"; the guard now names that test. Every name in both fine-byte guard lines counted 1 by git grep; `npm run docs:ai:check` passed. Follow-up, old behaviour (not this PR): min/max maps only the coarse byte, so a slow 16-bit sweep with limits not 0..255 steps back by up to 255/256.
