@@ -297,11 +297,15 @@
     const TOT = INS_L.reduce((a, q) => a + q[1], 0);
     INS_R.push([86.5, TOT - INS_R.reduce((a, q) => a + q[1], 0)]);
     const NATIVE_W = 1108, NATIVE_H = 664 * (100 + TOT) / 100;
-    const PAD_FONT = [11, 10, 9, 8, 7, 6.5, 6];   // native px, tried in order until the name fits its pad
+    // Pad names are sized in px AS DRAWN ON SCREEN (the stage is scaled, so native = rendered / scale), never under READ_MIN.
+    // A name that does not fit its pad at READ_MIN shows its short form (shortName) with the full name as the pad's title and in
+    // the PADS list. Owner 2026-11-27: "fix and update ui that i can see what is what".
+    const PAD_RENDERED = [14, 13, 12, 11.5, 11];
+    const READ_MIN = 11;
 
     const css = document.createElement('style');
     css.textContent = CSS.join('\n') + [
-      '.apc40{display:flex;gap:12px;align-items:flex-start;min-width:0}',
+      '.apc40{display:flex;flex-direction:column;gap:12px;align-items:stretch;min-width:0}',
       '.apc40 .apcwrap{position:relative;overflow:hidden;flex:none;min-width:0}',
       '.apc40 .apcp{flex:none;width:' + NATIVE_W + 'px}',
       '.apcp .pad{border:1px solid rgba(255,255,255,.08);color:#151515;cursor:pointer;padding:0}',
@@ -323,7 +327,7 @@
       '.apcleads{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}',
       '.apcleads path{fill:none;stroke:#9a9aa0;stroke-width:1;vector-effect:non-scaling-stroke}',
       '.apcleads circle{fill:#9a9aa0}',
-      '.apcstage .cl{position:absolute;box-sizing:border-box;font:600 10.5px/1.2 var(--mono);color:#e4e4e8;text-align:center;overflow-wrap:normal;word-break:normal;pointer-events:none}',
+      '.apcstage .cl{position:absolute;box-sizing:border-box;font:600 var(--clpx,10.5px)/1.2 var(--mono);color:#e4e4e8;text-align:center;overflow-wrap:normal;word-break:normal;pointer-events:none}',
       '.apcstage .cl.left{text-align:right}.apcstage .cl.right{text-align:left}',
       '.apc40.nolabels .cl,.apc40.nolabels .apcleads{display:none}',
       '.apcside .tog{display:flex;gap:6px;align-items:center;margin:0 0 8px;color:var(--text);cursor:pointer}',
@@ -332,7 +336,7 @@
       '.apcp .scene .lb,.apcp .sqp .lb,.apcp .cs .lb{color:#151515}',
       '.apcp .scene.red{border:2px solid #e0524a}',
       '.apcp .cross .ar .lb{position:absolute;inset:0;color:#e8e8ea}',
-      '.apc40 .apcside{flex:1 1 280px;min-width:0;font:12px/1.4 var(--mono);color:var(--text)}',
+      '.apc40 .apcside{flex:none;width:100%;min-width:0;font:12px/1.4 var(--mono);color:var(--text);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 24px;align-items:start}',
       '.apcside h3{margin:0 0 6px;font:700 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}',
       '.apcside table{border-collapse:collapse;width:100%;margin:0 0 12px}',
       '.apcside td{padding:4px 6px;border-top:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}',
@@ -342,7 +346,11 @@
       '.apcside p{margin:0 0 6px;color:var(--muted)}',
       '.apcside .air{color:var(--text);font-weight:700}.apcside .key{display:flex;gap:14px;flex-wrap:wrap}.apcside .key .k{white-space:nowrap}.apcside .sw{display:inline-block;width:10px;height:10px;margin-right:6px;border:1px solid var(--line);vertical-align:-1px}.apcside i.sw{font-style:normal}',
       '.apcside .last{color:var(--text);min-height:1.4em}',
-      '@media (max-width:1000px){.apc40{flex-direction:column}.apc40 .apcside{flex:none;width:100%}}',
+      '.apcside ol.padlist{list-style:none;margin:0 0 10px;padding:0;columns:2 220px;column-gap:16px}',
+      '.apcside ol.padlist li{break-inside:avoid;padding:1px 0;white-space:normal;overflow-wrap:anywhere;color:var(--text)}',
+      '.apcside ol.padlist li .no{display:inline-block;min-width:2.4em;color:var(--muted)}',
+      '.apcside ol.padlist li.live{color:#ff6a6a;font-weight:700}',
+      '@media (max-width:1000px){.apcside{grid-template-columns:minmax(0,1fr)}}',
     ].join('\n');
     document.head.appendChild(css);
 
@@ -623,22 +631,24 @@
       }
 
       // ---- the legend and the readout ----
-      const tog = el('label', 'tog', side); const cb = el('input', '', tog); cb.type = 'checkbox'; cb.checked = labelsOn; tog.appendChild(document.createTextNode('Labels with leader lines'));
+      const sideL = el('div', '', side), sideR = el('div', '', side);
+      const tog = el('label', 'tog', sideL); const cb = el('input', '', tog); cb.type = 'checkbox'; cb.checked = labelsOn; tog.appendChild(document.createTextNode('Labels with leader lines'));
       wrap.classList.toggle('nolabels', !labelsOn);
       cb.addEventListener('change', () => {
         labelsOn = cb.checked; wrap.classList.toggle('nolabels', !labelsOn);
         try { window.localStorage.setItem('deskApcLabels', labelsOn ? '1' : '0'); } catch (e) { /* storage blocked: the choice lasts this page */ }
         fitScale();
       });
-      const sh = el('h3', '', side, 'Pads');
-      const sp = el('p', '', side);
-      const air = el('p', 'air', side);
-      const key = el('p', 'key', side);
+      const sh = el('h3', '', sideL, 'Pads');
+      const sp = el('p', '', sideL);
+      const air = el('p', 'air', sideL);
+      const key = el('p', 'key', sideL);
+      const padlist = el('ol', 'padlist', sideL);
       for (const [c, t] of [['#ff0000', 'on air'], ['#591d00', 'ready (this page)'], ['#d8d8dc', 'empty slot']]) { const b = el('span', 'k', key); const w = el('i', 'sw', b); w.style.background = c; b.appendChild(document.createTextNode(t)); }
-      const sh2 = el('h3', '', side, 'Buttons'); void sh;
-      const tb = el('table', '', side); const tbody = el('tbody', '', tb);
-      const note = el('p', '', side);
-      const last = el('p', 'last', side); last.setAttribute('aria-live', 'polite');
+      const sh2 = el('h3', '', sideR, 'Buttons'); void sh;
+      const tb = el('table', '', sideR); const tbody = el('tbody', '', tb);
+      const note = el('p', '', sideR);
+      const last = el('p', 'last', sideR); last.setAttribute('aria-live', 'polite');
       void sh2;
 
       const fitted = new Map();   // element -> "text|px", so a repaint that changes nothing measures nothing
@@ -659,6 +669,31 @@
         lbEl.dataset.cut = '1'; lbEl.dataset.px = sizes[sizes.length - 1];
       }
 
+      // Short form of a look name for a pad too small for it at READ_MIN: the leading code ("R1", "H3", "X1b"), or number + first word ("5 Comet").
+      function shortName(name) {
+        const w = String(name).trim().split(/\s+/);
+        if (/^[A-Za-z]{1,2}\d+[a-z]?$/.test(w[0])) return w[0];
+        if (/^\d+$/.test(w[0]) && w[1]) return w[0] + ' ' + w[1].replace(/[^\p{L}\p{N}-]+$/u, '');
+        return w[0].length > 8 ? w[0].slice(0, 8) : w[0];
+      }
+      // Fits `text` in the pad at the biggest size of PAD_RENDERED (px on screen); full name first, then the short form; else cut and counted.
+      function fitPad(lbEl, name) {
+        const sizes = PAD_RENDERED.map((r) => Math.round(r / (scale || 1) * 100) / 100);
+        const key = name + '|' + sizes.join();
+        if (fitted.get(lbEl) === key) return;
+        fitted.set(lbEl, key);
+        lbEl.removeAttribute('data-cut'); lbEl.removeAttribute('data-short'); lbEl.style.overflowWrap = 'normal';
+        lbEl.textContent = name;
+        if (!name) return;
+        const fits = () => lbEl.scrollWidth <= lbEl.clientWidth && lbEl.scrollHeight <= lbEl.clientHeight;
+        for (const [text, isShort] of [[name, false], [shortName(name), true]]) {
+          lbEl.textContent = text;
+          if (isShort) lbEl.dataset.short = '1';
+          for (const px of sizes) { lbEl.style.fontSize = px + 'px'; if (fits()) { lbEl.dataset.px = px; return; } }
+        }
+        lbEl.dataset.cut = '1'; lbEl.dataset.px = sizes[sizes.length - 1];
+      }
+
       let lastView = null;
       function update(model) {
         const v = lastView = apc40View(model);
@@ -669,7 +704,7 @@
           e.className = 'pad ' + p.state + (e.classList.contains('hit') ? ' hit' : '');
           e.title = p.name ? `${p.no}  ${p.name}` : '';
           e.setAttribute('aria-label', p.name ? `look pad ${p.no} ${p.name}` : 'empty pad');
-          fitLabel(e.firstChild, p.name, PAD_FONT);
+          fitPad(e.firstChild, p.name);
           if (p.key) { keyOfEl.set(e, p.key); if (p.bind) bindOfEl.set(e, p.bind); } else bindOfEl.delete(e);
         });
         v.columns.forEach((col, c) => {
@@ -697,6 +732,7 @@
         sp.textContent = `Looks page ${v.page + 1} of ${v.pages}  ·  ${v.total} looks, 40 a page  ·  RIGHT / LEFT turn the page` + (v.ordered ? '  ·  columns dark to bright' : '');
         air.textContent = 'On air: ' + (v.onAir || 'none');
         const rows = [];
+        padlist.innerHTML = v.pads.filter((p) => p.name).map((p) => `<li class="${p.state === 'live' ? 'live' : ''}"><span class="no">${p.no}</span>${esc(p.name)}</li>`).join('') || '<li>no looks on this page</li>';
         for (const b of v.buttons) rows.push(`<tr class="${b.danger ? 'danger' : ''}"><td class="hw">${b.hex && b.vel > 1 ? `<span class="sw" style="background:${b.hex}"></span>` : ''}${esc(b.hw)}</td><td class="do">${esc(b.does)}</td></tr>`);
         for (const c of v.controls.concat(v.knobs)) rows.push(`<tr><td class="hw">${esc(c.hw)}</td><td class="do">${esc(c.does)}  [${esc(c.range)}]</td></tr>`);
         if (v.master.mapped) rows.push(`<tr><td class="hw">MASTER fader (CC ${v.master.cc})</td><td class="do">${esc(v.master.does)}</td></tr>`);
@@ -723,17 +759,15 @@
         body.style.display = total < 640 ? 'none' : '';
         if (total < 640) return;
         const m = margins(), SW = NATIVE_W + m.l + m.r, SH = NATIVE_H + m.t + m.b;
-        const narrow = total < 1000;
-        const sideMin = 300, gap = 12;
-        const availW = narrow ? total : total - sideMin - gap;
-        const top = wrap.getBoundingClientRect().top;
-        const availH = Math.max(420, window.innerHeight - Math.max(top, 0) - 16);
-        scale = Math.max(.3, Math.min(availW / SW, (narrow ? 9 : 1) * availH / SH, 1.6));
+        // By WIDTH only (the legend sits below it and the page scrolls): a height-bound scale drew the type at 4-7 px on screen.
+        scale = Math.max(.3, Math.min(total / SW, 2));
+        stage.style.setProperty('--clpx', Math.max(10.5, Math.round(12 / scale * 100) / 100) + 'px');   // leader labels: 12 px on screen
         ap.style.left = m.l + 'px'; ap.style.top = m.t + 'px';
         stage.style.width = SW + 'px'; stage.style.height = SH + 'px';
         stage.style.transform = 'scale(' + scale + ')';
         body.style.width = Math.floor(SW * scale) + 'px';
         body.style.height = Math.ceil(SH * scale) + 'px';
+        if (lastView) lastView.pads.forEach((p, i) => fitPad(A.pads[i].firstChild, p.name));   // names are sized in px on screen: refit at every scale
         layoutCallouts();
       }
       if (window.ResizeObserver) new ResizeObserver(fitScale).observe(wrap);
@@ -760,7 +794,7 @@
           if (r.left < stg.left - 1 || r.top < stg.top - 1 || r.right > stg.right + 1 || r.bottom > stg.bottom + 1) clOut++;
           for (let b = a + 1; b < rects.length; b++) { const q = rects[b]; if (r.left < q.right && r.right > q.left && r.top < q.bottom && r.bottom > q.top) clOverlap++; }
         }
-        const callouts = { count: cls.length, cut: clCut, overlap: clOverlap, onUnit: clOnUnit, outsideStage: clOut, minPx: cls.length ? Math.round(10.5 * scale * 10) / 10 : 0 };
+        const callouts = { count: cls.length, cut: clCut, overlap: clOverlap, onUnit: clOnUnit, outsideStage: clOut, minPx: cls.length ? Math.round(Math.min(...cls.map((e) => parseFloat(getComputedStyle(e).fontSize))) * scale * 10) / 10 : 0 };
         return { callouts, labels: shown.length, cut: cut.length, cutTexts: cut.map((l) => l.textContent), outside: bad.length, outsideWho: bad.slice(0, 5), minPx: px.length ? Math.round(Math.min(...px) * 10) / 10 : 0, scale: Math.round(scale * 1000) / 1000, panel: [Math.round(pr.width), Math.round(pr.height)], side: [Math.round(sr.width), Math.round(sr.height)], sideCut, unknownLed: lastView ? lastView.pads.filter((p) => p.hex === UNKNOWN_HEX).length : 0 };
       }
       function say(text) { last.textContent = text; }
