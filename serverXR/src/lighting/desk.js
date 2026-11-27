@@ -42,7 +42,7 @@ const { DmxInput } = require('./dmxin-net');
 const { sanitizeInputConfig, artNetFromDesk, sacnFromDesk, cidString, inputLevels } = require('./dmxin');
 const {
   sanitizeLook, sanitizeLooks, sanitizeLayer, sanitizeLayers,
-  KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows,
+  KINDS: LOOK_KINDS, MERGES: LAYER_MERGES, SCOPES: LOOK_SCOPES, SPATIAL: LOOK_SPATIAL, kindAllows, onAirOf,
 } = require('./looks');
 const { createCueRunner, sanitizeCues } = require('./cuerun');
 const strips = require('./pixelstrip');
@@ -594,6 +594,17 @@ function createDesk(opts = {}) {
   // 'manual' for anything else; `cue` is where the list stands (null with no list), so a
   // hand-fired look can still say where GO resumes. null when nothing is on.
   // (MOXIR UI audit, 2026-10-01)
+  // WHICH LOOK IS ON AIR, from every source (looks.js onAirOf): the one fact a controller's pads
+  // light by. `rev` moves when the look, its layer or the blackout changes. Small on purpose:
+  // GET /api/onair is polled by the armed tab several times a second.
+  let onAirSig = '', onAirRev = 0;
+  function onAirNow() {
+    const a = onAirOf(state) || { lookId: '', layerId: '' };
+    const blackout = !!state.blackout;
+    const sig = a.lookId + '|' + a.layerId + '|' + (blackout ? 1 : 0);
+    if (sig !== onAirSig) { onAirSig = sig; onAirRev++; }
+    return { lookId: a.lookId, layerId: a.layerId, blackout, rev: onAirRev };
+  }
   function nowOnDesk() {
     const layer = state.layers.find((l) => l.id === CUE_LAYER);
     if (!layer || !layer.on || !(layer.level > 0) || !layer.lookId) return null;
@@ -1489,6 +1500,7 @@ function createDesk(opts = {}) {
     const patched = new Set(state.fixtures.map((f) => f.id));
     return Object.assign({}, state, {
       now: nowOnDesk(),
+      onAir: onAirNow(),
       // Who holds each manual channel (holds.js), filled in for a show that predates tags.
       rawOwners: holds.sanitizeRawOwners(state.rawOwners, state.raw),
       // How much of each scene still exists. Recall skips fixtures that have been unpatched,
@@ -1623,6 +1635,8 @@ function createDesk(opts = {}) {
       res.writeHead(200, { 'content-type': 'image/jpeg', 'cache-control': 'no-store', 'content-length': f.buf.length, 'x-frame-age': String(Date.now() - f.at), 'x-frame-seq': String(f.seq) });
       return res.end(f.buf);
     },
+
+    'GET /api/onair': (req, res) => json(res, onAirNow(), 200, req),
 
     'GET /api/state': (req, res) => json(res, publicStateJson(new URL(req.url, 'http://localhost').searchParams.get('looksRev')), 200, req),
 
