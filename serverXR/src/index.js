@@ -220,7 +220,9 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/zip',
   'application/x-zip-compressed',
   'application/gzip',
-  'text/plain'
+  'text/plain',
+  // single-file HTML "visuals" — stored and served sandboxed (projectRoutes.js)
+  'text/html'
 ])
 const ALLOWED_EXTENSIONS = new Set([
   '.glb',
@@ -245,7 +247,9 @@ const ALLOWED_EXTENSIONS = new Set([
   '.zip',
   '.bin',
   '.hdr',
-  '.exr'
+  '.exr',
+  '.html',
+  '.htm'
 ])
 
 const releaseInfo = loadReleaseInfo(config.directories.root)

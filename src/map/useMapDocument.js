@@ -115,6 +115,27 @@ export function useMapActions(applyOps, perform = applyOps) {
         },
         reorderCues: (cueIds) => applyOps({ type: 'reorderMappingCues', payload: { cueIds } }),
 
+        // The visuals bank (src/map/wallScreens.js). Adding, renaming and
+        // removing a visual are edits, recorded for undo. PLAYING one is a
+        // performance, like firing a cue: it goes straight to the wall and
+        // never onto the history, so Ctrl+Z after a show undoes the last edit
+        // instead of walking back through every visual that was played.
+        addVisual: (patch = {}) => {
+            const id = generateId('vis')
+            applyOps({ type: 'createMappingVisual', payload: { visual: { name: '', source: { kind: 'test', ref: 'card' }, ...patch, id } } })
+            return id
+        },
+        updateVisual: (visualId, patch) => {
+            if (!visualId || !patch) return
+            applyOps({ type: 'setMappingVisual', payload: { visualId, patch } })
+        },
+        deleteVisual: (visualId) => {
+            if (!visualId) return
+            applyOps({ type: 'deleteMappingVisual', payload: { visualId } })
+        },
+        reorderVisuals: (visualIds) => applyOps({ type: 'reorderMappingVisuals', payload: { visualIds } }),
+        play: (visualId) => perform({ type: 'setMappingState', payload: { patch: { playing: visualId || '' } } }),
+
         // Firing a cue is ONE op batch, and the batch is built in
         // src/map/cueFiring.js — the same call the 3D scene's cue strip makes.
         // Nothing downstream of that function can tell which tool pressed the

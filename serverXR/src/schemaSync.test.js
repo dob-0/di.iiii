@@ -1106,3 +1106,75 @@ describe('fields this build does not know ride through the CJS twin (audit 2026-
     expect(normalizeProjectDocument(JSON.parse(JSON.stringify(once)))).toEqual(once)
   })
 })
+
+describe('the visuals bank on the CJS twin', () => {
+  // The server applies every op through this file; if only the ESM side knew the bank, the
+  // first save would empty it and turn every 'visual' screen back into a test pattern.
+  const v = (id, source) => ({ id, name: id, source: source || { kind: 'image', ref: '/a.png' } })
+  const base = () => normalizeProjectDocument({})
+
+  it('applies the visual ops and keeps the new source kinds and input through a re-normalize', () => {
+    const written = applyProjectOps(base(), [
+      { type: 'createMappingVisual', payload: { visual: v('a') } },
+      { type: 'createMappingVisual', payload: { visual: v('b', { kind: 'html', ref: '/x.html' }), index: 0 } },
+      { type: 'createMappingSurface', payload: { surface: { id: 's', source: { kind: 'visual', ref: 'a' }, input: [0.5, 0, 2, 1] } } },
+      { type: 'setMappingState', payload: { patch: { playing: 'a', visuals: [] } } }
+    ])
+    const read = normalizeProjectDocument(JSON.parse(JSON.stringify(written)))
+    expect(read.mappingState.visuals.map((x) => x.id)).toEqual(['b', 'a'])
+    expect(read.mappingState.playing).toBe('a')
+    expect(read.mappingState.surfaces[0].source).toEqual({ kind: 'visual', ref: 'a' })
+    expect(read.mappingState.surfaces[0].input).toEqual([0.5, 0, 0.5, 1])
+  })
+
+  it('deleteMappingVisual repoints surfaces, and its inverse undoes it', () => {
+    const doc = applyProjectOps(base(), [
+      { type: 'createMappingVisual', payload: { visual: v('a') } },
+      { type: 'createMappingSurface', payload: { surface: { id: 's', source: { kind: 'visual', ref: 'a' } } } },
+      { type: 'setMappingState', payload: { patch: { playing: 'a' } } }
+    ])
+    const ops = [{ type: 'deleteMappingVisual', payload: { visualId: 'a' } }]
+    const after = applyProjectOps(doc, ops)
+    expect(after.mappingState.surfaces[0].source).toEqual({ kind: 'wall', ref: '' })
+    expect(after.mappingState.playing).toBe('')
+    expect(applyProjectOps(after, schema.invertProjectOps(doc, ops)).mappingState).toEqual(doc.mappingState)
+  })
+
+  it('matches the ESM twin on clamping, caps and kinds', () => {
+    const state = normalizeProjectDocument({ mappingState: {
+      visuals: [{ id: 'w', source: { kind: 'wall' } }, { id: 'w' }, { name: 'idless' }],
+      surfaces: [{ id: 's', input: [-1, 2, 5, -3] }, { id: 't', input: [0, 0, 1] }]
+    } }).mappingState
+    expect(state.visuals).toEqual([{ id: 'w', name: 'Visual 1', source: { kind: 'test', ref: 'card' } }])
+    expect(state.surfaces[0].input).toEqual([0, 1, 1, 0.001])
+    expect('input' in state.surfaces[1]).toBe(false)
+  })
+})
+
+describe('advanced output surface fields on the CJS twin', () => {
+  const inputs = [
+    {},
+    { flip: 'hv', isKey: true, blackBg: false, red: 5, green: -0.123456, blue: 0.5, inputRotation: 190, softEdge: { enabled: true, left: 9, power: 0, gamma: 50, luminance: -1 } },
+    { warp: { mode: 'bezier', divisionsX: 1, divisionsY: 1, points: [[0.2, 0.2], [0.5, 0], [0.9, 0.9], [0, 0.5], [0.123456789, 3], [1, 0.5], [0, 1], [0.5, 1], [5, 5]] } },
+    { warp: { mode: 'nope', divisionsX: 9, divisionsY: -1, points: [[0, 0]] } },
+    { warp: null },
+    { flip: 'x', inputRotation: -180, softEdge: 'x' },
+  ]
+
+  it('agrees with the ESM twin on every shape', async () => {
+    const esm = await import('../../src/shared/projectSchema.js')
+    for (const input of inputs) {
+      expect(schema.normalizeMappingSurface({ id: 'a', ...input })).toEqual(esm.normalizeMappingSurface({ id: 'a', ...input }))
+    }
+    expect(schema.regularWarpGrid(2, 1)).toEqual(esm.regularWarpGrid(2, 1))
+    expect(schema.regularWarpGrid(2, 1)).toHaveLength(15)
+  })
+
+  it('sets and removes warp through setMappingSurface', () => {
+    const doc = applyProjectOps(normalizeProjectDocument({}), [{ type: 'createMappingSurface', payload: { surface: { id: 'a' } } }])
+    const set = applyProjectOps(doc, [{ type: 'setMappingSurface', payload: { surfaceId: 'a', patch: { warp: { divisionsX: 1 } } } }])
+    expect(set.mappingState.surfaces[0].warp.points).toHaveLength(6)
+    const gone = applyProjectOps(set, [{ type: 'setMappingSurface', payload: { surfaceId: 'a', patch: { warp: null } } }])
+    expect('warp' in gone.mappingState.surfaces[0]).toBe(false)
+  })
+})
