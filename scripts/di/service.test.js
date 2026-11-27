@@ -115,6 +115,13 @@ describe('the unit: systemd watches the server itself', () => {
         expect(text).toMatch(/^TimeoutStopSec=10$/m)
     })
 
+    it('wins the CPU under contention: CPUWeight=1000 in [Service], no IOWeight, no Nice', () => {
+        const service = text.slice(text.indexOf('[Service]'), text.indexOf('[Install]'))
+        expect(service).toMatch(/^CPUWeight=1000$/m)
+        expect(text).not.toMatch(/^IOWeight=/m)
+        expect(text).not.toMatch(/^Nice=/m)
+    })
+
     it('gives up on a server that cannot start, with the limit in [Unit] where systemd reads it', () => {
         const unitSection = text.slice(text.indexOf('[Unit]'), text.indexOf('[Service]'))
         expect(unitSection).toMatch(/^StartLimitIntervalSec=300$/m)
