@@ -86,8 +86,8 @@ describe('I1: an armed tab never takes over from the page defaults', () => {
     expect(api.armed).toBe(true)
     expect(api.wait).toBe(true)
     api.midiSend('api/master', { master: 10 })
-    expect(api.pending.size).toBe(0)
-    expect(log.fetches.filter((f) => f.route !== 'api/onair' && f.route !== 'api/raw')).toEqual([])   // api/raw = the arm-time clear of a stale hit (#1397)
+    expect([...api.pending.keys()].filter((k) => k !== 'hold:clearflash')).toEqual([])   // only the arm-time clearFlash may wait behind the clear
+    expect(log.fetches.filter((f) => f.route !== 'api/onair' && f.route !== 'api/raw' && f.route !== 'api/fx')).toEqual([])   // api/raw + api/fx = the arm-time clear of a stale hit and of a stale software strobe (#1397)
     api.setS(desk(128)); api.midiLiveArrived()
     expect(api.wait).toBe(false)
     expect(api.live.master).toBe(128)        // not the default 255
@@ -223,7 +223,7 @@ describe('the fast poll and the urgent sends', () => {
       api.midiSetArmed(true)
       api.midiSend('api/looks/fire', { id: 'l1', autoplayOff: true }, 'lookpad:3', true)
       await vi.advanceTimersByTimeAsync(5)   // 5 ms: far under the 40 ms merge timer
-      expect(log.fetches.filter((f) => f.route !== 'api/onair' && f.route !== 'api/raw')).toEqual([{ route: 'api/looks/fire', body: { id: 'l1', autoplayOff: true } }])
+      expect(log.fetches.filter((f) => f.route !== 'api/onair' && f.route !== 'api/raw' && f.route !== 'api/fx')).toEqual([{ route: 'api/looks/fire', body: { id: 'l1', autoplayOff: true } }])
     } finally { vi.useRealTimers() }
   })
   it('the pad handler builds that one call: fire body + autoplayOff, sent as the urgent key', () => {
@@ -277,7 +277,7 @@ describe('state.onAir is the desk\'s own fact and the page follows it', () => {
 const withLooks = (extra = {}) => desk(128, { looks: [{ id: 'l1', name: 'On air' }, { id: 'l2', name: 'Other' }], ...extra })
 
 // ARM's own one-time hold clear (#1397 L2: a hit whose release never came lets go on ARM) and the on-air poll are not presses.
-const notArmNoise = (f) => f.route !== 'api/onair' && !(f.route === 'api/raw' && f.body && f.body.owner === 'apc40' && f.body.clear === true)
+const notArmNoise = (f) => f.route !== 'api/onair' && !(f.route === 'api/raw' && f.body && f.body.owner === 'apc40' && f.body.clear === true) && !(f.route === 'api/fx' && f.body && f.body.clearFlash === true)
 
 describe('round 3: the look pad press at the handler (N4, and the two mutations the round-2 review found alive)', () => {
   it('a look pad press is ONE fire call carrying autoplayOff, sent at once with no 40 ms wait', async () => {

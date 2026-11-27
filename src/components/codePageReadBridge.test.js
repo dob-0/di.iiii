@@ -109,9 +109,9 @@ describe('codePageReadBridge', () => {
         const state = sanitizeReadBody('/light/api/state', {
             master: 255, blackout: false, scenes: [{ id: 's' }],
             output: { targets: ['2.0.0.7'], serialPort: '/dev/ttyUSB0' },
-            fixtures: [{ id: 'a', name: 'P1', universe: 2, address: 1, profile: 'X', values: { r1: 1 }, limits: { panTrim: 1 } }]
+            fixtures: [{ id: 'a', name: 'P1', universe: 2, address: 1, profile: 'X', x: 0.1, y: 0.2, values: { r1: 1 }, limits: { panTrim: 1 } }]
         })
-        expect(state).toEqual({ master: 255, blackout: false, fixtures: [{ id: 'a', name: 'P1', universe: 2, address: 1, profile: 'X', values: { r1: 1 } }] })
+        expect(state).toEqual({ master: 255, blackout: false, fixtures: [{ id: 'a', name: 'P1', universe: 2, address: 1, profile: 'X', x: 0.1, y: 0.2, values: { r1: 1 } }] })
         const summary = sanitizeReadBody('/light/api/summary?x=1', {
             looks: 27, input: { port: 'x' },
             output: { enabled: true, connected: true, packetsSent: 5, lastError: '/dev/ttyUSB0 gone', targets: ['2.0.0.7'], bus: { status: 'ok', networks: ['2.0.0.0/8'], routes: [{ name: 'Output', driver: 'artnet', status: 'ok', reason: 'to 2.0.0.7', target: '2.0.0.7' }] } }

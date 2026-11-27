@@ -147,6 +147,12 @@ export const unitText = ({ name, home, node }) => {
         'RestartMaxDelaySec=60',
         // `di down` used to wait 8 s, then SIGKILL. Same here.
         'TimeoutStopSec=10',
+        // The light desk runs in this server: under CPU contention it gets 10x
+        // the default share (100) against sibling user services and scopes
+        // (systemd.resource-control(5), CPUWeight=). No effect on an idle
+        // machine. No IOWeight (the io controller is not delegated to user
+        // managers) and no negative Nice (needs privilege).
+        'CPUWeight=1000',
         `SyslogIdentifier=${name}`,
         '',
         '[Install]',
