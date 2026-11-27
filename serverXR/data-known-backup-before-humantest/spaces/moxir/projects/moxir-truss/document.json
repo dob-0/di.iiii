@@ -1,0 +1,227 @@
+{
+  "version": 4,
+  "projectMeta": {
+    "id": "moxir-truss",
+    "spaceId": "moxir",
+    "title": "Truss over the DJ",
+    "createdAt": 1790696460241,
+    "updatedAt": 1790696460267,
+    "source": "project"
+  },
+  "nodes": [],
+  "edges": [],
+  "templates": [],
+  "workspaceState": {
+    "selectedNodeId": null,
+    "liveWorldNodeIdByScope": {},
+    "activeNodeIdByTypeScope": {}
+  },
+  "entities": [],
+  "worldState": {
+    "backgroundColor": "#0a1118",
+    "environmentAssetId": null,
+    "environmentIntensity": 1,
+    "atmosphereBlend": false,
+    "hubDecor": false,
+    "spawn": null,
+    "fog": null,
+    "walkableAreas": null,
+    "placement": null,
+    "gridVisible": true,
+    "gridSize": 24,
+    "gridCellSize": 0.75,
+    "gridCellThickness": 0.3,
+    "gridCellColor": "#2a6e73",
+    "gridSectionSize": 6,
+    "gridSectionThickness": 0.65,
+    "gridSectionColor": "#4df9ff",
+    "gridFadeDistance": 80,
+    "gridFadeStrength": 1,
+    "gridOffset": 0.015,
+    "ambientLight": {
+      "color": "#ffffff",
+      "intensity": 0.85
+    },
+    "directionalLight": {
+      "color": "#fff7ea",
+      "intensity": 1.15,
+      "position": [
+        8,
+        12,
+        4
+      ]
+    },
+    "savedView": {
+      "mode": "perspective",
+      "position": [
+        0,
+        2.4,
+        6.5
+      ],
+      "target": [
+        0,
+        0.75,
+        0
+      ],
+      "fov": 50,
+      "zoom": 1,
+      "near": 0.1,
+      "far": 1000
+    }
+  },
+  "renderSettings": {
+    "shadows": true,
+    "shadowCasting": {
+      "enabled": false,
+      "mapSize": 1024
+    },
+    "antialias": true,
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 1,
+    "dprMin": 1,
+    "dprMax": 2
+  },
+  "xrState": {
+    "mode": "none",
+    "debugVisible": false,
+    "vrSupported": false,
+    "arSupported": false
+  },
+  "presentationState": {
+    "mode": "code",
+    "fixedCamera": {
+      "projection": "perspective",
+      "position": [
+        0,
+        2.4,
+        6.5
+      ],
+      "target": [
+        0,
+        0.75,
+        0
+      ],
+      "fov": 50,
+      "zoom": 1,
+      "near": 0.1,
+      "far": 200,
+      "locked": false
+    },
+    "codeHtml": "",
+    "codeSourceType": "html",
+    "codeUrl": "",
+    "codeFiles": [
+      {
+        "name": "index.html",
+        "content": "<!doctype html>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n<title>MOXIR ten truss versions</title>\n<style>\n:root{--bg:#0d0d0e;--ink:#ecebe7;--soft:#a3a09a;--dim:#5f5d59;--rule:#2a2a2d;--crane:#c9a227;--truss:#ecebe7;--chain:#8d8a84;--beam:#d2232a;--mach:#1d1d20}\n*{box-sizing:border-box}\nbody{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;padding:24px clamp(16px,4vw,48px) 64px}\nh1{font:800 clamp(28px,4vw,44px)/1 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.02em;margin:0 0 8px}\nh3{font:700 14px/1.2 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);margin:36px 0 8px}\np{color:var(--soft);max-width:80ch;margin:0 0 10px}\n.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:30px;margin-top:22px}\n.opt{border-top:1px solid var(--rule);padding-top:12px;display:grid;gap:8px;align-content:start}\n.opt h2{font:700 18px/1.15 system-ui,sans-serif;margin:0;text-transform:uppercase}\n.opt h2 span{color:var(--beam);font:500 12px ui-monospace,monospace;letter-spacing:.12em;margin-right:8px}\n.pick h2 span::after{content:\" · my pick\";color:var(--ink)}\nsvg{width:100%;height:auto;background:#121214;border:1px solid var(--rule)}\n.cap{font-size:12px;color:var(--dim)}\ndl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13px}\ndt{color:var(--dim)}dd{margin:0;color:var(--soft)}\n.note{margin-top:40px;border-top:1px solid var(--rule);padding-top:16px}\n.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:var(--dim)}\n.legend i{display:inline-block;width:18px;height:4px;vertical-align:middle;margin-right:6px}\n</style>\n<h1>MOXIR — ten truss versions</h1>\n<p>Truss and lights only. The truss is the object, the lights live on it, and nothing else is added. Every version uses the lights already on the rental list: 7 beams (B380F), 2 strobes and the PARs. Front views are from the dance floor, with the yellow crane at about 7.6 m and the DJ below. The press and machine line stand on the <b>right</b>, so anything low goes left. Sizes are standard truss lengths (2, 3, 4 m) and estimates; every hanging point is a chain hoist with a safety steel.</p>\n<div class=\"legend\"><span><i style=\"background:var(--crane)\"></i>crane</span><span><i style=\"background:var(--truss)\"></i>truss</span><span><i style=\"background:var(--beam)\"></i>beam</span><span><i style=\"background:#3a3a3e\"></i>press / machines</span></div>\n\n<div class=\"grid\">\n\n<section class=\"opt\">\n<h2><span>1</span>The X</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"110\" y1=\"24\" x2=\"110\" y2=\"50\"/><line x1=\"190\" y1=\"24\" x2=\"190\" y2=\"50\"/></g><g stroke=\"var(--truss)\" stroke-width=\"6\"><line x1=\"110\" y1=\"50\" x2=\"190\" y2=\"130\"/><line x1=\"190\" y1=\"50\" x2=\"110\" y2=\"130\"/></g><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"110\" y1=\"50\" x2=\"40\" y2=\"175\"/><line x1=\"190\" y1=\"50\" x2=\"260\" y2=\"175\"/><line x1=\"110\" y1=\"130\" x2=\"80\" y2=\"175\"/><line x1=\"190\" y1=\"130\" x2=\"220\" y2=\"175\"/><line x1=\"150\" y1=\"90\" x2=\"150\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/></svg>\n<dl><dt>truss</dt><dd>2 × 4 m + a centre crossing block, hung flat facing the crowd</dd><dt>lights</dt><dd>a beam on each of the 4 ends, 3 at the crossing, a strobe at the top and bottom</dd><dt>rig</dt><dd>2–3 hoists · ~8 m</dd><dt>feel</dt><dd>the sign. Strong, simple, maybe expected</dd></dl>\n</section>\n\n<section class=\"opt\">\n<h2><span>2</span>The X lying down</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"80\" y1=\"24\" x2=\"80\" y2=\"72\"/><line x1=\"220\" y1=\"24\" x2=\"220\" y2=\"72\"/><line x1=\"120\" y1=\"24\" x2=\"120\" y2=\"64\"/><line x1=\"180\" y1=\"24\" x2=\"180\" y2=\"80\"/></g><g stroke=\"var(--truss)\" stroke-width=\"6\"><line x1=\"80\" y1=\"72\" x2=\"220\" y2=\"72\"/><line x1=\"120\" y1=\"64\" x2=\"180\" y2=\"80\"/></g><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"80\" y1=\"72\" x2=\"20\" y2=\"175\"/><line x1=\"220\" y1=\"72\" x2=\"280\" y2=\"175\"/><line x1=\"150\" y1=\"72\" x2=\"150\" y2=\"175\"/><line x1=\"120\" y1=\"64\" x2=\"100\" y2=\"175\"/><line x1=\"180\" y1=\"80\" x2=\"200\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"12\" y=\"44\" fill=\"var(--dim)\" font-size=\"10\">top view: ✕ flat at 6 m</text></svg>\n<dl><dt>truss</dt><dd>2 × 5 m crossing flat (horizontal) at 6 m, one arm pointing into the crowd</dd><dt>lights</dt><dd>beams on all 4 ends fire in 4 directions; the X only reads from above, or in the haze as 4 rays</dd><dt>rig</dt><dd>4 hoists · ~10 m</dd><dt>feel</dt><dd>fresh: the sign is hidden, you feel it rather than see it</dd></dl>\n</section>\n\n<section class=\"opt pick\">\n<h2><span>3</span>The fallen X</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"100\" y1=\"24\" x2=\"100\" y2=\"44\"/><line x1=\"180\" y1=\"24\" x2=\"180\" y2=\"44\"/></g><g stroke=\"var(--truss)\" stroke-width=\"6\"><line x1=\"100\" y1=\"44\" x2=\"180\" y2=\"124\"/><line x1=\"60\" y1=\"174\" x2=\"170\" y2=\"54\"/></g><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"100\" y1=\"44\" x2=\"30\" y2=\"175\"/><line x1=\"180\" y1=\"124\" x2=\"200\" y2=\"175\"/><line x1=\"170\" y1=\"54\" x2=\"240\" y2=\"175\"/><line x1=\"92\" y1=\"140\" x2=\"130\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/></svg>\n<dl><dt>truss</dt><dd>one 4 m arm hangs from the crane; the other 4 m arm stands on a base plate on the LEFT floor and leans into the crossing, tied off</dd><dt>lights</dt><dd>beams at the ends and at the crossing; one beam at the fallen foot shoots up through the crossing</dd><dt>rig</dt><dd>2 hoists + 1 ground point with barrier · ~8 m</dd><dt>feel</dt><dd>wild, broken, still MOXIR: the ruin of the sign</dd></dl>\n</section>\n\n<section class=\"opt\">\n<h2><span>4</span>The cut</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"40\" y1=\"24\" x2=\"40\" y2=\"110\"/><line x1=\"150\" y1=\"24\" x2=\"150\" y2=\"74\"/><line x1=\"260\" y1=\"24\" x2=\"260\" y2=\"40\"/></g><line x1=\"30\" y1=\"114\" x2=\"270\" y2=\"36\" stroke=\"var(--truss)\" stroke-width=\"6\"/><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"60\" y1=\"104\" x2=\"30\" y2=\"175\"/><line x1=\"100\" y1=\"91\" x2=\"100\" y2=\"175\"/><line x1=\"140\" y1=\"78\" x2=\"160\" y2=\"175\"/><line x1=\"180\" y1=\"65\" x2=\"200\" y2=\"175\"/><line x1=\"220\" y1=\"52\" x2=\"250\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/></svg>\n<dl><dt>truss</dt><dd>one straight 12 m line, a steep diagonal across the whole bridge: low on the left (≈4 m), high on the right (≈7 m, over the machines)</dd><dt>lights</dt><dd>the 7 beams spaced along it, each at a different height; strobes at both ends</dd><dt>rig</dt><dd>3 hoists · 12 m</dd><dt>feel</dt><dd>one gesture, a slash through the hall. Very minimal</dd></dl>\n</section>\n\n<section class=\"opt\">\n<h2><span>5</span>The spine</h2>\n<svg viewBox=\"0 0 300 180\"><line x1=\"150\" y1=\"10\" x2=\"150\" y2=\"30\" stroke=\"var(--crane)\" stroke-width=\"7\"/><text x=\"160\" y=\"24\" fill=\"var(--crane)\" font-size=\"10\">crane (end view)</text><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"150\" y1=\"30\" x2=\"150\" y2=\"40\"/></g><line x1=\"140\" y1=\"42\" x2=\"20\" y2=\"80\" stroke=\"var(--truss)\" stroke-width=\"6\"/><line x1=\"140\" y1=\"42\" x2=\"160\" y2=\"42\" stroke=\"var(--truss)\" stroke-width=\"6\"/><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"120\" y1=\"48\" x2=\"120\" y2=\"175\"/><line x1=\"90\" y1=\"58\" x2=\"90\" y2=\"175\"/><line x1=\"60\" y1=\"67\" x2=\"60\" y2=\"175\"/><line x1=\"30\" y1=\"77\" x2=\"30\" y2=\"175\"/></g><rect x=\"150\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"24\" y=\"100\" fill=\"var(--dim)\" font-size=\"10\">← over the crowd</text><text x=\"150\" y=\"152\" fill=\"var(--dim)\" font-size=\"10\">DJ</text></svg>\n<dl><dt>truss</dt><dd>side view: one 12 m line running ALONG the hall, from the crane over the DJ out over the dance floor, dipping slightly toward the crowd</dd><dt>lights</dt><dd>beams all along it, straight down into the crowd, one after another</dd><dt>rig</dt><dd>1 hoist at the crane + 2 more at the far end (a second crane point or a ground tower) · 12 m</dd><dt>feel</dt><dd>fresh: the light reaches out from the DJ into the people</dd></dl>\n</section>\n\n<section class=\"opt\">\n<h2><span>6</span>Halo</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"90\" y1=\"24\" x2=\"90\" y2=\"80\"/><line x1=\"210\" y1=\"24\" x2=\"210\" y2=\"80\"/><line x1=\"150\" y1=\"24\" x2=\"150\" y2=\"70\"/></g><polygon points=\"90,80 210,80 150,70\" fill=\"none\" stroke=\"var(--truss)\" stroke-width=\"6\"/><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"90\" y1=\"80\" x2=\"120\" y2=\"175\"/><line x1=\"210\" y1=\"80\" x2=\"180\" y2=\"175\"/><line x1=\"150\" y1=\"72\" x2=\"150\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/><text x=\"12\" y=\"44\" fill=\"var(--dim)\" font-size=\"10\">flat triangle at 6 m</text></svg>\n<dl><dt>truss</dt><dd>a triangle of 3 × 4 m lying flat at 6 m, centred over the DJ</dd><dt>lights</dt><dd>beams on the corners all aim in to a point on the DJ: a cone of light around them, then open outward to the crowd</dd><dt>rig</dt><dd>3 hoists · 12 m + 3 corners</dd><dt>feel</dt><dd>ritual; strong focus on the DJ</dd></dl>\n</section>\n\n<section class=\"opt\">\n<h2><span>7</span>Arrow</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"100\" y1=\"24\" x2=\"100\" y2=\"40\"/><line x1=\"200\" y1=\"24\" x2=\"200\" y2=\"40\"/></g><polygon points=\"100,40 200,40 150,130\" fill=\"none\" stroke=\"var(--truss)\" stroke-width=\"6\"/><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"150\" y1=\"130\" x2=\"150\" y2=\"175\"/><line x1=\"100\" y1=\"40\" x2=\"30\" y2=\"175\"/><line x1=\"200\" y1=\"40\" x2=\"270\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/></svg>\n<dl><dt>truss</dt><dd>a triangle of 3 × 4 m hung upright, point down, aimed at the DJ</dd><dt>lights</dt><dd>a strobe at the point, beams along the top edge</dd><dt>rig</dt><dd>2 hoists · 12 m</dd><dt>feel</dt><dd>aggressive, graphic; close to a logo</dd></dl>\n</section>\n\n<section class=\"opt\">\n<h2><span>8</span>Organ</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--truss)\" stroke-width=\"6\"><line x1=\"70\" y1=\"24\" x2=\"70\" y2=\"120\"/><line x1=\"105\" y1=\"24\" x2=\"105\" y2=\"90\"/><line x1=\"140\" y1=\"24\" x2=\"140\" y2=\"104\"/><line x1=\"175\" y1=\"24\" x2=\"175\" y2=\"70\"/><line x1=\"210\" y1=\"24\" x2=\"210\" y2=\"60\"/></g><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"70\" y1=\"120\" x2=\"40\" y2=\"175\"/><line x1=\"105\" y1=\"90\" x2=\"110\" y2=\"175\"/><line x1=\"140\" y1=\"104\" x2=\"160\" y2=\"175\"/><line x1=\"175\" y1=\"70\" x2=\"200\" y2=\"175\"/><line x1=\"210\" y1=\"60\" x2=\"250\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/></svg>\n<dl><dt>truss</dt><dd>5 vertical pieces (2–3 m) of different lengths hanging in a row, longest on the left, shortest over the machines</dd><dt>lights</dt><dd>a beam at the foot of each, 2 on the longest; they fire one by one like keys</dd><dt>rig</dt><dd>5 hoists · ~12 m</dd><dt>feel</dt><dd>the pendulum idea, turned into an instrument</dd></dl>\n</section>\n\n<section class=\"opt\">\n<h2><span>9</span>Portal ajar</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"100\" y1=\"24\" x2=\"100\" y2=\"44\"/><line x1=\"200\" y1=\"24\" x2=\"200\" y2=\"56\"/></g><polygon points=\"100,44 200,56 196,150 104,138\" fill=\"none\" stroke=\"var(--truss)\" stroke-width=\"6\"/><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"100\" y1=\"44\" x2=\"30\" y2=\"175\"/><line x1=\"200\" y1=\"56\" x2=\"270\" y2=\"175\"/><line x1=\"150\" y1=\"50\" x2=\"150\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/></svg>\n<dl><dt>truss</dt><dd>a 4 × 4 m square frame hung upright around the DJ, twisted about 20°, a door left half open</dd><dt>lights</dt><dd>beams on the top corners; strobes low on both sides, which make the frame flash as a silhouette</dd><dt>rig</dt><dd>2 hoists · 16 m + corners</dd><dt>feel</dt><dd>architectural; the DJ plays inside a door</dd></dl>\n</section>\n\n<section class=\"opt\">\n<h2><span>10</span>The gap</h2>\n<svg viewBox=\"0 0 300 180\"><rect x=\"200\" y=\"120\" width=\"90\" height=\"55\" fill=\"var(--mach)\" stroke=\"#3a3a3e\"/><line x1=\"10\" y1=\"20\" x2=\"290\" y2=\"20\" stroke=\"var(--crane)\" stroke-width=\"7\"/><g stroke=\"var(--chain)\" stroke-dasharray=\"3 3\"><line x1=\"30\" y1=\"24\" x2=\"30\" y2=\"100\"/><line x1=\"125\" y1=\"24\" x2=\"125\" y2=\"100\"/><line x1=\"175\" y1=\"24\" x2=\"175\" y2=\"60\"/><line x1=\"270\" y1=\"24\" x2=\"270\" y2=\"60\"/></g><g stroke=\"var(--truss)\" stroke-width=\"6\"><line x1=\"30\" y1=\"100\" x2=\"125\" y2=\"100\"/><line x1=\"175\" y1=\"60\" x2=\"270\" y2=\"60\"/></g><g stroke=\"var(--beam)\" stroke-opacity=\".5\"><line x1=\"125\" y1=\"100\" x2=\"150\" y2=\"175\"/><line x1=\"175\" y1=\"60\" x2=\"150\" y2=\"175\"/><line x1=\"30\" y1=\"100\" x2=\"20\" y2=\"175\"/><line x1=\"270\" y1=\"60\" x2=\"285\" y2=\"175\"/><line x1=\"78\" y1=\"100\" x2=\"70\" y2=\"175\"/></g><rect x=\"130\" y=\"158\" width=\"40\" height=\"17\" fill=\"none\" stroke=\"var(--ink)\"/></svg>\n<dl><dt>truss</dt><dd>two 6 m lines, the left one low (≈5 m) and the right one high (≈7 m, over the machines), with a 2 m gap right over the DJ</dd><dt>lights</dt><dd>the two inner beams meet in the gap on the DJ; the outer ones sweep the room</dd><dt>rig</dt><dd>4 hoists · 12 m</dd><dt>feel</dt><dd>a broken bridge; the DJ stands in the break</dd></dl>\n</section>\n</div>\n\n<section class=\"note\">\n<h3>My advice</h3>\n<p><b>3, the fallen X.</b> It is the MOXIR sign, it's broken and wild the way you described, and it's still only two pieces of truss, so it stays minimal. The fallen arm stands on the open left, away from the machines, and its foot beam firing up through the crossing gives the night a moment nobody forgets.</p>\n<p>Next: <b>4, the cut</b> (the most minimal: one line, one gesture) and <b>10, the gap</b> (the DJ standing in a broken bridge). <b>2, the X lying down</b> is the freshest if you want the sign hidden.</p>\n<p class=\"cap\">Any version: a rigger signs off the crane loads. Plan B if the crane is refused: the same truss on ground towers. Pick two or three and I build them in the 3D room so you can judge from the dance floor.</p>\n</section>\n"
+      }
+    ],
+    "entryView": "code",
+    "deviceAccess": false
+  },
+  "publishState": {
+    "shareEnabled": false,
+    "xrDefaultMode": "none",
+    "lastExportAt": 0
+  },
+  "showState": {
+    "clockEpoch": 0
+  },
+  "performState": {
+    "presets": []
+  },
+  "mappingState": {
+    "output": {
+      "width": 1920,
+      "height": 1080
+    },
+    "background": "#000000",
+    "surfaces": [],
+    "cues": [],
+    "reference": {
+      "url": "",
+      "opacity": 0.5,
+      "visible": false
+    },
+    "grid": 0,
+    "fade": 0
+  },
+  "windowLayout": {
+    "activeWindowId": "viewport",
+    "windows": {
+      "viewport": {
+        "id": "viewport",
+        "title": "Viewport",
+        "visible": true,
+        "minimized": false,
+        "pinned": true,
+        "x": 24,
+        "y": 176,
+        "width": 860,
+        "height": 580,
+        "zIndex": 3
+      },
+      "assets": {
+        "id": "assets",
+        "title": "Assets",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 910,
+        "y": 176,
+        "width": 360,
+        "height": 360,
+        "zIndex": 4
+      },
+      "inspector": {
+        "id": "inspector",
+        "title": "Inspector",
+        "visible": true,
+        "minimized": false,
+        "pinned": false,
+        "x": 910,
+        "y": 552,
+        "width": 360,
+        "height": 420,
+        "zIndex": 5
+      },
+      "outliner": {
+        "id": "outliner",
+        "title": "Outliner",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 24,
+        "y": 620,
+        "width": 280,
+        "height": 260,
+        "zIndex": 2
+      },
+      "activity": {
+        "id": "activity",
+        "title": "Activity",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 320,
+        "y": 620,
+        "width": 340,
+        "height": 260,
+        "zIndex": 1
+      },
+      "project": {
+        "id": "project",
+        "title": "Project",
+        "visible": false,
+        "minimized": false,
+        "pinned": false,
+        "x": 680,
+        "y": 620,
+        "width": 320,
+        "height": 260,
+        "zIndex": 1
+      }
+    }
+  },
+  "assets": []
+}
