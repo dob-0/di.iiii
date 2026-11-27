@@ -181,7 +181,7 @@ function customProfiles() {
 const {
   ROLE_DEFAULTS, LIGHT_ROLES, LEVEL_ROLES, POSITION_ROLES, FINE_ROLES, roleKind, roleKinds, fineRoleIn,
 } = require('./roles');
-const { testMoveAt } = require('./testmove');
+const { testMoveSteps } = require('./testmove');
 
 const DEFAULT_LIMITS = {
   dimMin: 0, dimMax: 255,
@@ -438,7 +438,6 @@ class Engine {
       const val = colorFxVal(cfxFrame, f, pixelVal(state, f, profile, excluded, now, baseVal));
       const headPT = heads && heads.has(f.id) ? headsPose(heads.get(f.id), profile.channels, val) : null;
       // A test move (testmove.js): a short swing of one desk-side axis, live only, like the flash.
-      const swing = state.testMove ? testMoveAt(state.testMove[f.id], now) : null;
       // Fine bytes of 16-bit pan/tilt are written after the channel loop, over the pass-through.
       let fineWrites = null;
       const flash = ident(f.id);
@@ -470,34 +469,55 @@ class Engine {
         if (kind === 'level') {
           v = dim * 255 * lvl;
         } else if (kind === 'position') {
-          // Order: the desk's own value (with a test swing on the desk side) -> Swap -> Invert ->
-          // the min/max mapping -> the trim, clamped to the limits, never wrapped.
+          // The old engine's value FIRST, exactly (pre-fine-trim): Swap -> desk value -> Invert -> the
+          // min/max mapping -> a WHOLE trim (truncated toward 0) clamped to the limits. A show that
+          // uses only whole trims gets these bytes and nothing else, on any head. Only what the old
+          // engine could not carry (a fraction of a trim, a test swing) is added after, below.
+          // On a 16-bit head the fine byte travels with its coarse (lead's call 2026-11-27, once #1381 made
+          // head-motion looks write fine bytes): Swap takes the source axis's fine value along, and Invert
+          // mirrors coarse + fine as ONE position, 255 - (coarse + fine/256), around the same middle as the
+          // 8-bit mirror. A fine value of 0 (a look that writes none) gives exactly the old bytes.
           const src = lim.swapPT ? (role === 'pan' ? 'tilt' : 'pan') : role;
-          const raw = (headPT && headPT[src] != null) ? headPT[src] : (val(src) ?? 128);
-          const push = swing && swing.axis === src ? swing.steps : 0;
+          let raw = (headPT && headPT[src] != null) ? headPT[src] : (val(src) ?? 128);
           const inv = role === 'pan' ? lim.invertPan : lim.invertTilt;
-          const lo = role === 'pan' ? lim.panMin : lim.tiltMin, hi = role === 'pan' ? lim.panMax : lim.tiltMax;
-          const trim = +(role === 'pan' ? lim.panTrim : lim.tiltTrim) || 0;
           const fineRole = fineRoleIn(profile.channels, role);
           const fineCh = fineRole ? f.address - 1 + profile.channels.indexOf(fineRole) : -1;
-          if (fineCh >= 0 && fineCh <= 511) {
-            // 16-bit: the position is coarse + fine/256, so a fraction of a step (a fine trim, a
-            // fine value from the desk or the heads, the swing) has somewhere to go. The fine
-            // source follows Swap with its coarse, and Invert mirrors the pair together, around
-            // the same middle as the 8-bit mirror: a fine byte of 0 gives exactly the old bytes.
-            const fineIn = fineRoleIn(profile.channels, src);
-            const fineSrc = fineIn ? ((headPT && headPT[fineIn] != null) ? headPT[fineIn] : (val(fineIn) ?? 0)) : 0;
-            let x = raw + fineSrc / 256 + push;
-            if (inv) x = 255 - x;
-            const w16 = Math.round((mapRange(x, lo, hi) + trim) * 256);
-            const pos = Math.max(Math.min(lo, hi) * 256, Math.min(Math.max(lo, hi) * 256 + 255, w16));
-            v = pos >> 8;
-            (fineWrites || (fineWrites = [])).push([fineCh, pos & 255]);
-          } else {
-            // 8-bit: whole steps only, so a stored fraction (not written by the desk) is rounded.
-            let x = raw + push;
-            if (inv) x = 255 - x;
-            v = Math.max(Math.min(lo, hi), Math.min(Math.max(lo, hi), mapRange(x, lo, hi) + Math.round(trim)));
+          const has16 = fineCh >= 0 && fineCh <= 511;
+          const fineSrc = has16 ? fineRoleIn(profile.channels, src) : null;
+          let fine = fineSrc ? clamp8(+((headPT && headPT[fineSrc] != null) ? headPT[fineSrc] : (val(fineSrc) ?? ROLE_DEFAULTS[fineSrc] ?? 0)) || 0) : 0;
+          if (inv) {
+            raw = 255 - raw;
+            if (fine) {
+              if (raw - fine / 256 <= 0) { raw = 0; fine = 0; } else { raw = Math.max(0, raw - 1); fine = 256 - fine; }
+            }
+          }
+          const lo = role === 'pan' ? lim.panMin : lim.tiltMin, hi = role === 'pan' ? lim.panMax : lim.tiltMax;
+          v = mapRange(raw, lo, hi);
+          const trimIn = role === 'pan' ? lim.panTrim : lim.tiltTrim;
+          const whole = trimIn | 0;
+          if (whole) v = Math.max(Math.min(lo, hi), Math.min(Math.max(lo, hi), v + whole));
+          let extra = (+trimIn || 0) - whole;
+          const steps = testMoveSteps(state.testMove && state.testMove[f.id], now, src);
+          if (steps) extra += steps * (inv ? -1 : 1) * (hi - lo) / 255;
+          if (extra && Number.isFinite(extra) && Number.isFinite(+v)) {
+            const loN = Math.max(0, Math.min(255, +lo || 0)), hiN = Math.max(0, Math.min(255, +hi || 0));
+            if (has16) {
+              // 16-bit: the fraction goes to the fine byte, on top of the old coarse and the fine value
+              // that travels with it (the pass-through, or the swapped / mirrored one above).
+              const base = clamp8(v) * 256 + fine;
+              // The ends are the OLD end bytes (end coarse + that fine), so past a range end the
+              // fraction can never step back while the trim grows (255/0 stays 255/0, not 255/253 then 255/0).
+              const p = Math.max(Math.min(loN, hiN) * 256 + fine, Math.min(Math.max(loN, hiN) * 256 + fine, base + Math.round(extra * 256)));
+              v = p >> 8;
+              (fineWrites || (fineWrites = [])).push([fineCh, p & 255]);
+            } else {
+              // 8-bit: whole steps only, so the fraction is rounded by the final clamp8.
+              v = Math.max(Math.min(loN, hiN), Math.min(Math.max(loN, hiN), v + extra));
+            }
+          } else if (has16 && (inv || lim.swapPT)) {
+            // No fraction, no swing: the fine channel gets the fine value that travels with this coarse,
+            // over its own pass-through (the same byte when the look writes no fine value).
+            (fineWrites || (fineWrites = [])).push([fineCh, fine]);
           }
         } else if (kind === 'emitter') {
           // Master and FX ride the dimmer channel when the fixture has one, so neither may
