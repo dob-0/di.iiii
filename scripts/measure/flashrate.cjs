@@ -9,7 +9,7 @@ const N = 12, STEP = 25, T = 120000;
 const lamps = Array.from({ length: N }, (_, i) => ({ x: -1 + 3 * i / (N - 1), y: 0.5 + 0.1 * (i % 3) }));
 import(require('url').pathToFileURL(require('path').join(__dirname, '../../src/project/nodes/flashRule.js')).href).then((rule) => {
 function worst(mode, bpm, depth, spatial) {
-  const cfg = { mode, bpm, depth, spatial, enabled: true, epoch: 0 };
+  const cfg = { mode, bpm, depth, spatial, enabled: true, epoch: 0, strobeLimit: true };
   let worst1 = 0, total = 0;
   for (let i = 0; i < N; i++) {
     const samples = [];
