@@ -51,7 +51,7 @@ describe('drawn APC40: buttons', () => {
     expect(b.cueback.hw).toBe('SCENE LAUNCH 1'); expect(b.cueauto.hw).toBe('SCENE LAUNCH 2'); expect(b.cueloop.hw).toBe('SCENE LAUNCH 3')
     expect(b.blackout).toMatchObject({ note: 0x56, hw: 'SCENE LAUNCH 5', danger: true })
     expect(b['lookpage:next'].hw).toBe('RIGHT'); expect(b['lookpage:prev'].hw).toBe('LEFT')
-    expect(Object.keys(b).sort()).toEqual(Object.keys(BUTTONS).sort())
+    expect(Object.keys(b).sort()).toEqual(Object.keys(map).filter((k) => BUTTONS[k]).sort())   // round 3: only what the map binds
     expect(view().master).toMatchObject({ mapped: true, cc: 0x0e })
   })
   it('blackout is the only one marked danger; its LED goes bright red when on, dim red when off', () => {
@@ -69,8 +69,8 @@ describe('drawn APC40: buttons', () => {
     delete m2.blackout
     const v = apc40View({ map: m2, cues: { list: [] }, state: {}, looks, page: 0 })
     expect(v.buttons.find((x) => x.key === 'cuego').note).toBe(0x5d)
-    // blackout still comes from the preset layout: the drawing never invents a binding the preset lacks
-    expect(v.buttons.find((x) => x.key === 'blackout').note).toBe(0x56)
+    // round 3: an unbound key is not drawn, not even from the preset
+    expect(v.buttons.find((x) => x.key === 'blackout')).toBeUndefined()
   })
   it('an empty map draws the preset layout and says it is not mapped; a bound map says so', () => {
     expect(apc40View({ map: {}, looks, page: 0 }).mapped).toBe(false)
@@ -113,5 +113,33 @@ describe('drawn APC40: the full patch, strobe and the knob pages (round 2)', () 
   })
   it('every row has a printed name, a sentence and a range, none empty', () => {
     for (const r of [...v.controls, ...v.knobs]) { expect(r.hw).toBeTruthy(); expect(r.does).toBeTruthy(); expect(r.range).toBeTruthy() }
+  })
+})
+
+describe('round 2: safe look, contrast, callouts', () => {
+  const draw = require('./ui/apc40draw.js')
+  const fs = require('node:fs')
+  const src = fs.readFileSync(require.resolve('./ui/apc40draw.js'), 'utf8')
+  const lum = (h) => { const c = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((x) => (x <= .03928 ? x / 12.92 : ((x + .055) / 1.055) ** 2.4)); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2] }
+  it('Safe dims the pads and kills every glow (pinned in the CSS)', () => {
+    expect(src).toContain('.apc40.safe .apcp .pad')
+    expect(src).toMatch(/\.apc40\.safe \.apcp \*[^']*box-shadow:none!important;filter:none!important/)
+  })
+  it('on-air label gradient keeps white text at 4.5:1 or more', () => {
+    for (const bg of draw.LIVE_GRADIENT) expect(1.05 / (lum(bg) + .05)).toBeGreaterThanOrEqual(4.5)
+  })
+  it('crossfader A/B buttons have the press flash', () => { expect(src).toContain('.apcp .xab.hit') })
+  it('ccTarget reads the Akai table: track faders by channel, master, crossfader, bank knobs', () => {
+    expect(draw.ccTarget(3, 7)).toMatchObject({ id: 'fader.2' })
+    expect(draw.ccTarget(1, 14)).toMatchObject({ id: 'fader.8' })
+    expect(draw.ccTarget(1, 15)).toMatchObject({ id: 'xfader' })
+    expect(draw.ccTarget(2, 18)).toMatchObject({ id: 'dk.2', bank: 2 })
+    expect(draw.ccTarget(1, 13)).toMatchObject({ id: 'tempo', kind: 'rel' })
+  })
+  it('callouts come from the live binding map, one per bound group, none for unbound', () => {
+    const c = draw.apc40Callouts(map, view())
+    expect(c.length).toBeGreaterThan(0)
+    for (const x of c) { expect(['top', 'bottom', 'left', 'right']).toContain(x.side); expect(x.text).toBeTruthy(); expect(x.target).toBeTruthy() }
+    expect(draw.apc40Callouts({}, view({ map: {} })).length).toBeLessThan(c.length)
   })
 })

@@ -6667,14 +6667,17 @@ function midiPageMessage(e) {
     midiSeenCC.add(ch + ':' + b);
     // Clamped: a controller sending a byte above 127 is out of spec, and without this it
     // drives a target past full and reads "157%" in the value column.
+    if (midiApc) midiApc.live({ type: 'cc', ch, num: b, unit: clamp(c / 127, 0, 1), raw: c });   // the drawing shows every real move, bound or not
     midiHandle('cc', ch, b, clamp(c / 127, 0, 1), c);
     midiMonitor('cc', `ch${mpad(ch, 2)}  CC ${mpad(b, 3)}   ${mpad(c, 3)}${midiBar(c / 127)}`);
   } else if (type === 0x90 && c > 0) {                    // note on
     midiSeenNote.add(ch + ':' + b);
+    if (midiApc) midiApc.live({ type: 'note', ch, num: b, down: true });
     midiHandle('note', ch, b, 1);
     midiMonitor('note', `ch${mpad(ch, 2)}  NOTE ${mpad(b, 3)} on  vel ${mpad(c, 3)}`);
   } else if (type === 0x80 || (type === 0x90 && c === 0)) {
     midiMonitor('other', `ch${mpad(ch, 2)}  NOTE ${mpad(b, 3)} off`);
+    if (midiApc) midiApc.live({ type: 'note', ch, num: b, down: false });
     midiRelease(ch, b);
   } else if (type === 0xe0) {                             // pitch bend — some faders use it
     const v = ((c << 7) | b) / 16383;
@@ -6896,15 +6899,37 @@ function midiApcPress(key) {
   if (!t || t.kind !== 'note') return;
   t.apply(); midiHit(key);
 }
+// A click or drag on the drawn unit is a controller message through the SAME door as the real APC40 (midiHandle / midiRelease:
+// the desk's own binding map, soft takeover, the ARM gate), never a second copy of what each control does.
+function midiApcMsg(m) {
+  if (!midiArmed || midiLearnRow || midiWizardOn || midiSceneLearn) return;
+  if (m.type === 'note' && !m.down) { midiRelease(m.ch, m.num); return; }
+  // A drawn fader has its own takeover (the drag), so it skips the real unit's pickup; afterwards the REAL unit must catch
+  // the desk again and forgets its last value, else its next move jumps the rig (round 3, finding 2).
+  const key = m.type === 'cc' ? midiKeyFor('cc', m.ch, m.num) : null;
+  const tg = key && midiTargets.find((x) => x.key === key);
+  const pos = !!(tg && !tg.rel);
+  if (pos) midiPickup[key] = false;
+  try { midiHandle(m.type, m.ch, m.num, m.unit, m.raw); }
+  finally { if (pos) { midiPickup[key] = true; delete midiLastVal[key]; } }
+}
+// What the desk reads for every bound fader / knob (0..1), so a change made anywhere on the desk moves the drawn control.
+function midiApcValues() {
+  const out = {};
+  for (const t of midiTargets) { if (t.group || t.kind !== 'cc' || t.rel || !t.read || !midiMap[t.key]) continue; try { const u = t.read(); if (Number.isFinite(u)) out[t.key] = u; } catch (e) { /* a target that cannot read yet */ } }
+  const mp = window.deskMidiPatch;
+  if (mp && S) { try { Object.assign(out, mp.knobRings(S)); } catch (e) { /* no rings yet */ } }
+  return out;
+}
 function midiApcUpdate() {
   if (page !== 'midi' || !window.deskApc40Draw || !$('#miApc')) return;
   if (!midiPadBright && !midiPadBrightBusy && S) midiLoadPadBright();
-  if (!midiApc) midiApc = window.deskApc40Draw.create($('#miApc'), { press: midiApcPress, armed: () => midiArmed });
+  if (!midiApc) midiApc = window.deskApc40Draw.create($('#miApc'), { press: midiApcPress, send: midiApcMsg, armed: () => midiArmed });
   const mv = midiArmed ? midiLive.master : (S ? S.master : null);
   midiApc.update({
     map: midiMap, cues: CUES, state: { blackout: midiBlackoutNow() },
     looks: padLooksOf(), order: curPadOrder(), bright: midiPadBright, page: midiLookPage, activeId: lookOnAirId(),
-    master: mv == null ? undefined : mv / 255,
+    master: mv == null ? undefined : mv / 255, values: midiApcValues(),
   });
 }
 
@@ -7154,7 +7179,7 @@ function midiApcSoon() {
     // Only when something it draws has changed: the 1 s cue paint and every state poll land here.
     const c = CUES || {};
     const sig = [lookOnAirId(), midiLookPage, midiArmed, midiBlackoutNow(),
-      midiArmed ? midiLive.master : (S && S.master), c.index, c.running, c.autoplay, c.loop, c.n, S && S.looksRev, Object.keys(midiMap).length].join('|');
+      midiArmed ? midiLive.master : (S && S.master), c.index, c.running, c.autoplay, c.loop, c.n, S && S.looksRev, Object.keys(midiMap).length, JSON.stringify(midiApcValues())].join('|');
     if (sig === midiApcSig) return;
     midiApcSig = sig; midiApcAt = Date.now(); midiApcUpdate();
   }, Math.max(0, midiApcAt + 250 - Date.now()));
