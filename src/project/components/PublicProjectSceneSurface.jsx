@@ -137,6 +137,8 @@ export default function PublicProjectSceneSurface({
     posedEntities = null,
     // output mode (viewport/outputMode.js): the room drawn light enough for a phone
     outputMode = false,
+    // a preview that still plays the room's screens (StudioViewport `liveScreens`)
+    liveScreens = false,
     lockInside = false,
     onBuilding,
     onLockPaused,
@@ -275,6 +277,7 @@ export default function PublicProjectSceneSurface({
                     enableNavigation={!caged && !isPreview}
                     showChrome={!isPreview}
                     lowPower={isPreview}
+                    liveScreens={liveScreens}
                     // Authored keyframes used to play ONLY while the editor's
                     // Timeline scrubber was being dragged, so a published scene
                     // sat frozen on its authored pose forever -- invisibly, since

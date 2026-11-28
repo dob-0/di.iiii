@@ -117,6 +117,21 @@
     width: 110px;
 }
 
+.vj-deck-grade,
+.vj-deck-grade-item {
+    display: flex;
+    align-items: center;
+    gap: var(--di-space-2);
+}
+
+.vj-deck-grade {
+    flex-wrap: wrap;
+}
+
+.vj-deck-grade-item input {
+    width: 84px;
+}
+
 /* The crossfader sits between the tempo and the master: A, the fader, B. */
 .vj-deck-crossfader {
     display: flex;
@@ -1402,3 +1417,7 @@
     line-height: 1.2;
     white-space: nowrap;
 }
+
+/* The host's extra monitor (Perform: the 3D room) under PREVIEW and OUTPUT. */
+.vj-deck-monitor--extra .vj-deck-monitor-screen { position: relative; overflow: hidden; }
+.vj-deck-monitor--extra .vj-deck-monitor-screen > .perform-pane { position: absolute; inset: 0; width: 100%; height: 100%; }

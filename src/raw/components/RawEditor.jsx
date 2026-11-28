@@ -2375,6 +2375,7 @@ export default function RawEditor({
                 <VjDeckView
                     node={node}
                     placement={options.placement || 'window'}
+                    extraMonitor={options.extraMonitor || null}
                     spaceId={resolvedSpaceId}
                     projectId={projectId || null}
                     assets={document.assets || []}

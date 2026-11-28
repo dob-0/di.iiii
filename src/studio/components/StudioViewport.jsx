@@ -237,6 +237,8 @@ const DeskLightContext = createContext(true)
 const canTransform = (editMode) => editMode === 'edit' || editMode === 'select'
 
 function SelectableEntity({ entity, assetMap, screens = null, selected, selectedIdSet = null, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, gizmoSpace = 'world', overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
+    // a visitor's view (links on, see entityLinkContext.js): no editor markers on the lamps
+    const visitor = useContext(EntityLinksContext) === true
     const groupRef = useRef()
     const tcRef = useRef()
     const highlightRef = useRef(null)
@@ -374,7 +376,7 @@ function SelectableEntity({ entity, assetMap, screens = null, selected, selected
                 {/* Live only where the surface turned links on (a visitor's
                     view mode) — see entityLinkContext.js. */}
                 <EntityLink entity={entity}>
-                    <EntityContent entity={shown} assetMap={assetMap} screens={screens} />
+                    <EntityContent entity={shown} assetMap={assetMap} screens={screens} markers={!visitor} />
                 </EntityLink>
                 {selected && isPrimary && (
                     <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]} style={{ pointerEvents: 'none' }}>
@@ -1201,6 +1203,9 @@ export default function StudioViewport({
     enableNavigation = true,
     showChrome = true,
     lowPower = false,
+    // a low-power view that still wants the room's screens live (the Perform desk's Room 3D monitor: ONE small
+    // room beside the deck, where a dark LED wall is the one thing the picture is for). Cards leave it off.
+    liveScreens = false,
     showHelp = false,
     onCloseHelp,
     onShowHelp,
@@ -1456,7 +1461,7 @@ export default function StudioViewport({
             {/* The sources behind the room's screens. Not in a low-power preview
                 card: thirteen cards each running a video would be the cost the
                 cards exist to avoid; there a screen draws its dim plate. */}
-            {!lowPower && <LiveScreens document={document} onScreens={setScreens} />}
+            {(!lowPower || liveScreens) && <LiveScreens document={document} onScreens={setScreens} />}
 
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
 
