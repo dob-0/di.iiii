@@ -58,6 +58,8 @@
       <h2>Looks</h2>
       <span class="muted" id="liveName">Nothing on the cubes. Press a look.</span>
     </div>
+    <!-- Send to (2026-11-07, the owner: "send differnet signals to each laser"): pick lasers, then a tile's picture. -->
+    <div class="sendto" id="sendTo" role="group" aria-label="Send to" hidden></div>
     <div class="tiles" id="tiles"></div>
   </section>
 
@@ -83,8 +85,21 @@
     <div class="panehead">
       <h2>Edit</h2>
       <input id="lookName" class="namefield" maxlength="40" placeholder="Name" aria-label="Look name">
+      <button id="resetLook" class="quiet small" title="Every setting back to how this scene started; its size, place and cubes stay. Ctrl+Z takes it back">Reset</button>
     </div>
     <div class="editbody" id="editor">
+      <!-- Layers (2026-11-07, the owner: "insted second pattern we are adding + and opening same pattern copy and alll the
+           paraamamtres"): 1 is the look; + copies the open pattern into a layer of its own, opened here. Each laser draws ONE
+           layer (the owner, later that day: "copy on other lasers", never a doubled signal): the chips under the strip pick
+           the open layer's lasers; a layer on none is only seen in the Preview. -->
+      <div class="group" id="layersGroup">
+        <div class="grouphead"><span>Layers</span><span class="muted">one per laser</span></div>
+        <div class="chips" id="layerStrip" role="group" aria-label="Layers"></div>
+        <div id="layerCubesRow" class="layercubes" hidden>
+          <div class="chips" id="layerCubes" role="group" aria-label="Lasers of the open layer"></div>
+          <div class="muted" id="layerCubesNote"></div>
+        </div>
+      </div>
       <div class="group">
         <div class="grouphead"><span>Shape</span>
           <label class="check" title="Pick several shapes: they play in turn"><input type="checkbox" id="cycleMode"> Cycle</label>
@@ -114,6 +129,8 @@
       <div class="group" id="moveFields"><div class="grouphead"><span>Movement</span>
           <label class="check multi" title="Every second cube mirrored"><input type="checkbox" id="mirror"> Mirror</label>
         </div></div>
+      <!-- Beam (2026-11-06 evening, from the owner's laser.html): Split, its colour, Flicker. -->
+      <div class="group" id="beamFields"><div class="grouphead"><span>Beam</span></div></div>
       <div class="group multi">
         <div class="grouphead"><span>Cubes</span></div>
         <div class="chips" id="lookCubes"></div>
