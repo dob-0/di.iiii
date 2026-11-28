@@ -20,6 +20,7 @@
 import { watchVideoFrames, hasNewFrame } from './videoFrames.js'
 import { bodyMatte, MATTE_W, MATTE_H } from './bodyMatte.js'
 import { pickMatteRuns } from './matteScheduler.js'
+import { STEADY_W, STEADY_H, greyOf, steadyState, steadyStep } from './steadyMotion.js'
 import { TOP_OPERATORS, isTopType, measurePixels, resolveTopParams, hexToRgb01 } from './topOperators.js'
 
 const VERTEX = `
@@ -316,6 +317,9 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
     const matteStates = new Map()
     let matteAllowed = new Set()
     let mattePixels = null
+    // Steady: the input drawn down small and read back, to measure how far the camera jumped (steadyMotion.js).
+    let steadyTarget = null
+    let steadyPixels = null
 
     let network = { nodes: [], wires: [] }
     let order = []
@@ -349,6 +353,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                 slot.matte = true
                 bodyMatte().acquire(node.id)
             }
+            if (TOP_OPERATORS[node.type].steady) slot.steady = steadyState()
             slots.set(node.id, slot)
         }
         return slot
@@ -619,8 +624,30 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
                 bindTexture(compiled, 'a', 0, readA)
             }
 
+            // Steady: measure this frame's jump and get the correction. A Steady nobody sees (a silent
+            // deck layer) does not read back; it keeps the offset it has.
+            let steadyOffset = null
+            if (slot.steady) {
+                steadyOffset = [slot.steady.offsetX, slot.steady.offsetY]
+                if (readA && matteWanted(node)) {
+                    if (!steadyTarget) {
+                        steadyTarget = makeTarget(gl, STEADY_W, STEADY_H)
+                        steadyPixels = new Uint8Array(STEADY_W * STEADY_H * 4)
+                    }
+                    bindTexture(present, 'a', 0, readA)
+                    draw(present, steadyTarget)
+                    gl.readPixels(0, 0, STEADY_W, STEADY_H, gl.RGBA, gl.UNSIGNED_BYTE, steadyPixels)
+                    steadyOffset = steadyStep(slot.steady, greyOf(steadyPixels), params, now)
+                    bindTexture(compiled, 'a', 0, readA)
+                }
+            }
+
             gl.useProgram(compiled.program)
             gl.uniform2f(uniform(gl, compiled, 'texel'), 1 / width, 1 / height)
+            if (steadyOffset) {
+                const steadyLocation = uniform(gl, compiled, 'steady_offset')
+                if (steadyLocation !== null) gl.uniform2f(steadyLocation, steadyOffset[0], steadyOffset[1])
+            }
             const timeLocation = uniform(gl, compiled, 'time')
             if (timeLocation !== null) gl.uniform1f(timeLocation, clock)
             const shiftLocation = uniform(gl, compiled, 'shift')
@@ -708,6 +735,7 @@ export const createTopEngine = ({ canvas, width = 640, height = 360, onMeasure =
             watchers.clear()
             freeTarget(gl, measureTarget)
             if (matteTarget) freeTarget(gl, matteTarget)
+            if (steadyTarget) freeTarget(gl, steadyTarget)
             for (const state of matteStates.values()) gl.deleteTexture(state.texture)
             matteStates.clear()
             for (const compiled of programs.values()) if (compiled.program) gl.deleteProgram(compiled.program)
