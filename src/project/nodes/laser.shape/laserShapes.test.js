@@ -812,3 +812,131 @@ describe('the lava shapes: lava, magma, eruption, bubble, crack, drip (2026-11-0
         for (const shape of LAVA) expect(generateShape({ shape, time: 3.3 }), shape).toEqual(generateShape({ shape, beat: 6.6 }))
     })
 })
+
+describe('volcano: the lava story in one line over four bars (2026-11-06 evening)', () => {
+    const isLit = (p) => p[2] + p[3] + p[4] > 0
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const at = (beat) => strokes(generateShape({ shape: 'volcano', size: 1, points: 900, beat, colour: '#ff4000' }))
+    const isRing = (s) => s.length > 4 && Math.hypot(s[0][0] - s[s.length - 1][0], s[0][1] - s[s.length - 1][1]) < 1e-6
+    const ringOf = (s) => {
+        const xs = s.map((p) => p[0])
+        const ys = s.map((p) => p[1])
+        return { x: (Math.max(...xs) + Math.min(...xs)) / 2, y: (Math.max(...ys) + Math.min(...ys)) / 2, r: (Math.max(...xs) - Math.min(...xs)) / 2 }
+    }
+    const top = (beat) => Math.max(...at(beat)[0].map((p) => p[1]))
+    const lowest = (beat) => at(beat)[0].reduce((best, p) => (p[1] < best[1] ? p : best))
+    const heightAt = (line, x) => line.reduce((best, p) => (Math.abs(p[0] - x) < Math.abs(best[0] - x) ? p : best))[1]
+
+    it('comes after the lava shapes, one line right across inside 0.95 of the picture, beside it at most two whole dots that never touch', () => {
+        expect(LASER_SHAPES[52]).toBe('volcano')
+        for (let beat = 0; beat < 48; beat += 1 / 16) {
+            const [line, ...dots] = at(beat)
+            const label = `beat ${beat}`
+            expect(Math.min(...line.map((p) => p[0])), label).toBeCloseTo(-0.95, 6)
+            expect(Math.max(...line.map((p) => p[0])), label).toBeCloseTo(0.95, 6)
+            expect(Math.max(...[line, ...dots].flat().map((p) => Math.max(Math.abs(p[0]), Math.abs(p[1])))), label).toBeLessThanOrEqual(0.95 + 1e-9)
+            expect(dots.length, label).toBeLessThanOrEqual(2)
+            expect(dots.every(isRing), label).toBe(true)
+            const rings = dots.map(ringOf)
+            for (const d of rings) expect(d.r, label).toBeCloseTo(0.12, 2)
+            if (rings.length === 2) expect(Math.hypot(rings[0].x - rings[1].x, rings[0].y - rings[1].y) - 0.24, label).toBeGreaterThan(0.02)
+        }
+    })
+
+    it('bar one: flat on the downbeat, then the drop\'s ripples run out to both sides and die away before bar two', () => {
+        expect(top(0)).toBeCloseTo(-0.55, 6)
+        expect(lowest(0)[1]).toBeCloseTo(-0.55, 6)
+        expect(lowest(0.3)[1]).toBeLessThan(-0.6)
+        const out = [1, 2, 3].map((beat) => Math.abs(lowest(beat)[0]))
+        expect(out[0]).toBeLessThan(out[1])
+        expect(out[1]).toBeLessThan(out[2])
+        expect(top(4)).toBeCloseTo(-0.55, 6)
+        expect(lowest(4)[1]).toBeCloseTo(-0.55, 6)
+        for (let beat = 0; beat < 8; beat += 1 / 16) expect(at(beat), `beat ${beat}`).toHaveLength(1)
+    })
+
+    it('bar two: the pool swells into a cone, a step each beat that glides in the first half and holds in the second', () => {
+        const steps = [4, 5, 6, 7].map((b) => top(b + 0.75))
+        for (let i = 1; i < 4; i += 1) expect(steps[i]).toBeGreaterThan(steps[i - 1] + 0.1)
+        for (const b of [4, 5, 6, 7]) expect(top(b + 0.6), `beat ${b}`).toBeCloseTo(top(b + 0.95), 6)
+        expect(steps[3]).toBeCloseTo(-0.55 + 0.85, 1)
+    })
+
+    it('bar three: the crater bursts open on its downbeat and throws a bomb left on each beat and one right a quarter beat later', () => {
+        expect(heightAt(at(7.95)[0], 0)).toBeGreaterThan(heightAt(at(8.01)[0], 0) + 0.05)
+        for (const k of [8, 9, 10, 11]) {
+            expect(at(k + 0.1).slice(1).map(ringOf).some((d) => d.x < 0 && d.y > 0), `left on beat ${k}`).toBe(true)
+            expect(at(k + 0.35).slice(1).map(ringOf).some((d) => d.x > 0 && d.y > 0), `right after beat ${k}`).toBe(true)
+        }
+        for (let beat = 12.5; beat < 15; beat += 1 / 16) expect(at(beat), `beat ${beat}`).toHaveLength(1)
+        // The bombs fly their own heights each loop; the line keeps the story's beats.
+        expect(at(8.3)).not.toEqual(at(24.3))
+        expect(at(21.5)[0]).toEqual(at(5.5)[0])
+    })
+
+    it('bar four: it melts back a step on each of three beats, and the next drop hangs, falls and lands on the downbeat', () => {
+        expect(top(12.75)).toBeGreaterThan(top(13.75) + 0.1)
+        expect(top(13.75)).toBeGreaterThan(top(14.75) + 0.1)
+        expect(top(14.75)).toBeCloseTo(-0.55, 6)
+        const drop = (beat) => ringOf(at(beat)[1])
+        expect(drop(15.1).x).toBeCloseTo(0, 6)
+        expect(drop(15.1).y).toBeCloseTo(drop(15.45).y, 6)
+        expect(drop(15.75).y).toBeLessThan(drop(15.55).y)
+        expect(drop(15.999).y - 0.12).toBeCloseTo(-0.55, 1)
+        expect(at(16)).toHaveLength(1)
+    })
+
+    it('without a beat it runs on time at 120 BPM', () => {
+        expect(generateShape({ shape: 'volcano', time: 3.3 })).toEqual(generateShape({ shape: 'volcano', beat: 6.6 }))
+    })
+})
+
+describe('strands: the owner\'s laser.html, a tangle of drifting sines the beam runs along (2026-11-06 evening)', () => {
+    const isLit = (p) => p[2] + p[3] + p[4] > 0
+    const strokes = (points) => {
+        const out = [[]]
+        for (const p of points) { if (!isLit(p)) out.push([]); else out[out.length - 1].push(p) }
+        return out.filter((s) => s.length)
+    }
+    const at = (beat, more = {}) => strokes(generateShape({ shape: 'strands', size: 1, points: 600, beat, colour: '#ff190a', ...more }))
+    const lengthOf = (s) => s.slice(1).reduce((sum, p, i) => sum + Math.hypot(p[0] - s[i][0], p[1] - s[i][1]), 0)
+
+    it('comes after volcano: one line inside 0.92 of the picture at every moment, at every tangle', () => {
+        expect(LASER_SHAPES[53]).toBe('strands')
+        for (const copies of [0, 2, 8]) {
+            for (let beat = 0; beat < 32; beat += 1 / 16) {
+                const s = at(beat, { copies })
+                expect(s, `×${copies} beat ${beat}`).toHaveLength(1)
+                expect(Math.max(...s[0].map((p) => Math.max(Math.abs(p[0]), Math.abs(p[1])))), `×${copies} beat ${beat}`).toBeLessThanOrEqual(0.92 + 1e-9)
+            }
+        }
+    })
+
+    it('wanders on as the beam runs, the same moment drawing the same strand', () => {
+        expect(at(0.25)).not.toEqual(at(0))
+        expect(at(7.3)).toEqual(at(7.3))
+        expect(lengthOf(at(3)[0])).toBeGreaterThan(1)
+    })
+
+    it('Copies sets how tangled: 2 to 8 harmonics, 5 its own', () => {
+        expect(at(2, { copies: 0 })).toEqual(at(2, { copies: 5 }))
+        expect(at(2, { copies: 12 })).toEqual(at(2, { copies: 8 }))
+        expect(at(2, { copies: 1 })).toEqual(at(2, { copies: 2 }))
+        expect(at(2, { copies: 2 })).not.toEqual(at(2, { copies: 8 }))
+    })
+
+    it('a faster look draws a longer strand, up to twice as long; a slower one keeps its length', () => {
+        const mean = (speed) => Array.from({ length: 32 }, (_, k) => lengthOf(at(k / 2, { speed })[0])).reduce((s, l) => s + l, 0) / 32
+        expect(mean(2)).toBeGreaterThan(mean(1) * 1.5)
+        expect(at(5, { speed: 4 })).toEqual(at(5, { speed: 2 }))
+        expect(at(5, { speed: 0.25 })).toEqual(at(5, { speed: 1 }))
+    })
+
+    it('without a beat it runs on time at 120 BPM', () => {
+        expect(generateShape({ shape: 'strands', time: 3.3 })).toEqual(generateShape({ shape: 'strands', beat: 6.6 }))
+    })
+})
